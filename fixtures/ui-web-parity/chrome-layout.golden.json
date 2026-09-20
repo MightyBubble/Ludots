@@ -1,0 +1,605 @@
+{
+  "generatedAt": "2026-08-10T07:58:32.035Z",
+  "chrome": "Chrome/148.0.7778.96",
+  "fixture": "fixtures/ui-web-parity/parity_menu.html",
+  "coordinateSpace": "stage-local",
+  "viewports": [
+    {
+      "name": "desktop",
+      "width": 1280,
+      "height": 720,
+      "boxes": {
+        "stage": {
+          "x": 0,
+          "y": 0,
+          "width": 1280,
+          "height": 720
+        },
+        "backdrop": {
+          "x": 0,
+          "y": 0,
+          "width": 1280,
+          "height": 720
+        },
+        "orb-a": {
+          "x": 76.8,
+          "y": 86.39,
+          "width": 220,
+          "height": 220
+        },
+        "orb-b": {
+          "x": 997.61,
+          "y": 129.59,
+          "width": 180,
+          "height": 180
+        },
+        "orb-c": {
+          "x": 358.39,
+          "y": 402.41,
+          "width": 260,
+          "height": 260
+        },
+        "menu-shell": {
+          "x": 64,
+          "y": 43.2,
+          "width": 1152,
+          "height": 633.59
+        },
+        "menu-card": {
+          "x": 64,
+          "y": 43.2,
+          "width": 785,
+          "height": 633.59
+        },
+        "hero-strip": {
+          "x": 80,
+          "y": 59.2,
+          "width": 753,
+          "height": 88
+        },
+        "hero-crest": {
+          "x": 93,
+          "y": 74.2,
+          "width": 58,
+          "height": 58
+        },
+        "hero-copy": {
+          "x": 161,
+          "y": 70.2,
+          "width": 561,
+          "height": 66
+        },
+        "menu-kicker": {
+          "x": 161,
+          "y": 70.2,
+          "width": 561,
+          "height": 16
+        },
+        "menu-title": {
+          "x": 161,
+          "y": 88.2,
+          "width": 561,
+          "height": 28
+        },
+        "menu-subtitle": {
+          "x": 161,
+          "y": 118.2,
+          "width": 561,
+          "height": 18
+        },
+        "hero-badge": {
+          "x": 732,
+          "y": 77.2,
+          "width": 88,
+          "height": 52
+        },
+        "menu-grid": {
+          "x": 80,
+          "y": 157.2,
+          "width": 753,
+          "height": 415.59
+        },
+        "btn-resume": {
+          "x": 80,
+          "y": 157.2,
+          "width": 370.5,
+          "height": 201.8
+        },
+        "btn-map": {
+          "x": 462.5,
+          "y": 157.2,
+          "width": 370.5,
+          "height": 201.8
+        },
+        "btn-settings": {
+          "x": 80,
+          "y": 371,
+          "width": 370.5,
+          "height": 201.8
+        },
+        "btn-quit": {
+          "x": 462.5,
+          "y": 371,
+          "width": 370.5,
+          "height": 201.8
+        },
+        "stat-row": {
+          "x": 80,
+          "y": 582.8,
+          "width": 753,
+          "height": 78
+        },
+        "stat-hp": {
+          "x": 80,
+          "y": 582.8,
+          "width": 244.33,
+          "height": 78
+        },
+        "stat-mp": {
+          "x": 334.33,
+          "y": 582.8,
+          "width": 244.34,
+          "height": 78
+        },
+        "stat-gold": {
+          "x": 588.67,
+          "y": 582.8,
+          "width": 244.33,
+          "height": 78
+        },
+        "side-rail": {
+          "x": 861,
+          "y": 43.2,
+          "width": 355,
+          "height": 633.59
+        },
+        "rail-card": {
+          "x": 861,
+          "y": 43.2,
+          "width": 355,
+          "height": 515.59
+        },
+        "rail-kicker": {
+          "x": 875,
+          "y": 57.2,
+          "width": 327,
+          "height": 14
+        },
+        "rail-title": {
+          "x": 875,
+          "y": 77.2,
+          "width": 327,
+          "height": 24
+        },
+        "rail-body": {
+          "x": 875,
+          "y": 107.2,
+          "width": 327,
+          "height": 377.59
+        },
+        "rail-progress": {
+          "x": 875,
+          "y": 490.8,
+          "width": 327,
+          "height": 54
+        },
+        "tip-card": {
+          "x": 861,
+          "y": 568.8,
+          "width": 355,
+          "height": 108
+        },
+        "tip-kicker": {
+          "x": 874,
+          "y": 581.8,
+          "width": 329,
+          "height": 14
+        },
+        "tip-body": {
+          "x": 874,
+          "y": 601.8,
+          "width": 329,
+          "height": 62
+        }
+      }
+    },
+    {
+      "name": "tablet",
+      "width": 900,
+      "height": 700,
+      "boxes": {
+        "stage": {
+          "x": 0,
+          "y": 0,
+          "width": 900,
+          "height": 700
+        },
+        "backdrop": {
+          "x": 0,
+          "y": 0,
+          "width": 900,
+          "height": 700
+        },
+        "orb-a": {
+          "x": 54,
+          "y": 84,
+          "width": 220,
+          "height": 220
+        },
+        "orb-b": {
+          "x": 648,
+          "y": 126,
+          "width": 180,
+          "height": 180
+        },
+        "orb-c": {
+          "x": 252,
+          "y": 384,
+          "width": 260,
+          "height": 260
+        },
+        "menu-shell": {
+          "x": 45,
+          "y": 42,
+          "width": 810,
+          "height": 616
+        },
+        "menu-card": {
+          "x": 45,
+          "y": 42,
+          "width": 528.5,
+          "height": 616
+        },
+        "hero-strip": {
+          "x": 61,
+          "y": 58,
+          "width": 496.5,
+          "height": 88
+        },
+        "hero-crest": {
+          "x": 74,
+          "y": 73,
+          "width": 58,
+          "height": 58
+        },
+        "hero-copy": {
+          "x": 142,
+          "y": 69,
+          "width": 304.5,
+          "height": 66
+        },
+        "menu-kicker": {
+          "x": 142,
+          "y": 69,
+          "width": 304.5,
+          "height": 16
+        },
+        "menu-title": {
+          "x": 142,
+          "y": 87,
+          "width": 304.5,
+          "height": 28
+        },
+        "menu-subtitle": {
+          "x": 142,
+          "y": 117,
+          "width": 304.5,
+          "height": 18
+        },
+        "hero-badge": {
+          "x": 456.5,
+          "y": 76,
+          "width": 88,
+          "height": 52
+        },
+        "menu-grid": {
+          "x": 61,
+          "y": 156,
+          "width": 496.5,
+          "height": 398
+        },
+        "btn-resume": {
+          "x": 61,
+          "y": 156,
+          "width": 242.25,
+          "height": 193
+        },
+        "btn-map": {
+          "x": 315.25,
+          "y": 156,
+          "width": 242.25,
+          "height": 193
+        },
+        "btn-settings": {
+          "x": 61,
+          "y": 361,
+          "width": 242.25,
+          "height": 193
+        },
+        "btn-quit": {
+          "x": 315.25,
+          "y": 361,
+          "width": 242.25,
+          "height": 193
+        },
+        "stat-row": {
+          "x": 61,
+          "y": 564,
+          "width": 496.5,
+          "height": 78
+        },
+        "stat-hp": {
+          "x": 61,
+          "y": 564,
+          "width": 158.83,
+          "height": 78
+        },
+        "stat-mp": {
+          "x": 229.83,
+          "y": 564,
+          "width": 158.84,
+          "height": 78
+        },
+        "stat-gold": {
+          "x": 398.67,
+          "y": 564,
+          "width": 158.83,
+          "height": 78
+        },
+        "side-rail": {
+          "x": 585.5,
+          "y": 42,
+          "width": 269.5,
+          "height": 616
+        },
+        "rail-card": {
+          "x": 585.5,
+          "y": 42,
+          "width": 269.5,
+          "height": 498
+        },
+        "rail-kicker": {
+          "x": 599.5,
+          "y": 56,
+          "width": 241.5,
+          "height": 14
+        },
+        "rail-title": {
+          "x": 599.5,
+          "y": 76,
+          "width": 241.5,
+          "height": 24
+        },
+        "rail-body": {
+          "x": 599.5,
+          "y": 106,
+          "width": 241.5,
+          "height": 360
+        },
+        "rail-progress": {
+          "x": 599.5,
+          "y": 472,
+          "width": 241.5,
+          "height": 54
+        },
+        "tip-card": {
+          "x": 585.5,
+          "y": 550,
+          "width": 269.5,
+          "height": 108
+        },
+        "tip-kicker": {
+          "x": 598.5,
+          "y": 563,
+          "width": 243.5,
+          "height": 14
+        },
+        "tip-body": {
+          "x": 598.5,
+          "y": 583,
+          "width": 243.5,
+          "height": 62
+        }
+      }
+    },
+    {
+      "name": "phone",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "stage": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 844
+        },
+        "backdrop": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 844
+        },
+        "orb-a": {
+          "x": 23.39,
+          "y": 101.27,
+          "width": 220,
+          "height": 220
+        },
+        "orb-b": {
+          "x": 178.81,
+          "y": 151.91,
+          "width": 180,
+          "height": 180
+        },
+        "orb-c": {
+          "x": 109.19,
+          "y": 516.48,
+          "width": 260,
+          "height": 260
+        },
+        "menu-shell": {
+          "x": 19.5,
+          "y": 50.64,
+          "width": 351,
+          "height": 742.72
+        },
+        "menu-card": {
+          "x": 19.5,
+          "y": 50.64,
+          "width": 351,
+          "height": 492.36
+        },
+        "hero-strip": {
+          "x": 35.5,
+          "y": 66.64,
+          "width": 319,
+          "height": 150
+        },
+        "hero-crest": {
+          "x": 48.5,
+          "y": 81.64,
+          "width": 58,
+          "height": 58
+        },
+        "hero-copy": {
+          "x": 116.5,
+          "y": 77.64,
+          "width": 225,
+          "height": 66
+        },
+        "menu-kicker": {
+          "x": 116.5,
+          "y": 77.64,
+          "width": 225,
+          "height": 16
+        },
+        "menu-title": {
+          "x": 116.5,
+          "y": 95.64,
+          "width": 225,
+          "height": 28
+        },
+        "menu-subtitle": {
+          "x": 116.5,
+          "y": 125.64,
+          "width": 225,
+          "height": 18
+        },
+        "hero-badge": {
+          "x": 48.5,
+          "y": 153.64,
+          "width": 88,
+          "height": 52
+        },
+        "menu-grid": {
+          "x": 35.5,
+          "y": 226.64,
+          "width": 319,
+          "height": 212.36
+        },
+        "btn-resume": {
+          "x": 35.5,
+          "y": 226.64,
+          "width": 153.5,
+          "height": 100.17
+        },
+        "btn-map": {
+          "x": 201,
+          "y": 226.64,
+          "width": 153.5,
+          "height": 100.17
+        },
+        "btn-settings": {
+          "x": 35.5,
+          "y": 338.81,
+          "width": 153.5,
+          "height": 100.19
+        },
+        "btn-quit": {
+          "x": 201,
+          "y": 338.81,
+          "width": 153.5,
+          "height": 100.19
+        },
+        "stat-row": {
+          "x": 35.5,
+          "y": 449,
+          "width": 319,
+          "height": 78
+        },
+        "stat-hp": {
+          "x": 35.5,
+          "y": 449,
+          "width": 99.66,
+          "height": 78
+        },
+        "stat-mp": {
+          "x": 145.16,
+          "y": 449,
+          "width": 99.67,
+          "height": 78
+        },
+        "stat-gold": {
+          "x": 254.83,
+          "y": 449,
+          "width": 99.67,
+          "height": 78
+        },
+        "side-rail": {
+          "x": 19.5,
+          "y": 555,
+          "width": 351,
+          "height": 238.36
+        },
+        "rail-card": {
+          "x": 19.5,
+          "y": 555,
+          "width": 351,
+          "height": 120.36
+        },
+        "rail-kicker": {
+          "x": 33.5,
+          "y": 569,
+          "width": 323,
+          "height": 14
+        },
+        "rail-title": {
+          "x": 33.5,
+          "y": 589,
+          "width": 323,
+          "height": 24
+        },
+        "rail-body": {
+          "x": 33.5,
+          "y": 619,
+          "width": 323,
+          "height": 0
+        },
+        "rail-progress": {
+          "x": 33.5,
+          "y": 625,
+          "width": 323,
+          "height": 54
+        },
+        "tip-card": {
+          "x": 19.5,
+          "y": 685.36,
+          "width": 351,
+          "height": 108
+        },
+        "tip-kicker": {
+          "x": 32.5,
+          "y": 698.36,
+          "width": 325,
+          "height": 14
+        },
+        "tip-body": {
+          "x": 32.5,
+          "y": 718.36,
+          "width": 325,
+          "height": 62
+        }
+      }
+    }
+  ]
+}

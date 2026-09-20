@@ -1,0 +1,22 @@
+{
+  "actions": [
+    {
+      "id": "FieldHierarchyQuery.CycleMapMode",
+      "name": "FieldHierarchyQuery_CycleMapMode",
+      "type": "Button"
+    }
+  ],
+  "contexts": [
+    {
+      "id": "FieldHierarchyQuery.Controls",
+      "name": "Field Hierarchy Query Controls",
+      "priority": 90,
+      "bindings": [
+        {
+          "actionId": "FieldHierarchyQuery.CycleMapMode",
+          "path": "<Keyboard>/m"
+        }
+      ]
+    }
+  ]
+}

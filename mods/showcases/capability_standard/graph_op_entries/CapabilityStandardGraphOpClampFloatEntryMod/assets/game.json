@@ -1,0 +1,15 @@
+{
+  "startupMapId": "capability_standard_graph_op_ClampFloat",
+  "windowTitle": "Ludots - 撞到上限就停",
+  "targetFps": 60,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true,
+  "presentation": {
+    "cameraCulling": {
+      "highLodDistanceCm": 12000,
+      "mediumLodDistanceCm": 36000,
+      "lowLodDistanceCm": 72000
+    }
+  }
+}

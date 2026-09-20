@@ -1,7 +1,7 @@
 namespace Ludots.WebUI.DataPlane;
 
 /// <summary>
-/// Independent notification SSOT. Accepts domain projections as messages; does not own Quest,
+/// Independent notification SSOT. Accepts domain projections as messages; does not own Task,
 /// NarrativeFrontend, or showcase toast private state.
 /// </summary>
 public sealed class NotificationRuntime

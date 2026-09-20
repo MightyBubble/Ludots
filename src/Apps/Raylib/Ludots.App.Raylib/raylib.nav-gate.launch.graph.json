@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-08-23T00:00:00.0000000Z",
+  "orderedModIds": [
+    "LudotsCoreMod",
+    "CoreInputMod",
+    "CameraProfilesMod",
+    "NavGateShowcaseMod"
+  ],
+  "plannedMods": [
+    { "id": "LudotsCoreMod", "rootPath": "../../../../../../../mods/LudotsCoreMod" },
+    { "id": "CoreInputMod", "rootPath": "../../../../../../../mods/CoreInputMod" },
+    { "id": "CameraProfilesMod", "rootPath": "../../../../../../../mods/capabilities/camera/CameraProfilesMod" },
+    { "id": "NavGateShowcaseMod", "rootPath": "../../../../../../../mods/showcases/navmesh_runtime_gate/NavGateShowcaseMod" }
+  ]
+}

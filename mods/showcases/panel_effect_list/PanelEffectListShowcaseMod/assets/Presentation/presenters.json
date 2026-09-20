@@ -1,0 +1,55 @@
+[
+  {
+    "id": "effectlist_showcase_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "buff_hero" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "effectlist_unit_root",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "buff_hero" },
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "effectlist_unit_root",
+    "children": [
+      {
+        "definitionId": "effectlist_unit_mesh",
+        "scopeTag": "structure",
+        "overrides": {
+          "transform": {
+            "localPosition": [0, 1.2, 0],
+            "localScale": [1.6, 2.2, 1.6]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "effectlist_unit_mesh",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "effectlist.unit_box",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static"
+        },
+        "style": {
+          "color": [0.35, 0.7, 0.95, 1]
+        }
+      }
+    ]
+  }
+]

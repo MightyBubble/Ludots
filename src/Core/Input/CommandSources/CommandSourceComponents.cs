@@ -14,6 +14,7 @@ namespace Ludots.Core.Input.CommandSources
 
     public sealed class CommandSourceAcquisitionCollectionConfig
     {
+        public bool Enabled { get; set; } = true;
         public string CollectionKey { get; set; } = Ludots.Core.EntityCollections.EntityCollectionKeys.UiCommandAcquisition;
         public string Title { get; set; } = "Command acquisition";
     }
@@ -92,5 +93,6 @@ namespace Ludots.Core.Input.CommandSources
     {
         public const string Additive = "QueueModifier";
         public const string Toggle = "PrecisionModifier";
+        public const string Subtract = "ModifierSubtract";
     }
 }

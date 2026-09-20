@@ -17,7 +17,7 @@ using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Gameplay.GAS.Orders;
@@ -26,6 +26,7 @@ using Ludots.Core.Systems;
 using NUnit.Framework;
 using Schedulers;
 using static NUnit.Framework.Assert;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.ThreeC
 {
@@ -507,11 +508,11 @@ namespace Ludots.Tests.ThreeC
         //  D. Camera Culling
         // ------------------------------------------------------------
 
-        private static PerformerEntityRuntime CreatePerformerPayload(World world, Entity entity)
+        private static PresenterEntityRuntime CreatePresenterPayload(World world, Entity entity)
         {
-            var performers = new PerformerEntityRuntime(world);
-            var definition = new PerformerDefinition { Key = "test.culling.performer" };
-            Entity performerEntity = performers.Create(
+            var presenters = new PresenterEntityRuntime(world);
+            var definition = new PresenterDefinition { Key = "test.culling.presenter" };
+            Entity presenterEntity = presenters.Create(
                 defId: 1,
                 owner: entity,
                 scopeId: 1,
@@ -520,8 +521,8 @@ namespace Ludots.Tests.ThreeC
                 stableId: 7001,
                 Entity.Null,
                 definition);
-            That(performerEntity, Is.Not.EqualTo(Entity.Null));
-            return performers;
+            That(presenterEntity, Is.Not.EqualTo(Entity.Null));
+            return presenters;
         }
 
         private static Entity CreateCullableEntity(
@@ -613,12 +614,43 @@ namespace Ludots.Tests.ThreeC
             var entity = CreateCullableEntity(world, 100, 100); // very close to camera target
             spatial.Entities.Add(entity);
 
-            var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, performers: null);
+            var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, presenters: null);
             system.Update(0.016f);
 
             ref var cull = ref world.Get<CullState>(entity);
             That(cull.LOD, Is.EqualTo(LODLevel.High));
             That(cull.IsVisible, Is.True);
+        }
+
+        [Test]
+        public void Culling_DisarmedWithoutPresentBinding_DoesNotWriteCullState()
+        {
+            using var world = World.Create();
+            var manager = new CameraManager();
+            manager.State.TargetCm = Vector2.Zero;
+            manager.State.DistanceCm = 2000f;
+            manager.State.Pitch = 45f;
+            manager.State.FovYDeg = 60f;
+
+            var spatial = new StubSpatialQueryService();
+            var view = new StubViewController();
+            var entity = CreateCullableEntity(world, 100, 100);
+            spatial.Entities.Add(entity);
+            ref var cullBefore = ref world.Get<CullState>(entity);
+            cullBefore.IsVisible = false;
+            cullBefore.LOD = LODLevel.Low;
+
+            var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, presenters: null);
+            system.DisarmPresentBindingCulling();
+            system.Update(0.016f);
+
+            That(world.Get<CullState>(entity).IsVisible, Is.False);
+            That(world.Get<CullState>(entity).LOD, Is.EqualTo(LODLevel.Low));
+
+            system.RebindPresentBinding(manager, view);
+            system.Update(0.016f);
+            That(world.Get<CullState>(entity).IsVisible, Is.True);
+            That(world.Get<CullState>(entity).LOD, Is.EqualTo(LODLevel.High));
         }
 
         [Test]
@@ -638,7 +670,7 @@ namespace Ludots.Tests.ThreeC
             var entity = CreateCullableEntity(world, 5000, 5000); // dist ~= 7071cm
             spatial.Entities.Add(entity);
 
-            var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, performers: null);
+            var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, presenters: null);
             system.Update(0.016f);
 
             ref var cull = ref world.Get<CullState>(entity);
@@ -663,7 +695,7 @@ namespace Ludots.Tests.ThreeC
             var entity = CreateCullableEntity(world, 10000, 10000); // dist ~= 14142cm
             spatial.Entities.Add(entity);
 
-            var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, performers: null);
+            var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, presenters: null);
             system.Update(0.016f);
 
             ref var cull = ref world.Get<CullState>(entity);
@@ -688,7 +720,7 @@ namespace Ludots.Tests.ThreeC
             var entity = CreateCullableEntity(world, 20000, 20000); // dist ~= 28284cm
             spatial.Entities.Add(entity);
 
-            var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, performers: null);
+            var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, presenters: null);
             system.Update(0.016f);
 
             ref var cull = ref world.Get<CullState>(entity);
@@ -710,10 +742,10 @@ namespace Ludots.Tests.ThreeC
             var view = new StubViewController();
 
             var entity = CreateCullableEntity(world, 100, 100);
-            var performers = CreatePerformerPayload(world, entity);
+            var presenters = CreatePresenterPayload(world, entity);
             spatial.Entities.Add(entity);
 
-            var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, performers: performers);
+            var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, presenters: presenters);
 
             // Frame 1: entity is visible
             system.Update(0.016f);
@@ -754,10 +786,10 @@ namespace Ludots.Tests.ThreeC
                 yCm: 2000,
                 PresentationLocalBounds.Create(Vector3.Zero, new Vector3(20f, 1f, 20f)),
                 lodProfile);
-            var performers = CreatePerformerPayload(world, entity);
+            var presenters = CreatePresenterPayload(world, entity);
             spatial.Entities.Add(entity);
 
-            var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, performers: performers);
+            var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, presenters: presenters);
             system.Update(0.016f);
 
             ref CullState cull = ref world.Get<CullState>(entity);
@@ -767,7 +799,7 @@ namespace Ludots.Tests.ThreeC
         }
 
         [Test]
-        public void Culling_WithoutPerformerBuffer_DoesNotForceCullEntities()
+        public void Culling_WithoutPresenterBuffer_DoesNotForceCullEntities()
         {
             using var world = World.Create();
             world.Create(
@@ -785,7 +817,7 @@ namespace Ludots.Tests.ThreeC
             var entity = CreateCullableEntity(world, 100, 100);
             spatial.Entities.Add(entity);
 
-            var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, performers: null);
+            var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, presenters: null);
             system.Update(0.016f);
 
             ref var cull = ref world.Get<CullState>(entity);
@@ -809,7 +841,7 @@ namespace Ludots.Tests.ThreeC
             var spatial = new StubSpatialQueryService();
             Entity entity = world.Create(
                 WorldPositionCm.FromCm(50000, 50000),
-                new CullState { IsVisible = false, LOD = LODLevel.Culled },
+                new CullState { IsVisible = false, LOD = LODLevel.Low },
                 new Name { Value = "outside" });
 
             using var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, timingDiagnostics: null);
@@ -843,7 +875,7 @@ namespace Ludots.Tests.ThreeC
             loadedChunks.SetLoaded(loadedKey);
 
             var entity = CreateCullableEntity(world, 100000, 100000);
-            var performers = CreatePerformerPayload(world, entity);
+            var presenters = CreatePresenterPayload(world, entity);
             spatial.Entities.Add(entity);
 
             var system = new CameraCullingSystem(
@@ -853,7 +885,7 @@ namespace Ludots.Tests.ThreeC
                 view,
                 cullingConfig: TestCameraCullingConfig,
                 loadedChunks: loadedChunks,
-                performers: performers,
+                presenters: presenters,
                 timingDiagnostics: null);
             system.Update(0.016f);
 
@@ -891,7 +923,7 @@ namespace Ludots.Tests.ThreeC
             var view = new StubViewController();
             Entity entity = world.Create(
                 WorldPositionCm.FromCm(0, 2600),
-                new CullState { IsVisible = false, LOD = LODLevel.Culled },
+                new CullState { IsVisible = false, LOD = LODLevel.Low },
                 new PresentationStaticTransform(),
                 new VisualTransform
                 {
@@ -935,7 +967,7 @@ namespace Ludots.Tests.ThreeC
             var view = new StubViewController();
             Entity entity = world.Create(
                 WorldPositionCm.FromCm(5000, 0),
-                new CullState { IsVisible = false, LOD = LODLevel.Culled },
+                new CullState { IsVisible = false, LOD = LODLevel.Low },
                 new PresentationStaticTransform(),
                 new VisualTransform
                 {
@@ -1041,7 +1073,7 @@ namespace Ludots.Tests.ThreeC
                 WorldPositionCm.FromCm(100, 200),
                 new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(100, 200) },
                 new VisualTransform { Position = sentinel, Rotation = Quaternion.Identity, Scale = Vector3.One },
-                new CullState { IsVisible = false, LOD = LODLevel.Culled }
+                new CullState { IsVisible = false, LOD = LODLevel.Low }
             );
 
             var system = new WorldToVisualSyncSystem(world);
@@ -1068,7 +1100,7 @@ namespace Ludots.Tests.ThreeC
                 new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(100, 200) },
                 new VisualTransform { Position = Vector3.Zero, Rotation = Quaternion.Identity, Scale = Vector3.One },
                 new FacingDirection { AngleRad = MathF.PI * 0.5f },
-                new CullState { IsVisible = false, LOD = LODLevel.Culled }
+                new CullState { IsVisible = false, LOD = LODLevel.Low }
             );
 
             var system = new WorldToVisualSyncSystem(world);
@@ -1145,24 +1177,24 @@ namespace Ludots.Tests.ThreeC
             var (backend, handler) = BuildSimpleInputHandler();
 
             // Frame 1: key not pressed
-            handler.Update();
+            handler.Update(1f / 60f);
             That(handler.PressedThisFrame("Attack"), Is.False);
             That(handler.ReleasedThisFrame("Attack"), Is.False);
 
             // Frame 2: press key
             backend.Buttons["<Keyboard>/a"] = true;
-            handler.Update();
+            handler.Update(1f / 60f);
             That(handler.PressedThisFrame("Attack"), Is.True, "First frame of press should be PressedThisFrame");
             That(handler.ReleasedThisFrame("Attack"), Is.False);
 
             // Frame 3: key held (still pressed)
-            handler.Update();
+            handler.Update(1f / 60f);
             That(handler.PressedThisFrame("Attack"), Is.False, "Subsequent held frames should not be PressedThisFrame");
             That(handler.IsDown("Attack"), Is.True);
 
             // Frame 4: release key
             backend.Buttons["<Keyboard>/a"] = false;
-            handler.Update();
+            handler.Update(1f / 60f);
             That(handler.ReleasedThisFrame("Attack"), Is.True, "First frame of release should be ReleasedThisFrame");
             That(handler.PressedThisFrame("Attack"), Is.False);
         }
@@ -1174,12 +1206,12 @@ namespace Ludots.Tests.ThreeC
 
             // Press key first to establish triggered state
             backend.Buttons["<Keyboard>/a"] = true;
-            handler.Update();
+            handler.Update(1f / 60f);
             That(handler.IsDown("Attack"), Is.True);
 
             // Block input
             handler.InputBlocked = true;
-            handler.Update();
+            handler.Update(1f / 60f);
 
             That(handler.IsDown("Attack"), Is.False, "Blocked input should suppress all actions");
             That(handler.PressedThisFrame("Attack"), Is.False);
@@ -1193,7 +1225,7 @@ namespace Ludots.Tests.ThreeC
 
             var orderConfig = new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.TargetFirst,
+                InteractionMode = CastModeType.TargetFirst,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -1225,16 +1257,16 @@ namespace Ludots.Tests.ThreeC
 
             using var world = World.Create();
             var player = world.Create();
-            system.SetLocalPlayer(player, 1);
+            system.SetSolePossessedActor(player, 1);
 
             // Frame 1: no press
-            handler.Update();
+            handler.Update(1f / 60f);
             system.Update(0.016f);
             That(capturedOrder, Is.Null, "No order before button press");
 
             // Frame 2: press left mouse button
             backend.Buttons["<Mouse>/LeftButton"] = true;
-            handler.Update();
+            handler.Update(1f / 60f);
             system.Update(0.016f);
 
             That(capturedOrder, Is.Not.Null, "Order should be submitted on press");

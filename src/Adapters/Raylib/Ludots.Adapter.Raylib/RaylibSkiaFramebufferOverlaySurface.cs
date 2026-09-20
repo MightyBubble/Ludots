@@ -1,5 +1,4 @@
 using System;
-using System.Runtime.InteropServices;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Presentation.Skia;
@@ -13,7 +12,6 @@ namespace Ludots.Adapter.Raylib
 
         private readonly GRGlInterface _glInterface;
         private readonly GRContext _context;
-        private readonly GRGlGetProcedureAddressDelegate _getProcAddress;
 
         private GRBackendRenderTarget? _renderTarget;
         private SKSurface? _surface;
@@ -22,11 +20,7 @@ namespace Ludots.Adapter.Raylib
 
         public RaylibSkiaFramebufferOverlaySurface()
         {
-            _getProcAddress = ResolveGlProcAddress;
-            _glInterface = GRGlInterface.CreateOpenGl(_getProcAddress)
-                ?? throw new InvalidOperationException("Skia framebuffer overlay could not create an OpenGL function interface.");
-            _context = GRContext.CreateGl(_glInterface)
-                ?? throw new InvalidOperationException("Skia framebuffer overlay could not create a GRContext for the current Raylib OpenGL context.");
+            (_glInterface, _context) = RaylibSkiaGlContext.Create("framebuffer overlay");
             Log.Info(in LogChannels.Presentation, "GPU Accelerated: True (Raylib Skia direct framebuffer overlay)");
         }
 
@@ -121,22 +115,5 @@ namespace Ludots.Adapter.Raylib
             _width = width;
             _height = height;
         }
-
-        private static IntPtr ResolveGlProcAddress(string name)
-        {
-            IntPtr proc = WglGetProcAddress(name);
-            if (proc != IntPtr.Zero && proc.ToInt64() is not 1 and not 2 and not 3 and not -1)
-            {
-                return proc;
-            }
-
-            return NativeLibrary.TryLoad("opengl32.dll", out IntPtr module) &&
-                NativeLibrary.TryGetExport(module, name, out proc)
-                    ? proc
-                    : IntPtr.Zero;
-        }
-
-        [DllImport("opengl32.dll", EntryPoint = "wglGetProcAddress", CharSet = CharSet.Ansi, ExactSpelling = true)]
-        private static extern IntPtr WglGetProcAddress(string procName);
     }
 }

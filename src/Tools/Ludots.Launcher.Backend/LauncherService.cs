@@ -12,6 +12,7 @@ namespace Ludots.Launcher.Backend;
 public sealed class LauncherService
 {
     private const int LaunchGraphSchemaVersion = 1;
+    private const string RuntimeTargetFramework = "net9.0";
     private static readonly JsonSerializerOptions BootstrapJsonWriteOptions = new() { WriteIndented = true };
     private static readonly JsonSerializerOptions GraphJsonWriteOptions = new()
     {
@@ -20,11 +21,17 @@ public sealed class LauncherService
     };
 
     private sealed record ActiveLaunchProcessRecord(
+        string Id,
+        string ProcessRole,
         int Pid,
         long StartedAtUtcTicks,
-        string AdapterId,
         string AppAssemblyPath,
         string BootstrapPath);
+
+    private sealed record ActiveLaunchGroupRecord(
+        string LaunchId,
+        string AdapterId,
+        IReadOnlyList<ActiveLaunchProcessRecord> Processes);
 
     private readonly string _repoRoot;
     private readonly LauncherConfigService _configService;
@@ -139,6 +146,7 @@ public sealed class LauncherService
         }
 
         var config = LoadRepoConfig();
+        var existing = config.Bindings.Find(binding => string.Equals(binding.Name, name, StringComparison.OrdinalIgnoreCase));
         config.Bindings.RemoveAll(binding => string.Equals(binding.Name, name, StringComparison.OrdinalIgnoreCase));
         config.Bindings.Add(new LauncherBinding
         {
@@ -147,7 +155,8 @@ public sealed class LauncherService
             {
                 Type = targetType.Trim(),
                 Value = targetValue.Trim(),
-                ProjectPath = string.IsNullOrWhiteSpace(projectPath) ? null : projectPath.Trim()
+                ProjectPath = string.IsNullOrWhiteSpace(projectPath) ? null : projectPath.Trim(),
+                Args = existing?.Target.Args
             }
         });
         SaveRepoConfig(config);
@@ -215,6 +224,9 @@ public sealed class LauncherService
             throw new InvalidOperationException("At least one selector is required to save a preset.");
         }
 
+        LauncherProcessGroupDefinition? existingProcessGroup = presetDocument.Presets
+            .FirstOrDefault(item => string.Equals(item.Id, resolvedPresetId, StringComparison.OrdinalIgnoreCase))
+            ?.ProcessGroup;
         presetDocument.Presets.RemoveAll(item => string.Equals(item.Id, resolvedPresetId, StringComparison.OrdinalIgnoreCase));
         presetDocument.Presets.Add(new LauncherPresetDefinition
         {
@@ -222,7 +234,8 @@ public sealed class LauncherService
             Name = name.Trim(),
             Selectors = selectorList,
             AdapterId = string.IsNullOrWhiteSpace(adapterId) ? null : adapterId.Trim().ToLowerInvariant(),
-            BuildMode = buildMode.ToString().ToLowerInvariant()
+            BuildMode = buildMode.ToString().ToLowerInvariant(),
+            ProcessGroup = existingProcessGroup
         });
         SavePresets(presetDocument);
 
@@ -286,15 +299,34 @@ public sealed class LauncherService
         IEnumerable<string> selectors,
         string? adapterId = null,
         LauncherBuildMode buildMode = LauncherBuildMode.Always,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        string? browserProviderOverride = null)
     {
         var resolvedSelectors = selectors
             .Where(selector => !string.IsNullOrWhiteSpace(selector))
             .ToList();
         var config = LoadConfig();
-        var resolveResult = ResolvePlan(resolvedSelectors, adapterId, buildMode, config, BuildCatalog(config), LoadPresets());
+        var resolveResult = ResolvePlan(
+            resolvedSelectors,
+            adapterId,
+            buildMode,
+            config,
+            BuildCatalog(config),
+            LoadPresets(),
+            browserProviderOverride);
         WriteLaunchGraphDocument(resolveResult.Plan);
         return await BuildPlanRuntimeAsync(resolveResult.Plan, config, ct);
+    }
+
+    /// <summary>
+    /// 与 BuildExecutableTargetAsync 的 Never 语义对齐：预构建布局（玩家发行包）跳过 app 编译，
+    /// 避免玩家机需要 .NET SDK。
+    /// </summary>
+    private static bool ShouldSkipAppBuild(LauncherLaunchPlan plan)
+    {
+        return plan.BuildMode == LauncherBuildMode.Never.ToString().ToLowerInvariant() &&
+               !string.IsNullOrWhiteSpace(plan.AppAssemblyPath) &&
+               File.Exists(plan.AppAssemblyPath);
     }
 
     public async Task<LauncherBuildResult> BuildAppAsync(string platformId)
@@ -382,19 +414,73 @@ public sealed class LauncherService
             throw new ArgumentNullException(nameof(plan));
         }
 
+        if (plan.IsExecutableTarget)
+        {
+            throw new InvalidOperationException("Executable target plans do not write a runtime bootstrap.");
+        }
+
         return WriteRuntimeBootstrap(plan);
+    }
+
+    public LauncherResolvedProcessGroup ResolveProcessGroup(
+        IEnumerable<string> selectors,
+        LauncherBuildMode buildMode = LauncherBuildMode.Auto)
+    {
+        var resolvedSelectors = selectors
+            .Where(selector => !string.IsNullOrWhiteSpace(selector))
+            .Select(selector => selector.Trim())
+            .ToList();
+        var config = LoadConfig();
+        var presets = LoadPresets();
+        LauncherPresetDefinition preset = RequireDirectProcessGroupPreset(resolvedSelectors, presets);
+        var resolveResult = ResolvePlan(
+            resolvedSelectors,
+            preset.AdapterId,
+            buildMode,
+            config,
+            BuildCatalog(config),
+            presets);
+        return LauncherNetworkProcessGroupResolver.Resolve(
+            _repoRoot,
+            preset.Id,
+            preset.ProcessGroup!,
+            resolveResult.Plan);
+    }
+
+    public LauncherProcessGroupArtifacts WriteProcessGroupArtifacts(
+        IEnumerable<string> selectors,
+        LauncherBuildMode buildMode = LauncherBuildMode.Auto)
+    {
+        return new LauncherNetworkRoleArtifactGenerator().Generate(
+            ResolveProcessGroup(selectors, buildMode));
     }
 
     public async Task<LauncherLaunchResult> LaunchAsync(
         IEnumerable<string> selectors,
         string? adapterId = null,
-        LauncherBuildMode buildMode = LauncherBuildMode.Auto)
+        LauncherBuildMode buildMode = LauncherBuildMode.Auto,
+        string? browserProviderOverride = null)
     {
         var resolvedSelectors = selectors
             .Where(selector => !string.IsNullOrWhiteSpace(selector))
             .ToList();
         var config = LoadConfig();
-        var resolveResult = ResolvePlan(resolvedSelectors, adapterId, buildMode, config, BuildCatalog(config), LoadPresets());
+        var presets = LoadPresets();
+        LauncherPresetDefinition? processGroupPreset = FindDirectProcessGroupPreset(resolvedSelectors, presets);
+        EnsureProcessGroupsAreLaunchedDirectly(resolvedSelectors, presets, processGroupPreset);
+        var resolveResult = ResolvePlan(
+            resolvedSelectors,
+            processGroupPreset?.AdapterId ?? adapterId,
+            buildMode,
+            config,
+            BuildCatalog(config),
+            presets,
+            browserProviderOverride);
+        if (resolveResult.Plan.IsExecutableTarget)
+        {
+            return await LaunchExecutableTargetAsync(resolveResult.Plan, config);
+        }
+
         var buildResults = await BuildPlanRuntimeAsync(resolveResult.Plan, config, CancellationToken.None);
         var failedModBuild = buildResults.FirstOrDefault(result => !result.Ok);
         if (failedModBuild != null)
@@ -402,37 +488,302 @@ public sealed class LauncherService
             return new LauncherLaunchResult(false, failedModBuild.Output, -1, string.Empty, string.Empty, resolveResult.Plan);
         }
 
-        var appBuild = await BuildAppAsync(resolveResult.Plan.AdapterId);
+        if (processGroupPreset != null)
+        {
+            LauncherResolvedProcessGroup group = LauncherNetworkProcessGroupResolver.Resolve(
+                _repoRoot,
+                processGroupPreset.Id,
+                processGroupPreset.ProcessGroup!,
+                resolveResult.Plan);
+            IReadOnlyList<LauncherBuildResult> appBuilds = await BuildProcessGroupApplicationsAsync(group);
+            LauncherBuildResult? failedAppBuild = appBuilds.FirstOrDefault(result => !result.Ok);
+            if (failedAppBuild != null)
+            {
+                return new LauncherLaunchResult(false, failedAppBuild.Output, -1, string.Empty, string.Empty, resolveResult.Plan);
+            }
+
+            ReplacePreviousActiveLaunch(resolveResult.Plan.AdapterId);
+            var artifactGenerator = new LauncherNetworkRoleArtifactGenerator();
+            artifactGenerator.PrepareCredentialsForLaunch(group);
+            LauncherProcessGroupArtifacts artifacts = artifactGenerator.Generate(group);
+            return await StartProcessGroupAsync(resolveResult.Plan, artifacts);
+        }
+
+        var appBuild = ShouldSkipAppBuild(resolveResult.Plan)
+            ? new LauncherBuildResult(resolveResult.Plan.AdapterId, true, 0, "App build skipped by request; using prebuilt assembly.")
+            : await BuildAppAsync(resolveResult.Plan.AdapterId);
         if (!appBuild.Ok)
         {
             return new LauncherLaunchResult(false, appBuild.Output, -1, string.Empty, string.Empty, resolveResult.Plan);
         }
 
         var bootstrapPath = WriteRuntimeBootstrap(resolveResult.Plan);
-        ReplacePreviousActiveProcess(resolveResult.Plan);
-        var startInfo = new ProcessStartInfo(
-            ResolveDotnetCommand(),
-            $"exec --roll-forward Major \"{resolveResult.Plan.AppAssemblyPath}\" \"{bootstrapPath}\"")
+        ReplacePreviousActiveLaunch(resolveResult.Plan.AdapterId);
+        Process process;
+        try
         {
-            WorkingDirectory = resolveResult.Plan.AppOutputDirectory,
-            UseShellExecute = false
-        };
+            process = Process.Start(CreateAppStartInfo(
+                resolveResult.Plan.AppAssemblyPath,
+                resolveResult.Plan.AppOutputDirectory,
+                $"\"{bootstrapPath}\""));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return new LauncherLaunchResult(false, ex.Message, -1, string.Empty, bootstrapPath, resolveResult.Plan);
+        }
 
-        var process = Process.Start(startInfo);
         if (process == null)
         {
             return new LauncherLaunchResult(false, "Failed to start platform process.", -1, string.Empty, bootstrapPath, resolveResult.Plan);
         }
 
-        PersistActiveProcess(resolveResult.Plan, bootstrapPath, process);
-        return new LauncherLaunchResult(true, string.Empty, process.Id, resolveResult.Plan.LaunchUrl, bootstrapPath, resolveResult.Plan);
+        try
+        {
+            var started = new LauncherStartedProcess(
+                "primary",
+                string.Empty,
+                process.Id,
+                resolveResult.Plan.AppAssemblyPath,
+                bootstrapPath);
+            PersistActiveLaunch(
+                resolveResult.Plan.AdapterId,
+                resolveResult.Plan.PlanFingerprint,
+                new[] { CreateActiveProcessRecord(started, process) });
+            return new LauncherLaunchResult(true, string.Empty, process.Id, resolveResult.Plan.LaunchUrl, bootstrapPath, resolveResult.Plan)
+            {
+                Processes = new[] { started }
+            };
+        }
+        catch (Exception exception)
+        {
+            List<string> cleanupFailures = StopOwnedProcesses(new[] { process });
+            if (cleanupFailures.Count == 0)
+            {
+                try
+                {
+                    DeleteActiveProcessRecord(GetActiveProcessRecordPath(resolveResult.Plan.AdapterId));
+                }
+                catch (Exception cleanupException) when (cleanupException is IOException or UnauthorizedAccessException)
+                {
+                    cleanupFailures.Add($"active record cleanup: {cleanupException.Message}");
+                }
+            }
+
+            string error = $"Failed to register launched process: {exception.Message}";
+            if (cleanupFailures.Count > 0)
+            {
+                error += Environment.NewLine + string.Join("; ", cleanupFailures);
+            }
+
+            return new LauncherLaunchResult(false, error, -1, string.Empty, bootstrapPath, resolveResult.Plan);
+        }
+        finally
+        {
+            process.Dispose();
+        }
     }
 
-    public LauncherResolveResult Resolve(IEnumerable<string> selectors, string? adapterId = null, LauncherBuildMode buildMode = LauncherBuildMode.Auto)
+    private async Task<LauncherLaunchResult> LaunchExecutableTargetAsync(LauncherLaunchPlan plan, LauncherConfig config)
+    {
+        var buildResults = await BuildPlanRuntimeAsync(plan, config, CancellationToken.None);
+        var failedBuild = buildResults.FirstOrDefault(result => !result.Ok);
+        if (failedBuild != null)
+        {
+            return new LauncherLaunchResult(false, failedBuild.Output, -1, string.Empty, string.Empty, plan);
+        }
+
+        ReplacePreviousActiveLaunch(plan.AdapterId);
+        Process process;
+        try
+        {
+            process = Process.Start(CreateAppStartInfo(
+                plan.AppAssemblyPath,
+                plan.AppOutputDirectory,
+                BuildExecutableTargetArguments(plan)));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return new LauncherLaunchResult(false, ex.Message, -1, string.Empty, string.Empty, plan);
+        }
+
+        if (process == null)
+        {
+            return new LauncherLaunchResult(false, "Failed to start executable target process.", -1, string.Empty, string.Empty, plan);
+        }
+
+        var started = new LauncherStartedProcess(
+            "primary",
+            string.Empty,
+            process.Id,
+            plan.AppAssemblyPath,
+            string.Empty);
+        PersistActiveLaunch(
+            plan.AdapterId,
+            plan.PlanFingerprint,
+            new[] { CreateActiveProcessRecord(started, process) });
+        return new LauncherLaunchResult(true, string.Empty, process.Id, string.Empty, string.Empty, plan)
+        {
+            Processes = new[] { started }
+        };
+    }
+
+    public async Task<LauncherExecutableTargetRun> ExecuteExecutableTargetAsync(LauncherLaunchPlan plan, CancellationToken ct = default)
+    {
+        if (plan == null)
+        {
+            throw new ArgumentNullException(nameof(plan));
+        }
+
+        if (!plan.IsExecutableTarget)
+        {
+            throw new InvalidOperationException("Plan is not an executable target plan.");
+        }
+
+        ct.ThrowIfCancellationRequested();
+        var (runnerFileName, runnerArguments) = BuildAppRunnerCommand(
+            plan.AppAssemblyPath,
+            BuildExecutableTargetArguments(plan));
+        var run = await RunProcessAsync(
+            runnerFileName,
+            runnerArguments,
+            plan.AppOutputDirectory,
+            timeoutMs: 300_000);
+        return new LauncherExecutableTargetRun($"{runnerFileName} {runnerArguments}", run.ExitCode, run.Output);
+    }
+
+    private static string BuildExecutableTargetArguments(LauncherLaunchPlan plan)
+    {
+        var arguments = new StringBuilder();
+        foreach (var argument in plan.ExecutableArgs ?? Array.Empty<string>())
+        {
+            if (arguments.Length > 0)
+            {
+                arguments.Append(' ');
+            }
+
+            arguments.Append(QuoteProcessArgument(argument));
+        }
+
+        return arguments.ToString();
+    }
+
+    /// <summary>
+    /// 自包含发布布局下 apphost 与应用 DLL 同目录：Windows 为 .exe，Unix 为无扩展名同名文件。
+    /// 存在则直启（玩家机无需安装 .NET 运行时）；否则要求可用的 dotnet（开发机布局），缺则显式失败。
+    /// </summary>
+    private static (string FileName, string Arguments) BuildAppRunnerCommand(string appAssemblyPath, string arguments)
+    {
+        var appHostPath = ResolveAppHostPath(appAssemblyPath);
+        if (appHostPath != null)
+        {
+            return (appHostPath, arguments);
+        }
+
+        var dotnet = ResolveDotnetCommand();
+        if (!IsUsableDotnetCommand(dotnet))
+        {
+            throw new InvalidOperationException(
+                $"App host executable not found next to '{appAssemblyPath}', and no usable dotnet is available. " +
+                "Prebuilt/player packages must ship the self-contained apphost next to the app DLL " +
+                "(Windows: *.exe; Linux/macOS: extensionless sibling); " +
+                "dev layouts require a runnable dotnet (launcher must run under dotnet, or dotnet must be on PATH).");
+        }
+
+        var dotnetArguments = string.IsNullOrWhiteSpace(arguments)
+            ? $"exec --roll-forward Major \"{appAssemblyPath}\""
+            : $"exec --roll-forward Major \"{appAssemblyPath}\" {arguments}";
+        return (dotnet, dotnetArguments);
+    }
+
+    private static string? ResolveAppHostPath(string appAssemblyPath)
+    {
+        var directory = Path.GetDirectoryName(appAssemblyPath);
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            return null;
+        }
+
+        var baseName = Path.GetFileNameWithoutExtension(appAssemblyPath);
+        if (OperatingSystem.IsWindows())
+        {
+            var windowsHost = Path.Combine(directory, baseName + ".exe");
+            return File.Exists(windowsHost) ? windowsHost : null;
+        }
+
+        // linux-x64 / osx-* self-contained：apphost 与 DLL 同名、无扩展名
+        var unixHost = Path.Combine(directory, baseName);
+        if (!File.Exists(unixHost))
+        {
+            return null;
+        }
+
+        if (string.Equals(Path.GetFullPath(unixHost), Path.GetFullPath(appAssemblyPath), StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return unixHost;
+    }
+
+    private static bool IsUsableDotnetCommand(string command)
+    {
+        if (!string.Equals(Path.GetFileName(command), "dotnet", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(Path.GetFileName(command), "dotnet.exe", StringComparison.OrdinalIgnoreCase))
+        {
+            return File.Exists(command);
+        }
+
+        // 裸 "dotnet"：必须真的能在 PATH 上找到
+        var pathVariable = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        var extensions = OperatingSystem.IsWindows() ? new[] { ".exe", ".cmd", ".bat", "" } : new[] { "" };
+        return pathVariable.Split(Path.PathSeparator).Any(directory =>
+        {
+            if (string.IsNullOrWhiteSpace(directory))
+            {
+                return false;
+            }
+
+            return extensions.Any(extension =>
+                File.Exists(Path.Combine(directory.Trim(), $"dotnet{extension}")));
+        });
+    }
+
+    private static ProcessStartInfo CreateAppStartInfo(string appAssemblyPath, string workingDirectory, string arguments)
+    {
+        var (fileName, fullArguments) = BuildAppRunnerCommand(appAssemblyPath, arguments);
+        return new ProcessStartInfo(fileName, fullArguments)
+        {
+            WorkingDirectory = workingDirectory,
+            UseShellExecute = false
+        };
+    }
+
+    private static string QuoteProcessArgument(string argument)
+    {
+        if (!argument.Contains(' ') && !argument.Contains('"'))
+        {
+            return argument;
+        }
+
+        return $"\"{argument.Replace("\"", "\\\"")}\"";
+    }
+
+    public LauncherResolveResult Resolve(
+        IEnumerable<string> selectors,
+        string? adapterId = null,
+        LauncherBuildMode buildMode = LauncherBuildMode.Auto,
+        string? browserProviderOverride = null)
     {
         var config = LoadConfig();
         var catalog = BuildCatalog(config);
-        var result = ResolvePlan(selectors.Where(selector => !string.IsNullOrWhiteSpace(selector)).ToList(), adapterId, buildMode, config, catalog, LoadPresets());
+        var result = ResolvePlan(
+            selectors.Where(selector => !string.IsNullOrWhiteSpace(selector)).ToList(),
+            adapterId,
+            buildMode,
+            config,
+            catalog,
+            LoadPresets(),
+            browserProviderOverride);
         WriteLaunchGraphDocument(result.Plan);
         return result;
     }
@@ -510,13 +861,109 @@ public sealed class LauncherService
     private void SavePresets(LauncherPresetDocument presets) => _configService.SavePresets(presets);
     private void SavePreferences(LauncherPreferences preferences) => _configService.SavePreferences(preferences);
 
+    private static LauncherPresetDefinition RequireDirectProcessGroupPreset(
+        IReadOnlyList<string> selectors,
+        LauncherPresetDocument presets)
+    {
+        LauncherPresetDefinition? preset = FindDirectProcessGroupPreset(selectors, presets);
+        EnsureProcessGroupsAreLaunchedDirectly(selectors, presets, preset);
+        return preset ?? throw new InvalidOperationException(
+            "A process group must be selected directly with exactly one preset:<id> selector.");
+    }
+
+    private static LauncherPresetDefinition? FindDirectProcessGroupPreset(
+        IReadOnlyList<string> selectors,
+        LauncherPresetDocument presets)
+    {
+        if (selectors.Count != 1 || !selectors[0].StartsWith("preset:", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        string presetId = selectors[0]["preset:".Length..];
+        LauncherPresetDefinition? preset = presets.Presets.FirstOrDefault(item =>
+            string.Equals(item.Id, presetId, StringComparison.OrdinalIgnoreCase));
+        return preset?.ProcessGroup == null ? null : preset;
+    }
+
+    private static void EnsureProcessGroupsAreLaunchedDirectly(
+        IReadOnlyList<string> selectors,
+        LauncherPresetDocument presets,
+        LauncherPresetDefinition? directProcessGroup)
+    {
+        if (directProcessGroup != null)
+        {
+            return;
+        }
+
+        var stack = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (string selector in selectors)
+        {
+            string? groupId = FindReferencedProcessGroup(selector, presets, stack);
+            if (groupId != null)
+            {
+                throw new InvalidOperationException(
+                    $"Process group preset '{groupId}' must be launched directly as the only selector. " +
+                    "Mixing a process group with bindings, mods, paths, or wrapper presets is not supported.");
+            }
+        }
+    }
+
+    private static string? FindReferencedProcessGroup(
+        string selector,
+        LauncherPresetDocument presets,
+        HashSet<string> stack)
+    {
+        if (!selector.StartsWith("preset:", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        string presetId = selector["preset:".Length..];
+        LauncherPresetDefinition? preset = presets.Presets.FirstOrDefault(item =>
+            string.Equals(item.Id, presetId, StringComparison.OrdinalIgnoreCase));
+        if (preset == null)
+        {
+            return null;
+        }
+
+        if (preset.ProcessGroup != null)
+        {
+            return preset.Id;
+        }
+
+        if (!stack.Add(preset.Id))
+        {
+            throw new InvalidOperationException($"Preset cycle detected at '{preset.Id}'.");
+        }
+
+        try
+        {
+            foreach (string nestedSelector in preset.Selectors)
+            {
+                string? groupId = FindReferencedProcessGroup(nestedSelector, presets, stack);
+                if (groupId != null)
+                {
+                    return groupId;
+                }
+            }
+
+            return null;
+        }
+        finally
+        {
+            stack.Remove(preset.Id);
+        }
+    }
+
     private LauncherResolveResult ResolvePlan(
         IReadOnlyList<string> selectors,
         string? adapterId,
         LauncherBuildMode buildMode,
         LauncherConfig config,
         CatalogIndex catalog,
-        LauncherPresetDocument presetDocument)
+        LauncherPresetDocument presetDocument,
+        string? browserProviderOverride = null)
     {
         if (selectors.Count == 0)
         {
@@ -529,11 +976,24 @@ public sealed class LauncherService
             pair => pair.Value.ToList(),
             StringComparer.OrdinalIgnoreCase);
         var presetStack = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var resolutionState = new PlanResolutionState();
         var roots = new List<CatalogEntry>();
 
         foreach (var selector in selectors)
         {
-            roots.AddRange(ResolveSelector(selector, config, presetDocument, catalog, localByRootPath, localById, presetStack));
+            roots.AddRange(ResolveSelector(selector, config, presetDocument, catalog, localByRootPath, localById, presetStack, resolutionState));
+        }
+
+        if (resolutionState.ExecutableTargets.Count > 0)
+        {
+            if (roots.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    "Executable project bindings cannot be combined with mod selectors in one launch plan.");
+            }
+
+            var executablePlan = BuildExecutableLaunchPlan(selectors, adapterId, buildMode, config, resolutionState);
+            return new LauncherResolveResult(executablePlan, catalog.Entries.Select(entry => entry.Info).ToList());
         }
 
         var ordered = ResolveDependencyClosure(roots, localById);
@@ -560,7 +1020,12 @@ public sealed class LauncherService
             .Select(entry => entry.Info.Id)
             .ToList();
         var diagnostics = BuildPlanDiagnostics(roots, ordered);
-        var browserRuntime = ResolveBrowserRuntimeConfig(selectors, presetDocument, diagnostics, config);
+        var browserRuntime = ResolveBrowserRuntimeConfig(
+            selectors,
+            presetDocument,
+            diagnostics,
+            config,
+            browserProviderOverride);
         var adapterDescriptor = BuildAdapterDescriptor(profile);
         var bootstrapArtifactPath = Path.Combine(profile.OutputDirectory, profile.RuntimeBootstrapFileName);
         var appAssemblyPath = ResolveAppAssemblyPath(profile);
@@ -611,7 +1076,8 @@ public sealed class LauncherService
         CatalogIndex catalog,
         Dictionary<string, CatalogEntry> localByRootPath,
         Dictionary<string, List<CatalogEntry>> localById,
-        HashSet<string> presetStack)
+        HashSet<string> presetStack,
+        PlanResolutionState resolutionState)
     {
         if (string.IsNullOrWhiteSpace(selector))
         {
@@ -626,7 +1092,7 @@ public sealed class LauncherService
                 throw new InvalidOperationException($"Binding not found: {selector}");
             }
 
-            return ResolveBinding(binding, config, catalog, localByRootPath, localById, presetDocument, presetStack);
+            return ResolveBinding(binding, config, catalog, localByRootPath, localById, presetDocument, presetStack, resolutionState);
         }
 
         if (selector.StartsWith("preset:", StringComparison.OrdinalIgnoreCase))
@@ -645,10 +1111,11 @@ public sealed class LauncherService
                     throw new InvalidOperationException($"Preset not found: {presetId}");
                 }
 
+                ApplyPresetArgs(preset, resolutionState);
                 var resolved = new List<CatalogEntry>();
                 foreach (var nestedSelector in preset.Selectors)
                 {
-                    resolved.AddRange(ResolveSelector(nestedSelector, config, presetDocument, catalog, localByRootPath, localById, presetStack));
+                    resolved.AddRange(ResolveSelector(nestedSelector, config, presetDocument, catalog, localByRootPath, localById, presetStack, resolutionState));
                 }
 
                 return resolved;
@@ -701,14 +1168,149 @@ public sealed class LauncherService
         Dictionary<string, CatalogEntry> localByRootPath,
         Dictionary<string, List<CatalogEntry>> localById,
         LauncherPresetDocument presetDocument,
-        HashSet<string> presetStack)
+        HashSet<string> presetStack,
+        PlanResolutionState resolutionState)
     {
         return binding.Target.Type.Trim().ToLowerInvariant() switch
         {
-            "path" => ResolveSelector($"path:{binding.Target.Value}", config, presetDocument, catalog, localByRootPath, localById, presetStack),
-            "modid" => ResolveSelector($"mod:{binding.Target.Value}", config, presetDocument, catalog, localByRootPath, localById, presetStack),
+            "path" => ResolveSelector($"path:{binding.Target.Value}", config, presetDocument, catalog, localByRootPath, localById, presetStack, resolutionState),
+            "modid" => ResolveSelector($"mod:{binding.Target.Value}", config, presetDocument, catalog, localByRootPath, localById, presetStack, resolutionState),
+            "project" => ResolveProjectBinding(binding, resolutionState),
             _ => throw new InvalidOperationException($"Unsupported binding target type: {binding.Target.Type}")
         };
+    }
+
+    private IReadOnlyList<CatalogEntry> ResolveProjectBinding(LauncherBinding binding, PlanResolutionState resolutionState)
+    {
+        var projectPath = ResolveRepoRelativePath(binding.Target.Value);
+        if (!File.Exists(projectPath))
+        {
+            throw new InvalidOperationException($"Executable project target not found: {projectPath}");
+        }
+
+        resolutionState.ExecutableTargets.Add(new ExecutableTargetCandidate(projectPath, binding.Target.Args));
+        return Array.Empty<CatalogEntry>();
+    }
+
+    private static void ApplyPresetArgs(LauncherPresetDefinition preset, PlanResolutionState resolutionState)
+    {
+        if (preset.Args == null)
+        {
+            return;
+        }
+
+        if (resolutionState.PresetArgs != null &&
+            !resolutionState.PresetArgs.SequenceEqual(preset.Args, StringComparer.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Conflicting preset args: [{string.Join(" ", resolutionState.PresetArgs)}] vs [{string.Join(" ", preset.Args)}].");
+        }
+
+        resolutionState.PresetArgs = preset.Args.ToList();
+    }
+
+    private LauncherLaunchPlan BuildExecutableLaunchPlan(
+        IReadOnlyList<string> selectors,
+        string? adapterId,
+        LauncherBuildMode buildMode,
+        LauncherConfig config,
+        PlanResolutionState resolutionState)
+    {
+        var distinctTargets = resolutionState.ExecutableTargets
+            .GroupBy(target => target.ProjectPath, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (distinctTargets.Count > 1)
+        {
+            throw new InvalidOperationException(
+                $"Multiple executable project targets selected: {string.Join(", ", distinctTargets.Select(group => group.Key))}.");
+        }
+
+        var target = distinctTargets[0].First();
+        var resolvedAdapterId = string.IsNullOrWhiteSpace(adapterId)
+            ? ResolveSelectedAdapterId(config, LoadPreferences())
+            : adapterId!.Trim().ToLowerInvariant();
+        var profile = GetPlatformProfile(resolvedAdapterId);
+        var buildModeText = buildMode.ToString().ToLowerInvariant();
+        var executableArgs = NormalizeExecutableArgs(resolutionState.PresetArgs ?? target.BindingArgs);
+        var outputDirectory = ResolveExecutableOutputDirectory(target.ProjectPath);
+        var appAssemblyPath = ResolveExecutableAssemblyPath(target.ProjectPath, outputDirectory);
+        var adapterDescriptor = new LauncherAdapterDescriptor(
+            profile.Id,
+            profile.Name,
+            string.Equals(profile.Id, LauncherPlatformIds.Web, StringComparison.OrdinalIgnoreCase) ? "web" : "desktop",
+            "dotnet",
+            "none",
+            target.ProjectPath,
+            outputDirectory,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            string.Empty);
+        var graphArtifactPath = ResolveGraphArtifactPath(profile);
+        var generatedAtUtc = DateTimeOffset.UtcNow.ToString("O");
+        var planFingerprint = ComputePlanFingerprint(
+            adapterDescriptor,
+            buildModeText,
+            selectors,
+            Array.Empty<string>(),
+            Array.Empty<string>(),
+            Array.Empty<LauncherPlannedMod>(),
+            "none",
+            string.Empty,
+            graphArtifactPath,
+            outputDirectory,
+            appAssemblyPath,
+            string.Empty,
+            browserRuntime: null,
+            isExecutableTarget: true,
+            executableProjectPath: target.ProjectPath,
+            executableArgs: executableArgs);
+
+        return new LauncherLaunchPlan(
+            profile.Id,
+            buildModeText,
+            selectors,
+            Array.Empty<string>(),
+            Array.Empty<string>(),
+            Array.Empty<LauncherPlannedMod>(),
+            "none",
+            string.Empty,
+            outputDirectory,
+            appAssemblyPath,
+            string.Empty,
+            null,
+            new LauncherPlanDiagnostics(Array.Empty<LauncherResolvedSetting>(), Array.Empty<string>()),
+            adapterDescriptor,
+            LaunchGraphSchemaVersion,
+            generatedAtUtc,
+            planFingerprint,
+            graphArtifactPath,
+            IsExecutableTarget: true,
+            ExecutableProjectPath: target.ProjectPath,
+            ExecutableArgs: executableArgs);
+    }
+
+    private static IReadOnlyList<string> NormalizeExecutableArgs(List<string>? args)
+    {
+        return args == null
+            ? Array.Empty<string>()
+            : args.Where(arg => !string.IsNullOrWhiteSpace(arg)).Select(arg => arg.Trim()).ToList();
+    }
+
+    private static string ResolveExecutableOutputDirectory(string projectPath)
+    {
+        var projectDirectory = Path.GetDirectoryName(projectPath);
+        if (string.IsNullOrWhiteSpace(projectDirectory))
+        {
+            throw new InvalidOperationException($"Executable project path has no directory: {projectPath}");
+        }
+
+        return Path.Combine(projectDirectory, "bin", "Release", RuntimeTargetFramework);
+    }
+
+    private static string ResolveExecutableAssemblyPath(string projectPath, string outputDirectory)
+    {
+        return Path.Combine(outputDirectory, Path.GetFileNameWithoutExtension(projectPath) + ".dll");
     }
 
     private static CatalogEntry ResolveUniqueModEntry(string modId, IReadOnlyDictionary<string, List<CatalogEntry>> byId)
@@ -795,12 +1397,31 @@ public sealed class LauncherService
         IReadOnlyList<string> selectors,
         LauncherPresetDocument presetDocument,
         LauncherPlanDiagnostics diagnostics,
-        LauncherConfig config)
+        LauncherConfig config,
+        string? browserProviderOverride = null)
     {
         BrowserRuntimeConfig? gameConfig = ResolveBrowserRuntimeFromDiagnostics(diagnostics);
         BrowserRuntimeConfig? presetConfig = ResolveBrowserRuntimeFromSelectors(selectors, presetDocument);
         BrowserRuntimeConfig? effective = presetConfig ?? gameConfig;
-        return effective == null ? null : CompleteHostBrowserRuntimeConfig(effective, config);
+        if (effective == null)
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(browserProviderOverride))
+        {
+            effective = CloneBrowserRuntimeConfig(effective);
+            effective.Provider = browserProviderOverride.Trim();
+            // Force host paths to be re-derived from the selected provider registration.
+            effective.ProviderAssemblyPath = string.Empty;
+            effective.ProviderHostTypeName = string.Empty;
+            effective.ProviderProjectPath = string.Empty;
+            effective.RuntimeRootPath = string.Empty;
+            effective.UseCollectibleLoadContext = null;
+            effective.ProcessSharedAssemblyNamePrefixes = Array.Empty<string>();
+        }
+
+        return CompleteHostBrowserRuntimeConfig(effective, config);
     }
 
     private static BrowserRuntimeConfig? ResolveBrowserRuntimeFromDiagnostics(LauncherPlanDiagnostics diagnostics)
@@ -898,6 +1519,15 @@ public sealed class LauncherService
         {
             throw new InvalidOperationException(
                 $"browserRuntime provider '{runtime.Provider}' is not registered in launcher.config.json browserRuntimeProviders.");
+        }
+
+        if (string.Equals(runtime.Provider, "cef", StringComparison.OrdinalIgnoreCase) &&
+            !OperatingSystem.IsWindows())
+        {
+            throw new PlatformNotSupportedException(
+                "browserRuntime provider 'cef' requires Windows (CefSharp.OffScreen.NETCore win-x64). " +
+                $"Current OS '{System.Runtime.InteropServices.RuntimeInformation.OSDescription}' is unsupported. " +
+                "Disable browserRuntime on this host, or register a Linux-capable provider such as Ultralight.");
         }
 
         if (!string.IsNullOrWhiteSpace(provider.ProjectPath))
@@ -1172,7 +1802,7 @@ public sealed class LauncherService
                 LauncherPlatformIds.Raylib,
                 "Raylib",
                 Path.Combine(_repoRoot, "src", "Apps", "Raylib", "Ludots.App.Raylib", "Ludots.App.Raylib.csproj"),
-                Path.Combine(_repoRoot, "src", "Apps", "Raylib", "Ludots.App.Raylib", "bin", "Release", "net8.0"),
+                Path.Combine(_repoRoot, "src", "Apps", "Raylib", "Ludots.App.Raylib", "bin", "Release", RuntimeTargetFramework),
                 string.Empty,
                 string.Empty,
                 string.Empty,
@@ -1181,7 +1811,7 @@ public sealed class LauncherService
                 LauncherPlatformIds.Web,
                 "Web",
                 Path.Combine(_repoRoot, "src", "Apps", "Web", "Ludots.App.Web", "Ludots.App.Web.csproj"),
-                Path.Combine(_repoRoot, "src", "Apps", "Web", "Ludots.App.Web", "bin", "Release", "net8.0"),
+                Path.Combine(_repoRoot, "src", "Apps", "Web", "Ludots.App.Web", "bin", "Release", RuntimeTargetFramework),
                 Path.Combine(_repoRoot, "src", "Client", "Web"),
                 Path.Combine(_repoRoot, "src", "Client", "Web", "dist"),
                 "http://localhost:5200",
@@ -1242,7 +1872,10 @@ public sealed class LauncherService
         string appOutputDirectory,
         string appAssemblyPath,
         string launchUrl,
-        BrowserRuntimeConfig? browserRuntime)
+        BrowserRuntimeConfig? browserRuntime,
+        bool isExecutableTarget = false,
+        string executableProjectPath = "",
+        IReadOnlyList<string>? executableArgs = null)
     {
         var payload = new PlanFingerprintPayload(
             LaunchGraphSchemaVersion,
@@ -1266,7 +1899,10 @@ public sealed class LauncherService
             appOutputDirectory,
             appAssemblyPath,
             launchUrl,
-            browserRuntime);
+            browserRuntime,
+            isExecutableTarget,
+            executableProjectPath,
+            executableArgs?.ToList());
         var json = JsonSerializer.Serialize(payload);
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(json));
         return Convert.ToHexString(hash).ToLowerInvariant();
@@ -1420,6 +2056,10 @@ public sealed class LauncherService
                     names.Add(binding.Name);
                     break;
                 }
+                case "project":
+                {
+                    break;
+                }
             }
         }
 
@@ -1442,9 +2082,18 @@ public sealed class LauncherService
                     config,
                     catalog,
                     presetDocument);
+                if (preset.ProcessGroup != null)
+                {
+                    _ = LauncherNetworkProcessGroupResolver.Resolve(
+                        _repoRoot,
+                        preset.Id,
+                        preset.ProcessGroup,
+                        resolved.Plan);
+                }
+
                 activeModIds.AddRange(resolved.Plan.OrderedModIds);
             }
-            catch
+            catch when (preset.ProcessGroup == null)
             {
             }
 
@@ -1470,9 +2119,75 @@ public sealed class LauncherService
         CancellationToken ct)
     {
         var results = new List<LauncherBuildResult>();
+        if (plan.IsExecutableTarget)
+        {
+            results.Add(await BuildExecutableTargetAsync(plan, ct));
+            return results;
+        }
+
         results.AddRange(await BuildPlannedModsAsync(plan, config, ct));
         results.AddRange(await BuildHostBrowserRuntimeAsync(plan, ct));
         return results;
+    }
+
+    private async Task<IReadOnlyList<LauncherBuildResult>> BuildProcessGroupApplicationsAsync(
+        LauncherResolvedProcessGroup group)
+    {
+        var results = new List<LauncherBuildResult>(group.Applications.Count);
+        foreach (LauncherResolvedProcessApplication application in group.Applications)
+        {
+            var build = await RunDotnetAsync(
+                $"build \"{application.ProjectPath}\" -c Release",
+                _repoRoot,
+                timeoutMs: 300_000);
+            string output = build.Output;
+            if (build.ExitCode == 0 && !File.Exists(application.AssemblyPath))
+            {
+                output += Environment.NewLine +
+                    $"Configured process-group assembly was not produced: {application.AssemblyPath}";
+                results.Add(new LauncherBuildResult(application.Id, false, 1, output));
+                continue;
+            }
+
+            results.Add(new LauncherBuildResult(
+                application.Id,
+                build.ExitCode == 0,
+                build.ExitCode,
+                output));
+        }
+
+        return results;
+    }
+
+    private async Task<LauncherBuildResult> BuildExecutableTargetAsync(LauncherLaunchPlan plan, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var resultId = $"project:{plan.ExecutableProjectPath}";
+        if (plan.BuildMode == LauncherBuildMode.Never.ToString().ToLowerInvariant() && File.Exists(plan.AppAssemblyPath))
+        {
+            return new LauncherBuildResult(resultId, true, 0, "Executable target build skipped by request.");
+        }
+
+        var projectDirectory = Path.GetDirectoryName(plan.ExecutableProjectPath) ?? _repoRoot;
+        var build = await RunDotnetAsync(
+            $"build \"{plan.ExecutableProjectPath}\" -c Release",
+            projectDirectory,
+            timeoutMs: 300_000);
+        if (build.ExitCode != 0)
+        {
+            return new LauncherBuildResult(resultId, false, build.ExitCode, build.Output);
+        }
+
+        if (!File.Exists(plan.AppAssemblyPath))
+        {
+            return new LauncherBuildResult(
+                resultId,
+                false,
+                1,
+                $"{build.Output}{Environment.NewLine}Executable assembly missing after build: {plan.AppAssemblyPath}");
+        }
+
+        return new LauncherBuildResult(resultId, true, 0, build.Output);
     }
 
     private async Task<IReadOnlyList<LauncherBuildResult>> BuildHostBrowserRuntimeAsync(
@@ -1597,6 +2312,41 @@ public sealed class LauncherService
                 }
             }
         }
+        else if (string.Equals(browserRuntime.Provider, "ultralight", StringComparison.OrdinalIgnoreCase))
+        {
+            string[] requiredFiles =
+            {
+                "Ludots.UI.Browser.Ultralight.deps.json",
+                "Ludots.UI.Browser.Ultralight.dll",
+                "UltralightNet.dll",
+                "UltralightNet.Binaries.dll",
+                "UltralightNet.AppCore.dll",
+                "UltralightNet.AppCore.Binaries.dll"
+            };
+
+            foreach (string file in requiredFiles)
+            {
+                string path = Path.Combine(browserRuntime.RuntimeRootPath, file);
+                if (!File.Exists(path))
+                {
+                    message = $"Ultralight browser runtime package is incomplete. Missing: {path}";
+                    return false;
+                }
+            }
+
+            bool hasLinux = File.Exists(Path.Combine(browserRuntime.RuntimeRootPath, "libUltralight.so")) ||
+                            File.Exists(Path.Combine(browserRuntime.RuntimeRootPath, "runtimes", "linux-x64", "native", "libUltralight.so"));
+            bool hasWindows = File.Exists(Path.Combine(browserRuntime.RuntimeRootPath, "Ultralight.dll")) ||
+                              File.Exists(Path.Combine(browserRuntime.RuntimeRootPath, "runtimes", "win-x64", "native", "Ultralight.dll"));
+            bool hasMac = File.Exists(Path.Combine(browserRuntime.RuntimeRootPath, "libUltralight.dylib")) ||
+                          File.Exists(Path.Combine(browserRuntime.RuntimeRootPath, "runtimes", "osx-x64", "native", "libUltralight.dylib"));
+            if (!hasLinux && !hasWindows && !hasMac)
+            {
+                message =
+                    $"Ultralight browser runtime package is incomplete. Missing native Ultralight libraries under '{browserRuntime.RuntimeRootPath}'.";
+                return false;
+            }
+        }
 
         message = string.Empty;
         return true;
@@ -1712,7 +2462,7 @@ public sealed class LauncherService
         var projectContent = $@"<Project Sdk=""Microsoft.NET.Sdk"">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>{RuntimeTargetFramework}</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <OutputPath>bin</OutputPath>
@@ -1779,120 +2529,417 @@ public sealed class LauncherService
         return plan.GraphArtifactPath;
     }
 
-    private void ReplacePreviousActiveProcess(LauncherLaunchPlan plan)
+    private async Task<LauncherLaunchResult> StartProcessGroupAsync(
+        LauncherLaunchPlan plan,
+        LauncherProcessGroupArtifacts artifacts)
     {
-        var recordPath = GetActiveProcessRecordPath(plan.AdapterId);
-        var record = ReadActiveProcessRecord(recordPath);
+        var ownedProcesses = new List<Process>(artifacts.Processes.Count);
+        var activeRecords = new List<ActiveLaunchProcessRecord>(artifacts.Processes.Count);
+        var startedProcesses = new List<LauncherStartedProcess>(artifacts.Processes.Count);
+        string recordPath = GetActiveProcessRecordPath(plan.AdapterId);
+        try
+        {
+            void StartRole(LauncherNetworkRoleArtifact artifact)
+            {
+                if (!File.Exists(artifact.ApplicationAssemblyPath))
+                {
+                    throw new FileNotFoundException(
+                        $"Configured process-group assembly was not found: {artifact.ApplicationAssemblyPath}",
+                        artifact.ApplicationAssemblyPath);
+                }
+
+                var startInfo = new ProcessStartInfo(ResolveDotnetCommand())
+                {
+                    WorkingDirectory = artifact.WorkingDirectory,
+                    UseShellExecute = false
+                };
+                startInfo.ArgumentList.Add("exec");
+                startInfo.ArgumentList.Add("--roll-forward");
+                startInfo.ArgumentList.Add("Major");
+                startInfo.ArgumentList.Add(artifact.ApplicationAssemblyPath);
+                startInfo.ArgumentList.Add(artifact.BootstrapPath);
+                Process process = Process.Start(startInfo)
+                    ?? throw new InvalidOperationException(
+                        $"Failed to start process-group role '{artifact.ProcessId}'.");
+                ownedProcesses.Add(process);
+
+                var started = new LauncherStartedProcess(
+                    artifact.ProcessId,
+                    artifact.ProcessRole,
+                    process.Id,
+                    artifact.ApplicationAssemblyPath,
+                    artifact.BootstrapPath);
+                startedProcesses.Add(started);
+                activeRecords.Add(CreateActiveProcessRecord(started, process));
+                PersistActiveLaunch(plan.AdapterId, artifacts.PresetId, activeRecords);
+            }
+
+            if (artifacts.Topology == LauncherProcessGroupTopologies.LocalAuthoritative)
+            {
+                LauncherNetworkRoleArtifact server = artifacts.Processes[0];
+                StartRole(server);
+                await WaitForProcessGroupReadinessAsync(
+                    artifacts,
+                    ownedProcesses,
+                    serverRuntimeOnly: true);
+                foreach (LauncherNetworkRoleArtifact client in artifacts.Processes.Skip(1))
+                {
+                    StartRole(client);
+                }
+            }
+            else
+            {
+                foreach (LauncherNetworkRoleArtifact process in artifacts.Processes)
+                {
+                    StartRole(process);
+                }
+            }
+
+            await WaitForProcessGroupReadinessAsync(
+                artifacts,
+                ownedProcesses,
+                serverRuntimeOnly: false);
+            new LauncherNetworkRoleArtifactGenerator().DeleteSensitiveBootstrapArtifacts(artifacts);
+
+            LauncherStartedProcess primary = startedProcesses[0];
+            return new LauncherLaunchResult(
+                true,
+                string.Empty,
+                primary.Pid,
+                string.Empty,
+                primary.BootstrapPath,
+                plan)
+            {
+                Processes = startedProcesses
+            };
+        }
+        catch (Exception exception)
+        {
+            var cleanupFailures = StopOwnedProcesses(ownedProcesses);
+            if (cleanupFailures.Count == 0)
+            {
+                try
+                {
+                    DeleteActiveProcessRecord(recordPath);
+                }
+                catch (Exception cleanupException) when (cleanupException is IOException or UnauthorizedAccessException)
+                {
+                    cleanupFailures.Add($"active record cleanup: {cleanupException.Message}");
+                }
+
+            }
+
+            try
+            {
+                new LauncherNetworkRoleArtifactGenerator().DeleteSensitiveBootstrapArtifacts(artifacts);
+            }
+            catch (Exception cleanupException) when (
+                cleanupException is IOException or UnauthorizedAccessException or InvalidOperationException)
+            {
+                cleanupFailures.Add($"sensitive bootstrap cleanup: {cleanupException.Message}");
+            }
+
+            string error = exception.Message;
+            if (cleanupFailures.Count > 0)
+            {
+                error += Environment.NewLine +
+                    $"Process-group rollback could not confirm every role stopped: {string.Join("; ", cleanupFailures)}";
+            }
+
+            return new LauncherLaunchResult(false, error, -1, string.Empty, string.Empty, plan)
+            {
+                Processes = startedProcesses
+            };
+        }
+        finally
+        {
+            foreach (Process process in ownedProcesses)
+            {
+                process.Dispose();
+            }
+        }
+    }
+
+    private static async Task WaitForProcessGroupReadinessAsync(
+        LauncherProcessGroupArtifacts artifacts,
+        IReadOnlyList<Process> ownedProcesses,
+        bool serverRuntimeOnly)
+    {
+        var reader = new LauncherNetworkProcessReadinessReader();
+        var stopwatch = Stopwatch.StartNew();
+        string lastPending = "readiness artifacts have not been written";
+        while (stopwatch.ElapsedMilliseconds < artifacts.ReadinessTimeoutMilliseconds)
+        {
+            for (int index = 0; index < ownedProcesses.Count; index++)
+            {
+                Process process = ownedProcesses[index];
+                if (process.HasExited)
+                {
+                    LauncherNetworkRoleArtifact role = artifacts.Processes[index];
+                    throw new InvalidOperationException(
+                        $"Process-group role '{role.ProcessId}' exited with code {process.ExitCode} before " +
+                        $"{(serverRuntimeOnly ? "server runtime" : "the process group")} became ready.");
+                }
+            }
+
+            if (serverRuntimeOnly)
+            {
+                LauncherNetworkRoleArtifact server = artifacts.Processes[0];
+                if (reader.TryRead(
+                        server.ReadinessArtifactPath,
+                        ownedProcesses[0].StartTime.ToUniversalTime(),
+                        out LauncherNetworkProcessReadinessArtifact readiness) &&
+                    LauncherNetworkProcessReadinessEvaluator.IsServerRuntimeReady(server, readiness))
+                {
+                    return;
+                }
+
+                lastPending = $"server '{server.ProcessId}' has not reported runtimeReady=true";
+            }
+            else
+            {
+                bool allReady = true;
+                for (int index = 0; index < ownedProcesses.Count; index++)
+                {
+                    LauncherNetworkRoleArtifact role = artifacts.Processes[index];
+                    if (!reader.TryRead(
+                            role.ReadinessArtifactPath,
+                            ownedProcesses[index].StartTime.ToUniversalTime(),
+                            out LauncherNetworkProcessReadinessArtifact readiness))
+                    {
+                        allReady = false;
+                        lastPending = $"role '{role.ProcessId}' has not written '{role.ReadinessArtifactPath}'";
+                        break;
+                    }
+
+                    if (!LauncherNetworkProcessReadinessEvaluator.IsGroupReady(
+                            role,
+                            readiness,
+                            artifacts.ClientCount))
+                    {
+                        allReady = false;
+                        lastPending = role.ProcessRole == "authoritativeServer"
+                            ? $"server '{role.ProcessId}' connectedSeatCount={readiness.ConnectedSeatCount}/{artifacts.ClientCount}"
+                            : $"client '{role.ProcessId}' session={readiness.SessionEstablished}, " +
+                              $"replicatedMirrors={readiness.ReplicatedMirrorCount}/{role.MinimumReplicatedMirrorCount}, " +
+                              $"renderableMirrors={readiness.RenderableMirrorCount}/{role.MinimumRenderableMirrorCount}, " +
+                              $"credential={File.Exists(role.CredentialPath)}";
+                        break;
+                    }
+                }
+
+                if (allReady)
+                {
+                    return;
+                }
+            }
+
+            await Task.Delay(artifacts.ReadinessPollIntervalMilliseconds);
+        }
+
+        throw new TimeoutException(
+            $"Process group '{artifacts.PresetId}' timed out after {artifacts.ReadinessTimeoutMilliseconds} ms waiting for " +
+            $"{(serverRuntimeOnly ? "the authoritative server runtime" : "all roles")} readiness: {lastPending}.");
+    }
+
+    private static List<string> StopOwnedProcesses(IEnumerable<Process> processes)
+    {
+        var failures = new List<string>();
+        foreach (Process process in processes.Reverse())
+        {
+            try
+            {
+                if (!process.HasExited)
+                {
+                    process.Kill(entireProcessTree: true);
+                    if (!process.WaitForExit(5000))
+                    {
+                        failures.Add($"pid {process.Id} did not exit within 5 seconds");
+                    }
+                }
+            }
+            catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
+            {
+                failures.Add($"pid {process.Id}: {exception.Message}");
+            }
+        }
+
+        return failures;
+    }
+
+    private void ReplacePreviousActiveLaunch(string adapterId)
+    {
+        string recordPath = GetActiveProcessRecordPath(adapterId);
+        ActiveLaunchGroupRecord? record = ReadActiveLaunchRecord(recordPath);
         if (record == null)
         {
             return;
         }
 
-        if (!PathsEqual(record.AppAssemblyPath, plan.AppAssemblyPath))
+        if (!string.Equals(record.AdapterId, adapterId, StringComparison.OrdinalIgnoreCase))
         {
-            DeleteActiveProcessRecord(recordPath);
-            return;
+            throw new InvalidOperationException(
+                $"Active launch record '{recordPath}' belongs to adapter '{record.AdapterId}', not '{adapterId}'.");
         }
 
+        var failures = new List<string>();
+        foreach (ActiveLaunchProcessRecord owned in record.Processes.Reverse())
+        {
+            try
+            {
+                using Process process = Process.GetProcessById(owned.Pid);
+                if (process.HasExited || !StartTimeMatches(process, owned.StartedAtUtcTicks))
+                {
+                    continue;
+                }
+
+                process.Kill(entireProcessTree: true);
+                if (!process.WaitForExit(5000))
+                {
+                    failures.Add($"{owned.Id} (pid {owned.Pid}) did not exit within 5 seconds");
+                }
+            }
+            catch (ArgumentException)
+            {
+            }
+            catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
+            {
+                failures.Add($"{owned.Id} (pid {owned.Pid}): {exception.Message}");
+            }
+        }
+
+        if (failures.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"Cannot replace active launch '{record.LaunchId}' because its process group was not fully stopped: " +
+                string.Join("; ", failures));
+        }
+
+        DeleteActiveProcessRecord(recordPath);
+    }
+
+    private static ActiveLaunchProcessRecord CreateActiveProcessRecord(
+        LauncherStartedProcess started,
+        Process process)
+    {
+        return new ActiveLaunchProcessRecord(
+            started.Id,
+            started.ProcessRole,
+            started.Pid,
+            process.StartTime.ToUniversalTime().Ticks,
+            Path.GetFullPath(started.AppAssemblyPath),
+            Path.GetFullPath(started.BootstrapPath));
+    }
+
+    private void PersistActiveLaunch(
+        string adapterId,
+        string launchId,
+        IReadOnlyList<ActiveLaunchProcessRecord> processes)
+    {
+        if (processes.Count == 0)
+        {
+            throw new InvalidOperationException("An active launch record must contain at least one process.");
+        }
+
+        var record = new ActiveLaunchGroupRecord(launchId, adapterId, processes.ToArray());
+        string recordPath = GetActiveProcessRecordPath(adapterId);
+        string directory = Path.GetDirectoryName(recordPath)
+            ?? throw new InvalidOperationException($"Active launch record path has no parent directory: {recordPath}");
+        Directory.CreateDirectory(directory);
+        string temporaryPath = Path.Combine(
+            directory,
+            $".{Path.GetFileName(recordPath)}.{Guid.NewGuid():N}.tmp");
         try
         {
-            using var process = Process.GetProcessById(record.Pid);
-            if (process.HasExited || !StartTimeMatches(process, record.StartedAtUtcTicks))
-            {
-                DeleteActiveProcessRecord(recordPath);
-                return;
-            }
-
-            process.Kill(entireProcessTree: true);
-            process.WaitForExit(5000);
-        }
-        catch (ArgumentException)
-        {
-        }
-        catch (InvalidOperationException)
-        {
+            var json = JsonSerializer.Serialize(record, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(temporaryPath, json);
+            File.Move(temporaryPath, recordPath, overwrite: true);
         }
         finally
         {
-            DeleteActiveProcessRecord(recordPath);
-        }
-    }
-
-    private void PersistActiveProcess(LauncherLaunchPlan plan, string bootstrapPath, Process process)
-    {
-        var record = new ActiveLaunchProcessRecord(
-            process.Id,
-            process.StartTime.ToUniversalTime().Ticks,
-            plan.AdapterId,
-            Path.GetFullPath(plan.AppAssemblyPath),
-            Path.GetFullPath(bootstrapPath));
-        var recordPath = GetActiveProcessRecordPath(plan.AdapterId);
-        var directory = Path.GetDirectoryName(recordPath);
-        if (!string.IsNullOrWhiteSpace(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-
-        var json = JsonSerializer.Serialize(record, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(recordPath, json);
-    }
-
-    private static ActiveLaunchProcessRecord? ReadActiveProcessRecord(string path)
-    {
-        try
-        {
-            if (!File.Exists(path))
+            if (File.Exists(temporaryPath))
             {
-                return null;
+                File.Delete(temporaryPath);
             }
-
-            var json = File.ReadAllText(path);
-            return JsonSerializer.Deserialize<ActiveLaunchProcessRecord>(json);
         }
-        catch
+    }
+
+    private static ActiveLaunchGroupRecord? ReadActiveLaunchRecord(string path)
+    {
+        if (!File.Exists(path))
         {
             return null;
         }
+
+        ActiveLaunchGroupRecord record;
+        try
+        {
+            record = JsonSerializer.Deserialize<ActiveLaunchGroupRecord>(
+                    File.ReadAllText(path),
+                    new JsonSerializerOptions
+                    {
+                        UnmappedMemberHandling = System.Text.Json.Serialization.JsonUnmappedMemberHandling.Disallow
+                    })
+                ?? throw new InvalidOperationException("Active launch record deserialized to null.");
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidOperationException(
+                $"Failed to parse active launch record '{path}': {exception.Message}",
+                exception);
+        }
+
+        if (string.IsNullOrWhiteSpace(record.LaunchId) ||
+            string.IsNullOrWhiteSpace(record.AdapterId) ||
+            record.Processes == null ||
+            record.Processes.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"Active launch record '{path}' is incomplete and cannot be replaced safely.");
+        }
+
+        var processIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var pids = new HashSet<int>();
+        foreach (ActiveLaunchProcessRecord process in record.Processes)
+        {
+            if (string.IsNullOrWhiteSpace(process.Id) ||
+                process.Pid <= 0 ||
+                process.StartedAtUtcTicks <= 0 ||
+                string.IsNullOrWhiteSpace(process.AppAssemblyPath) ||
+                string.IsNullOrWhiteSpace(process.BootstrapPath) ||
+                !processIds.Add(process.Id) ||
+                !pids.Add(process.Pid))
+            {
+                throw new InvalidOperationException(
+                    $"Active launch record '{path}' contains an invalid or duplicate process identity.");
+            }
+        }
+
+        return record;
     }
 
     private static void DeleteActiveProcessRecord(string path)
     {
-        try
+        if (File.Exists(path))
         {
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
-        }
-        catch
-        {
+            File.Delete(path);
         }
     }
 
     private static bool StartTimeMatches(Process process, long startedAtUtcTicks)
     {
-        try
-        {
-            return process.StartTime.ToUniversalTime().Ticks == startedAtUtcTicks;
-        }
-        catch
-        {
-            return false;
-        }
+        return process.StartTime.ToUniversalTime().Ticks == startedAtUtcTicks;
     }
 
-    private static string GetActiveProcessRecordPath(string adapterId)
+    internal string GetActiveProcessRecordPath(string adapterId)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(adapterId);
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        var safeAdapterId = string.IsNullOrWhiteSpace(adapterId)
-            ? "default"
-            : string.Concat(adapterId.Where(char.IsLetterOrDigit));
-        if (string.IsNullOrWhiteSpace(safeAdapterId))
-        {
-            safeAdapterId = "default";
-        }
-
-        return Path.Combine(appData, "Ludots", "Launcher", "active-processes", $"{safeAdapterId}.json");
+        string repoIdentity = OperatingSystem.IsWindows() ? _repoRoot.ToUpperInvariant() : _repoRoot;
+        string identity = $"{repoIdentity}\n{adapterId.Trim().ToLowerInvariant()}";
+        byte[] digest = SHA256.HashData(Encoding.UTF8.GetBytes(identity));
+        string key = Convert.ToHexString(digest).ToLowerInvariant();
+        return Path.Combine(appData, "Ludots", "Launcher", "active-processes", $"launch-{key}.json");
     }
 
     private string? ResolveBuildProjectPath(LauncherConfig config, string rootPath, string modId, string preferredProjectPath)
@@ -2399,7 +3446,7 @@ public sealed class LauncherService
 
     private string GetLudotsToolAssemblyPath()
     {
-        return Path.Combine(_repoRoot, "src", "Tools", "Ludots.Tool", "bin", "Release", "net8.0", "Ludots.Tool.dll");
+        return Path.Combine(_repoRoot, "src", "Tools", "Ludots.Tool", "bin", "Release", RuntimeTargetFramework, "Ludots.Tool.dll");
     }
 
     private async Task<(int ExitCode, string Output)> RunLudotsToolAsync(string arguments, int timeoutMs)
@@ -2471,7 +3518,18 @@ public sealed class LauncherService
         string AppOutputDirectory,
         string AppAssemblyPath,
         string LaunchUrl,
-        BrowserRuntimeConfig? BrowserRuntime);
+        BrowserRuntimeConfig? BrowserRuntime,
+        bool IsExecutableTarget,
+        string ExecutableProjectPath,
+        IReadOnlyList<string>? ExecutableArgs);
+
+    private sealed class PlanResolutionState
+    {
+        public List<ExecutableTargetCandidate> ExecutableTargets { get; } = new();
+        public List<string>? PresetArgs { get; set; }
+    }
+
+    private sealed record ExecutableTargetCandidate(string ProjectPath, List<string>? BindingArgs);
 
     private sealed record CatalogEntry(LauncherModInfo Info, ModManifest Manifest);
     private sealed record GameConfigFragment(string Source, string? OwnerModId, bool IsRootSelection, JsonObject Content);

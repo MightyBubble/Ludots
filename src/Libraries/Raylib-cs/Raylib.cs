@@ -259,6 +259,21 @@ namespace Raylib_cs
     }
 
     [StructLayout(LayoutKind.Sequential)]
+    public struct BoundingBox
+    {
+        public Vector3 min;
+        public Vector3 max;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public unsafe struct FilePathList
+    {
+        public uint capacity;
+        public uint count;
+        public IntPtr paths;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
     public struct MaterialMap
     {
         public Texture2D texture;
@@ -296,15 +311,27 @@ namespace Raylib_cs
         public byte* colors;
         public ushort* indices;
 
-        // Animation vertex data
+        // Animation vertex data (raylib 5.5 layout)
         public float* animVertices;
         public float* animNormals;
         public byte* boneIds;
         public float* boneWeights;
+        public RaylibMatrix* boneMatrices;
+        public int boneCount;
 
         // OpenGL identifiers
         public uint vaoId;
         public uint* vboId;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public unsafe struct ModelAnimation
+    {
+        public int boneCount;
+        public int frameCount;
+        public BoneInfo* bones;
+        public Transform** framePoses;
+        public fixed byte name[32];
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -334,6 +361,23 @@ namespace Raylib_cs
         public int boneCount;
         public BoneInfo* bones;
         public Transform* bindPose;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public unsafe struct AudioStream
+    {
+        public void* buffer;
+        public void* processor;
+        public uint sampleRate;
+        public uint sampleSize;
+        public uint channels;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public unsafe struct Sound
+    {
+        public AudioStream stream;
+        public uint frameCount;
     }
 
     public static class Raylib
@@ -375,6 +419,15 @@ namespace Raylib_cs
         public static extern void EndMode3D();
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void BeginScissorMode(int x, int y, int width, int height);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void EndScissorMode();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern unsafe byte* rlReadScreenPixels(int width, int height);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void rlDrawRenderBatchActive();
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
@@ -403,6 +456,9 @@ namespace Raylib_cs
         
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void DrawLine3D(Vector3 startPos, Vector3 endPos, Color color);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void DrawTriangle3D(Vector3 v1, Vector3 v2, Vector3 v3, Color color);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void DrawSphere(Vector3 centerPos, float radius, Color color);
@@ -454,6 +510,16 @@ namespace Raylib_cs
         public static extern bool IsWindowFocused();
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        public static extern bool IsFileDropped();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern FilePathList LoadDroppedFiles();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void UnloadDroppedFiles(FilePathList files);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern Vector2 GetWindowPosition();
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
@@ -469,6 +535,12 @@ namespace Raylib_cs
         public static extern int GetScreenHeight();
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int GetRenderWidth();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int GetRenderHeight();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern float GetMouseWheelMove();
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
@@ -482,6 +554,13 @@ namespace Raylib_cs
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
         public static extern bool IsMouseButtonReleased(MouseButton button);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        public static extern bool IsGamepadAvailable(int gamepad);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr GetGamepadName(int gamepad);
 
         // --- Instancing APIs ---
 
@@ -516,6 +595,9 @@ namespace Raylib_cs
         public static extern Shader LoadShader(string vsFileName, string fsFileName);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Shader LoadShaderFromMemory(string vsCode, string fsCode);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void UnloadShader(Shader shader);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
@@ -539,6 +621,15 @@ namespace Raylib_cs
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void SetShaderValueMatrix(Shader shader, int locIndex, RaylibMatrix mat);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern unsafe void SetShaderValueV(Shader shader, int locIndex, void* value, int uniformType, int count);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlEnableShader(uint id);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern unsafe void rlSetUniformMatrices(int locIndex, RaylibMatrix* matrices, int count);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void DrawMesh(Mesh mesh, Material material, RaylibMatrix transform);
@@ -576,7 +667,10 @@ namespace Raylib_cs
             SHADER_LOC_MAP_CUBEMAP,
             SHADER_LOC_MAP_IRRADIANCE,
             SHADER_LOC_MAP_PREFILTER,
-            SHADER_LOC_MAP_BRDF
+            SHADER_LOC_MAP_BRDF,
+            SHADER_LOC_VERTEX_BONEIDS,
+            SHADER_LOC_VERTEX_BONEWEIGHTS,
+            SHADER_LOC_BONE_MATRICES
         }
 
         public enum MaterialMapIndex
@@ -592,6 +686,24 @@ namespace Raylib_cs
             MATERIAL_MAP_IRRADIANCE,
             MATERIAL_MAP_PREFILTER,
             MATERIAL_MAP_BRDF
+        }
+
+        public enum TextureFilter
+        {
+            TEXTURE_FILTER_POINT = 0,
+            TEXTURE_FILTER_BILINEAR,
+            TEXTURE_FILTER_TRILINEAR,
+            TEXTURE_FILTER_ANISOTROPIC_4X,
+            TEXTURE_FILTER_ANISOTROPIC_8X,
+            TEXTURE_FILTER_ANISOTROPIC_16X
+        }
+
+        public enum TextureWrap
+        {
+            TEXTURE_WRAP_REPEAT = 0,
+            TEXTURE_WRAP_CLAMP,
+            TEXTURE_WRAP_MIRROR_REPEAT,
+            TEXTURE_WRAP_MIRROR_CLAMP
         }
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
@@ -619,6 +731,12 @@ namespace Raylib_cs
         public static extern unsafe void UpdateTextureRec(Texture2D texture, Rectangle rec, void* pixels);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void SetTextureFilter(Texture2D texture, TextureFilter filter);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void SetTextureWrap(Texture2D texture, TextureWrap wrap);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void DrawTexture(Texture2D texture, int posX, int posY, Color tint);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
@@ -638,6 +756,12 @@ namespace Raylib_cs
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation, Color tint);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void BeginShaderMode(Shader shader);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void EndShaderMode();
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void BeginBlendMode(BlendMode mode);
@@ -664,6 +788,18 @@ namespace Raylib_cs
         public static extern void rlEnableBackfaceCulling();
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlBegin(int mode);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlEnd();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlVertex3f(float x, float y, float z);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlColor4ub(byte r, byte g, byte b, byte a);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void rlEnableDepthTest();
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
@@ -684,9 +820,72 @@ namespace Raylib_cs
         public static extern void UnloadModel(Model model);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern BoundingBox GetModelBoundingBox(Model model);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern unsafe ModelAnimation* LoadModelAnimations(string fileName, out int animCount);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern unsafe void UnloadModelAnimations(ModelAnimation* animations, int animCount);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        public static extern bool IsModelAnimationValid(Model model, ModelAnimation anim);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void UpdateModelAnimation(Model model, ModelAnimation anim, int frame);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void UpdateModelAnimationBones(Model model, ModelAnimation anim, int frame);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void DrawModel(Model model, Vector3 position, float scale, Color tint);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void DrawModelEx(Model model, Vector3 position, Vector3 rotationAxis, float rotationAngle, Vector3 scale, Color tint);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void SetMaterialTexture(ref Material material, int mapType, Texture2D texture);
+
+        // --- Audio APIs ---
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void InitAudioDevice();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void CloseAudioDevice();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        public static extern bool IsAudioDeviceReady();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Sound LoadSound(string fileName);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Sound LoadSoundAlias(Sound sourceSound);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void UnloadSound(Sound sound);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void UnloadSoundAlias(Sound alias);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        public static extern bool IsSoundValid(Sound sound);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        public static extern bool IsSoundPlaying(Sound sound);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void PlaySound(Sound sound);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void StopSound(Sound sound);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void SetSoundVolume(Sound sound, float volume);
     }
 }

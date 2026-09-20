@@ -32,6 +32,7 @@ using Ludots.Core.Spatial;
 using Ludots.Core.Vision;
 using Ludots.Core.Vision.Config;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {
@@ -44,12 +45,12 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot("Ludots_Issue590_FogLayers");
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "Vision"));
+                Directory.CreateDirectory(Path.Combine(root, "Vision"));
                 File.WriteAllText(
-                    Path.Combine(root, "Configs", "config_catalog.json"),
+                    Path.Combine(root, "config_catalog.json"),
                     @"[{ ""Path"": ""Vision/fog_layers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
                 File.WriteAllText(
-                    Path.Combine(root, "Configs", "Vision", "fog_layers.json"),
+                    Path.Combine(root, "Vision", "fog_layers.json"),
                     @"[
   { ""id"": ""ground"", ""cellSizeCm"": 100, ""updateHz"": 10 },
   { ""id"": ""detection"", ""cellSizeCm"": 125, ""updateHz"": 5 }
@@ -137,7 +138,8 @@ namespace Ludots.Tests.GAS
                 {
                     Op = (ushort)GraphNodeOp.InvokeBuiltin,
                     Imm = (int)BuiltinHandlerId.RevealArea
-                }
+                },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 }
             ], GraphKind.Effect);
             programs.Register(decayGraphId,
             [
@@ -145,7 +147,8 @@ namespace Ludots.Tests.GAS
                 {
                     Op = (ushort)GraphNodeOp.InvokeBuiltin,
                     Imm = (int)BuiltinHandlerId.DecayRevealArea
-                }
+                },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 }
             ], GraphKind.Effect);
 
             var behavior = new EffectPhaseGraphBindings();
@@ -165,7 +168,7 @@ namespace Ludots.Tests.GAS
                 programs,
                 presetTypes,
                 builtinHandlers,
-                GasGraphOpHandlerTable.Instance,
+                new GasGraphOpHandlerTable(),
                 templates);
             var runtime = new BuiltinHandlerExecutionContext
             {
@@ -183,7 +186,7 @@ namespace Ludots.Tests.GAS
                 EffectPhaseId.OnApply,
                 behavior,
                 EffectPresetType.None,
-                effectTagId: 0,
+                effectCategoryId: 0,
                 effectTemplateId: templateId,
                 builtinRuntime: runtime);
 
@@ -201,7 +204,7 @@ namespace Ludots.Tests.GAS
                 EffectPhaseId.OnRemove,
                 behavior,
                 EffectPresetType.None,
-                effectTagId: 0,
+                effectCategoryId: 0,
                 effectTemplateId: templateId,
                 builtinRuntime: runtime);
 
@@ -218,12 +221,12 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot("Ludots_Issue590_RevealAreaEffect");
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
                 File.WriteAllText(
-                    Path.Combine(root, "Configs", "config_catalog.json"),
+                    Path.Combine(root, "config_catalog.json"),
                     @"[{ ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
                 File.WriteAllText(
-                    Path.Combine(root, "Configs", "GAS", "effects.json"),
+                    Path.Combine(root, "GAS", "effects.json"),
                     @"[
   {
     ""id"": ""hero_reveal"",
@@ -291,12 +294,12 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot("Ludots_Issue590_RevealAreaMissingLayer");
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
                 File.WriteAllText(
-                    Path.Combine(root, "Configs", "config_catalog.json"),
+                    Path.Combine(root, "config_catalog.json"),
                     @"[{ ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
                 File.WriteAllText(
-                    Path.Combine(root, "Configs", "GAS", "effects.json"),
+                    Path.Combine(root, "GAS", "effects.json"),
                     @"[
   {
     ""id"": ""hero_reveal"",
@@ -370,21 +373,29 @@ namespace Ludots.Tests.GAS
                 new GraphProgramRegistry(),
                 presetTypes,
                 builtinHandlers,
-                GasGraphOpHandlerTable.Instance,
+                new GasGraphOpHandlerTable(),
                 templates);
             var runtime = new BuiltinHandlerExecutionContext { Relationships = relationships };
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = captor,
+                Target = captive,
+                TargetContext = Entity.Null
+            };
 
+            EffectPhaseGraphBindings relationBehavior = default;
             executor.ExecutePhase(
                 world,
                 new GasGraphRuntimeApi(world, null, null, null),
-                captor,
-                captive,
-                Entity.Null,
+                context.Source,
+                context.Target,
+                context.TargetContext,
                 default,
                 EffectPhaseId.OnApply,
-                default,
+                in relationBehavior,
                 EffectPresetType.Relation,
-                effectTagId: 0,
+                effectCategoryId: 0,
                 effectTemplateId: templateId,
                 builtinRuntime: runtime);
 
@@ -397,12 +408,12 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot("Ludots_Issue590_RelationEnsureLink");
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
                 File.WriteAllText(
-                    Path.Combine(root, "Configs", "config_catalog.json"),
+                    Path.Combine(root, "config_catalog.json"),
                     @"[{ ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
                 File.WriteAllText(
-                    Path.Combine(root, "Configs", "GAS", "effects.json"),
+                    Path.Combine(root, "GAS", "effects.json"),
                     @"[
   {
     ""id"": ""capture_link"",
@@ -513,7 +524,6 @@ namespace Ludots.Tests.GAS
             var commands = new FanOutCommandBuffer(capacity: 4);
             var budget = new RootBudgetTable(16);
             Entity[] buffer = new Entity[4];
-            int dropped = 0;
 
             TargetResolverFanOutHelper.CollectFanOutTargets(
                 world,
@@ -524,8 +534,7 @@ namespace Ludots.Tests.GAS
                 service,
                 budget,
                 commands,
-                buffer,
-                ref dropped);
+                buffer);
 
             var queue = new EffectRequestQueue();
             TargetResolverFanOutHelper.PublishFanOutCommands(commands, queue);
@@ -558,7 +567,6 @@ namespace Ludots.Tests.GAS
             Entity[] candidates = { firstTarget, secondTarget };
             var commands = new FanOutCommandBuffer(capacity: 1);
             var budget = new RootBudgetTable(16);
-            int dropped = 0;
 
             InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
                 TargetResolverFanOutHelper.ValidateAndCollect(
@@ -570,8 +578,7 @@ namespace Ludots.Tests.GAS
                     candidates,
                     candidates.Length,
                     budget,
-                    commands,
-                    ref dropped))!;
+                    commands))!;
 
             Assert.That(error.Message, Does.StartWith(TargetResolverFanOutHelper.CommandCapacityExceededError));
             Assert.That(commands, Has.Count.EqualTo(1));
@@ -590,7 +597,8 @@ namespace Ludots.Tests.GAS
                 stream,
                 new GameSession(),
                 gasEvents,
-                new PresentationOwnerChangeBuffer(8));
+                new PresentationOwnerChangeBuffer(8),
+                enabled: true);
             Entity actor = world.Create();
             Entity target = world.Create();
             gasEvents.Publish(new GasPresentationEvent { Kind = GasPresentationEventKind.CastStarted, Actor = actor, Target = target, AbilitySlot = 1, AbilityId = 11 });

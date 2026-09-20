@@ -1,0 +1,5 @@
+namespace PresenterBlacksmithScatterHudTextBenchmarkEntryMod;
+
+public sealed class PresenterBlacksmithScatterHudTextBenchmarkEntryModEntry
+{
+}

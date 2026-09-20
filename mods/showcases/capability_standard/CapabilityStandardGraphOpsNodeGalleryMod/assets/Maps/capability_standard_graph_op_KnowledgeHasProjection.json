@@ -1,0 +1,91 @@
+{
+  "Id": "capability_standard_graph_op_KnowledgeHasProjection",
+  "Tags": [
+    "showcase",
+    "capability-standard",
+    "gas",
+    "graph-ops",
+    "per-op"
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.GraphOpsGallery",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "DistanceCm": 2600,
+    "Pitch": 75,
+    "Yaw": 180,
+    "FovYDeg": 50
+  },
+  "Entities": [
+    {
+      "InstanceId": "viewer",
+      "Template": "GraphOps.Caster",
+      "Overrides": {
+        "Name": {
+          "Value": "观众"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": -200,
+            "Y": 0
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "caster",
+      "Template": "GraphOps.Ally",
+      "Overrides": {
+        "Name": {
+          "Value": "陌生人"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 150,
+            "Y": 300
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "target",
+      "Template": "GraphOps.Target",
+      "Overrides": {
+        "Name": {
+          "Value": "木桩"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 400,
+            "Y": 0
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        }
+      }
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "caster"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "target"
+    }
+  ]
+}

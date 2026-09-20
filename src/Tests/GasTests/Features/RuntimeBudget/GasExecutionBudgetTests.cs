@@ -84,6 +84,16 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
         }
 
         [Test]
+        public void GasRuntimeCapacity_RequiresEffectRequestQueueCapacityAtOrAboveEngineFloor()
+        {
+            var config = CreateValidRuntimeCapacity();
+            config.EffectRequestQueueCapacity = GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME - 1;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(config.Validate)!;
+            Assert.That(ex.Message, Does.Contain("effectRequestQueueCapacity"));
+        }
+
+        [Test]
         public void GasRuntimeCapacity_RequiresPositiveOrderAdmissionRejectionCapacity()
         {
             var config = CreateValidRuntimeCapacity();
@@ -176,10 +186,20 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
         }
 
         [Test]
+        public void GasRuntimeCapacity_RequiresPositiveAttachmentPositionSyncScratchCapacity()
+        {
+            var config = CreateValidRuntimeCapacity();
+            config.AttachmentPositionSyncScratchCapacity = 0;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(config.Validate)!;
+            Assert.That(ex.Message, Does.Contain("attachmentPositionSyncScratchCapacity"));
+        }
+
+        [Test]
         public void DefaultGameConfig_GasRuntimeCapacity_ValidatesAdmissionResultHeadroom()
         {
             string repoRoot = FindRepoRoot();
-            string configPath = Path.Combine(repoRoot, "assets", "Configs", "game.json");
+            string configPath = Path.Combine(repoRoot, "assets", "game.json");
             string json = File.ReadAllText(configPath);
             GameConfig config = JsonSerializer.Deserialize<GameConfig>(
                 json,
@@ -461,7 +481,8 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 clock,
                 new GasConditionRegistry(),
                 snapshotCapacity: 32,
-                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)
+                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry())
             {
                 MaxWorkUnitsPerSlice = 3,
             };
@@ -506,7 +527,8 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 new DiscreteClock(),
                 new GasConditionRegistry(),
                 snapshotCapacity: 4,
-                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)
+                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry())
             {
                 MaxWorkUnitsPerSlice = 1,
             };
@@ -678,6 +700,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
         [Test]
         public void EffectLifetime_ResetSlice_AfterExternalCommit_CompletesCommittedCleanup()
         {
+            var registry = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry(64);
             using var world = World.Create();
             Entity source = world.Create();
             Entity target = world.Create(new ActiveEffectContainer());
@@ -698,7 +721,8 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 new DiscreteClock(),
                 new GasConditionRegistry(),
                 snapshotCapacity: 4,
-                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)
+                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry())
             {
                 MaxWorkUnitsPerSlice = 2,
             };
@@ -708,12 +732,13 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
 
             Assert.That(world.IsAlive(effect), Is.False);
             Assert.That(world.Get<ActiveEffectContainer>(target).Count, Is.Zero);
-            Assert.That(world.Has<AttributeAggregateDirty>(target), Is.True);
+            Assert.That(registry.Contains(target), Is.True);
         }
 
         [Test]
         public void RealtimePacemaker_BudgetFuse_AfterLifetimeCommit_ResetsWithoutPartialCleanup()
         {
+            var registry = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry(64);
             float fixedDeltaBefore = Time.FixedDeltaTime;
             try
             {
@@ -742,7 +767,8 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                     lifetimeSnapshotCapacity: 4,
                     fanOutCommandCapacity: 4,
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                    maxWorkUnitsPerSlice: 2);
+                    maxWorkUnitsPerSlice: 2,
+                    aggregateDirty: registry);
                 var systems = new Dictionary<SystemGroup, List<ISystem<float>>>
                 {
                     [SystemGroup.EffectProcessing] = new List<ISystem<float>> { loop },
@@ -760,7 +786,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 Assert.That(pacemaker.IsBudgetFused, Is.True);
                 Assert.That(world.IsAlive(effect), Is.False);
                 Assert.That(world.Get<ActiveEffectContainer>(target).Count, Is.Zero);
-                Assert.That(world.Has<AttributeAggregateDirty>(target), Is.True);
+                Assert.That(registry.Contains(target), Is.True);
             }
             finally
             {
@@ -861,7 +887,8 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 new DiscreteClock(),
                 new GasConditionRegistry(),
                 snapshotCapacity: 5,
-                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME);
+                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry());
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
                 system.UpdateSlice(0f, int.MaxValue))!;
@@ -873,6 +900,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
         [Test]
         public void EffectProcessingLoop_AllStagesShareOneDeterministicWorkBudget()
         {
+            var registry = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry(64);
             using var world = World.Create();
             var clock = new DiscreteClock();
             var requests = new EffectRequestQueue();
@@ -918,7 +946,8 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                 templates: templates,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                maxWorkUnitsPerSlice: 4);
+                maxWorkUnitsPerSlice: 4,
+                    aggregateDirty: registry);
 
             bool completed;
             bool sawProposal = false;
@@ -949,6 +978,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
         [Test]
         public void EffectProcessingLoop_ExactProposalBudgetBoundary_DoesNotOverrunWhenClosingWindow()
         {
+            var registry = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry(64);
             const int workBudget = 4096;
             const int ordinaryRequestCount = 1364;
             const int ordinaryTemplateId = 1;
@@ -965,7 +995,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
             });
             templates.Register(respondingTemplateId, new EffectTemplateData
             {
-                TagId = respondingTagId,
+                CategoryId = respondingTagId,
                 LifetimeKind = EffectLifetimeKind.Instant,
                 ParticipatesInResponse = true,
             });
@@ -1005,7 +1035,8 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 fanOutCommandCapacity: workBudget,
                 templates: templates,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                maxWorkUnitsPerSlice: workBudget);
+                maxWorkUnitsPerSlice: workBudget,
+                    aggregateDirty: registry);
 
             Assert.That(loop.UpdateSlice(0f, int.MaxValue), Is.False);
             Assert.That(loop.ProposalProcessedLastSlice, Is.EqualTo(workBudget));
@@ -1047,12 +1078,14 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 AbilityExecSnapshotCapacity = 64,
                 EffectLifetimeSnapshotCapacity = 64,
                 EffectFanOutCommandCapacity = 64,
+                EffectRequestQueueCapacity = GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                 OrderQueueCapacity = 64,
                 ResponseChainOrderQueueCapacity = 64,
                 OrderAdmissionResultCapacity = 128,
                 OrderAdmissionRejectionCapacity = 64,
                 OrderTerminalResultCapacity = 64,
                 DeferredTriggerActiveEntityCapacity = 64,
+                DeferredTriggerPerFrameCapacity = GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME,
                 ProjectileCollisionCandidateCapacity = 64,
                 ProjectileRuntimeEntityCapacity = 64,
                 EffectPhaseGraphProgramScratchCapacity = 64,
@@ -1060,6 +1093,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 AbilityExecMaxWorkUnitsPerSlice = 32,
                 EffectProcessingMaxWorkUnitsPerSlice = 32,
                 CommandIntentScratchCapacity = 64,
+                AttachmentPositionSyncScratchCapacity = 64,
             };
         }
 
@@ -1069,7 +1103,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
             while (directory != null)
             {
                 string gitPath = Path.Combine(directory.FullName, ".git");
-                string defaultConfigPath = Path.Combine(directory.FullName, "assets", "Configs", "game.json");
+                string defaultConfigPath = Path.Combine(directory.FullName, "assets", "game.json");
                 if ((File.Exists(gitPath) || Directory.Exists(gitPath)) &&
                     File.Exists(defaultConfigPath) &&
                     Directory.Exists(Path.Combine(directory.FullName, "mods")))

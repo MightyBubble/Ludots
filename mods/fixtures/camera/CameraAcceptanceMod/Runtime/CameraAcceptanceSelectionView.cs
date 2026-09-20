@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Client;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Input.CommandSources;
 
@@ -25,11 +26,9 @@ namespace CameraAcceptanceMod.Runtime
         private static bool TryResolveLocalCommandSourceOwner(World world, Dictionary<string, object> globals, out Entity owner)
         {
             owner = Entity.Null;
-            return globals.TryGetValue(Ludots.Core.Scripting.CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) &&
-                   localObj is Entity local &&
-                   local != Entity.Null &&
-                   world.IsAlive(local) &&
-                   (owner = local) != Entity.Null;
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(globals, out owner) &&
+                   owner != Entity.Null &&
+                   world.IsAlive(owner);
         }
 
         public static string FormatEntityId(Entity entity) => $"#{entity.Id}";

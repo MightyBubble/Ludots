@@ -42,7 +42,7 @@
       "chips": ["PresentationBridge", "ClearPresentationFlags"], "chip_columns": 6 },
 
     { "id": "pvs", "title": "Presentation Systems", "tint": "stone", "x": 90, "y": 1835, "w": 1240, "h": 120,
-      "chips": ["FrameSetup", "WorldToVisualSync", "TerrainHeightSync", "EntityVisualEmit", "PerformerRule", "PerformerRuntime", "PerformerEmit", "ResponseChainDirector"], "chip_columns": 6 }
+      "chips": ["FrameSetup", "WorldToVisualSync", "TerrainHeightSync", "EntityVisualEmit", "PresenterRule", "PresenterRuntime", "PresenterEmit", "ResponseChainDirector"], "chip_columns": 6 }
   ],
 
   "edges": [

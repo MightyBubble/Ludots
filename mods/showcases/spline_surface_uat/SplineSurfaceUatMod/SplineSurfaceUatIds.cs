@@ -7,10 +7,10 @@ namespace SplineSurfaceUatMod
         public const string InstalledKey = "SplineSurfaceUatMod.Installed";
         public const string MapId = "spline_surface_uat";
 
-        public const string RoadPerformerId = "uat_surface_road";
-        public const string RiverPerformerId = "uat_surface_river";
-        public const string LakePerformerId = "uat_surface_lake";
-        public const string RawPerformerId = "uat_surface_raw";
+        public const string RoadPresenterId = "uat_surface_road";
+        public const string RiverPresenterId = "uat_surface_river";
+        public const string LakePresenterId = "uat_surface_lake";
+        public const string RawPresenterId = "uat_surface_raw";
 
         public const int RoadScopeId = 710001;
         public const int RiverScopeId = 710002;

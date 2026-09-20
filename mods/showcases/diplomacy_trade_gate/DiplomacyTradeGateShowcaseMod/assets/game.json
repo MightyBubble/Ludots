@@ -1,4 +1,7 @@
 {
   "startupMapId": "diplomacy_trade_gate_showcase",
-  "startupInputContexts": ["Default_Gameplay", "DiplomacyTradeGate.Controls"]
+  "startupInputContexts": [
+    "Default_Gameplay",
+    "DiplomacyTradeGate.Controls"
+  ]
 }

@@ -1,14 +1,12 @@
 using System;
 using Arch.Core;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
 {
-    /// <summary>
-    /// Thin entry point for GAS Graph VM execution.
-    /// Allocates registers on the stack and delegates to <see cref="GasGraphOpHandlerTable"/>.
-    /// </summary>
     public static class GraphExecutor
     {
         internal static void Execute(
@@ -19,7 +17,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             ReadOnlySpan<GraphInstruction> program,
             IGraphRuntimeApi api)
         {
-            ExecuteCore(world, caster, explicitTarget, targetPosCm, program, api, GraphKind.Effect);
+            ExecuteCore(world, caster, explicitTarget, targetPosCm, program, api, GraphKind.Effect, GraphEntityPreset.None, programs: null);
         }
 
         public static void Execute(
@@ -29,10 +27,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             IntVector2 targetPosCm,
             ReadOnlySpan<GraphInstruction> program,
             IGraphRuntimeApi api,
-            GraphKind kind)
+            GraphKind kind,
+            GasGraphOpHandlerTable? handlers = null,
+            GraphProgramRegistry? programs = null)
         {
             RequireKind(kind, GraphKind.Effect, nameof(Execute));
-            ExecuteCore(world, caster, explicitTarget, targetPosCm, program, api, kind);
+            ExecuteCore(world, caster, explicitTarget, targetPosCm, program, api, kind, GraphEntityPreset.None, handlers, programs);
         }
 
         internal static void Execute(
@@ -54,11 +54,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Execute(world, caster, explicitTarget, targetPosCm, tmp.Slice(0, count), api);
         }
 
-        /// <summary>
-        /// Execute a graph program as a validation check.
-        /// Returns the value of B[0] after execution: true = validation passed, false = rejected.
-        /// Fail-closed: B[0] starts at 0 (reject). The validation graph must explicitly write B[0]=1 to pass.
-        /// </summary>
         internal static bool ExecuteValidation(
             World world,
             Entity caster,
@@ -67,7 +62,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             ReadOnlySpan<GraphInstruction> program,
             IGraphRuntimeApi api)
         {
-            return ExecuteValidationCore(world, caster, explicitTarget, targetPosCm, program, api, GraphKind.Validation);
+            return ExecuteValidationCore(world, caster, explicitTarget, targetPosCm, program, api, GraphKind.Validation, GraphEntityPreset.None, programs: null);
         }
 
         public static bool ExecuteValidation(
@@ -77,15 +72,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             IntVector2 targetPosCm,
             ReadOnlySpan<GraphInstruction> program,
             IGraphRuntimeApi api,
-            GraphKind kind)
+            GraphKind kind,
+            GasGraphOpHandlerTable? handlers = null,
+            GraphProgramRegistry? programs = null)
         {
             RequireKind(kind, GraphKind.Validation, nameof(ExecuteValidation));
-            return ExecuteValidationCore(world, caster, explicitTarget, targetPosCm, program, api, kind);
+            return ExecuteValidationCore(world, caster, explicitTarget, targetPosCm, program, api, kind, GraphEntityPreset.None, handlers, programs);
         }
 
-        /// <summary>
-        /// Execute a graph program and return F[0] as the score output.
-        /// </summary>
         internal static float ExecuteScore(
             World world,
             Entity caster,
@@ -94,7 +88,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             ReadOnlySpan<GraphInstruction> program,
             IGraphRuntimeApi api)
         {
-            return ExecuteScoreCore(world, caster, explicitTarget, targetPosCm, program, api, GraphKind.Score);
+            return ExecuteScoreCore(world, caster, explicitTarget, targetPosCm, program, api, GraphKind.Score, GraphEntityPreset.None, programs: null);
         }
 
         public static float ExecuteScore(
@@ -104,15 +98,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             IntVector2 targetPosCm,
             ReadOnlySpan<GraphInstruction> program,
             IGraphRuntimeApi api,
-            GraphKind kind)
+            GraphKind kind,
+            GasGraphOpHandlerTable? handlers = null,
+            GraphProgramRegistry? programs = null)
         {
             RequireKind(kind, GraphKind.Score, nameof(ExecuteScore));
-            return ExecuteScoreCore(world, caster, explicitTarget, targetPosCm, program, api, kind);
+            return ExecuteScoreCore(world, caster, explicitTarget, targetPosCm, program, api, kind, GraphEntityPreset.None, handlers, programs);
         }
 
-        /// <summary>
-        /// Execute a validation graph from a <see cref="GraphProgramBuffer"/>.
-        /// </summary>
         internal static bool ExecuteValidation(
             World world,
             Entity caster,
@@ -137,10 +130,303 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Entity entity,
             ReadOnlySpan<GraphInstruction> program,
             IGraphRuntimeApi api,
-            GraphKind kind)
+            GraphKind kind,
+            GraphProgramRegistry? programs = null)
         {
             RequireKind(kind, GraphKind.Derived, nameof(ExecuteDerived));
-            ExecuteCore(world, entity, entity, default, program, api, kind);
+            ExecuteCore(world, entity, entity, default, program, api, kind, GraphEntityPreset.None, handlers: null, programs);
+        }
+
+        public static void Execute(
+            ref GraphFrame frame,
+            ReadOnlySpan<GraphInstruction> program,
+            bool programAlreadyValidated = false,
+            GasGraphOpHandlerTable? handlers = null)
+        {
+            GasGraphOpHandlerTable table = handlers ?? GasGraphOpHandlerTable.Instance;
+            if (!programAlreadyValidated)
+            {
+                GraphKindOperationPolicy.RequireAllowed(
+                    frame.Kind,
+                    program,
+                    table,
+                    entrypoint: nameof(GraphExecutor));
+            }
+
+            GraphExecutionState state = frame.CreateState();
+            frame.Api?.BeginEntityQueryExecution();
+            try
+            {
+                if (!TryExecuteGenerated(ref frame, ref state))
+                    GasGraphOpHandlerTable.Execute(ref state, program, table);
+                frame.CopyBackExecutionState(ref state, copyCursor: true);
+            }
+            finally { frame.Api?.EndEntityQueryExecution(); }
+        }
+
+        public static GraphSliceResult ExecuteSlice(
+            ref GraphFrame frame,
+            ReadOnlySpan<GraphInstruction> program,
+            int budgetSteps,
+            bool programAlreadyValidated = false)
+        {
+            if (frame.Kind is not (GraphKind.Script or GraphKind.TriggerGraph))
+            {
+                throw new InvalidOperationException(
+                    $"{GraphKindOperationPolicy.KindMismatchError}: ExecuteSlice 只接受 Script 或 TriggerGraph，收到的种类是「{frame.Kind}」。");
+            }
+
+            if (!programAlreadyValidated)
+            {
+                GraphKindOperationPolicy.RequireAllowed(
+                    frame.Kind,
+                    program,
+                    GasGraphOpHandlerTable.Instance,
+                    entrypoint: nameof(ExecuteSlice));
+            }
+
+            GraphExecutionState state = frame.CreateState();
+            frame.Api?.BeginEntityQueryExecution();
+            try
+            {
+                GraphSliceResult result;
+                if (TryExecuteGeneratedSlice(ref frame, ref state, budgetSteps, out GraphSliceResult generated))
+                    result = generated;
+                else
+                    result = GasGraphOpHandlerTable.ExecuteSlice(
+                        ref state, program, GasGraphOpHandlerTable.Instance, ref frame.Cursor, budgetSteps);
+                frame.CopyBackExecutionState(ref state, copyCursor: false);
+                if (result.Yielded || result.BudgetSuspended)
+                    frame.Cursor.SaveTargets(state.TargetList.Span);
+                else
+                    frame.Cursor.TargetCount = 0;
+                return result;
+            }
+            finally { frame.Api?.EndEntityQueryExecution(); }
+        }
+
+        private static bool TryExecuteGenerated(ref GraphFrame frame, ref GraphExecutionState state)
+        {
+            if (frame.Programs == null || frame.GraphId <= 0)
+            {
+                return false;
+            }
+
+            if (!frame.Programs.TryGetRegistration(frame.GraphId, out GraphProgramRegistration registration) ||
+                registration.GeneratedExecute == null)
+            {
+                return false;
+            }
+
+            registration.GeneratedExecute(ref state);
+            return true;
+        }
+
+        private static bool TryExecuteGeneratedSlice(
+            ref GraphFrame frame,
+            ref GraphExecutionState state,
+            int budgetSteps,
+            out GraphSliceResult result)
+        {
+            result = default;
+            if (frame.Programs == null || frame.GraphId <= 0)
+            {
+                return false;
+            }
+
+            if (!frame.Programs.TryGetRegistration(frame.GraphId, out GraphProgramRegistration registration) ||
+                registration.GeneratedExecuteSlice == null)
+            {
+                return false;
+            }
+
+            result = registration.GeneratedExecuteSlice(ref state, ref frame.Cursor, budgetSteps);
+            return true;
+        }
+
+        public static void ExecuteRegistered(
+            GraphProgramRegistry programs,
+            int graphId,
+            GraphKind expectedKind,
+            ref GraphFrame frame)
+        {
+            ArgumentNullException.ThrowIfNull(programs);
+            programs.RequireHostKind(graphId, expectedKind, "这道执行门");
+            if (frame.Kind != expectedKind)
+            {
+                throw new InvalidOperationException(
+                    $"{GraphKindOperationPolicy.KindMismatchError}: 帧种类是「{frame.Kind}」，登记图 {graphId} 要求「{expectedKind}」。");
+            }
+
+            if (!programs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program) || program.Length == 0)
+            {
+                throw new InvalidOperationException($"Graph program id {graphId} is not registered.");
+            }
+
+            frame.Programs = programs;
+            frame.GraphId = graphId;
+            Execute(ref frame, program, programAlreadyValidated: true);
+        }
+
+        public static GraphSliceResult ExecuteRegisteredSlice(
+            GraphProgramRegistry programs,
+            int graphId,
+            Span<int> ints,
+            Span<byte> bools,
+            Span<int> callStack,
+            ref GraphExecutionCursor cursor,
+            int budgetSteps,
+            World? world = null,
+            Entity caster = default,
+            Entity explicitTarget = default,
+            IGraphRuntimeApi? api = null)
+        {
+            ArgumentNullException.ThrowIfNull(programs);
+            ReadOnlySpan<GraphInstruction> program = programs.RequireProgram(graphId, GraphKind.Script, "切片宿主");
+
+            return ExecuteResolvedRegisteredScriptSlice(
+                programs,
+                program,
+                ints,
+                bools,
+                callStack,
+                ref cursor,
+                budgetSteps,
+                world,
+                caster,
+                explicitTarget,
+                api,
+                graphId);
+        }
+
+        public static GraphSliceResult ExecuteResolvedRegisteredScriptSlice(
+            GraphProgramRegistry programs,
+            ReadOnlySpan<GraphInstruction> program,
+            Span<int> ints,
+            Span<byte> bools,
+            Span<int> callStack,
+            ref GraphExecutionCursor cursor,
+            int budgetSteps,
+            World? world = null,
+            Entity caster = default,
+            Entity explicitTarget = default,
+            IGraphRuntimeApi? api = null,
+            int graphId = 0)
+        {
+            ArgumentNullException.ThrowIfNull(programs);
+            if (program.Length == 0)
+            {
+                throw new InvalidOperationException("Resolved Script program is empty.");
+            }
+
+            Span<float> floats = stackalloc float[GraphVmLimits.MaxFloatRegisters];
+            Span<Entity> entities = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
+            Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+            GraphSliceResult result = ExecuteResolvedRegisteredScriptSlice(
+                programs, program, floats, ints, bools, entities, targets, callStack, ref cursor,
+                budgetSteps, world, caster, explicitTarget, api, graphId);
+            if (!result.Halted)
+            {
+                throw new InvalidOperationException("Resumable Script execution requires caller-owned float, entity, and target register spans.");
+            }
+            return result;
+        }
+
+        public static GraphSliceResult ExecuteResolvedRegisteredScriptSlice(
+            GraphProgramRegistry programs,
+            ReadOnlySpan<GraphInstruction> program,
+            Span<float> floats,
+            Span<int> ints,
+            Span<byte> bools,
+            Span<Entity> entities,
+            Span<Entity> targets,
+            Span<int> callStack,
+            ref GraphExecutionCursor cursor,
+            int budgetSteps,
+            World? world = null,
+            Entity caster = default,
+            Entity explicitTarget = default,
+            IGraphRuntimeApi? api = null,
+            int graphId = 0)
+        {
+            Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
+            GraphFrame frame = GraphFrame.Bind(
+                GraphKind.Script,
+                GraphEntityPreset.None,
+                world,
+                caster,
+                explicitTarget,
+                default,
+                api,
+                programs,
+                floats,
+                ints,
+                bools,
+                entities,
+                targets,
+                intIds,
+                callStack,
+                cursor);
+            frame.GraphId = graphId;
+            GraphSliceResult result = ExecuteSlice(ref frame, program, budgetSteps, programAlreadyValidated: true);
+            cursor = frame.Cursor;
+            return result;
+        }
+
+        public static GraphSliceResult ExecuteScriptSlice(
+            World world,
+            Entity caster,
+            Entity explicitTarget,
+            IntVector2 targetPosCm,
+            ReadOnlySpan<GraphInstruction> program,
+            IGraphRuntimeApi? api,
+            GraphProgramRegistry? programs,
+            Span<float> floats,
+            Span<int> ints,
+            Span<byte> bools,
+            Span<Entity> entities,
+            Span<Entity> targets,
+            Span<int> callStack,
+            ref GraphExecutionCursor cursor,
+            int budgetSteps,
+            GraphKind kind = GraphKind.Script,
+            GraphDebugTrace? debugTrace = null,
+            MapId? mapScope = null,
+            int graphId = 0,
+            GraphEntryPayloadTable? entryPayload = null,
+            GraphEntryPayloadTable? invokeArgs = null)
+        {
+            if (kind is not (GraphKind.Script or GraphKind.TriggerGraph))
+            {
+                throw new InvalidOperationException(
+                    $"{GraphKindOperationPolicy.KindMismatchError}: ExecuteScriptSlice 只接受 Script 或 TriggerGraph，收到的种类是「{kind}」。");
+            }
+            Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
+            GraphFrame frame = GraphFrame.Bind(
+                kind,
+                GraphEntityPreset.None,
+                world,
+                caster,
+                explicitTarget,
+                targetPosCm,
+                api,
+                programs,
+                floats,
+                ints,
+                bools,
+                entities,
+                targets,
+                intIds,
+                callStack,
+                cursor,
+                debugTrace: debugTrace,
+                mapScope: mapScope,
+                entryPayload: entryPayload,
+                invokeArgs: invokeArgs);
+            frame.GraphId = graphId;
+            GraphSliceResult result = ExecuteSlice(ref frame, program, budgetSteps);
+            cursor = frame.Cursor;
+            return result;
         }
 
         private static void RequireKind(GraphKind actual, GraphKind expected, string entrypoint)
@@ -148,7 +434,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             if (actual != expected)
             {
                 throw new InvalidOperationException(
-                    $"Graph {entrypoint} requires kind '{expected}', but received '{actual}'.");
+                    $"{GraphKindOperationPolicy.KindMismatchError}: Graph {entrypoint} requires kind '{expected}', but received '{actual}'.");
             }
         }
 
@@ -159,35 +445,35 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             IntVector2 targetPosCm,
             ReadOnlySpan<GraphInstruction> program,
             IGraphRuntimeApi api,
-            GraphKind kind)
+            GraphKind kind,
+            GraphEntityPreset slot2,
+            GasGraphOpHandlerTable? handlers = null,
+            GraphProgramRegistry? programs = null)
         {
-            GraphKindOperationPolicy.RequireAllowed(kind, program, GasGraphOpHandlerTable.Instance, entrypoint: nameof(GraphExecutor));
             Span<float> f = stackalloc float[GraphVmLimits.MaxFloatRegisters];
             Span<int> i = stackalloc int[GraphVmLimits.MaxIntRegisters];
             Span<byte> b = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
             Span<Entity> e = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
             Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
-            var targetList = new GraphTargetList(targets);
-
-            e[0] = caster;
-            e[1] = explicitTarget;
-
-            var state = new GraphExecutionState
-            {
-                World = world,
-                Caster = caster,
-                ExplicitTarget = explicitTarget,
-                TargetPosCm = targetPosCm,
-                Api = api,
-                F = f,
-                I = i,
-                B = b,
-                E = e,
-                Targets = targets,
-                TargetList = targetList
-            };
-
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
+            Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
+            GraphFrame frame = GraphFrame.Bind(
+                kind,
+                slot2,
+                world,
+                caster,
+                explicitTarget,
+                targetPosCm,
+                api,
+                programs,
+                f,
+                i,
+                b,
+                e,
+                targets,
+                intIds,
+                callStack);
+            Execute(ref frame, program, handlers: handlers);
         }
 
         private static bool ExecuteValidationCore(
@@ -197,40 +483,37 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             IntVector2 targetPosCm,
             ReadOnlySpan<GraphInstruction> program,
             IGraphRuntimeApi api,
-            GraphKind kind)
+            GraphKind kind,
+            GraphEntityPreset slot2,
+            GasGraphOpHandlerTable? handlers = null,
+            GraphProgramRegistry? programs = null)
         {
-            GraphKindOperationPolicy.RequireAllowed(kind, program, GasGraphOpHandlerTable.Instance, entrypoint: nameof(ExecuteValidation));
             Span<float> f = stackalloc float[GraphVmLimits.MaxFloatRegisters];
             Span<int> i = stackalloc int[GraphVmLimits.MaxIntRegisters];
             Span<byte> b = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
             Span<Entity> e = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
             Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
-            var targetList = new GraphTargetList(targets);
-
-            // Fail-closed: B[0] defaults to 0 (reject). Validation graphs must explicitly set B[0]=1 to pass.
+            Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
+            Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
             b[0] = 0;
-
-            e[0] = caster;
-            e[1] = explicitTarget;
-
-            var state = new GraphExecutionState
-            {
-                World = world,
-                Caster = caster,
-                ExplicitTarget = explicitTarget,
-                TargetPosCm = targetPosCm,
-                Api = api,
-                F = f,
-                I = i,
-                B = b,
-                E = e,
-                Targets = targets,
-                TargetList = targetList
-            };
-
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
-
-            return b[0] != 0;
+            GraphFrame frame = GraphFrame.Bind(
+                kind,
+                slot2,
+                world,
+                caster,
+                explicitTarget,
+                targetPosCm,
+                api,
+                programs,
+                f,
+                i,
+                b,
+                e,
+                targets,
+                intIds,
+                callStack);
+            Execute(ref frame, program, handlers: handlers);
+            return frame.B[0] != 0;
         }
 
         private static float ExecuteScoreCore(
@@ -240,36 +523,36 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             IntVector2 targetPosCm,
             ReadOnlySpan<GraphInstruction> program,
             IGraphRuntimeApi api,
-            GraphKind kind)
+            GraphKind kind,
+            GraphEntityPreset slot2,
+            GasGraphOpHandlerTable? handlers = null,
+            GraphProgramRegistry? programs = null)
         {
-            GraphKindOperationPolicy.RequireAllowed(kind, program, GasGraphOpHandlerTable.Instance, entrypoint: nameof(ExecuteScore));
             Span<float> f = stackalloc float[GraphVmLimits.MaxFloatRegisters];
             Span<int> i = stackalloc int[GraphVmLimits.MaxIntRegisters];
             Span<byte> b = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
             Span<Entity> e = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
             Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
-            var targetList = new GraphTargetList(targets);
-
-            e[0] = caster;
-            e[1] = explicitTarget;
-
-            var state = new GraphExecutionState
-            {
-                World = world,
-                Caster = caster,
-                ExplicitTarget = explicitTarget,
-                TargetPosCm = targetPosCm,
-                Api = api,
-                F = f,
-                I = i,
-                B = b,
-                E = e,
-                Targets = targets,
-                TargetList = targetList
-            };
-
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
-            return f[0];
+            Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
+            Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
+            GraphFrame frame = GraphFrame.Bind(
+                kind,
+                slot2,
+                world,
+                caster,
+                explicitTarget,
+                targetPosCm,
+                api,
+                programs,
+                f,
+                i,
+                b,
+                e,
+                targets,
+                intIds,
+                callStack);
+            Execute(ref frame, program, handlers: handlers);
+            return frame.F[0];
         }
     }
 }

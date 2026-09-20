@@ -1,0 +1,12 @@
+[
+  {
+    "id": "field_hierarchy.agent",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "field_hierarchy.marker",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  }
+]

@@ -170,6 +170,7 @@ a:hover { color: var(--accent-dark); text-decoration: underline; }
 .grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
 .grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
 .grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+.grid.cols-5 { grid-template-columns: repeat(5, 1fr); }
 
 /* ============ 统计卡（index / tests 共用） ============ */
 .stat-card { padding: 26px 24px; text-align: left; }
@@ -403,12 +404,13 @@ table.data tbody tr:hover td { background: var(--bg-soft); }
 
 /* ============ 响应式 ============ */
 @media (max-width: 960px) {
-  .grid.cols-4 { grid-template-columns: repeat(2, 1fr); }
+  .grid.cols-5 { grid-template-columns: repeat(3, 1fr); }
+.grid.cols-4 { grid-template-columns: repeat(2, 1fr); }
   .grid.cols-3 { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 720px) {
   .page { padding: 32px 18px 72px; }
-  .grid.cols-4, .grid.cols-3, .grid.cols-2 { grid-template-columns: 1fr; }
+  .grid.cols-5, .grid.cols-4, .grid.cols-3, .grid.cols-2 { grid-template-columns: 1fr; }
   .topbar-inner { padding: 0 16px; gap: 12px; }
   .topbar nav {
     display: none;

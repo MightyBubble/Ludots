@@ -1,0 +1,102 @@
+[
+  {
+    "id": "roster_commander",
+    "components": {
+      "Name": { "Value": "指挥官" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "VisionEmitterCm": {
+        "scope": "roster.local",
+        "layers": ["ground"],
+        "polarity": "Reveal",
+        "aperture": { "kind": "Disk", "rangeCm": 1200 },
+        "detectionStrength": 1
+      },
+      "AttributeBuffer": {
+        "base": { "Health": 100, "Attack": 20 }
+      },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "roster_medic",
+    "components": {
+      "Name": { "Value": "医师" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": -220, "Y": 80 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "FogOccupantCm": { "layers": ["ground"] },
+      "AttributeBuffer": {
+        "base": { "Health": 97, "Attack": 8 }
+      },
+      "GameplayTagContainer": {}
+    }
+  },
+  {
+    "id": "roster_archer",
+    "components": {
+      "Name": { "Value": "弓手" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 220, "Y": 80 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "FogOccupantCm": { "layers": ["ground"] },
+      "AttributeBuffer": {
+        "base": { "Health": 64, "Attack": 15 }
+      },
+      "GameplayTagContainer": {}
+    }
+  },
+  {
+    "id": "roster_stunned_guard",
+    "components": {
+      "Name": { "Value": "晕眩卫士" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": -120, "Y": -160 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "FogOccupantCm": { "layers": ["ground"] },
+      "AttributeBuffer": {
+        "base": { "Health": 80, "Attack": 12 }
+      },
+      "GameplayTagContainer": {}
+    }
+  },
+  {
+    "id": "roster_fallen",
+    "components": {
+      "Name": { "Value": "阵亡斥候" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 120, "Y": -160 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "FogOccupantCm": { "layers": ["ground"] },
+      "AttributeBuffer": {
+        "base": { "Health": 0, "Attack": 5 }
+      },
+      "GameplayTagContainer": {}
+    }
+  },
+  {
+    "id": "roster_enemy",
+    "components": {
+      "Name": { "Value": "敌方哨兵" },
+      "Team": { "Id": 2 },
+      "WorldPositionCm": { "Value": { "X": 500, "Y": 0 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 3.14 },
+      "FogOccupantCm": { "layers": ["ground"] },
+      "AttributeBuffer": {
+        "base": { "Health": 90, "Attack": 10 }
+      },
+      "GameplayTagContainer": {}
+    }
+  }
+]

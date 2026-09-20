@@ -186,24 +186,34 @@ public class UIRoot
 			flag = scene.Dispatch(new UiPointerEvent(UiPointerEventType.Scroll, pointerEvent.PointerId, pointerEvent.X, pointerEvent.Y, uiNodeId, pointerEvent.DeltaX, pointerEvent.DeltaY)).Handled;
 			break;
 		}
-		if (!ReferenceEquals(Scene, scene))
+		return FinishInputDispatch(scene, flag);
+	}
+
+	public bool ScrollNode(UiNodeId targetNodeId, float deltaX, float deltaY)
+	{
+		if (!targetNodeId.IsValid)
 		{
-			IsDirty = true;
-			return flag;
+			throw new ArgumentException("ScrollNode requires a valid target node id.", nameof(targetNodeId));
 		}
 
-		bool sceneChanged = scene.IsDirty;
-		bool runtimeChanged = false;
-		if (flag || sceneChanged)
+		UiScene scene = Scene;
+		if (scene == null)
 		{
-			runtimeChanged = RefreshReactiveSceneRuntime(scene);
-			sceneChanged = scene.IsDirty;
+			return false;
 		}
-		if (sceneChanged || runtimeChanged)
-		{
-			IsDirty = true;
-		}
-		return flag || runtimeChanged;
+
+		scene.Layout(Width, Height);
+		UiNode target = scene.FindNode(targetNodeId)
+			?? throw new InvalidOperationException($"ScrollNode target '{targetNodeId.Value}' is not mounted in the current scene.");
+		bool handled = scene.Dispatch(new UiPointerEvent(
+			UiPointerEventType.Scroll,
+			0,
+			target.LayoutRect.X,
+			target.LayoutRect.Y,
+			targetNodeId,
+			deltaX,
+			deltaY)).Handled;
+		return FinishInputDispatch(scene, handled);
 	}
 
 	private static bool TryHandleCanvasInput(UiNode node, PointerEvent pointerEvent, out UiNodeId canvasNodeId)
@@ -245,6 +255,28 @@ public class UIRoot
 		}
 
 		return handled;
+	}
+
+	private bool FinishInputDispatch(UiScene scene, bool handled)
+	{
+		if (!ReferenceEquals(Scene, scene))
+		{
+			IsDirty = true;
+			return handled;
+		}
+
+		bool sceneChanged = scene.IsDirty;
+		bool runtimeChanged = false;
+		if (handled || sceneChanged)
+		{
+			runtimeChanged = RefreshReactiveSceneRuntime(scene);
+			sceneChanged = scene.IsDirty;
+		}
+		if (sceneChanged || runtimeChanged)
+		{
+			IsDirty = true;
+		}
+		return handled || runtimeChanged;
 	}
 
 	private void SetFocusedCanvas(UiNodeId? canvasNodeId)

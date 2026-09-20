@@ -27,33 +27,40 @@ namespace Ludots.Core.Presentation.Systems
         public override void Update(in float dt)
         {
             int frame = _runtime.BeginFrame();
-            ReadOnlySpan<PresentationRequest> span = _requests.GetSpan();
-            for (int i = 0; i < span.Length; i++)
+            ReadOnlySpan<PresentationRequestOp> ops = _requests.Ops;
+            for (int i = 0; i < ops.Length; i++)
             {
-                ref readonly PresentationRequest request = ref span[i];
-                if (request.Kind != PresentationRequestKind.SurfaceSource)
+                PresentationRequestOp op = ops[i];
+                if (op.Channel == PresentationRequestChannel.Removal)
                 {
-                    if (request.Kind == PresentationRequestKind.RemoveSurfaceSource)
+                    ref readonly PresentationRemovalRequest removal = ref _requests.RemovalAt(op.Slot);
+                    if (removal.Kind == PresentationRequestKind.RemoveSurfaceSource)
                     {
-                        _runtime.MarkPendingRemoval(request.StableId);
+                        _runtime.MarkPendingRemoval(removal.StableId);
                     }
 
                     continue;
                 }
 
-                if (!_payloads.TryGet(request.SurfaceSource.ScopeId, out SurfacePayloadSnapshot payload))
+                if (op.Channel != PresentationRequestChannel.SurfaceSource)
                 {
-                    throw new InvalidOperationException(
-                        $"SurfaceSource performer scopeId={request.SurfaceSource.ScopeId} stableId={request.SurfaceSource.StableId} is missing runtime payload registration.");
+                    continue;
                 }
 
-                if (payload.Kind != request.SurfaceSource.SurfaceKind)
+                ref readonly SurfaceSourceRequest surfaceSource = ref _requests.SurfaceSourceAt(op.Slot).Item;
+                if (!_payloads.TryGet(surfaceSource.ScopeId, out SurfacePayloadSnapshot payload))
                 {
                     throw new InvalidOperationException(
-                        $"SurfaceSource performer scopeId={request.SurfaceSource.ScopeId} stableId={request.SurfaceSource.StableId} has payload kind '{payload.Kind}' but authoring kind '{request.SurfaceSource.SurfaceKind}'.");
+                        $"SurfaceSource presenter scopeId={surfaceSource.ScopeId} stableId={surfaceSource.StableId} is missing runtime payload registration.");
                 }
 
-                _runtime.Upsert(in request.SurfaceSource, in payload, frame);
+                if (payload.Kind != surfaceSource.SurfaceKind)
+                {
+                    throw new InvalidOperationException(
+                        $"SurfaceSource presenter scopeId={surfaceSource.ScopeId} stableId={surfaceSource.StableId} has payload kind '{payload.Kind}' but authoring kind '{surfaceSource.SurfaceKind}'.");
+                }
+
+                _runtime.Upsert(in surfaceSource, in payload, frame);
             }
         }
     }

@@ -10,6 +10,8 @@ using Ludots.Core.Physics;
 using Ludots.Core.Spatial;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
+using Ludots.Core.GraphRuntime;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {
@@ -54,10 +56,11 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadCaster, Dst = 3 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.SelectEntity, Dst = 4, A = 1, B = 3, C = 2 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 4, B = 1, Imm = 0 },
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.ApplyEffectTemplate, A = 2, Imm = tplId }
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.ApplyEffectTemplate, A = 2, Imm = tplId },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 4 }
                 };
 
-                GraphExecutor.Execute(world, caster, target, new IntVector2(0, 0), program, api);
+                GraphExecutor.Execute(world, caster, target, new IntVector2(0, 0), program, api, GraphKind.Effect, new GasGraphOpHandlerTable());
 
                 eventBus.Update();
 
@@ -99,10 +102,11 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.JumpIfFalse, A = 0, Imm = 2 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.SendEvent, A = 2, B = 0, Imm = 555 },
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.ApplyEffectTemplate, A = 2, Imm = 7 }
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.ApplyEffectTemplate, A = 2, Imm = 7 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 }
                 };
 
-                GraphExecutor.Execute(world, caster, target, new IntVector2(0, 0), program, api);
+                GraphExecutor.Execute(world, caster, target, new IntVector2(0, 0), program, api, GraphKind.Effect, new GasGraphOpHandlerTable());
                 eventBus.Update();
 
                 That(eventBus.Events.Count, Is.EqualTo(0));
@@ -138,10 +142,11 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.AggCount, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 2 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 1, ImmF = 1f },
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 2, B = 1, Imm = 0 }
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 2, B = 1, Imm = 0 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 }
                 };
 
-                GraphExecutor.Execute(world, caster, target, new IntVector2(0, 0), program, api);
+                GraphExecutor.Execute(world, caster, target, new IntVector2(0, 0), program, api, GraphKind.Effect, new GasGraphOpHandlerTable());
 
                 That(world.Get<AttributeBuffer>(target).GetCurrent(0), Is.EqualTo(1f));
             }

@@ -1,0 +1,10 @@
+{
+  "name": "FieldEditorPaintMod",
+  "version": "1.0.0",
+  "description": "Field editor paint: ownership.paint with paint.a/paint.b schema v2 rects (field-editor CLI shape).",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0"
+  }
+}

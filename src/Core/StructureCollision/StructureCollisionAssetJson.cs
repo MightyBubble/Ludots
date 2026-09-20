@@ -4,6 +4,7 @@ using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Ludots.Core.Mathematics;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.StructureCollision
 {

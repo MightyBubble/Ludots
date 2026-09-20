@@ -11,7 +11,7 @@ Deliver a minimal playable champion skill sandbox mod that:
 - shows different command panel content based on the command-source primary and current form/state
 - supports three global cast modes through one shared toolbar
 - uses the existing GAS / entity collection / command panel / aim presentation pipelines
-- gives every skill a clear visible effect expression through the performer system
+- gives every skill a clear visible effect expression through the presenter system
 - supports camera reset, free camera, command-source primary follow, and weighted command-source group follow
 
 ## Confirmed Reuse Baseline
@@ -21,7 +21,7 @@ The current implementation must continue to reuse these existing foundations ins
 - Entity collection SSOT: `docs/architecture/entity_collection_query_infrastructure.md`
 - Entity command panel infrastructure: `docs/architecture/entity_command_panel_infrastructure.md`
 - GAS layered execution: `docs/architecture/gas_combat_infrastructure.md`
-- Performer pipeline: `docs/architecture/presentation_performer.md`
+- Presenter pipeline: `docs/architecture/presentation_presenter.md`
 - Camera interaction acceptance references:
   - `mods/fixtures/camera/CameraAcceptanceMod/`
   - `docs/audits/camera_acceptance_projection_marker_recovery.md`
@@ -33,10 +33,10 @@ Concrete code entry points already confirmed:
 - Ability form config loading: `src/Core/Gameplay/GAS/Config/AbilityFormSetConfigLoader.cs`
 - Entity collection runtime: `src/Core/EntityCollections/` and `src/Core/Input/CommandSources/EntityCollectionContextRuntime.cs`
 - Aim presentation projection: `mods/CoreInputMod/Systems/AbilityAimPresentationProjectionSystem.cs` + `src/Core/Input/Orders/AbilityAimPresentationRuntime.cs`
-- Performer runtime:
-  - `src/Core/Presentation/Systems/PerformerRuleSystem.cs`
-  - `src/Core/Presentation/Systems/PerformerRuntimeSystem.cs`
-  - `src/Core/Presentation/Systems/PerformerEmitSystem.cs`
+- Presenter runtime:
+  - `src/Core/Presentation/Systems/PresenterRuleSystem.cs`
+  - `src/Core/Presentation/Systems/PresenterRuntimeSystem.cs`
+  - `src/Core/Presentation/Systems/PresenterEmitSystem.cs`
 - Projectile runtime entity creation:
   - `src/Core/Gameplay/GAS/BuiltinHandlers.cs`
   - `src/Core/Gameplay/GAS/Systems/ProjectileRuntimeSystem.cs`
@@ -59,8 +59,8 @@ Implemented in the sandbox branch:
   - free
   - command-source primary
   - weighted command-source group
-- projectile skills now use real GAS projectile entities with performer bootstrap
-- sandbox cast / hit / projectile cues now go through performer definitions and `PresentationCommandBuffer`
+- projectile skills now use real GAS projectile entities with presenter bootstrap
+- sandbox cast / hit / projectile cues now go through presenter definitions and `PresentationCommandBuffer`
 - command panel keeps reusing existing ability-slot routing and icon generation
 
 Recent camera-follow slice commit:
@@ -69,7 +69,7 @@ Recent camera-follow slice commit:
 
 Recent projectile / presentation slices:
 
-- `283c472 feat(presentation): bridge projectile entities into performers`
+- `283c472 feat(presentation): bridge projectile entities into presenters`
 - `abe91e8 feat(gas): preserve projectile target points`
 
 Recent sandbox interaction / feedback slices:
@@ -83,7 +83,7 @@ Recent sandbox interaction / feedback slices:
 ### 1. Projectile is a real ECS entity
 
 `LaunchProjectile` creates a runtime projectile entity through `BuiltinHandlers.HandleCreateProjectile`.
-That entity is moved by `ProjectileRuntimeSystem`, keeps launch-origin / target-point data, and can now receive startup performers through the shared projectile-presentation binding registry.
+That entity is moved by `ProjectileRuntimeSystem`, keeps launch-origin / target-point data, and can now receive startup presenters through the shared projectile-presentation binding registry.
 
 Relevant code:
 
@@ -97,18 +97,18 @@ Result:
 - projectile logic and projectile visuals stay on the same entity-backed runtime path
 - sandbox projectile visuals are declared in config instead of special-case presenter code
 
-### 2. Skill FX are performer-driven
+### 2. Skill FX are presenter-driven
 
-Sandbox cast / hit feedback now uses `GasPresentationEventBuffer` + `PresentationCommandBuffer` and resolves performer ids from:
+Sandbox cast / hit feedback now uses `GasPresentationEventBuffer` + `PresentationCommandBuffer` and resolves presenter ids from:
 
 - ability ids for cast cues
 - effect template ids for hit cues
-- projectile impact effect ids for projectile-body startup performers
+- projectile impact effect ids for projectile-body startup presenters
 
 Relevant code:
 
 - `mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/Runtime/ChampionSkillSandboxVisualFeedback.cs`
-- `mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/assets/Presentation/performers.json`
+- `mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/assets/Presentation/presenters.json`
 - `mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/assets/Presentation/projectile_cues.json`
 
 Result:
@@ -127,26 +127,26 @@ The sandbox will keep using:
 - `AbilityFormRoutingSystem`
 - command panel effective-slot resolution
 
-### B. Reuse the shared projectile-to-performer bridge instead of fake sandbox-only missiles
+### B. Reuse the shared projectile-to-presenter bridge instead of fake sandbox-only missiles
 
 Projectile remains a real ECS entity.
 
-The reusable extension now attaches performer startup state to runtime projectile entities so that projectile visuals can be authored declaratively and reused by mods.
+The reusable extension now attaches presenter startup state to runtime projectile entities so that projectile visuals can be authored declaratively and reused by mods.
 
 Target outcome:
 
 - projectile entity is still moved by `ProjectileRuntimeSystem`
-- projectile entity gains performer bootstrap state for visible primitive VFX
+- projectile entity gains presenter bootstrap state for visible primitive VFX
 - sandbox authors only need config bindings, not custom projectile presenter code
 
-### C. Skill cast / hit cues go through performer commands
+### C. Skill cast / hit cues go through presenter commands
 
-For non-projectile skill feedback, the sandbox emits `PresentationCommand.CreatePerformer` based on `GasPresentationEvent` so cues can anchor to:
+For non-projectile skill feedback, the sandbox emits `PresentationCommand.CreatePresenter` based on `GasPresentationEvent` so cues can anchor to:
 
 - caster for cast windup / self-buff / aura cues
 - target for impact / execute / hit cues
 
-This keeps feedback inside the performer system while allowing per-skill anchor choice.
+This keeps feedback inside the presenter system while allowing per-skill anchor choice.
 
 ### D. Primitive-first visuals are sufficient
 
@@ -157,7 +157,7 @@ Expected visual vocabulary:
 - projectile body: sphere / pulse marker
 - zone skill: ring / circle / rectangle overlay
 - melee / strike skill: short burst marker on actor or target
-- toggle / aura skill: persistent ring or marker performer
+- toggle / aura skill: persistent ring or marker presenter
 
 ## Implementation Slices
 
@@ -172,12 +172,12 @@ Evidence:
 - `src/Tests/GasTests/Production/ChampionSkillSandboxConfigTests.cs`
 - `src/Tests/ThreeCTests/CameraRuntimeConvergenceTests.cs`
 
-### Slice 2. Reusable projectile performer bootstrap
+### Slice 2. Reusable projectile presenter bootstrap
 
 Completed Core work:
 
 - add a generic projectile presentation binding/bootstrap path
-- ensure runtime-created projectile entities can receive startup performers and stable presentation identity
+- ensure runtime-created projectile entities can receive startup presenters and stable presentation identity
 - cover the bootstrap path with focused GAS / presentation tests
 
 ### Slice 3. Convert sandbox projectile skills to real `LaunchProjectile`
@@ -185,14 +185,14 @@ Completed Core work:
 Completed sandbox work:
 
 - convert Ezreal Q / R and Jayce Cannon Q from `Search` to `LaunchProjectile`
-- author projectile performer bindings/config
+- author projectile presenter bindings/config
 - keep impact damage in existing GAS hit effects
 
-### Slice 4. Replace generic sandbox feedback with per-skill performer FX
+### Slice 4. Replace generic sandbox feedback with per-skill presenter FX
 
 Completed sandbox work:
 
-- add performer definitions for cast, projectile, hit, aura, and execute cues
+- add presenter definitions for cast, projectile, hit, aura, and execute cues
 - route sandbox visual feedback through `PresentationCommandBuffer`
 - make every showcased skill visibly different
 
@@ -216,7 +216,7 @@ Required evidence:
 - three cast modes behave differently and can be switched from the toolbar
 - move order remains usable for spacing
 - selection and hover are visually legible
-- projectile skills spawn visible performer-driven missiles
+- projectile skills spawn visible presenter-driven missiles
 - every skill has a distinct cast and/or impact effect cue
 - camera can reset, stay confined, and follow the command-source primary or weighted group
 
@@ -227,4 +227,4 @@ Required evidence:
 
 ## Open Risk
 
-The current projectile runtime only stores logic travel data. If later features need richer projectile-specific rendering metadata beyond startup performers, a dedicated shared projectile presentation contract may still be needed in Core.
+The current projectile runtime only stores logic travel data. If later features need richer projectile-specific rendering metadata beyond startup presenters, a dedicated shared projectile presentation contract may still be needed in Core.

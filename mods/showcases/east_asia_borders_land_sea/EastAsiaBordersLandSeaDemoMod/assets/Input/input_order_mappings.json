@@ -1,0 +1,25 @@
+{
+  "interactionMode": "SmartCast",
+  "mappings": [
+    {
+      "actionId": "Command",
+      "actorCollectionKey": "collection.command.source",
+      "trigger": "PressedThisFrame",
+      "orderTypeKey": "massNavigationMove",
+      "argsTemplate": {},
+      "requireTarget": true,
+      "targetType": "Position",
+      "isSkillMapping": false,
+      "modifierBehavior": "QueueOnModifier"
+    }
+  ],
+  "groupMoveTargetLayout": {
+    "mode": "Grid",
+    "spacingCm": 5000,
+    "orderTypeKeys": ["massNavigationMove"]
+  },
+  "userOverrides": {
+    "enabled": false,
+    "persistPath": ""
+  }
+}

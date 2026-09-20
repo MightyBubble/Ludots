@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 
 namespace Ludots.Core.Presentation.Hud
 {
@@ -8,6 +9,10 @@ namespace Ludots.Core.Presentation.Hud
         private readonly WorldHudItem[] _buffer;
         private readonly WorldHudItem[] _dirtyContentBuffer;
         private readonly int[] _removedStableIds;
+        private int[] _positionDirtyStableIds = Array.Empty<int>();
+        private int[] _positionDirtySlotStamps = Array.Empty<int>();
+        private int _positionDirtyCount;
+        private int _positionDeltaStamp = 1;
         private readonly Dictionary<int, int> _retainedIndexByStableId = new();
         private readonly Dictionary<WorldHudOwnerGroupKey, int> _ownerGroupIndexByKey = new();
         private WorldHudOwnerGroup[] _ownerGroups;
@@ -28,29 +33,83 @@ namespace Ludots.Core.Presentation.Hud
         public int ProjectionRevision { get; private set; }
         public int ContentOnlyRevision { get; private set; }
 
+        /// <summary>
+        /// 世界→屏幕映射相关修订号：摄像机不因它改变而重拍；
+        /// 只有世界 HUD 的投影相关字段（位置/尺寸）变化时才自增，
+        /// 供 WorldHudToScreenSystem 走"仅位置增量"轻路径（不重做地形遮挡）。
+        /// </summary>
+        public int PositionRevision { get; private set; }
+
+        /// <summary>
+        /// 结构性修订号：仅新增/移除/清空时自增（非位置、非值的变化）。
+        /// 结构变化必须走全量重建，不能走位置/内容增量路径。
+        /// </summary>
+        public int StructuralRevision { get; private set; }
+
         public WorldHudBatchBuffer(int capacity = 65536)
         {
             if (capacity <= 0) throw new ArgumentOutOfRangeException(nameof(capacity));
             _buffer = new WorldHudItem[capacity];
             _dirtyContentBuffer = new WorldHudItem[capacity];
             _removedStableIds = new int[capacity];
+            _positionDirtyStableIds = new int[capacity];
+            _positionDirtySlotStamps = new int[capacity];
             _ownerGroups = new WorldHudOwnerGroup[Math.Min(capacity, 1024)];
             _groupedItemIndices = new int[capacity];
             _ownerGroupWriteOffsets = new int[Math.Min(capacity, 1024)];
         }
 
+        /// <summary>
+        /// LUDOTS_HUD_TRACE=1 时的残留取证：缓冲从近空回填的头三笔 TryAdd 打调用栈，
+        /// 用于钉住“镜头离开后条目被重新生产”的发射路径。默认零开销。
+        /// </summary>
+        private static void TraceRefillCallers(int count)
+        {
+            if (!HudTraceEnabled || _traceRefillLogs >= 3)
+            {
+                return;
+            }
+
+            if (count != 0)
+            {
+                return;
+            }
+
+            _traceRefillLogs++;
+            var stack = new System.Diagnostics.StackTrace(2, false);
+            var frames = new System.Text.StringBuilder();
+            for (int i = 0; i < Math.Min(10, stack.FrameCount); i++)
+            {
+                var frame = stack.GetFrame(i);
+                frames.Append("  ").Append(frame?.GetMethod()?.ReflectedType?.Name).Append('.').Append(frame?.GetMethod()?.Name).Append('\n');
+            }
+
+            Ludots.Core.Diagnostics.Log.Info(
+                in Ludots.Core.Diagnostics.LogChannels.Presentation,
+                $"[hud-refill] TryAdd from empty #{_traceRefillLogs}:\n{frames}");
+        }
+
+        private static readonly bool HudTraceEnabled =
+            Environment.GetEnvironmentVariable("LUDOTS_HUD_TRACE") is "1" or "true" or "yes" or "on";
+
+        private static int _traceRefillLogs;
+
         public bool TryAdd(in WorldHudItem item)
         {
+            TraceRefillCallers(_count);
             if (item.StableId > 0 && _retainedIndexByStableId.TryGetValue(item.StableId, out int existingIndex))
             {
                 if (WorldHudItemEquals(in _buffer[existingIndex], in item))
                 {
+                    AdoptValueBoundValues(existingIndex, in item);
                     return true;
                 }
 
                 if (!WorldHudProjectionEquals(in _buffer[existingIndex], in item))
                 {
                     ProjectionRevision++;
+                    PositionRevision++;
+                    MarkPositionDirty(existingIndex, item.StableId);
                 }
                 else
                 {
@@ -83,7 +142,48 @@ namespace Ludots.Core.Presentation.Hud
 
             ContentRevision++;
             ProjectionRevision++;
+            StructuralRevision++;
             return true;
+        }
+
+        /// <summary>
+        /// 值绑定条目的 emit 侧 serial 不混入数值，重发在 serial 命中被判"相等"；
+        /// 但世界车道自身（wire 全量帧、调试读数）直接消费 Value0/Value1，
+        /// 不能停留在首帧快照——静默采纳重发带来的新值，不产生脏增量与修订号：
+        /// 屏幕侧权威值仍由 RefreshAttributeBoundTexts 投影期现读，互不替代。
+        /// </summary>
+        private void AdoptValueBoundValues(int index, in WorldHudItem item)
+        {
+            ref WorldHudItem retained = ref _buffer[index];
+            if (retained.ValueBound == 0 ||
+                item.ValueBound == 0 ||
+                (retained.Value0 == item.Value0 && retained.Value1 == item.Value1))
+            {
+                return;
+            }
+
+            retained.Value0 = item.Value0;
+            retained.Value1 = item.Value1;
+        }
+
+        public void UpdatePosition(int stableId, in Vector3 position)
+        {
+            if (stableId <= 0 || !_retainedIndexByStableId.TryGetValue(stableId, out int index))
+            {
+                throw new InvalidOperationException($"Retained world HUD item {stableId} is not present.");
+            }
+
+            ref WorldHudItem item = ref _buffer[index];
+            if (item.WorldPosition == position)
+            {
+                return;
+            }
+
+            item.WorldPosition = position;
+            ContentRevision++;
+            ProjectionRevision++;
+            PositionRevision++;
+            MarkPositionDirty(index, stableId);
         }
 
         public void Remove(int stableId)
@@ -109,6 +209,7 @@ namespace Ludots.Core.Presentation.Hud
             AddRemovedStableId(stableId);
             ContentRevision++;
             ProjectionRevision++;
+            StructuralRevision++;
         }
 
         public void ClearTransient()
@@ -131,6 +232,7 @@ namespace Ludots.Core.Presentation.Hud
             _transientCount = 0;
             ContentRevision++;
             ProjectionRevision++;
+            StructuralRevision++;
         }
 
         private void RemoveAt(int index)
@@ -147,6 +249,42 @@ namespace Ludots.Core.Presentation.Hud
             }
 
             _count = lastIndex;
+        }
+
+        public ReadOnlySpan<int> GetPositionDirtyStableIdSpan() => new(_positionDirtyStableIds, 0, _positionDirtyCount);
+
+        public void ClearPositionDeltas()
+        {
+            _positionDirtyCount = 0;
+            _positionDeltaStamp++;
+            if (_positionDeltaStamp == 0)
+            {
+                Array.Clear(_positionDirtySlotStamps, 0, _positionDirtySlotStamps.Length);
+                _positionDeltaStamp = 1;
+            }
+        }
+
+        private void MarkPositionDirty(int slotIndex, int stableId)
+        {
+            if (stableId <= 0)
+            {
+                return;
+            }
+
+            if (_positionDirtySlotStamps[slotIndex] == _positionDeltaStamp)
+            {
+                return;
+            }
+
+            _positionDirtySlotStamps[slotIndex] = _positionDeltaStamp;
+            if (_positionDirtyCount >= _positionDirtyStableIds.Length)
+            {
+                throw new InvalidOperationException(
+                    $"WorldHudBatchBuffer position-dirty window overflowed capacity {_positionDirtyStableIds.Length}; " +
+                    "position updates within one projection frame exceed the declared worldHud capacity.");
+            }
+
+            _positionDirtyStableIds[_positionDirtyCount++] = stableId;
         }
 
         public ReadOnlySpan<WorldHudItem> GetSpan() => new ReadOnlySpan<WorldHudItem>(_buffer, 0, _count);
@@ -243,8 +381,11 @@ namespace Ludots.Core.Presentation.Hud
             _ownerGroupProjectionRevision = -1;
             _dirtyContentCount = 0;
             _removedStableIdCount = 0;
+            _positionDirtyCount = 0;
+            _positionDeltaStamp++;
             ContentRevision++;
             ProjectionRevision++;
+            StructuralRevision++;
         }
 
         public ReadOnlySpan<WorldHudItem> GetDirtyContentSpan() => new(_dirtyContentBuffer, 0, _dirtyContentCount);
@@ -271,11 +412,15 @@ namespace Ludots.Core.Presentation.Hud
         {
             if (_removedStableIdCount >= _removedStableIds.Length)
             {
+                RemovedIdDrops++;
                 return;
             }
 
             _removedStableIds[_removedStableIdCount++] = stableId;
         }
+
+        /// <summary>取证计数：removedStableIds 容量溢出被丢弃的条数（LUDOTS_HUD_TRACE 之外恒为 0 且无人读取）。</summary>
+        public int RemovedIdDrops { get; private set; }
 
         private void EnsureOwnerGroups()
         {

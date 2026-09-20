@@ -21,11 +21,7 @@ internal sealed class UiAnimationChannelState
 		get
 		{
 			UiAnimationFillMode fillMode = _entry.FillMode;
-			if ((uint)(fillMode - 2) <= 1u)
-			{
-				return true;
-			}
-			return false;
+			return (uint)(fillMode - 2) <= 1u;
 		}
 	}
 
@@ -34,11 +30,7 @@ internal sealed class UiAnimationChannelState
 		get
 		{
 			UiAnimationFillMode fillMode = _entry.FillMode;
-			if (fillMode == UiAnimationFillMode.Forwards || fillMode == UiAnimationFillMode.Both)
-			{
-				return true;
-			}
-			return false;
+			return fillMode == UiAnimationFillMode.Forwards || fillMode == UiAnimationFillMode.Both;
 		}
 	}
 
@@ -125,20 +117,14 @@ internal sealed class UiAnimationChannelState
 	private float ApplyDirection(int iterationIndex, float progress)
 	{
 		UiAnimationDirection direction = _entry.Direction;
-		if (1 == 0)
+		bool reverse = direction switch
 		{
-		}
-		bool flag = direction switch
-		{
-			UiAnimationDirection.Reverse => true, 
-			UiAnimationDirection.Alternate => (iterationIndex & 1) == 1, 
-			UiAnimationDirection.AlternateReverse => (iterationIndex & 1) == 0, 
-			_ => false, 
+			UiAnimationDirection.Reverse => true,
+			UiAnimationDirection.Alternate => (iterationIndex & 1) == 1,
+			UiAnimationDirection.AlternateReverse => (iterationIndex & 1) == 0,
+			_ => false,
 		};
-		if (1 == 0)
-		{
-		}
-		return flag ? (1f - progress) : progress;
+		return reverse ? (1f - progress) : progress;
 	}
 
 	private static List<UiAnimationPropertyTrack> BuildTracks(UiAnimationEntry entry, UiStyle baseStyle)
@@ -149,8 +135,11 @@ internal sealed class UiAnimationChannelState
 		{
 			return list;
 		}
-		Dictionary<string, Dictionary<float, UiColor>> dictionary = new Dictionary<string, Dictionary<float, UiColor>>(StringComparer.OrdinalIgnoreCase);
-		Dictionary<string, Dictionary<float, float>> dictionary2 = new Dictionary<string, Dictionary<float, float>>(StringComparer.OrdinalIgnoreCase);
+		Dictionary<string, Dictionary<float, UiColor>> colorTracks = new Dictionary<string, Dictionary<float, UiColor>>(StringComparer.OrdinalIgnoreCase);
+		Dictionary<string, Dictionary<float, float>> floatTracks = new Dictionary<string, Dictionary<float, float>>(StringComparer.OrdinalIgnoreCase);
+		Dictionary<float, UiTransform> transformStops = new Dictionary<float, UiTransform>();
+		bool transformDeclared = false;
+		bool transformPoisoned = false;
 		for (int i = 0; i < keyframes.Stops.Count; i++)
 		{
 			UiKeyframeStop uiKeyframeStop = keyframes.Stops[i];
@@ -158,11 +147,24 @@ internal sealed class UiAnimationChannelState
 			HashSet<string> hashSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 			foreach (KeyValuePair<string, string> item in uiKeyframeStop.Declaration)
 			{
-				if (TryNormalizeAnimatedPropertyName(item.Key, out string normalized))
+				if (!TryNormalizeAnimatedPropertyName(item.Key, out string? normalized) || normalized == null)
 				{
-					uiStyle = UiStyleResolver.ApplyProperty(uiStyle, item.Key, item.Value);
-					hashSet.Add(normalized);
+					continue;
 				}
+				if (normalized == "transform")
+				{
+					transformDeclared = true;
+					if (!UiStyleResolver.TryParseTransform(item.Value, out UiTransform? parsed) || parsed == null)
+					{
+						transformPoisoned = true;
+						continue;
+					}
+					uiStyle = uiStyle with { Transform = parsed };
+					hashSet.Add(normalized);
+					continue;
+				}
+				uiStyle = UiStyleResolver.ApplyProperty(uiStyle, item.Key, item.Value);
+				hashSet.Add(normalized);
 			}
 			float key = ClampOffset(uiKeyframeStop.Offset);
 			foreach (string item2 in hashSet)
@@ -170,42 +172,49 @@ internal sealed class UiAnimationChannelState
 				switch (item2)
 				{
 				case "background-color":
-					GetOrCreateColorTrack(dictionary, item2)[key] = uiStyle.BackgroundColor;
+					GetOrCreateColorTrack(colorTracks, item2)[key] = uiStyle.BackgroundColor;
 					break;
 				case "border-color":
-					GetOrCreateColorTrack(dictionary, item2)[key] = uiStyle.BorderColor;
+					GetOrCreateColorTrack(colorTracks, item2)[key] = uiStyle.BorderColor;
 					break;
 				case "outline-color":
-					GetOrCreateColorTrack(dictionary, item2)[key] = uiStyle.OutlineColor;
+					GetOrCreateColorTrack(colorTracks, item2)[key] = uiStyle.OutlineColor;
 					break;
 				case "color":
-					GetOrCreateColorTrack(dictionary, item2)[key] = uiStyle.Color;
+					GetOrCreateColorTrack(colorTracks, item2)[key] = uiStyle.Color;
 					break;
 				case "opacity":
-					GetOrCreateFloatTrack(dictionary2, item2)[key] = uiStyle.Opacity;
+					GetOrCreateFloatTrack(floatTracks, item2)[key] = uiStyle.Opacity;
 					break;
 				case "filter":
-					GetOrCreateFloatTrack(dictionary2, item2)[key] = uiStyle.FilterBlurRadius;
+					GetOrCreateFloatTrack(floatTracks, item2)[key] = uiStyle.FilterBlurRadius;
 					break;
 				case "backdrop-filter":
-					GetOrCreateFloatTrack(dictionary2, item2)[key] = uiStyle.BackdropBlurRadius;
+					GetOrCreateFloatTrack(floatTracks, item2)[key] = uiStyle.BackdropBlurRadius;
+					break;
+				case "transform":
+					transformStops[key] = uiStyle.Transform ?? UiTransform.Identity;
 					break;
 				}
 			}
 		}
-		AddColorTrack(list, "background-color", baseStyle.BackgroundColor, dictionary);
-		AddColorTrack(list, "border-color", baseStyle.BorderColor, dictionary);
-		AddColorTrack(list, "outline-color", baseStyle.OutlineColor, dictionary);
-		AddColorTrack(list, "color", baseStyle.Color, dictionary);
-		AddFloatTrack(list, "opacity", baseStyle.Opacity, dictionary2);
-		AddFloatTrack(list, "filter", baseStyle.FilterBlurRadius, dictionary2);
-		AddFloatTrack(list, "backdrop-filter", baseStyle.BackdropBlurRadius, dictionary2);
+		AddColorTrack(list, "background-color", baseStyle.BackgroundColor, colorTracks);
+		AddColorTrack(list, "border-color", baseStyle.BorderColor, colorTracks);
+		AddColorTrack(list, "outline-color", baseStyle.OutlineColor, colorTracks);
+		AddColorTrack(list, "color", baseStyle.Color, colorTracks);
+		AddFloatTrack(list, "opacity", baseStyle.Opacity, floatTracks);
+		AddFloatTrack(list, "filter", baseStyle.FilterBlurRadius, floatTracks);
+		AddFloatTrack(list, "backdrop-filter", baseStyle.BackdropBlurRadius, floatTracks);
+		if (transformDeclared && !transformPoisoned)
+		{
+			AddTransformTrack(list, baseStyle.Transform ?? UiTransform.Identity, transformStops);
+		}
 		return list;
 	}
 
 	private static void AddColorTrack(ICollection<UiAnimationPropertyTrack> tracks, string propertyName, UiColor baseValue, IReadOnlyDictionary<string, Dictionary<float, UiColor>> values)
 	{
-		if (values.TryGetValue(propertyName, out Dictionary<float, UiColor> value) && value.Count != 0)
+		if (values.TryGetValue(propertyName, out Dictionary<float, UiColor>? value) && value.Count != 0)
 		{
 			value.TryAdd(0f, baseValue);
 			value.TryAdd(1f, baseValue);
@@ -221,7 +230,7 @@ internal sealed class UiAnimationChannelState
 
 	private static void AddFloatTrack(ICollection<UiAnimationPropertyTrack> tracks, string propertyName, float baseValue, IReadOnlyDictionary<string, Dictionary<float, float>> values)
 	{
-		if (values.TryGetValue(propertyName, out Dictionary<float, float> value) && value.Count != 0)
+		if (values.TryGetValue(propertyName, out Dictionary<float, float>? value) && value.Count != 0)
 		{
 			value.TryAdd(0f, baseValue);
 			value.TryAdd(1f, baseValue);
@@ -235,9 +244,42 @@ internal sealed class UiAnimationChannelState
 		}
 	}
 
+	private static void AddTransformTrack(ICollection<UiAnimationPropertyTrack> tracks, UiTransform baseValue, Dictionary<float, UiTransform> values)
+	{
+		if (values.Count == 0)
+		{
+			return;
+		}
+		if (!values.ContainsKey(0f))
+		{
+			UiTransform first = values.OrderBy(pair => pair.Key).First().Value;
+			values[0f] = UiTransitionMath.AreCompatible(baseValue, first) ? baseValue : first;
+		}
+		if (!values.ContainsKey(1f))
+		{
+			UiTransform last = values.OrderBy(pair => pair.Key).Last().Value;
+			values[1f] = UiTransitionMath.AreCompatible(baseValue, last) ? baseValue : last;
+		}
+		UiAnimationTransformStop[] array = (from pair in values
+			orderby pair.Key
+			select new UiAnimationTransformStop(pair.Key, pair.Value)).ToArray();
+		if (array.Length <= 1)
+		{
+			return;
+		}
+		for (int i = 1; i < array.Length; i++)
+		{
+			if (!UiTransitionMath.AreCompatible(array[i - 1].Value, array[i].Value))
+			{
+				return;
+			}
+		}
+		tracks.Add(UiAnimationPropertyTrack.CreateTransform("transform", array));
+	}
+
 	private static Dictionary<float, UiColor> GetOrCreateColorTrack(IDictionary<string, Dictionary<float, UiColor>> tracks, string propertyName)
 	{
-		if (!tracks.TryGetValue(propertyName, out Dictionary<float, UiColor> value))
+		if (!tracks.TryGetValue(propertyName, out Dictionary<float, UiColor>? value))
 		{
 			value = (tracks[propertyName] = new Dictionary<float, UiColor>());
 		}
@@ -246,7 +288,7 @@ internal sealed class UiAnimationChannelState
 
 	private static Dictionary<float, float> GetOrCreateFloatTrack(IDictionary<string, Dictionary<float, float>> tracks, string propertyName)
 	{
-		if (!tracks.TryGetValue(propertyName, out Dictionary<float, float> value))
+		if (!tracks.TryGetValue(propertyName, out Dictionary<float, float>? value))
 		{
 			value = (tracks[propertyName] = new Dictionary<float, float>());
 		}
@@ -256,43 +298,18 @@ internal sealed class UiAnimationChannelState
 	private static bool TryNormalizeAnimatedPropertyName(string propertyName, out string? normalized)
 	{
 		string text = propertyName.Trim().ToLowerInvariant();
-		if (1 == 0)
+		normalized = text switch
 		{
-		}
-		string text2;
-		switch (text)
-		{
-		case "background":
-		case "background-color":
-			text2 = "background-color";
-			break;
-		case "border-color":
-			text2 = "border-color";
-			break;
-		case "outline":
-		case "outline-color":
-			text2 = "outline-color";
-			break;
-		case "color":
-			text2 = "color";
-			break;
-		case "opacity":
-			text2 = "opacity";
-			break;
-		case "filter":
-			text2 = "filter";
-			break;
-		case "backdrop-filter":
-			text2 = "backdrop-filter";
-			break;
-		default:
-			text2 = null;
-			break;
-		}
-		if (1 == 0)
-		{
-		}
-		normalized = text2;
+			"background" or "background-color" => "background-color",
+			"border-color" => "border-color",
+			"outline" or "outline-color" => "outline-color",
+			"color" => "color",
+			"opacity" => "opacity",
+			"filter" => "filter",
+			"backdrop-filter" => "backdrop-filter",
+			"transform" => "transform",
+			_ => null,
+		};
 		return normalized != null;
 	}
 

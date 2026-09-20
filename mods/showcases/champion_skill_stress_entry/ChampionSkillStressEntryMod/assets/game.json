@@ -1,3 +1,9 @@
 {
-  "startupMapId": "champion_skill_stress"
+  "startupMapId": "champion_skill_stress",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
 }

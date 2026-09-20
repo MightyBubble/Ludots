@@ -1,0 +1,8 @@
+{
+  "scene": "atmosphere_fog",
+  "frames": 120,
+  "avgFrameMs": 3.796,
+  "p95FrameMs": 0.695,
+  "maxFrameMs": 408.826,
+  "wallMs": 2663.1
+}

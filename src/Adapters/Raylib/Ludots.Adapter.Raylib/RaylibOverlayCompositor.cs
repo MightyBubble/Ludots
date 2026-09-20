@@ -7,6 +7,7 @@ using Ludots.Presentation.Skia;
 using Ludots.UI;
 using Ludots.UI.Skia;
 using SkiaSharp;
+using Ludots.Raylib.Render;
 
 namespace Ludots.Adapter.Raylib
 {
@@ -23,6 +24,8 @@ namespace Ludots.Adapter.Raylib
         private RaylibSkiaFramebufferOverlaySurface? _framebufferTopOverlaySurface;
 
         private bool _underlayHadContent;
+        private static readonly bool OverlayTraceEnabled = ReadEnvBool("LUDOTS_OVERLAY_TRACE");
+        private int _traceFrame;
         private bool _overlayHadContent;
         private bool _uiHadContent;
         private bool _compositeHadContent;
@@ -72,13 +75,20 @@ namespace Ludots.Adapter.Raylib
             bool hasTopOverlay = scene != null && scene.ContainsLayer(PresentationOverlayLayer.TopMost);
             bool hasUiLayer = !suppressHostDiagnosticUi && drawSkiaUi && uiRoot.Scene != null;
             bool directTopOverlayComposite = hasTopOverlay && _useGpuDirectUnderlay && !hasUnderlay && !hasUiLayer;
-            bool orderedDirectOverlayComposite = hasUnderlay && hasTopOverlay && !hasUiLayer && _useGpuDirectUnderlay;
+            bool orderedDirectOverlayComposite = hasUnderlay && hasTopOverlay && _useGpuDirectUnderlay;
             bool framebufferDirectTopOverlay = directTopOverlayComposite && _useFramebufferDirectUnderlay;
             bool gpuDirectTopOverlay = directTopOverlayComposite && !framebufferDirectTopOverlay;
             bool rasterTopOverlay = hasTopOverlay && !directTopOverlayComposite && !orderedDirectOverlayComposite;
-            bool directUnderlayComposite = hasUnderlay && !hasUiLayer && (!hasTopOverlay || orderedDirectOverlayComposite);
-            bool framebufferDirectUnderlay = directUnderlayComposite && _useGpuDirectUnderlay && _useFramebufferDirectUnderlay;
-            bool gpuDirectUnderlay = directUnderlayComposite && _useGpuDirectUnderlay && !framebufferDirectUnderlay;
+            bool gpuOrFramebufferUnderlayEnabled = hasUnderlay &&
+                _useGpuDirectUnderlay &&
+                (!hasTopOverlay || orderedDirectOverlayComposite);
+            bool framebufferDirectUnderlay = gpuOrFramebufferUnderlayEnabled && _useFramebufferDirectUnderlay;
+            bool gpuDirectUnderlay = gpuOrFramebufferUnderlayEnabled && !framebufferDirectUnderlay;
+            bool rasterDirectUnderlayComposite = hasUnderlay &&
+                !gpuOrFramebufferUnderlayEnabled &&
+                !hasUiLayer &&
+                !rasterTopOverlay;
+            bool directUnderlayComposite = gpuDirectUnderlay || framebufferDirectUnderlay || rasterDirectUnderlayComposite;
 
             int currentUnderlayVersion = scene?.GetLayerVersion(PresentationOverlayLayer.UnderUi) ?? 0;
             int currentTopOverlayVersion = scene?.GetLayerVersion(PresentationOverlayLayer.TopMost) ?? 0;
@@ -87,6 +97,31 @@ namespace Ludots.Adapter.Raylib
             if (framebufferDirectUnderlay && hasUnderlay)
             {
                 refreshUnderlay = true;
+            }
+
+            if (OverlayTraceEnabled && (_traceFrame++ % 30) == 0)
+            {
+                int underUiTexts = 0, underUiBars = 0, topMost = 0;
+                var orphanIds = new System.Text.StringBuilder();
+                if (scene != null)
+                {
+                    foreach (ref readonly PresentationOverlayItem orphan in scene.GetLaneSpan(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Text))
+                    {
+                        underUiTexts++;
+                        if (orphanIds.Length < 120)
+                        {
+                            orphanIds.Append($" id={orphan.StableId}({(int)orphan.X},{(int)orphan.Y})");
+                        }
+                    }
+
+                    underUiBars = scene.GetLaneSpan(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Bar).Length;
+                    topMost = scene.GetLaneSpan(PresentationOverlayLayer.TopMost, PresentationOverlayItemKind.MinimapMarker).Length +
+                        scene.GetLaneSpan(PresentationOverlayLayer.TopMost, PresentationOverlayItemKind.Text).Length;
+                }
+
+                Ludots.Core.Diagnostics.Log.Info(
+                    in Ludots.Core.Diagnostics.LogChannels.Presentation,
+                    $"[overlay-trace] f={_traceFrame} underlay={hasUnderlay} fbDirect={framebufferDirectUnderlay} uText={underUiTexts} uBar={underUiBars} miss={scene?.RemoveStableMisses ?? 0}{orphanIds}");
             }
 
             bool underlayCanvasChanged = false;
@@ -183,28 +218,25 @@ namespace Ludots.Adapter.Raylib
                 _topOverlayLayerVersion = currentTopOverlayVersion;
             }
 
-            bool hasCompositeContent = hasUnderlay || hasUiLayer || rasterTopOverlay;
-            bool refreshComposite = underlayCanvasChanged ||
+            bool rasterUnderlayInComposite = hasUnderlay && !gpuDirectUnderlay && !framebufferDirectUnderlay;
+            bool hasRasterCompositeContent = rasterUnderlayInComposite || hasUiLayer || rasterTopOverlay;
+            bool refreshRasterComposite = (rasterUnderlayInComposite && underlayCanvasChanged) ||
                 refreshUiLayer ||
                 (refreshTopOverlay && rasterTopOverlay) ||
-                hasCompositeContent != _compositeHadContent;
+                hasRasterCompositeContent != _compositeHadContent;
 
-            if (framebufferDirectUnderlay || gpuDirectUnderlay)
-            {
-                _compositeHadContent = hasCompositeContent;
-            }
-            else if (refreshComposite && directUnderlayComposite)
+            if (refreshRasterComposite && rasterDirectUnderlayComposite)
             {
                 long uploadStart = Stopwatch.GetTimestamp();
                 _compositeRenderer.UpdateTexture();
-                uploadMs = hasCompositeContent ? ElapsedMs(uploadStart) : 0d;
-                _compositeHadContent = hasCompositeContent;
+                uploadMs = hasRasterCompositeContent ? ElapsedMs(uploadStart) : 0d;
+                _compositeHadContent = hasRasterCompositeContent;
             }
-            else if (refreshComposite)
+            else if (refreshRasterComposite && hasRasterCompositeContent)
             {
                 long compositeStart = Stopwatch.GetTimestamp();
                 _compositeRenderer.Canvas.Clear(SKColors.Transparent);
-                if (hasUnderlay)
+                if (rasterUnderlayInComposite)
                 {
                     _underlayLayer.DrawTo(_compositeRenderer.Canvas);
                 }
@@ -223,11 +255,20 @@ namespace Ludots.Adapter.Raylib
 
                 long uploadStart = Stopwatch.GetTimestamp();
                 _compositeRenderer.UpdateTexture();
-                uploadMs = hasCompositeContent ? ElapsedMs(uploadStart) : 0d;
-                _compositeHadContent = hasCompositeContent;
+                uploadMs = ElapsedMs(uploadStart);
+                _compositeHadContent = true;
+            }
+            else if (refreshRasterComposite)
+            {
+                _compositeHadContent = false;
             }
 
-            if (hasCompositeContent || _compositeHadContent || directTopOverlayComposite || orderedDirectOverlayComposite)
+            bool drawCompositeTexture = _compositeHadContent && hasRasterCompositeContent;
+            if (gpuDirectUnderlay ||
+                framebufferDirectUnderlay ||
+                drawCompositeTexture ||
+                directTopOverlayComposite ||
+                orderedDirectOverlayComposite)
             {
                 long finalDrawStart = Stopwatch.GetTimestamp();
                 if (framebufferDirectUnderlay)
@@ -238,8 +279,11 @@ namespace Ludots.Adapter.Raylib
                 {
                     _gpuUnderlaySurface?.Draw();
                 }
-                else if (hasCompositeContent || _compositeHadContent)
+
+                if (drawCompositeTexture)
                 {
+                    // UI (and any raster TopMost) blit after GPU UnderUi HUD so a mounted
+                    // panel does not force the world HUD back onto the full-window raster path.
                     _compositeRenderer.Draw();
                 }
 
@@ -276,7 +320,7 @@ namespace Ludots.Adapter.Raylib
                 CompositeMs: compositeMs,
                 UploadMs: uploadMs,
                 FinalDrawMs: finalDrawMs,
-                RefreshComposite: refreshComposite,
+                RefreshComposite: refreshRasterComposite,
                 UiRenderMs: uiRenderMs);
         }
 

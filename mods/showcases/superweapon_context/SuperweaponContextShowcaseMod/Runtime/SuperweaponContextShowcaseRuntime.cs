@@ -13,6 +13,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Registry;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using SuperweaponContextShowcaseMod.UI;
 
@@ -69,13 +70,13 @@ namespace SuperweaponContextShowcaseMod.Runtime
 
         private void Enable(GameEngine engine)
         {
-            State.LocalPlayer = ResolveLocalPlayer(engine);
+            State.SolePossessedRep = RequireSolePossessedRep(engine);
             State.Commander = ResolveNamedEntity(engine, InteractionShowcaseIds.CommanderName);
             State.Arcweaver = ResolveNamedEntity(engine, InteractionShowcaseIds.ArcweaverName);
             State.Vanguard = ResolveNamedEntity(engine, InteractionShowcaseIds.VanguardName);
             State.AbilityId = AbilityIdRegistry.GetId(SuperweaponContextShowcaseIds.AbilityId);
 
-            if (State.LocalPlayer == Entity.Null ||
+            if (State.SolePossessedRep == Entity.Null ||
                 State.Commander == Entity.Null ||
                 State.Arcweaver == Entity.Null ||
                 State.Vanguard == Entity.Null ||
@@ -105,16 +106,14 @@ namespace SuperweaponContextShowcaseMod.Runtime
         public void Update(GameEngine engine)
         {
             if (!State.IsActive ||
-                State.LocalPlayer == Entity.Null ||
+                State.SolePossessedRep == Entity.Null ||
                 State.Commander == Entity.Null ||
                 !engine.World.IsAlive(State.Commander))
             {
                 return;
             }
 
-            var stack = engine.GetService(CoreServiceKeys.InteractionContextStack)
-                ?? throw new InvalidOperationException("Superweapon context showcase requires InteractionContextStack.");
-            if (!TryGetActiveSuperweaponFrame(stack, out _))
+            if (!TryGetActiveSuperweaponContext(engine))
             {
                 return;
             }
@@ -146,9 +145,7 @@ namespace SuperweaponContextShowcaseMod.Runtime
                 return;
             }
 
-            var stack = engine.GetService(CoreServiceKeys.InteractionContextStack)
-                ?? throw new InvalidOperationException("Superweapon context showcase requires InteractionContextStack.");
-            if (!TryGetActiveSuperweaponFrame(stack, out _))
+            if (!TryGetActiveSuperweaponContext(engine))
             {
                 return;
             }
@@ -341,7 +338,7 @@ namespace SuperweaponContextShowcaseMod.Runtime
             Span<Entity> targets = stackalloc Entity[2];
             targets[0] = State.Arcweaver;
             targets[1] = State.Vanguard;
-            writer.CommitCast(State.LocalPlayer, targets, EntityCollectionSourceKind.UiAcquisition);
+            writer.CommitCast(State.SolePossessedRep, targets, EntityCollectionSourceKind.UiAcquisition);
             State.RoutedTargetCount = targets.Length;
         }
 
@@ -411,15 +408,24 @@ namespace SuperweaponContextShowcaseMod.Runtime
             _markerDescriptorsReady = true;
         }
 
-        private bool TryGetActiveSuperweaponFrame(InteractionContextStack stack, out InteractionContextFrame frame)
+        /// <summary>
+        /// The superweapon confirmation context's identity, read from the entity-mounted active
+        /// interaction state on the sole possessed rep; the profile registry supplies the context
+        /// id space the profile id resolves in.
+        /// </summary>
+        private bool TryGetActiveSuperweaponContext(GameEngine engine)
         {
-            if (!stack.TryPeek(out frame))
+            var contextProfiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry)
+                ?? throw new InvalidOperationException("Superweapon context showcase requires InteractionContextProfileRegistry.");
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity rep) ||
+                !engine.World.IsAlive(rep) ||
+                !engine.World.TryGet<InteractionContextInstance>(rep, out InteractionContextInstance context))
             {
                 return false;
             }
 
-            return frame.ContextEntity == State.Commander &&
-                   frame.ContextId == stack.ContextIdRegistry.GetId(SuperweaponContextShowcaseIds.ContextProfileId);
+            return context.ContextEntity == State.Commander &&
+                   context.ContextId == contextProfiles.ProfileIdRegistry.GetId(SuperweaponContextShowcaseIds.ContextProfileId);
         }
 
         private static int ResolveOrderTypeId(GameEngine engine, string orderTypeName)
@@ -435,10 +441,10 @@ namespace SuperweaponContextShowcaseMod.Runtime
             return id;
         }
 
-        private static Entity ResolveLocalPlayer(GameEngine engine)
+        private static Entity RequireSolePossessedRep(GameEngine engine)
         {
-            return engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity localPlayer)
-                ? localPlayer
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity solePossessedRep)
+                ? solePossessedRep
                 : Entity.Null;
         }
 

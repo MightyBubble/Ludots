@@ -1,0 +1,10 @@
+[
+  {
+    "id": "TF.GraphScore.Hostile",
+    "MaxResults": 8,
+    "Ops": [
+      { "Kind": "SpatialRadius", "RadiusCm": 2000 },
+      { "Kind": "Relationship", "Value": "Hostile" }
+    ]
+  }
+]

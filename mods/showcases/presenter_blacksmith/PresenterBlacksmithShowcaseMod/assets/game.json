@@ -1,0 +1,47 @@
+{
+  "startupMapId": "presenter_blacksmith_showcase",
+  "targetFps": 0,
+  "gasRuntimeCapacity": {
+    "effectLifetimeSnapshotCapacity": 32768,
+    "effectFanOutCommandCapacity": 32768,
+    "deferredTriggerActiveEntityCapacity": 32768,
+    "effectRequestQueueCapacity": 50000
+  },
+  "presentation": {
+    "presenterInstanceCapacity": 1048576,
+    "gasPresentationEventCapacity": 2097152,
+    "presentationEventStreamCapacity": 2097152,
+    "presentationOwnerChangeCapacity": 2097152,
+    "presenterCommandCapacity": 2097152,
+    "primitiveDrawBufferCapacity": 1048576,
+    "visualSnapshotBufferCapacity": 1048576,
+    "visualProxyBufferCapacity": 1048576,
+    "skinnedVisualBatchCapacity": 65536,
+    "presentationRequestCapacity": 196608,
+    "groundOverlayCapacity": 65536,
+    "splineRibbonCapacity": 65536,
+    "worldHudCapacity": 1048576,
+    "screenHudCapacity": 1048576,
+    "minimapMarkerCapacity": 1048576,
+    "runtimeEntitySpawnQueueCapacity": 524288,
+    "runtimeEntitySpawnReceiptQueueCapacity": 524288,
+    "cameraCulling": {
+      "highLodDistanceCm": 20000.0,
+      "mediumLodDistanceCm": 70000.0,
+      "lowLodDistanceCm": 180000.0
+    },
+    "minimap": {
+      "initialZoomNormalized": 1.0,
+      "wheelZoomNormalizedStep": 0.08,
+      "buttonZoomNormalizedStep": 0.18,
+      "zoomSliderEnabled": true,
+      "modeToggleEnabled": true,
+      "rotateToggleEnabled": true,
+      "debugMarkerSampleCapacity": 128,
+      "minZoomExtentMode": "OneChunk",
+      "maxZoomExtentMode": "FullMap",
+      "minZoomExplicitHalfExtentCm": 750.0,
+      "maxZoomExplicitHalfExtentCm": 0.0
+    }
+  }
+}

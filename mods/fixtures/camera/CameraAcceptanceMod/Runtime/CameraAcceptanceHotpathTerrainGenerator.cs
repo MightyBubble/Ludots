@@ -7,7 +7,7 @@ namespace CameraAcceptanceMod.Runtime
 {
     internal static class CameraAcceptanceHotpathTerrainGenerator
     {
-        private const string FileName = "camera_acceptance_hotpath.vtxm";
+        private const string FileName = "camera_acceptance_hotpath.hex";
         private const int Version = 2;
         private const int ChunkSize = 64;
         private const int WidthChunks = 12;
@@ -35,7 +35,7 @@ namespace CameraAcceptanceMod.Runtime
             using FileStream stream = File.Create(fullPath);
             using var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
 
-            writer.Write(Encoding.ASCII.GetBytes("VTXM"));
+            writer.Write(Encoding.ASCII.GetBytes("HEXM"));
             writer.Write(Version);
             writer.Write(WidthChunks);
             writer.Write(HeightChunks);

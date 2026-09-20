@@ -174,7 +174,7 @@ namespace Ludots.Core.UI.ProductionOverview
     /// </summary>
     public enum ProductionOverviewSourceKind : byte
     {
-        LocalPlayerRep = 0,
+        SolePossessedRep = 0,
         ExplicitEntity = 1,
         EntityCollection = 2,
         ControlPlaneView = 3
@@ -184,18 +184,18 @@ namespace Ludots.Core.UI.ProductionOverview
     public readonly struct ProductionOverviewBindingContext
     {
         public ProductionOverviewBindingContext(
-            Entity localPlayerRep,
+            Entity solePossessedRep,
             Entity focusedEntity,
             Entity collectionOwner,
             string instanceKey)
         {
-            LocalPlayerRep = localPlayerRep;
+            SolePossessedRep = solePossessedRep;
             FocusedEntity = focusedEntity;
             CollectionOwner = collectionOwner;
             InstanceKey = instanceKey ?? string.Empty;
         }
 
-        public Entity LocalPlayerRep { get; }
+        public Entity SolePossessedRep { get; }
         public Entity FocusedEntity { get; }
         public Entity CollectionOwner { get; }
         public string InstanceKey { get; }
@@ -316,7 +316,7 @@ namespace Ludots.Core.UI.ProductionOverview
 
     public static class ProductionOverviewSourceKindIds
     {
-        public const string LocalPlayerRep = "localPlayerRep";
+        public const string SolePossessedRep = "solePossessedRep";
         public const string ExplicitEntity = "explicitEntity";
         public const string EntityCollection = "entityCollection";
         public const string ControlPlaneView = "controlPlaneView";

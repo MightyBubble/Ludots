@@ -1,0 +1,24 @@
+{
+  "op": "MoveInt",
+  "driver": "script",
+  "title": "把 3 抄一份到结果槽",
+  "beat": "左边格子里的 3 原样不动，右边结果格里多出一份 3。",
+  "detailTemplate": "抄完了：来源还是 3，结果格里也是 {result}。",
+  "assertDetailContains": [
+    "抄完"
+  ],
+  "featuredNodeId": "move",
+  "graphKind": "Script",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "喝茶人",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

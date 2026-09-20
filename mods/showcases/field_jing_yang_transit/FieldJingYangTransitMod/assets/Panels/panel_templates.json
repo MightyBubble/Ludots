@@ -1,0 +1,44 @@
+[
+  {
+    "id": "panel.field_jing_yang.progress",
+    "graph": "Graph.FieldJingYang.Panel.Values",
+    "pins": [
+      {
+        "name": "stage",
+        "key": "field.jingyang.panel.stage",
+        "mode": "realtime",
+        "default": 0
+      },
+      {
+        "name": "regionCode",
+        "key": "field.jingyang.panel.regionCode",
+        "mode": "realtime",
+        "default": 0
+      },
+      {
+        "name": "enterCount",
+        "key": "field.jingyang.panel.enterCount",
+        "mode": "realtime",
+        "default": 0
+      },
+      {
+        "name": "exitCount",
+        "key": "field.jingyang.panel.exitCount",
+        "mode": "realtime",
+        "default": 0
+      },
+      {
+        "name": "fireScope",
+        "key": "field.jingyang.panel.fireScope",
+        "mode": "realtime",
+        "default": 0
+      },
+      {
+        "name": "fireCastCount",
+        "key": "field.jingyang.panel.fireCastCount",
+        "mode": "realtime",
+        "default": 0
+      }
+    ]
+  }
+]

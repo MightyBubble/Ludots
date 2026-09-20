@@ -1,0 +1,1353 @@
+[
+  {
+    "id": "Graph.Lifecycle.DeployConsumeSource",
+    "kind": "Effect",
+    "entry": "begin",
+    "nodes": [
+      {
+        "id": "begin",
+        "op": "BeginLifecycleTransaction"
+      },
+      {
+        "id": "materialize",
+        "op": "InvokeBuiltin",
+        "builtinHandler": "MaterializeTemplate"
+      },
+      {
+        "id": "copyIdentity",
+        "op": "InvokeBuiltin",
+        "builtinHandler": "CopyIdentityComponents"
+      },
+      {
+        "id": "copyAttrs",
+        "op": "InvokeBuiltin",
+        "builtinHandler": "CopyAttributeSlice"
+      },
+      {
+        "id": "clearFx",
+        "op": "InvokeBuiltin",
+        "builtinHandler": "ClearActiveEffects"
+      },
+      {
+        "id": "transferId",
+        "op": "InvokeBuiltin",
+        "builtinHandler": "TransferStableId"
+      },
+      {
+        "id": "consume",
+        "op": "InvokeBuiltin",
+        "builtinHandler": "ConsumeEntity"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "begin",
+        "fromPort": "next",
+        "to": "materialize"
+      },
+      {
+        "from": "materialize",
+        "fromPort": "next",
+        "to": "copyIdentity"
+      },
+      {
+        "from": "copyIdentity",
+        "fromPort": "next",
+        "to": "copyAttrs"
+      },
+      {
+        "from": "copyAttrs",
+        "fromPort": "next",
+        "to": "clearFx"
+      },
+      {
+        "from": "clearFx",
+        "fromPort": "next",
+        "to": "transferId"
+      },
+      {
+        "from": "transferId",
+        "fromPort": "next",
+        "to": "consume"
+      }
+    ],
+    "valueEdges": []
+  },
+  {
+    "id": "Graph.FuncLib.Demo.ConstSeven",
+    "kind": "Script",
+    "entry": "c",
+    "nodes": [
+      {
+        "id": "c",
+        "op": "ConstInt",
+        "intValue": 7
+      },
+      {
+        "id": "h",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "c",
+        "fromPort": "next",
+        "to": "h"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c",
+        "fromPort": "value",
+        "to": "h",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.LSW.HotDamage",
+    "kind": "Script",
+    "entry": "c",
+    "nodes": [
+      {
+        "id": "c",
+        "op": "ConstInt",
+        "intValue": 35
+      },
+      {
+        "id": "h",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "c",
+        "fromPort": "next",
+        "to": "h"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c",
+        "fromPort": "value",
+        "to": "h",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.LSW.FrostDraft",
+    "kind": "Script",
+    "entry": "c",
+    "nodes": [
+      {
+        "id": "c",
+        "op": "ConstInt",
+        "intValue": 20
+      },
+      {
+        "id": "h",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "c",
+        "fromPort": "next",
+        "to": "h"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c",
+        "fromPort": "value",
+        "to": "h",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.FuncLib.Demo.InvokeConstSeven",
+    "kind": "Script",
+    "entry": "invoke",
+    "nodes": [
+      {
+        "id": "invoke",
+        "op": "InvokeScript",
+        "functionName": "demo.const.seven"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "invoke",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "invoke",
+        "fromPort": "value",
+        "to": "done",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.BT.Leaf.SeeEnemy",
+    "kind": "Script",
+    "entry": "self",
+    "nodes": [
+      {
+        "id": "self",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "readDist",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "Sensor.DistanceCm"
+      },
+      {
+        "id": "threshold",
+        "op": "ConstInt",
+        "intValue": 550
+      },
+      {
+        "id": "cmp",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "branch",
+        "op": "BranchBool"
+      },
+      {
+        "id": "haltTrue",
+        "op": "HaltReturnInt",
+        "intValue": 1
+      },
+      {
+        "id": "haltFalse",
+        "op": "HaltReturnInt",
+        "intValue": 0
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "self",
+        "fromPort": "next",
+        "to": "readDist"
+      },
+      {
+        "from": "readDist",
+        "fromPort": "next",
+        "to": "threshold"
+      },
+      {
+        "from": "threshold",
+        "fromPort": "next",
+        "to": "cmp"
+      },
+      {
+        "from": "cmp",
+        "fromPort": "next",
+        "to": "branch"
+      },
+      {
+        "from": "branch",
+        "fromPort": "true",
+        "to": "haltTrue"
+      },
+      {
+        "from": "branch",
+        "fromPort": "false",
+        "to": "haltFalse"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "self",
+        "fromPort": "value",
+        "to": "readDist",
+        "toPort": "source"
+      },
+      {
+        "from": "readDist",
+        "fromPort": "value",
+        "to": "cmp",
+        "toPort": "a"
+      },
+      {
+        "from": "threshold",
+        "fromPort": "value",
+        "to": "cmp",
+        "toPort": "b"
+      },
+      {
+        "from": "cmp",
+        "fromPort": "value",
+        "to": "branch",
+        "toPort": "condition"
+      }
+    ]
+  },
+  {
+    "id": "Graph.BT.Leaf.InAttackRange",
+    "kind": "Script",
+    "entry": "self",
+    "nodes": [
+      {
+        "id": "self",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "readDist",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "Sensor.DistanceCm"
+      },
+      {
+        "id": "threshold",
+        "op": "ConstInt",
+        "intValue": 150
+      },
+      {
+        "id": "cmp",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "branch",
+        "op": "BranchBool"
+      },
+      {
+        "id": "haltTrue",
+        "op": "HaltReturnInt",
+        "intValue": 1
+      },
+      {
+        "id": "haltFalse",
+        "op": "HaltReturnInt",
+        "intValue": 0
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "self",
+        "fromPort": "next",
+        "to": "readDist"
+      },
+      {
+        "from": "readDist",
+        "fromPort": "next",
+        "to": "threshold"
+      },
+      {
+        "from": "threshold",
+        "fromPort": "next",
+        "to": "cmp"
+      },
+      {
+        "from": "cmp",
+        "fromPort": "next",
+        "to": "branch"
+      },
+      {
+        "from": "branch",
+        "fromPort": "true",
+        "to": "haltTrue"
+      },
+      {
+        "from": "branch",
+        "fromPort": "false",
+        "to": "haltFalse"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "self",
+        "fromPort": "value",
+        "to": "readDist",
+        "toPort": "source"
+      },
+      {
+        "from": "readDist",
+        "fromPort": "value",
+        "to": "cmp",
+        "toPort": "a"
+      },
+      {
+        "from": "threshold",
+        "fromPort": "value",
+        "to": "cmp",
+        "toPort": "b"
+      },
+      {
+        "from": "cmp",
+        "fromPort": "value",
+        "to": "branch",
+        "toPort": "condition"
+      }
+    ]
+  },
+  {
+    "id": "Graph.BT.Leaf.Chase",
+    "kind": "Script",
+    "entry": "self",
+    "nodes": [
+      {
+        "id": "self",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "readDist",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "Sensor.DistanceCm"
+      },
+      {
+        "id": "threshold",
+        "op": "ConstInt",
+        "intValue": 550
+      },
+      {
+        "id": "cmp",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "branch",
+        "op": "BranchBool"
+      },
+      {
+        "id": "haltTrue",
+        "op": "HaltReturnInt",
+        "intValue": 1
+      },
+      {
+        "id": "haltFalse",
+        "op": "HaltReturnInt",
+        "intValue": 0
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "self",
+        "fromPort": "next",
+        "to": "readDist"
+      },
+      {
+        "from": "readDist",
+        "fromPort": "next",
+        "to": "threshold"
+      },
+      {
+        "from": "threshold",
+        "fromPort": "next",
+        "to": "cmp"
+      },
+      {
+        "from": "cmp",
+        "fromPort": "next",
+        "to": "branch"
+      },
+      {
+        "from": "branch",
+        "fromPort": "true",
+        "to": "haltTrue"
+      },
+      {
+        "from": "branch",
+        "fromPort": "false",
+        "to": "haltFalse"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "self",
+        "fromPort": "value",
+        "to": "readDist",
+        "toPort": "source"
+      },
+      {
+        "from": "readDist",
+        "fromPort": "value",
+        "to": "cmp",
+        "toPort": "a"
+      },
+      {
+        "from": "threshold",
+        "fromPort": "value",
+        "to": "cmp",
+        "toPort": "b"
+      },
+      {
+        "from": "cmp",
+        "fromPort": "value",
+        "to": "branch",
+        "toPort": "condition"
+      }
+    ]
+  },
+  {
+    "id": "Graph.BT.Leaf.Attack",
+    "kind": "Script",
+    "entry": "self",
+    "nodes": [
+      {
+        "id": "self",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "readDist",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "Sensor.DistanceCm"
+      },
+      {
+        "id": "threshold",
+        "op": "ConstInt",
+        "intValue": 150
+      },
+      {
+        "id": "cmp",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "branch",
+        "op": "BranchBool"
+      },
+      {
+        "id": "haltTrue",
+        "op": "HaltReturnInt",
+        "intValue": 2
+      },
+      {
+        "id": "haltFalse",
+        "op": "HaltReturnInt",
+        "intValue": 1
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "self",
+        "fromPort": "next",
+        "to": "readDist"
+      },
+      {
+        "from": "readDist",
+        "fromPort": "next",
+        "to": "threshold"
+      },
+      {
+        "from": "threshold",
+        "fromPort": "next",
+        "to": "cmp"
+      },
+      {
+        "from": "cmp",
+        "fromPort": "next",
+        "to": "branch"
+      },
+      {
+        "from": "branch",
+        "fromPort": "true",
+        "to": "haltTrue"
+      },
+      {
+        "from": "branch",
+        "fromPort": "false",
+        "to": "haltFalse"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "self",
+        "fromPort": "value",
+        "to": "readDist",
+        "toPort": "source"
+      },
+      {
+        "from": "readDist",
+        "fromPort": "value",
+        "to": "cmp",
+        "toPort": "a"
+      },
+      {
+        "from": "threshold",
+        "fromPort": "value",
+        "to": "cmp",
+        "toPort": "b"
+      },
+      {
+        "from": "cmp",
+        "fromPort": "value",
+        "to": "branch",
+        "toPort": "condition"
+      }
+    ]
+  },
+  {
+    "id": "Graph.BT.Leaf.Patrol",
+    "kind": "Script",
+    "entry": "self",
+    "nodes": [
+      {
+        "id": "self",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "intent",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "self",
+        "fromPort": "next",
+        "to": "intent"
+      },
+      {
+        "from": "intent",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "intent",
+        "fromPort": "value",
+        "to": "done",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.HFSM.Cond.AlwaysTrue",
+    "kind": "Script",
+    "entry": "readDist",
+    "nodes": [
+      {
+        "id": "readDist",
+        "op": "MoveInt"
+      },
+      {
+        "id": "alertCm",
+        "op": "ConstInt",
+        "intValue": 500
+      },
+      {
+        "id": "near",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "branch",
+        "op": "BranchBool"
+      },
+      {
+        "id": "yes",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "no",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "haltYes",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "haltNo",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "readDist",
+        "fromPort": "next",
+        "to": "alertCm"
+      },
+      {
+        "from": "alertCm",
+        "fromPort": "next",
+        "to": "near"
+      },
+      {
+        "from": "near",
+        "fromPort": "next",
+        "to": "branch"
+      },
+      {
+        "from": "branch",
+        "fromPort": "true",
+        "to": "yes"
+      },
+      {
+        "from": "branch",
+        "fromPort": "false",
+        "to": "no"
+      },
+      {
+        "from": "yes",
+        "fromPort": "next",
+        "to": "haltYes"
+      },
+      {
+        "from": "no",
+        "fromPort": "next",
+        "to": "haltNo"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "readDist",
+        "fromPort": "value",
+        "to": "near",
+        "toPort": "a"
+      },
+      {
+        "from": "alertCm",
+        "fromPort": "value",
+        "to": "near",
+        "toPort": "b"
+      },
+      {
+        "from": "near",
+        "fromPort": "value",
+        "to": "branch",
+        "toPort": "condition"
+      },
+      {
+        "from": "yes",
+        "fromPort": "value",
+        "to": "haltYes",
+        "toPort": "value"
+      },
+      {
+        "from": "no",
+        "fromPort": "value",
+        "to": "haltNo",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.HFSM.Combat.OnEnter",
+    "kind": "Script",
+    "entry": "readDist",
+    "nodes": [
+      {
+        "id": "readDist",
+        "op": "MoveInt"
+      },
+      {
+        "id": "combatCm",
+        "op": "ConstInt",
+        "intValue": 200
+      },
+      {
+        "id": "near",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "branch",
+        "op": "BranchBool"
+      },
+      {
+        "id": "nearCode",
+        "op": "ConstInt",
+        "intValue": 11
+      },
+      {
+        "id": "farCode",
+        "op": "ConstInt",
+        "intValue": 10
+      },
+      {
+        "id": "haltNear",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "haltFar",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "readDist",
+        "fromPort": "next",
+        "to": "combatCm"
+      },
+      {
+        "from": "combatCm",
+        "fromPort": "next",
+        "to": "near"
+      },
+      {
+        "from": "near",
+        "fromPort": "next",
+        "to": "branch"
+      },
+      {
+        "from": "branch",
+        "fromPort": "true",
+        "to": "nearCode"
+      },
+      {
+        "from": "branch",
+        "fromPort": "false",
+        "to": "farCode"
+      },
+      {
+        "from": "nearCode",
+        "fromPort": "next",
+        "to": "haltNear"
+      },
+      {
+        "from": "farCode",
+        "fromPort": "next",
+        "to": "haltFar"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "readDist",
+        "fromPort": "value",
+        "to": "near",
+        "toPort": "a"
+      },
+      {
+        "from": "combatCm",
+        "fromPort": "value",
+        "to": "near",
+        "toPort": "b"
+      },
+      {
+        "from": "near",
+        "fromPort": "value",
+        "to": "branch",
+        "toPort": "condition"
+      },
+      {
+        "from": "nearCode",
+        "fromPort": "value",
+        "to": "haltNear",
+        "toPort": "value"
+      },
+      {
+        "from": "farCode",
+        "fromPort": "value",
+        "to": "haltFar",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.HFSM.Combat.OnTick",
+    "kind": "Script",
+    "entry": "readDist",
+    "nodes": [
+      {
+        "id": "readDist",
+        "op": "MoveInt"
+      },
+      {
+        "id": "combatCm",
+        "op": "ConstInt",
+        "intValue": 200
+      },
+      {
+        "id": "near",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "branch",
+        "op": "BranchBool"
+      },
+      {
+        "id": "nearCode",
+        "op": "ConstInt",
+        "intValue": 21
+      },
+      {
+        "id": "farCode",
+        "op": "ConstInt",
+        "intValue": 20
+      },
+      {
+        "id": "haltNear",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "haltFar",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "readDist",
+        "fromPort": "next",
+        "to": "combatCm"
+      },
+      {
+        "from": "combatCm",
+        "fromPort": "next",
+        "to": "near"
+      },
+      {
+        "from": "near",
+        "fromPort": "next",
+        "to": "branch"
+      },
+      {
+        "from": "branch",
+        "fromPort": "true",
+        "to": "nearCode"
+      },
+      {
+        "from": "branch",
+        "fromPort": "false",
+        "to": "farCode"
+      },
+      {
+        "from": "nearCode",
+        "fromPort": "next",
+        "to": "haltNear"
+      },
+      {
+        "from": "farCode",
+        "fromPort": "next",
+        "to": "haltFar"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "readDist",
+        "fromPort": "value",
+        "to": "near",
+        "toPort": "a"
+      },
+      {
+        "from": "combatCm",
+        "fromPort": "value",
+        "to": "near",
+        "toPort": "b"
+      },
+      {
+        "from": "near",
+        "fromPort": "value",
+        "to": "branch",
+        "toPort": "condition"
+      },
+      {
+        "from": "nearCode",
+        "fromPort": "value",
+        "to": "haltNear",
+        "toPort": "value"
+      },
+      {
+        "from": "farCode",
+        "fromPort": "value",
+        "to": "haltFar",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.HFSM.Combat.OnExit",
+    "kind": "Script",
+    "entry": "readDist",
+    "nodes": [
+      {
+        "id": "readDist",
+        "op": "MoveInt"
+      },
+      {
+        "id": "combatCm",
+        "op": "ConstInt",
+        "intValue": 200
+      },
+      {
+        "id": "near",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "branch",
+        "op": "BranchBool"
+      },
+      {
+        "id": "nearCode",
+        "op": "ConstInt",
+        "intValue": 31
+      },
+      {
+        "id": "farCode",
+        "op": "ConstInt",
+        "intValue": 30
+      },
+      {
+        "id": "haltNear",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "haltFar",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "readDist",
+        "fromPort": "next",
+        "to": "combatCm"
+      },
+      {
+        "from": "combatCm",
+        "fromPort": "next",
+        "to": "near"
+      },
+      {
+        "from": "near",
+        "fromPort": "next",
+        "to": "branch"
+      },
+      {
+        "from": "branch",
+        "fromPort": "true",
+        "to": "nearCode"
+      },
+      {
+        "from": "branch",
+        "fromPort": "false",
+        "to": "farCode"
+      },
+      {
+        "from": "nearCode",
+        "fromPort": "next",
+        "to": "haltNear"
+      },
+      {
+        "from": "farCode",
+        "fromPort": "next",
+        "to": "haltFar"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "readDist",
+        "fromPort": "value",
+        "to": "near",
+        "toPort": "a"
+      },
+      {
+        "from": "combatCm",
+        "fromPort": "value",
+        "to": "near",
+        "toPort": "b"
+      },
+      {
+        "from": "near",
+        "fromPort": "value",
+        "to": "branch",
+        "toPort": "condition"
+      },
+      {
+        "from": "nearCode",
+        "fromPort": "value",
+        "to": "haltNear",
+        "toPort": "value"
+      },
+      {
+        "from": "farCode",
+        "fromPort": "value",
+        "to": "haltFar",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.Ability.Slash",
+    "kind": "Script",
+    "entry": "c",
+    "nodes": [
+      {
+        "id": "c",
+        "op": "ConstInt",
+        "intValue": 11
+      },
+      {
+        "id": "h",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "c",
+        "fromPort": "next",
+        "to": "h"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c",
+        "fromPort": "value",
+        "to": "h",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.Ability.Bash",
+    "kind": "Script",
+    "entry": "c",
+    "nodes": [
+      {
+        "id": "c",
+        "op": "ConstInt",
+        "intValue": 22
+      },
+      {
+        "id": "h",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "c",
+        "fromPort": "next",
+        "to": "h"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c",
+        "fromPort": "value",
+        "to": "h",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.Script.DrinkUntilFull",
+    "kind": "Script",
+    "entry": "zeroWater",
+    "nodes": [
+      {
+        "id": "zeroWater",
+        "op": "ConstInt",
+        "intValue": 0,
+        "pinRegister": 0
+      },
+      {
+        "id": "limitValue",
+        "op": "ConstInt",
+        "intValue": 5,
+        "pinRegister": 1
+      },
+      {
+        "id": "oneValue",
+        "op": "ConstInt",
+        "intValue": 1,
+        "pinRegister": 2
+      },
+      {
+        "id": "readWater",
+        "op": "MoveInt"
+      },
+      {
+        "id": "readLimit",
+        "op": "MoveInt"
+      },
+      {
+        "id": "waterBelowLimit",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "branchNeedDrink",
+        "op": "BranchBool"
+      },
+      {
+        "id": "callDrink",
+        "op": "Call"
+      },
+      {
+        "id": "readWaterForReturn",
+        "op": "MoveInt"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "drinkReadWater",
+        "op": "MoveInt"
+      },
+      {
+        "id": "drinkReadOne",
+        "op": "MoveInt"
+      },
+      {
+        "id": "drinkAdd",
+        "op": "AddInt",
+        "pinRegister": 0
+      },
+      {
+        "id": "drinkYield",
+        "op": "Yield"
+      },
+      {
+        "id": "drinkReturn",
+        "op": "Return"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "zeroWater",
+        "fromPort": "next",
+        "to": "limitValue"
+      },
+      {
+        "from": "limitValue",
+        "fromPort": "next",
+        "to": "oneValue"
+      },
+      {
+        "from": "oneValue",
+        "fromPort": "next",
+        "to": "readWater"
+      },
+      {
+        "from": "readWater",
+        "fromPort": "next",
+        "to": "readLimit"
+      },
+      {
+        "from": "readLimit",
+        "fromPort": "next",
+        "to": "waterBelowLimit"
+      },
+      {
+        "from": "waterBelowLimit",
+        "fromPort": "next",
+        "to": "branchNeedDrink"
+      },
+      {
+        "from": "branchNeedDrink",
+        "fromPort": "true",
+        "to": "callDrink"
+      },
+      {
+        "from": "branchNeedDrink",
+        "fromPort": "false",
+        "to": "readWaterForReturn"
+      },
+      {
+        "from": "callDrink",
+        "fromPort": "call",
+        "to": "drinkReadWater"
+      },
+      {
+        "from": "callDrink",
+        "fromPort": "next",
+        "to": "readWater"
+      },
+      {
+        "from": "readWaterForReturn",
+        "fromPort": "next",
+        "to": "done"
+      },
+      {
+        "from": "drinkReadWater",
+        "fromPort": "next",
+        "to": "drinkReadOne"
+      },
+      {
+        "from": "drinkReadOne",
+        "fromPort": "next",
+        "to": "drinkAdd"
+      },
+      {
+        "from": "drinkAdd",
+        "fromPort": "next",
+        "to": "drinkYield"
+      },
+      {
+        "from": "drinkYield",
+        "fromPort": "next",
+        "to": "drinkReturn"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "zeroWater",
+        "fromPort": "value",
+        "to": "readWater",
+        "toPort": "value"
+      },
+      {
+        "from": "limitValue",
+        "fromPort": "value",
+        "to": "readLimit",
+        "toPort": "value"
+      },
+      {
+        "from": "readWater",
+        "fromPort": "value",
+        "to": "waterBelowLimit",
+        "toPort": "a"
+      },
+      {
+        "from": "readLimit",
+        "fromPort": "value",
+        "to": "waterBelowLimit",
+        "toPort": "b"
+      },
+      {
+        "from": "waterBelowLimit",
+        "fromPort": "value",
+        "to": "branchNeedDrink",
+        "toPort": "condition"
+      },
+      {
+        "from": "zeroWater",
+        "fromPort": "value",
+        "to": "readWaterForReturn",
+        "toPort": "value"
+      },
+      {
+        "from": "readWaterForReturn",
+        "fromPort": "value",
+        "to": "done",
+        "toPort": "value"
+      },
+      {
+        "from": "zeroWater",
+        "fromPort": "value",
+        "to": "drinkReadWater",
+        "toPort": "value"
+      },
+      {
+        "from": "oneValue",
+        "fromPort": "value",
+        "to": "drinkReadOne",
+        "toPort": "value"
+      },
+      {
+        "from": "drinkReadWater",
+        "fromPort": "value",
+        "to": "drinkAdd",
+        "toPort": "a"
+      },
+      {
+        "from": "drinkReadOne",
+        "fromPort": "value",
+        "to": "drinkAdd",
+        "toPort": "b"
+      }
+    ]
+  }
+]

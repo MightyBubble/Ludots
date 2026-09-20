@@ -103,11 +103,11 @@ namespace GasTests.Physics2D
 
         private static void WritePhysicsClockConfig(string root, string clockJson)
         {
-            Directory.CreateDirectory(Path.Combine(root, "Configs", "Physics2D"));
+            Directory.CreateDirectory(Path.Combine(root, "Physics2D"));
             File.WriteAllText(
-                Path.Combine(root, "Configs", "config_catalog.json"),
+                Path.Combine(root, "config_catalog.json"),
                 "[{ \"Path\": \"Physics2D/clock.json\", \"Policy\": \"DeepObject\" }]");
-            File.WriteAllText(Path.Combine(root, "Configs", "Physics2D", "clock.json"), clockJson);
+            File.WriteAllText(Path.Combine(root, "Physics2D", "clock.json"), clockJson);
         }
 
         private static string CreateTempRoot()

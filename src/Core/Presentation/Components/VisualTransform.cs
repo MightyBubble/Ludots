@@ -24,7 +24,7 @@ namespace Ludots.Core.Presentation.Components
     /// Frame-local provenance for VisualTransform.Y after terrain projection.
     /// Consumers can use this to avoid re-sampling the same visual heightmap truth.
     /// </summary>
-    public struct VisualHeightmapSampleState
+    public struct ContinuousHeightmapSampleState
     {
         public int FrameId;
         public byte Sampled;

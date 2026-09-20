@@ -1,0 +1,44 @@
+{
+  "Id": "presenter_blacksmith_dynamic_worker_large_world_benchmark",
+  "Tuning": {
+    "LoadedChunkCapacity": 256
+  },
+  "Tags": [
+    "showcase",
+    "presenter",
+    "benchmark",
+    "dynamic",
+    "skinned",
+    "animator",
+    "large-world"
+  ],
+  "ContinuousHeightmapAsset": "assets/terrain/presenter_blacksmith_dynamic_worker_large_world.height",
+  "Metadata": {
+    "presenterBlacksmith": {
+      "dynamicWorkerBenchmarkTotal": 30000,
+      "dynamicWorkerScatterSeed": 91543,
+      "dynamicWorkerScatterPaddingCm": 32000.0,
+      "dynamicWorkerScatterJitterCm": 1400.0,
+      "dynamicWorkerMovementPaddingCm": 32000.0,
+      "dynamicWorkerMovementSpeedCmPerSecond": 84.0
+    }
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthCells": 65536,
+      "HeightCells": 65536,
+      "GridCellSizeCm": 100
+    }
+  ],
+  "DefaultCamera": {
+    "TargetXCm": 18640,
+    "TargetYCm": 0,
+    "Yaw": 45,
+    "Pitch": 42,
+    "DistanceCm": 5000,
+    "FovYDeg": 45
+  },
+  "Entities": []
+}

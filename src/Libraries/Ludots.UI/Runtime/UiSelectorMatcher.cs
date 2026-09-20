@@ -10,6 +10,22 @@ public static class UiSelectorMatcher
 	{
 		ArgumentNullException.ThrowIfNull(node, "node");
 		ArgumentNullException.ThrowIfNull(selector, "selector");
+		if (selector.PseudoElement == UiPseudoElement.Unsupported)
+		{
+			return false;
+		}
+		if (selector.PseudoElement != UiPseudoElement.None)
+		{
+			if (node.PseudoElement != selector.PseudoElement)
+			{
+				return false;
+			}
+			return Matches(node.Parent, selector.Parts.Count - 1, selector.Parts);
+		}
+		if (node.PseudoElement != UiPseudoElement.None)
+		{
+			return false;
+		}
 		return Matches(node, selector.Parts.Count - 1, selector.Parts);
 	}
 
@@ -148,7 +164,7 @@ public static class UiSelectorMatcher
 
 	private static bool MatchesStructuralPseudo(UiNode node, UiStructuralPseudo pseudo)
 	{
-		if (node.Parent == null)
+		if (node.Parent == null || node.PseudoElement != UiPseudoElement.None)
 		{
 			return false;
 		}
@@ -157,7 +173,7 @@ public static class UiSelectorMatcher
 		{
 			return false;
 		}
-		return UiStructuralPseudoMatcher.Matches(node.Parent.Children.Count, childIndex, pseudo);
+		return UiStructuralPseudoMatcher.Matches(CountOriginatingChildren(node.Parent), childIndex, pseudo);
 	}
 
 	private static bool MatchesLogicalPseudo(UiNode node, UiSelectorLogicalPseudo pseudo)
@@ -193,14 +209,34 @@ public static class UiSelectorMatcher
 		{
 			return -1;
 		}
+		int index = 0;
 		for (int i = 0; i < node.Parent.Children.Count; i++)
 		{
-			if (node.Parent.Children[i] == node)
+			UiNode child = node.Parent.Children[i];
+			if (child.PseudoElement != UiPseudoElement.None)
 			{
-				return i + 1;
+				continue;
+			}
+			index++;
+			if (child == node)
+			{
+				return index;
 			}
 		}
 		return -1;
+	}
+
+	private static int CountOriginatingChildren(UiNode parent)
+	{
+		int count = 0;
+		for (int i = 0; i < parent.Children.Count; i++)
+		{
+			if (parent.Children[i].PseudoElement == UiPseudoElement.None)
+			{
+				count++;
+			}
+		}
+		return count;
 	}
 
 	private static UiNode? GetPreviousSibling(UiNode node)
@@ -209,11 +245,17 @@ public static class UiSelectorMatcher
 		{
 			return null;
 		}
+		UiNode? previous = null;
 		for (int i = 0; i < node.Parent.Children.Count; i++)
 		{
-			if (node.Parent.Children[i] == node)
+			UiNode child = node.Parent.Children[i];
+			if (child == node)
 			{
-				return (i > 0) ? node.Parent.Children[i - 1] : null;
+				return previous;
+			}
+			if (child.PseudoElement == UiPseudoElement.None)
+			{
+				previous = child;
 			}
 		}
 		return null;

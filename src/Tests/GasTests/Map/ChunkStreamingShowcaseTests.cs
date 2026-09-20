@@ -9,6 +9,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Map.Board;
 using NUnit.Framework;
 using RoadNetworkShowcaseMod.Runtime;
+using Ludots.Tests.TestCommon;
 
 namespace Ludots.Tests.GAS
 {
@@ -47,11 +48,11 @@ namespace Ludots.Tests.GAS
 
             Assert.That(timeline[0].LoadedChunkCount, Is.EqualTo(25));
             Assert.That(timeline[0].LoadedNodeCount, Is.GreaterThan(100));
-            Assert.That(timeline[0].LoadedRoadSplineCount, Is.EqualTo(11));
+            Assert.That(timeline[0].LoadedSplineRibbonCount, Is.EqualTo(11));
             Assert.That(timeline[1].ChunkSignature, Is.Not.EqualTo(timeline[0].ChunkSignature));
             Assert.That(timeline[2].ChunkSignature, Is.Not.EqualTo(timeline[1].ChunkSignature));
             Assert.That(timeline[2].LoadedNodeCount, Is.GreaterThan(40));
-            Assert.That(timeline[2].LoadedRoadSplineCount, Is.GreaterThan(0));
+            Assert.That(timeline[2].LoadedSplineRibbonCount, Is.GreaterThan(0));
             Assert.That(timeline[3].ChunkSignature, Is.EqualTo(timeline[0].ChunkSignature));
 
             string artifactDir = Path.Combine(FindRepoRoot(), "artifacts", "acceptance", "chunk_streaming_showcase");
@@ -69,7 +70,7 @@ namespace Ludots.Tests.GAS
             int splineCount = 0;
             foreach (long chunkKey in board.LoadedChunksSource.ActiveChunkKeys)
             {
-                if (scenario.TryGetRoadSplineChunk(chunkKey, out RoadNetworkScenarioDefinition.RoadSplineSpec[]? chunkSplines))
+                if (scenario.TryGetRoadRibbonChunk(chunkKey, out RoadNetworkScenarioDefinition.RoadRibbonSpec[]? chunkSplines))
                 {
                     splineCount += chunkSplines.Length;
                 }
@@ -77,7 +78,7 @@ namespace Ludots.Tests.GAS
 
             return new ChunkSnapshot(
                 step,
-                engine.GameSession.Camera.State.TargetCm,
+                engine.AuthorityCamera().State.TargetCm,
                 board.LoadedChunksSource.ActiveChunkKeys.Count,
                 board.GraphRuntime.CurrentGraph.NodeCount,
                 splineCount,
@@ -172,7 +173,7 @@ namespace Ludots.Tests.GAS
             sb.AppendLine("## Timeline");
             foreach (ChunkSnapshot snapshot in timeline)
             {
-                sb.AppendLine($"- {snapshot.Step}: camera=`{snapshot.CameraTarget.X:0},{snapshot.CameraTarget.Y:0}` chunks=`{snapshot.LoadedChunkCount}` nodes=`{snapshot.LoadedNodeCount}` splines=`{snapshot.LoadedRoadSplineCount}`");
+                sb.AppendLine($"- {snapshot.Step}: camera=`{snapshot.CameraTarget.X:0},{snapshot.CameraTarget.Y:0}` chunks=`{snapshot.LoadedChunkCount}` nodes=`{snapshot.LoadedNodeCount}` splines=`{snapshot.LoadedSplineRibbonCount}`");
             }
 
             sb.AppendLine();
@@ -193,7 +194,7 @@ namespace Ludots.Tests.GAS
                     camera = new { x = snapshot.CameraTarget.X, y = snapshot.CameraTarget.Y },
                     chunks = snapshot.LoadedChunkCount,
                     nodes = snapshot.LoadedNodeCount,
-                    splines = snapshot.LoadedRoadSplineCount,
+                    splines = snapshot.LoadedSplineRibbonCount,
                     signature = snapshot.ChunkSignature
                 }));
             }
@@ -230,7 +231,7 @@ namespace Ludots.Tests.GAS
             Vector2 CameraTarget,
             int LoadedChunkCount,
             int LoadedNodeCount,
-            int LoadedRoadSplineCount,
+            int LoadedSplineRibbonCount,
             string ChunkSignature);
     }
 }

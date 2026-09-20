@@ -37,6 +37,34 @@ namespace Ludots.Tool
             return LoadMergedMap(root, mods, loadOrder, mapId);
         }
 
+        public static string ResolveModRoot(string repoRoot, string modId)
+        {
+            if (string.IsNullOrWhiteSpace(repoRoot))
+            {
+                throw new InvalidOperationException("Mod root resolution requires a repo root.");
+            }
+
+            if (string.IsNullOrWhiteSpace(modId))
+            {
+                throw new InvalidOperationException("Mod root resolution requires a mod id.");
+            }
+
+            List<ModInfo> matches = DiscoverMods(Path.GetFullPath(repoRoot))
+                .Where(mod => string.Equals(mod.Id, modId, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            if (matches.Count == 0)
+            {
+                throw new InvalidOperationException($"Unknown mod '{modId}'.");
+            }
+
+            if (matches.Count > 1)
+            {
+                throw new InvalidOperationException($"Mod id '{modId}' resolves to multiple roots.");
+            }
+
+            return matches[0].RootPath;
+        }
+
         public static BoardConfig ResolvePrimaryNavigationBoard(MapConfig map)
         {
             if (map == null) throw new ArgumentNullException(nameof(map));
@@ -45,12 +73,27 @@ namespace Ludots.Tool
                 throw new InvalidOperationException($"Map '{map.Id}' has no BoardConfig entries.");
             }
 
+            string? rootDesignation = map.RootBoard?.Trim();
+            if (!string.IsNullOrWhiteSpace(rootDesignation))
+            {
+                foreach (var board in map.Boards)
+                {
+                    if (string.Equals(board.Name, rootDesignation, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return board;
+                    }
+                }
+
+                throw new InvalidOperationException(
+                    $"Map '{map.Id}' RootBoard '{rootDesignation}' matches no board (#1567).");
+            }
+
             BoardConfig? defaultNavigationBoard = null;
             BoardConfig? firstNavigationBoard = null;
             for (int i = 0; i < map.Boards.Count; i++)
             {
                 BoardConfig board = map.Boards[i];
-                if (board == null || !board.NavigationEnabled)
+                if (board == null)
                 {
                     continue;
                 }
@@ -76,6 +119,7 @@ namespace Ludots.Tool
             }
 
             return Directory.GetFiles(modsRoot, "mod.json", SearchOption.AllDirectories)
+                .Where(path => !IsBuildOutputPath(path))
                 .Select(path =>
                 {
                     using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(path));
@@ -103,6 +147,22 @@ namespace Ludots.Tool
                 .OrderBy(mod => mod.Priority)
                 .ThenBy(mod => mod.Id, StringComparer.OrdinalIgnoreCase)
                 .ToList();
+        }
+
+        private static bool IsBuildOutputPath(string path)
+        {
+            foreach (string segment in path.Split(
+                new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
+                StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (string.Equals(segment, "bin", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(segment, "obj", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static List<string> ResolveUniqueMapLoadOrder(string repoRoot, IReadOnlyList<ModInfo> mods, string mapId)
@@ -244,17 +304,20 @@ namespace Ludots.Tool
             {
                 MapConfig parent = LoadMergedMap(repoRoot, mods, loadOrder, merged.ParentId);
                 MergeMap(parent, merged);
-                return parent;
+                Ludots.Core.Map.MapManager.ApplyWorldTuningToBoards(parent);
+            return parent;
             }
 
-            return merged;
+            Ludots.Core.Map.MapManager.ApplyWorldTuningToBoards(merged);
+        return merged;
         }
 
         private static void MergeMap(MapConfig target, MapConfig source)
         {
             if (!string.IsNullOrWhiteSpace(source.Id)) target.Id = source.Id;
             if (!string.IsNullOrWhiteSpace(source.ParentId)) target.ParentId = source.ParentId;
-            if (!string.IsNullOrWhiteSpace(source.VisualHeightmapAsset)) target.VisualHeightmapAsset = source.VisualHeightmapAsset;
+            if (!string.IsNullOrWhiteSpace(source.ContinuousHeightmapAsset)) target.ContinuousHeightmapAsset = source.ContinuousHeightmapAsset;
+            if (source.TerrainPresentation != null) target.TerrainPresentation = source.TerrainPresentation.Clone();
 
             if (source.Dependencies != null)
             {
@@ -317,8 +380,18 @@ namespace Ludots.Tool
             }
 
             if (source.DefaultCamera != null) target.DefaultCamera = source.DefaultCamera;
-            if (source.VisualHeightmap != null) target.VisualHeightmap = source.VisualHeightmap;
+            if (source.ContinuousHeightmap != null) target.ContinuousHeightmap = source.ContinuousHeightmap;
             if (source.ParticipantRelationships != null) target.ParticipantRelationships = source.ParticipantRelationships;
+        if (!string.IsNullOrWhiteSpace(source.RootBoard))
+        {
+            target.RootBoard = source.RootBoard;
+        }
+
+        if (source.Tuning is { } srcTuning && srcTuning.IsAuthored)
+        {
+            target.Tuning = srcTuning.Clone();
+        }
+
         }
 
         private static bool MapFileExists(string rootPath, string mapId)
@@ -338,10 +411,11 @@ namespace Ludots.Tool
                 return;
             }
 
-            if (ContainsKey(root, "WidthInTiles") || ContainsKey(root, "HeightInTiles"))
+            if (ContainsKey(root, "WidthInTiles") || ContainsKey(root, "HeightInTiles") ||
+                ContainsKey(root, "WidthInPages") || ContainsKey(root, "HeightInPages"))
             {
                 throw new InvalidOperationException(
-                    $"Map config '{path}' uses legacy WidthInTiles/HeightInTiles. Use WidthInMacroTiles/HeightInMacroTiles.");
+                    $"Map config '{path}' uses legacy tile-count world keys. Use Boards[].WidthCells/HeightCells; the root board anchors the host world.");
             }
 
             if (TryGetObjectArray(root, "boards", out JsonArray? boards) && boards != null)
@@ -350,10 +424,11 @@ namespace Ludots.Tool
                 {
                     JsonNode? boardNode = boards[i];
                     if (boardNode is JsonObject board &&
-                        (ContainsKey(board, "WidthInTiles") || ContainsKey(board, "HeightInTiles")))
+                        (ContainsKey(board, "WidthInTiles") || ContainsKey(board, "HeightInTiles") ||
+                         ContainsKey(board, "WidthInPages") || ContainsKey(board, "HeightInPages")))
                     {
                         throw new InvalidOperationException(
-                            $"Map config '{path}' board[{i}] uses legacy WidthInTiles/HeightInTiles. Use WidthInMacroTiles/HeightInMacroTiles.");
+                            $"Map config '{path}' board[{i}] uses legacy tile-count extent keys. Use Boards[].WidthCells/HeightCells; the root board anchors the host world.");
                     }
                 }
             }
@@ -363,7 +438,7 @@ namespace Ludots.Tool
         {
             foreach (KeyValuePair<string, JsonNode?> kvp in obj)
             {
-                if (string.Equals(kvp.Key, key, StringComparison.Ordinal))
+                if (string.Equals(kvp.Key, key, StringComparison.OrdinalIgnoreCase))
                 {
                     return true;
                 }

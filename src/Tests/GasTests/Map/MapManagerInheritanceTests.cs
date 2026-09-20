@@ -26,11 +26,10 @@ namespace GasTests
                     {
                       "name": "default",
                       "spatialType": "Hex",
-                      "widthInMacroTiles": 128,
-                      "heightInMacroTiles": 64,
+                      "widthCells": 32768,
+                      "heightCells": 16384,
                       "gridCellSizeCm": 200,
-                      "hexEdgeLengthCm": 900,
-                      "chunkSizeCells": 32
+                      "hexEdgeLengthCm": 900
                     }
                   ]
                 }
@@ -51,7 +50,7 @@ namespace GasTests
                 Assert.That(cfg.Boards.Count, Is.EqualTo(1));
                 var board = cfg.Boards[0];
                 Assert.That(board.SpatialType, Is.EqualTo("Hex"));
-                Assert.That(board.WidthInMacroTiles, Is.EqualTo(128));
+                Assert.That(board.WidthCells, Is.EqualTo(32768));
                 Assert.That(board.HexEdgeLengthCm, Is.EqualTo(900));
             }
             finally
@@ -103,7 +102,7 @@ namespace GasTests
                     {
                       "name": "default",
                       "widthInTiles": 2,
-                      "heightInMacroTiles": 2
+                      "heightCells": 512
                     }
                   ]
                 }
@@ -113,7 +112,7 @@ namespace GasTests
                 var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("legacy"));
 
                 Assert.That(ex!.Message, Does.Contain("legacy key 'widthInTiles'"));
-                Assert.That(ex.Message, Does.Contain("widthInMacroTiles"));
+                Assert.That(ex.Message, Does.Contain("WidthCells"));
             }
             finally
             {
@@ -122,7 +121,29 @@ namespace GasTests
         }
 
         [Test]
-        public void LoadMap_WhenChildOmitsVisualHeightmapAsset_InheritsParentDeclaration()
+        public void LoadMap_WhenWorldTuningDeclaresCapacity_BoardsInheritSingleBudget()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "tuned", """
+                {
+                  "id": "tuned",
+                  "tuning": { "loadedChunkCapacity": 64 },
+                  "boards": [
+                    { "name": "default", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100 }
+                  ]
+                }
+                """);
+                var manager = CreateMapManager(tempRoot);
+                var cfg = manager.LoadMap("tuned");
+                Assert.That(cfg!.Boards[0].LoadedChunkCapacity, Is.EqualTo(64));
+            }
+            finally { TryDelete(tempRoot); }
+        }
+
+        [Test]
+        public void LoadMap_WhenChildAddsNoOverrides_ParentTuningSurvives()
         {
             var tempRoot = CreateTempDir();
             try
@@ -130,7 +151,269 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "parent", """
                 {
                   "id": "parent",
-                  "visualHeightmapAsset": "terrain/parent.vhtm"
+                  "tuning": { "loadedChunkCapacity": 64 },
+                  "boards": [
+                    { "name": "default", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100 }
+                  ]
+                }
+                """);
+                WriteMapConfig(tempRoot, "child", """
+                {
+                  "id": "child",
+                  "parentId": "parent"
+                }
+                """);
+                var manager = CreateMapManager(tempRoot);
+                var cfg = manager.LoadMap("child");
+                Assert.That(cfg.Tuning.LoadedChunkCapacity, Is.EqualTo(64));
+                Assert.That(cfg.Boards[0].LoadedChunkCapacity, Is.EqualTo(64));
+            }
+            finally { TryDelete(tempRoot); }
+        }
+
+        [Test]
+        public void LoadMap_WhenBoardAuthorsRetiredCapacityKey_Throws()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "conflict", """
+                {
+                  "id": "conflict",
+                  "tuning": { "loadedChunkCapacity": 64 },
+                  "boards": [
+                    { "name": "default", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100, "loadedChunkCapacity": 32 }
+                  ]
+                }
+                """);
+                var manager = CreateMapManager(tempRoot);
+                var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("conflict"));
+                Assert.That(ex!.Message, Does.Contain("legacy key 'loadedChunkCapacity'"));
+            }
+            finally { TryDelete(tempRoot); }
+        }
+
+        [Test]
+        public void LoadMap_WhenWorldTuningPartitionIsNotPowerOfTwo_Throws()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "oddpart", """
+                {
+                  "id": "oddpart",
+                  "tuning": { "partitionChunkCells": 48 },
+                  "boards": [
+                    { "name": "default", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100 }
+                  ]
+                }
+                """);
+                var manager = CreateMapManager(tempRoot);
+                var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("oddpart"));
+                Assert.That(ex!.Message, Does.Contain("power of two"));
+            }
+            finally { TryDelete(tempRoot); }
+        }
+
+        [Test]
+        public void LoadMap_WhenBoardAuthorsRetiredPartitionKey_Throws()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "partconflict", """
+                {
+                  "id": "partconflict",
+                  "tuning": { "loadedChunkCapacity": 64, "partitionChunkCells": 128 },
+                  "boards": [
+                    { "name": "default", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100, "chunkSizeCells": 32 }
+                  ]
+                }
+                """);
+                var manager = CreateMapManager(tempRoot);
+                var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("partconflict"));
+                Assert.That(ex!.Message, Does.Contain("legacy key 'chunkSizeCells'"));
+            }
+            finally { TryDelete(tempRoot); }
+        }
+
+        [Test]
+        public void LoadMap_WhenSatelliteBoardExceedsRootBoard_Throws()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "oversize", """
+                {
+                  "id": "oversize",
+                  "tuning": { "loadedChunkCapacity": 16 },
+                  "boards": [
+                    { "name": "root", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100 },
+                    { "name": "default", "widthCells": 1024, "heightCells": 256, "gridCellSizeCm": 100 }
+                  ]
+                }
+                """);
+                var manager = CreateMapManager(tempRoot);
+                var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("oversize"));
+                Assert.That(ex!.Message, Does.Contain("exceeds root board 'root'"));
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
+        [Test]
+        public void LoadMap_WhenRootBoardDesignationMatchesNoBoard_Throws()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "badroot", """
+                {
+                  "id": "badroot",
+                  "tuning": { "loadedChunkCapacity": 16 },
+                  "rootBoard": "ghost",
+                  "boards": [
+                    { "name": "root", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100 }
+                  ]
+                }
+                """);
+                var manager = CreateMapManager(tempRoot);
+                var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("badroot"));
+                Assert.That(ex!.Message, Does.Contain("RootBoard 'ghost' matches no board"));
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
+        [Test]
+        public void LoadMap_WhenBoardOriginAxesMismatch_Throws()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "halforigin", """
+                {
+                  "id": "halforigin",
+                  "tuning": { "loadedChunkCapacity": 16 },
+                  "boards": [
+                    {
+                      "name": "default",
+                      "widthCells": 256,
+                      "heightCells": 256,
+                      "gridCellSizeCm": 100,
+                      "originXCm": 1000
+                    }
+                  ]
+                }
+                """);
+                var manager = CreateMapManager(tempRoot);
+                var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("halforigin"));
+                Assert.That(ex!.Message, Does.Contain("OriginXCm and OriginYcm together"));
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
+        [Test]
+        public void LoadMap_WhenBoardDeclaresNonZeroOrigin_FailsClosedUntilSlice2b()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "placed", """
+                {
+                  "id": "placed",
+                  "tuning": { "loadedChunkCapacity": 16 },
+                  "boards": [
+                    {
+                      "name": "default",
+                      "widthCells": 256,
+                      "heightCells": 256,
+                      "gridCellSizeCm": 100,
+                      "originXCm": 1000,
+                      "originYCm": 2000
+                    }
+                  ]
+                }
+                """);
+                var manager = CreateMapManager(tempRoot);
+                var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("placed"));
+                Assert.That(ex!.Message, Does.Contain("slice 2b"));
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
+        [Test]
+        public void LoadMap_WhenBoardDeclaresZeroOriginAlsoFailsClosed()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "zeroplace", """
+                {
+                  "id": "zeroplace",
+                  "tuning": { "loadedChunkCapacity": 16 },
+                  "boards": [
+                    { "name": "default", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100, "originXCm": 0, "originYCm": 0 }
+                  ]
+                }
+                """);
+                var manager = CreateMapManager(tempRoot);
+                var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("zeroplace"));
+                Assert.That(ex!.Message, Does.Contain("slice 2b"));
+            }
+            finally { TryDelete(tempRoot); }
+        }
+
+        [Test]
+        public void LoadMap_WhenSingleBoardIsRoot_Loads()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "exact", """
+                {
+                  "id": "exact",
+                  "tuning": { "loadedChunkCapacity": 16 },
+                  "boards": [
+                    {
+                      "name": "default",
+                      "widthCells": 512,
+                      "heightCells": 512,
+                      "gridCellSizeCm": 100
+                    }
+                  ]
+                }
+                """);
+                var manager = CreateMapManager(tempRoot);
+                var cfg = manager.LoadMap("exact");
+                Assert.That(cfg, Is.Not.Null);
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
+        [Test]
+        public void LoadMap_WhenChildOmitsContinuousHeightmapAsset_InheritsParentDeclaration()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "parent", """
+                {
+                  "id": "parent",
+                  "continuousHeightmapAsset": "terrain/parent.height"
                 }
                 """);
 
@@ -145,7 +428,7 @@ namespace GasTests
                 var cfg = manager.LoadMap("child");
 
                 Assert.That(cfg, Is.Not.Null);
-                Assert.That(cfg!.VisualHeightmapAsset, Is.EqualTo("terrain/parent.vhtm"));
+                Assert.That(cfg!.ContinuousHeightmapAsset, Is.EqualTo("terrain/parent.height"));
             }
             finally
             {
@@ -154,7 +437,7 @@ namespace GasTests
         }
 
         [Test]
-        public void LoadMap_WhenBoardDeclaresVisualHeightmapAsset_UsesBoardScopedContract()
+        public void LoadMap_WhenBoardDeclaresContinuousHeightmapAsset_UsesBoardScopedContract()
         {
             var tempRoot = CreateTempDir();
             try
@@ -162,10 +445,14 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "board_map", """
                 {
                   "id": "board_map",
+                  "tuning": { "loadedChunkCapacity": 16 },
                   "boards": [
                     {
                       "name": "default",
-                      "visualHeightmapAsset": "terrain/board.vhtm"
+                      "widthCells": 256,
+                      "heightCells": 256,
+                      "gridCellSizeCm": 100,
+                      "continuousHeightmapAsset": "terrain/board.height"
                     }
                   ]
                 }
@@ -176,7 +463,7 @@ namespace GasTests
 
                 Assert.That(cfg, Is.Not.Null);
                 Assert.That(cfg!.Boards.Count, Is.EqualTo(1));
-                Assert.That(cfg.Boards[0].VisualHeightmapAsset, Is.EqualTo("terrain/board.vhtm"));
+                Assert.That(cfg.Boards[0].ContinuousHeightmapAsset, Is.EqualTo("terrain/board.height"));
             }
             finally
             {
@@ -302,7 +589,7 @@ namespace GasTests
 
         private static void WriteMapConfig(string root, string mapId, string json)
         {
-            var mapsDir = Path.Combine(root, "Configs", "Maps");
+            var mapsDir = Path.Combine(root, "Maps");
             Directory.CreateDirectory(mapsDir);
             File.WriteAllText(Path.Combine(mapsDir, $"{mapId}.json"), json);
         }

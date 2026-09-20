@@ -1,0 +1,2028 @@
+adapter=raylib
+pid=26936
+bootstrap=C:\001_AI\Ludots-gpu-commercial\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net9.0\launcher.runtime.json
+process=primary role= pid=26936 bootstrap=C:\001_AI\Ludots-gpu-commercial\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net9.0\launcher.runtime.json
+rootMods=CapabilityStandardMassNavigationLargeWorld10kMod
+orderedMods=LudotsCoreMod, CoreInputMod, SelectionInteractionMod, MassNavigationMod, CapabilityStandardMassNavigationLargeWorld10kMod
+startup:
+  defaultCoreMod=LudotsCoreMod @ assets/game.json
+  startupMapId=mass_navigation @ mods/showcases/capability_standard/CapabilityStandardMassNavigationLargeWorld10kMod/assets/game.json
+    - mods/LudotsCoreMod/assets/game.json -> entry
+    - mods/capabilities/navigation/MassNavigationMod/assets/game.json -> mass_navigation
+    * mods/showcases/capability_standard/CapabilityStandardMassNavigationLargeWorld10kMod/assets/game.json -> mass_navigation
+  startupInputContexts=[Default_Gameplay] @ mods/LudotsCoreMod/assets/game.json
+  browserRuntime=(unset) @ (unset)
+[INF][Engine] Initializing with ConfigPipeline...
+[INF][Engine] Applying launcher-resolved mod plan: fingerprint=d829347c4757355fc6aee6ad722f1f0cd9431399d393ec81c9d0528ca0d32d8a, schema=1, mods=5
+[INF][ModLoader] Resolved Mod Load Order (launcher graph):
+[INF][ModLoader] - LudotsCoreMod (P:-1000)
+[INF][ModLoader] - CoreInputMod (P:0)
+[INF][ModLoader] - SelectionInteractionMod (P:0)
+[INF][ModLoader] - MassNavigationMod (P:0)
+[INF][ModLoader] - CapabilityStandardMassNavigationLargeWorld10kMod (P:-2000)
+[INF][ModLoader] Loading DLL for LudotsCoreMod at C:\001_AI\Ludots-gpu-commercial\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll
+[INF][ModLoader] Scanning 2 types in assembly...
+[INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+[INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+[INF][ModLoader] LudotsCoreMod OnLoad completed.
+[INF][ModLoader] Loaded LudotsCoreMod
+[INF][ModLoader] Loading DLL for CoreInputMod at C:\001_AI\Ludots-gpu-commercial\mods\CoreInputMod\bin\net9.0\CoreInputMod.dll
+[INF][ModLoader] Scanning 33 types in assembly...
+[INF][ModLoader] Instantiated entry for CoreInputMod. Calling OnLoad...
+[INF][Mod.CoreInputMod] [CoreInputMod] Loaded - generic command-source and GAS input
+[INF][ModLoader] CoreInputMod OnLoad completed.
+[INF][ModLoader] Loaded CoreInputMod
+[INF][ModLoader] Skip code load for SelectionInteractionMod: manifest has no 'main' (asset-only mod).
+[INF][ModLoader] Loading DLL for MassNavigationMod at C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\bin\net9.0\MassNavigationMod.dll
+[INF][ModLoader] Scanning 2 types in assembly...
+[INF][ModLoader] Instantiated entry for MassNavigationMod. Calling OnLoad...
+[INF][Mod.MassNavigationMod] [MassNavigationMod] Loaded MassNavigation assets and MovePlan order adapter.
+[INF][ModLoader] MassNavigationMod OnLoad completed.
+[INF][ModLoader] Loaded MassNavigationMod
+[INF][ModLoader] Loading DLL for CapabilityStandardMassNavigationLargeWorld10kMod at C:\001_AI\Ludots-gpu-commercial\mods\showcases\capability_standard\CapabilityStandardMassNavigationLargeWorld10kMod\bin\net9.0\CapabilityStandardMassNavigationLargeWorld10kMod.dll
+[INF][ModLoader] Scanning 4 types in assembly...
+[INF][ModLoader] Instantiated entry for CapabilityStandardMassNavigationLargeWorld10kMod. Calling OnLoad...
+[INF][Mod.CapabilityStandardMassNavigationLargeWorld10kMod] [CapabilityStandardMassNavigationLargeWorld10kMod] Loaded
+[INF][ModLoader] CapabilityStandardMassNavigationLargeWorld10kMod OnLoad completed.
+[INF][ModLoader] Loaded CapabilityStandardMassNavigationLargeWorld10kMod
+[INF][Config] Merged fragment from: Core:game.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/game.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/game.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json
+[INF][Engine] Merged GameConfig: StartupMapId=mass_navigation, DefaultCoreMod=LudotsCoreMod
+[INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3
+[INF][Engine] Initializing JobScheduler...
+[INF][Config] Loading DataRegistry<EntityTemplate> from Entities/templates.json...
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Entities/templates.json
+[INF][Config] Loaded 16 DataRegistry<EntityTemplate> items.
+[INF][Engine] Initializing Core GAS Systems...
+[INF][Config] Merged fragment from: Core:Engine/clock.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Engine/clock.json
+[INF][Config] Merged fragment from: Core:Relationships/catalog.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json
+[INF][Config] Merged fragment from: Core:Relationships/control_profiles.json
+[INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json
+[INF][Config] Merged fragment from: Core:GAS/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/solver.json
+[INF][Config] Merged fragment from: Core:Physics2D/kinematic.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/attribute_constraints.json
+[INF][Config] Merged fragment from: Core:Enums/enums.json
+[INF][Config] Merged fragment from: Core:Vision/fog_layers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json
+[INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json
+[INF][Config] Merged fragment from: Core:GAS/graphs.json
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.box_begin.json
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.box_commit.json
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.box_hit.json
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.selection_commit.json
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.selection_preview_clear.json
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.case_e.selection_preview_tick.json
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/GAS/graphs/graph.selection.rectangle_hits.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs/graph.case_e.box_hit.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs/graph.mass_navigation.selection_candidates.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs/graph.mass_navigation.selection_roster.json
+[INF][Config] Merged fragment from: Core:GAS/preset_types.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Progression/scopes.json
+[INF][Config] Merged fragment from: Core:Progression/progressions.json
+[INF][Config] Merged fragment from: Core:Progression/requirements.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: Core:GAS/effects.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/effects.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/tag_rules.json
+[INF][Config] Merged fragment from: Core:GAS/func_lib.json
+[INF][Config] Merged fragment from: Core:GAS/action_lib.json
+[INF][Config] Merged fragment from: Core:Items/shapes.json
+[INF][Config] Merged fragment from: Core:Items/layouts.json
+[INF][Config] Merged fragment from: Core:Items/definitions.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Panels/panel_templates.json
+[INF][Config] Merged fragment from: Core:Input/filter_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animator_controllers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_clips.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_profiles.json
+[INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Input/interaction_context_profiles.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: CoreInputMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Input/default_input.json
+[INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Input/default_input.json
+[INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json
+[INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Input/command_intent_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json
+[INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json
+[INF][Config] Merged fragment from: Core:Input/control_schemes.json
+[INF][Config] Merged fragment from: Core:Input/interaction_prefs.json
+[INF][Config] Merged fragment from: Core:Input/interaction_modes.json
+[INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json
+[INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json
+[INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json
+[INF][Config] Merged fragment from: Core:AI/behavior_trees.json
+[INF][Config] Merged fragment from: Core:AI/hfsm.json
+[INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json
+[INF][Config] Merged fragment from: Core:Presentation/image_assets.json
+[INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Camera/virtual_cameras.json
+[INF][Config] Merged fragment from: Core:Story/lines.json
+[INF][Config] Merged fragment from: Core:Story/presentation_profiles.json
+[INF][Config] Merged fragment from: Core:Story/speakers.json
+[INF][Config] Merged fragment from: Core:Dialogue/dialogues.json
+[INF][Config] Merged fragment from: Core:Sequencer/sequences.json
+[INF][ModLoader] No registration conflicts detected.
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/host_assets.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Input/default_input.json
+[INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json
+[INF][Config] Merged fragment from: SelectionInteractionMod:assets/Input/default_input.json
+INFO: Initializing raylib 5.5
+INFO: Platform backend: DESKTOP (GLFW)
+INFO: Supported raylib modules:
+INFO:     > rcore:..... loaded (mandatory)
+INFO:     > rlgl:...... loaded (mandatory)
+INFO:     > rshapes:... loaded (optional)
+INFO:     > rtextures:. loaded (optional)
+INFO:     > rtext:..... loaded (optional)
+INFO:     > rmodels:... loaded (optional)
+INFO:     > raudio:.... loaded (optional)
+INFO: DISPLAY: Device initialized successfully
+INFO:     > Display size: 2560 x 1600
+INFO:     > Screen size:  1600 x 900
+INFO:     > Render size:  1600 x 900
+INFO:     > Viewport offsets: 0, 0
+INFO: GLAD: OpenGL extensions loaded successfully
+INFO: GL: Supported extensions count: 296
+INFO: GL: OpenGL device information:
+INFO:     > Vendor:   ATI Technologies Inc.
+INFO:     > Renderer: AMD Radeon(TM) 8060S Graphics
+INFO:     > Version:  3.3.0 Core Profile Context 26.10.32.01.260717
+INFO:     > GLSL:     4.60
+INFO: GL: VAO extension detected, VAO functions loaded successfully
+INFO: GL: NPOT textures extension detected, full NPOT textures supported
+INFO: GL: DXT compressed textures supported
+INFO: GL: ETC2/EAC compressed textures supported
+INFO: PLATFORM: DESKTOP (GLFW - Win32): Initialized successfully
+INFO: TEXTURE: [ID 1] Texture loaded successfully (1x1 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Default texture loaded successfully
+INFO: SHADER: [ID 1] Vertex shader compiled successfully
+INFO: SHADER: [ID 2] Fragment shader compiled successfully
+INFO: SHADER: [ID 3] Program shader loaded successfully
+INFO: SHADER: [ID 3] Default shader loaded successfully
+INFO: RLGL: Render batch vertex buffers loaded successfully in RAM (CPU)
+INFO: RLGL: Render batch vertex buffers loaded successfully in VRAM (GPU)
+INFO: RLGL: Default OpenGL state initialized successfully
+INFO: TEXTURE: [ID 2] Texture loaded successfully (128x128 | GRAY_ALPHA | 1 mipmaps)
+INFO: FONT: Default font loaded successfully (224 glyphs)
+INFO: SYSTEM: Working Directory: C:\001_AI\Ludots-gpu-commercial\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net9.0
+INFO: TIMER: Target time per frame: 0.000 milliseconds
+INFO: AUDIO: Device initialized successfully
+INFO:     > Backend:       miniaudio | WASAPI
+INFO:     > Format:        32-bit IEEE Floating Point -> 32-bit IEEE Floating Point
+INFO:     > Channels:      2 -> 2
+INFO:     > Sample rate:   48000 -> 48000
+INFO:     > Periods size:  1440
+[INF][Presentation] GPU Accelerated: False (raster UI compositor)
+INFO: TEXTURE: [ID 3] Texture loaded successfully (1600x900 | R8G8B8A8 | 1 mipmaps)
+[INF][Presentation] Skia overlay backend: GPU direct framebuffer underlay with raster compositor for UI/top overlay
+INFO: SHADER: [ID 6] Vertex shader compiled successfully
+INFO: SHADER: [ID 7] Fragment shader compiled successfully
+INFO: SHADER: [ID 8] Program shader loaded successfully
+[INF][Config] Merged fragment from: Core:Presentation/raylib_scenes.json
+INFO: TEXTURE: [ID 4] Texture loaded successfully (2048x2048 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: FILEIO: [C:\001_AI\Ludots-gpu-commercial\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net9.0\shadow_depth.vs] Text file loaded successfully
+INFO: FILEIO: [C:\001_AI\Ludots-gpu-commercial\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net9.0\shadow_depth.fs] Text file loaded successfully
+INFO: SHADER: [ID 6] Vertex shader compiled successfully
+INFO: SHADER: [ID 7] Fragment shader compiled successfully
+INFO: SHADER: [ID 9] Program shader loaded successfully
+INFO: FILEIO: [C:\001_AI\Ludots-gpu-commercial\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net9.0\shadow_depth_instanced.vs] Text file loaded successfully
+INFO: FILEIO: [C:\001_AI\Ludots-gpu-commercial\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net9.0\shadow_depth.fs] Text file loaded successfully
+INFO: SHADER: [ID 6] Vertex shader compiled successfully
+INFO: SHADER: [ID 7] Fragment shader compiled successfully
+INFO: SHADER: [ID 10] Program shader loaded successfully
+INFO: FILEIO: [C:\001_AI\Ludots-gpu-commercial\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net9.0\shadow_depth_skinning_ssbo.vs] Text file loaded successfully
+INFO: FILEIO: [C:\001_AI\Ludots-gpu-commercial\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net9.0\shadow_depth.fs] Text file loaded successfully
+INFO: SHADER: [ID 6] Vertex shader compiled successfully
+INFO: SHADER: [ID 7] Fragment shader compiled successfully
+INFO: SHADER: [ID 11] Program shader loaded successfully
+INFO: FILEIO: [C:\001_AI\Ludots-gpu-commercial\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net9.0\shadow_depth_cutout.vs] Text file loaded successfully
+INFO: FILEIO: [C:\001_AI\Ludots-gpu-commercial\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net9.0\shadow_depth_cutout.fs] Text file loaded successfully
+INFO: SHADER: [ID 6] Vertex shader compiled successfully
+INFO: SHADER: [ID 7] Fragment shader compiled successfully
+INFO: SHADER: [ID 12] Program shader loaded successfully
+[INF][Engine] Firing GameStart event...
+[LudotsCoreMod] Core systems installed
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+[INF][Mod.CoreInputMod] [CoreInputMod] Acquisition enabled: False; input and presentation systems registered.
+[INF][Engine] Loading Map: mass_navigation
+[INF][Map] Loading Map: mass_navigation
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Maps/mass_navigation.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Maps/mass_navigation.json
+[INF][Map] Map 'mass_navigation' loaded.
+[INF][Map] Creating GridBoard 'default' (250x250 macroTiles, cell=100cm)
+[INF][Engine] Created Board 'default' (type=Grid) for map 'mass_navigation'
+[INF][Map] Map 'mass_navigation' pushed to focus (stack depth=1).
+[INF][Engine] ContinuousHeightmap does not cover board 'default' extent 6400000x6400000cm; keeping flat grid terrain.
+[INF][Engine] Created flat grid LogicTerrainField 64000x64000 cells for board 'default'
+[INF][Config] Merged fragment from: Core:Navigation/pathing.json
+[INF][Engine] Pathing bootstrap skipped for map 'mass_navigation': no node-graph board or navmesh query service is loaded.
+[INF][Engine] Creating Entities from MapConfig...
+[INF][Engine] Registered 2 triggers for map 'mass_navigation'.
+[INF][Engine] MapLoaded deferred for 'mass_navigation'.
+INFO: FILEIO: [C:\Users\sietg\AppData\Local\Temp\Ludots.AssetConvert\23BAFB43B88B340CA5607BC6F24058A113E3DB37\mass_navigation_blocker_rock.glb] File loaded successfully
+INFO: MODEL: [C:\Users\sietg\AppData\Local\Temp\Ludots.AssetConvert\23BAFB43B88B340CA5607BC6F24058A113E3DB37\mass_navigation_blocker_rock.glb] Model basic data (glb) loaded successfully
+INFO:     > Meshes count: 1
+INFO:     > Materials count: 2 (+1 default)
+WARNING: MODEL: [C:\Users\sietg\AppData\Local\Temp\Ludots.AssetConvert\23BAFB43B88B340CA5607BC6F24058A113E3DB37\mass_navigation_blocker_rock.glb] Indices data converted from u32 to u16, possible loss of data
+INFO: VAO: [ID 2] Mesh uploaded successfully to VRAM (GPU)
+[INF][Engine] Applied DefaultCamera: yaw=45 pitch=42 dist=14000cm fov=60
+[INF][Config] Merged fragment from: MassNavigationMod:assets/MassNavigationConfig.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/MassNavigationConfig.json
+[INF][Engine] [MassNavigation runtime] Installed mass-navigation runtime.
+[INF][Engine] Firing MapLoaded event for mass_navigation...
+emit-probe query=0.367ms dirtyStatic=1.325ms retained=0.365ms lifecycle=0.153ms
+INFO: SHADER: [ID 6] Vertex shader compiled successfully
+INFO: SHADER: [ID 7] Fragment shader compiled successfully
+INFO: SHADER: [ID 13] Program shader loaded successfully
+INFO: VAO: [ID 3] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 4] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 5] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 6] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 7] Mesh uploaded successfully to VRAM (GPU)
+WARNING: VAO: [ID 7] Trying to re-load an already loaded mesh
+INFO: VAO: [ID 8] Mesh uploaded successfully to VRAM (GPU)
+WARNING: VAO: [ID 8] Trying to re-load an already loaded mesh
+INFO: VAO: [ID 9] Mesh uploaded successfully to VRAM (GPU)
+WARNING: VAO: [ID 9] Trying to re-load an already loaded mesh
+INFO: VAO: [ID 10] Mesh uploaded successfully to VRAM (GPU)
+INFO: FILEIO: [C:\001_AI\Ludots-gpu-commercial\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net9.0\vfx_unlit_tint.vs] Text file loaded successfully
+INFO: FILEIO: [C:\001_AI\Ludots-gpu-commercial\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net9.0\vfx_unlit_tint.fs] Text file loaded successfully
+INFO: SHADER: [ID 6] Vertex shader compiled successfully
+INFO: SHADER: [ID 7] Fragment shader compiled successfully
+INFO: SHADER: [ID 14] Program shader loaded successfully
+INFO: SHADER: [ID 6] Vertex shader compiled successfully
+INFO: SHADER: [ID 7] Fragment shader compiled successfully
+INFO: SHADER: [ID 15] Program shader loaded successfully
+INFO: TEXTURE: [ID 5] Texture loaded successfully (512x512 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 6] Cubemap texture loaded successfully (64x64)
+INFO: TEXTURE: [ID 7] Texture loaded successfully (1600x900 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 2] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 2] Framebuffer object created successfully
+INFO: FILEIO: [C:\001_AI\Ludots-gpu-commercial\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net9.0\postprocess.fs] Text file loaded successfully
+INFO: SHADER: [ID 6] Fragment shader compiled successfully
+INFO: SHADER: [ID 7] Program shader loaded successfully
+INFO: VAO: [ID 3] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 4] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 5] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 6] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 3] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 4] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 5] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 6] Mesh uploaded successfully to VRAM (GPU)
+[INF][Presentation] GPU Accelerated: True (Raylib Skia direct framebuffer overlay)
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original.
+[WRN][Engine] Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original.
+[INF][Engine] Appended 2 triggers to map 'mass_navigation'.
+emit-probe query=0.009ms dirtyStatic=1.496ms retained=0.001ms lifecycle=0.006ms
+emit-probe query=0.003ms dirtyStatic=0.002ms retained=0.001ms lifecycle=0.001ms
+emit-probe query=8.470ms dirtyStatic=0.039ms retained=26.774ms lifecycle=1.416ms
+emit-probe query=1.121ms dirtyStatic=0.037ms retained=14.804ms lifecycle=0.107ms
+INFO: FILEIO: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk.glb] File loaded successfully
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk.glb] Model basic data (glb) loaded successfully
+INFO:     > Meshes count: 1
+INFO:     > Materials count: 1 (+1 default)
+INFO: IMAGE: Data loaded successfully (512x512 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 10] Texture loaded successfully (512x512 | R8G8B8A8 | 1 mipmaps)
+INFO: VAO: [ID 12] Mesh uploaded successfully to VRAM (GPU)
+[WRN][Presentation] Raylib renderer skipped model shadow draw: meshAssetId=9 could not be loaded. No placeholder model is drawn.
+INFO: FILEIO: [C:\Users\sietg\AppData\Local\Temp\Ludots.AssetConvert\205AD8B1847926FEA4A83AF4F669FCAB99445602\mass_navigation_hotspot_obelisk.glb] File loaded successfully
+INFO: MODEL: [C:\Users\sietg\AppData\Local\Temp\Ludots.AssetConvert\205AD8B1847926FEA4A83AF4F669FCAB99445602\mass_navigation_hotspot_obelisk.glb] Model basic data (glb) loaded successfully
+INFO:     > Meshes count: 1
+INFO:     > Materials count: 2 (+1 default)
+WARNING: MODEL: [C:\Users\sietg\AppData\Local\Temp\Ludots.AssetConvert\205AD8B1847926FEA4A83AF4F669FCAB99445602\mass_navigation_hotspot_obelisk.glb] Indices data converted from u32 to u16, possible loss of data
+INFO: VAO: [ID 13] Mesh uploaded successfully to VRAM (GPU)
+emit-probe query=0.775ms dirtyStatic=0.002ms retained=0.001ms lifecycle=0.134ms
+INFO: FILEIO: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk.glb] File loaded successfully
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk.glb] Loaded animation: Death_A (99 frames, 1.666667s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk.glb] Loaded animation: Death_A_Pose (1 frames, 0.000000s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk.glb] Loaded animation: Hit_A (40 frames, 0.666667s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk.glb] Loaded animation: Idle_A (116 frames, 1.958333s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk.glb] Loaded animation: Idle_B (353 frames, 6.000000s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk.glb] Loaded animation: retarget_Idle_A (116 frames, 1.958333s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk.glb] Loaded animation: retarget_Walking_A (62 frames, 1.041667s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk.glb] Loaded animation: Running_A (62 frames, 1.041667s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk.glb] Loaded animation: T-Pose (1 frames, 0.000000s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk.glb] Loaded animation: T-Pose.001 (1 frames, 0.000000s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk.glb] Loaded animation: Walking_A (62 frames, 1.041667s)
+emit-probe query=0.753ms dirtyStatic=0.002ms retained=0.001ms lifecycle=0.124ms
+INFO: FILEIO: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk_lod1.glb] File loaded successfully
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk_lod1.glb] Model basic data (glb) loaded successfully
+INFO:     > Meshes count: 1
+INFO:     > Materials count: 1 (+1 default)
+INFO: IMAGE: Data loaded successfully (512x512 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 11] Texture loaded successfully (512x512 | R8G8B8A8 | 1 mipmaps)
+INFO: VAO: [ID 14] Mesh uploaded successfully to VRAM (GPU)
+emit-probe query=0.843ms dirtyStatic=0.002ms retained=0.001ms lifecycle=0.113ms
+INFO: FILEIO: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk_lod1.glb] File loaded successfully
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk_lod1.glb] Loaded animation: Death_A (99 frames, 1.666667s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk_lod1.glb] Loaded animation: Death_A_Pose (1 frames, 0.000000s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk_lod1.glb] Loaded animation: Hit_A (40 frames, 0.666667s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk_lod1.glb] Loaded animation: Idle_A (116 frames, 1.958333s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk_lod1.glb] Loaded animation: Idle_B (353 frames, 6.000000s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk_lod1.glb] Loaded animation: retarget_Idle_A (116 frames, 1.958333s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk_lod1.glb] Loaded animation: retarget_Walking_A (62 frames, 1.041667s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk_lod1.glb] Loaded animation: Running_A (62 frames, 1.041667s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk_lod1.glb] Loaded animation: T-Pose (1 frames, 0.000000s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk_lod1.glb] Loaded animation: T-Pose.001 (1 frames, 0.000000s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk_lod1.glb] Loaded animation: Walking_A (62 frames, 1.041667s)
+emit-probe query=0.903ms dirtyStatic=0.002ms retained=0.002ms lifecycle=0.122ms
+INFO: FILEIO: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk_lod2.glb] File loaded successfully
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk_lod2.glb] Model basic data (glb) loaded successfully
+INFO:     > Meshes count: 1
+INFO:     > Materials count: 1 (+1 default)
+INFO: VAO: [ID 15] Mesh uploaded successfully to VRAM (GPU)
+emit-probe query=0.790ms dirtyStatic=0.003ms retained=0.001ms lifecycle=0.136ms
+INFO: FILEIO: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk_lod2.glb] File loaded successfully
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk_lod2.glb] Loaded animation: Death_A (99 frames, 1.666667s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk_lod2.glb] Loaded animation: Death_A_Pose (1 frames, 0.000000s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk_lod2.glb] Loaded animation: Hit_A (40 frames, 0.666667s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk_lod2.glb] Loaded animation: Idle_A (116 frames, 1.958333s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk_lod2.glb] Loaded animation: Idle_B (353 frames, 6.000000s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk_lod2.glb] Loaded animation: retarget_Idle_A (116 frames, 1.958333s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk_lod2.glb] Loaded animation: retarget_Walking_A (62 frames, 1.041667s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk_lod2.glb] Loaded animation: Running_A (62 frames, 1.041667s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk_lod2.glb] Loaded animation: T-Pose (1 frames, 0.000000s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk_lod2.glb] Loaded animation: T-Pose.001 (1 frames, 0.000000s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-commercial\mods\capabilities\navigation\MassNavigationMod\assets\Models\mannequin_large_idle_walk_lod2.glb] Loaded animation: Walking_A (62 frames, 1.041667s)
+emit-probe query=0.811ms dirtyStatic=0.002ms retained=0.001ms lifecycle=0.151ms
+emit-probe query=0.987ms dirtyStatic=0.002ms retained=0.001ms lifecycle=0.122ms
+emit-probe query=0.729ms dirtyStatic=0.002ms retained=0.002ms lifecycle=0.122ms
+emit-probe query=0.705ms dirtyStatic=0.002ms retained=0.002ms lifecycle=0.112ms
+emit-probe query=0.699ms dirtyStatic=0.002ms retained=0.001ms lifecycle=0.111ms
+emit-probe query=0.833ms dirtyStatic=0.003ms retained=0.001ms lifecycle=0.125ms
+emit-probe query=1.533ms dirtyStatic=0.004ms retained=0.002ms lifecycle=0.166ms
+emit-probe query=1.226ms dirtyStatic=0.003ms retained=0.002ms lifecycle=0.134ms
+emit-probe query=1.502ms dirtyStatic=0.003ms retained=0.001ms lifecycle=0.150ms
+emit-probe query=1.391ms dirtyStatic=0.003ms retained=0.002ms lifecycle=0.141ms
+emit-probe query=0.859ms dirtyStatic=0.003ms retained=0.001ms lifecycle=0.114ms
+emit-probe query=1.075ms dirtyStatic=0.003ms retained=0.002ms lifecycle=0.140ms
+emit-probe query=1.000ms dirtyStatic=0.003ms retained=0.001ms lifecycle=0.101ms
+emit-probe query=0.809ms dirtyStatic=0.004ms retained=0.002ms lifecycle=0.102ms
+emit-probe query=1.692ms dirtyStatic=0.004ms retained=0.002ms lifecycle=0.135ms
+emit-probe query=0.789ms dirtyStatic=0.003ms retained=14.621ms lifecycle=0.341ms
+[INF][Presentation] GPU Accelerated: True (Raylib Skia direct framebuffer overlay)
+emit-probe query=1.060ms dirtyStatic=0.003ms retained=2.173ms lifecycle=0.292ms
+emit-probe query=0.840ms dirtyStatic=0.003ms retained=0.855ms lifecycle=0.292ms
+emit-probe query=1.022ms dirtyStatic=0.004ms retained=1.406ms lifecycle=0.374ms
+emit-probe query=1.013ms dirtyStatic=0.004ms retained=2.382ms lifecycle=0.279ms
+emit-probe query=0.817ms dirtyStatic=0.003ms retained=2.267ms lifecycle=0.406ms
+emit-probe query=1.244ms dirtyStatic=0.004ms retained=3.569ms lifecycle=0.473ms
+emit-probe query=1.256ms dirtyStatic=0.011ms retained=3.483ms lifecycle=0.492ms
+emit-probe query=1.006ms dirtyStatic=0.003ms retained=2.574ms lifecycle=0.342ms
+emit-probe query=1.036ms dirtyStatic=0.003ms retained=2.480ms lifecycle=0.401ms
+emit-probe query=0.815ms dirtyStatic=0.003ms retained=2.560ms lifecycle=0.340ms
+emit-probe query=0.785ms dirtyStatic=0.002ms retained=3.208ms lifecycle=0.525ms
+emit-probe query=0.981ms dirtyStatic=0.003ms retained=0.882ms lifecycle=0.502ms
+emit-probe query=0.814ms dirtyStatic=0.003ms retained=2.826ms lifecycle=0.478ms
+emit-probe query=0.805ms dirtyStatic=0.002ms retained=3.317ms lifecycle=0.511ms
+emit-probe query=0.817ms dirtyStatic=0.002ms retained=3.456ms lifecycle=0.506ms
+emit-probe query=0.857ms dirtyStatic=0.003ms retained=3.045ms lifecycle=0.474ms
+emit-probe query=1.061ms dirtyStatic=0.003ms retained=3.812ms lifecycle=0.673ms
+emit-probe query=0.781ms dirtyStatic=0.003ms retained=3.076ms lifecycle=0.482ms
+emit-probe query=1.073ms dirtyStatic=0.003ms retained=3.917ms lifecycle=0.530ms
+emit-probe query=0.840ms dirtyStatic=0.002ms retained=2.531ms lifecycle=0.394ms
+emit-probe query=0.782ms dirtyStatic=0.002ms retained=3.058ms lifecycle=0.463ms
+emit-probe query=0.905ms dirtyStatic=0.003ms retained=2.927ms lifecycle=0.501ms
+emit-probe query=1.257ms dirtyStatic=0.003ms retained=2.983ms lifecycle=0.482ms
+emit-probe query=0.909ms dirtyStatic=0.002ms retained=2.670ms lifecycle=0.459ms
+emit-probe query=0.682ms dirtyStatic=0.002ms retained=2.584ms lifecycle=0.402ms
+emit-probe query=0.851ms dirtyStatic=0.003ms retained=2.718ms lifecycle=0.462ms
+emit-probe query=0.790ms dirtyStatic=0.003ms retained=3.333ms lifecycle=0.482ms
+emit-probe query=1.202ms dirtyStatic=0.002ms retained=2.533ms lifecycle=0.446ms
+emit-probe query=1.174ms dirtyStatic=0.003ms retained=3.176ms lifecycle=0.492ms
+emit-probe query=6.389ms dirtyStatic=0.003ms retained=1.765ms lifecycle=2.223ms
+emit-probe query=0.724ms dirtyStatic=0.003ms retained=2.365ms lifecycle=0.236ms
+emit-probe query=0.710ms dirtyStatic=0.003ms retained=1.956ms lifecycle=0.216ms
+emit-probe query=0.853ms dirtyStatic=0.003ms retained=3.334ms lifecycle=0.376ms
+emit-probe query=0.893ms dirtyStatic=0.003ms retained=3.237ms lifecycle=0.376ms
+emit-probe query=0.841ms dirtyStatic=0.003ms retained=3.655ms lifecycle=0.367ms
+emit-probe query=0.849ms dirtyStatic=0.003ms retained=3.659ms lifecycle=0.379ms
+emit-probe query=0.602ms dirtyStatic=0.003ms retained=3.175ms lifecycle=0.332ms
+emit-probe query=1.013ms dirtyStatic=0.003ms retained=1.241ms lifecycle=0.428ms
+emit-probe query=0.863ms dirtyStatic=0.003ms retained=1.978ms lifecycle=0.345ms
+emit-probe query=0.816ms dirtyStatic=0.003ms retained=3.016ms lifecycle=0.348ms
+emit-probe query=1.136ms dirtyStatic=0.003ms retained=2.982ms lifecycle=0.353ms
+emit-probe query=1.230ms dirtyStatic=0.003ms retained=14.922ms lifecycle=0.496ms
+emit-probe query=0.831ms dirtyStatic=0.003ms retained=0.832ms lifecycle=0.352ms
+emit-probe query=0.950ms dirtyStatic=0.003ms retained=2.523ms lifecycle=0.370ms
+emit-probe query=0.834ms dirtyStatic=0.003ms retained=2.785ms lifecycle=0.389ms
+emit-probe query=1.096ms dirtyStatic=0.003ms retained=2.117ms lifecycle=0.404ms
+emit-probe query=0.794ms dirtyStatic=0.003ms retained=2.054ms lifecycle=0.321ms
+emit-probe query=0.869ms dirtyStatic=0.003ms retained=0.622ms lifecycle=0.470ms
+emit-probe query=0.899ms dirtyStatic=0.003ms retained=1.604ms lifecycle=0.400ms
+emit-probe query=0.998ms dirtyStatic=0.004ms retained=2.289ms lifecycle=0.319ms
+emit-probe query=1.531ms dirtyStatic=0.003ms retained=2.114ms lifecycle=0.397ms
+emit-probe query=0.706ms dirtyStatic=0.003ms retained=2.218ms lifecycle=0.325ms
+emit-probe query=0.839ms dirtyStatic=0.003ms retained=2.138ms lifecycle=0.335ms
+emit-probe query=1.168ms dirtyStatic=0.004ms retained=2.893ms lifecycle=0.408ms
+emit-probe query=1.132ms dirtyStatic=0.003ms retained=2.238ms lifecycle=0.360ms
+emit-probe query=1.074ms dirtyStatic=0.003ms retained=2.529ms lifecycle=0.385ms
+emit-probe query=1.182ms dirtyStatic=0.003ms retained=2.227ms lifecycle=0.360ms
+emit-probe query=1.017ms dirtyStatic=0.003ms retained=2.508ms lifecycle=0.348ms
+emit-probe query=0.833ms dirtyStatic=0.012ms retained=2.283ms lifecycle=0.383ms
+emit-probe query=1.293ms dirtyStatic=0.003ms retained=2.912ms lifecycle=0.395ms
+emit-probe query=0.873ms dirtyStatic=0.002ms retained=1.919ms lifecycle=0.323ms
+emit-probe query=0.952ms dirtyStatic=0.002ms retained=2.547ms lifecycle=0.348ms
+emit-probe query=0.840ms dirtyStatic=0.002ms retained=2.254ms lifecycle=0.355ms
+emit-probe query=1.273ms dirtyStatic=0.002ms retained=2.362ms lifecycle=0.334ms
+emit-probe query=1.266ms dirtyStatic=0.003ms retained=0.745ms lifecycle=0.365ms
+emit-probe query=0.861ms dirtyStatic=0.002ms retained=1.543ms lifecycle=0.330ms
+emit-probe query=0.811ms dirtyStatic=0.002ms retained=2.612ms lifecycle=0.383ms
+emit-probe query=0.854ms dirtyStatic=0.002ms retained=2.082ms lifecycle=0.362ms
+emit-probe query=0.919ms dirtyStatic=0.003ms retained=2.362ms lifecycle=0.346ms
+emit-probe query=0.886ms dirtyStatic=0.001ms retained=1.914ms lifecycle=0.279ms
+emit-probe query=0.967ms dirtyStatic=0.001ms retained=2.369ms lifecycle=0.320ms
+emit-probe query=0.863ms dirtyStatic=0.001ms retained=2.150ms lifecycle=0.294ms
+emit-probe query=1.213ms dirtyStatic=0.001ms retained=2.860ms lifecycle=0.393ms
+emit-probe query=0.911ms dirtyStatic=0.001ms retained=0.771ms lifecycle=0.327ms
+emit-probe query=0.857ms dirtyStatic=0.001ms retained=1.460ms lifecycle=0.280ms
+emit-probe query=0.864ms dirtyStatic=0.001ms retained=2.115ms lifecycle=0.268ms
+emit-probe query=1.097ms dirtyStatic=0.001ms retained=1.977ms lifecycle=0.290ms
+emit-probe query=0.839ms dirtyStatic=0.001ms retained=2.263ms lifecycle=0.301ms
+emit-probe query=0.818ms dirtyStatic=0.001ms retained=1.874ms lifecycle=0.279ms
+emit-probe query=0.896ms dirtyStatic=0.001ms retained=2.178ms lifecycle=0.269ms
+emit-probe query=0.857ms dirtyStatic=0.001ms retained=1.863ms lifecycle=0.269ms
+emit-probe query=0.914ms dirtyStatic=0.001ms retained=2.159ms lifecycle=0.279ms
+emit-probe query=0.840ms dirtyStatic=0.001ms retained=1.897ms lifecycle=0.278ms
+emit-probe query=0.860ms dirtyStatic=0.001ms retained=0.698ms lifecycle=0.387ms
+emit-probe query=1.227ms dirtyStatic=0.001ms retained=1.742ms lifecycle=0.277ms
+emit-probe query=1.032ms dirtyStatic=0.001ms retained=2.014ms lifecycle=0.318ms
+emit-probe query=0.860ms dirtyStatic=0.001ms retained=2.215ms lifecycle=0.254ms
+emit-probe query=0.986ms dirtyStatic=0.001ms retained=1.958ms lifecycle=0.279ms
+emit-probe query=0.819ms dirtyStatic=0.001ms retained=1.900ms lifecycle=0.260ms
+emit-probe query=0.895ms dirtyStatic=0.001ms retained=1.977ms lifecycle=0.280ms
+emit-probe query=1.034ms dirtyStatic=0.000ms retained=1.918ms lifecycle=0.254ms
+emit-probe query=0.840ms dirtyStatic=0.000ms retained=1.736ms lifecycle=0.277ms
+emit-probe query=0.964ms dirtyStatic=0.001ms retained=0.541ms lifecycle=0.319ms
+emit-probe query=0.994ms dirtyStatic=0.001ms retained=1.573ms lifecycle=0.287ms
+emit-probe query=0.881ms dirtyStatic=0.001ms retained=0.499ms lifecycle=0.363ms
+emit-probe query=0.947ms dirtyStatic=0.001ms retained=1.286ms lifecycle=0.283ms
+emit-probe query=0.867ms dirtyStatic=0.001ms retained=2.081ms lifecycle=0.261ms
+emit-probe query=0.961ms dirtyStatic=0.001ms retained=1.732ms lifecycle=0.292ms
+emit-probe query=0.919ms dirtyStatic=0.001ms retained=2.010ms lifecycle=0.265ms
+emit-probe query=0.935ms dirtyStatic=0.001ms retained=1.652ms lifecycle=0.293ms
+emit-probe query=1.050ms dirtyStatic=0.001ms retained=1.982ms lifecycle=0.282ms
+emit-probe query=0.924ms dirtyStatic=0.001ms retained=1.864ms lifecycle=0.295ms
+emit-probe query=0.835ms dirtyStatic=0.001ms retained=2.079ms lifecycle=0.269ms
+emit-probe query=0.855ms dirtyStatic=0.001ms retained=1.770ms lifecycle=0.275ms
+emit-probe query=0.873ms dirtyStatic=0.001ms retained=2.495ms lifecycle=0.284ms
+emit-probe query=0.881ms dirtyStatic=0.001ms retained=0.608ms lifecycle=0.364ms
+emit-probe query=0.948ms dirtyStatic=0.001ms retained=1.554ms lifecycle=0.306ms
+emit-probe query=0.850ms dirtyStatic=0.000ms retained=1.961ms lifecycle=0.284ms
+emit-probe query=0.865ms dirtyStatic=0.001ms retained=2.196ms lifecycle=0.302ms
+emit-probe query=0.960ms dirtyStatic=0.001ms retained=2.707ms lifecycle=0.406ms
+emit-probe query=1.280ms dirtyStatic=0.001ms retained=0.666ms lifecycle=0.328ms
+emit-probe query=1.072ms dirtyStatic=0.001ms retained=1.353ms lifecycle=0.297ms
+emit-probe query=0.915ms dirtyStatic=0.000ms retained=2.039ms lifecycle=0.302ms
+emit-probe query=0.894ms dirtyStatic=0.001ms retained=2.021ms lifecycle=0.306ms
+emit-probe query=1.073ms dirtyStatic=0.001ms retained=1.973ms lifecycle=0.286ms
+emit-probe query=0.944ms dirtyStatic=0.001ms retained=1.850ms lifecycle=0.315ms
+emit-probe query=0.911ms dirtyStatic=0.001ms retained=2.091ms lifecycle=0.733ms
+emit-probe query=0.863ms dirtyStatic=0.000ms retained=1.788ms lifecycle=0.267ms
+emit-probe query=0.865ms dirtyStatic=0.001ms retained=2.182ms lifecycle=0.301ms
+emit-probe query=0.855ms dirtyStatic=0.001ms retained=1.886ms lifecycle=0.296ms
+emit-probe query=0.968ms dirtyStatic=0.001ms retained=0.537ms lifecycle=0.315ms
+emit-probe query=0.843ms dirtyStatic=0.000ms retained=1.669ms lifecycle=0.306ms
+emit-probe query=0.851ms dirtyStatic=0.001ms retained=0.583ms lifecycle=0.340ms
+emit-probe query=1.162ms dirtyStatic=0.001ms retained=1.307ms lifecycle=0.302ms
+emit-probe query=0.874ms dirtyStatic=0.001ms retained=2.324ms lifecycle=0.284ms
+emit-probe query=1.274ms dirtyStatic=0.001ms retained=0.660ms lifecycle=0.423ms
+emit-probe query=0.867ms dirtyStatic=0.001ms retained=1.346ms lifecycle=0.307ms
+emit-probe query=0.996ms dirtyStatic=0.001ms retained=2.013ms lifecycle=0.275ms
+emit-probe query=0.929ms dirtyStatic=0.001ms retained=1.872ms lifecycle=0.313ms
+emit-probe query=0.875ms dirtyStatic=0.001ms retained=2.241ms lifecycle=0.299ms
+emit-probe query=0.898ms dirtyStatic=0.001ms retained=1.982ms lifecycle=0.282ms
+emit-probe query=0.932ms dirtyStatic=0.001ms retained=2.384ms lifecycle=0.321ms
+emit-probe query=0.862ms dirtyStatic=0.001ms retained=2.139ms lifecycle=0.299ms
+emit-probe query=0.847ms dirtyStatic=0.001ms retained=2.254ms lifecycle=0.322ms
+emit-probe query=0.836ms dirtyStatic=0.001ms retained=1.777ms lifecycle=0.281ms
+emit-probe query=0.991ms dirtyStatic=0.001ms retained=2.291ms lifecycle=0.359ms
+emit-probe query=1.476ms dirtyStatic=0.001ms retained=2.369ms lifecycle=0.348ms
+emit-probe query=0.928ms dirtyStatic=0.001ms retained=2.287ms lifecycle=0.302ms
+emit-probe query=0.870ms dirtyStatic=0.001ms retained=1.910ms lifecycle=0.312ms
+emit-probe query=0.875ms dirtyStatic=0.001ms retained=1.952ms lifecycle=0.266ms
+emit-probe query=1.259ms dirtyStatic=0.001ms retained=1.768ms lifecycle=0.279ms
+emit-probe query=0.895ms dirtyStatic=0.001ms retained=1.912ms lifecycle=0.267ms
+emit-probe query=0.903ms dirtyStatic=0.001ms retained=0.535ms lifecycle=0.320ms
+emit-probe query=0.840ms dirtyStatic=0.001ms retained=1.236ms lifecycle=0.263ms
+emit-probe query=1.171ms dirtyStatic=0.001ms retained=2.275ms lifecycle=0.329ms
+emit-probe query=0.875ms dirtyStatic=0.001ms retained=1.685ms lifecycle=0.298ms
+emit-probe query=0.883ms dirtyStatic=0.001ms retained=2.018ms lifecycle=0.277ms
+emit-probe query=1.109ms dirtyStatic=0.001ms retained=1.936ms lifecycle=0.282ms
+emit-probe query=0.928ms dirtyStatic=0.001ms retained=2.138ms lifecycle=0.299ms
+emit-probe query=1.147ms dirtyStatic=0.001ms retained=1.761ms lifecycle=0.307ms
+emit-probe query=0.844ms dirtyStatic=0.001ms retained=2.115ms lifecycle=0.350ms
+emit-probe query=0.839ms dirtyStatic=0.001ms retained=1.730ms lifecycle=0.264ms
+emit-probe query=0.954ms dirtyStatic=0.001ms retained=1.996ms lifecycle=0.290ms
+emit-probe query=0.859ms dirtyStatic=0.001ms retained=1.766ms lifecycle=0.264ms
+emit-probe query=0.854ms dirtyStatic=0.001ms retained=2.204ms lifecycle=0.298ms
+emit-probe query=0.850ms dirtyStatic=0.001ms retained=1.748ms lifecycle=0.296ms
+emit-probe query=0.824ms dirtyStatic=0.001ms retained=1.968ms lifecycle=0.289ms
+emit-probe query=0.949ms dirtyStatic=0.001ms retained=1.817ms lifecycle=0.268ms
+emit-probe query=0.852ms dirtyStatic=0.001ms retained=2.067ms lifecycle=0.271ms
+emit-probe query=1.085ms dirtyStatic=0.001ms retained=1.733ms lifecycle=0.257ms
+emit-probe query=0.882ms dirtyStatic=0.001ms retained=2.296ms lifecycle=0.316ms
+emit-probe query=1.038ms dirtyStatic=0.001ms retained=1.820ms lifecycle=0.278ms
+emit-probe query=0.832ms dirtyStatic=0.000ms retained=2.072ms lifecycle=0.267ms
+emit-probe query=0.867ms dirtyStatic=0.001ms retained=1.744ms lifecycle=0.268ms
+emit-probe query=1.020ms dirtyStatic=0.001ms retained=2.076ms lifecycle=0.436ms
+emit-probe query=0.856ms dirtyStatic=0.001ms retained=1.687ms lifecycle=0.271ms
+emit-probe query=0.943ms dirtyStatic=0.001ms retained=2.061ms lifecycle=0.288ms
+emit-probe query=0.851ms dirtyStatic=0.001ms retained=1.995ms lifecycle=0.295ms
+emit-probe query=1.168ms dirtyStatic=0.001ms retained=2.146ms lifecycle=0.294ms
+emit-probe query=0.866ms dirtyStatic=0.001ms retained=1.694ms lifecycle=0.279ms
+emit-probe query=0.814ms dirtyStatic=0.000ms retained=2.076ms lifecycle=0.259ms
+emit-probe query=0.918ms dirtyStatic=0.001ms retained=1.748ms lifecycle=0.280ms
+emit-probe query=0.910ms dirtyStatic=0.001ms retained=1.931ms lifecycle=0.296ms
+emit-probe query=0.842ms dirtyStatic=0.001ms retained=2.286ms lifecycle=0.307ms
+emit-probe query=0.870ms dirtyStatic=0.001ms retained=0.592ms lifecycle=0.340ms
+emit-probe query=0.867ms dirtyStatic=0.001ms retained=1.708ms lifecycle=0.325ms
+emit-probe query=0.975ms dirtyStatic=0.001ms retained=1.728ms lifecycle=0.291ms
+emit-probe query=0.979ms dirtyStatic=0.001ms retained=2.086ms lifecycle=0.317ms
+emit-probe query=0.820ms dirtyStatic=0.001ms retained=1.717ms lifecycle=0.267ms
+emit-probe query=0.881ms dirtyStatic=0.000ms retained=1.963ms lifecycle=0.262ms
+emit-probe query=0.822ms dirtyStatic=0.001ms retained=1.674ms lifecycle=0.253ms
+emit-probe query=0.862ms dirtyStatic=0.001ms retained=1.999ms lifecycle=0.247ms
+emit-probe query=0.825ms dirtyStatic=0.001ms retained=1.672ms lifecycle=0.249ms
+emit-probe query=0.787ms dirtyStatic=0.001ms retained=2.026ms lifecycle=0.252ms
+emit-probe query=0.825ms dirtyStatic=0.001ms retained=1.657ms lifecycle=0.258ms
+emit-probe query=0.855ms dirtyStatic=0.001ms retained=2.104ms lifecycle=0.293ms
+emit-probe query=1.068ms dirtyStatic=0.001ms retained=1.880ms lifecycle=0.282ms
+emit-probe query=0.997ms dirtyStatic=0.001ms retained=1.996ms lifecycle=0.258ms
+emit-probe query=0.865ms dirtyStatic=0.001ms retained=1.684ms lifecycle=0.280ms
+emit-probe query=1.274ms dirtyStatic=0.001ms retained=2.008ms lifecycle=0.275ms
+emit-probe query=1.333ms dirtyStatic=0.001ms retained=1.743ms lifecycle=0.304ms
+emit-probe query=0.857ms dirtyStatic=0.001ms retained=2.010ms lifecycle=0.268ms
+emit-probe query=0.906ms dirtyStatic=0.001ms retained=1.751ms lifecycle=0.284ms
+emit-probe query=1.026ms dirtyStatic=0.001ms retained=2.025ms lifecycle=0.273ms
+emit-probe query=0.944ms dirtyStatic=0.001ms retained=1.699ms lifecycle=0.326ms
+emit-probe query=0.744ms dirtyStatic=0.001ms retained=2.207ms lifecycle=0.355ms
+emit-probe query=0.840ms dirtyStatic=0.001ms retained=1.730ms lifecycle=0.302ms
+emit-probe query=1.211ms dirtyStatic=0.001ms retained=2.016ms lifecycle=0.276ms
+emit-probe query=0.793ms dirtyStatic=0.001ms retained=2.221ms lifecycle=0.315ms
+emit-probe query=1.150ms dirtyStatic=0.001ms retained=2.089ms lifecycle=0.290ms
+emit-probe query=1.021ms dirtyStatic=0.001ms retained=1.779ms lifecycle=0.286ms
+emit-probe query=0.901ms dirtyStatic=0.001ms retained=0.504ms lifecycle=0.358ms
+emit-probe query=1.442ms dirtyStatic=0.001ms retained=1.402ms lifecycle=0.300ms
+emit-probe query=1.800ms dirtyStatic=0.001ms retained=1.602ms lifecycle=0.321ms
+emit-probe query=0.761ms dirtyStatic=0.001ms retained=1.812ms lifecycle=0.278ms
+emit-probe query=1.337ms dirtyStatic=0.001ms retained=2.064ms lifecycle=0.300ms
+emit-probe query=0.837ms dirtyStatic=0.001ms retained=2.056ms lifecycle=0.265ms
+emit-probe query=1.275ms dirtyStatic=0.001ms retained=2.319ms lifecycle=0.360ms
+emit-probe query=0.729ms dirtyStatic=0.000ms retained=2.172ms lifecycle=0.291ms
+emit-probe query=0.737ms dirtyStatic=0.001ms retained=1.830ms lifecycle=0.279ms
+emit-probe query=1.073ms dirtyStatic=0.001ms retained=2.103ms lifecycle=0.306ms
+emit-probe query=1.363ms dirtyStatic=0.001ms retained=1.727ms lifecycle=0.295ms
+emit-probe query=0.561ms dirtyStatic=0.001ms retained=2.086ms lifecycle=0.278ms
+emit-probe query=0.836ms dirtyStatic=0.001ms retained=2.361ms lifecycle=0.370ms
+emit-probe query=0.646ms dirtyStatic=0.001ms retained=2.050ms lifecycle=0.244ms
+emit-probe query=0.769ms dirtyStatic=0.001ms retained=1.640ms lifecycle=0.229ms
+emit-probe query=1.044ms dirtyStatic=0.001ms retained=1.719ms lifecycle=0.223ms
+emit-probe query=0.612ms dirtyStatic=0.000ms retained=1.513ms lifecycle=0.261ms
+emit-probe query=0.718ms dirtyStatic=0.001ms retained=2.076ms lifecycle=0.263ms
+emit-probe query=0.542ms dirtyStatic=0.001ms retained=1.445ms lifecycle=0.216ms
+emit-probe query=0.640ms dirtyStatic=0.001ms retained=2.439ms lifecycle=0.261ms
+emit-probe query=0.580ms dirtyStatic=0.001ms retained=1.514ms lifecycle=0.205ms
+emit-probe query=0.734ms dirtyStatic=0.001ms retained=2.653ms lifecycle=0.343ms
+emit-probe query=1.003ms dirtyStatic=0.001ms retained=2.078ms lifecycle=0.313ms
+emit-probe query=1.011ms dirtyStatic=0.001ms retained=2.367ms lifecycle=0.272ms
+emit-probe query=0.559ms dirtyStatic=0.000ms retained=1.688ms lifecycle=0.276ms
+emit-probe query=1.336ms dirtyStatic=0.001ms retained=1.957ms lifecycle=0.303ms
+emit-probe query=1.362ms dirtyStatic=0.001ms retained=1.555ms lifecycle=0.245ms
+emit-probe query=0.740ms dirtyStatic=0.001ms retained=1.621ms lifecycle=0.250ms
+emit-probe query=0.774ms dirtyStatic=0.001ms retained=1.758ms lifecycle=0.258ms
+emit-probe query=0.890ms dirtyStatic=0.001ms retained=1.907ms lifecycle=0.315ms
+emit-probe query=1.239ms dirtyStatic=0.001ms retained=1.760ms lifecycle=0.276ms
+emit-probe query=0.949ms dirtyStatic=0.001ms retained=2.109ms lifecycle=0.276ms
+emit-probe query=0.855ms dirtyStatic=0.001ms retained=1.895ms lifecycle=0.303ms
+emit-probe query=0.795ms dirtyStatic=0.001ms retained=1.831ms lifecycle=0.292ms
+emit-probe query=0.888ms dirtyStatic=0.001ms retained=1.752ms lifecycle=0.294ms
+emit-probe query=0.827ms dirtyStatic=0.001ms retained=2.003ms lifecycle=0.273ms
+emit-probe query=0.910ms dirtyStatic=0.001ms retained=1.968ms lifecycle=0.302ms
+emit-probe query=1.426ms dirtyStatic=0.001ms retained=2.487ms lifecycle=0.324ms
+emit-probe query=1.327ms dirtyStatic=0.001ms retained=1.966ms lifecycle=0.309ms
+emit-probe query=1.280ms dirtyStatic=0.001ms retained=2.245ms lifecycle=0.381ms
+emit-probe query=1.502ms dirtyStatic=0.001ms retained=2.534ms lifecycle=0.384ms
+emit-probe query=0.978ms dirtyStatic=0.001ms retained=1.957ms lifecycle=0.280ms
+emit-probe query=1.007ms dirtyStatic=0.000ms retained=1.415ms lifecycle=0.245ms
+emit-probe query=1.852ms dirtyStatic=0.001ms retained=2.119ms lifecycle=0.360ms
+emit-probe query=0.714ms dirtyStatic=0.001ms retained=2.382ms lifecycle=0.358ms
+emit-probe query=0.771ms dirtyStatic=0.001ms retained=2.273ms lifecycle=0.433ms
+emit-probe query=1.384ms dirtyStatic=0.001ms retained=1.694ms lifecycle=0.259ms
+emit-probe query=0.842ms dirtyStatic=0.001ms retained=1.925ms lifecycle=0.333ms
+emit-probe query=0.839ms dirtyStatic=0.001ms retained=1.631ms lifecycle=0.274ms
+emit-probe query=1.320ms dirtyStatic=0.001ms retained=2.082ms lifecycle=0.281ms
+emit-probe query=0.855ms dirtyStatic=0.001ms retained=1.576ms lifecycle=0.263ms
+emit-probe query=0.928ms dirtyStatic=0.001ms retained=2.012ms lifecycle=0.269ms
+emit-probe query=0.842ms dirtyStatic=0.001ms retained=1.757ms lifecycle=0.292ms
+emit-probe query=0.848ms dirtyStatic=0.001ms retained=1.972ms lifecycle=0.259ms
+emit-probe query=0.844ms dirtyStatic=0.001ms retained=1.691ms lifecycle=0.274ms
+emit-probe query=0.843ms dirtyStatic=0.001ms retained=1.927ms lifecycle=0.288ms
+emit-probe query=1.041ms dirtyStatic=0.001ms retained=1.866ms lifecycle=0.280ms
+emit-probe query=0.846ms dirtyStatic=0.000ms retained=1.885ms lifecycle=0.248ms
+emit-probe query=1.347ms dirtyStatic=0.001ms retained=1.853ms lifecycle=0.259ms
+emit-probe query=1.911ms dirtyStatic=0.001ms retained=2.287ms lifecycle=0.362ms
+emit-probe query=0.889ms dirtyStatic=0.000ms retained=1.719ms lifecycle=0.254ms
+emit-probe query=0.863ms dirtyStatic=0.001ms retained=1.965ms lifecycle=0.249ms
+emit-probe query=1.200ms dirtyStatic=0.001ms retained=2.219ms lifecycle=0.409ms
+emit-probe query=0.868ms dirtyStatic=0.001ms retained=2.091ms lifecycle=0.330ms
+emit-probe query=0.882ms dirtyStatic=0.001ms retained=2.009ms lifecycle=0.328ms
+emit-probe query=0.862ms dirtyStatic=0.001ms retained=2.277ms lifecycle=0.280ms
+emit-probe query=0.937ms dirtyStatic=0.001ms retained=1.812ms lifecycle=0.310ms
+emit-probe query=0.769ms dirtyStatic=0.001ms retained=2.105ms lifecycle=0.320ms
+emit-probe query=0.814ms dirtyStatic=0.001ms retained=1.774ms lifecycle=0.334ms
+emit-probe query=0.870ms dirtyStatic=0.001ms retained=1.854ms lifecycle=0.280ms
+emit-probe query=0.826ms dirtyStatic=0.001ms retained=1.829ms lifecycle=0.293ms
+emit-probe query=0.875ms dirtyStatic=0.001ms retained=2.221ms lifecycle=0.331ms
+emit-probe query=0.925ms dirtyStatic=0.001ms retained=1.984ms lifecycle=0.338ms
+emit-probe query=0.944ms dirtyStatic=0.001ms retained=1.937ms lifecycle=0.289ms
+emit-probe query=0.859ms dirtyStatic=0.001ms retained=1.780ms lifecycle=0.297ms
+emit-probe query=1.322ms dirtyStatic=0.001ms retained=1.993ms lifecycle=0.329ms
+emit-probe query=0.874ms dirtyStatic=0.001ms retained=0.592ms lifecycle=0.354ms
+emit-probe query=1.213ms dirtyStatic=0.001ms retained=1.830ms lifecycle=0.362ms
+emit-probe query=0.887ms dirtyStatic=0.001ms retained=2.083ms lifecycle=0.324ms
+emit-probe query=0.836ms dirtyStatic=0.001ms retained=1.839ms lifecycle=0.280ms
+emit-probe query=0.949ms dirtyStatic=0.001ms retained=2.069ms lifecycle=0.379ms
+emit-probe query=1.158ms dirtyStatic=0.001ms retained=1.630ms lifecycle=0.280ms
+emit-probe query=1.024ms dirtyStatic=0.001ms retained=2.361ms lifecycle=0.328ms
+emit-probe query=1.314ms dirtyStatic=0.001ms retained=1.922ms lifecycle=0.302ms
+emit-probe query=1.018ms dirtyStatic=0.001ms retained=2.157ms lifecycle=0.273ms
+emit-probe query=0.747ms dirtyStatic=0.000ms retained=1.489ms lifecycle=0.265ms
+emit-probe query=0.722ms dirtyStatic=0.001ms retained=1.734ms lifecycle=0.265ms
+emit-probe query=0.918ms dirtyStatic=0.001ms retained=1.636ms lifecycle=0.279ms
+emit-probe query=1.151ms dirtyStatic=0.001ms retained=2.152ms lifecycle=0.333ms
+emit-probe query=1.058ms dirtyStatic=0.001ms retained=1.827ms lifecycle=0.305ms
+emit-probe query=0.873ms dirtyStatic=0.001ms retained=2.208ms lifecycle=0.303ms
+emit-probe query=0.864ms dirtyStatic=0.001ms retained=1.808ms lifecycle=0.258ms
+emit-probe query=0.943ms dirtyStatic=0.001ms retained=2.017ms lifecycle=0.283ms
+emit-probe query=0.862ms dirtyStatic=0.001ms retained=1.745ms lifecycle=0.302ms
+emit-probe query=0.947ms dirtyStatic=0.001ms retained=1.777ms lifecycle=0.267ms
+emit-probe query=0.895ms dirtyStatic=0.001ms retained=1.870ms lifecycle=0.321ms
+emit-probe query=1.071ms dirtyStatic=0.001ms retained=2.294ms lifecycle=0.302ms
+emit-probe query=0.902ms dirtyStatic=0.001ms retained=1.774ms lifecycle=0.284ms
+emit-probe query=0.872ms dirtyStatic=0.001ms retained=2.101ms lifecycle=0.381ms
+emit-probe query=1.113ms dirtyStatic=0.001ms retained=1.718ms lifecycle=0.296ms
+emit-probe query=1.228ms dirtyStatic=0.001ms retained=1.904ms lifecycle=0.325ms
+emit-probe query=1.135ms dirtyStatic=0.001ms retained=1.987ms lifecycle=0.315ms
+emit-probe query=0.908ms dirtyStatic=0.001ms retained=2.654ms lifecycle=0.419ms
+emit-probe query=1.049ms dirtyStatic=0.001ms retained=2.237ms lifecycle=0.355ms
+emit-probe query=0.741ms dirtyStatic=0.000ms retained=1.905ms lifecycle=0.281ms
+emit-probe query=1.091ms dirtyStatic=0.001ms retained=1.914ms lifecycle=0.279ms
+emit-probe query=0.705ms dirtyStatic=0.001ms retained=2.354ms lifecycle=0.403ms
+emit-probe query=0.976ms dirtyStatic=0.001ms retained=2.039ms lifecycle=0.304ms
+emit-probe query=0.908ms dirtyStatic=0.001ms retained=2.076ms lifecycle=0.298ms
+emit-probe query=0.817ms dirtyStatic=0.001ms retained=1.667ms lifecycle=0.266ms
+emit-probe query=1.220ms dirtyStatic=0.001ms retained=2.523ms lifecycle=0.326ms
+emit-probe query=0.971ms dirtyStatic=0.001ms retained=1.562ms lifecycle=0.261ms
+emit-probe query=0.865ms dirtyStatic=0.001ms retained=1.938ms lifecycle=0.267ms
+emit-probe query=0.866ms dirtyStatic=0.001ms retained=1.772ms lifecycle=0.272ms
+emit-probe query=0.894ms dirtyStatic=0.001ms retained=2.045ms lifecycle=0.271ms
+emit-probe query=1.220ms dirtyStatic=0.001ms retained=1.797ms lifecycle=0.288ms
+emit-probe query=1.932ms dirtyStatic=0.001ms retained=1.888ms lifecycle=0.286ms
+emit-probe query=0.928ms dirtyStatic=0.001ms retained=1.499ms lifecycle=0.252ms
+emit-probe query=1.361ms dirtyStatic=0.001ms retained=1.889ms lifecycle=0.277ms
+emit-probe query=0.818ms dirtyStatic=0.001ms retained=1.696ms lifecycle=0.257ms
+emit-probe query=0.843ms dirtyStatic=0.001ms retained=1.889ms lifecycle=0.246ms
+emit-probe query=0.847ms dirtyStatic=0.001ms retained=1.750ms lifecycle=0.254ms
+emit-probe query=0.812ms dirtyStatic=0.001ms retained=1.971ms lifecycle=0.249ms
+emit-probe query=0.899ms dirtyStatic=0.001ms retained=1.589ms lifecycle=0.255ms
+emit-probe query=0.896ms dirtyStatic=0.001ms retained=1.869ms lifecycle=0.282ms
+emit-probe query=0.873ms dirtyStatic=0.001ms retained=1.844ms lifecycle=0.308ms
+emit-probe query=0.854ms dirtyStatic=0.001ms retained=2.053ms lifecycle=0.267ms
+emit-probe query=0.897ms dirtyStatic=0.001ms retained=1.775ms lifecycle=0.302ms
+emit-probe query=0.908ms dirtyStatic=0.001ms retained=0.498ms lifecycle=0.352ms
+emit-probe query=1.409ms dirtyStatic=0.000ms retained=1.891ms lifecycle=0.294ms
+emit-probe query=0.895ms dirtyStatic=0.001ms retained=1.665ms lifecycle=0.274ms
+emit-probe query=0.877ms dirtyStatic=0.001ms retained=1.875ms lifecycle=0.288ms
+emit-probe query=0.855ms dirtyStatic=0.000ms retained=1.698ms lifecycle=0.259ms
+emit-probe query=0.875ms dirtyStatic=0.001ms retained=1.908ms lifecycle=0.262ms
+emit-probe query=0.836ms dirtyStatic=0.001ms retained=1.719ms lifecycle=0.268ms
+emit-probe query=0.854ms dirtyStatic=0.001ms retained=1.925ms lifecycle=0.274ms
+emit-probe query=0.994ms dirtyStatic=0.001ms retained=1.515ms lifecycle=0.257ms
+emit-probe query=0.832ms dirtyStatic=0.001ms retained=1.712ms lifecycle=0.253ms
+emit-probe query=0.895ms dirtyStatic=0.001ms retained=1.655ms lifecycle=0.253ms
+emit-probe query=0.858ms dirtyStatic=0.001ms retained=1.891ms lifecycle=0.244ms
+emit-probe query=0.820ms dirtyStatic=0.001ms retained=1.666ms lifecycle=0.243ms
+emit-probe query=0.820ms dirtyStatic=0.001ms retained=1.839ms lifecycle=0.254ms
+emit-probe query=0.824ms dirtyStatic=0.001ms retained=1.537ms lifecycle=0.254ms
+emit-probe query=0.874ms dirtyStatic=0.001ms retained=1.932ms lifecycle=0.311ms
+emit-probe query=0.867ms dirtyStatic=0.001ms retained=1.579ms lifecycle=0.260ms
+emit-probe query=0.824ms dirtyStatic=0.001ms retained=2.023ms lifecycle=0.262ms
+emit-probe query=0.844ms dirtyStatic=0.001ms retained=1.751ms lifecycle=0.278ms
+emit-probe query=1.048ms dirtyStatic=0.001ms retained=2.055ms lifecycle=0.265ms
+emit-probe query=0.929ms dirtyStatic=0.001ms retained=1.513ms lifecycle=0.268ms
+emit-probe query=0.829ms dirtyStatic=0.001ms retained=1.719ms lifecycle=0.269ms
+emit-probe query=0.827ms dirtyStatic=0.001ms retained=1.708ms lifecycle=0.299ms
+emit-probe query=0.909ms dirtyStatic=0.001ms retained=2.004ms lifecycle=0.251ms
+emit-probe query=0.852ms dirtyStatic=0.001ms retained=1.712ms lifecycle=0.271ms
+emit-probe query=1.257ms dirtyStatic=0.001ms retained=2.051ms lifecycle=0.275ms
+emit-probe query=0.906ms dirtyStatic=0.001ms retained=1.586ms lifecycle=0.262ms
+emit-probe query=0.805ms dirtyStatic=0.001ms retained=1.706ms lifecycle=0.246ms
+emit-probe query=0.907ms dirtyStatic=0.001ms retained=1.671ms lifecycle=0.259ms
+emit-probe query=0.818ms dirtyStatic=0.001ms retained=2.177ms lifecycle=0.366ms
+emit-probe query=0.830ms dirtyStatic=0.001ms retained=1.629ms lifecycle=0.260ms
+emit-probe query=0.867ms dirtyStatic=0.001ms retained=2.035ms lifecycle=0.284ms
+emit-probe query=0.974ms dirtyStatic=0.001ms retained=1.783ms lifecycle=0.285ms
+emit-probe query=1.528ms dirtyStatic=0.001ms retained=1.837ms lifecycle=0.321ms
+emit-probe query=0.967ms dirtyStatic=0.001ms retained=1.929ms lifecycle=0.355ms
+emit-probe query=1.069ms dirtyStatic=0.001ms retained=2.002ms lifecycle=0.275ms
+emit-probe query=0.878ms dirtyStatic=0.001ms retained=1.723ms lifecycle=0.268ms
+emit-probe query=0.858ms dirtyStatic=0.001ms retained=2.579ms lifecycle=0.261ms
+emit-probe query=0.839ms dirtyStatic=0.001ms retained=1.634ms lifecycle=0.358ms
+emit-probe query=0.792ms dirtyStatic=0.001ms retained=2.002ms lifecycle=0.323ms
+emit-probe query=1.216ms dirtyStatic=0.001ms retained=1.843ms lifecycle=0.300ms
+emit-probe query=1.153ms dirtyStatic=0.001ms retained=2.473ms lifecycle=0.314ms
+emit-probe query=1.234ms dirtyStatic=0.000ms retained=1.849ms lifecycle=0.277ms
+emit-probe query=1.180ms dirtyStatic=0.001ms retained=2.217ms lifecycle=0.294ms
+emit-probe query=0.828ms dirtyStatic=0.001ms retained=1.606ms lifecycle=0.296ms
+emit-probe query=0.961ms dirtyStatic=0.001ms retained=1.815ms lifecycle=0.276ms
+emit-probe query=1.282ms dirtyStatic=0.001ms retained=1.812ms lifecycle=0.274ms
+emit-probe query=0.851ms dirtyStatic=0.001ms retained=1.942ms lifecycle=0.283ms
+emit-probe query=0.962ms dirtyStatic=0.001ms retained=1.645ms lifecycle=0.266ms
+emit-probe query=0.988ms dirtyStatic=0.001ms retained=1.840ms lifecycle=0.284ms
+emit-probe query=1.069ms dirtyStatic=0.001ms retained=1.529ms lifecycle=0.287ms
+emit-probe query=0.918ms dirtyStatic=0.001ms retained=1.859ms lifecycle=0.313ms
+emit-probe query=0.826ms dirtyStatic=0.001ms retained=0.517ms lifecycle=0.328ms
+emit-probe query=0.982ms dirtyStatic=0.001ms retained=1.161ms lifecycle=0.284ms
+emit-probe query=1.034ms dirtyStatic=0.001ms retained=2.549ms lifecycle=0.399ms
+emit-probe query=0.927ms dirtyStatic=0.001ms retained=2.055ms lifecycle=0.325ms
+emit-probe query=0.925ms dirtyStatic=0.001ms retained=2.159ms lifecycle=0.318ms
+emit-probe query=0.808ms dirtyStatic=0.001ms retained=1.443ms lifecycle=0.282ms
+emit-probe query=0.809ms dirtyStatic=0.001ms retained=1.697ms lifecycle=0.271ms
+emit-probe query=1.090ms dirtyStatic=0.001ms retained=1.874ms lifecycle=0.312ms
+emit-probe query=1.210ms dirtyStatic=0.001ms retained=1.928ms lifecycle=0.288ms
+emit-probe query=0.965ms dirtyStatic=0.001ms retained=1.701ms lifecycle=0.281ms
+emit-probe query=0.920ms dirtyStatic=0.001ms retained=1.921ms lifecycle=0.298ms
+emit-probe query=1.029ms dirtyStatic=0.001ms retained=1.544ms lifecycle=0.293ms
+emit-probe query=0.962ms dirtyStatic=0.001ms retained=2.151ms lifecycle=0.319ms
+emit-probe query=0.920ms dirtyStatic=0.001ms retained=1.884ms lifecycle=0.293ms
+emit-probe query=0.966ms dirtyStatic=0.001ms retained=1.929ms lifecycle=0.311ms
+emit-probe query=0.981ms dirtyStatic=0.001ms retained=1.830ms lifecycle=0.310ms
+emit-probe query=0.941ms dirtyStatic=0.001ms retained=2.122ms lifecycle=0.332ms
+emit-probe query=0.863ms dirtyStatic=0.001ms retained=1.678ms lifecycle=0.286ms
+emit-probe query=0.960ms dirtyStatic=0.001ms retained=1.860ms lifecycle=0.299ms
+emit-probe query=0.866ms dirtyStatic=0.001ms retained=1.757ms lifecycle=0.291ms
+emit-probe query=0.961ms dirtyStatic=0.001ms retained=2.147ms lifecycle=0.309ms
+emit-probe query=0.854ms dirtyStatic=0.001ms retained=1.721ms lifecycle=0.271ms
+emit-probe query=0.881ms dirtyStatic=0.001ms retained=1.967ms lifecycle=0.265ms
+emit-probe query=0.912ms dirtyStatic=0.001ms retained=1.539ms lifecycle=0.287ms
+emit-probe query=1.228ms dirtyStatic=0.001ms retained=1.849ms lifecycle=0.308ms
+emit-probe query=0.846ms dirtyStatic=0.001ms retained=1.663ms lifecycle=0.322ms
+emit-probe query=0.967ms dirtyStatic=0.001ms retained=2.022ms lifecycle=0.273ms
+emit-probe query=0.821ms dirtyStatic=0.001ms retained=1.727ms lifecycle=0.281ms
+emit-probe query=0.857ms dirtyStatic=0.001ms retained=1.902ms lifecycle=0.263ms
+emit-probe query=0.882ms dirtyStatic=0.001ms retained=1.392ms lifecycle=0.259ms
+emit-probe query=0.963ms dirtyStatic=0.001ms retained=1.643ms lifecycle=0.290ms
+emit-probe query=0.899ms dirtyStatic=0.001ms retained=1.689ms lifecycle=0.275ms
+emit-probe query=0.947ms dirtyStatic=0.001ms retained=2.192ms lifecycle=0.325ms
+emit-probe query=0.851ms dirtyStatic=0.001ms retained=1.932ms lifecycle=0.309ms
+emit-probe query=0.872ms dirtyStatic=0.001ms retained=2.056ms lifecycle=0.274ms
+emit-probe query=0.854ms dirtyStatic=0.001ms retained=0.606ms lifecycle=0.341ms
+emit-probe query=0.945ms dirtyStatic=0.000ms retained=1.044ms lifecycle=0.294ms
+emit-probe query=0.845ms dirtyStatic=0.001ms retained=1.722ms lifecycle=0.280ms
+emit-probe query=0.867ms dirtyStatic=0.001ms retained=1.742ms lifecycle=0.281ms
+emit-probe query=0.894ms dirtyStatic=0.001ms retained=2.087ms lifecycle=0.291ms
+emit-probe query=1.137ms dirtyStatic=0.001ms retained=1.786ms lifecycle=0.278ms
+emit-probe query=0.902ms dirtyStatic=0.000ms retained=1.899ms lifecycle=0.299ms
+emit-probe query=1.203ms dirtyStatic=0.001ms retained=1.470ms lifecycle=0.272ms
+emit-probe query=0.923ms dirtyStatic=0.001ms retained=1.773ms lifecycle=0.298ms
+emit-probe query=1.282ms dirtyStatic=0.001ms retained=1.707ms lifecycle=0.270ms
+emit-probe query=1.104ms dirtyStatic=0.001ms retained=1.786ms lifecycle=0.271ms
+emit-probe query=0.831ms dirtyStatic=0.000ms retained=1.757ms lifecycle=0.264ms
+emit-probe query=0.869ms dirtyStatic=0.001ms retained=1.749ms lifecycle=0.256ms
+emit-probe query=0.883ms dirtyStatic=0.001ms retained=1.412ms lifecycle=0.259ms
+emit-probe query=0.863ms dirtyStatic=0.001ms retained=1.624ms lifecycle=0.264ms
+emit-probe query=0.981ms dirtyStatic=0.001ms retained=1.630ms lifecycle=0.254ms
+emit-probe query=1.006ms dirtyStatic=0.001ms retained=1.774ms lifecycle=0.296ms
+emit-probe query=0.883ms dirtyStatic=0.001ms retained=1.492ms lifecycle=0.266ms
+emit-probe query=0.935ms dirtyStatic=0.001ms retained=0.518ms lifecycle=0.291ms
+emit-probe query=0.859ms dirtyStatic=0.001ms retained=1.339ms lifecycle=0.261ms
+emit-probe query=0.894ms dirtyStatic=0.001ms retained=1.435ms lifecycle=0.319ms
+emit-probe query=0.848ms dirtyStatic=0.001ms retained=1.553ms lifecycle=0.263ms
+emit-probe query=0.917ms dirtyStatic=0.001ms retained=1.599ms lifecycle=0.260ms
+emit-probe query=0.850ms dirtyStatic=0.001ms retained=1.795ms lifecycle=0.252ms
+emit-probe query=0.886ms dirtyStatic=0.001ms retained=1.586ms lifecycle=0.249ms
+emit-probe query=0.812ms dirtyStatic=0.001ms retained=1.643ms lifecycle=0.244ms
+emit-probe query=0.885ms dirtyStatic=0.001ms retained=1.476ms lifecycle=0.367ms
+emit-probe query=0.929ms dirtyStatic=0.001ms retained=1.674ms lifecycle=0.299ms
+emit-probe query=1.228ms dirtyStatic=0.001ms retained=1.561ms lifecycle=0.261ms
+emit-probe query=1.150ms dirtyStatic=0.001ms retained=1.887ms lifecycle=0.309ms
+emit-probe query=0.943ms dirtyStatic=0.001ms retained=1.721ms lifecycle=0.304ms
+emit-probe query=1.036ms dirtyStatic=0.001ms retained=1.833ms lifecycle=0.273ms
+emit-probe query=0.925ms dirtyStatic=0.000ms retained=1.396ms lifecycle=0.301ms
+emit-probe query=0.828ms dirtyStatic=0.001ms retained=0.504ms lifecycle=0.317ms
+emit-probe query=0.990ms dirtyStatic=0.001ms retained=1.270ms lifecycle=0.365ms
+emit-probe query=0.864ms dirtyStatic=0.001ms retained=1.596ms lifecycle=0.274ms
+emit-probe query=1.128ms dirtyStatic=0.001ms retained=1.931ms lifecycle=0.321ms
+emit-probe query=0.864ms dirtyStatic=0.001ms retained=1.620ms lifecycle=0.285ms
+emit-probe query=1.264ms dirtyStatic=0.001ms retained=1.839ms lifecycle=0.270ms
+emit-probe query=0.870ms dirtyStatic=0.001ms retained=1.520ms lifecycle=0.270ms
+emit-probe query=0.845ms dirtyStatic=0.001ms retained=1.749ms lifecycle=0.377ms
+emit-probe query=0.925ms dirtyStatic=0.001ms retained=1.723ms lifecycle=0.283ms
+emit-probe query=1.117ms dirtyStatic=0.001ms retained=2.155ms lifecycle=0.330ms
+emit-probe query=0.853ms dirtyStatic=0.001ms retained=1.664ms lifecycle=0.268ms
+emit-probe query=0.862ms dirtyStatic=0.001ms retained=1.926ms lifecycle=0.305ms
+emit-probe query=0.874ms dirtyStatic=0.001ms retained=1.530ms lifecycle=0.292ms
+emit-probe query=0.890ms dirtyStatic=0.001ms retained=1.928ms lifecycle=0.323ms
+emit-probe query=1.081ms dirtyStatic=0.001ms retained=1.639ms lifecycle=0.271ms
+emit-probe query=0.895ms dirtyStatic=0.001ms retained=1.682ms lifecycle=0.264ms
+emit-probe query=0.977ms dirtyStatic=0.001ms retained=1.782ms lifecycle=0.308ms
+emit-probe query=1.220ms dirtyStatic=0.001ms retained=1.863ms lifecycle=0.289ms
+emit-probe query=0.988ms dirtyStatic=0.001ms retained=1.519ms lifecycle=0.323ms
+emit-probe query=0.910ms dirtyStatic=0.001ms retained=1.590ms lifecycle=0.298ms
+emit-probe query=0.982ms dirtyStatic=0.001ms retained=1.538ms lifecycle=0.287ms
+emit-probe query=0.840ms dirtyStatic=0.001ms retained=0.557ms lifecycle=0.497ms
+emit-probe query=0.814ms dirtyStatic=0.001ms retained=1.455ms lifecycle=0.263ms
+emit-probe query=0.922ms dirtyStatic=0.001ms retained=1.712ms lifecycle=0.310ms
+emit-probe query=1.079ms dirtyStatic=0.001ms retained=1.780ms lifecycle=0.275ms
+emit-probe query=0.891ms dirtyStatic=0.001ms retained=1.429ms lifecycle=0.291ms
+emit-probe query=0.946ms dirtyStatic=0.001ms retained=1.614ms lifecycle=0.293ms
+emit-probe query=0.884ms dirtyStatic=0.001ms retained=1.631ms lifecycle=0.266ms
+emit-probe query=0.956ms dirtyStatic=0.001ms retained=1.920ms lifecycle=0.279ms
+emit-probe query=0.828ms dirtyStatic=0.001ms retained=1.582ms lifecycle=0.267ms
+emit-probe query=1.096ms dirtyStatic=0.001ms retained=1.829ms lifecycle=0.269ms
+emit-probe query=0.858ms dirtyStatic=0.001ms retained=1.567ms lifecycle=0.274ms
+emit-probe query=0.940ms dirtyStatic=0.001ms retained=1.656ms lifecycle=0.317ms
+emit-probe query=0.885ms dirtyStatic=0.001ms retained=2.139ms lifecycle=0.395ms
+emit-probe query=0.887ms dirtyStatic=0.001ms retained=1.862ms lifecycle=0.287ms
+emit-probe query=0.926ms dirtyStatic=0.001ms retained=1.770ms lifecycle=0.298ms
+emit-probe query=0.960ms dirtyStatic=0.001ms retained=2.103ms lifecycle=0.351ms
+emit-probe query=0.886ms dirtyStatic=0.001ms retained=1.743ms lifecycle=0.323ms
+emit-probe query=0.875ms dirtyStatic=0.001ms retained=2.262ms lifecycle=0.337ms
+emit-probe query=1.113ms dirtyStatic=0.001ms retained=1.824ms lifecycle=0.319ms
+emit-probe query=0.816ms dirtyStatic=0.001ms retained=1.984ms lifecycle=0.285ms
+emit-probe query=1.198ms dirtyStatic=0.001ms retained=1.638ms lifecycle=0.299ms
+emit-probe query=1.151ms dirtyStatic=0.001ms retained=2.012ms lifecycle=0.294ms
+emit-probe query=1.277ms dirtyStatic=0.001ms retained=1.811ms lifecycle=0.336ms
+emit-probe query=0.840ms dirtyStatic=0.001ms retained=1.988ms lifecycle=0.343ms
+emit-probe query=1.186ms dirtyStatic=0.001ms retained=2.316ms lifecycle=0.454ms
+emit-probe query=0.925ms dirtyStatic=0.001ms retained=1.963ms lifecycle=0.314ms
+emit-probe query=0.876ms dirtyStatic=0.001ms retained=1.459ms lifecycle=0.268ms
+emit-probe query=0.835ms dirtyStatic=0.001ms retained=1.728ms lifecycle=0.268ms
+emit-probe query=1.118ms dirtyStatic=0.001ms retained=1.389ms lifecycle=0.298ms
+emit-probe query=1.105ms dirtyStatic=0.001ms retained=1.718ms lifecycle=0.281ms
+emit-probe query=1.180ms dirtyStatic=0.001ms retained=1.940ms lifecycle=0.314ms
+emit-probe query=1.251ms dirtyStatic=0.001ms retained=1.920ms lifecycle=0.280ms
+emit-probe query=1.073ms dirtyStatic=0.001ms retained=1.658ms lifecycle=0.293ms
+emit-probe query=0.925ms dirtyStatic=0.001ms retained=1.976ms lifecycle=0.323ms
+emit-probe query=1.236ms dirtyStatic=0.001ms retained=1.693ms lifecycle=0.347ms
+emit-probe query=1.145ms dirtyStatic=0.001ms retained=1.765ms lifecycle=0.349ms
+emit-probe query=0.890ms dirtyStatic=0.001ms retained=2.146ms lifecycle=0.376ms
+emit-probe query=1.042ms dirtyStatic=0.001ms retained=1.819ms lifecycle=0.300ms
+emit-probe query=0.861ms dirtyStatic=0.001ms retained=1.755ms lifecycle=0.448ms
+emit-probe query=1.244ms dirtyStatic=0.001ms retained=2.321ms lifecycle=0.417ms
+emit-probe query=0.925ms dirtyStatic=0.001ms retained=1.518ms lifecycle=0.332ms
+emit-probe query=0.972ms dirtyStatic=0.001ms retained=1.509ms lifecycle=0.298ms
+emit-probe query=1.275ms dirtyStatic=0.001ms retained=2.485ms lifecycle=0.419ms
+emit-probe query=0.844ms dirtyStatic=0.001ms retained=1.915ms lifecycle=0.275ms
+emit-probe query=0.999ms dirtyStatic=0.001ms retained=1.487ms lifecycle=0.281ms
+emit-probe query=0.917ms dirtyStatic=0.001ms retained=1.737ms lifecycle=0.335ms
+emit-probe query=0.952ms dirtyStatic=0.001ms retained=1.520ms lifecycle=0.278ms
+emit-probe query=1.181ms dirtyStatic=0.001ms retained=1.892ms lifecycle=0.276ms
+emit-probe query=0.956ms dirtyStatic=0.001ms retained=1.500ms lifecycle=0.266ms
+emit-probe query=0.948ms dirtyStatic=0.001ms retained=1.713ms lifecycle=0.254ms
+emit-probe query=0.889ms dirtyStatic=0.001ms retained=1.598ms lifecycle=0.300ms
+emit-probe query=0.952ms dirtyStatic=0.001ms retained=1.964ms lifecycle=0.353ms
+emit-probe query=0.860ms dirtyStatic=0.001ms retained=1.318ms lifecycle=0.275ms
+emit-probe query=0.962ms dirtyStatic=0.001ms retained=1.509ms lifecycle=0.314ms
+emit-probe query=0.848ms dirtyStatic=0.001ms retained=1.616ms lifecycle=0.277ms
+emit-probe query=0.990ms dirtyStatic=0.001ms retained=1.671ms lifecycle=0.322ms
+emit-probe query=0.862ms dirtyStatic=0.001ms retained=1.562ms lifecycle=0.278ms
+emit-probe query=0.910ms dirtyStatic=0.001ms retained=1.556ms lifecycle=0.310ms
+emit-probe query=0.833ms dirtyStatic=0.001ms retained=1.408ms lifecycle=0.323ms
+emit-probe query=1.007ms dirtyStatic=0.001ms retained=1.607ms lifecycle=0.329ms
+emit-probe query=1.164ms dirtyStatic=0.001ms retained=1.618ms lifecycle=0.311ms
+emit-probe query=0.882ms dirtyStatic=0.001ms retained=1.747ms lifecycle=0.311ms
+emit-probe query=0.938ms dirtyStatic=0.001ms retained=1.500ms lifecycle=0.280ms
+emit-probe query=0.840ms dirtyStatic=0.001ms retained=1.598ms lifecycle=0.278ms
+emit-probe query=1.299ms dirtyStatic=0.001ms retained=1.285ms lifecycle=0.279ms
+emit-probe query=0.889ms dirtyStatic=0.001ms retained=1.532ms lifecycle=0.286ms
+emit-probe query=0.829ms dirtyStatic=0.001ms retained=1.526ms lifecycle=0.270ms
+emit-probe query=0.837ms dirtyStatic=0.001ms retained=1.565ms lifecycle=0.261ms
+emit-probe query=0.817ms dirtyStatic=0.001ms retained=1.517ms lifecycle=0.273ms
+emit-probe query=0.816ms dirtyStatic=0.001ms retained=1.601ms lifecycle=0.293ms
+emit-probe query=0.955ms dirtyStatic=0.001ms retained=1.535ms lifecycle=0.323ms
+emit-probe query=1.079ms dirtyStatic=0.001ms retained=1.494ms lifecycle=0.340ms
+emit-probe query=0.950ms dirtyStatic=0.001ms retained=1.469ms lifecycle=0.279ms
+emit-probe query=0.864ms dirtyStatic=0.001ms retained=1.636ms lifecycle=0.266ms
+emit-probe query=1.051ms dirtyStatic=0.001ms retained=1.426ms lifecycle=0.271ms
+emit-probe query=0.885ms dirtyStatic=0.001ms retained=1.550ms lifecycle=0.294ms
+emit-probe query=0.836ms dirtyStatic=0.001ms retained=1.217ms lifecycle=0.268ms
+emit-probe query=0.862ms dirtyStatic=0.001ms retained=1.190ms lifecycle=0.288ms
+emit-probe query=0.841ms dirtyStatic=0.001ms retained=1.433ms lifecycle=0.289ms
+emit-probe query=0.915ms dirtyStatic=0.001ms retained=1.421ms lifecycle=0.270ms
+emit-probe query=0.900ms dirtyStatic=0.001ms retained=1.430ms lifecycle=0.302ms
+emit-probe query=0.823ms dirtyStatic=0.001ms retained=1.385ms lifecycle=0.293ms
+emit-probe query=1.031ms dirtyStatic=0.001ms retained=1.339ms lifecycle=0.319ms
+emit-probe query=0.869ms dirtyStatic=0.001ms retained=1.298ms lifecycle=0.296ms
+emit-probe query=0.871ms dirtyStatic=0.001ms retained=1.465ms lifecycle=0.275ms
+emit-probe query=0.862ms dirtyStatic=0.001ms retained=1.517ms lifecycle=0.294ms
+emit-probe query=0.894ms dirtyStatic=0.001ms retained=1.292ms lifecycle=0.285ms
+emit-probe query=0.859ms dirtyStatic=0.001ms retained=1.396ms lifecycle=0.278ms
+emit-probe query=0.940ms dirtyStatic=0.001ms retained=1.139ms lifecycle=0.288ms
+emit-probe query=1.048ms dirtyStatic=0.001ms retained=1.405ms lifecycle=0.300ms
+emit-probe query=0.873ms dirtyStatic=0.001ms retained=1.440ms lifecycle=0.311ms
+emit-probe query=0.799ms dirtyStatic=0.001ms retained=1.764ms lifecycle=0.318ms
+emit-probe query=0.865ms dirtyStatic=0.001ms retained=1.349ms lifecycle=0.278ms
+emit-probe query=1.097ms dirtyStatic=0.001ms retained=1.462ms lifecycle=0.317ms
+emit-probe query=1.187ms dirtyStatic=0.001ms retained=1.241ms lifecycle=0.284ms
+emit-probe query=0.997ms dirtyStatic=0.001ms retained=1.444ms lifecycle=0.393ms
+emit-probe query=0.902ms dirtyStatic=0.001ms retained=1.540ms lifecycle=0.290ms
+emit-probe query=1.046ms dirtyStatic=0.001ms retained=1.462ms lifecycle=0.326ms
+emit-probe query=1.178ms dirtyStatic=0.001ms retained=1.368ms lifecycle=0.279ms
+emit-probe query=1.240ms dirtyStatic=0.001ms retained=1.324ms lifecycle=0.355ms
+emit-probe query=0.855ms dirtyStatic=0.001ms retained=1.137ms lifecycle=0.272ms
+emit-probe query=0.873ms dirtyStatic=0.001ms retained=1.160ms lifecycle=0.297ms
+emit-probe query=1.145ms dirtyStatic=0.001ms retained=1.287ms lifecycle=0.289ms
+emit-probe query=0.834ms dirtyStatic=0.001ms retained=1.436ms lifecycle=0.281ms
+emit-probe query=0.835ms dirtyStatic=0.001ms retained=1.270ms lifecycle=0.262ms
+emit-probe query=0.828ms dirtyStatic=0.001ms retained=1.218ms lifecycle=0.262ms
+emit-probe query=0.886ms dirtyStatic=0.001ms retained=1.205ms lifecycle=0.281ms
+emit-probe query=0.949ms dirtyStatic=0.001ms retained=1.245ms lifecycle=0.297ms
+emit-probe query=0.881ms dirtyStatic=0.001ms retained=1.321ms lifecycle=0.263ms
+emit-probe query=1.109ms dirtyStatic=0.001ms retained=1.414ms lifecycle=0.295ms
+emit-probe query=0.825ms dirtyStatic=0.001ms retained=1.209ms lifecycle=0.273ms
+emit-probe query=0.961ms dirtyStatic=0.001ms retained=1.332ms lifecycle=0.311ms
+emit-probe query=1.396ms dirtyStatic=0.001ms retained=1.307ms lifecycle=0.396ms
+emit-probe query=0.838ms dirtyStatic=0.001ms retained=1.160ms lifecycle=0.273ms
+emit-probe query=0.898ms dirtyStatic=0.001ms retained=1.222ms lifecycle=0.252ms
+emit-probe query=0.798ms dirtyStatic=0.001ms retained=1.198ms lifecycle=0.261ms
+emit-probe query=0.832ms dirtyStatic=0.001ms retained=1.203ms lifecycle=0.270ms
+emit-probe query=0.930ms dirtyStatic=0.001ms retained=1.243ms lifecycle=0.267ms
+emit-probe query=0.899ms dirtyStatic=0.001ms retained=1.236ms lifecycle=0.278ms
+emit-probe query=0.845ms dirtyStatic=0.001ms retained=1.012ms lifecycle=0.297ms
+emit-probe query=0.901ms dirtyStatic=0.001ms retained=1.225ms lifecycle=0.281ms
+emit-probe query=0.940ms dirtyStatic=0.001ms retained=1.452ms lifecycle=0.298ms
+emit-probe query=1.353ms dirtyStatic=0.001ms retained=1.491ms lifecycle=0.427ms
+emit-probe query=1.346ms dirtyStatic=0.001ms retained=1.604ms lifecycle=0.366ms
+emit-probe query=0.997ms dirtyStatic=0.001ms retained=1.045ms lifecycle=0.303ms
+emit-probe query=0.963ms dirtyStatic=0.001ms retained=1.206ms lifecycle=0.335ms
+emit-probe query=0.904ms dirtyStatic=0.001ms retained=1.322ms lifecycle=0.305ms
+emit-probe query=0.933ms dirtyStatic=0.001ms retained=1.370ms lifecycle=0.325ms
+emit-probe query=0.889ms dirtyStatic=0.001ms retained=1.358ms lifecycle=0.365ms
+emit-probe query=1.401ms dirtyStatic=0.001ms retained=1.399ms lifecycle=0.319ms
+emit-probe query=0.967ms dirtyStatic=0.001ms retained=1.265ms lifecycle=0.365ms
+emit-probe query=1.148ms dirtyStatic=0.001ms retained=1.111ms lifecycle=0.317ms
+emit-probe query=0.834ms dirtyStatic=0.001ms retained=1.253ms lifecycle=0.304ms
+emit-probe query=0.984ms dirtyStatic=0.001ms retained=1.242ms lifecycle=0.314ms
+emit-probe query=0.681ms dirtyStatic=0.001ms retained=1.208ms lifecycle=0.273ms
+emit-probe query=0.872ms dirtyStatic=0.001ms retained=1.244ms lifecycle=0.295ms
+emit-probe query=0.711ms dirtyStatic=0.001ms retained=0.896ms lifecycle=0.238ms
+emit-probe query=0.789ms dirtyStatic=0.001ms retained=0.861ms lifecycle=0.237ms
+emit-probe query=0.859ms dirtyStatic=0.002ms retained=1.093ms lifecycle=0.258ms
+emit-probe query=0.779ms dirtyStatic=0.001ms retained=1.084ms lifecycle=0.257ms
+emit-probe query=0.891ms dirtyStatic=0.001ms retained=1.242ms lifecycle=0.319ms
+emit-probe query=0.933ms dirtyStatic=0.001ms retained=1.157ms lifecycle=0.311ms
+emit-probe query=0.940ms dirtyStatic=0.001ms retained=1.153ms lifecycle=0.322ms
+emit-probe query=0.888ms dirtyStatic=0.001ms retained=1.018ms lifecycle=0.334ms
+emit-probe query=0.872ms dirtyStatic=0.001ms retained=1.180ms lifecycle=0.271ms
+emit-probe query=0.894ms dirtyStatic=0.001ms retained=1.055ms lifecycle=0.270ms
+emit-probe query=0.860ms dirtyStatic=0.001ms retained=1.045ms lifecycle=0.285ms
+emit-probe query=1.015ms dirtyStatic=0.001ms retained=1.120ms lifecycle=0.285ms
+emit-probe query=0.866ms dirtyStatic=0.001ms retained=0.968ms lifecycle=0.285ms
+emit-probe query=0.874ms dirtyStatic=0.001ms retained=1.006ms lifecycle=0.295ms
+emit-probe query=0.891ms dirtyStatic=0.001ms retained=1.124ms lifecycle=0.278ms
+emit-probe query=0.904ms dirtyStatic=0.001ms retained=1.221ms lifecycle=0.293ms
+emit-probe query=1.101ms dirtyStatic=0.001ms retained=1.150ms lifecycle=0.311ms
+emit-probe query=1.179ms dirtyStatic=0.001ms retained=1.067ms lifecycle=0.302ms
+emit-probe query=0.864ms dirtyStatic=0.001ms retained=0.988ms lifecycle=0.303ms
+emit-probe query=0.953ms dirtyStatic=0.001ms retained=0.964ms lifecycle=0.307ms
+emit-probe query=0.915ms dirtyStatic=0.001ms retained=1.134ms lifecycle=0.328ms
+emit-probe query=0.942ms dirtyStatic=0.001ms retained=1.288ms lifecycle=0.315ms
+emit-probe query=0.861ms dirtyStatic=0.001ms retained=1.100ms lifecycle=0.303ms
+emit-probe query=0.950ms dirtyStatic=0.001ms retained=1.056ms lifecycle=0.311ms
+emit-probe query=0.957ms dirtyStatic=0.001ms retained=0.967ms lifecycle=0.308ms
+emit-probe query=1.034ms dirtyStatic=0.001ms retained=0.933ms lifecycle=0.413ms
+emit-probe query=0.899ms dirtyStatic=0.001ms retained=1.331ms lifecycle=0.351ms
+emit-probe query=1.403ms dirtyStatic=0.001ms retained=1.173ms lifecycle=0.330ms
+emit-probe query=0.968ms dirtyStatic=0.001ms retained=0.970ms lifecycle=0.321ms
+emit-probe query=0.887ms dirtyStatic=0.001ms retained=0.943ms lifecycle=0.282ms
+emit-probe query=1.251ms dirtyStatic=0.001ms retained=1.012ms lifecycle=0.323ms
+emit-probe query=0.937ms dirtyStatic=0.001ms retained=0.842ms lifecycle=0.314ms
+emit-probe query=0.899ms dirtyStatic=0.001ms retained=1.072ms lifecycle=0.274ms
+emit-probe query=0.968ms dirtyStatic=0.001ms retained=1.033ms lifecycle=0.322ms
+emit-probe query=0.958ms dirtyStatic=0.001ms retained=1.110ms lifecycle=0.402ms
+emit-probe query=1.054ms dirtyStatic=0.001ms retained=1.042ms lifecycle=0.414ms
+emit-probe query=0.817ms dirtyStatic=0.001ms retained=0.878ms lifecycle=0.266ms
+emit-probe query=0.583ms dirtyStatic=0.001ms retained=0.804ms lifecycle=0.252ms
+emit-probe query=0.819ms dirtyStatic=0.001ms retained=1.169ms lifecycle=0.289ms
+emit-probe query=0.894ms dirtyStatic=0.001ms retained=1.040ms lifecycle=0.404ms
+emit-probe query=0.743ms dirtyStatic=0.001ms retained=0.956ms lifecycle=0.239ms
+emit-probe query=0.827ms dirtyStatic=0.001ms retained=0.913ms lifecycle=0.274ms
+emit-probe query=0.828ms dirtyStatic=0.001ms retained=0.990ms lifecycle=0.273ms
+emit-probe query=0.814ms dirtyStatic=0.001ms retained=0.743ms lifecycle=0.239ms
+emit-probe query=1.109ms dirtyStatic=0.001ms retained=1.006ms lifecycle=0.276ms
+emit-probe query=0.829ms dirtyStatic=0.001ms retained=0.928ms lifecycle=0.280ms
+emit-probe query=0.975ms dirtyStatic=0.001ms retained=0.897ms lifecycle=0.274ms
+emit-probe query=0.870ms dirtyStatic=0.001ms retained=0.904ms lifecycle=0.274ms
+emit-probe query=0.846ms dirtyStatic=0.000ms retained=0.755ms lifecycle=0.314ms
+emit-probe query=0.833ms dirtyStatic=0.001ms retained=0.805ms lifecycle=0.273ms
+emit-probe query=1.281ms dirtyStatic=0.001ms retained=1.252ms lifecycle=0.331ms
+emit-probe query=1.224ms dirtyStatic=0.001ms retained=1.014ms lifecycle=0.337ms
+emit-probe query=0.857ms dirtyStatic=0.001ms retained=0.965ms lifecycle=0.283ms
+emit-probe query=0.871ms dirtyStatic=0.000ms retained=0.955ms lifecycle=0.401ms
+emit-probe query=0.890ms dirtyStatic=0.001ms retained=0.880ms lifecycle=0.267ms
+emit-probe query=0.837ms dirtyStatic=0.001ms retained=0.800ms lifecycle=0.282ms
+emit-probe query=0.921ms dirtyStatic=0.001ms retained=0.991ms lifecycle=0.275ms
+emit-probe query=0.852ms dirtyStatic=0.001ms retained=0.999ms lifecycle=0.281ms
+emit-probe query=1.197ms dirtyStatic=0.001ms retained=0.924ms lifecycle=0.260ms
+emit-probe query=1.115ms dirtyStatic=0.001ms retained=0.826ms lifecycle=0.299ms
+emit-probe query=0.868ms dirtyStatic=0.001ms retained=0.825ms lifecycle=0.282ms
+emit-probe query=0.873ms dirtyStatic=0.001ms retained=0.769ms lifecycle=0.280ms
+emit-probe query=0.825ms dirtyStatic=0.001ms retained=0.931ms lifecycle=0.264ms
+emit-probe query=1.104ms dirtyStatic=0.001ms retained=0.952ms lifecycle=0.292ms
+emit-probe query=0.899ms dirtyStatic=0.001ms retained=0.919ms lifecycle=0.279ms
+emit-probe query=0.854ms dirtyStatic=0.000ms retained=0.830ms lifecycle=0.277ms
+emit-probe query=0.851ms dirtyStatic=0.001ms retained=0.827ms lifecycle=0.264ms
+emit-probe query=1.113ms dirtyStatic=0.001ms retained=0.771ms lifecycle=0.284ms
+emit-probe query=0.878ms dirtyStatic=0.001ms retained=0.965ms lifecycle=0.271ms
+emit-probe query=0.930ms dirtyStatic=0.001ms retained=0.796ms lifecycle=0.259ms
+emit-probe query=1.057ms dirtyStatic=0.001ms retained=0.815ms lifecycle=0.273ms
+emit-probe query=0.801ms dirtyStatic=0.001ms retained=0.780ms lifecycle=0.308ms
+emit-probe query=0.861ms dirtyStatic=0.001ms retained=0.745ms lifecycle=0.262ms
+emit-probe query=0.878ms dirtyStatic=0.001ms retained=0.735ms lifecycle=0.266ms
+emit-probe query=0.849ms dirtyStatic=0.001ms retained=0.920ms lifecycle=0.295ms
+emit-probe query=0.859ms dirtyStatic=0.001ms retained=0.845ms lifecycle=0.277ms
+emit-probe query=0.910ms dirtyStatic=0.001ms retained=0.834ms lifecycle=0.275ms
+emit-probe query=0.840ms dirtyStatic=0.001ms retained=0.715ms lifecycle=0.360ms
+emit-probe query=1.051ms dirtyStatic=0.001ms retained=0.850ms lifecycle=0.321ms
+emit-probe query=1.096ms dirtyStatic=0.001ms retained=0.758ms lifecycle=0.287ms
+emit-probe query=0.897ms dirtyStatic=0.001ms retained=0.925ms lifecycle=0.269ms
+emit-probe query=0.849ms dirtyStatic=0.000ms retained=1.221ms lifecycle=0.282ms
+emit-probe query=0.904ms dirtyStatic=0.001ms retained=0.883ms lifecycle=0.271ms
+emit-probe query=0.839ms dirtyStatic=0.001ms retained=0.730ms lifecycle=0.295ms
+emit-probe query=0.958ms dirtyStatic=0.001ms retained=0.774ms lifecycle=0.280ms
+emit-probe query=0.825ms dirtyStatic=0.001ms retained=0.643ms lifecycle=0.278ms
+emit-probe query=1.102ms dirtyStatic=0.001ms retained=0.971ms lifecycle=0.311ms
+emit-probe query=0.932ms dirtyStatic=0.001ms retained=0.951ms lifecycle=0.299ms
+emit-probe query=0.982ms dirtyStatic=0.001ms retained=0.832ms lifecycle=0.332ms
+emit-probe query=0.877ms dirtyStatic=0.001ms retained=0.750ms lifecycle=0.314ms
+emit-probe query=0.856ms dirtyStatic=0.001ms retained=0.868ms lifecycle=0.297ms
+emit-probe query=0.938ms dirtyStatic=0.001ms retained=0.666ms lifecycle=0.300ms
+emit-probe query=0.887ms dirtyStatic=0.001ms retained=0.830ms lifecycle=0.281ms
+emit-probe query=1.297ms dirtyStatic=0.001ms retained=0.835ms lifecycle=0.392ms
+emit-probe query=0.824ms dirtyStatic=0.001ms retained=0.776ms lifecycle=0.322ms
+emit-probe query=0.878ms dirtyStatic=0.001ms retained=0.760ms lifecycle=0.286ms
+emit-probe query=0.883ms dirtyStatic=0.001ms retained=0.781ms lifecycle=0.282ms
+emit-probe query=1.017ms dirtyStatic=0.001ms retained=0.700ms lifecycle=0.302ms
+emit-probe query=1.250ms dirtyStatic=0.001ms retained=1.124ms lifecycle=0.401ms
+emit-probe query=0.852ms dirtyStatic=0.001ms retained=0.586ms lifecycle=0.297ms
+emit-probe query=0.881ms dirtyStatic=0.001ms retained=0.865ms lifecycle=0.271ms
+emit-probe query=0.930ms dirtyStatic=0.001ms retained=0.628ms lifecycle=0.338ms
+emit-probe query=0.875ms dirtyStatic=0.001ms retained=0.742ms lifecycle=0.282ms
+emit-probe query=1.030ms dirtyStatic=0.001ms retained=0.706ms lifecycle=0.286ms
+emit-probe query=0.948ms dirtyStatic=0.001ms retained=0.800ms lifecycle=0.285ms
+emit-probe query=0.827ms dirtyStatic=0.001ms retained=0.784ms lifecycle=0.282ms
+emit-probe query=0.845ms dirtyStatic=0.001ms retained=0.803ms lifecycle=0.283ms
+emit-probe query=0.858ms dirtyStatic=0.000ms retained=0.660ms lifecycle=0.315ms
+emit-probe query=0.842ms dirtyStatic=0.001ms retained=0.588ms lifecycle=0.262ms
+emit-probe query=0.913ms dirtyStatic=0.001ms retained=0.577ms lifecycle=0.329ms
+emit-probe query=0.974ms dirtyStatic=0.001ms retained=0.756ms lifecycle=0.275ms
+emit-probe query=1.134ms dirtyStatic=0.001ms retained=0.690ms lifecycle=0.281ms
+emit-probe query=0.929ms dirtyStatic=0.001ms retained=1.148ms lifecycle=0.318ms
+emit-probe query=0.821ms dirtyStatic=0.001ms retained=0.675ms lifecycle=0.310ms
+emit-probe query=0.850ms dirtyStatic=0.001ms retained=0.686ms lifecycle=0.311ms
+emit-probe query=0.823ms dirtyStatic=0.001ms retained=0.586ms lifecycle=0.270ms
+emit-probe query=1.039ms dirtyStatic=0.001ms retained=0.914ms lifecycle=0.276ms
+emit-probe query=1.257ms dirtyStatic=0.001ms retained=0.872ms lifecycle=0.293ms
+emit-probe query=0.797ms dirtyStatic=0.001ms retained=0.885ms lifecycle=0.296ms
+emit-probe query=1.143ms dirtyStatic=0.001ms retained=0.726ms lifecycle=0.331ms
+emit-probe query=0.814ms dirtyStatic=0.001ms retained=0.625ms lifecycle=0.262ms
+emit-probe query=0.865ms dirtyStatic=0.001ms retained=0.603ms lifecycle=0.325ms
+emit-probe query=0.848ms dirtyStatic=0.001ms retained=0.750ms lifecycle=0.337ms
+emit-probe query=0.843ms dirtyStatic=0.001ms retained=0.701ms lifecycle=0.342ms
+emit-probe query=0.858ms dirtyStatic=0.000ms retained=0.846ms lifecycle=0.316ms
+emit-probe query=1.196ms dirtyStatic=0.001ms retained=0.614ms lifecycle=0.319ms
+emit-probe query=0.867ms dirtyStatic=0.001ms retained=0.741ms lifecycle=0.281ms
+emit-probe query=0.903ms dirtyStatic=0.001ms retained=0.584ms lifecycle=0.325ms
+emit-probe query=0.874ms dirtyStatic=0.001ms retained=0.822ms lifecycle=0.295ms
+emit-probe query=1.337ms dirtyStatic=0.001ms retained=0.703ms lifecycle=0.298ms
+emit-probe query=0.837ms dirtyStatic=0.001ms retained=0.739ms lifecycle=0.282ms
+emit-probe query=0.849ms dirtyStatic=0.001ms retained=0.606ms lifecycle=0.317ms
+emit-probe query=1.087ms dirtyStatic=0.001ms retained=0.688ms lifecycle=0.290ms
+emit-probe query=0.918ms dirtyStatic=0.001ms retained=0.574ms lifecycle=0.308ms
+emit-probe query=0.847ms dirtyStatic=0.000ms retained=0.714ms lifecycle=0.340ms
+emit-probe query=1.221ms dirtyStatic=0.001ms retained=0.760ms lifecycle=0.311ms
+emit-probe query=0.869ms dirtyStatic=0.000ms retained=0.690ms lifecycle=0.283ms
+emit-probe query=0.835ms dirtyStatic=0.000ms retained=0.551ms lifecycle=0.309ms
+emit-probe query=0.861ms dirtyStatic=0.001ms retained=0.682ms lifecycle=0.270ms
+emit-probe query=0.966ms dirtyStatic=0.001ms retained=0.508ms lifecycle=0.308ms
+emit-probe query=0.869ms dirtyStatic=0.000ms retained=0.655ms lifecycle=0.323ms
+emit-probe query=1.131ms dirtyStatic=0.001ms retained=0.623ms lifecycle=0.277ms
+emit-probe query=0.830ms dirtyStatic=0.001ms retained=0.643ms lifecycle=0.309ms
+emit-probe query=0.846ms dirtyStatic=0.001ms retained=0.522ms lifecycle=0.301ms
+emit-probe query=0.855ms dirtyStatic=0.001ms retained=0.609ms lifecycle=0.385ms
+emit-probe query=0.829ms dirtyStatic=0.001ms retained=0.518ms lifecycle=0.305ms
+emit-probe query=0.807ms dirtyStatic=0.001ms retained=0.749ms lifecycle=0.262ms
+emit-probe query=0.853ms dirtyStatic=0.001ms retained=0.580ms lifecycle=0.336ms
+emit-probe query=0.948ms dirtyStatic=0.001ms retained=0.734ms lifecycle=0.293ms
+emit-probe query=0.848ms dirtyStatic=0.001ms retained=0.572ms lifecycle=0.278ms
+emit-probe query=0.840ms dirtyStatic=0.001ms retained=0.659ms lifecycle=0.319ms
+emit-probe query=0.929ms dirtyStatic=0.001ms retained=0.531ms lifecycle=0.270ms
+emit-probe query=0.914ms dirtyStatic=0.001ms retained=0.754ms lifecycle=0.286ms
+emit-probe query=0.823ms dirtyStatic=0.001ms retained=0.559ms lifecycle=0.302ms
+emit-probe query=0.902ms dirtyStatic=0.001ms retained=0.713ms lifecycle=0.279ms
+emit-probe query=1.351ms dirtyStatic=0.001ms retained=0.764ms lifecycle=0.444ms
+emit-probe query=0.858ms dirtyStatic=0.001ms retained=0.607ms lifecycle=0.311ms
+emit-probe query=0.911ms dirtyStatic=0.001ms retained=0.567ms lifecycle=0.298ms
+emit-probe query=1.215ms dirtyStatic=0.001ms retained=0.938ms lifecycle=0.290ms
+emit-probe query=0.913ms dirtyStatic=0.001ms retained=0.456ms lifecycle=0.351ms
+emit-probe query=0.822ms dirtyStatic=0.001ms retained=0.692ms lifecycle=0.265ms
+emit-probe query=0.817ms dirtyStatic=0.001ms retained=0.515ms lifecycle=0.272ms
+emit-probe query=0.826ms dirtyStatic=0.001ms retained=0.623ms lifecycle=0.284ms
+emit-probe query=0.894ms dirtyStatic=0.001ms retained=0.571ms lifecycle=0.279ms
+emit-probe query=1.203ms dirtyStatic=0.001ms retained=0.735ms lifecycle=0.293ms
+emit-probe query=0.901ms dirtyStatic=0.001ms retained=0.566ms lifecycle=0.281ms
+emit-probe query=0.867ms dirtyStatic=0.001ms retained=0.607ms lifecycle=0.319ms
+emit-probe query=0.944ms dirtyStatic=0.001ms retained=0.573ms lifecycle=0.275ms
+emit-probe query=0.889ms dirtyStatic=0.001ms retained=0.621ms lifecycle=0.285ms
+emit-probe query=0.820ms dirtyStatic=0.001ms retained=0.500ms lifecycle=0.266ms
+emit-probe query=0.849ms dirtyStatic=0.001ms retained=0.649ms lifecycle=0.265ms
+emit-probe query=0.828ms dirtyStatic=0.001ms retained=0.517ms lifecycle=0.264ms
+emit-probe query=0.996ms dirtyStatic=0.001ms retained=0.686ms lifecycle=0.274ms
+emit-probe query=0.883ms dirtyStatic=0.001ms retained=0.595ms lifecycle=0.321ms
+emit-probe query=0.895ms dirtyStatic=0.001ms retained=0.639ms lifecycle=0.307ms
+emit-probe query=0.868ms dirtyStatic=0.001ms retained=0.530ms lifecycle=0.270ms
+emit-probe query=0.857ms dirtyStatic=0.001ms retained=0.629ms lifecycle=0.297ms
+emit-probe query=0.905ms dirtyStatic=0.000ms retained=0.561ms lifecycle=0.301ms
+emit-probe query=0.868ms dirtyStatic=0.001ms retained=0.672ms lifecycle=0.316ms
+emit-probe query=1.234ms dirtyStatic=0.001ms retained=0.650ms lifecycle=0.276ms
+emit-probe query=0.990ms dirtyStatic=0.001ms retained=0.595ms lifecycle=0.265ms
+emit-probe query=0.887ms dirtyStatic=0.000ms retained=0.496ms lifecycle=0.324ms
+emit-probe query=0.856ms dirtyStatic=0.001ms retained=0.603ms lifecycle=0.266ms
+emit-probe query=0.888ms dirtyStatic=0.001ms retained=0.548ms lifecycle=0.315ms
+emit-probe query=0.842ms dirtyStatic=0.001ms retained=0.636ms lifecycle=0.281ms
+emit-probe query=0.865ms dirtyStatic=0.000ms retained=0.503ms lifecycle=0.299ms
+emit-probe query=0.813ms dirtyStatic=0.001ms retained=0.647ms lifecycle=0.263ms
+emit-probe query=0.835ms dirtyStatic=0.001ms retained=0.508ms lifecycle=0.306ms
+emit-probe query=0.978ms dirtyStatic=0.001ms retained=0.641ms lifecycle=0.267ms
+emit-probe query=0.875ms dirtyStatic=0.001ms retained=0.534ms lifecycle=0.296ms
+emit-probe query=0.906ms dirtyStatic=0.001ms retained=0.544ms lifecycle=0.327ms
+emit-probe query=0.861ms dirtyStatic=0.001ms retained=0.551ms lifecycle=0.265ms
+emit-probe query=0.912ms dirtyStatic=0.001ms retained=0.557ms lifecycle=0.302ms
+emit-probe query=0.845ms dirtyStatic=0.001ms retained=0.512ms lifecycle=0.294ms
+emit-probe query=0.838ms dirtyStatic=0.001ms retained=0.635ms lifecycle=0.328ms
+emit-probe query=0.877ms dirtyStatic=0.001ms retained=0.552ms lifecycle=0.301ms
+emit-probe query=0.846ms dirtyStatic=0.001ms retained=0.021ms lifecycle=0.274ms
+emit-probe query=0.814ms dirtyStatic=0.001ms retained=0.580ms lifecycle=0.292ms
+emit-probe query=0.890ms dirtyStatic=0.001ms retained=0.470ms lifecycle=0.301ms
+emit-probe query=0.850ms dirtyStatic=0.001ms retained=0.546ms lifecycle=0.265ms
+emit-probe query=0.901ms dirtyStatic=0.000ms retained=0.496ms lifecycle=0.316ms
+emit-probe query=0.800ms dirtyStatic=0.001ms retained=0.613ms lifecycle=0.263ms
+emit-probe query=0.993ms dirtyStatic=0.001ms retained=0.621ms lifecycle=0.333ms
+emit-probe query=1.167ms dirtyStatic=0.001ms retained=0.642ms lifecycle=0.290ms
+emit-probe query=0.844ms dirtyStatic=0.001ms retained=0.504ms lifecycle=0.325ms
+emit-probe query=0.825ms dirtyStatic=0.001ms retained=0.565ms lifecycle=0.278ms
+emit-probe query=0.894ms dirtyStatic=0.001ms retained=0.553ms lifecycle=0.285ms
+emit-probe query=1.001ms dirtyStatic=0.001ms retained=0.659ms lifecycle=0.313ms
+emit-probe query=0.843ms dirtyStatic=0.001ms retained=0.557ms lifecycle=0.348ms
+emit-probe query=0.866ms dirtyStatic=0.001ms retained=0.564ms lifecycle=0.312ms
+emit-probe query=0.981ms dirtyStatic=0.001ms retained=0.477ms lifecycle=0.303ms
+emit-probe query=0.878ms dirtyStatic=0.000ms retained=0.605ms lifecycle=0.338ms
+emit-probe query=0.838ms dirtyStatic=0.001ms retained=0.604ms lifecycle=0.323ms
+emit-probe query=0.900ms dirtyStatic=0.001ms retained=0.607ms lifecycle=0.304ms
+emit-probe query=0.892ms dirtyStatic=0.001ms retained=0.510ms lifecycle=0.308ms
+emit-probe query=0.825ms dirtyStatic=0.001ms retained=0.560ms lifecycle=0.317ms
+emit-probe query=0.870ms dirtyStatic=0.000ms retained=0.494ms lifecycle=0.323ms
+emit-probe query=0.857ms dirtyStatic=0.001ms retained=0.533ms lifecycle=0.266ms
+emit-probe query=1.360ms dirtyStatic=0.001ms retained=0.642ms lifecycle=0.294ms
+emit-probe query=0.837ms dirtyStatic=0.001ms retained=0.620ms lifecycle=0.322ms
+emit-probe query=0.881ms dirtyStatic=0.001ms retained=0.431ms lifecycle=0.398ms
+emit-probe query=0.868ms dirtyStatic=0.001ms retained=0.962ms lifecycle=0.282ms
+emit-probe query=1.253ms dirtyStatic=0.001ms retained=0.624ms lifecycle=0.337ms
+emit-probe query=0.928ms dirtyStatic=0.001ms retained=0.533ms lifecycle=0.265ms
+emit-probe query=0.851ms dirtyStatic=0.001ms retained=0.539ms lifecycle=0.342ms
+emit-probe query=0.834ms dirtyStatic=0.001ms retained=0.527ms lifecycle=0.297ms
+emit-probe query=0.908ms dirtyStatic=0.001ms retained=0.543ms lifecycle=0.328ms
+emit-probe query=0.862ms dirtyStatic=0.001ms retained=0.503ms lifecycle=0.307ms
+emit-probe query=0.832ms dirtyStatic=0.001ms retained=0.502ms lifecycle=0.303ms
+emit-probe query=0.862ms dirtyStatic=0.001ms retained=0.455ms lifecycle=0.263ms
+emit-probe query=0.876ms dirtyStatic=0.001ms retained=0.492ms lifecycle=0.330ms
+emit-probe query=0.788ms dirtyStatic=0.001ms retained=0.547ms lifecycle=0.270ms
+emit-probe query=0.904ms dirtyStatic=0.001ms retained=0.505ms lifecycle=0.347ms
+emit-probe query=0.846ms dirtyStatic=0.001ms retained=0.559ms lifecycle=0.293ms
+emit-probe query=0.892ms dirtyStatic=0.001ms retained=0.599ms lifecycle=0.301ms
+emit-probe query=0.862ms dirtyStatic=0.001ms retained=0.595ms lifecycle=0.269ms
+emit-probe query=0.910ms dirtyStatic=0.000ms retained=0.470ms lifecycle=0.328ms
+emit-probe query=0.846ms dirtyStatic=0.001ms retained=0.624ms lifecycle=0.281ms
+emit-probe query=0.869ms dirtyStatic=0.001ms retained=0.577ms lifecycle=0.373ms
+emit-probe query=1.226ms dirtyStatic=0.001ms retained=0.597ms lifecycle=0.273ms
+emit-probe query=0.893ms dirtyStatic=0.001ms retained=0.452ms lifecycle=0.298ms
+emit-probe query=0.869ms dirtyStatic=0.001ms retained=0.502ms lifecycle=0.277ms
+emit-probe query=0.849ms dirtyStatic=0.001ms retained=0.487ms lifecycle=0.320ms
+emit-probe query=0.831ms dirtyStatic=0.001ms retained=0.525ms lifecycle=0.316ms
+emit-probe query=1.205ms dirtyStatic=0.001ms retained=0.538ms lifecycle=0.387ms
+emit-probe query=1.098ms dirtyStatic=0.001ms retained=0.762ms lifecycle=0.330ms
+emit-probe query=0.831ms dirtyStatic=0.001ms retained=0.469ms lifecycle=0.285ms
+emit-probe query=1.172ms dirtyStatic=0.001ms retained=0.680ms lifecycle=0.312ms
+emit-probe query=0.935ms dirtyStatic=0.001ms retained=0.500ms lifecycle=0.321ms
+emit-probe query=0.880ms dirtyStatic=0.001ms retained=0.001ms lifecycle=0.320ms
+emit-probe query=0.834ms dirtyStatic=0.001ms retained=0.593ms lifecycle=0.315ms
+emit-probe query=1.165ms dirtyStatic=0.001ms retained=0.584ms lifecycle=0.350ms
+emit-probe query=0.895ms dirtyStatic=0.001ms retained=0.505ms lifecycle=0.319ms
+emit-probe query=0.842ms dirtyStatic=0.001ms retained=0.497ms lifecycle=0.328ms
+emit-probe query=0.893ms dirtyStatic=0.001ms retained=0.607ms lifecycle=0.308ms
+emit-probe query=0.875ms dirtyStatic=0.001ms retained=0.611ms lifecycle=0.311ms
+emit-probe query=1.156ms dirtyStatic=0.001ms retained=0.685ms lifecycle=0.333ms
+emit-probe query=0.975ms dirtyStatic=0.001ms retained=0.644ms lifecycle=0.347ms
+emit-probe query=1.157ms dirtyStatic=0.001ms retained=0.595ms lifecycle=0.317ms
+emit-probe query=0.862ms dirtyStatic=0.001ms retained=0.474ms lifecycle=0.331ms
+emit-probe query=1.144ms dirtyStatic=0.001ms retained=0.582ms lifecycle=0.297ms
+emit-probe query=0.924ms dirtyStatic=0.001ms retained=0.553ms lifecycle=0.363ms
+emit-probe query=0.853ms dirtyStatic=0.001ms retained=0.550ms lifecycle=0.307ms
+emit-probe query=0.909ms dirtyStatic=0.001ms retained=0.516ms lifecycle=0.351ms
+emit-probe query=0.849ms dirtyStatic=0.001ms retained=0.530ms lifecycle=0.264ms
+emit-probe query=0.891ms dirtyStatic=0.000ms retained=0.469ms lifecycle=0.323ms
+emit-probe query=0.852ms dirtyStatic=0.001ms retained=0.518ms lifecycle=0.328ms
+emit-probe query=0.892ms dirtyStatic=0.001ms retained=0.488ms lifecycle=0.323ms
+emit-probe query=0.922ms dirtyStatic=0.001ms retained=0.564ms lifecycle=0.317ms
+emit-probe query=1.142ms dirtyStatic=0.001ms retained=0.564ms lifecycle=0.352ms
+emit-probe query=0.857ms dirtyStatic=0.001ms retained=0.504ms lifecycle=0.313ms
+emit-probe query=0.866ms dirtyStatic=0.001ms retained=0.489ms lifecycle=0.335ms
+emit-probe query=0.889ms dirtyStatic=0.001ms retained=0.613ms lifecycle=0.304ms
+emit-probe query=0.857ms dirtyStatic=0.001ms retained=0.519ms lifecycle=0.338ms
+emit-probe query=0.888ms dirtyStatic=0.001ms retained=0.577ms lifecycle=0.319ms
+emit-probe query=0.910ms dirtyStatic=0.001ms retained=0.517ms lifecycle=0.286ms
+emit-probe query=0.892ms dirtyStatic=0.001ms retained=0.524ms lifecycle=0.286ms
+emit-probe query=0.866ms dirtyStatic=0.000ms retained=0.482ms lifecycle=0.348ms
+emit-probe query=0.928ms dirtyStatic=0.001ms retained=0.486ms lifecycle=0.300ms
+emit-probe query=0.869ms dirtyStatic=0.001ms retained=0.519ms lifecycle=0.325ms
+emit-probe query=0.840ms dirtyStatic=0.001ms retained=0.579ms lifecycle=0.267ms
+emit-probe query=0.911ms dirtyStatic=0.001ms retained=0.423ms lifecycle=0.351ms
+emit-probe query=0.839ms dirtyStatic=0.001ms retained=0.651ms lifecycle=0.336ms
+emit-probe query=1.019ms dirtyStatic=0.001ms retained=0.664ms lifecycle=0.355ms
+emit-probe query=0.937ms dirtyStatic=0.001ms retained=0.570ms lifecycle=0.319ms
+emit-probe query=0.828ms dirtyStatic=0.001ms retained=0.535ms lifecycle=0.287ms
+emit-probe query=0.869ms dirtyStatic=0.001ms retained=0.485ms lifecycle=0.365ms
+emit-probe query=0.933ms dirtyStatic=0.001ms retained=0.030ms lifecycle=0.288ms
+emit-probe query=0.954ms dirtyStatic=0.001ms retained=0.633ms lifecycle=0.308ms
+emit-probe query=0.981ms dirtyStatic=0.001ms retained=0.516ms lifecycle=0.349ms
+emit-probe query=1.165ms dirtyStatic=0.001ms retained=0.562ms lifecycle=0.300ms
+emit-probe query=0.944ms dirtyStatic=0.001ms retained=0.472ms lifecycle=0.283ms
+emit-probe query=0.912ms dirtyStatic=0.001ms retained=0.518ms lifecycle=0.422ms
+emit-probe query=0.861ms dirtyStatic=0.001ms retained=0.548ms lifecycle=0.288ms
+emit-probe query=0.896ms dirtyStatic=0.001ms retained=0.523ms lifecycle=0.343ms
+emit-probe query=0.871ms dirtyStatic=0.001ms retained=0.587ms lifecycle=0.316ms
+emit-probe query=0.852ms dirtyStatic=0.001ms retained=0.604ms lifecycle=0.370ms
+emit-probe query=0.969ms dirtyStatic=0.001ms retained=0.991ms lifecycle=0.328ms
+emit-probe query=0.867ms dirtyStatic=0.001ms retained=0.536ms lifecycle=0.375ms
+emit-probe query=0.874ms dirtyStatic=0.001ms retained=0.612ms lifecycle=0.330ms
+emit-probe query=0.907ms dirtyStatic=0.001ms retained=0.613ms lifecycle=0.315ms
+emit-probe query=0.946ms dirtyStatic=0.001ms retained=0.573ms lifecycle=0.322ms
+emit-probe query=0.818ms dirtyStatic=0.001ms retained=0.452ms lifecycle=0.274ms
+emit-probe query=0.832ms dirtyStatic=0.000ms retained=0.476ms lifecycle=0.305ms
+emit-probe query=0.842ms dirtyStatic=0.001ms retained=0.497ms lifecycle=0.282ms
+emit-probe query=1.022ms dirtyStatic=0.001ms retained=0.493ms lifecycle=0.318ms
+emit-probe query=0.846ms dirtyStatic=0.001ms retained=0.569ms lifecycle=0.308ms
+emit-probe query=0.859ms dirtyStatic=0.000ms retained=0.537ms lifecycle=0.305ms
+emit-probe query=0.870ms dirtyStatic=0.001ms retained=0.481ms lifecycle=0.319ms
+emit-probe query=0.897ms dirtyStatic=0.001ms retained=0.584ms lifecycle=0.298ms
+emit-probe query=0.859ms dirtyStatic=0.001ms retained=0.580ms lifecycle=0.310ms
+emit-probe query=0.877ms dirtyStatic=0.001ms retained=0.580ms lifecycle=0.298ms
+emit-probe query=0.855ms dirtyStatic=0.001ms retained=0.520ms lifecycle=0.318ms
+emit-probe query=0.867ms dirtyStatic=0.001ms retained=0.454ms lifecycle=0.301ms
+emit-probe query=0.856ms dirtyStatic=0.001ms retained=0.523ms lifecycle=0.328ms
+emit-probe query=1.034ms dirtyStatic=0.001ms retained=0.486ms lifecycle=0.308ms
+emit-probe query=0.834ms dirtyStatic=0.001ms retained=0.542ms lifecycle=0.302ms
+emit-probe query=0.830ms dirtyStatic=0.001ms retained=0.536ms lifecycle=0.267ms
+emit-probe query=1.095ms dirtyStatic=0.001ms retained=0.623ms lifecycle=0.295ms
+emit-probe query=0.869ms dirtyStatic=0.001ms retained=0.472ms lifecycle=0.266ms
+emit-probe query=0.856ms dirtyStatic=0.001ms retained=0.443ms lifecycle=0.313ms
+emit-probe query=1.146ms dirtyStatic=0.001ms retained=0.497ms lifecycle=0.323ms
+emit-probe query=0.901ms dirtyStatic=0.000ms retained=0.556ms lifecycle=0.315ms
+emit-probe query=0.814ms dirtyStatic=0.001ms retained=0.520ms lifecycle=0.360ms
+emit-probe query=0.927ms dirtyStatic=0.001ms retained=0.481ms lifecycle=0.328ms
+emit-probe query=0.894ms dirtyStatic=0.001ms retained=0.520ms lifecycle=0.281ms
+emit-probe query=1.163ms dirtyStatic=0.001ms retained=0.642ms lifecycle=0.310ms
+emit-probe query=0.884ms dirtyStatic=0.001ms retained=0.480ms lifecycle=0.296ms
+emit-probe query=0.869ms dirtyStatic=0.001ms retained=0.507ms lifecycle=0.335ms
+emit-probe query=0.885ms dirtyStatic=0.001ms retained=0.526ms lifecycle=0.280ms
+emit-probe query=0.880ms dirtyStatic=0.001ms retained=0.546ms lifecycle=0.331ms
+emit-probe query=0.855ms dirtyStatic=0.001ms retained=0.478ms lifecycle=0.263ms
+emit-probe query=0.865ms dirtyStatic=0.001ms retained=0.510ms lifecycle=0.323ms
+emit-probe query=0.828ms dirtyStatic=0.001ms retained=0.561ms lifecycle=0.273ms
+emit-probe query=0.846ms dirtyStatic=0.001ms retained=0.512ms lifecycle=0.325ms
+emit-probe query=0.903ms dirtyStatic=0.001ms retained=0.494ms lifecycle=0.323ms
+emit-probe query=0.845ms dirtyStatic=0.000ms retained=0.501ms lifecycle=0.329ms
+emit-probe query=0.866ms dirtyStatic=0.001ms retained=0.500ms lifecycle=0.267ms
+emit-probe query=0.905ms dirtyStatic=0.001ms retained=0.518ms lifecycle=0.287ms
+emit-probe query=0.896ms dirtyStatic=0.001ms retained=0.476ms lifecycle=0.306ms
+emit-probe query=0.964ms dirtyStatic=0.001ms retained=0.516ms lifecycle=0.340ms
+emit-probe query=0.880ms dirtyStatic=0.001ms retained=0.574ms lifecycle=0.305ms
+emit-probe query=0.843ms dirtyStatic=0.001ms retained=0.427ms lifecycle=0.287ms
+emit-probe query=0.868ms dirtyStatic=0.001ms retained=0.545ms lifecycle=0.314ms
+emit-probe query=0.942ms dirtyStatic=0.001ms retained=0.507ms lifecycle=0.352ms
+emit-probe query=0.854ms dirtyStatic=0.001ms retained=0.514ms lifecycle=0.298ms
+emit-probe query=0.911ms dirtyStatic=0.000ms retained=0.561ms lifecycle=0.333ms
+emit-probe query=0.956ms dirtyStatic=0.001ms retained=0.473ms lifecycle=0.332ms
+emit-probe query=0.889ms dirtyStatic=0.001ms retained=0.576ms lifecycle=0.288ms
+emit-probe query=0.948ms dirtyStatic=0.001ms retained=0.561ms lifecycle=0.284ms
+emit-probe query=0.929ms dirtyStatic=0.001ms retained=0.517ms lifecycle=0.344ms
+emit-probe query=0.862ms dirtyStatic=0.001ms retained=0.422ms lifecycle=0.311ms
+emit-probe query=0.871ms dirtyStatic=0.001ms retained=0.481ms lifecycle=0.282ms
+emit-probe query=0.930ms dirtyStatic=0.001ms retained=0.637ms lifecycle=0.292ms
+emit-probe query=0.845ms dirtyStatic=0.001ms retained=0.573ms lifecycle=0.301ms
+emit-probe query=0.906ms dirtyStatic=0.001ms retained=0.573ms lifecycle=0.315ms
+emit-probe query=0.868ms dirtyStatic=0.001ms retained=0.021ms lifecycle=0.310ms
+emit-probe query=0.880ms dirtyStatic=0.001ms retained=0.586ms lifecycle=0.337ms
+emit-probe query=0.836ms dirtyStatic=0.001ms retained=0.592ms lifecycle=0.313ms
+emit-probe query=0.833ms dirtyStatic=0.001ms retained=0.547ms lifecycle=0.327ms
+emit-probe query=1.269ms dirtyStatic=0.001ms retained=0.671ms lifecycle=0.270ms
+emit-probe query=0.897ms dirtyStatic=0.001ms retained=0.545ms lifecycle=0.340ms
+emit-probe query=0.885ms dirtyStatic=0.001ms retained=0.562ms lifecycle=0.340ms
+emit-probe query=0.884ms dirtyStatic=0.000ms retained=0.462ms lifecycle=0.350ms
+emit-probe query=0.825ms dirtyStatic=0.001ms retained=0.461ms lifecycle=0.259ms
+emit-probe query=0.857ms dirtyStatic=0.001ms retained=0.490ms lifecycle=0.319ms
+emit-probe query=0.855ms dirtyStatic=0.000ms retained=0.518ms lifecycle=0.323ms
+emit-probe query=0.860ms dirtyStatic=0.001ms retained=0.530ms lifecycle=0.330ms
+emit-probe query=0.853ms dirtyStatic=0.001ms retained=0.507ms lifecycle=0.311ms
+emit-probe query=0.849ms dirtyStatic=0.001ms retained=0.486ms lifecycle=0.316ms
+emit-probe query=0.872ms dirtyStatic=0.000ms retained=0.549ms lifecycle=0.305ms
+emit-probe query=0.919ms dirtyStatic=0.001ms retained=0.505ms lifecycle=0.307ms
+emit-probe query=0.872ms dirtyStatic=0.001ms retained=0.568ms lifecycle=0.314ms
+emit-probe query=0.909ms dirtyStatic=0.000ms retained=0.523ms lifecycle=0.357ms
+emit-probe query=0.930ms dirtyStatic=0.001ms retained=0.473ms lifecycle=0.311ms
+emit-probe query=0.873ms dirtyStatic=0.001ms retained=0.526ms lifecycle=0.330ms
+emit-probe query=0.849ms dirtyStatic=0.001ms retained=0.467ms lifecycle=0.262ms
+emit-probe query=0.848ms dirtyStatic=0.001ms retained=0.531ms lifecycle=0.280ms
+emit-probe query=1.162ms dirtyStatic=0.001ms retained=0.685ms lifecycle=0.303ms
+emit-probe query=0.874ms dirtyStatic=0.001ms retained=0.537ms lifecycle=0.320ms
+emit-probe query=0.939ms dirtyStatic=0.001ms retained=0.473ms lifecycle=0.308ms
+emit-probe query=1.242ms dirtyStatic=0.001ms retained=0.585ms lifecycle=0.299ms
+emit-probe query=1.021ms dirtyStatic=0.001ms retained=0.496ms lifecycle=0.280ms
+emit-probe query=0.895ms dirtyStatic=0.001ms retained=0.510ms lifecycle=0.301ms
+emit-probe query=0.956ms dirtyStatic=0.001ms retained=0.578ms lifecycle=0.338ms
+emit-probe query=1.232ms dirtyStatic=0.001ms retained=0.594ms lifecycle=0.321ms
+emit-probe query=0.975ms dirtyStatic=0.001ms retained=0.529ms lifecycle=0.348ms
+emit-probe query=0.966ms dirtyStatic=0.001ms retained=0.563ms lifecycle=0.318ms
+emit-probe query=1.285ms dirtyStatic=0.001ms retained=0.656ms lifecycle=0.318ms
+emit-probe query=0.904ms dirtyStatic=0.001ms retained=0.556ms lifecycle=0.366ms
+emit-probe query=0.896ms dirtyStatic=0.001ms retained=0.614ms lifecycle=0.351ms
+emit-probe query=1.251ms dirtyStatic=0.001ms retained=0.662ms lifecycle=0.338ms
+emit-probe query=0.860ms dirtyStatic=0.001ms retained=0.485ms lifecycle=0.308ms
+emit-probe query=0.894ms dirtyStatic=0.001ms retained=0.530ms lifecycle=0.350ms
+emit-probe query=0.963ms dirtyStatic=0.001ms retained=0.621ms lifecycle=0.296ms
+emit-probe query=0.866ms dirtyStatic=0.001ms retained=0.552ms lifecycle=0.359ms
+emit-probe query=0.797ms dirtyStatic=0.001ms retained=0.553ms lifecycle=0.277ms
+emit-probe query=0.861ms dirtyStatic=0.001ms retained=0.506ms lifecycle=0.281ms
+emit-probe query=0.893ms dirtyStatic=0.001ms retained=0.569ms lifecycle=0.283ms
+emit-probe query=0.882ms dirtyStatic=0.001ms retained=0.500ms lifecycle=0.331ms
+emit-probe query=1.301ms dirtyStatic=0.001ms retained=0.613ms lifecycle=0.280ms
+emit-probe query=0.858ms dirtyStatic=0.000ms retained=0.508ms lifecycle=0.322ms
+emit-probe query=0.929ms dirtyStatic=0.001ms retained=0.577ms lifecycle=0.317ms
+emit-probe query=0.900ms dirtyStatic=0.001ms retained=0.431ms lifecycle=0.303ms
+emit-probe query=0.825ms dirtyStatic=0.001ms retained=0.541ms lifecycle=0.327ms
+emit-probe query=0.866ms dirtyStatic=0.001ms retained=0.474ms lifecycle=0.277ms
+emit-probe query=0.866ms dirtyStatic=0.001ms retained=0.503ms lifecycle=0.309ms
+emit-probe query=0.880ms dirtyStatic=0.001ms retained=0.594ms lifecycle=0.307ms
+emit-probe query=0.823ms dirtyStatic=0.001ms retained=0.456ms lifecycle=0.262ms
+emit-probe query=0.848ms dirtyStatic=0.001ms retained=0.548ms lifecycle=0.312ms
+emit-probe query=0.850ms dirtyStatic=0.001ms retained=0.635ms lifecycle=0.331ms
+emit-probe query=0.923ms dirtyStatic=0.001ms retained=0.498ms lifecycle=0.325ms
+emit-probe query=1.073ms dirtyStatic=0.001ms retained=0.430ms lifecycle=0.370ms
+emit-probe query=0.859ms dirtyStatic=0.001ms retained=0.482ms lifecycle=0.321ms
+emit-probe query=1.353ms dirtyStatic=0.001ms retained=0.609ms lifecycle=0.328ms
+emit-probe query=0.852ms dirtyStatic=0.001ms retained=0.013ms lifecycle=0.286ms
+emit-probe query=0.866ms dirtyStatic=0.001ms retained=0.614ms lifecycle=0.291ms
+emit-probe query=0.995ms dirtyStatic=0.001ms retained=0.576ms lifecycle=0.280ms
+emit-probe query=0.861ms dirtyStatic=0.001ms retained=0.657ms lifecycle=0.358ms
+emit-probe query=0.893ms dirtyStatic=0.001ms retained=0.530ms lifecycle=0.310ms
+emit-probe query=0.891ms dirtyStatic=0.001ms retained=0.613ms lifecycle=0.351ms
+emit-probe query=0.912ms dirtyStatic=0.001ms retained=0.581ms lifecycle=0.326ms
+emit-probe query=0.870ms dirtyStatic=0.001ms retained=0.567ms lifecycle=0.338ms
+emit-probe query=0.921ms dirtyStatic=0.001ms retained=0.588ms lifecycle=0.292ms
+emit-probe query=0.925ms dirtyStatic=0.001ms retained=0.479ms lifecycle=0.324ms
+emit-probe query=0.889ms dirtyStatic=0.001ms retained=0.775ms lifecycle=0.307ms
+emit-probe query=0.845ms dirtyStatic=0.001ms retained=0.499ms lifecycle=0.342ms
+emit-probe query=0.926ms dirtyStatic=0.001ms retained=0.523ms lifecycle=0.318ms
+emit-probe query=1.268ms dirtyStatic=0.001ms retained=0.591ms lifecycle=0.279ms
+emit-probe query=0.840ms dirtyStatic=0.001ms retained=0.534ms lifecycle=0.270ms
+emit-probe query=0.893ms dirtyStatic=0.001ms retained=0.491ms lifecycle=0.322ms
+emit-probe query=0.902ms dirtyStatic=0.001ms retained=0.548ms lifecycle=0.292ms
+emit-probe query=0.904ms dirtyStatic=0.001ms retained=0.488ms lifecycle=0.334ms
+emit-probe query=1.264ms dirtyStatic=0.001ms retained=0.599ms lifecycle=0.290ms
+emit-probe query=0.878ms dirtyStatic=0.001ms retained=0.501ms lifecycle=0.301ms
+emit-probe query=0.906ms dirtyStatic=0.001ms retained=0.479ms lifecycle=0.274ms
+emit-probe query=1.485ms dirtyStatic=0.001ms retained=0.703ms lifecycle=0.445ms
+emit-probe query=1.010ms dirtyStatic=0.001ms retained=0.545ms lifecycle=0.333ms
+emit-probe query=0.899ms dirtyStatic=0.001ms retained=0.532ms lifecycle=0.332ms
+emit-probe query=0.854ms dirtyStatic=0.001ms retained=0.517ms lifecycle=0.846ms
+emit-probe query=0.806ms dirtyStatic=0.001ms retained=0.624ms lifecycle=0.349ms
+emit-probe query=0.876ms dirtyStatic=0.001ms retained=0.480ms lifecycle=0.311ms
+emit-probe query=0.939ms dirtyStatic=0.001ms retained=0.483ms lifecycle=0.314ms
+emit-probe query=0.918ms dirtyStatic=0.001ms retained=0.496ms lifecycle=0.312ms
+emit-probe query=1.465ms dirtyStatic=0.001ms retained=0.660ms lifecycle=0.297ms
+emit-probe query=1.278ms dirtyStatic=0.001ms retained=0.674ms lifecycle=0.362ms
+emit-probe query=0.867ms dirtyStatic=0.001ms retained=0.509ms lifecycle=0.341ms
+emit-probe query=0.855ms dirtyStatic=0.001ms retained=0.518ms lifecycle=0.319ms
+emit-probe query=0.876ms dirtyStatic=0.001ms retained=0.592ms lifecycle=0.364ms
+emit-probe query=0.883ms dirtyStatic=0.001ms retained=0.508ms lifecycle=0.311ms
+emit-probe query=0.862ms dirtyStatic=0.001ms retained=0.509ms lifecycle=0.351ms
+emit-probe query=0.856ms dirtyStatic=0.001ms retained=0.500ms lifecycle=0.312ms
+emit-probe query=0.877ms dirtyStatic=0.001ms retained=0.591ms lifecycle=0.302ms
+emit-probe query=0.894ms dirtyStatic=0.001ms retained=0.476ms lifecycle=0.298ms
+emit-probe query=0.868ms dirtyStatic=0.001ms retained=0.499ms lifecycle=0.335ms
+emit-probe query=0.839ms dirtyStatic=0.001ms retained=0.558ms lifecycle=0.272ms
+emit-probe query=0.838ms dirtyStatic=0.001ms retained=0.723ms lifecycle=0.291ms
+emit-probe query=0.839ms dirtyStatic=0.001ms retained=0.524ms lifecycle=0.273ms
+emit-probe query=0.898ms dirtyStatic=0.001ms retained=0.504ms lifecycle=0.309ms
+emit-probe query=0.856ms dirtyStatic=0.001ms retained=0.495ms lifecycle=0.315ms
+emit-probe query=0.928ms dirtyStatic=0.001ms retained=0.516ms lifecycle=0.306ms
+emit-probe query=0.882ms dirtyStatic=0.001ms retained=0.477ms lifecycle=0.284ms
+emit-probe query=0.848ms dirtyStatic=0.001ms retained=0.010ms lifecycle=0.287ms
+emit-probe query=1.246ms dirtyStatic=0.001ms retained=0.640ms lifecycle=0.302ms
+emit-probe query=0.881ms dirtyStatic=0.001ms retained=0.614ms lifecycle=0.322ms
+emit-probe query=0.867ms dirtyStatic=0.001ms retained=0.420ms lifecycle=0.335ms
+emit-probe query=0.858ms dirtyStatic=0.001ms retained=0.516ms lifecycle=0.316ms
+emit-probe query=0.984ms dirtyStatic=0.001ms retained=0.481ms lifecycle=0.301ms
+emit-probe query=1.231ms dirtyStatic=0.001ms retained=0.522ms lifecycle=0.284ms
+emit-probe query=1.158ms dirtyStatic=0.001ms retained=0.549ms lifecycle=0.284ms
+emit-probe query=0.859ms dirtyStatic=0.000ms retained=0.454ms lifecycle=0.308ms
+emit-probe query=1.111ms dirtyStatic=0.001ms retained=0.677ms lifecycle=0.313ms
+emit-probe query=1.151ms dirtyStatic=0.001ms retained=0.619ms lifecycle=0.378ms
+emit-probe query=0.851ms dirtyStatic=0.001ms retained=0.527ms lifecycle=0.321ms
+emit-probe query=0.860ms dirtyStatic=0.000ms retained=0.434ms lifecycle=0.295ms
+emit-probe query=0.873ms dirtyStatic=0.001ms retained=0.556ms lifecycle=0.295ms
+emit-probe query=0.843ms dirtyStatic=0.001ms retained=0.500ms lifecycle=0.296ms
+emit-probe query=0.839ms dirtyStatic=0.001ms retained=0.487ms lifecycle=0.326ms
+emit-probe query=0.881ms dirtyStatic=0.001ms retained=0.559ms lifecycle=0.278ms
+emit-probe query=0.876ms dirtyStatic=0.001ms retained=0.580ms lifecycle=0.344ms
+emit-probe query=0.839ms dirtyStatic=0.000ms retained=0.544ms lifecycle=0.348ms
+emit-probe query=0.842ms dirtyStatic=0.001ms retained=0.566ms lifecycle=0.330ms
+emit-probe query=1.008ms dirtyStatic=0.001ms retained=0.632ms lifecycle=0.283ms
+emit-probe query=0.812ms dirtyStatic=0.001ms retained=0.593ms lifecycle=0.397ms
+emit-probe query=0.833ms dirtyStatic=0.001ms retained=1.043ms lifecycle=0.292ms
+emit-probe query=0.866ms dirtyStatic=0.001ms retained=0.465ms lifecycle=0.325ms
+emit-probe query=0.839ms dirtyStatic=0.001ms retained=0.520ms lifecycle=0.305ms
+emit-probe query=0.884ms dirtyStatic=0.001ms retained=0.503ms lifecycle=0.324ms
+emit-probe query=0.903ms dirtyStatic=0.001ms retained=0.532ms lifecycle=0.280ms
+emit-probe query=0.860ms dirtyStatic=0.001ms retained=0.535ms lifecycle=0.307ms
+emit-probe query=0.867ms dirtyStatic=0.001ms retained=0.512ms lifecycle=0.296ms
+emit-probe query=0.872ms dirtyStatic=0.001ms retained=0.514ms lifecycle=0.334ms
+emit-probe query=0.845ms dirtyStatic=0.001ms retained=0.559ms lifecycle=0.274ms
+emit-probe query=0.928ms dirtyStatic=0.001ms retained=0.485ms lifecycle=0.337ms
+emit-probe query=1.040ms dirtyStatic=0.001ms retained=0.656ms lifecycle=0.430ms
+emit-probe query=0.881ms dirtyStatic=0.001ms retained=0.505ms lifecycle=0.339ms
+emit-probe query=0.867ms dirtyStatic=0.001ms retained=0.468ms lifecycle=0.333ms
+emit-probe query=0.878ms dirtyStatic=0.001ms retained=0.521ms lifecycle=0.331ms
+emit-probe query=1.343ms dirtyStatic=0.001ms retained=0.581ms lifecycle=0.274ms
+emit-probe query=0.844ms dirtyStatic=0.001ms retained=0.553ms lifecycle=0.342ms
+emit-probe query=1.421ms dirtyStatic=0.001ms retained=0.611ms lifecycle=0.274ms
+emit-probe query=0.873ms dirtyStatic=0.001ms retained=0.559ms lifecycle=0.324ms
+emit-probe query=1.186ms dirtyStatic=0.001ms retained=0.538ms lifecycle=0.270ms
+emit-probe query=0.987ms dirtyStatic=0.001ms retained=0.499ms lifecycle=0.300ms
+emit-probe query=0.870ms dirtyStatic=0.001ms retained=0.511ms lifecycle=0.322ms
+emit-probe query=0.862ms dirtyStatic=0.001ms retained=0.481ms lifecycle=0.332ms
+emit-probe query=0.855ms dirtyStatic=0.001ms retained=0.527ms lifecycle=0.275ms
+emit-probe query=0.898ms dirtyStatic=0.001ms retained=0.502ms lifecycle=0.344ms
+emit-probe query=0.896ms dirtyStatic=0.001ms retained=0.581ms lifecycle=0.319ms
+emit-probe query=0.857ms dirtyStatic=0.001ms retained=0.490ms lifecycle=0.282ms
+emit-probe query=0.866ms dirtyStatic=0.001ms retained=0.500ms lifecycle=0.266ms
+emit-probe query=0.851ms dirtyStatic=0.001ms retained=0.489ms lifecycle=0.311ms
+emit-probe query=0.865ms dirtyStatic=0.001ms retained=0.487ms lifecycle=0.305ms
+emit-probe query=0.852ms dirtyStatic=0.001ms retained=0.541ms lifecycle=0.346ms
+emit-probe query=1.289ms dirtyStatic=0.001ms retained=0.508ms lifecycle=0.327ms
+emit-probe query=0.864ms dirtyStatic=0.001ms retained=0.012ms lifecycle=0.362ms
+emit-probe query=1.134ms dirtyStatic=0.001ms retained=0.564ms lifecycle=0.303ms
+emit-probe query=0.853ms dirtyStatic=0.001ms retained=1.173ms lifecycle=0.280ms
+emit-probe query=0.967ms dirtyStatic=0.001ms retained=0.510ms lifecycle=0.327ms
+emit-probe query=0.867ms dirtyStatic=0.001ms retained=0.527ms lifecycle=0.300ms
+emit-probe query=0.801ms dirtyStatic=0.001ms retained=0.525ms lifecycle=0.286ms
+emit-probe query=0.839ms dirtyStatic=0.001ms retained=0.495ms lifecycle=0.268ms
+emit-probe query=1.027ms dirtyStatic=0.001ms retained=0.615ms lifecycle=0.336ms
+emit-probe query=0.962ms dirtyStatic=0.001ms retained=0.564ms lifecycle=0.299ms
+emit-probe query=1.229ms dirtyStatic=0.001ms retained=0.712ms lifecycle=0.339ms
+emit-probe query=0.894ms dirtyStatic=0.001ms retained=0.653ms lifecycle=0.313ms
+emit-probe query=1.234ms dirtyStatic=0.001ms retained=0.011ms lifecycle=0.319ms
+emit-probe query=0.858ms dirtyStatic=0.001ms retained=0.464ms lifecycle=0.342ms
+emit-probe query=0.845ms dirtyStatic=0.001ms retained=0.532ms lifecycle=0.295ms
+emit-probe query=0.884ms dirtyStatic=0.001ms retained=0.502ms lifecycle=0.293ms
+emit-probe query=1.483ms dirtyStatic=0.001ms retained=0.587ms lifecycle=0.327ms
+emit-probe query=0.853ms dirtyStatic=0.001ms retained=0.553ms lifecycle=0.345ms
+emit-probe query=0.870ms dirtyStatic=0.001ms retained=0.489ms lifecycle=0.310ms
+emit-probe query=1.114ms dirtyStatic=0.001ms retained=0.655ms lifecycle=0.301ms
+emit-probe query=1.008ms dirtyStatic=0.001ms retained=0.489ms lifecycle=0.301ms
+emit-probe query=0.868ms dirtyStatic=0.001ms retained=1.052ms lifecycle=0.295ms
+emit-probe query=0.996ms dirtyStatic=0.001ms retained=0.445ms lifecycle=0.342ms
+emit-probe query=1.079ms dirtyStatic=0.001ms retained=0.505ms lifecycle=0.297ms
+emit-probe query=0.922ms dirtyStatic=0.001ms retained=0.576ms lifecycle=0.291ms
+emit-probe query=0.892ms dirtyStatic=0.001ms retained=0.523ms lifecycle=0.319ms
+emit-probe query=0.840ms dirtyStatic=0.001ms retained=0.546ms lifecycle=0.308ms
+emit-probe query=0.870ms dirtyStatic=0.001ms retained=0.615ms lifecycle=0.370ms
+emit-probe query=0.851ms dirtyStatic=0.001ms retained=0.562ms lifecycle=0.315ms
+emit-probe query=0.871ms dirtyStatic=0.001ms retained=0.517ms lifecycle=0.292ms
+emit-probe query=1.087ms dirtyStatic=0.001ms retained=0.601ms lifecycle=0.282ms
+emit-probe query=0.977ms dirtyStatic=0.001ms retained=0.621ms lifecycle=0.314ms
+emit-probe query=0.845ms dirtyStatic=0.001ms retained=0.558ms lifecycle=0.328ms
+emit-probe query=1.623ms dirtyStatic=0.001ms retained=0.539ms lifecycle=0.351ms
+emit-probe query=0.961ms dirtyStatic=0.001ms retained=0.483ms lifecycle=0.283ms
+emit-probe query=0.870ms dirtyStatic=0.001ms retained=0.484ms lifecycle=0.318ms
+emit-probe query=0.911ms dirtyStatic=0.001ms retained=0.586ms lifecycle=0.291ms
+emit-probe query=0.859ms dirtyStatic=0.001ms retained=0.552ms lifecycle=0.330ms
+emit-probe query=0.826ms dirtyStatic=0.001ms retained=0.538ms lifecycle=0.342ms
+emit-probe query=0.999ms dirtyStatic=0.001ms retained=0.592ms lifecycle=0.321ms
+emit-probe query=1.327ms dirtyStatic=0.001ms retained=0.722ms lifecycle=0.298ms
+emit-probe query=0.909ms dirtyStatic=0.001ms retained=0.508ms lifecycle=0.339ms
+emit-probe query=0.828ms dirtyStatic=0.001ms retained=0.540ms lifecycle=0.353ms
+emit-probe query=0.993ms dirtyStatic=0.001ms retained=0.589ms lifecycle=0.337ms
+emit-probe query=0.962ms dirtyStatic=0.001ms retained=0.485ms lifecycle=0.357ms
+emit-probe query=0.856ms dirtyStatic=0.001ms retained=0.560ms lifecycle=0.345ms
+emit-probe query=0.869ms dirtyStatic=0.001ms retained=0.474ms lifecycle=0.272ms
+emit-probe query=1.176ms dirtyStatic=0.001ms retained=0.590ms lifecycle=0.304ms
+emit-probe query=0.848ms dirtyStatic=0.001ms retained=0.512ms lifecycle=0.310ms
+emit-probe query=0.968ms dirtyStatic=0.001ms retained=0.629ms lifecycle=0.285ms
+emit-probe query=0.848ms dirtyStatic=0.001ms retained=0.471ms lifecycle=0.277ms
+emit-probe query=0.889ms dirtyStatic=0.001ms retained=0.473ms lifecycle=0.327ms
+emit-probe query=0.918ms dirtyStatic=0.001ms retained=0.482ms lifecycle=0.350ms
+emit-probe query=0.862ms dirtyStatic=0.001ms retained=0.471ms lifecycle=0.312ms
+emit-probe query=0.870ms dirtyStatic=0.001ms retained=0.510ms lifecycle=0.351ms
+emit-probe query=0.864ms dirtyStatic=0.001ms retained=0.006ms lifecycle=0.288ms
+emit-probe query=0.950ms dirtyStatic=0.001ms retained=0.518ms lifecycle=0.304ms
+emit-probe query=0.913ms dirtyStatic=0.001ms retained=0.526ms lifecycle=0.308ms
+emit-probe query=1.038ms dirtyStatic=0.001ms retained=0.581ms lifecycle=0.332ms
+emit-probe query=1.262ms dirtyStatic=0.000ms retained=0.548ms lifecycle=0.315ms
+emit-probe query=0.841ms dirtyStatic=0.001ms retained=0.516ms lifecycle=0.313ms
+emit-probe query=0.854ms dirtyStatic=0.000ms retained=0.510ms lifecycle=0.314ms
+emit-probe query=1.265ms dirtyStatic=0.001ms retained=0.657ms lifecycle=0.315ms
+emit-probe query=0.905ms dirtyStatic=0.001ms retained=0.505ms lifecycle=0.317ms
+emit-probe query=1.839ms dirtyStatic=0.001ms retained=0.577ms lifecycle=0.327ms
+emit-probe query=0.981ms dirtyStatic=0.001ms retained=0.681ms lifecycle=0.280ms
+emit-probe query=0.833ms dirtyStatic=0.001ms retained=0.519ms lifecycle=0.303ms
+emit-probe query=0.901ms dirtyStatic=0.001ms retained=0.518ms lifecycle=0.291ms
+emit-probe query=0.895ms dirtyStatic=0.001ms retained=0.524ms lifecycle=0.313ms
+emit-probe query=0.932ms dirtyStatic=0.001ms retained=0.607ms lifecycle=0.333ms
+emit-probe query=0.882ms dirtyStatic=0.001ms retained=0.587ms lifecycle=0.342ms
+emit-probe query=0.900ms dirtyStatic=0.001ms retained=0.483ms lifecycle=0.314ms
+emit-probe query=1.202ms dirtyStatic=0.001ms retained=0.565ms lifecycle=0.300ms
+emit-probe query=0.907ms dirtyStatic=0.001ms retained=0.587ms lifecycle=0.305ms
+emit-probe query=1.219ms dirtyStatic=0.001ms retained=0.469ms lifecycle=0.298ms
+emit-probe query=0.855ms dirtyStatic=0.001ms retained=0.517ms lifecycle=0.279ms
+emit-probe query=0.870ms dirtyStatic=0.001ms retained=0.508ms lifecycle=0.339ms
+emit-probe query=0.860ms dirtyStatic=0.001ms retained=0.499ms lifecycle=0.300ms
+emit-probe query=0.828ms dirtyStatic=0.001ms retained=0.559ms lifecycle=0.329ms
+emit-probe query=1.257ms dirtyStatic=0.001ms retained=0.611ms lifecycle=0.301ms
+emit-probe query=0.950ms dirtyStatic=0.000ms retained=0.557ms lifecycle=0.336ms
+emit-probe query=0.887ms dirtyStatic=0.001ms retained=0.492ms lifecycle=0.306ms
+emit-probe query=1.153ms dirtyStatic=0.001ms retained=0.574ms lifecycle=0.303ms
+emit-probe query=0.988ms dirtyStatic=0.001ms retained=0.443ms lifecycle=0.292ms
+emit-probe query=1.167ms dirtyStatic=0.001ms retained=0.543ms lifecycle=0.314ms
+emit-probe query=0.897ms dirtyStatic=0.001ms retained=0.481ms lifecycle=0.298ms
+emit-probe query=1.141ms dirtyStatic=0.001ms retained=0.588ms lifecycle=0.313ms
+emit-probe query=1.210ms dirtyStatic=0.001ms retained=0.646ms lifecycle=0.276ms
+emit-probe query=0.906ms dirtyStatic=0.001ms retained=0.694ms lifecycle=0.330ms
+emit-probe query=0.858ms dirtyStatic=0.001ms retained=0.535ms lifecycle=0.296ms
+emit-probe query=0.997ms dirtyStatic=0.001ms retained=0.517ms lifecycle=0.366ms
+emit-probe query=0.832ms dirtyStatic=0.001ms retained=0.545ms lifecycle=0.308ms
+emit-probe query=0.866ms dirtyStatic=0.001ms retained=0.559ms lifecycle=0.315ms
+emit-probe query=0.843ms dirtyStatic=0.001ms retained=0.519ms lifecycle=0.345ms
+emit-probe query=0.831ms dirtyStatic=0.001ms retained=0.449ms lifecycle=0.279ms
+emit-probe query=0.852ms dirtyStatic=0.000ms retained=0.509ms lifecycle=0.324ms
+emit-probe query=0.849ms dirtyStatic=0.001ms retained=0.480ms lifecycle=0.303ms
+emit-probe query=0.857ms dirtyStatic=0.001ms retained=0.494ms lifecycle=0.332ms
+emit-probe query=0.875ms dirtyStatic=0.000ms retained=0.542ms lifecycle=0.338ms
+emit-probe query=0.900ms dirtyStatic=0.001ms retained=0.529ms lifecycle=0.321ms
+emit-probe query=0.999ms dirtyStatic=0.001ms retained=0.702ms lifecycle=0.313ms
+emit-probe query=0.921ms dirtyStatic=0.001ms retained=0.580ms lifecycle=0.281ms
+emit-probe query=0.905ms dirtyStatic=0.001ms retained=0.500ms lifecycle=0.355ms
+emit-probe query=0.853ms dirtyStatic=0.001ms retained=0.583ms lifecycle=0.336ms
+emit-probe query=0.873ms dirtyStatic=0.001ms retained=0.499ms lifecycle=0.323ms
+emit-probe query=0.901ms dirtyStatic=0.001ms retained=0.466ms lifecycle=0.353ms
+emit-probe query=1.081ms dirtyStatic=0.001ms retained=0.549ms lifecycle=0.330ms
+emit-probe query=1.175ms dirtyStatic=0.001ms retained=0.512ms lifecycle=0.306ms
+emit-probe query=1.047ms dirtyStatic=0.001ms retained=0.580ms lifecycle=0.312ms
+emit-probe query=1.211ms dirtyStatic=0.001ms retained=0.001ms lifecycle=0.321ms
+emit-probe query=0.894ms dirtyStatic=0.001ms retained=0.541ms lifecycle=0.329ms
+emit-probe query=1.119ms dirtyStatic=0.001ms retained=0.584ms lifecycle=0.303ms
+emit-probe query=0.866ms dirtyStatic=0.001ms retained=0.490ms lifecycle=0.304ms
+emit-probe query=0.904ms dirtyStatic=0.001ms retained=0.485ms lifecycle=0.310ms
+emit-probe query=0.863ms dirtyStatic=0.000ms retained=0.447ms lifecycle=0.300ms
+emit-probe query=0.941ms dirtyStatic=0.001ms retained=0.497ms lifecycle=0.320ms
+emit-probe query=0.880ms dirtyStatic=0.001ms retained=0.528ms lifecycle=0.317ms
+emit-probe query=0.882ms dirtyStatic=0.001ms retained=0.521ms lifecycle=0.353ms
+emit-probe query=0.874ms dirtyStatic=0.001ms retained=0.517ms lifecycle=0.315ms
+emit-probe query=0.868ms dirtyStatic=0.001ms retained=0.494ms lifecycle=0.352ms
+emit-probe query=1.159ms dirtyStatic=0.001ms retained=0.499ms lifecycle=0.267ms
+emit-probe query=1.061ms dirtyStatic=0.001ms retained=0.491ms lifecycle=0.334ms
+emit-probe query=0.982ms dirtyStatic=0.001ms retained=0.494ms lifecycle=0.327ms
+emit-probe query=0.902ms dirtyStatic=0.001ms retained=0.563ms lifecycle=0.309ms
+emit-probe query=0.859ms dirtyStatic=0.001ms retained=0.449ms lifecycle=0.264ms
+emit-probe query=0.824ms dirtyStatic=0.001ms retained=0.508ms lifecycle=0.303ms
+emit-probe query=0.901ms dirtyStatic=0.001ms retained=0.550ms lifecycle=0.284ms
+emit-probe query=1.040ms dirtyStatic=0.001ms retained=0.559ms lifecycle=0.312ms
+emit-probe query=1.372ms dirtyStatic=0.001ms retained=0.715ms lifecycle=0.271ms
+emit-probe query=0.859ms dirtyStatic=0.001ms retained=0.541ms lifecycle=0.531ms
+emit-probe query=0.882ms dirtyStatic=0.001ms retained=0.492ms lifecycle=0.287ms
+emit-probe query=0.861ms dirtyStatic=0.001ms retained=0.509ms lifecycle=0.333ms
+emit-probe query=0.848ms dirtyStatic=0.001ms retained=0.475ms lifecycle=0.268ms
+emit-probe query=0.870ms dirtyStatic=0.001ms retained=0.533ms lifecycle=0.336ms
+emit-probe query=0.869ms dirtyStatic=0.001ms retained=0.598ms lifecycle=0.292ms
+emit-probe query=0.878ms dirtyStatic=0.001ms retained=0.440ms lifecycle=0.335ms
+emit-probe query=1.354ms dirtyStatic=0.001ms retained=0.777ms lifecycle=0.287ms
+emit-probe query=0.859ms dirtyStatic=0.001ms retained=0.491ms lifecycle=0.356ms
+emit-probe query=0.878ms dirtyStatic=0.000ms retained=0.529ms lifecycle=0.297ms
+emit-probe query=0.864ms dirtyStatic=0.001ms retained=0.573ms lifecycle=0.397ms
+emit-probe query=0.837ms dirtyStatic=0.001ms retained=0.508ms lifecycle=0.317ms
+emit-probe query=0.929ms dirtyStatic=0.001ms retained=0.661ms lifecycle=0.330ms
+emit-probe query=1.292ms dirtyStatic=0.000ms retained=0.568ms lifecycle=0.313ms
+emit-probe query=0.881ms dirtyStatic=0.001ms retained=0.568ms lifecycle=0.364ms
+emit-probe query=0.864ms dirtyStatic=0.001ms retained=0.444ms lifecycle=0.327ms
+emit-probe query=0.871ms dirtyStatic=0.001ms retained=0.533ms lifecycle=0.316ms
+emit-probe query=0.894ms dirtyStatic=0.001ms retained=0.475ms lifecycle=0.266ms
+emit-probe query=0.870ms dirtyStatic=0.001ms retained=0.488ms lifecycle=0.346ms
+emit-probe query=0.848ms dirtyStatic=0.001ms retained=0.536ms lifecycle=0.320ms
+emit-probe query=0.904ms dirtyStatic=0.001ms retained=0.579ms lifecycle=0.326ms
+emit-probe query=0.845ms dirtyStatic=0.001ms retained=0.557ms lifecycle=0.296ms
+emit-probe query=1.059ms dirtyStatic=0.001ms retained=0.496ms lifecycle=0.366ms
+emit-probe query=0.926ms dirtyStatic=0.001ms retained=0.573ms lifecycle=0.331ms
+emit-probe query=0.995ms dirtyStatic=0.001ms retained=0.592ms lifecycle=0.360ms
+emit-probe query=0.917ms dirtyStatic=0.001ms retained=0.644ms lifecycle=0.285ms
+emit-probe query=0.856ms dirtyStatic=0.001ms retained=0.473ms lifecycle=0.293ms
+emit-probe query=1.219ms dirtyStatic=0.001ms retained=0.618ms lifecycle=0.289ms
+emit-probe query=1.128ms dirtyStatic=0.001ms retained=0.553ms lifecycle=0.299ms
+emit-probe query=1.010ms dirtyStatic=0.001ms retained=0.511ms lifecycle=0.314ms
+emit-probe query=0.847ms dirtyStatic=0.000ms retained=0.544ms lifecycle=0.338ms
+emit-probe query=0.894ms dirtyStatic=0.001ms retained=0.545ms lifecycle=0.288ms
+emit-probe query=0.860ms dirtyStatic=0.001ms retained=0.499ms lifecycle=0.306ms
+emit-probe query=1.188ms dirtyStatic=0.001ms retained=0.696ms lifecycle=0.275ms
+emit-probe query=0.798ms dirtyStatic=0.001ms retained=0.588ms lifecycle=0.310ms
+emit-probe query=0.832ms dirtyStatic=0.001ms retained=0.562ms lifecycle=0.271ms
+emit-probe query=0.842ms dirtyStatic=0.001ms retained=0.528ms lifecycle=0.309ms
+emit-probe query=0.837ms dirtyStatic=0.001ms retained=0.451ms lifecycle=0.320ms
+emit-probe query=0.875ms dirtyStatic=0.001ms retained=0.557ms lifecycle=0.305ms
+emit-probe query=0.879ms dirtyStatic=0.000ms retained=0.486ms lifecycle=0.326ms
+emit-probe query=0.858ms dirtyStatic=0.001ms retained=0.531ms lifecycle=0.301ms
+emit-probe query=0.839ms dirtyStatic=0.001ms retained=0.595ms lifecycle=0.308ms
+emit-probe query=0.945ms dirtyStatic=0.000ms retained=0.621ms lifecycle=0.312ms
+emit-probe query=0.849ms dirtyStatic=0.000ms retained=0.451ms lifecycle=0.329ms
+emit-probe query=0.915ms dirtyStatic=0.001ms retained=0.476ms lifecycle=0.364ms
+emit-probe query=0.883ms dirtyStatic=0.001ms retained=0.467ms lifecycle=0.298ms
+emit-probe query=0.826ms dirtyStatic=0.001ms retained=0.490ms lifecycle=0.292ms
+emit-probe query=1.448ms dirtyStatic=0.001ms retained=0.570ms lifecycle=0.288ms
+emit-probe query=0.864ms dirtyStatic=0.001ms retained=0.528ms lifecycle=0.350ms
+emit-probe query=0.877ms dirtyStatic=0.001ms retained=0.565ms lifecycle=0.342ms
+emit-probe query=0.920ms dirtyStatic=0.001ms retained=0.519ms lifecycle=0.335ms
+emit-probe query=0.898ms dirtyStatic=0.001ms retained=0.517ms lifecycle=0.316ms
+emit-probe query=0.861ms dirtyStatic=0.001ms retained=0.521ms lifecycle=0.318ms
+emit-probe query=0.854ms dirtyStatic=0.001ms retained=0.528ms lifecycle=0.502ms
+emit-probe query=0.858ms dirtyStatic=0.001ms retained=0.611ms lifecycle=0.291ms
+emit-probe query=1.339ms dirtyStatic=0.001ms retained=0.725ms lifecycle=0.352ms
+emit-probe query=0.818ms dirtyStatic=0.001ms retained=0.496ms lifecycle=0.274ms
+emit-probe query=0.964ms dirtyStatic=0.001ms retained=0.539ms lifecycle=0.298ms
+emit-probe query=0.931ms dirtyStatic=0.001ms retained=0.521ms lifecycle=0.312ms
+emit-probe query=1.149ms dirtyStatic=0.001ms retained=0.574ms lifecycle=0.291ms
+emit-probe query=0.947ms dirtyStatic=0.001ms retained=0.535ms lifecycle=0.352ms
+emit-probe query=0.849ms dirtyStatic=0.001ms retained=0.503ms lifecycle=0.311ms
+emit-probe query=1.050ms dirtyStatic=0.001ms retained=0.530ms lifecycle=0.326ms
+emit-probe query=0.844ms dirtyStatic=0.001ms retained=0.508ms lifecycle=0.303ms
+emit-probe query=0.939ms dirtyStatic=0.001ms retained=0.598ms lifecycle=0.326ms
+emit-probe query=1.224ms dirtyStatic=0.001ms retained=0.733ms lifecycle=0.297ms
+emit-probe query=0.906ms dirtyStatic=0.000ms retained=0.429ms lifecycle=0.365ms
+emit-probe query=0.919ms dirtyStatic=0.000ms retained=0.575ms lifecycle=0.308ms
+emit-probe query=1.020ms dirtyStatic=0.001ms retained=0.507ms lifecycle=0.335ms
+emit-probe query=0.901ms dirtyStatic=0.001ms retained=0.529ms lifecycle=0.332ms
+emit-probe query=0.965ms dirtyStatic=0.001ms retained=0.596ms lifecycle=0.328ms
+emit-probe query=1.200ms dirtyStatic=0.001ms retained=0.625ms lifecycle=0.312ms
+emit-probe query=0.818ms dirtyStatic=0.001ms retained=0.567ms lifecycle=0.286ms
+emit-probe query=1.383ms dirtyStatic=0.001ms retained=0.576ms lifecycle=0.276ms
+emit-probe query=0.889ms dirtyStatic=0.001ms retained=0.587ms lifecycle=0.303ms
+emit-probe query=0.858ms dirtyStatic=0.001ms retained=0.407ms lifecycle=0.267ms
+emit-probe query=0.898ms dirtyStatic=0.001ms retained=0.507ms lifecycle=0.347ms
+emit-probe query=0.848ms dirtyStatic=0.001ms retained=0.508ms lifecycle=0.326ms
+emit-probe query=0.843ms dirtyStatic=0.001ms retained=0.512ms lifecycle=0.310ms
+emit-probe query=0.896ms dirtyStatic=0.001ms retained=0.522ms lifecycle=0.265ms
+emit-probe query=0.845ms dirtyStatic=0.001ms retained=0.572ms lifecycle=0.324ms
+emit-probe query=0.858ms dirtyStatic=0.000ms retained=0.546ms lifecycle=0.336ms
+emit-probe query=0.894ms dirtyStatic=0.001ms retained=0.494ms lifecycle=0.327ms
+emit-probe query=0.819ms dirtyStatic=0.001ms retained=0.580ms lifecycle=0.307ms
+emit-probe query=0.857ms dirtyStatic=0.001ms retained=0.537ms lifecycle=0.326ms
+emit-probe query=1.235ms dirtyStatic=0.001ms retained=0.629ms lifecycle=0.280ms
+emit-probe query=0.870ms dirtyStatic=0.001ms retained=0.484ms lifecycle=0.302ms
+emit-probe query=0.861ms dirtyStatic=0.001ms retained=0.485ms lifecycle=0.268ms
+emit-probe query=0.892ms dirtyStatic=0.001ms retained=0.483ms lifecycle=0.306ms
+emit-probe query=0.955ms dirtyStatic=0.000ms retained=0.463ms lifecycle=0.286ms
+emit-probe query=0.881ms dirtyStatic=0.001ms retained=0.575ms lifecycle=0.313ms
+emit-probe query=0.833ms dirtyStatic=0.001ms retained=0.504ms lifecycle=0.305ms
+emit-probe query=0.884ms dirtyStatic=0.001ms retained=0.468ms lifecycle=0.307ms
+emit-probe query=0.846ms dirtyStatic=0.001ms retained=0.558ms lifecycle=0.264ms
+emit-probe query=0.970ms dirtyStatic=0.001ms retained=0.525ms lifecycle=0.303ms
+emit-probe query=0.863ms dirtyStatic=0.001ms retained=0.545ms lifecycle=0.303ms
+emit-probe query=0.893ms dirtyStatic=0.001ms retained=0.484ms lifecycle=0.309ms
+emit-probe query=0.869ms dirtyStatic=0.001ms retained=0.475ms lifecycle=0.285ms
+emit-probe query=0.884ms dirtyStatic=0.001ms retained=0.478ms lifecycle=0.325ms
+emit-probe query=1.144ms dirtyStatic=0.001ms retained=0.627ms lifecycle=0.286ms
+emit-probe query=0.848ms dirtyStatic=0.001ms retained=0.525ms lifecycle=0.322ms
+emit-probe query=1.134ms dirtyStatic=0.001ms retained=0.644ms lifecycle=0.287ms
+emit-probe query=0.880ms dirtyStatic=0.001ms retained=0.570ms lifecycle=0.344ms
+emit-probe query=0.863ms dirtyStatic=0.001ms retained=0.521ms lifecycle=0.329ms
+emit-probe query=0.868ms dirtyStatic=0.001ms retained=0.491ms lifecycle=0.350ms
+emit-probe query=0.897ms dirtyStatic=0.001ms retained=0.503ms lifecycle=0.293ms
+emit-probe query=0.862ms dirtyStatic=0.001ms retained=0.492ms lifecycle=0.324ms
+emit-probe query=1.125ms dirtyStatic=0.001ms retained=0.683ms lifecycle=0.339ms
+emit-probe query=0.927ms dirtyStatic=0.001ms retained=0.489ms lifecycle=0.357ms
+emit-probe query=0.898ms dirtyStatic=0.001ms retained=1.016ms lifecycle=0.296ms
+emit-probe query=0.907ms dirtyStatic=0.001ms retained=0.494ms lifecycle=0.366ms
+emit-probe query=0.860ms dirtyStatic=0.001ms retained=0.496ms lifecycle=0.292ms
+emit-probe query=0.835ms dirtyStatic=0.001ms retained=0.527ms lifecycle=0.284ms
+emit-probe query=0.911ms dirtyStatic=0.001ms retained=0.551ms lifecycle=0.278ms
+emit-probe query=0.856ms dirtyStatic=0.001ms retained=0.552ms lifecycle=0.328ms
+emit-probe query=0.910ms dirtyStatic=0.001ms retained=0.512ms lifecycle=0.322ms
+emit-probe query=0.867ms dirtyStatic=0.001ms retained=0.503ms lifecycle=0.348ms
+emit-probe query=0.832ms dirtyStatic=0.001ms retained=0.513ms lifecycle=0.469ms
+emit-probe query=0.836ms dirtyStatic=0.001ms retained=0.578ms lifecycle=0.285ms
+emit-probe query=0.907ms dirtyStatic=0.001ms retained=0.513ms lifecycle=0.311ms
+emit-probe query=0.855ms dirtyStatic=0.001ms retained=0.567ms lifecycle=0.345ms
+emit-probe query=0.976ms dirtyStatic=0.001ms retained=0.462ms lifecycle=0.316ms
+emit-probe query=0.951ms dirtyStatic=0.001ms retained=0.530ms lifecycle=0.346ms
+emit-probe query=0.856ms dirtyStatic=0.001ms retained=0.523ms lifecycle=0.276ms
+emit-probe query=0.876ms dirtyStatic=0.001ms retained=0.495ms lifecycle=0.305ms
+emit-probe query=0.826ms dirtyStatic=0.001ms retained=0.537ms lifecycle=0.314ms
+emit-probe query=0.881ms dirtyStatic=0.001ms retained=0.405ms lifecycle=0.279ms
+emit-probe query=0.887ms dirtyStatic=0.001ms retained=0.548ms lifecycle=0.333ms
+emit-probe query=0.896ms dirtyStatic=0.001ms retained=0.464ms lifecycle=0.338ms
+emit-probe query=0.838ms dirtyStatic=0.001ms retained=0.474ms lifecycle=0.301ms
+emit-probe query=1.026ms dirtyStatic=0.001ms retained=0.589ms lifecycle=0.292ms
+emit-probe query=0.866ms dirtyStatic=0.001ms retained=0.582ms lifecycle=0.397ms
+emit-probe query=0.894ms dirtyStatic=0.001ms retained=0.582ms lifecycle=0.308ms
+emit-probe query=0.853ms dirtyStatic=0.001ms retained=0.486ms lifecycle=0.280ms
+emit-probe query=0.868ms dirtyStatic=0.001ms retained=0.532ms lifecycle=0.335ms
+emit-probe query=0.839ms dirtyStatic=0.001ms retained=0.407ms lifecycle=0.263ms
+emit-probe query=1.188ms dirtyStatic=0.001ms retained=0.519ms lifecycle=0.296ms
+emit-probe query=0.858ms dirtyStatic=0.001ms retained=0.528ms lifecycle=0.306ms
+emit-probe query=1.326ms dirtyStatic=0.001ms retained=0.596ms lifecycle=0.304ms
+emit-probe query=0.941ms dirtyStatic=0.000ms retained=0.651ms lifecycle=0.341ms
+emit-probe query=0.900ms dirtyStatic=0.001ms retained=0.617ms lifecycle=0.292ms
+emit-probe query=1.175ms dirtyStatic=0.001ms retained=0.698ms lifecycle=0.317ms
+emit-probe query=1.284ms dirtyStatic=0.001ms retained=0.564ms lifecycle=0.318ms
+emit-probe query=0.884ms dirtyStatic=0.001ms retained=0.605ms lifecycle=0.364ms
+emit-probe query=0.872ms dirtyStatic=0.001ms retained=0.636ms lifecycle=0.365ms
+emit-probe query=1.101ms dirtyStatic=0.001ms retained=0.689ms lifecycle=0.321ms
+emit-probe query=1.121ms dirtyStatic=0.001ms retained=0.577ms lifecycle=0.336ms
+emit-probe query=0.934ms dirtyStatic=0.001ms retained=0.508ms lifecycle=0.339ms
+emit-probe query=0.916ms dirtyStatic=0.001ms retained=0.605ms lifecycle=0.332ms
+emit-probe query=0.966ms dirtyStatic=0.001ms retained=0.493ms lifecycle=0.320ms
+emit-probe query=1.229ms dirtyStatic=0.001ms retained=0.642ms lifecycle=0.326ms
+emit-probe query=0.908ms dirtyStatic=0.001ms retained=0.541ms lifecycle=0.320ms
+emit-probe query=1.153ms dirtyStatic=0.001ms retained=0.552ms lifecycle=0.315ms
+emit-probe query=0.920ms dirtyStatic=0.001ms retained=0.631ms lifecycle=0.304ms
+emit-probe query=0.866ms dirtyStatic=0.001ms retained=0.506ms lifecycle=0.301ms
+emit-probe query=0.964ms dirtyStatic=0.001ms retained=0.683ms lifecycle=0.298ms
+emit-probe query=0.911ms dirtyStatic=0.001ms retained=0.533ms lifecycle=0.317ms
+emit-probe query=1.162ms dirtyStatic=0.001ms retained=0.512ms lifecycle=0.301ms
+emit-probe query=0.873ms dirtyStatic=0.001ms retained=0.512ms lifecycle=0.330ms
+emit-probe query=0.929ms dirtyStatic=0.001ms retained=0.476ms lifecycle=0.308ms
+emit-probe query=0.913ms dirtyStatic=0.001ms retained=0.528ms lifecycle=0.312ms
+emit-probe query=0.858ms dirtyStatic=0.001ms retained=0.596ms lifecycle=0.299ms
+emit-probe query=0.844ms dirtyStatic=0.001ms retained=0.570ms lifecycle=0.336ms
+emit-probe query=0.873ms dirtyStatic=0.001ms retained=0.454ms lifecycle=0.273ms
+emit-probe query=1.356ms dirtyStatic=0.001ms retained=0.644ms lifecycle=0.355ms
+emit-probe query=0.898ms dirtyStatic=0.001ms retained=0.501ms lifecycle=0.314ms
+emit-probe query=1.003ms dirtyStatic=0.001ms retained=0.499ms lifecycle=0.328ms
+emit-probe query=0.964ms dirtyStatic=0.001ms retained=0.669ms lifecycle=0.289ms
+emit-probe query=0.867ms dirtyStatic=0.001ms retained=0.471ms lifecycle=0.314ms
+emit-probe query=0.843ms dirtyStatic=0.001ms retained=0.521ms lifecycle=0.310ms
+emit-probe query=0.841ms dirtyStatic=0.001ms retained=0.479ms lifecycle=0.321ms
+emit-probe query=0.900ms dirtyStatic=0.001ms retained=0.475ms lifecycle=0.326ms
+emit-probe query=0.879ms dirtyStatic=0.001ms retained=0.513ms lifecycle=0.286ms
+emit-probe query=0.947ms dirtyStatic=0.001ms retained=0.560ms lifecycle=0.314ms
+emit-probe query=0.880ms dirtyStatic=0.001ms retained=0.575ms lifecycle=0.341ms
+emit-probe query=0.856ms dirtyStatic=0.000ms retained=0.456ms lifecycle=0.309ms
+emit-probe query=0.854ms dirtyStatic=0.001ms retained=0.496ms lifecycle=0.325ms
+emit-probe query=0.873ms dirtyStatic=0.001ms retained=0.572ms lifecycle=0.325ms
+emit-probe query=0.843ms dirtyStatic=0.001ms retained=0.595ms lifecycle=0.303ms
+emit-probe query=0.901ms dirtyStatic=0.001ms retained=0.513ms lifecycle=0.317ms
+emit-probe query=0.905ms dirtyStatic=0.001ms retained=0.546ms lifecycle=0.351ms
+emit-probe query=0.858ms dirtyStatic=0.001ms retained=0.571ms lifecycle=0.321ms
+emit-probe query=1.256ms dirtyStatic=0.001ms retained=0.598ms lifecycle=0.330ms
+emit-probe query=0.999ms dirtyStatic=0.001ms retained=0.551ms lifecycle=0.310ms
+emit-probe query=0.862ms dirtyStatic=0.001ms retained=0.509ms lifecycle=0.305ms
+emit-probe query=1.070ms dirtyStatic=0.001ms retained=0.635ms lifecycle=0.271ms
+emit-probe query=0.853ms dirtyStatic=0.001ms retained=0.410ms lifecycle=0.282ms
+emit-probe query=0.842ms dirtyStatic=0.001ms retained=0.562ms lifecycle=0.298ms
+emit-probe query=0.886ms dirtyStatic=0.001ms retained=0.476ms lifecycle=0.562ms
+emit-probe query=0.843ms dirtyStatic=0.001ms retained=0.547ms lifecycle=0.288ms
+emit-probe query=1.104ms dirtyStatic=0.001ms retained=0.539ms lifecycle=0.306ms
+emit-probe query=1.214ms dirtyStatic=0.001ms retained=0.001ms lifecycle=0.297ms
+emit-probe query=0.835ms dirtyStatic=0.001ms retained=0.441ms lifecycle=0.319ms
+emit-probe query=0.866ms dirtyStatic=0.001ms retained=0.855ms lifecycle=0.347ms
+emit-probe query=1.105ms dirtyStatic=0.001ms retained=0.541ms lifecycle=0.298ms
+emit-probe query=0.872ms dirtyStatic=0.001ms retained=0.525ms lifecycle=0.346ms
+emit-probe query=0.871ms dirtyStatic=0.001ms retained=0.408ms lifecycle=0.264ms
+emit-probe query=0.868ms dirtyStatic=0.001ms retained=0.528ms lifecycle=0.347ms
+emit-probe query=0.946ms dirtyStatic=0.001ms retained=0.564ms lifecycle=0.302ms
+emit-probe query=0.825ms dirtyStatic=0.001ms retained=0.499ms lifecycle=0.543ms
+emit-probe query=0.858ms dirtyStatic=0.001ms retained=0.512ms lifecycle=0.273ms
+emit-probe query=0.831ms dirtyStatic=0.001ms retained=0.571ms lifecycle=0.315ms
+emit-probe query=0.928ms dirtyStatic=0.001ms retained=0.537ms lifecycle=0.267ms
+emit-probe query=1.083ms dirtyStatic=0.001ms retained=0.504ms lifecycle=0.285ms
+emit-probe query=0.914ms dirtyStatic=0.001ms retained=0.586ms lifecycle=0.281ms
+emit-probe query=0.861ms dirtyStatic=0.001ms retained=0.533ms lifecycle=0.330ms
+emit-probe query=0.775ms dirtyStatic=0.001ms retained=0.535ms lifecycle=0.284ms
+emit-probe query=1.210ms dirtyStatic=0.001ms retained=0.582ms lifecycle=0.550ms
+emit-probe query=0.887ms dirtyStatic=0.001ms retained=0.530ms lifecycle=0.306ms
+emit-probe query=0.925ms dirtyStatic=0.001ms retained=0.537ms lifecycle=0.349ms
+emit-probe query=1.095ms dirtyStatic=0.001ms retained=0.552ms lifecycle=0.343ms
+emit-probe query=1.249ms dirtyStatic=0.001ms retained=0.006ms lifecycle=0.340ms
+emit-probe query=0.883ms dirtyStatic=0.001ms retained=0.541ms lifecycle=0.321ms
+emit-probe query=1.011ms dirtyStatic=0.001ms retained=0.659ms lifecycle=0.283ms
+emit-probe query=0.686ms dirtyStatic=0.001ms retained=0.458ms lifecycle=0.269ms
+emit-probe query=0.884ms dirtyStatic=0.001ms retained=0.656ms lifecycle=0.270ms
+emit-probe query=0.617ms dirtyStatic=0.000ms retained=0.464ms lifecycle=0.266ms
+emit-probe query=0.781ms dirtyStatic=0.001ms retained=0.528ms lifecycle=0.233ms
+emit-probe query=0.904ms dirtyStatic=0.001ms retained=0.503ms lifecycle=0.343ms
+emit-probe query=1.073ms dirtyStatic=0.001ms retained=0.497ms lifecycle=0.329ms
+emit-probe query=0.874ms dirtyStatic=0.001ms retained=0.541ms lifecycle=0.339ms
+emit-probe query=1.251ms dirtyStatic=0.001ms retained=0.475ms lifecycle=0.283ms
+emit-probe query=0.848ms dirtyStatic=0.001ms retained=0.526ms lifecycle=0.320ms
+emit-probe query=0.815ms dirtyStatic=0.001ms retained=0.484ms lifecycle=0.265ms
+emit-probe query=1.265ms dirtyStatic=0.001ms retained=0.795ms lifecycle=0.471ms
+emit-probe query=1.258ms dirtyStatic=0.001ms retained=0.607ms lifecycle=0.308ms
+emit-probe query=0.878ms dirtyStatic=0.001ms retained=0.467ms lifecycle=0.279ms
+emit-probe query=0.840ms dirtyStatic=0.001ms retained=0.490ms lifecycle=0.268ms
+emit-probe query=0.886ms dirtyStatic=0.001ms retained=0.485ms lifecycle=0.309ms
+emit-probe query=0.920ms dirtyStatic=0.001ms retained=0.546ms lifecycle=0.300ms
+emit-probe query=0.880ms dirtyStatic=0.001ms retained=0.502ms lifecycle=0.357ms
+emit-probe query=0.845ms dirtyStatic=0.001ms retained=0.611ms lifecycle=0.349ms
+emit-probe query=0.880ms dirtyStatic=0.000ms retained=0.517ms lifecycle=0.317ms
+emit-probe query=0.847ms dirtyStatic=0.001ms retained=0.508ms lifecycle=0.324ms
+emit-probe query=0.852ms dirtyStatic=0.001ms retained=0.524ms lifecycle=0.341ms
+emit-probe query=1.172ms dirtyStatic=0.001ms retained=0.554ms lifecycle=0.297ms
+emit-probe query=1.058ms dirtyStatic=0.001ms retained=0.593ms lifecycle=0.304ms
+emit-probe query=0.908ms dirtyStatic=0.001ms retained=0.544ms lifecycle=0.355ms
+emit-probe query=1.002ms dirtyStatic=0.000ms retained=0.539ms lifecycle=0.370ms
+emit-probe query=0.891ms dirtyStatic=0.001ms retained=0.628ms lifecycle=0.317ms
+emit-probe query=1.255ms dirtyStatic=0.001ms retained=0.736ms lifecycle=0.341ms
+emit-probe query=0.833ms dirtyStatic=0.001ms retained=0.520ms lifecycle=0.314ms
+emit-probe query=0.889ms dirtyStatic=0.001ms retained=0.533ms lifecycle=0.305ms
+emit-probe query=0.850ms dirtyStatic=0.000ms retained=0.498ms lifecycle=0.302ms
+emit-probe query=0.890ms dirtyStatic=0.001ms retained=0.535ms lifecycle=0.353ms
+emit-probe query=0.900ms dirtyStatic=0.001ms retained=0.001ms lifecycle=0.337ms
+emit-probe query=0.931ms dirtyStatic=0.001ms retained=0.496ms lifecycle=0.325ms
+emit-probe query=1.124ms dirtyStatic=0.001ms retained=0.548ms lifecycle=0.301ms
+emit-probe query=1.037ms dirtyStatic=0.000ms retained=0.571ms lifecycle=0.324ms
+emit-probe query=1.170ms dirtyStatic=0.001ms retained=0.479ms lifecycle=0.309ms
+emit-probe query=1.244ms dirtyStatic=0.001ms retained=0.640ms lifecycle=0.280ms
+emit-probe query=0.863ms dirtyStatic=0.001ms retained=0.531ms lifecycle=0.299ms
+emit-probe query=0.829ms dirtyStatic=0.001ms retained=0.591ms lifecycle=0.273ms
+emit-probe query=0.901ms dirtyStatic=0.001ms retained=0.550ms lifecycle=0.307ms
+emit-probe query=0.856ms dirtyStatic=0.001ms retained=0.501ms lifecycle=0.347ms
+emit-probe query=0.837ms dirtyStatic=0.001ms retained=0.566ms lifecycle=0.319ms
+emit-probe query=0.865ms dirtyStatic=0.001ms retained=0.436ms lifecycle=0.260ms
+emit-probe query=0.956ms dirtyStatic=0.000ms retained=0.522ms lifecycle=0.323ms
+emit-probe query=0.826ms dirtyStatic=0.001ms retained=0.429ms lifecycle=0.269ms
+emit-probe query=0.886ms dirtyStatic=0.001ms retained=0.493ms lifecycle=0.348ms
+emit-probe query=0.890ms dirtyStatic=0.001ms retained=0.530ms lifecycle=0.295ms
+emit-probe query=0.885ms dirtyStatic=0.001ms retained=0.522ms lifecycle=0.317ms
+emit-probe query=0.864ms dirtyStatic=0.001ms retained=0.530ms lifecycle=0.343ms
+emit-probe query=0.869ms dirtyStatic=0.001ms retained=0.594ms lifecycle=0.339ms
+emit-probe query=1.281ms dirtyStatic=0.001ms retained=0.609ms lifecycle=0.281ms
+emit-probe query=0.879ms dirtyStatic=0.000ms retained=0.511ms lifecycle=0.355ms
+emit-probe query=0.832ms dirtyStatic=0.000ms retained=0.521ms lifecycle=0.320ms
+emit-probe query=0.864ms dirtyStatic=0.001ms retained=0.592ms lifecycle=0.281ms
+emit-probe query=0.875ms dirtyStatic=0.001ms retained=0.536ms lifecycle=0.308ms
+emit-probe query=0.864ms dirtyStatic=0.001ms retained=0.482ms lifecycle=0.308ms
+emit-probe query=0.876ms dirtyStatic=0.001ms retained=0.495ms lifecycle=0.335ms
+emit-probe query=0.869ms dirtyStatic=0.001ms retained=0.842ms lifecycle=0.308ms
+emit-probe query=1.054ms dirtyStatic=0.001ms retained=0.489ms lifecycle=0.303ms
+emit-probe query=0.976ms dirtyStatic=0.001ms retained=0.600ms lifecycle=0.291ms
+emit-probe query=0.827ms dirtyStatic=0.001ms retained=0.546ms lifecycle=0.304ms
+emit-probe query=0.871ms dirtyStatic=0.001ms retained=0.501ms lifecycle=0.340ms
+emit-probe query=0.872ms dirtyStatic=0.001ms retained=0.581ms lifecycle=0.343ms
+emit-probe query=0.901ms dirtyStatic=0.001ms retained=0.566ms lifecycle=0.373ms
+emit-probe query=0.942ms dirtyStatic=0.001ms retained=0.634ms lifecycle=0.293ms
+emit-probe query=0.847ms dirtyStatic=0.001ms retained=0.515ms lifecycle=0.303ms
+emit-probe query=0.834ms dirtyStatic=0.001ms retained=0.485ms lifecycle=0.322ms
+emit-probe query=1.065ms dirtyStatic=0.001ms retained=0.582ms lifecycle=0.315ms
+emit-probe query=0.869ms dirtyStatic=0.001ms retained=0.464ms lifecycle=0.314ms
+emit-probe query=0.852ms dirtyStatic=0.001ms retained=0.639ms lifecycle=0.357ms
+emit-probe query=1.161ms dirtyStatic=0.001ms retained=0.687ms lifecycle=0.350ms
+emit-probe query=0.923ms dirtyStatic=0.001ms retained=0.555ms lifecycle=0.298ms
+emit-probe query=0.849ms dirtyStatic=0.001ms retained=0.586ms lifecycle=0.287ms
+emit-probe query=0.924ms dirtyStatic=0.001ms retained=0.474ms lifecycle=0.338ms
+emit-probe query=0.908ms dirtyStatic=0.000ms retained=0.517ms lifecycle=0.329ms
+emit-probe query=0.845ms dirtyStatic=0.001ms retained=0.523ms lifecycle=0.306ms
+emit-probe query=0.978ms dirtyStatic=0.001ms retained=0.479ms lifecycle=0.308ms
+emit-probe query=0.849ms dirtyStatic=0.001ms retained=0.478ms lifecycle=0.302ms
+emit-probe query=0.920ms dirtyStatic=0.001ms retained=0.768ms lifecycle=0.282ms
+emit-probe query=0.849ms dirtyStatic=0.001ms retained=0.479ms lifecycle=0.339ms
+emit-probe query=1.175ms dirtyStatic=0.001ms retained=0.521ms lifecycle=0.290ms
+emit-probe query=0.800ms dirtyStatic=0.001ms retained=0.479ms lifecycle=0.277ms
+emit-probe query=0.816ms dirtyStatic=0.000ms retained=0.506ms lifecycle=0.271ms
+emit-probe query=0.820ms dirtyStatic=0.001ms retained=0.559ms lifecycle=0.344ms
+emit-probe query=0.869ms dirtyStatic=0.001ms retained=0.496ms lifecycle=0.298ms
+emit-probe query=1.091ms dirtyStatic=0.001ms retained=0.565ms lifecycle=0.346ms
+emit-probe query=0.855ms dirtyStatic=0.001ms retained=0.543ms lifecycle=0.312ms
+emit-probe query=0.999ms dirtyStatic=0.001ms retained=0.530ms lifecycle=0.336ms
+emit-probe query=0.857ms dirtyStatic=0.001ms retained=0.503ms lifecycle=0.801ms
+emit-probe query=0.875ms dirtyStatic=0.001ms retained=0.507ms lifecycle=0.333ms
+emit-probe query=0.864ms dirtyStatic=0.001ms retained=0.480ms lifecycle=0.263ms
+emit-probe query=0.856ms dirtyStatic=0.000ms retained=0.507ms lifecycle=0.335ms
+emit-probe query=0.865ms dirtyStatic=0.001ms retained=0.523ms lifecycle=0.294ms
+emit-probe query=0.837ms dirtyStatic=0.001ms retained=0.513ms lifecycle=0.320ms
+emit-probe query=0.872ms dirtyStatic=0.001ms retained=0.878ms lifecycle=0.297ms
+emit-probe query=0.858ms dirtyStatic=0.001ms retained=0.415ms lifecycle=0.283ms
+emit-probe query=1.222ms dirtyStatic=0.001ms retained=0.617ms lifecycle=0.279ms
+emit-probe query=0.903ms dirtyStatic=0.001ms retained=0.507ms lifecycle=0.337ms
+emit-probe query=0.869ms dirtyStatic=0.001ms retained=0.559ms lifecycle=0.309ms
+emit-probe query=0.897ms dirtyStatic=0.001ms retained=0.518ms lifecycle=0.322ms
+emit-probe query=0.889ms dirtyStatic=0.001ms retained=0.476ms lifecycle=0.316ms
+emit-probe query=1.034ms dirtyStatic=0.001ms retained=0.583ms lifecycle=0.303ms
+emit-probe query=0.903ms dirtyStatic=0.001ms retained=0.001ms lifecycle=0.310ms
+emit-probe query=1.163ms dirtyStatic=0.001ms retained=0.532ms lifecycle=0.287ms
+emit-probe query=0.877ms dirtyStatic=0.000ms retained=0.521ms lifecycle=0.327ms
+emit-probe query=0.910ms dirtyStatic=0.001ms retained=0.987ms lifecycle=0.290ms
+emit-probe query=0.870ms dirtyStatic=0.001ms retained=0.516ms lifecycle=0.296ms
+emit-probe query=0.956ms dirtyStatic=0.001ms retained=0.527ms lifecycle=0.327ms
+emit-probe query=0.880ms dirtyStatic=0.001ms retained=0.520ms lifecycle=0.318ms
+emit-probe query=0.912ms dirtyStatic=0.001ms retained=0.532ms lifecycle=0.294ms
+emit-probe query=0.855ms dirtyStatic=0.001ms retained=0.761ms lifecycle=0.300ms
+INFO: SHADER: [ID 0] Unloaded shader program data from VRAM (GPU)
+INFO: SHADER: [ID 0] Unloaded shader program data from VRAM (GPU)
+INFO: SHADER: [ID 0] Unloaded shader program data from VRAM (GPU)
+INFO: SHADER: [ID 0] Unloaded shader program data from VRAM (GPU)
+INFO: SHADER: [ID 9] Unloaded shader program data from VRAM (GPU)
+INFO: SHADER: [ID 10] Unloaded shader program data from VRAM (GPU)
+INFO: SHADER: [ID 11] Unloaded shader program data from VRAM (GPU)
+INFO: SHADER: [ID 12] Unloaded shader program data from VRAM (GPU)
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+INFO: SHADER: [ID 0] Unloaded shader program data from VRAM (GPU)
+INFO: SHADER: [ID 8] Unloaded shader program data from VRAM (GPU)
+INFO: SHADER: [ID 14] Unloaded shader program data from VRAM (GPU)
+INFO: TEXTURE: [ID 6] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 5] Unloaded texture data from VRAM (GPU)
+INFO: VAO: [ID 7] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 8] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 9] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 10] Unloaded vertex array data from VRAM (GPU)
+INFO: SHADER: [ID 0] Unloaded shader program data from VRAM (GPU)
+INFO: SHADER: [ID 15] Unloaded shader program data from VRAM (GPU)
+INFO: VAO: [ID 2] Unloaded vertex array data from VRAM (GPU)
+INFO: MODEL: Unloaded model (and meshes) from RAM and VRAM
+INFO: VAO: [ID 12] Unloaded vertex array data from VRAM (GPU)
+INFO: MODEL: Unloaded model (and meshes) from RAM and VRAM
+INFO: VAO: [ID 13] Unloaded vertex array data from VRAM (GPU)
+INFO: MODEL: Unloaded model (and meshes) from RAM and VRAM
+INFO: VAO: [ID 14] Unloaded vertex array data from VRAM (GPU)
+INFO: MODEL: Unloaded model (and meshes) from RAM and VRAM
+INFO: VAO: [ID 15] Unloaded vertex array data from VRAM (GPU)
+INFO: MODEL: Unloaded model (and meshes) from RAM and VRAM
+INFO: FBO: [ID 2] Unloaded framebuffer from VRAM (GPU)
+INFO: SHADER: [ID 7] Unloaded shader program data from VRAM (GPU)
+INFO: TEXTURE: [ID 3] Unloaded texture data from VRAM (GPU)
+INFO: AUDIO: Device closed successfully
+INFO: TEXTURE: [ID 2] Unloaded texture data from VRAM (GPU)
+INFO: SHADER: [ID 3] Default shader unloaded successfully
+INFO: TEXTURE: [ID 1] Default texture unloaded successfully
+INFO: Window closed successfully
+INFO: VAO: [ID 3] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 4] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 5] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 6] Unloaded vertex array data from VRAM (GPU)
+INFO: SHADER: [ID 0] Unloaded shader program data from VRAM (GPU)
+INFO: SHADER: [ID 13] Unloaded shader program data from VRAM (GPU)
+[INF][Engine] Unloading ModLoader contexts...
+[INF][Engine] Disposing JobScheduler...

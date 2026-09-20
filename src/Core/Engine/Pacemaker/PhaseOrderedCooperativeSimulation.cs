@@ -9,23 +9,9 @@ namespace Ludots.Core.Engine.Pacemaker
 {
     public sealed class PhaseOrderedCooperativeSimulation : ICooperativeSimulation
     {
-        private static readonly SystemGroup[] PhaseOrder =
-        [
-            SystemGroup.SchemaUpdate,
-            SystemGroup.InputCollection,
-            SystemGroup.PostMovement,
-            SystemGroup.AbilityActivation,
-            SystemGroup.EffectProcessing,
-            SystemGroup.RuntimeEntityBinding,
-            SystemGroup.AttributeCalculation,
-            SystemGroup.DeferredTriggerCollection,
-            SystemGroup.Cleanup,
-            SystemGroup.EventDispatch,
-            SystemGroup.ClearPresentationFlags
-        ];
-
         private readonly Dictionary<SystemGroup, List<ISystem<float>>> _systemGroups;
-        private readonly Action<float> _onStepCompleted;
+        private readonly Action<float>? _onStepStarted;
+        private readonly Action<float>? _onStepCompleted;
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
 
         private bool _stepActive;
@@ -34,10 +20,12 @@ namespace Ludots.Core.Engine.Pacemaker
 
         public PhaseOrderedCooperativeSimulation(
             Dictionary<SystemGroup, List<ISystem<float>>> systemGroups,
-            Action<float> onStepCompleted = null,
-            PresentationTimingDiagnostics? timingDiagnostics = null)
+            Action<float>? onStepCompleted = null,
+            PresentationTimingDiagnostics? timingDiagnostics = null,
+            Action<float>? onStepStarted = null)
         {
             _systemGroups = systemGroups;
+            _onStepStarted = onStepStarted;
             _onStepCompleted = onStepCompleted;
             _timingDiagnostics = timingDiagnostics;
         }
@@ -49,15 +37,17 @@ namespace Ludots.Core.Engine.Pacemaker
                 _stepActive = true;
                 _phaseIndex = 0;
                 _systemIndex = 0;
+                _onStepStarted?.Invoke(fixedDt);
             }
 
             if (timeBudgetMs <= 0) timeBudgetMs = 1;
             var start = System.Diagnostics.Stopwatch.GetTimestamp();
             long budgetTicks = timeBudgetMs * (System.Diagnostics.Stopwatch.Frequency / 1000);
 
-            while (_phaseIndex < PhaseOrder.Length)
+            IReadOnlyList<SystemGroup> phases = SystemGroupOrder.All;
+            while (_phaseIndex < phases.Count)
             {
-                var phase = PhaseOrder[_phaseIndex];
+                var phase = phases[_phaseIndex];
                 if (_systemGroups.TryGetValue(phase, out var systems))
                 {
                     for (int i = _systemIndex; i < systems.Count; i++)

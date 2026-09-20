@@ -19,7 +19,6 @@ namespace Ludots.Tests.GAS
             var relationshipMetrics = new RelationshipMetricRegistry();
             var relationshipFlags = new RelationshipFlagRegistry();
             var relationshipBands = new RelationshipBandRegistry();
-            var relationshipReasons = new RelationshipReasonRegistry();
             var relationships = new RelationshipRuntime(
                 world,
                 relationshipTypes,
@@ -36,8 +35,7 @@ namespace Ludots.Tests.GAS
                 relationshipTypes,
                 relationshipMetrics,
                 relationshipFlags,
-                relationshipBands,
-                relationshipReasons);
+                relationshipBands);
             int ownsTypeId = relationships.TypeRegistry.GetId("Owns");
             var ownership = new OwnershipResolver(relationships, ownsTypeId);
 

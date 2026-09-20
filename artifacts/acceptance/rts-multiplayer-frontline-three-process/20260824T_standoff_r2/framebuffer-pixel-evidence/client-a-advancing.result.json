@@ -1,0 +1,103 @@
+{
+    "schemaVersion":  1,
+    "imagePath":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260824T_standoff_r2\\screens\\client-a\\frontline_002_advancing.png",
+    "width":  1280,
+    "height":  720,
+    "passed":  true,
+    "requirements":  [
+                         {
+                             "role":  "battleInfantryBodies",
+                             "presentationTemplate":  "rts.frontline.infantry.body",
+                             "minimumPixelsPerRegion":  5,
+                             "minimumPassingRegions":  2,
+                             "passingRegions":  6,
+                             "matchingPixels":  2029,
+                             "passed":  true,
+                             "regions":  [
+                                             {
+                                                 "id":  "51:16147765",
+                                                 "x":  633,
+                                                 "y":  330,
+                                                 "width":  27,
+                                                 "height":  33,
+                                                 "matchingPixels":  326,
+                                                 "passed":  true
+                                             },
+                                             {
+                                                 "id":  "51:17673833",
+                                                 "x":  674,
+                                                 "y":  245,
+                                                 "width":  27,
+                                                 "height":  32,
+                                                 "matchingPixels":  302,
+                                                 "passed":  true
+                                             },
+                                             {
+                                                 "id":  "51:31791884",
+                                                 "x":  930,
+                                                 "y":  309,
+                                                 "width":  38,
+                                                 "height":  34,
+                                                 "matchingPixels":  360,
+                                                 "passed":  true
+                                             },
+                                             {
+                                                 "id":  "51:34844020",
+                                                 "x":  883,
+                                                 "y":  306,
+                                                 "width":  37,
+                                                 "height":  33,
+                                                 "matchingPixels":  368,
+                                                 "passed":  true
+                                             },
+                                             {
+                                                 "id":  "51:38275751",
+                                                 "x":  524,
+                                                 "y":  339,
+                                                 "width":  32,
+                                                 "height":  33,
+                                                 "matchingPixels":  396,
+                                                 "passed":  true
+                                             },
+                                             {
+                                                 "id":  "51:41327887",
+                                                 "x":  529,
+                                                 "y":  301,
+                                                 "width":  29,
+                                                 "height":  33,
+                                                 "matchingPixels":  277,
+                                                 "passed":  true
+                                             }
+                                         ]
+                         },
+                         {
+                             "role":  "crystalField",
+                             "presentationTemplate":  "rts.frontline.crystal.center",
+                             "minimumPixelsPerRegion":  5,
+                             "minimumPassingRegions":  1,
+                             "passingRegions":  2,
+                             "matchingPixels":  1530,
+                             "passed":  true,
+                             "regions":  [
+                                             {
+                                                 "id":  "55:19199905",
+                                                 "x":  713,
+                                                 "y":  300,
+                                                 "width":  26,
+                                                 "height":  51,
+                                                 "matchingPixels":  707,
+                                                 "passed":  true
+                                             },
+                                             {
+                                                 "id":  "55:20725973",
+                                                 "x":  433,
+                                                 "y":  300,
+                                                 "width":  34,
+                                                 "height":  51,
+                                                 "matchingPixels":  823,
+                                                 "passed":  true
+                                             }
+                                         ]
+                         }
+                     ]
+}

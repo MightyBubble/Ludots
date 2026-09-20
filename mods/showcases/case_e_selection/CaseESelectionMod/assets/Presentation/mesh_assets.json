@@ -1,0 +1,17 @@
+[
+  {
+    "id": "case_e.commander_cube",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "case_e.marine_cube",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "case_e.raider_cube",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  }
+]

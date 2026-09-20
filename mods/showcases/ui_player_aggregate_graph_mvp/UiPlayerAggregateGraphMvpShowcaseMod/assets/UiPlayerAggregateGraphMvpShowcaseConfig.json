@@ -1,0 +1,78 @@
+{
+  "mapId": "ui_player_aggregate_graph_mvp",
+  "graphId": "ui.panel.player.resource.aggregate",
+  "playerTeamId": 1,
+  "factionOwnerName": "Player Faction",
+  "shutDownBuildingName": "Crystal Hub Beta",
+  "attributes": {
+    "ore": "Showcase.Resource.Ore",
+    "crystal": "Showcase.Resource.Crystal"
+  },
+  "panelBindings": [
+    {
+      "variableId": "oreTotal",
+      "label": "Ore",
+      "graphOutputKey": "ui.panel.player.ore.total",
+      "accent": "#F0C36B"
+    },
+    {
+      "variableId": "crystalTotal",
+      "label": "Crystal",
+      "graphOutputKey": "ui.panel.player.crystal.total",
+      "accent": "#7CC4FF"
+    }
+  ],
+  "buildings": [
+    {
+      "name": "Ore Depot Alpha",
+      "ore": 120,
+      "crystal": 30
+    },
+    {
+      "name": "Crystal Hub Beta",
+      "ore": 60,
+      "crystal": 90
+    }
+  ],
+  "presentation": {
+    "title": "Player Resource Overview",
+    "copy": "Ore and Crystal totals come from the tally Query graph projection written into GraphOutputValueStore — the panel never hand-sums buildings.",
+    "controls": "Click Shut down Crystal Hub, or press Space.",
+    "panel": {
+      "width": 560,
+      "padding": 16,
+      "gap": 10,
+      "radius": 10,
+      "background": "#0A1320",
+      "borderColor": "#2F475E",
+      "borderThickness": 1,
+      "titleColor": "#F4F7FB",
+      "copyColor": "#B7C9DA",
+      "graphMetaColor": "#8096AA",
+      "statusColor": "#F5C66E",
+      "controlsColor": "#94D2FF",
+      "chipValueColor": "#F7FBFF",
+      "chipGap": 18,
+      "buttonPaddingX": 12,
+      "buttonPaddingY": 8,
+      "buttonRadius": 8,
+      "buttonBackground": "#3B5F7A",
+      "buttonOfflineBackground": "#243140",
+      "buttonColor": "#F5F7FA"
+    },
+    "markers": {
+      "onlineColor": { "r": 80, "g": 200, "b": 140, "a": 255 },
+      "offlineColor": { "r": 180, "g": 70, "b": 70, "a": 255 },
+      "onlineDotColor": { "r": 255, "g": 255, "b": 0, "a": 255 },
+      "offlineDotColor": { "r": 255, "g": 0, "b": 0, "a": 255 },
+      "halfSizeMeters": 0.85,
+      "innerScale": 0.55,
+      "outerThickness": 0.1,
+      "innerThickness": 0.08,
+      "onlineDotRadius": 0.42,
+      "offlineDotRadius": 0.28,
+      "dotThickness": 0.08,
+      "offlineStockEpsilon": 0.01
+    }
+  }
+}

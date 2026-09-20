@@ -1,0 +1,50 @@
+{
+  "name": "presenter-command-flow",
+  "title": "PresenterCommand Flow",
+  "subtitle": "CommandBuffer -> EmitSystem -> EntityRuntime",
+  "canvas": { "width": 1900, "height": 1280 },
+
+  "nodes": [
+    { "id": "gas", "title": "Gameplay / GAS", "tint": "sage", "x": 40, "y": 140, "w": 300, "h": 90 },
+    { "id": "sel", "title": "Selection Events", "tint": "mauve", "x": 40, "y": 260, "w": 300, "h": 90 },
+    { "id": "glob", "title": "Global Events", "tint": "clay", "x": 40, "y": 380, "w": 300, "h": 90 },
+
+    { "id": "pes", "title": "PresentationEventStream", "tint": "stone", "x": 460, "y": 220, "w": 340, "h": 110,
+      "items": ["Fixed Capacity Event Stream"] },
+    { "id": "prs", "title": "PresenterRuleSystem", "tint": "stone", "x": 880, "y": 220, "w": 340, "h": 110,
+      "items": ["Event x Rule -> Command"] },
+    { "id": "pcb", "title": "PresenterCommandBuffer", "tint": "stone", "x": 1300, "y": 220, "w": 360, "h": 110,
+      "items": ["Ring Buffer 0-GC"] },
+
+    { "id": "c1", "title": "Create", "tint": "stone", "x": 1520, "y": 420, "w": 320, "h": 60 },
+    { "id": "c2", "title": "Destroy", "tint": "stone", "x": 1520, "y": 500, "w": 320, "h": 60 },
+    { "id": "c3", "title": "SetParam", "tint": "stone", "x": 1520, "y": 660, "w": 320, "h": 60 },
+    { "id": "c4", "title": "Activate/Deactivate", "tint": "stone", "x": 1520, "y": 740, "w": 320, "h": 60 },
+
+    { "id": "runtime", "title": "PresenterRuntimeSystem", "tint": "stone", "x": 880, "y": 460, "w": 360, "h": 110,
+      "items": ["Command Consume / Instance Lifecycle"] },
+    { "id": "behavior", "title": "PresenterBehaviorSystem", "tint": "stone", "x": 880, "y": 640, "w": 360, "h": 110,
+      "items": ["Behavior Drive / Animation / Material"] },
+    { "id": "emit", "title": "PresenterEmitSystem", "tint": "stone", "border_w": 1.6, "x": 880, "y": 820, "w": 400, "h": 110,
+      "items": ["Output: VisualProxy / DrawBuffer / SoundRequest"] },
+    { "id": "adapter", "title": "Adapter Consume (Raylib / UE5 / Web)", "tint": "steel", "x": 880, "y": 1000, "w": 400, "h": 80 }
+  ],
+
+  "edges": [
+    { "from": "gas", "to": "pes" },
+    { "from": "sel", "to": "pes" },
+    { "from": "glob", "to": "pes" },
+    { "from": "pes", "to": "prs" },
+    { "from": "prs", "to": "pcb" },
+    { "from": "pcb", "to": "runtime", "route": "elbow", "from_side": "bottom", "to_side": "right", "stub": 40 },
+    { "from": "c1", "to": "runtime", "arrow": false, "route": "elbow", "from_side": "left", "to_side": "right", "stub": 20 },
+    { "from": "c2", "to": "runtime", "arrow": false, "route": "elbow", "from_side": "left", "to_side": "right", "stub": 20 },
+    { "from": "c3", "to": "behavior", "arrow": false, "route": "elbow", "from_side": "left", "to_side": "right", "stub": 20 },
+    { "from": "c4", "to": "behavior", "arrow": false, "route": "elbow", "from_side": "left", "to_side": "right", "stub": 20 },
+    { "from": "runtime", "to": "behavior" },
+    { "from": "behavior", "to": "emit" },
+    { "from": "emit", "to": "adapter" },
+    { "from": "emit", "to": "pes", "route": "elbow", "from_side": "left", "to_side": "bottom", "stub": 60,
+      "style": "dashed", "label": "Overflow Count / Telemetry" }
+  ]
+}

@@ -1,0 +1,14 @@
+[
+  {
+    "id": "showcase.panel.test",
+    "graph": "showcase.panel.test.graph.values",
+    "pins": [
+      {
+        "name": "health",
+        "key": "showcase.panel.test.health",
+        "mode": "realtime",
+        "default": 0
+      }
+    ]
+  }
+]

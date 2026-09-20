@@ -1,0 +1,11 @@
+{
+  "name": "RaylibPlatformMeshesMod",
+  "version": "1.0.0",
+  "description": "Platform benchmark mesh fixtures: the five blacksmith building models shared by raylib platform benchmarks and the engine gallery, decoupled from the presenter showcase.",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["fixture", "raylib", "meshes"]
+}

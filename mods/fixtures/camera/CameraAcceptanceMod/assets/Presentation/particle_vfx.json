@@ -1,0 +1,87 @@
+[
+  {
+    "id": "camera.projection_cue",
+    "version": "quarks.ludots.v1",
+    "spawnMode": "Loop",
+    "shape": "Sphere",
+    "renderMode": "Primitive",
+    "blendMode": "Additive",
+    "primitive": "Sphere",
+    "maxParticles": 96,
+    "seed": 2026080611,
+    "durationSeconds": 0.75,
+    "emissionRatePerSecond": 36,
+    "burstCount": 24,
+    "shapeRadius": 0.58,
+    "shapeAngleRadians": 0.0,
+    "shapeThickness": 0.25,
+    "startLife": [
+      0.45,
+      0.85
+    ],
+    "startSpeed": [
+      0.15,
+      0.7
+    ],
+    "startSize": [
+      0.045,
+      0.12
+    ],
+    "startColor": [
+      0.25,
+      0.88,
+      1.0,
+      0.9
+    ],
+    "sizeOverLife": [
+      {
+        "position": 0.0,
+        "value": 0.45
+      },
+      {
+        "position": 0.35,
+        "value": 1.0
+      },
+      {
+        "position": 1.0,
+        "value": 0.1
+      }
+    ],
+    "colorOverLife": [
+      {
+        "position": 0.0,
+        "color": [
+          0.55,
+          0.95,
+          1.0,
+          0.9
+        ]
+      },
+      {
+        "position": 0.55,
+        "color": [
+          1.0,
+          0.92,
+          0.32,
+          0.65
+        ]
+      },
+      {
+        "position": 1.0,
+        "color": [
+          0.08,
+          0.18,
+          0.24,
+          0.0
+        ]
+      }
+    ],
+    "gravity": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "drag": 0.08,
+    "worldSpace": true
+  }
+]

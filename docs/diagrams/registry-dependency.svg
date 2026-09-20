@@ -632,7 +632,7 @@ z
     <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="194.4" y="880.429219" transform="rotate(-0 194.4 880.429219)">LayerRegistry</text>
    </g>
    <g id="text_24">
-    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="684" y="143.192188" transform="rotate(-0 684 143.192188)">PerformerDefinition</text>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="684" y="143.192188" transform="rotate(-0 684 143.192188)">PresenterDefinition</text>
    </g>
    <g id="text_25">
     <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="684" y="195.032187" transform="rotate(-0 684 195.032187)">AnimationClip</text>

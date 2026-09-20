@@ -224,6 +224,10 @@ namespace Ludots.Core.Gameplay.GAS
             }
 
             templates.FinalizeExecutionPlans(plannedExecutionPlans);
+            templates.SetPeriodKernelTable(EffectPeriodKernelCompiler.Compile(
+                templates,
+                presetTypes,
+                graphPrograms));
         }
 
         private static unsafe void AnalyzeListenerGraphs(
@@ -258,7 +262,7 @@ namespace Ludots.Core.Gameplay.GAS
                 int graphId = listeners.GraphProgramIds[listenerIndex];
                 int eventTagId = listeners.EventTagIds[listenerIndex];
                 if (!EffectPhaseListenerContract.TryValidateRegistration(
-                        listeners.ListenTagIds[listenerIndex],
+                        listeners.ListenCategoryIds[listenerIndex],
                         listeners.ListenEffectIds[listenerIndex],
                         phase,
                         scope,

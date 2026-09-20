@@ -1,0 +1,10 @@
+{
+  "name": "PanelThemeInkMod",
+  "version": "1.0.0",
+  "description": "Panel theme showcase variant: ink-wash",
+  "priority": 0,
+  "dependencies": {
+    "FireballSharedMod": "^1.0.0",
+    "PanelThemeShowcaseMod": "^1.0.0"
+  }
+}

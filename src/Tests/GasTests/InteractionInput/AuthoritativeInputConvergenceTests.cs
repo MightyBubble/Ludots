@@ -2,9 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
+using Ludots.Tests.TestCommon;
+using Ludots.Core.Client;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Bindings;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Input;
@@ -49,17 +52,17 @@ namespace Ludots.Tests.GAS
             var accumulator = new AuthoritativeInputAccumulator();
             var snapshot = new FrozenInputActionReader();
 
-            handler.Update();
+            handler.Update(1f / 60f);
             accumulator.CaptureVisualFrame(handler);
             accumulator.BuildTickSnapshot(snapshot);
             Assert.That(snapshot.PressedThisFrame("Attack"), Is.False);
             Assert.That(snapshot.IsDown("Attack"), Is.False);
 
             backend.Buttons["<Keyboard>/a"] = true;
-            handler.Update();
+            handler.Update(1f / 60f);
             accumulator.CaptureVisualFrame(handler);
 
-            handler.Update();
+            handler.Update(1f / 60f);
             accumulator.CaptureVisualFrame(handler);
 
             accumulator.BuildTickSnapshot(snapshot);
@@ -71,7 +74,7 @@ namespace Ludots.Tests.GAS
             Assert.That(snapshot.IsDown("Attack"), Is.True);
 
             backend.Buttons["<Keyboard>/a"] = false;
-            handler.Update();
+            handler.Update(1f / 60f);
             accumulator.CaptureVisualFrame(handler);
 
             accumulator.BuildTickSnapshot(snapshot);
@@ -116,7 +119,7 @@ namespace Ludots.Tests.GAS
                     zoomAttribute,
                     InputActionAttributeValueKind.Axis1D,
                     0,
-                    InputActionAttributeTargetKind.LocalPlayerEntity,
+                    InputActionAttributeTargetKind.SolePossessedRep,
                     1f,
                     zeroWhenUiCaptured: true,
                     suppressOnUiWheelCaptured: true,
@@ -147,7 +150,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             Entity localPlayerIdentity = world.Create();
-            Entity cameraBehaviorInputTarget = world.Create(new AttributeBuffer(), new CameraBehaviorInputTarget());
+            Entity cameraBehaviorInputTarget = world.Create(new AttributeBuffer(), new DirtyFlags(), new CameraBehaviorInputTarget());
             int lookXAttribute = AttributeRegistry.Register(CameraBehaviorAttributes.LookX);
 
             var authoritativeInput = new FrozenInputActionReader();
@@ -176,10 +179,14 @@ namespace Ludots.Tests.GAS
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.AuthoritativeInput.Name] = authoritativeInput,
-                [CoreServiceKeys.LocalPlayerEntity.Name] = localPlayerIdentity,
                 [CoreServiceKeys.UiCaptured.Name] = false,
             };
-            var system = new InputActionAttributeBindingSystem(world, globals, registry);
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, localPlayerIdentity, 1, "seat.0");
+            var system = new InputActionAttributeBindingSystem(
+                world,
+                globals,
+                registry,
+                new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             system.Update(0f);
 
@@ -223,14 +230,14 @@ namespace Ludots.Tests.GAS
             system.SetOrderSubmitHandler((in Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
 
             using var world = World.Create();
-            system.SetLocalPlayer(world.Create(), 1);
+            system.SetSolePossessedActor(world.Create(), 1);
 
             backend.Buttons["<Keyboard>/a"] = true;
-            handler.Update();
+            handler.Update(1f / 60f);
             accumulator.CaptureVisualFrame(handler);
 
             backend.Buttons["<Keyboard>/a"] = false;
-            handler.Update();
+            handler.Update(1f / 60f);
             accumulator.CaptureVisualFrame(handler);
 
             accumulator.BuildTickSnapshot(snapshot);
@@ -276,11 +283,11 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
                 [CoreServiceKeys.AbilityInputRequestQueue.Name] = new InputRequestQueue(),
                 [CoreServiceKeys.InputResponseBuffer.Name] = new InputResponseBuffer(),
-                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
                 [CoreServiceKeys.EntityCollectionStore.Name] = collections,
                 [CoreServiceKeys.EntityCollectionKeyRegistry.Name] = collectionKeys,
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings { ConfirmActionId = "Confirm" },
             };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1, "seat.0");
             ((AuthoritativePointerButtonSnapshot)globals[CoreServiceKeys.AuthoritativePointerButtons.Name]).SetState(
                 "Confirm",
                 new PointerButtonState(
@@ -315,7 +322,7 @@ namespace Ludots.Tests.GAS
             var session = new GameSession();
             using var world = World.Create();
             var behaviorInput = new CameraBehaviorInputState();
-            Entity localPlayer = world.Create(new AttributeBuffer(), new CameraBehaviorInputTarget());
+            Entity localPlayer = world.Create(new AttributeBuffer(), new DirtyFlags(), new CameraBehaviorInputTarget());
             var registry = new VirtualCameraRegistry();
             registry.Register(new VirtualCameraDefinition
             {
@@ -333,18 +340,25 @@ namespace Ludots.Tests.GAS
                 EnableZoom = false,
                 AllowUserInput = true
             });
-            session.Camera.SetVirtualCameraRegistry(registry);
-            session.Camera.ConfigureRuntime(behaviorInput, new StubViewController());
-            session.Camera.ActivateVirtualCamera("EdgePan", blendDurationSeconds: 0f);
+            var camera = new CameraManager();
+            camera.SetVirtualCameraRegistry(registry);
+            camera.ConfigureRuntime(behaviorInput, new StubViewController());
+            camera.ActivateVirtualCamera("EdgePan", blendDurationSeconds: 0f);
 
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.InputHandler.Name] = handler,
                 [CoreServiceKeys.AuthoritativeInput.Name] = handler,
                 [CoreServiceKeys.GameSession.Name] = session,
-                [CoreServiceKeys.LocalPlayerEntity.Name] = localPlayer,
                 [CoreServiceKeys.UiCaptured.Name] = true,
             };
+            ClientLocalSeatBindings.BindSoleSeat(
+                globals,
+                localPlayer,
+                playerId: 1,
+                seatId: "seat.0",
+                primaryCamera: camera,
+                presentResolutionPx: ClientLocalSeatTestBindings.DefaultPresentResolutionPx);
             var actionBindings = new InputActionAttributeBindingRegistry();
             actionBindings.Set(new[]
             {
@@ -353,7 +367,7 @@ namespace Ludots.Tests.GAS
                     AttributeRegistry.Register(CameraBehaviorAttributes.PointerX),
                     InputActionAttributeValueKind.Axis2D,
                     0,
-                    InputActionAttributeTargetKind.LocalPlayerEntity,
+                    InputActionAttributeTargetKind.SolePossessedRep,
                     1f,
                     zeroWhenUiCaptured: true,
                     suppressOnUiWheelCaptured: false,
@@ -363,7 +377,7 @@ namespace Ludots.Tests.GAS
                     AttributeRegistry.Register(CameraBehaviorAttributes.PointerY),
                     InputActionAttributeValueKind.Axis2D,
                     1,
-                    InputActionAttributeTargetKind.LocalPlayerEntity,
+                    InputActionAttributeTargetKind.SolePossessedRep,
                     1f,
                     zeroWhenUiCaptured: true,
                     suppressOnUiWheelCaptured: false,
@@ -373,7 +387,7 @@ namespace Ludots.Tests.GAS
                     AttributeRegistry.Register(CameraBehaviorAttributes.PointerActive),
                     InputActionAttributeValueKind.Constant,
                     0,
-                    InputActionAttributeTargetKind.LocalPlayerEntity,
+                    InputActionAttributeTargetKind.SolePossessedRep,
                     1f,
                     zeroWhenUiCaptured: true,
                     suppressOnUiWheelCaptured: false,
@@ -413,25 +427,29 @@ namespace Ludots.Tests.GAS
                 new[] { new AttributeBindingGroup(cameraSinkId, 0, 3) });
 
             var system = new InputRuntimeSystem(globals);
-            var actionBindingSystem = new InputActionAttributeBindingSystem(world, globals, actionBindings);
+            var actionBindingSystem = new InputActionAttributeBindingSystem(
+                world,
+                globals,
+                actionBindings,
+                new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             var attributeBindingSystem = new AttributeBindingSystem(world, sinks, attributeBindings);
 
             backend.MousePosition = Vector2.Zero;
             system.Update(1f);
             actionBindingSystem.Update(1f);
             attributeBindingSystem.Update(1f);
-            session.Camera.Update(1f);
+            camera.Update(1f);
 
-            Assert.That(session.Camera.State.TargetCm.X, Is.EqualTo(0f).Within(0.01f));
-            Assert.That(session.Camera.State.TargetCm.Y, Is.EqualTo(0f).Within(0.01f));
+            Assert.That(camera.State.TargetCm.X, Is.EqualTo(0f).Within(0.01f));
+            Assert.That(camera.State.TargetCm.Y, Is.EqualTo(0f).Within(0.01f));
 
             globals[CoreServiceKeys.UiCaptured.Name] = false;
             system.Update(1f);
             actionBindingSystem.Update(1f);
             attributeBindingSystem.Update(1f);
-            session.Camera.Update(1f);
+            camera.Update(1f);
 
-            Assert.That(session.Camera.State.TargetCm.Length(), Is.GreaterThan(0.01f));
+            Assert.That(camera.State.TargetCm.Length(), Is.GreaterThan(0.01f));
         }
 
         [Test]
@@ -469,7 +487,7 @@ namespace Ludots.Tests.GAS
                     AttributeRegistry.Register(CameraBehaviorAttributes.Zoom),
                     InputActionAttributeValueKind.Axis1D,
                     0,
-                    InputActionAttributeTargetKind.LocalPlayerEntity,
+                    InputActionAttributeTargetKind.SolePossessedRep,
                     1f,
                     zeroWhenUiCaptured: true,
                     suppressOnUiWheelCaptured: true,
@@ -505,7 +523,7 @@ namespace Ludots.Tests.GAS
             {
                 [CoreServiceKeys.InputHandler.Name] = handler,
                 [CoreServiceKeys.ScreenRayProvider.Name] = new VerticalScreenRayProvider(),
-                [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
+                [CoreServiceKeys.ContinuousHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = new WorldSizeSpec(new WorldAabbCm(-100000, -100000, 200000, 200000), 100),
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
@@ -530,7 +548,7 @@ namespace Ludots.Tests.GAS
             {
                 [CoreServiceKeys.InputHandler.Name] = handler,
                 [CoreServiceKeys.ScreenRayProvider.Name] = new VerticalScreenRayProvider(),
-                [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
+                [CoreServiceKeys.ContinuousHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = new WorldSizeSpec(new WorldAabbCm(-100000, -100000, 200000, 200000), 100),
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
                 [CoreServiceKeys.AuthoritativeGroundPointerOverride.Name] = groundOverride,
@@ -681,8 +699,8 @@ namespace Ludots.Tests.GAS
             Assert.That(pointerSnapshot.TryGetState("Confirm", out var selectState), Is.True);
             Assert.That(selectState.PressedThisFrame, Is.False, "Pointer buttons snapshot must not leak minimap clicks into gameplay selection.");
 
-            Assert.That(engine.GameSession.Camera.State.TargetCm.X, Is.EqualTo(expectedTarget.X).Within(1f));
-            Assert.That(engine.GameSession.Camera.State.TargetCm.Y, Is.EqualTo(expectedTarget.Y).Within(1f));
+            Assert.That(engine.AuthorityCamera().State.TargetCm.X, Is.EqualTo(expectedTarget.X).Within(1f));
+            Assert.That(engine.AuthorityCamera().State.TargetCm.Y, Is.EqualTo(expectedTarget.Y).Within(1f));
         }
 
         [Test]
@@ -741,7 +759,7 @@ namespace Ludots.Tests.GAS
             engine.SetService(CoreServiceKeys.PointerInputCaptured, false);
             engine.SetService(CoreServiceKeys.InputFrameConsumers, new List<IInputFrameConsumer> { CreateMinimapInputConsumer(minimap) });
             engine.SetService(CoreServiceKeys.ScreenRayProvider, rayProvider);
-            engine.SetService(CoreServiceKeys.VisualHeightmap, CreateFlatHeightmap());
+            engine.SetService(CoreServiceKeys.ContinuousHeightmap, CreateFlatHeightmap());
             engine.SetService(CoreServiceKeys.WorldSizeSpec, new WorldSizeSpec(new WorldAabbCm(-100000, -100000, 200000, 200000), 100));
 
             var input = new AuthoritativeInputAccumulator();
@@ -817,7 +835,7 @@ namespace Ludots.Tests.GAS
             engine.SetService(CoreServiceKeys.MinimapRuntime, minimap);
             minimap.Visible = true;
             minimap.UseRtsFullMapPreset();
-            engine.GameSession.Camera.ApplyPose(new CameraPoseRequest { Yaw = 90f });
+            engine.AuthorityCamera().ApplyPose(new CameraPoseRequest { Yaw = 90f });
             minimap.Refresh(engine, markerBuffer, screenMarkers);
 
             engine.SetService(CoreServiceKeys.InputHandler, handler);
@@ -867,14 +885,14 @@ namespace Ludots.Tests.GAS
             backend.Buttons["<Mouse>/LeftButton"] = true;
             Assert.That(minimap.TryScreenToWorld(firstDrag, out Vector2 expectedFirstTarget), Is.True);
             system.Update(1f / 60f);
-            Assert.That(engine.GameSession.Camera.State.TargetCm.X, Is.EqualTo(expectedFirstTarget.X).Within(1f));
-            Assert.That(engine.GameSession.Camera.State.TargetCm.Y, Is.EqualTo(expectedFirstTarget.Y).Within(1f));
+            Assert.That(engine.AuthorityCamera().State.TargetCm.X, Is.EqualTo(expectedFirstTarget.X).Within(1f));
+            Assert.That(engine.AuthorityCamera().State.TargetCm.Y, Is.EqualTo(expectedFirstTarget.Y).Within(1f));
 
             backend.MousePosition = secondDrag;
             Assert.That(minimap.TryScreenToWorld(secondDrag, out Vector2 expectedSecondTarget), Is.True);
             system.Update(1f / 60f);
-            Assert.That(engine.GameSession.Camera.State.TargetCm.X, Is.EqualTo(expectedSecondTarget.X).Within(1f));
-            Assert.That(engine.GameSession.Camera.State.TargetCm.Y, Is.EqualTo(expectedSecondTarget.Y).Within(1f));
+            Assert.That(engine.AuthorityCamera().State.TargetCm.X, Is.EqualTo(expectedSecondTarget.X).Within(1f));
+            Assert.That(engine.AuthorityCamera().State.TargetCm.Y, Is.EqualTo(expectedSecondTarget.Y).Within(1f));
             Assert.That(handler.IsDown("Confirm"), Is.False, "Held minimap drag must keep suppressing gameplay confirm.");
 
             backend.Buttons["<Mouse>/LeftButton"] = false;
@@ -1106,10 +1124,10 @@ namespace Ludots.Tests.GAS
             }
         }
 
-        private static IVisualHeightmap CreateFlatHeightmap()
+        private static IContinuousHeightmap CreateFlatHeightmap()
         {
-            return new VisualHeightmapRuntime(
-                VisualHeightmapAsset.CreateSingleLayer(
+            return new ContinuousHeightmapRuntime(
+                ContinuousHeightmapAsset.CreateSingleLayer(
                     new WorldAabbCm(-100000, -100000, 200000, 200000),
                     sampleColumns: 2,
                     sampleRows: 2,

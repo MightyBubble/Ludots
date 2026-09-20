@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "name": "engine_gallery",
+  "scenes": "catalog.json",
+  "contentAssembly": "Ludots.Content.EngineGallery"
+}

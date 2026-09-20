@@ -1,0 +1,40 @@
+{
+  "Id": "navmesh_debug_vhtm",
+  "Tuning": {
+    "LoadedChunkCapacity": 16
+  },
+  "Tags": [
+    "showcase",
+    "navmesh",
+    "vhtm",
+    "Feature.NavMesh:On",
+    "Raylib.DebugGuides:Off"
+  ],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthCells": 256,
+      "HeightCells": 256,
+      "GridCellSizeCm": 100
+    }
+  ],
+  "Entities": [],
+  "TriggerTypes": [],
+  "DefaultCamera": {
+    "VirtualCameraId": "Rts",
+    "TargetXCm": 12800,
+    "TargetYCm": 12800,
+    "Yaw": 180,
+    "Pitch": 50,
+    "DistanceCm": 30000,
+    "FovYDeg": 60
+  },
+  "ContinuousHeightmap": {
+    "Asset": "assets/terrain/navmesh_debug_vhtm.height",
+    "RenderProfile": {
+      "AbsoluteColorPeakSpanCm": 1500,
+      "ColorContrast": 2.5
+    }
+  }
+}

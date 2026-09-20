@@ -1,0 +1,15 @@
+{
+  "types": [
+    { "id": "SocialBond", "isSymmetric": false }
+  ],
+  "metrics": [
+    { "id": "Loyalty", "minValue": -100, "maxValue": 100, "defaultValue": 0 }
+  ],
+  "flags": [
+    { "id": "Trusted" },
+    { "id": "Estranged" }
+  ],
+  "reasons": [
+    { "id": "Scenario.Setup" }
+  ]
+}

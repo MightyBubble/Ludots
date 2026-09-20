@@ -35,7 +35,7 @@ AbilityExecSpec:
     → FanOutApplyEffect(damage_template)
 ```
 
-- Performer: `GroundOverlay` (Circle, radius=250, color=red)
+- Presenter: `GroundOverlay` (Circle, radius=250, color=red)
 
 ### D2: 环形/甜甜圈
 
@@ -108,7 +108,7 @@ AbilityExecSpec:
       2. FanOutApplyEffect(delayed_damage)
 ```
 
-- Performer: GroundOverlay(Circle, growing opacity) 在 1.5s 内渐显
+- Presenter: GroundOverlay(Circle, growing opacity) 在 1.5s 内渐显
 
 ### D8: 持续区域
 
@@ -141,9 +141,9 @@ AbilityExecSpec:
 | Minimap click → world position | P3 | D4 (Adapter层) |
 | Wall entity template 规范 | P2 | D3 |
 
-## Performer 集成
+## Presenter 集成
 
-| 场景 | PerformerVisualKind | 参数 |
+| 场景 | PresenterVisualKind | 参数 |
 |------|-------------------|------|
 | D1 圆形AoE指示器 | GroundOverlay(Circle) | radius, color, opacity |
 | D2 环形指示器 | GroundOverlay(Ring) | inner_radius, outer_radius |

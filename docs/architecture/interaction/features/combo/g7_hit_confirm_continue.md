@@ -70,7 +70,7 @@ Hit2 precondition: HasTag("hit_confirmed")          // requires both conditions
           }
         ]
       },
-      "performer": "slash_animation_1"
+      "presenter": "slash_animation_1"
     },
     {
       "id": "hit_confirm_stage_2",
@@ -82,7 +82,7 @@ Hit2 precondition: HasTag("hit_confirmed")          // requires both conditions
           { "type": "RemoveTag", "tag": "hit_confirmed" }
         ]
       },
-      "performer": "slash_animation_2"
+      "presenter": "slash_animation_2"
     }
   ]
 }

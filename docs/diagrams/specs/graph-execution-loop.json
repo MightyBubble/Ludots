@@ -192,7 +192,7 @@
       "ha": "center"
     },
     {
-      "text": "⚠ GraphExecutor 是解释型执行器（非 JIT）。未来可能引入编译式执行优化（performer-compiled-lanes）。",
+      "text": "⚠ GraphExecutor 是解释型执行器（非 JIT）。未来可能引入编译式执行优化（presenter-compiled-lanes）。",
       "x": 90,
       "y": 1330,
       "ha": "left"

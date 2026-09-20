@@ -1,7 +1,10 @@
 {
   "startupMapId": "visual_benchmark",
+  "gasRuntimeCapacity": {
+    "deferredTriggerActiveEntityCapacity": 32768
+  },
   "presentation": {
-    "performerInstanceCapacity": 65536,
+    "presenterInstanceCapacity": 65536,
     "gasPresentationEventCapacity": 65536,
     "screenHudCapacity": 262144,
     "worldHudCapacity": 262144

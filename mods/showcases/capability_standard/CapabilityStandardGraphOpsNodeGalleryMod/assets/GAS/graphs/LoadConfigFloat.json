@@ -1,0 +1,64 @@
+[
+  {
+    "id": "showcase.graph_op.LoadConfigFloat",
+    "kind": "Effect",
+    "entry": "cfgF",
+    "nodes": [
+      {
+        "id": "cfgF",
+        "op": "LoadConfigFloat",
+        "configKey": "showcase.config.power"
+      },
+      {
+        "id": "neg",
+        "op": "NegFloat"
+      },
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "hit",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "cfgF",
+        "fromPort": "next",
+        "to": "neg"
+      },
+      {
+        "from": "neg",
+        "fromPort": "next",
+        "to": "explicit"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "hit"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "cfgF",
+        "fromPort": "value",
+        "to": "neg",
+        "toPort": "value"
+      },
+      {
+        "from": "neg",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "value"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "target"
+      }
+    ]
+  }
+]

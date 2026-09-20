@@ -1,0 +1,10 @@
+{
+  "name": "SelectionInteractionMod",
+  "version": "1.0.0",
+  "description": "Shared data-only rectangle selection: input contexts, graphs, preview and committed markers.",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "tags": ["input", "selection"]
+}

@@ -14,6 +14,7 @@ using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Spatial;
 using NUnit.Framework;
 using GraphInstruction = Ludots.Core.GraphRuntime.GraphInstruction;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {
@@ -97,12 +98,13 @@ namespace Ludots.Tests.GAS
                 graphPrograms,
                 new StubSpatialQueryService(targetNormal, targetDowned),
                 new StubGraphApi(world),
-                AllowAllCandidates);
+                AllowAllCandidates,
+                new GasGraphOpHandlerTable());
 
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var mapping = new InputOrderMappingSystem(input, new InputOrderMappingConfig
             {
-                InteractionMode = InteractionModeType.ContextScored,
+                InteractionMode = CastModeType.ContextScored,
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -119,7 +121,7 @@ namespace Ludots.Tests.GAS
             });
 
             var orders = new List<Ludots.Core.Gameplay.GAS.Orders.Order>();
-            mapping.SetLocalPlayer(actor, 1);
+            mapping.SetSolePossessedActor(actor, 1);
             mapping.SetOrderTypeKeyResolver(key => key == "castAbility" ? 100 : 0);
             mapping.SetHoveredEntityProvider((out Entity entity) =>
             {
@@ -130,12 +132,94 @@ namespace Ludots.Tests.GAS
             mapping.SetOrderSubmitHandler((in Ludots.Core.Gameplay.GAS.Orders.Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
 
             input.InjectButtonPress("Attack");
-            input.Update();
+            input.Update(1f / 60f);
             mapping.Update(0f);
 
             Assert.That(orders.Count, Is.EqualTo(1));
             Assert.That(orders[0].Args.I0, Is.EqualTo(2), "ContextScored should resolve to the finisher slot.");
             Assert.That(orders[0].Target, Is.EqualTo(targetDowned));
+        }
+
+        [Test]
+        public void ContextScoredMode_TargetlessCandidate_EmitsCanonicalTargetlessOrder()
+        {
+            using var world = World.Create();
+
+            const int rootAbilityId = 1050;
+            const int targetlessAbilityId = 1051;
+            Entity actor = world.Create();
+            var abilities = new AbilityStateBuffer();
+            abilities.AddAbility(rootAbilityId);
+            abilities.AddAbility(targetlessAbilityId);
+            world.Add(actor, abilities);
+            world.Add(actor, WorldPositionCm.FromCm(0, 0));
+
+            var contextGroups = new ContextGroupRegistry();
+            contextGroups.Register(
+                groupId: 1,
+                rootAbilityId: rootAbilityId,
+                new ContextGroupDefinition(
+                    searchRadiusCm: 0,
+                    new[]
+                    {
+                        new ContextGroupCandidate(
+                            abilityId: targetlessAbilityId,
+                            preconditionGraphId: 0,
+                            scoreGraphId: 0,
+                            basePriority: 10f,
+                            maxDistanceCm: 0,
+                            distanceWeight: 0f,
+                            maxAngleDeg: 0,
+                            angleWeight: 0f,
+                            hoveredBiasScore: 0f,
+                            requiresTarget: false),
+                    }));
+
+            var resolver = new ContextScoredOrderResolver(
+                world,
+                contextGroups,
+                new GraphProgramRegistry(),
+                new StubSpatialQueryService(),
+                new StubGraphApi(world),
+                AllowAllCandidates,
+                new GasGraphOpHandlerTable());
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var mapping = new InputOrderMappingSystem(input, new InputOrderMappingConfig
+            {
+                InteractionMode = CastModeType.ContextScored,
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Attack",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "castAbility",
+                        ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
+                        RequireTarget = false,
+                        TargetType = OrderTargetType.None,
+                        IsSkillMapping = true,
+                    },
+                },
+            });
+            var orders = new List<Ludots.Core.Gameplay.GAS.Orders.Order>();
+            mapping.SetSolePossessedActor(actor, 1);
+            mapping.SetOrderTypeKeyResolver(key => key == "castAbility" ? 100 : 0);
+            mapping.SetContextScoredProvider(resolver.TryResolve);
+            mapping.SetOrderSubmitHandler((in Ludots.Core.Gameplay.GAS.Orders.Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
+
+            input.InjectButtonPress("Attack");
+            input.Update(1f / 60f);
+            mapping.Update(0f);
+
+            Assert.That(orders, Has.Count.EqualTo(1));
+            Assert.Multiple(() =>
+            {
+                Assert.That(orders[0].Args.I0, Is.EqualTo(1));
+                Assert.That(orders[0].Target, Is.EqualTo(Entity.Null));
+                Assert.That(orders[0].TargetContext, Is.EqualTo(Entity.Null));
+                Assert.That(orders[0].CommandSource, Is.EqualTo(Entity.Null));
+                Assert.That(orders[0].Args.Spatial.Kind, Is.EqualTo(Ludots.Core.Gameplay.GAS.Orders.OrderSpatialKind.None));
+            });
         }
 
         [Test]
@@ -190,7 +274,8 @@ namespace Ludots.Tests.GAS
                 new GraphProgramRegistry(),
                 new StubSpatialQueryService(target),
                 new StubGraphApi(world),
-                AllowAllCandidates);
+                AllowAllCandidates,
+                new GasGraphOpHandlerTable());
 
             bool resolved = resolver.TryResolve(
                 actor,
@@ -267,7 +352,8 @@ namespace Ludots.Tests.GAS
                 new GraphProgramRegistry(),
                 new StubSpatialQueryService(higherEntityIdTarget, lowerEntityIdTarget),
                 new StubGraphApi(world),
-                AllowAllCandidates);
+                AllowAllCandidates,
+                new GasGraphOpHandlerTable());
 
             bool resolved = resolver.TryResolve(
                 actor,
@@ -337,7 +423,8 @@ namespace Ludots.Tests.GAS
                 {
                     Assert.That(viewer, Is.EqualTo(actor), "the resolver gates with the acting entity as viewer.");
                     return candidate != deniedTarget;
-                });
+                },
+                new GasGraphOpHandlerTable());
 
             bool resolved = resolver.TryResolve(
                 actor,
@@ -420,6 +507,14 @@ namespace Ludots.Tests.GAS
 
         private sealed class StubGraphApi : IGraphRuntimeApi
         {
+            public void SpawnTemplate(int templateKeyId, Arch.Core.Entity source, float xCm, float yCm, bool hasPosition)
+            {
+            }
+            public void SetWorldPosition(Arch.Core.Entity target, int xCm, int yCm)
+            {
+            }
+
+
             private readonly World _world;
 
             public StubGraphApi(World world)

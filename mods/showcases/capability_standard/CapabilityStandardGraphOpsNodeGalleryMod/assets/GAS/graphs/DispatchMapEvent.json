@@ -1,0 +1,81 @@
+[
+  {
+    "id": "showcase.graph_op.DispatchMapEvent",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "team"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "team",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "beat",
+        "op": "ConstInt",
+        "intValue": 5
+      },
+      {
+        "id": "delta",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "fire",
+        "op": "DispatchMapEvent",
+        "event": "EntityAliveCountChanged"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "team",
+        "fromPort": "next",
+        "to": "beat"
+      },
+      {
+        "from": "beat",
+        "fromPort": "next",
+        "to": "delta"
+      },
+      {
+        "from": "delta",
+        "fromPort": "next",
+        "to": "fire"
+      },
+      {
+        "from": "fire",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "team",
+        "fromPort": "value",
+        "to": "fire",
+        "toPort": "sourceTeamId"
+      },
+      {
+        "from": "beat",
+        "fromPort": "value",
+        "to": "fire",
+        "toPort": "count"
+      },
+      {
+        "from": "delta",
+        "fromPort": "value",
+        "to": "fire",
+        "toPort": "delta"
+      }
+    ]
+  }
+]

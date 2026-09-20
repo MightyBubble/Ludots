@@ -1,0 +1,189 @@
+using System;
+using Arch.Core;
+using Ludots.Core.GraphRuntime;
+using Ludots.Core.NodeLibraries.GASGraph;
+
+namespace Ludots.Core.Gameplay.AI.Fsm;
+
+public sealed class GraphProgramHfsmHost : IHfsmGraphHost
+{
+    private const int ScriptCacheCapacity = 8;
+    private readonly GraphProgramRegistry _programs;
+    private readonly World? _world;
+    private readonly IGraphRuntimeApi? _api;
+    private readonly int _budgetSteps;
+    private readonly int[] _ints = new int[GraphVmLimits.MaxIntRegisters];
+    private readonly byte[] _bools = new byte[GraphVmLimits.MaxBoolRegisters];
+    private readonly float[] _floats = new float[GraphVmLimits.MaxFloatRegisters];
+    private readonly Entity[] _entities = new Entity[GraphVmLimits.MaxEntityRegisters];
+    private readonly Entity[] _targets = new Entity[GraphVmLimits.MaxTargets];
+    private readonly int[] _callStack = new int[GraphVmLimits.MaxCallStackDepth];
+    private readonly int[] _cachedGraphIds = new int[ScriptCacheCapacity];
+    private readonly int[] _cachedVersions = new int[ScriptCacheCapacity];
+    private readonly GraphInstruction[]?[] _cachedPrograms = new GraphInstruction[ScriptCacheCapacity][];
+    private int _nextCacheSlot;
+    private Entity[] _agentCasters = Array.Empty<Entity>();
+
+    public GraphProgramHfsmHost(
+        GraphProgramRegistry programs,
+        World? world = null,
+        IGraphRuntimeApi? api = null,
+        int budgetSteps = 64)
+    {
+        if (budgetSteps <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(budgetSteps));
+        }
+
+        _programs = programs ?? throw new ArgumentNullException(nameof(programs));
+        _world = world;
+        _api = api;
+        _budgetSteps = budgetSteps;
+    }
+
+    /// <summary>
+    /// Sets the world entity each agent acts on (caster for its lifecycle/condition graphs).
+    /// Agents with no bound entity (unset or out-of-range) resolve to <see cref="Entity.Null"/>,
+    /// preserving the legacy register-only behavior of the showcase hosts.
+    /// </summary>
+    public void EnsureAgentCasterCapacity(int capacity)
+    {
+        if (capacity < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(capacity));
+        }
+
+        if (capacity <= _agentCasters.Length)
+        {
+            return;
+        }
+
+        var next = new Entity[capacity];
+        _agentCasters.AsSpan().CopyTo(next);
+        _agentCasters = next;
+    }
+
+    /// <summary>Binds an agent slot to the world entity it acts on (its graphs' caster).</summary>
+    public void SetAgentCaster(int agentIndex, Entity entity)
+    {
+        EnsureAgentCasterCapacity(agentIndex + 1);
+        _agentCasters[agentIndex] = entity;
+    }
+
+    public bool EvalCondition(int agentIndex, int conditionGraphId)
+    {
+        GraphSliceResult result = ExecuteHalt(conditionGraphId, "状态机条件", CasterFor(agentIndex));
+        return result.ReturnInt != 0;
+    }
+
+    public void RunAction(int agentIndex, int actionGraphId)
+    {
+        GraphSliceResult result = ExecuteHalt(actionGraphId, "状态机生命周期", CasterFor(agentIndex));
+        if (!result.Halted)
+        {
+            throw new InvalidOperationException(
+                $"HFSM action graph {actionGraphId} did not halt (Yield is not allowed on lifecycle bindings).");
+        }
+    }
+
+    /// <summary>
+    /// Runs an action graph and returns its ReturnInt (for hosts that map the return value
+    /// to a status, e.g. BT leaves: non-zero = Success, zero = Failure). Same halt requirement.
+    /// </summary>
+    public int RunActionForReturn(int agentIndex, int actionGraphId)
+    {
+        GraphSliceResult result = ExecuteHalt(actionGraphId, "行为叶子", CasterFor(agentIndex));
+        if (!result.Halted)
+        {
+            throw new InvalidOperationException(
+                $"Behavior leaf graph {actionGraphId} did not halt within budget.");
+        }
+
+        return result.ReturnInt;
+    }
+
+    private Entity CasterFor(int agentIndex)
+        => (uint)agentIndex < _agentCasters.Length ? _agentCasters[agentIndex] : Entity.Null;
+
+    private GraphSliceResult ExecuteHalt(int graphId, string hostLabel, Entity caster)
+    {
+        GraphInstruction[] program = ResolveScriptProgram(graphId, hostLabel);
+        if (TryExecuteImmediateHalt(program, out int immediateReturn))
+        {
+            return new GraphSliceResult(GraphExecutionStatus.Halted, immediateReturn, steps: 2);
+        }
+
+        Array.Clear(_ints, 0, _ints.Length);
+        Array.Clear(_bools, 0, _bools.Length);
+        Array.Clear(_floats, 0, _floats.Length);
+        Array.Clear(_entities, 0, _entities.Length);
+        Array.Clear(_targets, 0, _targets.Length);
+        Array.Clear(_callStack, 0, _callStack.Length);
+        var cursor = new GraphExecutionCursor();
+        GraphSliceResult result = GraphExecutor.ExecuteResolvedRegisteredScriptSlice(
+            _programs, program, _floats, _ints, _bools, _entities, _targets, _callStack,
+            ref cursor,
+            budgetSteps: _budgetSteps,
+            _world,
+            caster: caster,
+            api: _api);
+        if (!result.Halted)
+        {
+            throw new InvalidOperationException("HFSM-bound Script must halt within budget.");
+        }
+
+        return result;
+    }
+
+    private static bool TryExecuteImmediateHalt(GraphInstruction[] program, out int returnInt)
+    {
+        returnInt = 0;
+        if (program.Length != 2)
+        {
+            return false;
+        }
+
+        ref readonly GraphInstruction first = ref program[0];
+        ref readonly GraphInstruction second = ref program[1];
+        if (first.Op != (ushort)GraphNodeOp.ConstInt ||
+            second.Op != (ushort)GraphNodeOp.HaltReturnInt)
+        {
+            return false;
+        }
+
+        if ((uint)first.Dst >= GraphVmLimits.MaxIntRegisters ||
+            (uint)second.A >= GraphVmLimits.MaxIntRegisters)
+        {
+            return false;
+        }
+
+        returnInt = second.A == first.Dst ? first.Imm : 0;
+        return true;
+    }
+
+    private GraphInstruction[] ResolveScriptProgram(int graphId, string hostLabel)
+    {
+        int version = _programs.Version;
+        for (int i = 0; i < ScriptCacheCapacity; i++)
+        {
+            if (_cachedGraphIds[i] != graphId || _cachedVersions[i] != version)
+            {
+                continue;
+            }
+
+            GraphInstruction[]? cached = _cachedPrograms[i];
+            if (cached != null)
+            {
+                return cached;
+            }
+        }
+
+        GraphInstruction[] program = _programs.RequireProgramArray(graphId, GraphKind.Script, hostLabel);
+        int slot = _nextCacheSlot;
+        _nextCacheSlot = (slot + 1) % ScriptCacheCapacity;
+        _cachedGraphIds[slot] = graphId;
+        _cachedVersions[slot] = version;
+        _cachedPrograms[slot] = program;
+        return program;
+    }
+}

@@ -103,4 +103,33 @@ internal class Style
 		Value.CopyValue(dest.MaxDimensions, src.MaxDimensions);
 		dest.AspectRatio = src.AspectRatio;
 	}
+
+	internal void ResetInPlace()
+	{
+		Direction = Direction.Inherit;
+		FlexDirection = FlexDirection.Column;
+		JustifyContent = Justify.FlexStart;
+		AlignContent = Align.FlexStart;
+		AlignItems = Align.Stretch;
+		AlignSelf = Align.Auto;
+		PositionType = PositionType.Relative;
+		FlexWrap = Wrap.NoWrap;
+		Overflow = Overflow.Visible;
+		Display = Display.Flex;
+		Flex = float.NaN;
+		FlexGrow = float.NaN;
+		FlexShrink = float.NaN;
+		FlexBasis.SetAuto();
+		Value.ResetEdgeValues(Margin);
+		Value.ResetEdgeValues(Position);
+		Value.ResetEdgeValues(Padding);
+		Value.ResetEdgeValues(Border);
+		Dimensions[0].SetAuto();
+		Dimensions[1].SetAuto();
+		MinDimensions[0].SetUndefined();
+		MinDimensions[1].SetUndefined();
+		MaxDimensions[0].SetUndefined();
+		MaxDimensions[1].SetUndefined();
+		AspectRatio = float.NaN;
+	}
 }

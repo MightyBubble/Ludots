@@ -2,7 +2,7 @@
   "name": "RtsSc2TrainingShowcaseMod",
   "version": "1.0.0",
   "description": "Focused StarCraft II style gateway training showcase.",
-  "main": "bin/net8.0/RtsSc2TrainingShowcaseMod.dll",
+  "main": "bin/net9.0/RtsSc2TrainingShowcaseMod.dll",
   "priority": 120,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

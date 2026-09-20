@@ -2,7 +2,7 @@
   "name": "CombatStanceShowcaseMod",
   "version": "1.0.0",
   "description": "Focused combat stance showcase for attack-move, guard, stance switching, retaliation, and target priority.",
-  "main": "bin/net8.0/CombatStanceShowcaseMod.dll",
+  "main": "bin/net9.0/CombatStanceShowcaseMod.dll",
   "priority": 133,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

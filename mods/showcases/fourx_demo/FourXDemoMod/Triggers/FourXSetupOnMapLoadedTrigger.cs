@@ -100,23 +100,20 @@ namespace FourXDemoMod.Triggers
                 ?? throw new InvalidOperationException("FourX relationship showcase requires RelationshipMetricRegistry.");
             RelationshipFlagRegistry flags = engine.GetService(CoreServiceKeys.RelationshipFlagRegistry)
                 ?? throw new InvalidOperationException("FourX relationship showcase requires RelationshipFlagRegistry.");
-            RelationshipReasonRegistry reasons = engine.GetService(CoreServiceKeys.RelationshipReasonRegistry)
-                ?? throw new InvalidOperationException("FourX relationship showcase requires RelationshipReasonRegistry.");
 
             int diplomacyTypeId = types.GetId("Diplomacy");
             int trustMetricId = metrics.GetId("Trust");
             int tradeValueMetricId = metrics.GetId("TradeValue");
             int tradePactFlagId = flags.GetId("TradePact");
             int atWarFlagId = flags.GetId("AtWar");
-            int setupReasonId = reasons.Register("Scenario.Setup");
 
-            SeedDiplomacy(relationships, world, entities.Governor, entities.City, diplomacyTypeId, trustMetricId, tradeValueMetricId, tradePactFlagId, trust: 80, tradeValue: 140, setupReasonId);
-            SeedDiplomacy(relationships, world, entities.Governor, entities.Caravan, diplomacyTypeId, trustMetricId, tradeValueMetricId, tradePactFlagId, trust: 55, tradeValue: 95, setupReasonId);
+            SeedDiplomacy(relationships, world, entities.Governor, entities.City, diplomacyTypeId, trustMetricId, tradeValueMetricId, tradePactFlagId, trust: 80, tradeValue: 140);
+            SeedDiplomacy(relationships, world, entities.Governor, entities.Caravan, diplomacyTypeId, trustMetricId, tradeValueMetricId, tradePactFlagId, trust: 55, tradeValue: 95);
 
             if (world.IsAlive(entities.Camp))
             {
-                relationships.SetMetric(entities.Governor, entities.Camp, diplomacyTypeId, trustMetricId, -35, setupReasonId);
-                relationships.SetFlag(entities.Governor, entities.Camp, diplomacyTypeId, atWarFlagId, enabled: true, reasonId: setupReasonId);
+                relationships.SetMetric(entities.Governor, entities.Camp, diplomacyTypeId, trustMetricId, -35);
+                relationships.SetFlag(entities.Governor, entities.Camp, diplomacyTypeId, atWarFlagId, enabled: true);
             }
         }
 
@@ -130,17 +127,16 @@ namespace FourXDemoMod.Triggers
             int tradeValueMetricId,
             int tradePactFlagId,
             int trust,
-            int tradeValue,
-            int reasonId)
+            int tradeValue)
         {
             if (!world.IsAlive(target))
             {
                 return;
             }
 
-            relationships.SetMetric(source, target, typeId, trustMetricId, trust, reasonId);
-            relationships.SetMetric(source, target, typeId, tradeValueMetricId, tradeValue, reasonId);
-            relationships.SetFlag(source, target, typeId, tradePactFlagId, enabled: true, reasonId: reasonId);
+            relationships.SetMetric(source, target, typeId, trustMetricId, trust);
+            relationships.SetMetric(source, target, typeId, tradeValueMetricId, tradeValue);
+            relationships.SetFlag(source, target, typeId, tradePactFlagId, enabled: true);
         }
     }
 }

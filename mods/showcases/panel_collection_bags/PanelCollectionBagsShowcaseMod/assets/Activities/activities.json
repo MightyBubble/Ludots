@@ -1,0 +1,17 @@
+[
+  {
+    "id": "Activity.CollectionBags.Gathering",
+    "display_name": "名册集会",
+    "summary": "守望者主持的名册集会",
+    "source_key": "task.state_changed",
+    "dispatch_policy": "forced",
+    "repeat_policy": "Repeatable",
+    "options": [
+      {
+        "id": "attend",
+        "title": "参加集会",
+        "is_baseline": true
+      }
+    ]
+  }
+]

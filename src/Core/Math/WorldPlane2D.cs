@@ -3,6 +3,8 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using Ludots.Core.Mathematics.FixedPoint;
 
+using Ludots.Platform.Abstractions;
+
 namespace Ludots.Core.Mathematics
 {
     /// <summary>
@@ -111,12 +113,6 @@ namespace Ludots.Core.Mathematics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float RadToDegValue(float radians)
-        {
-            return radians * RadToDeg;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float NormalizeDegreesPositive(float degrees)
         {
             if (!float.IsFinite(degrees))
@@ -161,12 +157,6 @@ namespace Ludots.Core.Mathematics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector2 CameraScreenRightFromYawDegrees(float yawDeg)
-        {
-            return DirectionFromFacingRad(CameraYawDegToFacingRad(yawDeg) - (MathF.PI * 0.5f));
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Vector2 NormalizeOrDefault(Vector2 value, Vector2 defaultValue)
         {
             float lengthSquared = value.LengthSquared();
@@ -178,10 +168,14 @@ namespace Ludots.Core.Mathematics
             return value / MathF.Sqrt(lengthSquared);
         }
 
+        /// <summary>
+        /// 旋转随相机模式的 minimap 基向量。right 必须取主视图 CreateLookAt 的真实屏幕右向
+        /// （forward × up）；若按"屏幕坐标系翻一次"的直觉取反，整张 minimap 会相对主视图镜像。
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void CameraMinimapBasisFromYawDegrees(float yawDeg, out Vector2 mapRight, out Vector2 mapUp)
         {
-            mapRight = CameraScreenRightFromYawDegrees(yawDeg);
+            mapRight = CameraRightFromYawDegrees(yawDeg);
             mapUp = CameraForwardFromYawDegrees(yawDeg);
         }
 
@@ -216,7 +210,7 @@ namespace Ludots.Core.Mathematics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Vector3 LogicCmToVisualMeters(in Fix64Vec2 logicCm, float heightMeters = 0f)
         {
-            return WorldUnits.WorldCmToVisualMeters(in logicCm, heightMeters);
+            return WorldUnitsFix64.WorldCmToVisualMeters(in logicCm, heightMeters);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -251,80 +245,64 @@ namespace Ludots.Core.Mathematics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector3 FacingRadToVisualForward(float facingRad)
-        {
-            return new Vector3(MathF.Cos(facingRad), 0f, MathF.Sin(facingRad));
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector3 FacingRadToVisualRight(float facingRad)
-        {
-            return new Vector3(-MathF.Sin(facingRad), 0f, MathF.Cos(facingRad));
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector3 TransformVisualLocal2D(Vector3 origin, float facingRad, in Vector3 local)
-        {
-            Vector3 forward = FacingRadToVisualForward(facingRad);
-            Vector3 right = FacingRadToVisualRight(facingRad);
-            return origin + (forward * local.X) + (Vector3.UnitY * local.Y) + (right * local.Z);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector3 TransformVisualLocal(Vector3 origin, Quaternion rotation, Vector3 scale, in Vector3 local)
-        {
-            return origin + Vector3.Transform(local * NormalizeScale(scale), NormalizeOrIdentity(rotation));
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Vector3 ResolveVisualAssetPosition(
-            in Vector3 performerWorldPosition,
-            in Quaternion performerWorldRotation,
-            in Vector3 performerWorldScale,
+            in Vector3 presenterWorldPosition,
+            in Quaternion presenterWorldRotation,
+            in Vector3 presenterWorldScale,
             in Vector3 localOffset)
         {
             if (localOffset == Vector3.Zero)
             {
-                return performerWorldPosition;
+                return presenterWorldPosition;
             }
 
-            return TransformVisualLocal(
-                performerWorldPosition,
-                performerWorldRotation,
-                NormalizeScale(performerWorldScale),
+            return VisualMath.TransformVisualLocal(
+                presenterWorldPosition,
+                presenterWorldRotation,
+                VisualMath.NormalizeScale(presenterWorldScale),
                 in localOffset);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Quaternion ResolveVisualAssetRotation(
-            in Quaternion performerWorldRotation,
+            in Quaternion presenterWorldRotation,
             in Quaternion localRotation)
         {
-            return ComposeVisualRotation(performerWorldRotation, localRotation);
+            return ComposeVisualRotation(presenterWorldRotation, localRotation);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Quaternion ComposeVisualRotation(Quaternion worldRotation, Quaternion localRotation)
         {
-            return NormalizeOrIdentity(NormalizeOrIdentity(worldRotation) * NormalizeOrIdentity(localRotation));
+            return VisualMath.NormalizeOrIdentity(VisualMath.NormalizeOrIdentity(worldRotation) * VisualMath.NormalizeOrIdentity(localRotation));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float ResolveScreenFacingOffsetRad(in Vector2 mapRight, in Vector2 mapUp)
+        /// <summary>
+        /// 解出朝向→屏幕角的缓存偏移。det=+1 基（固定北向）屏幕角 = offset − facing；
+        /// det=−1 基（旋转随相机、与主视图同手性）屏幕角 = facing − offset，是反射不是旋转，
+        /// 常数偏移无法表达，必须由 <paramref name="reflectedBasis"/> 随偏移一起缓存。
+        /// </summary>
+        public static float ResolveScreenFacingOffsetRad(in Vector2 mapRight, in Vector2 mapUp, out bool reflectedBasis)
         {
+            reflectedBasis = ((mapRight.X * mapUp.Y) - (mapRight.Y * mapUp.X)) < 0f;
             return MathF.Atan2(mapRight.Y, mapRight.X);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float ProjectFacingRadToScreen(float facingRad, float screenFacingOffsetRad)
+        public static float ProjectFacingRadToScreen(float facingRad, float screenFacingOffsetRad, bool reflectedBasis)
         {
-            return NormalizeSignedRad(screenFacingOffsetRad - facingRad);
+            return NormalizeSignedRad(reflectedBasis
+                ? facingRad - screenFacingOffsetRad
+                : screenFacingOffsetRad - facingRad);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int ProjectFacingRadToScreenBucket(float facingRad, float screenFacingOffsetRad, int bucketCount)
+        public static int ProjectFacingRadToScreenBucket(float facingRad, float screenFacingOffsetRad, bool reflectedBasis, int bucketCount)
         {
-            return QuantizeFacingRadToBucket(screenFacingOffsetRad - facingRad, bucketCount);
+            return QuantizeFacingRadToBucket(reflectedBasis
+                ? facingRad - screenFacingOffsetRad
+                : screenFacingOffsetRad - facingRad, bucketCount);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -447,41 +425,6 @@ namespace Ludots.Core.Mathematics
                 halfExtentCm,
                 out float normalizedX,
                 out float normalizedY);
-            screenX = fieldX + (normalizedX * fieldScale);
-            screenY = fieldY + ((1f - normalizedY) * fieldScale);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ProjectWorldCmToScreenClamped(
-            float worldXcm,
-            float worldYcm,
-            float centerXcm,
-            float centerYcm,
-            float rightX,
-            float rightY,
-            float upX,
-            float upY,
-            float halfExtentCm,
-            float fieldX,
-            float fieldY,
-            float fieldScale,
-            out float screenX,
-            out float screenY)
-        {
-            WorldToMapNormalizedUnclipped(
-                worldXcm,
-                worldYcm,
-                centerXcm,
-                centerYcm,
-                rightX,
-                rightY,
-                upX,
-                upY,
-                halfExtentCm,
-                out float normalizedX,
-                out float normalizedY);
-            normalizedX = Math.Clamp(normalizedX, 0f, 1f);
-            normalizedY = Math.Clamp(normalizedY, 0f, 1f);
             screenX = fieldX + (normalizedX * fieldScale);
             screenY = fieldY + ((1f - normalizedY) * fieldScale);
         }
@@ -649,6 +592,82 @@ namespace Ludots.Core.Mathematics
             return float.IsFinite(worldCm.X) && float.IsFinite(worldCm.Y);
         }
 
+        /// <summary>
+        /// 将凸多边形（顶点按绕序排列）裁剪到 [0,1]² 归一化地图矩形（Sutherland–Hodgman）。
+        /// 输出保持绕序且仍为凸，写入 <paramref name="result"/>（不得与输入重叠），返回顶点数；
+        /// 完全在矩形外返回 0。越界的视锥足迹只能用它取交集——逐顶点独立 clamp 会把凸四边形
+        /// 折叠成自相交的蝴蝶结，不是裁剪。
+        /// </summary>
+        public static int ClipConvexPolygonToUnitSquare(ReadOnlySpan<Vector2> polygon, Span<Vector2> result)
+        {
+            if (polygon.Length < 3 || polygon.Length > 28 || result.Length < polygon.Length + 4)
+            {
+                return 0;
+            }
+
+            Span<Vector2> front = stackalloc Vector2[polygon.Length + 4];
+            Span<Vector2> back = stackalloc Vector2[polygon.Length + 4];
+            polygon.CopyTo(front);
+
+            int count = ClipPolygonToHalfPlane(front.Slice(0, polygon.Length), back, axisX: true, boundary: 0f, keepGreaterEqual: true);
+            if (count > 0)
+            {
+                count = ClipPolygonToHalfPlane(back.Slice(0, count), front, axisX: true, boundary: 1f, keepGreaterEqual: false);
+            }
+
+            if (count > 0)
+            {
+                count = ClipPolygonToHalfPlane(front.Slice(0, count), back, axisX: false, boundary: 0f, keepGreaterEqual: true);
+            }
+
+            if (count > 0)
+            {
+                count = ClipPolygonToHalfPlane(back.Slice(0, count), front, axisX: false, boundary: 1f, keepGreaterEqual: false);
+            }
+
+            if (count > 0)
+            {
+                front.Slice(0, count).CopyTo(result);
+            }
+
+            return count;
+        }
+
+        private static int ClipPolygonToHalfPlane(
+            ReadOnlySpan<Vector2> source,
+            Span<Vector2> destination,
+            bool axisX,
+            float boundary,
+            bool keepGreaterEqual)
+        {
+            int count = 0;
+            for (int i = 0; i < source.Length; i++)
+            {
+                Vector2 current = source[i];
+                Vector2 next = source[(i + 1) % source.Length];
+                float currentV = axisX ? current.X : current.Y;
+                float nextV = axisX ? next.X : next.Y;
+                bool currentIn = keepGreaterEqual ? currentV >= boundary : currentV <= boundary;
+                bool nextIn = keepGreaterEqual ? nextV >= boundary : nextV <= boundary;
+                if (currentIn)
+                {
+                    destination[count++] = current;
+                    if (!nextIn)
+                    {
+                        float t = (boundary - currentV) / (nextV - currentV);
+                        destination[count++] = current + ((next - current) * t);
+                    }
+                }
+                else if (nextIn)
+                {
+                    float t = (boundary - currentV) / (nextV - currentV);
+                    destination[count++] = current + ((next - current) * t);
+                }
+            }
+
+            return count;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float NormalizePositiveRad(float radians)
         {
@@ -713,42 +732,6 @@ namespace Ludots.Core.Mathematics
             }
 
             return NormalizeBucketIndex(bucket, bucketCount) * TwoPi / bucketCount;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool TryExtractFacingRadFromVisualYRotation(Quaternion rotation, out float facingRad)
-        {
-            Quaternion normalized = NormalizeOrIdentity(rotation);
-            Vector3 forward = Vector3.Transform(Vector3.UnitX, normalized);
-            float planarLengthSq = (forward.X * forward.X) + (forward.Z * forward.Z);
-            if (!float.IsFinite(planarLengthSq) || planarLengthSq <= 0.000001f)
-            {
-                facingRad = 0f;
-                return false;
-            }
-
-            facingRad = MathF.Atan2(forward.Z, forward.X);
-            return float.IsFinite(facingRad);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Quaternion NormalizeOrIdentity(Quaternion value)
-        {
-            float lengthSquared = value.LengthSquared();
-            if (!float.IsFinite(lengthSquared) || lengthSquared <= 0.000001f)
-            {
-                return Quaternion.Identity;
-            }
-
-            return MathF.Abs(lengthSquared - 1f) <= 0.0001f
-                ? value
-                : Quaternion.Normalize(value);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector3 NormalizeScale(Vector3 value)
-        {
-            return value == Vector3.Zero ? Vector3.One : value;
         }
     }
 }

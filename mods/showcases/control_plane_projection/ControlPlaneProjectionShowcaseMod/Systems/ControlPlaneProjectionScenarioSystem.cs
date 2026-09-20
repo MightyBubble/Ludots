@@ -2,6 +2,7 @@ using System;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
+using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS;
@@ -18,8 +19,8 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
 {
     /// <summary>
     /// Bootstraps the showcase world once the map session is live (CTRL-2 slice: Owns/MemberOf/Ally
-    /// edges via RelationshipRuntime.EnsureLink), binds P1Rep as the local command-source owner,
-    /// and services the ToggleProxy input action.
+    /// edges via RelationshipRuntime.EnsureLink), verifies the authored startup seat binding, and
+    /// services the ToggleProxy input action.
     /// </summary>
     internal sealed class ControlPlaneProjectionScenarioSystem : ISystem<float>
     {
@@ -123,7 +124,7 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
             _state.RefereePhase1ProjectionKeyId = collectionKeys.Register(ControlPlaneProjectionShowcaseIds.RefereePhase1ProjectionCollectionKey);
 
             BuildRelationshipEdges(relationships);
-            BindLocalPlayer();
+            RequireScenarioSeatBinding();
 
             _state.BindRuntime(_world, tagOps);
         }
@@ -252,10 +253,17 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
             relationships.EnsureLink(_state.P1Rep, _state.P2Rep, _state.AllyTypeId);
         }
 
-        private void BindLocalPlayer()
+        private void RequireScenarioSeatBinding()
         {
-            _engine.SetService(CoreServiceKeys.LocalPlayerEntity, _state.P1Rep);
-            _engine.SetService(CoreServiceKeys.LocalPlayerId, 1);
+            ClientLocalSeatRegistry seats = ClientLocalSeatAccess.RequireRegistry(_engine);
+            if (!seats.TryGetSoleSeat(out ClientLocalSeat seat) ||
+                !seat.HasPossession ||
+                seat.PossessedPlayerId != 1 ||
+                seat.PossessedRep != _state.P1Rep)
+            {
+                throw new InvalidOperationException(
+                    "Control plane projection showcase requires startupLocalSeats to bind seat 'seat.0' to player 1 / p1-rep before projection systems run.");
+            }
         }
 
         private static void ResolveUnits(MapSession session, string[] instanceIds, Entity[] destination)

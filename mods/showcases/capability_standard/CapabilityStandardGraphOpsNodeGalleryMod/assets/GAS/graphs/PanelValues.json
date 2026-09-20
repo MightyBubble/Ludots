@@ -1,0 +1,25 @@
+[
+  {
+    "id": "showcase.panel.test.graph.values",
+    "kind": "Query",
+    "entry": "hp",
+    "nodes": [
+      {
+        "id": "hp",
+        "op": "LoadSelfAttribute",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [],
+    "valueEdges": [],
+    "outputs": [
+      {
+        "id": "health",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "hp",
+        "key": "showcase.panel.test.health"
+      }
+    ]
+  }
+]

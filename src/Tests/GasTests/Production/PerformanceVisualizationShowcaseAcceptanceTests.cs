@@ -45,7 +45,7 @@ namespace Ludots.Tests.GAS.Production
             int smallBars = CountWorldHudItems(worldHud, WorldHudItemKind.Bar);
 
             Assert.That(smallCount, Is.EqualTo(2048));
-            Assert.That(smallBars, Is.GreaterThan(0), "Performer-driven health bars should emit world HUD bars.");
+            Assert.That(smallBars, Is.GreaterThan(0), "Presenter-driven health bars should emit world HUD bars.");
             Assert.That(worldHud.DroppedSinceClear, Is.EqualTo(0), "2K showcase lane should stay inside the world HUD budget.");
 
             Assert.That(InvokeBool(runtime, "TryRunScenario", engine, "medium"), Is.True);
@@ -80,7 +80,7 @@ namespace Ludots.Tests.GAS.Production
             int barCount = CountWorldHudItems(worldHud, WorldHudItemKind.Bar);
 
             Assert.That(largeCount, Is.EqualTo(32768), "32K showcase lane should fully realize the requested visual entity count.");
-            Assert.That(barCount, Is.EqualTo(0), "32K showcase lane is pure visual stress and must not spawn performer HUD bars.");
+            Assert.That(barCount, Is.EqualTo(0), "32K showcase lane is pure visual stress and must not spawn presenter HUD bars.");
             Assert.That(worldHud.DroppedSinceClear, Is.EqualTo(0), "Pure visual lane should not overflow the world HUD buffer.");
         }
 

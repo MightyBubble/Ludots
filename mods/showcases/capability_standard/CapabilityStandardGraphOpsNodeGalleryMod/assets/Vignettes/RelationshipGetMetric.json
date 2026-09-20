@@ -1,0 +1,13 @@
+{
+  "op": "RelationshipGetMetric",
+  "driver": "rel",
+  "title": "读出这个人的好感",
+  "beat": "从链上抽出读数牌，写着 85。",
+  "detailTemplate": "读到{friend}的好感 {loyalty}。",
+  "assertDetailContains": [
+    "好感"
+  ],
+  "featuredNodeId": "get",
+  "graphKind": "Effect",
+  "field": "rel"
+}

@@ -1,0 +1,13 @@
+{
+  "op": "QueryFilterTagAny",
+  "driver": "query",
+  "title": "戴敌徽的全圈出来",
+  "beat": "头顶红徽的九个留圈，没徽的退成灰影。",
+  "detailTemplate": "头顶带红徽的{count}个全被圈住，同队没戴徽的也照灭。",
+  "assertDetailContains": [
+    "红徽"
+  ],
+  "featuredNodeId": "tagAny",
+  "graphKind": "Query",
+  "field": "query"
+}

@@ -1,0 +1,4 @@
+{"step":"load-map","action":"capture","detail":"Loaded interaction_showcase_hub with UIRoot enabled."}
+{"step":"seed-command-source","action":"mutate","detail":"Bound 72 categorized entities to collection.command.source."}
+{"step":"scroll-panel","action":"scroll","detail":"Scrolled the entity collection panel and advanced the virtual window."}
+{"step":"export-screenshot","action":"capture","detail":"Wrote screens/interaction-selection-entity-collection.png."}

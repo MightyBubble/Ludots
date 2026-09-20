@@ -36,16 +36,16 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void ObservePerformerCoverage_NegativeCounts_ClampsToZero()
+        public void ObservePresenterCoverage_NegativeCounts_ClampsToZero()
         {
             var telemetry = new MassNavigationTelemetry();
 
-            telemetry.ObservePerformerCoverage(-1, -2, -3, -4);
+            telemetry.ObservePresenterCoverage(-1, -2, -3, -4);
 
             Assert.That(telemetry.CrowdInViewCount, Is.Zero);
             Assert.That(telemetry.CrowdSubmittedCount, Is.Zero);
             Assert.That(telemetry.ObstacleSubmittedCount, Is.Zero);
-            Assert.That(telemetry.PerformerDroppedCount, Is.Zero);
+            Assert.That(telemetry.PresenterDroppedCount, Is.Zero);
         }
     }
 }

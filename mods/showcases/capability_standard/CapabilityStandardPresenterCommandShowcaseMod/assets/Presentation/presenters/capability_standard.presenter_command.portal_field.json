@@ -1,0 +1,100 @@
+[
+  {
+    "id": "pcmd.field_director",
+    "rules": [
+      {
+        "event": { "kind": "GameplayEvent", "keyId": "pcmd.summon" },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "pcmd.portal_target",
+          "scopeSource": "Fixed",
+          "scopeTag": "pcmd.target.field",
+          "useEventPosition": true
+        }
+      },
+      {
+        "event": { "kind": "GameplayEvent", "keyId": "pcmd.remove.scoped" },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "pcmd.portal_target",
+          "scopeSource": "Fixed",
+          "scopeTag": "pcmd.target.field"
+        }
+      },
+      {
+        "event": { "kind": "GameplayEvent", "keyId": "pcmd.clear.field" },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "Fixed",
+          "scopeTag": "pcmd.target.field"
+        }
+      }
+    ]
+  },
+  {
+    "id": "pcmd.portal",
+    "anchor": {
+      "offset": [0, 1.4, 0]
+    },
+    "rules": [
+      {
+        "event": { "kind": "GameplayEvent", "keyId": "pcmd.portal.resync" },
+        "command": {
+          "kind": "InitializeTransform"
+        }
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [1.5, 2.8, 0.35]
+        },
+        "style": {
+          "color": [0.25, 0.85, 0.8, 1.0]
+        }
+      }
+    ]
+  },
+  {
+    "id": "pcmd.portal_target",
+    "paramDefaults": [
+      {
+        "paramKey": "pcmd.target.color",
+        "lane": "Vector",
+        "vectorValue": [1.0, 0.8, 0.2, 1.0]
+      }
+    ],
+    "rules": [
+      {
+        "event": { "kind": "GameplayEvent", "keyId": "pcmd.vanish" },
+        "command": {
+          "kind": "DestroyPresenter"
+        }
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [0.55, 0.55, 0.55],
+          "colorParamKey": "pcmd.target.color"
+        }
+      }
+    ]
+  }
+]

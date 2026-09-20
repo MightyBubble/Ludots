@@ -1,0 +1,158 @@
+[
+  {
+    "id": "showcase.graph_op.CompareLtInt",
+    "kind": "Effect",
+    "entry": "explicit",
+    "nodes": [
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "healthNow",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "showcase.attr.healthInt"
+      },
+      {
+        "id": "fullLine",
+        "op": "ConstInt",
+        "intValue": 80
+      },
+      {
+        "id": "canFull",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "jif",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "flipFull",
+        "op": "ConstFloat",
+        "floatValue": -18
+      },
+      {
+        "id": "hitFull",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      },
+      {
+        "id": "lightTap",
+        "op": "ConstFloat",
+        "floatValue": -6
+      },
+      {
+        "id": "hitLight",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      },
+      {
+        "id": "done",
+        "op": "ConstFloat",
+        "floatValue": 0
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "healthNow"
+      },
+      {
+        "from": "healthNow",
+        "fromPort": "next",
+        "to": "fullLine"
+      },
+      {
+        "from": "fullLine",
+        "fromPort": "next",
+        "to": "canFull"
+      },
+      {
+        "from": "canFull",
+        "fromPort": "next",
+        "to": "jif"
+      },
+      {
+        "from": "jif",
+        "fromPort": "true",
+        "to": "flipFull"
+      },
+      {
+        "from": "jif",
+        "fromPort": "false",
+        "to": "lightTap"
+      },
+      {
+        "from": "flipFull",
+        "fromPort": "next",
+        "to": "hitFull"
+      },
+      {
+        "from": "lightTap",
+        "fromPort": "next",
+        "to": "hitLight"
+      },
+      {
+        "from": "hitFull",
+        "fromPort": "next",
+        "to": "done"
+      },
+      {
+        "from": "hitLight",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "healthNow",
+        "toPort": "source"
+      },
+      {
+        "from": "healthNow",
+        "fromPort": "value",
+        "to": "canFull",
+        "toPort": "a"
+      },
+      {
+        "from": "fullLine",
+        "fromPort": "value",
+        "to": "canFull",
+        "toPort": "b"
+      },
+      {
+        "from": "canFull",
+        "fromPort": "value",
+        "to": "jif",
+        "toPort": "condition"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "hitFull",
+        "toPort": "target"
+      },
+      {
+        "from": "flipFull",
+        "fromPort": "value",
+        "to": "hitFull",
+        "toPort": "value"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "hitLight",
+        "toPort": "target"
+      },
+      {
+        "from": "lightTap",
+        "fromPort": "value",
+        "to": "hitLight",
+        "toPort": "value"
+      }
+    ]
+  }
+]

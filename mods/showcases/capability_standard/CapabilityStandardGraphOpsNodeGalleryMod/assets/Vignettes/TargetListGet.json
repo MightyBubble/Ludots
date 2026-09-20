@@ -1,0 +1,13 @@
+{
+  "op": "TargetListGet",
+  "driver": "spatial",
+  "title": "按名单取第一个",
+  "beat": "名单按序编号，红线只连 1 号。",
+  "detailTemplate": "名单第 1 个，是{name}。",
+  "assertDetailContains": [
+    "第 1 个"
+  ],
+  "featuredNodeId": "get0",
+  "graphKind": "Query",
+  "field": "spatial"
+}

@@ -1,0 +1,5 @@
+﻿{"tick":0,"event":"scenario.start","payload":{"map":"interaction_showcase_hub","ability":"Ability.Showcase.Superweapon.Context","commander":8}}
+{"tick":1,"event":"ability.frame.push","payload":{"context":"ctx.ability.superweapon.confirm_targets","inputContext":"imc.ability.confirm"}}
+{"tick":2,"event":"targets.commit","payload":{"rawTargets":[6,7],"abilityTargets":[6,7],"commandSourceMutated":false}}
+{"tick":3,"event":"input.confirm","payload":{"action":"SuperweaponConfirm","observed":true,"eventPublished":true,"eventCount":1}}
+{"tick":4,"event":"frame.restore","payload":{"context":"interaction.context.default","commandSourceAfterRestore":[8]}}

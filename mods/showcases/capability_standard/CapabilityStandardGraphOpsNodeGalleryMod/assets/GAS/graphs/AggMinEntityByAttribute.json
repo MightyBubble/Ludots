@@ -1,0 +1,33 @@
+[
+  {
+    "id": "showcase.graph_op.AggMinEntityByAttribute",
+    "kind": "Query",
+    "entry": "all",
+    "nodes": [
+      {
+        "id": "all",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "minEnt",
+        "op": "AggMinEntityByAttribute",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "all",
+        "fromPort": "next",
+        "to": "minEnt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "all",
+        "fromPort": "list",
+        "to": "minEnt",
+        "toPort": "list"
+      }
+    ]
+  }
+]

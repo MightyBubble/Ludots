@@ -1,5 +1,7 @@
 # NavBakeContext And Unified Bake Service
 
+> **Canonical SSOT:** [NavMesh 导航体系 SSOT](../navmesh-ssot.md)。本页只保留当前实现的服务、配置和测试细节；目标产品边界、编辑器和 showcase 口径以 SSOT 为准。
+
 Parent: [Epic #281](https://github.com/MightyBubble/Ludots/issues/281). Primary subissue: [NAV-5 #287](https://github.com/MightyBubble/Ludots/issues/287). Runtime incremental follow-up: [NAV-10 #304](https://github.com/MightyBubble/Ludots/issues/304). Related vocabulary: [NAV-0 #282](https://github.com/MightyBubble/Ludots/issues/282), [NAV-2 #284](https://github.com/MightyBubble/Ludots/issues/284), [NAV-3 #285](https://github.com/MightyBubble/Ludots/issues/285), [NAV-4 #286](https://github.com/MightyBubble/Ludots/issues/286). Bake planning: [Nav Bake Budget and Estimation](nav-bake-budget-and-estimation.md). Authoring toolchain: [Navmesh Authoring Bake Toolchain](navmesh-authoring-bake-toolchain.md).
 
 ## Background
@@ -8,7 +10,7 @@ Before NAV-5, navigation bake had multiple entry points and duplicated parameter
 
 | Entry | Old flow | Problem |
 |---|---|---|
-| CLI `nav bake` | Read `.vtxm` and called `NavTileBuilder` directly | Bypassed unified profile and obstacle config |
+| CLI `nav bake` | Read `.hex` and called `NavTileBuilder` directly | Bypassed unified profile and obstacle config |
 | CLI `nav bake-react` | Converted React `map_data.bin` then baked locally | Duplicated target selection and parallel loops |
 | CLI `nav bake-recast-react` | Loaded `Navigation/navmesh.json` then ran Recast loops locally | Duplicated editor Bridge logic |
 | Bridge `/api/nav/bake-react` | Form fields drove `BakePipeline` directly | CDT could hide failures behind old grid fallback |
@@ -65,7 +67,7 @@ dotnet test src\Tests\ArchitectureTests\ArchitectureTests.csproj --filter "NavBa
 
 ## Configuration
 
-`assets/Configs/Navigation/navmesh.json`:
+`assets/Navigation/navmesh.json`:
 
 | Field | Value | Owner | Constraint |
 |---|---|---|---|
@@ -83,7 +85,7 @@ dotnet test src\Tests\ArchitectureTests\ArchitectureTests.csproj --filter "NavBa
 | `runtimeIncremental.minWalkableUpDot` | float | Runtime `NavBuildConfig` | Required, `-1..1` |
 | `runtimeIncremental.cliffHeightThreshold` | int | Runtime `NavBuildConfig` | Required, `>= 0` |
 
-`sourceUri` must use VFS form such as `Core:Maps/example.vtxm` or `Core:Maps/example.runtime-navmesh`. The service layer records a URI contract and rejects absolute filesystem paths.
+`sourceUri` must use VFS form such as `Core:Maps/example.hex` or `Core:Maps/example.runtime-navmesh`. The service layer records a URI contract and rejects absolute filesystem paths.
 
 Runtime incremental rebuild is enabled only when the top-level config explicitly selects `mode: runtime-incremental` and `algorithm: cdt`. The default offline full-bake config may stay `mode: offline` and `algorithm: recast`; in that mode runtime dirty services are not registered.
 

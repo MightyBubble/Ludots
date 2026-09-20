@@ -5,6 +5,7 @@ using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Platform.Abstractions;
 
 namespace EntityInfoPanelsMod.Insight;
 
@@ -62,6 +63,7 @@ public sealed class EntityInsightProfileLoader
                 SurfaceColorHex = ReadRequiredString(node, "surfaceColorHex"),
                 GenreGlyph = ReadRequiredString(node, "genreGlyph"),
                 PortraitGlyph = ReadRequiredString(node, "portraitGlyph"),
+                PortraitImageId = node["portraitImageId"]?.GetValue<string>() ?? string.Empty,
                 GenreLabelTokenId = ResolveRequiredTokenId(textCatalog, node, "genreLabelToken", profileId),
                 SubtitleTokenId = ResolveRequiredTokenId(textCatalog, node, "subtitleToken", profileId),
                 BodyTokenId = ResolveRequiredTokenId(textCatalog, node, "bodyToken", profileId),

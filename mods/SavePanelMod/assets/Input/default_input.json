@@ -1,0 +1,15 @@
+{
+  "actions": [
+    { "id": "SavePanel.Toggle", "name": "SavePanel_Toggle", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "SavePanelMod.Controls",
+      "name": "Save Panel Controls",
+      "priority": 40,
+      "bindings": [
+        { "actionId": "SavePanel.Toggle", "path": "<Keyboard>/f5" }
+      ]
+    }
+  ]
+}

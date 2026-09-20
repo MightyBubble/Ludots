@@ -1,0 +1,13 @@
+{
+  "op": "QueryAllMapEntities",
+  "driver": "query",
+  "title": "把场上的人全点名",
+  "beat": "扫描弧从指挥席扫过全场，点到谁谁亮。",
+  "detailTemplate": "扫完一遍，场上{count}人个个有圈，计数牌停在{count}。",
+  "assertDetailContains": [
+    "场上"
+  ],
+  "featuredNodeId": "all",
+  "graphKind": "Query",
+  "field": "query"
+}

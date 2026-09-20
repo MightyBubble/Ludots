@@ -1,0 +1,193 @@
+using System.Diagnostics;
+using Ludots.Core.Gameplay.AI.BehaviorTree;
+using Ludots.Tests;
+using Ludots.Core.Gameplay.AI.Config;
+using Ludots.Core.GraphRuntime;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
+using Ludots.Tests.Gas.Graph;
+using NUnit.Framework;
+
+namespace Ludots.Tests.Gas.AI
+{
+    [TestFixture]
+    [NonParallelizable]
+    [Category("ci-gate")]
+    public sealed class BehaviorTreeRuntimeTests
+    {
+        private const double FrameBudgetMs = 15.0;
+        private const double LatchedWaveBudgetMs = 1.5;
+        private const double CiFrameEnvelopeMs = 25.0;
+        private const double CiLatchedEnvelopeMs = 5.0;
+
+        private GraphProgramRegistry? _programs;
+        private GraphActionCatalog? _actions;
+        private GraphBehaviorCatalog? _behavior;
+
+        private GraphProgramRegistry Programs
+            => _programs ??= GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _, out _actions, out _behavior);
+
+        private GraphActionCatalog Actions
+        {
+            get
+            {
+                _ = Programs;
+                return _actions!;
+            }
+        }
+
+        private GraphBehaviorCatalog Behavior
+        {
+            get
+            {
+                _ = Programs;
+                return _behavior!;
+            }
+        }
+
+        [Test]
+        public void TickAll_AlwaysSuccessSequence_ReachesSuccess()
+        {
+            BehaviorTreeDefinition tree = BehaviorTreeFactory.CreateAlwaysSuccessSequence("bt.seq", leafCount: 8);
+            var world = new BehaviorTreeWorld(tree, capacity: 4);
+            world.AddAgent();
+            world.AddAgent();
+            BehaviorTreeThinkStats stats = world.TickAll();
+            Assert.That(stats.Agents, Is.EqualTo(2));
+            Assert.That(world.Statuses[0], Is.EqualTo(BehaviorTreeStatus.Success));
+        }
+
+        [Test]
+        public void TickAll_PatrolSkeleton_StaysRunningOnEngageHold()
+        {
+            BehaviorTreeDefinition tree = BehaviorTreeFactory.CreatePatrolEngageSkeleton("bt.patrol");
+            var world = new BehaviorTreeWorld(tree, capacity: 1);
+            world.AddAgent();
+            world.TickAll();
+            Assert.That(world.Statuses[0], Is.EqualTo(BehaviorTreeStatus.Success));
+        }
+
+        [Test]
+        public void TickAll_FlatSequenceHoldRunning_ResumesRunningLeaf()
+        {
+            var nodes = new[]
+            {
+                new BehaviorTreeNode(BehaviorTreeNodeKind.Sequence, 1, 2, BehaviorTreeLeafBinding.None, 0),
+                new BehaviorTreeNode(BehaviorTreeNodeKind.Action, 0, 0, BehaviorTreeLeafBinding.AlwaysSuccess, 0),
+                new BehaviorTreeNode(BehaviorTreeNodeKind.Action, 0, 0, BehaviorTreeLeafBinding.HoldRunning, 0),
+            };
+            var tree = new BehaviorTreeDefinition("bt.flat-hold", nodes, rootIndex: 0);
+            var world = new BehaviorTreeWorld(tree, capacity: 1);
+            world.AddAgent();
+
+            BehaviorTreeThinkStats first = world.TickAll();
+            BehaviorTreeThinkStats second = world.TickAll();
+
+            Assert.That(first.NodesVisited, Is.EqualTo(3));
+            Assert.That(second.NodesVisited, Is.EqualTo(1));
+            Assert.That(world.Statuses[0], Is.EqualTo(BehaviorTreeStatus.Running));
+        }
+
+        [Test]
+        public void ThinkWave_10k_AlwaysSuccess16_UnderFifteenMilliseconds()
+        {
+            BehaviorTreeDefinition tree = BehaviorTreeFactory.CreateAlwaysSuccessSequence("bt.perf", leafCount: 15);
+            const int agents = 10_000;
+            var world = new BehaviorTreeWorld(tree, capacity: agents);
+            for (int i = 0; i < agents; i++) world.AddAgent();
+            world.TickAll();
+            world.RestartAllThinking();
+            var sw = Stopwatch.StartNew();
+            BehaviorTreeThinkStats stats = world.TickAll();
+            sw.Stop();
+            double ms = sw.Elapsed.TotalMilliseconds;
+            Warn.If(ms, Is.GreaterThanOrEqualTo(FrameBudgetMs),
+                $"AlwaysSuccess-16 think wave exceeded {FrameBudgetMs:F0}ms: {ms:F3}ms");
+            Assert.That(ms, Is.LessThan(CiFrameEnvelopeMs),
+                $"AlwaysSuccess-16 think wave exceeded CI envelope: {ms:F3}ms");
+            Assert.That(stats.Agents, Is.EqualTo(agents));
+        }
+
+        [Test]
+        public void LatchedSuccess_SecondWave_IsCheap()
+        {
+            BehaviorTreeDefinition tree = BehaviorTreeFactory.CreateAlwaysSuccessSequence("bt.latch", leafCount: 8);
+            const int agents = 10_000;
+            var world = new BehaviorTreeWorld(tree, capacity: agents);
+            for (int i = 0; i < agents; i++) world.AddAgent();
+            world.TickAll();
+            var sw = Stopwatch.StartNew();
+            world.TickAll();
+            sw.Stop();
+            double ms = sw.Elapsed.TotalMilliseconds;
+            Warn.If(ms, Is.GreaterThanOrEqualTo(LatchedWaveBudgetMs),
+                $"Latched success second wave exceeded {LatchedWaveBudgetMs:F1}ms: {ms:F3}ms");
+            Assert.That(ms, Is.LessThan(CiLatchedEnvelopeMs),
+                $"Latched success second wave exceeded CI envelope: {ms:F3}ms");
+        }
+
+
+
+        private void TickUntilPatrolCompletes(BehaviorTreeWorld world, ScriptedSensors sensors)
+            => TickUntilScriptReturn(world, sensors, 0);
+
+        private void TickUntilScriptReturn(BehaviorTreeWorld world, ScriptedSensors sensors, int expectedReturn)
+        {
+            for (int i = 0; i < 12; i++)
+            {
+                // Only restart topology after a terminal leaf. Restarting while a ScriptSlice is
+                // Yielded re-enters seeEnemy first and clears the suspended patrol cursor.
+                if (world.Statuses[0] is BehaviorTreeStatus.Success or BehaviorTreeStatus.Failure)
+                {
+                    world.RestartThinking(0);
+                }
+
+                world.TickAll(Programs, 32, sensors);
+                if (world.LastScriptReturns[0] == expectedReturn &&
+                    world.Statuses[0] is BehaviorTreeStatus.Success)
+                {
+                    return;
+                }
+            }
+
+            Assert.That(
+                world.Statuses[0],
+                Is.EqualTo(BehaviorTreeStatus.Success),
+                $"BT status after {12} think waves: return={world.LastScriptReturns[0]}");
+            Assert.That(
+                world.LastScriptReturns[0],
+                Is.EqualTo(expectedReturn),
+                $"BT script return after {12} think waves: status={world.Statuses[0]}");
+        }
+
+        /// <summary>
+        /// Visibility leaves consume signed sight margin; attack leaves consume distance in centimeters.
+        /// </summary>
+        private sealed class ScriptedSensors : IBehaviorTreeSensorFeed
+        {
+            public const int OnTopCm = 0;
+            public const int SeenOutOfRangeCm = 300;
+            public const int NoTargetCm = 100_000;
+
+            public int SeeDistanceCm;
+            public int RangeDistanceCm;
+            private readonly int _see;
+            private readonly int _range;
+            private readonly int _chase;
+            private readonly int _attack;
+
+            public ScriptedSensors(GraphActionCatalog actions)
+            {
+                _see = GraphIdRegistry.GetId("Graph.BT.Leaf.SeeEnemy");
+                _range = GraphIdRegistry.GetId("Graph.BT.Leaf.InAttackRange");
+                _chase = GraphRegistryScriptResolver.RequireActionId(actions, "bt.chase");
+                _attack = GraphRegistryScriptResolver.RequireActionId(actions, "bt.attack");
+            }
+
+            public void WriteSensors(int agentIndex, int graphId, System.Span<int> ints, System.Span<byte> bools)
+            {
+                if (graphId == _see || graphId == _chase) ints[0] = SeeDistanceCm - 550;
+                else if (graphId == _range || graphId == _attack) ints[0] = RangeDistanceCm;
+            }
+        }
+    }
+}

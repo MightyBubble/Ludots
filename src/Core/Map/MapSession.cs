@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Client;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
+using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Terrain;
@@ -11,6 +13,7 @@ using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Ludots.Core.StructureCollision;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Map
 {
@@ -24,19 +27,58 @@ namespace Ludots.Core.Map
         public MapConfig MapConfig { get; }
         public MapSessionState State { get; set; }
         public MapContext Context { get; }
-        public IVisualHeightmap? VisualHeightmap { get; set; }
+        public IContinuousHeightmap? ContinuousHeightmap { get; set; }
+        public ResolvedTerrainPresentation? TerrainPresentation { get; set; }
         public StructureCollisionAsset? StructureCollisionAsset { get; set; }
         public StructureCollisionRuntimeState? StructureCollisionRuntimeState { get; set; }
         public IGroundSurfaceSampler? GroundSurfaceSampler { get; set; }
         public TeamEntityLookup TeamEntityLookup { get; set; } = new TeamEntityLookup();
         public PlayerEntityLookup PlayerEntityLookup { get; set; } = new PlayerEntityLookup();
         public MapLoadEntityIndex EntityIndex { get; set; } = new MapLoadEntityIndex();
-        public int LocalPlayerId { get; set; }
-        public Entity LocalPlayerEntity { get; set; }
+        public IReadOnlyList<ResolvedLocalSeatPossession> LocalSeats { get; set; } = Array.Empty<ResolvedLocalSeatPossession>();
         public TeamRelationshipSnapshot? TeamRelationships { get; set; }
         public MapLaunchContext? LaunchContext { get; set; }
 
+        /// <summary>
+        /// Map-scoped variable table created from <see cref="MapConfig.Variables"/> when the
+        /// session is constructed; null after Cleanup/Dispose (map unload).
+        /// </summary>
+        public MapVariableStore? Variables { get; private set; }
+
+        /// <summary>
+        /// Field layers hosted by this map (catalog ∩ <see cref="MapConfig.Fields"/>),
+        /// created by the engine at map load; null after Cleanup/Dispose.
+        /// </summary>
+        public Ludots.Core.Fields.FieldSessionStore? Fields { get; internal set; }
+
+        /// <summary>
+        /// (layer, regionId) → materialized region entity, filled at map load;
+        /// null after Cleanup/Dispose.
+        /// </summary>
+        public Ludots.Core.Gameplay.FieldRegions.RegionEntityIndex? RegionIndex { get; internal set; }
+
+        /// <summary>
+        /// Hierarchy group entities by key, wired at map load from Fields/hierarchies.json;
+        /// null after Cleanup/Dispose.
+        /// </summary>
+        public Ludots.Core.Gameplay.FieldRegions.RegionHierarchyRuntime? RegionGroups { get; internal set; }
+
+        /// <summary>
+        /// Region volume keys materialized from map JSON "Regions" at map load; backs
+        /// placed-region addressing (LoadPlacedRegion) and TriggerGraph mount
+        /// validation. Null after Cleanup/Dispose.
+        /// </summary>
+        public IReadOnlySet<string>? RegionVolumeKeys { get; internal set; }
+
+        /// <summary>
+        /// Field region emission contracts keyed by region key, loaded from
+        /// Fields/region_emissions.json at map load (#1468); region entities carry
+        /// the matching RegionVolumeEmissionCm. Null after Cleanup/Dispose.
+        /// </summary>
+        public IReadOnlyDictionary<string, Ludots.Core.Gameplay.MapTriggers.RegionVolumeEmissionCm>? FieldRegionEmissions { get; internal set; }
+
         private readonly Dictionary<string, IBoard> _boards = new Dictionary<string, IBoard>(StringComparer.OrdinalIgnoreCase);
+        private readonly string _rootBoardName;
         private readonly List<Trigger> _triggers = new List<Trigger>();
 
         private static readonly QueryDescription _mapEntityQuery =
@@ -46,8 +88,10 @@ namespace Ludots.Core.Map
         {
             MapId = mapId;
             MapConfig = mapConfig;
+            _rootBoardName = mapConfig?.RootBoard;
             State = MapSessionState.Active;
             Context = new MapContext(parentContext);
+            Variables = MapVariableStore.Create(mapId, mapConfig?.Variables);
         }
 
         public void AddBoard(IBoard board)
@@ -66,12 +110,19 @@ namespace Ludots.Core.Map
         }
 
         /// <summary>
-        /// Returns the first board, or null. Convenience for single-board maps.
+        /// The root board (#1567): anchors the host world frame and backs engine-level
+        /// spatial services. Honors the map's RootBoard designation; falls back to the
+        /// first board exactly like the pre-#1567 behavior. Null on boardless maps.
         /// </summary>
         public IBoard PrimaryBoard
         {
             get
             {
+                if (_rootBoardName != null && _boards.TryGetValue(_rootBoardName, out var designated))
+                {
+                    return designated;
+                }
+
                 foreach (var kvp in _boards)
                     return kvp.Value;
                 return null;
@@ -153,6 +204,12 @@ namespace Ludots.Core.Map
                 }
             }
             _boards.Clear();
+            Variables = null;
+            Fields = null;
+            RegionIndex = null;
+            RegionGroups = null;
+            RegionVolumeKeys = null;
+            FieldRegionEmissions = null;
 
             State = MapSessionState.Disposed;
         }
@@ -166,6 +223,12 @@ namespace Ludots.Core.Map
                     try { kvp.Value.Dispose(); } catch { }
                 }
                 _boards.Clear();
+                Variables = null;
+                Fields = null;
+                RegionIndex = null;
+                RegionGroups = null;
+                RegionVolumeKeys = null;
+                FieldRegionEmissions = null;
                 State = MapSessionState.Disposed;
             }
         }

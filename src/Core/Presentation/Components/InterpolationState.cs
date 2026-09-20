@@ -4,7 +4,7 @@ namespace Ludots.Core.Presentation.Components
     /// Global presentation frame state for smooth visual rendering.
     /// This is a singleton component that provides interpolation factor to ALL visual sync systems.
     /// 
-    /// Architecture alignment with Performer:
+    /// Architecture alignment with Presenter:
     /// - Written by: PresentationFrameSetupSystem (once per render frame, before all visual systems)
     /// - Read by: Any visual sync system (Physics2D, Animation, Network, etc.)
     /// - Data flow: Logic domain → Interpolation → Visual domain (VisualTransform) → DrawBuffer

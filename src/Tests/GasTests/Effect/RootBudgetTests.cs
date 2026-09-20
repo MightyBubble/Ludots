@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
@@ -132,8 +132,6 @@ namespace Ludots.Tests.GAS
                 PayloadEffectTemplateId = 1001,
                 ContextMapping = TargetResolverContextMapping.Default,
             };
-            int dropped = 0;
-
             var error = Throws<InvalidOperationException>(() =>
                 TargetResolverFanOutHelper.ValidateAndCollect(
                     world,
@@ -144,12 +142,10 @@ namespace Ludots.Tests.GAS
                     candidates,
                     candidates.Length,
                     budget,
-                    commands,
-                    ref dropped));
+                    commands));
 
             That(error!.Message, Does.StartWith(TargetResolverFanOutHelper.RootBudgetExceededError));
             That(commands.Count, Is.Zero);
-            That(dropped, Is.Zero);
         }
 
         // Note: EffectCallbackComponent has been removed per the "Everything is Graph" architecture.
@@ -168,7 +164,7 @@ namespace Ludots.Tests.GAS
                 var templates = new EffectTemplateRegistry();
                 templates.Register(2001, new EffectTemplateData
                 {
-                    TagId = 0,
+                    CategoryId = 0,
                     PresetType = EffectPresetType.None,
                     LifetimeKind = EffectLifetimeKind.Instant,
                 });
@@ -221,7 +217,7 @@ namespace Ludots.Tests.GAS
             modifiers.Add(hpAttrId, ModifierOp.Add, -15f);
             templates.Register(2002, new EffectTemplateData
             {
-                TagId = 10,
+                CategoryId = 10,
                 PresetType = EffectPresetType.InstantDamage,
                 LifetimeKind = EffectLifetimeKind.Instant,
                 Modifiers = modifiers,
@@ -301,7 +297,7 @@ namespace Ludots.Tests.GAS
             modifiers.Add(hpAttrId, ModifierOp.Add, -15f);
             templates.Register(2003, new EffectTemplateData
             {
-                TagId = 10,
+                CategoryId = 10,
                 PresetType = EffectPresetType.InstantDamage,
                 LifetimeKind = EffectLifetimeKind.Instant,
                 Modifiers = modifiers,
@@ -362,7 +358,7 @@ namespace Ludots.Tests.GAS
             modifiers.Add(hpAttrId, ModifierOp.Add, -15f);
             templates.Register(2004, new EffectTemplateData
             {
-                TagId = 10,
+                CategoryId = 10,
                 PresetType = EffectPresetType.InstantDamage,
                 LifetimeKind = EffectLifetimeKind.Instant,
                 ParticipatesInResponse = true,
@@ -531,7 +527,7 @@ namespace Ludots.Tests.GAS
             modifiers.Add(attrId: 0, ModifierOp.Add, -5f);
             templates.Register(2001, new EffectTemplateData
             {
-                TagId = 10,
+                CategoryId = 10,
                 PresetType = EffectPresetType.DoT,
                 LifetimeKind = EffectLifetimeKind.After,
                 ClockId = GasClockId.Step,
@@ -600,7 +596,7 @@ namespace Ludots.Tests.GAS
                     new Ludots.Core.GraphRuntime.GraphProgramRegistry(),
                     new PresetTypeRegistry(),
                     new BuiltinHandlerRegistry(),
-                    Ludots.Core.NodeLibraries.GASGraph.GasGraphOpHandlerTable.Instance,
+                    new Ludots.Core.NodeLibraries.GASGraph.GasGraphOpHandlerTable(),
                     new EffectTemplateRegistry(),
                     globalListeners: globalRegistry,
                     eventBus: eventBus,
@@ -613,7 +609,7 @@ namespace Ludots.Tests.GAS
                 for (int i = 0; i < EffectPhaseListenerBuffer.CAPACITY; i++)
                 {
                     That(targetBuffer.TryAdd(
-                        listenTagId: 0,
+                        listenCategoryId: 0,
                         listenEffectId: 0,
                         phase: EffectPhaseId.OnApply,
                         scope: PhaseListenerScope.Target,
@@ -629,7 +625,7 @@ namespace Ludots.Tests.GAS
                 for (int i = 0; i < EffectPhaseListenerBuffer.CAPACITY; i++)
                 {
                     That(sourceBuffer.TryAdd(
-                        listenTagId: 0,
+                        listenCategoryId: 0,
                         listenEffectId: 0,
                         phase: EffectPhaseId.OnApply,
                         scope: PhaseListenerScope.Source,
@@ -644,7 +640,7 @@ namespace Ludots.Tests.GAS
                 for (int i = 0; i < GlobalPhaseListenerRegistry.MAX_LISTENERS; i++)
                 {
                     That(globalRegistry.Register(
-                        listenTagId: 0,
+                        listenCategoryId: 0,
                         listenEffectId: 0,
                         phase: EffectPhaseId.OnApply,
                         flags: PhaseListenerActionFlags.PublishEvent,
@@ -652,7 +648,6 @@ namespace Ludots.Tests.GAS
                         eventTagId: 2000 + i + 1,
                         priority: 0), Is.True);
                 }
-
                 var api = new GasGraphRuntimeApi(world, eventBus: eventBus);
                 using var transaction = new EffectPhaseSideEffectTransaction(
                     world,
@@ -672,7 +667,7 @@ namespace Ludots.Tests.GAS
                     targetContext: default,
                     targetPos: default,
                     phase: EffectPhaseId.OnApply,
-                    effectTagId: 1,
+                    effectCategoryId: 1,
                     effectTemplateId: 1);
                 transaction.Commit();
                 api.EndEffectSideEffectTransaction(transaction);

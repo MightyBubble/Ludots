@@ -1,0 +1,21 @@
+{
+  "actions": [
+    { "id": "StoryAdvance", "name": "Story_Advance", "type": "Button" },
+    { "id": "StoryChoice1", "name": "Story_Choice1", "type": "Button" },
+    { "id": "StoryChoice2", "name": "Story_Choice2", "type": "Button" },
+    { "id": "StoryChoice3", "name": "Story_Choice3", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "DialogueAuthorKit.Controls",
+      "name": "Dialogue Author Kit Controls",
+      "priority": 110,
+      "bindings": [
+        { "actionId": "StoryAdvance", "path": "<Keyboard>/enter" },
+        { "actionId": "StoryChoice1", "path": "<Keyboard>/1" },
+        { "actionId": "StoryChoice2", "path": "<Keyboard>/2" },
+        { "actionId": "StoryChoice3", "path": "<Keyboard>/3" }
+      ]
+    }
+  ]
+}

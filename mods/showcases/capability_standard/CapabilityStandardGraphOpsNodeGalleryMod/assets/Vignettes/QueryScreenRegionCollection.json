@@ -1,0 +1,11 @@
+{
+  "op": "QueryScreenRegionCollection",
+  "driver": "derivedQuery",
+  "title": "只点框内的敌军",
+  "beat": "左半场点名，友军与框外敌军留在圈外。",
+  "detailTemplate": "左半场命中{count}名敌军，换队后不再点名。",
+  "assertDetailContains": ["敌军"],
+  "featuredNodeId": "hits",
+  "graphKind": "Query",
+  "field": "query"
+}

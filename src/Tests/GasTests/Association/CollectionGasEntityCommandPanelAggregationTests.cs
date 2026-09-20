@@ -17,6 +17,7 @@ using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
+using Ludots.Core.Registry;
 using Ludots.UI;
 using Ludots.UI.Skia;
 using NUnit.Framework;
@@ -37,8 +38,8 @@ namespace Ludots.Tests.GAS
         private const string CollectionSourceId = "gas.collection-ability-slots";
         private const string AnyQueryId = "tests.command.aggregation-any";
 
-        private const string StimFamilyTag = "castFamily.stimpack";
-        private const string ChargeFamilyTag = "castFamily.charge_shot";
+        private const string StimFamilyCategory = "castFamily.stimpack";
+        private const string ChargeFamilyCategory = "castFamily.charge_shot";
 
         private const int StimAbilityId = 101;
         private const int TankChargeAbilityId = 201;
@@ -141,7 +142,7 @@ namespace Ludots.Tests.GAS
 
             var submitted = new List<Order>();
             InputOrderMappingSystem mapping = CreateMappingSystem(submitted);
-            mapping.SetLocalPlayer(fixture.CollectionOwner, 7);
+            mapping.SetSolePossessedActor(fixture.CollectionOwner, 7);
             mapping.SetActorProvider((out Entity actor) =>
             {
                 actor = fixture.CollectionOwner;
@@ -177,8 +178,8 @@ namespace Ludots.Tests.GAS
             var fixture = SelectionFixture.Create(engine);
 
             var submitted = new List<Order>();
-            InputOrderMappingSystem mapping = CreateMappingSystem(submitted, InteractionModeType.SmartCast);
-            mapping.SetLocalPlayer(fixture.CollectionOwner, 7);
+            InputOrderMappingSystem mapping = CreateMappingSystem(submitted, CastModeType.SmartCast);
+            mapping.SetSolePossessedActor(fixture.CollectionOwner, 7);
             mapping.SetActorProvider((out Entity actor) =>
             {
                 actor = fixture.CollectionOwner;
@@ -207,7 +208,7 @@ namespace Ludots.Tests.GAS
 
             var submitted = new List<Order>();
             InputOrderMappingSystem mapping = CreateMappingSystem(submitted);
-            mapping.SetLocalPlayer(fixture.CollectionOwner, 7);
+            mapping.SetSolePossessedActor(fixture.CollectionOwner, 7);
             mapping.SetActorProvider((out Entity actor) =>
             {
                 actor = fixture.CollectionOwner;
@@ -245,8 +246,8 @@ namespace Ludots.Tests.GAS
             var fixture = SelectionFixture.Create(engine);
 
             var submitted = new List<Order>();
-            InputOrderMappingSystem mapping = CreateMappingSystem(submitted, InteractionModeType.AimCast);
-            mapping.SetLocalPlayer(fixture.CollectionOwner, 7);
+            InputOrderMappingSystem mapping = CreateMappingSystem(submitted, CastModeType.AimCast);
+            mapping.SetSolePossessedActor(fixture.CollectionOwner, 7);
             mapping.SetActorProvider((out Entity actor) =>
             {
                 actor = fixture.CollectionOwner;
@@ -323,11 +324,11 @@ namespace Ludots.Tests.GAS
 
             public static SelectionFixture Create(GameEngine engine)
             {
-                RegisterAbility(engine, StrikeAbilityId, "Strike", "Strike detail", catalogTag: null);
-                RegisterAbility(engine, StimAbilityId, "Stimpack", "Stim detail", StimFamilyTag);
-                RegisterAbility(engine, TankChargeAbilityId, "Tank Charge", "Tank charge detail", ChargeFamilyTag);
-                RegisterAbility(engine, EliteChargeAbilityId, "Elite Charge", "Elite charge detail", ChargeFamilyTag);
-                RegisterAbility(engine, FormVariantAbilityId, "Form Variant", "Form variant detail", catalogTag: null);
+                RegisterAbility(engine, StrikeAbilityId, "Strike", "Strike detail", categoryName: null);
+                RegisterAbility(engine, StimAbilityId, "Stimpack", "Stim detail", StimFamilyCategory);
+                RegisterAbility(engine, TankChargeAbilityId, "Tank Charge", "Tank charge detail", ChargeFamilyCategory);
+                RegisterAbility(engine, EliteChargeAbilityId, "Elite Charge", "Elite charge detail", ChargeFamilyCategory);
+                RegisterAbility(engine, FormVariantAbilityId, "Form Variant", "Form variant detail", categoryName: null);
 
                 Entity marine1 = CreateActor(engine.World, "Marine 1", MarineTemplateKeyId, StrikeAbilityId, StimAbilityId);
                 Entity marine2 = CreateActor(engine.World, "Marine 2", MarineTemplateKeyId, StrikeAbilityId, StimAbilityId);
@@ -385,43 +386,16 @@ namespace Ludots.Tests.GAS
             string repoRoot = FindRepoRoot();
             var engine = new GameEngine();
             // EntityCommandPanelMod loads through the real ModLoader so its
-            // assets/Configs/UI/ability_aggregation_profiles.json fragment (aggregation.by_family)
+            // assets/UI/ability_aggregation_profiles.json fragment (aggregation.by_family)
             // merges additively into the Core structural profiles at engine init (ArrayById).
             engine.InitializeWithConfigPipeline(
                 RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "EntityCommandPanelMod" }),
                 Path.Combine(repoRoot, "assets"));
             InstallUiServices(engine);
-            RegisterAggregationFamilyTags();
-            InstallTestAggregationProfile(engine);
+            InstallTestAggregationProfiles(engine);
             engine.TriggerManager.FireEvent(GameEvents.GameStart, engine.CreateContext());
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
             return engine;
-        }
-
-        private static void RegisterAggregationFamilyTags()
-        {
-            // The by_family profile compiles its catalog mask during GameStart. Test data tags must
-            // exist by then, while ability catalog tags are registered later with the same ids.
-            TagRegistry.Register(StimFamilyTag);
-            TagRegistry.Register(ChargeFamilyTag);
-        }
-
-        private static void InstallTestAggregationProfile(GameEngine engine)
-        {
-            var registry = engine.GetService(CoreServiceKeys.AbilityAggregationProfileRegistry)
-                ?? throw new InvalidOperationException("AbilityAggregationProfileRegistry missing.");
-            registry.Install(new AbilityAggregationProfilesConfig
-            {
-                Profiles = new List<AbilityAggregationProfileDefinition>
-                {
-                    new()
-                    {
-                        Id = ByFamilyProfileId,
-                        GroupBy = "catalog.castFamily",
-                        Overflow = "nextPanelSlot"
-                    }
-                }
-            });
         }
 
         private static void InstallUiServices(GameEngine engine)
@@ -433,7 +407,36 @@ namespace Ludots.Tests.GAS
             engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)new SkiaImageSizeProvider());
         }
 
-        private static void RegisterAbility(GameEngine engine, int abilityId, string label, string detail, string? catalogTag)
+        private static void InstallTestAggregationProfiles(GameEngine engine)
+        {
+            AbilityCategoryRegistry.Register(StimFamilyCategory);
+            AbilityCategoryRegistry.Register(ChargeFamilyCategory);
+
+            var profileIds = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var registry = new AbilityAggregationProfileRegistry(profileIds);
+            registry.Install(new AbilityAggregationProfilesConfig
+            {
+                Profiles =
+                {
+                    new AbilityAggregationProfileDefinition
+                    {
+                        Id = ByFamilyProfileId,
+                        GroupBy = "catalog.castFamily",
+                        Overflow = "nextPanelSlot",
+                    },
+                    new AbilityAggregationProfileDefinition
+                    {
+                        Id = ByTemplateProfileId,
+                        GroupBy = "template.id",
+                        Overflow = "nextPanelSlot",
+                    },
+                }
+            });
+
+            engine.SetService(CoreServiceKeys.AbilityAggregationProfileRegistry, registry);
+        }
+
+        private static void RegisterAbility(GameEngine engine, int abilityId, string label, string detail, string? categoryName)
         {
             var registry = engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry)
                 ?? throw new InvalidOperationException("AbilityDefinitionRegistry missing.");
@@ -446,10 +449,10 @@ namespace Ludots.Tests.GAS
                     HintText = detail
                 }
             };
-            if (catalogTag != null)
+            if (categoryName != null)
             {
-                definition.HasCatalogTags = true;
-                definition.CatalogTags.AddTag(TagRegistry.Register(catalogTag));
+                definition.HasCategories = true;
+                definition.Categories.AddTag(AbilityCategoryRegistry.Register(categoryName));
             }
 
             registry.Register(abilityId, in definition, "CollectionGasEntityCommandPanelAggregationTests");
@@ -519,7 +522,7 @@ namespace Ludots.Tests.GAS
 
         private static InputOrderMappingSystem CreateMappingSystem(
             List<Order> submitted,
-            InteractionModeType interactionMode = InteractionModeType.TargetFirst)
+            CastModeType interactionMode = CastModeType.TargetFirst)
         {
             var mapping = new InputOrderMappingSystem(new FrozenInputActionReader(), new InputOrderMappingConfig
             {

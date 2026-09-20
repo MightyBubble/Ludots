@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyName>LiteNetLib</AssemblyName>
+    <RootNamespace>LiteNetLib</RootNamespace>
+    <TargetFramework>net8.0</TargetFramework>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <OutputType>Library</OutputType>
+    <LangVersion>8</LangVersion>
+
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>1701;1702;1705;1591</NoWarn>
+    <PackageVersion>2.1.4</PackageVersion>
+    <Title>Lite reliable UDP library for Mono and .NET </Title>
+    <AssemblyVersion>2.1.4</AssemblyVersion>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DefineConstants>$(DefineConstants);LITENETLIB_UNSAFE;SIMULATE_NETWORK</DefineConstants>
+    <PackageTags>udp reliable-udp network</PackageTags>
+    <PackageReleaseNotes>https://github.com/RevenantX/LiteNetLib/releases/tag/2.1.4</PackageReleaseNotes>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/RevenantX/LiteNetLib</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/RevenantX/LiteNetLib</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <Authors>Ruslan Pyrch</Authors>
+    <Copyright>Copyright 2026 Ruslan Pyrch</Copyright>
+    <Description>Lite reliable UDP library for .NET, Mono, and .NET Core</Description>
+  </PropertyGroup>
+
+</Project>

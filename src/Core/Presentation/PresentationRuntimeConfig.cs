@@ -1,4 +1,5 @@
 using System;
+using Ludots.Core.Presentation.Rendering;
 
 namespace Ludots.Core.Presentation
 {
@@ -8,24 +9,31 @@ namespace Ludots.Core.Presentation
     /// </summary>
     public sealed class PresentationRuntimeConfig
     {
-        private int? _performerInstanceCapacity;
+        private int? _presenterInstanceCapacity;
         private int? _gasPresentationEventCapacity;
         private int? _presentationEventStreamCapacity;
         private int? _presentationOwnerChangeCapacity;
-        private int? _performerCommandCapacity;
+        private int? _presenterCommandCapacity;
+        private int? _presenterTimerCapacity;
         private int? _primitiveDrawBufferCapacity;
         private int? _visualSnapshotBufferCapacity;
         private int? _visualProxyBufferCapacity;
         private int? _skinnedVisualBatchCapacity;
+        private GpuSkinnedRuntimeConfig? _gpuSkinned;
         private int? _presentationRequestCapacity;
+        private int? _clearTransientVisualProjectionCapacity;
+        private int? _instancedBatchRequestCapacity;
+        private int? _instancedBatchOperationCapacity;
         private int? _globalFieldVisualRecordCapacity;
         private int? _globalFieldVisualCellCapacity;
         private int? _globalFieldVisualDirtyRectCapacity;
         private int? _groundOverlayCapacity;
-        private int? _roadSplineCapacity;
+        private int? _splineRibbonCapacity;
         private int? _worldHudCapacity;
         private int? _screenHudCapacity;
         private int? _minimapMarkerCapacity;
+        private int? _navMeshTileCapacity;
+        private int? _trailMeshCapacity;
         private int? _runtimeEntitySpawnQueueCapacity;
         private int? _runtimeEntitySpawnReceiptQueueCapacity;
         private int? _runtimeEntityLifecycleQueueCapacity;
@@ -33,24 +41,35 @@ namespace Ludots.Core.Presentation
         private CameraCullingRuntimeConfig? _cameraCulling;
         private MinimapRuntimeConfig? _minimap;
 
-        public int PerformerInstanceCapacity { get => _performerInstanceCapacity ?? 0; set => _performerInstanceCapacity = value; }
+        public int PresenterInstanceCapacity { get => _presenterInstanceCapacity ?? 0; set => _presenterInstanceCapacity = value; }
         public int GasPresentationEventCapacity { get => _gasPresentationEventCapacity ?? 0; set => _gasPresentationEventCapacity = value; }
         public int PresentationEventStreamCapacity { get => _presentationEventStreamCapacity ?? 0; set => _presentationEventStreamCapacity = value; }
         public int PresentationOwnerChangeCapacity { get => _presentationOwnerChangeCapacity ?? 0; set => _presentationOwnerChangeCapacity = value; }
-        public int PerformerCommandCapacity { get => _performerCommandCapacity ?? 0; set => _performerCommandCapacity = value; }
+        public int PresenterCommandCapacity { get => _presenterCommandCapacity ?? 0; set => _presenterCommandCapacity = value; }
+        public int PresenterTimerCapacity { get => _presenterTimerCapacity ?? 0; set => _presenterTimerCapacity = value; }
         public int PrimitiveDrawBufferCapacity { get => _primitiveDrawBufferCapacity ?? 0; set => _primitiveDrawBufferCapacity = value; }
         public int VisualSnapshotBufferCapacity { get => _visualSnapshotBufferCapacity ?? 0; set => _visualSnapshotBufferCapacity = value; }
         public int VisualProxyBufferCapacity { get => _visualProxyBufferCapacity ?? 0; set => _visualProxyBufferCapacity = value; }
         public int SkinnedVisualBatchCapacity { get => _skinnedVisualBatchCapacity ?? 0; set => _skinnedVisualBatchCapacity = value; }
+        public GpuSkinnedRuntimeConfig GpuSkinned
+        {
+            get => _gpuSkinned ?? throw new InvalidOperationException("presentation.gpuSkinned must be explicitly configured.");
+            set => _gpuSkinned = value;
+        }
         public int PresentationRequestCapacity { get => _presentationRequestCapacity ?? 0; set => _presentationRequestCapacity = value; }
+        public int ClearTransientVisualProjectionCapacity { get => _clearTransientVisualProjectionCapacity ?? 0; set => _clearTransientVisualProjectionCapacity = value; }
+        public int InstancedBatchRequestCapacity { get => _instancedBatchRequestCapacity ?? 0; set => _instancedBatchRequestCapacity = value; }
+        public int InstancedBatchOperationCapacity { get => _instancedBatchOperationCapacity ?? 0; set => _instancedBatchOperationCapacity = value; }
         public int GlobalFieldVisualRecordCapacity { get => _globalFieldVisualRecordCapacity ?? 0; set => _globalFieldVisualRecordCapacity = value; }
         public int GlobalFieldVisualCellCapacity { get => _globalFieldVisualCellCapacity ?? 0; set => _globalFieldVisualCellCapacity = value; }
         public int GlobalFieldVisualDirtyRectCapacity { get => _globalFieldVisualDirtyRectCapacity ?? 0; set => _globalFieldVisualDirtyRectCapacity = value; }
         public int GroundOverlayCapacity { get => _groundOverlayCapacity ?? 0; set => _groundOverlayCapacity = value; }
-        public int RoadSplineCapacity { get => _roadSplineCapacity ?? 0; set => _roadSplineCapacity = value; }
+        public int SplineRibbonCapacity { get => _splineRibbonCapacity ?? 0; set => _splineRibbonCapacity = value; }
         public int WorldHudCapacity { get => _worldHudCapacity ?? 0; set => _worldHudCapacity = value; }
         public int ScreenHudCapacity { get => _screenHudCapacity ?? 0; set => _screenHudCapacity = value; }
         public int MinimapMarkerCapacity { get => _minimapMarkerCapacity ?? 0; set => _minimapMarkerCapacity = value; }
+        public int NavMeshTileCapacity { get => _navMeshTileCapacity ?? 4096; set => _navMeshTileCapacity = value; }
+        public int TrailMeshCapacity { get => _trailMeshCapacity ?? 0; set => _trailMeshCapacity = value; }
         public int RuntimeEntitySpawnQueueCapacity { get => _runtimeEntitySpawnQueueCapacity ?? 0; set => _runtimeEntitySpawnQueueCapacity = value; }
         public int RuntimeEntitySpawnReceiptQueueCapacity { get => _runtimeEntitySpawnReceiptQueueCapacity ?? 0; set => _runtimeEntitySpawnReceiptQueueCapacity = value; }
         public int RuntimeEntityLifecycleQueueCapacity { get => _runtimeEntityLifecycleQueueCapacity ?? 0; set => _runtimeEntityLifecycleQueueCapacity = value; }
@@ -70,24 +89,35 @@ namespace Ludots.Core.Presentation
 
         public void Validate()
         {
-            RequirePositive(_performerInstanceCapacity, "presentation.performerInstanceCapacity");
+            RequirePositive(_presenterInstanceCapacity, "presentation.presenterInstanceCapacity");
             RequirePositive(_gasPresentationEventCapacity, "presentation.gasPresentationEventCapacity");
             RequirePositive(_presentationEventStreamCapacity, "presentation.presentationEventStreamCapacity");
             RequirePositive(_presentationOwnerChangeCapacity, "presentation.presentationOwnerChangeCapacity");
-            RequirePositive(_performerCommandCapacity, "presentation.performerCommandCapacity");
+            RequirePositive(_presenterCommandCapacity, "presentation.presenterCommandCapacity");
+            RequirePositive(_presenterTimerCapacity, "presentation.presenterTimerCapacity");
             RequirePositive(_primitiveDrawBufferCapacity, "presentation.primitiveDrawBufferCapacity");
             RequirePositive(_visualSnapshotBufferCapacity, "presentation.visualSnapshotBufferCapacity");
             RequirePositive(_visualProxyBufferCapacity, "presentation.visualProxyBufferCapacity");
             RequirePositive(_skinnedVisualBatchCapacity, "presentation.skinnedVisualBatchCapacity");
+            if (_gpuSkinned == null)
+            {
+                throw new InvalidOperationException("presentation.gpuSkinned must be explicitly configured.");
+            }
+
+            _gpuSkinned.Validate();
             RequirePositive(_presentationRequestCapacity, "presentation.presentationRequestCapacity");
+            RequirePositive(_clearTransientVisualProjectionCapacity, "presentation.clearTransientVisualProjectionCapacity");
+            RequirePositive(_instancedBatchRequestCapacity, "presentation.instancedBatchRequestCapacity");
+            RequirePositive(_instancedBatchOperationCapacity, "presentation.instancedBatchOperationCapacity");
             RequirePositive(_globalFieldVisualRecordCapacity, "presentation.globalFieldVisualRecordCapacity");
             RequirePositive(_globalFieldVisualCellCapacity, "presentation.globalFieldVisualCellCapacity");
             RequirePositive(_globalFieldVisualDirtyRectCapacity, "presentation.globalFieldVisualDirtyRectCapacity");
             RequirePositive(_groundOverlayCapacity, "presentation.groundOverlayCapacity");
-            RequirePositive(_roadSplineCapacity, "presentation.roadSplineCapacity");
+            RequirePositive(_splineRibbonCapacity, "presentation.splineRibbonCapacity");
             RequirePositive(_worldHudCapacity, "presentation.worldHudCapacity");
             RequirePositive(_screenHudCapacity, "presentation.screenHudCapacity");
             RequirePositive(_minimapMarkerCapacity, "presentation.minimapMarkerCapacity");
+            RequirePositive(_trailMeshCapacity, "presentation.trailMeshCapacity");
             RequirePositive(_runtimeEntitySpawnQueueCapacity, "presentation.runtimeEntitySpawnQueueCapacity");
             RequirePositive(_runtimeEntitySpawnReceiptQueueCapacity, "presentation.runtimeEntitySpawnReceiptQueueCapacity");
             RequirePositive(_runtimeEntityLifecycleQueueCapacity, "presentation.runtimeEntityLifecycleQueueCapacity");
@@ -135,6 +165,42 @@ namespace Ludots.Core.Presentation
             }
 
             return value.Value;
+        }
+    }
+
+    public sealed class GpuSkinnedRuntimeConfig
+    {
+        private int? _maxBatches;
+        private int? _maxUniquePoses;
+        private int? _maxBoneSlots;
+        private int? _posePhaseBuckets;
+
+        public int MaxBatches { get => _maxBatches ?? 0; set => _maxBatches = value; }
+
+        public int MaxUniquePoses { get => _maxUniquePoses ?? 0; set => _maxUniquePoses = value; }
+
+        public int MaxBoneSlots { get => _maxBoneSlots ?? 0; set => _maxBoneSlots = value; }
+
+        public int PosePhaseBuckets { get => _posePhaseBuckets ?? 0; set => _posePhaseBuckets = value; }
+
+        public void Validate()
+        {
+            PresentationRuntimeConfig.RequirePositive(_maxBatches, "presentation.gpuSkinned.maxBatches");
+            PresentationRuntimeConfig.RequirePositive(_maxUniquePoses, "presentation.gpuSkinned.maxUniquePoses");
+            int maxBoneSlots = PresentationRuntimeConfig.RequirePositive(_maxBoneSlots, "presentation.gpuSkinned.maxBoneSlots");
+            if (maxBoneSlots > 2048)
+            {
+                throw new InvalidOperationException("presentation.gpuSkinned.maxBoneSlots must be <= 2048.");
+            }
+
+            int posePhaseBuckets = PresentationRuntimeConfig.RequirePositive(
+                _posePhaseBuckets,
+                "presentation.gpuSkinned.posePhaseBuckets");
+            if (posePhaseBuckets > _maxUniquePoses!.Value)
+            {
+                throw new InvalidOperationException(
+                    "presentation.gpuSkinned.posePhaseBuckets must be <= maxUniquePoses.");
+            }
         }
     }
 

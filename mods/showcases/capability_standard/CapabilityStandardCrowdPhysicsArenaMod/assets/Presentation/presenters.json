@@ -1,0 +1,394 @@
+[
+ {
+  "id": "crowd_arena_crate_bootstrap",
+  "rules": [
+   {
+    "event": {
+     "kind": "EntitySpawned",
+     "key": "crowd_arena_crate"
+    },
+    "condition": {
+     "inline": "SourceHasVisualTransform"
+    },
+    "command": {
+     "kind": "CreatePresenter",
+     "definitionId": "crowd_arena_crate",
+     "scopeSource": "EventPayloadA"
+    }
+   },
+   {
+    "event": {
+     "kind": "EntityDestroyed",
+     "key": "crowd_arena_crate"
+    },
+    "command": {
+     "kind": "DestroyPresenterScope",
+     "scopeSource": "EventPayloadA"
+    }
+   }
+  ]
+ },
+ {
+  "id": "crowd_arena_boulder_bootstrap",
+  "rules": [
+   {
+    "event": {
+     "kind": "EntitySpawned",
+     "key": "crowd_arena_boulder"
+    },
+    "condition": {
+     "inline": "SourceHasVisualTransform"
+    },
+    "command": {
+     "kind": "CreatePresenter",
+     "definitionId": "crowd_arena_boulder",
+     "scopeSource": "EventPayloadA"
+    }
+   },
+   {
+    "event": {
+     "kind": "EntityDestroyed",
+     "key": "crowd_arena_boulder"
+    },
+    "command": {
+     "kind": "DestroyPresenterScope",
+     "scopeSource": "EventPayloadA"
+    }
+   }
+  ]
+ },
+ {
+  "id": "crowd_arena_pressure_plate_bootstrap",
+  "rules": [
+   {
+    "event": {
+     "kind": "EntitySpawned",
+     "key": "crowd_arena_pressure_plate"
+    },
+    "condition": {
+     "inline": "SourceHasVisualTransform"
+    },
+    "command": {
+     "kind": "CreatePresenter",
+     "definitionId": "crowd_arena_pressure_plate",
+     "scopeSource": "EventPayloadA"
+    }
+   },
+   {
+    "event": {
+     "kind": "EntityDestroyed",
+     "key": "crowd_arena_pressure_plate"
+    },
+    "command": {
+     "kind": "DestroyPresenterScope",
+     "scopeSource": "EventPayloadA"
+    }
+   }
+  ]
+ },
+ {
+  "id": "crowd_arena_door_bootstrap",
+  "rules": [
+   {
+    "event": {
+     "kind": "EntitySpawned",
+     "key": "crowd_arena_door"
+    },
+    "condition": {
+     "inline": "SourceHasVisualTransform"
+    },
+    "command": {
+     "kind": "CreatePresenter",
+     "definitionId": "crowd_arena_door",
+     "scopeSource": "EventPayloadA"
+    }
+   },
+   {
+    "event": {
+     "kind": "EntityDestroyed",
+     "key": "crowd_arena_door"
+    },
+    "command": {
+     "kind": "DestroyPresenterScope",
+     "scopeSource": "EventPayloadA"
+    }
+   }
+  ]
+ },
+ {
+  "id": "crowd_arena_crate",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "cube",
+     "materialId": "default_surface",
+     "renderPath": "InstancedStaticMesh",
+     "mobility": "Movable",
+     "localScale": [
+      1.2,
+      1.2,
+      1.2
+     ]
+    },
+    "style": {
+     "color": [
+      0.62,
+      0.42,
+      0.24,
+      1
+     ]
+    }
+   },
+   {
+    "slot": "grounding",
+    "kind": "Grounding",
+    "activeByDefault": true,
+    "grounding": {
+     "mode": "SnapToGround",
+     "offset": 0.6,
+     "updatePolicy": "Once"
+    }
+   }
+  ]
+ },
+ {
+  "id": "crowd_arena_boulder",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "sphere",
+     "materialId": "default_surface",
+     "renderPath": "InstancedStaticMesh",
+     "mobility": "Movable",
+     "localScale": [
+      2.4,
+      2.4,
+      2.4
+     ]
+    },
+    "style": {
+     "color": [
+      0.58,
+      0.6,
+      0.64,
+      1
+     ]
+    }
+   },
+   {
+    "slot": "grounding",
+    "kind": "Grounding",
+    "activeByDefault": true,
+    "grounding": {
+     "mode": "SnapToGround",
+     "offset": 1.2,
+     "updatePolicy": "Once"
+    }
+   }
+  ]
+ },
+ {
+  "id": "crowd_arena_pressure_plate",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "cube",
+     "materialId": "default_surface",
+     "renderPath": "InstancedStaticMesh",
+     "mobility": "Static",
+     "localScale": [
+      0.8,
+      0.08,
+      8.4
+     ]
+    },
+    "style": {
+     "color": [
+      0.5,
+      0.62,
+      0.74,
+      1
+     ]
+    }
+   },
+   {
+    "slot": "grounding",
+    "kind": "Grounding",
+    "activeByDefault": true,
+    "grounding": {
+     "mode": "SnapToGround",
+     "offset": 0.04,
+     "updatePolicy": "Once"
+    }
+   }
+  ]
+ },
+ {
+  "id": "crowd_arena_door",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "cube",
+     "materialId": "default_surface",
+     "renderPath": "InstancedStaticMesh",
+     "mobility": "Static",
+     "localScale": [
+      5.2,
+      0.25,
+      5.2
+     ]
+    },
+    "style": {
+     "color": [
+      0.3,
+      0.32,
+      0.38,
+      1
+     ]
+    }
+   },
+   {
+    "slot": "grounding",
+    "kind": "Grounding",
+    "activeByDefault": true,
+    "grounding": {
+     "mode": "SnapToGround",
+     "offset": 0.125,
+     "updatePolicy": "Once"
+    }
+   }
+  ]
+ },
+ {
+  "id": "crowd_arena_azure_light_bootstrap",
+  "rules": [
+   {
+    "event": {
+     "kind": "EntitySpawned",
+     "key": "crowd_arena_agent_azure_light"
+    },
+    "condition": {
+     "inline": "SourceHasVisualTransform"
+    },
+    "command": {
+     "kind": "CreatePresenter",
+     "definitionId": "mass_navigation_agent_azure_light",
+     "scopeSource": "EventPayloadA"
+    }
+   },
+   {
+    "event": {
+     "kind": "EntityDestroyed",
+     "key": "crowd_arena_agent_azure_light"
+    },
+    "command": {
+     "kind": "DestroyPresenterScope",
+     "scopeSource": "EventPayloadA"
+    }
+   }
+  ]
+ },
+ {
+  "id": "crowd_arena_azure_heavy_bootstrap",
+  "rules": [
+   {
+    "event": {
+     "kind": "EntitySpawned",
+     "key": "crowd_arena_agent_azure_heavy"
+    },
+    "condition": {
+     "inline": "SourceHasVisualTransform"
+    },
+    "command": {
+     "kind": "CreatePresenter",
+     "definitionId": "mass_navigation_agent_azure_heavy",
+     "scopeSource": "EventPayloadA"
+    }
+   },
+   {
+    "event": {
+     "kind": "EntityDestroyed",
+     "key": "crowd_arena_agent_azure_heavy"
+    },
+    "command": {
+     "kind": "DestroyPresenterScope",
+     "scopeSource": "EventPayloadA"
+    }
+   }
+  ]
+ },
+ {
+  "id": "crowd_arena_crimson_light_bootstrap",
+  "rules": [
+   {
+    "event": {
+     "kind": "EntitySpawned",
+     "key": "crowd_arena_agent_crimson_light"
+    },
+    "condition": {
+     "inline": "SourceHasVisualTransform"
+    },
+    "command": {
+     "kind": "CreatePresenter",
+     "definitionId": "mass_navigation_agent_crimson_light",
+     "scopeSource": "EventPayloadA"
+    }
+   },
+   {
+    "event": {
+     "kind": "EntityDestroyed",
+     "key": "crowd_arena_agent_crimson_light"
+    },
+    "command": {
+     "kind": "DestroyPresenterScope",
+     "scopeSource": "EventPayloadA"
+    }
+   }
+  ]
+ },
+ {
+  "id": "crowd_arena_crimson_heavy_bootstrap",
+  "rules": [
+   {
+    "event": {
+     "kind": "EntitySpawned",
+     "key": "crowd_arena_agent_crimson_heavy"
+    },
+    "condition": {
+     "inline": "SourceHasVisualTransform"
+    },
+    "command": {
+     "kind": "CreatePresenter",
+     "definitionId": "mass_navigation_agent_crimson_heavy",
+     "scopeSource": "EventPayloadA"
+    }
+   },
+   {
+    "event": {
+     "kind": "EntityDestroyed",
+     "key": "crowd_arena_agent_crimson_heavy"
+    },
+    "command": {
+     "kind": "DestroyPresenterScope",
+     "scopeSource": "EventPayloadA"
+    }
+   }
+  ]
+ }
+]

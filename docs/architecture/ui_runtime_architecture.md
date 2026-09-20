@@ -202,5 +202,5 @@ Skia 原生库必须与可执行文件位于同级输出根目录，而不是仅
 - 浏览器 UI 决策：`docs/adr/ADR-0003-browser-ui-runtime-contract.md`
 - 浏览器 UI Runtime：`docs/architecture/browser_ui_runtime.md`
 - 适配器模式与平台抽象：`docs/architecture/adapter_pattern.md`
-- 表现层与渲染分层：`docs/architecture/presentation_performer.md`
+- 表现层与渲染分层：`docs/architecture/presentation_presenter.md`
 - Mod 运行时单一真相：`docs/architecture/mod_runtime_single_source_of_truth.md`

@@ -7,6 +7,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.MovePlanning;
 using Ludots.Core.Presentation.Events;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using RoadNetworkShowcaseMod.Gameplay;
 
@@ -133,8 +134,7 @@ namespace RoadNetworkShowcaseMod.Systems
         private bool TryResolveLocalCommandSourceOwner(out Entity owner)
         {
             owner = Entity.Null;
-            return _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) &&
-                   localObj is Entity local &&
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity local) &&
                    local != Entity.Null &&
                    _world.IsAlive(local) &&
                    (owner = local) != Entity.Null;

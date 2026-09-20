@@ -1,9 +1,6 @@
 [
   {
     "id": "Effect.MassNavigation.Agent.HealthDrift",
-    "tags": [
-      "Effect.MassNavigation.Agent.HealthDrift"
-    ],
     "presetType": "Buff",
     "lifetime": "Infinite",
     "participatesInResponse": false,
@@ -19,6 +16,9 @@
       "OnPeriod": {
         "post": "Graph.MassNavigation.Agent.HealthDrift"
       }
-    }
+    },
+    "categories": [
+      "Effect.MassNavigation.Agent.HealthDrift"
+    ]
   }
 ]

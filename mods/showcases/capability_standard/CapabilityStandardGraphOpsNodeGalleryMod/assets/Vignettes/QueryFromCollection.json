@@ -1,0 +1,13 @@
+{
+  "op": "QueryFromCollection",
+  "driver": "query",
+  "title": "照着名册点名",
+  "beat": "名册板六格点亮，点名线拉向场上六人。",
+  "detailTemplate": "名册上{count}人被点名线牵住，不在册的{rest}个退成灰影。",
+  "assertDetailContains": [
+    "点名线"
+  ],
+  "featuredNodeId": "fromCol",
+  "graphKind": "Query",
+  "field": "query"
+}

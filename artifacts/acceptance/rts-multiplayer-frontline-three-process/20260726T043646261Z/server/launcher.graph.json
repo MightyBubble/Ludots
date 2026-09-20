@@ -1,0 +1,221 @@
+{
+    "schemaVersion":  1,
+    "generatedAtUtc":  "2026-07-26T04:38:12.2168060+00:00",
+    "planFingerprint":  "052c4fd97d01835f9f322c361fa7c6b852d8be14eec7ffbe999850dd27920315",
+    "adapter":  {
+                    "id":  "raylib",
+                    "name":  "Raylib",
+                    "hostKind":  "desktop",
+                    "buildPipeline":  "dotnet",
+                    "runtimeBootstrapSchema":  "launcher.runtime.v1",
+                    "appProjectPath":  "C:\\001_AI\\LudotsProd_issue709\\src\\Apps\\Raylib\\Ludots.App.Raylib\\Ludots.App.Raylib.csproj",
+                    "outputDirectory":  "C:\\001_AI\\LudotsProd_issue709\\src\\Apps\\Raylib\\Ludots.App.Raylib\\bin\\Release\\net8.0",
+                    "clientProjectDirectory":  "",
+                    "clientDistributionDirectory":  "",
+                    "launchUrl":  "",
+                    "runtimeBootstrapFileName":  "launcher.runtime.json"
+                },
+    "buildMode":  "never",
+    "selectors":  [
+                      "preset:rts_multiplayer_frontline_three_process_uat_raylib"
+                  ],
+    "rootModIds":  [
+                       "RtsMultiplayerFrontlineNetworkedMod",
+                       "RtsMultiplayerFrontlineThreeProcessAcceptanceMod"
+                   ],
+    "orderedModIds":  [
+                          "LudotsCoreMod",
+                          "CoreInputMod",
+                          "EntityCommandPanelMod",
+                          "RtsDemoMod",
+                          "RtsShowcaseMod",
+                          "RtsMultiplayerFrontlineMod",
+                          "RtsMultiplayerFrontlineNetworkedMod",
+                          "RtsMultiplayerFrontlineThreeProcessAcceptanceMod"
+                      ],
+    "plannedMods":  [
+                        {
+                            "id":  "LudotsCoreMod",
+                            "rootPath":  "C:\\001_AI\\LudotsProd_issue709\\mods\\LudotsCoreMod",
+                            "projectPath":  "C:\\001_AI\\LudotsProd_issue709\\mods\\LudotsCoreMod\\LudotsCoreMod.csproj",
+                            "mainAssemblyPath":  "C:\\001_AI\\LudotsProd_issue709\\mods\\LudotsCoreMod\\bin\\net8.0\\LudotsCoreMod.dll",
+                            "kind":  2,
+                            "buildState":  4,
+                            "bindingNames":  [
+
+                                             ]
+                        },
+                        {
+                            "id":  "CoreInputMod",
+                            "rootPath":  "C:\\001_AI\\LudotsProd_issue709\\mods\\CoreInputMod",
+                            "projectPath":  "C:\\001_AI\\LudotsProd_issue709\\mods\\CoreInputMod\\CoreInputMod.csproj",
+                            "mainAssemblyPath":  "C:\\001_AI\\LudotsProd_issue709\\mods\\CoreInputMod\\bin\\net8.0\\CoreInputMod.dll",
+                            "kind":  2,
+                            "buildState":  4,
+                            "bindingNames":  [
+
+                                             ]
+                        },
+                        {
+                            "id":  "EntityCommandPanelMod",
+                            "rootPath":  "C:\\001_AI\\LudotsProd_issue709\\mods\\EntityCommandPanelMod",
+                            "projectPath":  "C:\\001_AI\\LudotsProd_issue709\\mods\\EntityCommandPanelMod\\EntityCommandPanelMod.csproj",
+                            "mainAssemblyPath":  "C:\\001_AI\\LudotsProd_issue709\\mods\\EntityCommandPanelMod\\bin\\net8.0\\EntityCommandPanelMod.dll",
+                            "kind":  2,
+                            "buildState":  4,
+                            "bindingNames":  [
+
+                                             ]
+                        },
+                        {
+                            "id":  "RtsDemoMod",
+                            "rootPath":  "C:\\001_AI\\LudotsProd_issue709\\mods\\showcases\\rts_demo\\RtsDemoMod",
+                            "projectPath":  "C:\\001_AI\\LudotsProd_issue709\\mods\\showcases\\rts_demo\\RtsDemoMod\\RtsDemoMod.csproj",
+                            "mainAssemblyPath":  "C:\\001_AI\\LudotsProd_issue709\\mods\\showcases\\rts_demo\\RtsDemoMod\\bin\\net8.0\\RtsDemoMod.dll",
+                            "kind":  2,
+                            "buildState":  4,
+                            "bindingNames":  [
+
+                                             ]
+                        },
+                        {
+                            "id":  "RtsShowcaseMod",
+                            "rootPath":  "C:\\001_AI\\LudotsProd_issue709\\mods\\showcases\\rts_showcase\\RtsShowcaseMod",
+                            "projectPath":  "C:\\001_AI\\LudotsProd_issue709\\mods\\showcases\\rts_showcase\\RtsShowcaseMod\\RtsShowcaseMod.csproj",
+                            "mainAssemblyPath":  "C:\\001_AI\\LudotsProd_issue709\\mods\\showcases\\rts_showcase\\RtsShowcaseMod\\bin\\net8.0\\RtsShowcaseMod.dll",
+                            "kind":  2,
+                            "buildState":  4,
+                            "bindingNames":  [
+
+                                             ]
+                        },
+                        {
+                            "id":  "RtsMultiplayerFrontlineMod",
+                            "rootPath":  "C:\\001_AI\\LudotsProd_issue709\\mods\\showcases\\rts_multiplayer_frontline\\RtsMultiplayerFrontlineMod",
+                            "projectPath":  "C:\\001_AI\\LudotsProd_issue709\\mods\\showcases\\rts_multiplayer_frontline\\RtsMultiplayerFrontlineMod\\RtsMultiplayerFrontlineMod.csproj",
+                            "mainAssemblyPath":  "C:\\001_AI\\LudotsProd_issue709\\mods\\showcases\\rts_multiplayer_frontline\\RtsMultiplayerFrontlineMod\\bin\\net8.0\\RtsMultiplayerFrontlineMod.dll",
+                            "kind":  2,
+                            "buildState":  4,
+                            "bindingNames":  [
+                                                 "rts_multiplayer_frontline"
+                                             ]
+                        },
+                        {
+                            "id":  "RtsMultiplayerFrontlineNetworkedMod",
+                            "rootPath":  "C:\\001_AI\\LudotsProd_issue709\\mods\\showcases\\rts_multiplayer_frontline\\RtsMultiplayerFrontlineNetworkedMod",
+                            "projectPath":  "C:\\001_AI\\LudotsProd_issue709\\mods\\showcases\\rts_multiplayer_frontline\\RtsMultiplayerFrontlineNetworkedMod\\RtsMultiplayerFrontlineNetworkedMod.csproj",
+                            "mainAssemblyPath":  "C:\\001_AI\\LudotsProd_issue709\\mods\\showcases\\rts_multiplayer_frontline\\RtsMultiplayerFrontlineNetworkedMod\\bin\\net8.0\\RtsMultiplayerFrontlineNetworkedMod.dll",
+                            "kind":  2,
+                            "buildState":  4,
+                            "bindingNames":  [
+                                                 "rts_multiplayer_frontline_networked"
+                                             ]
+                        },
+                        {
+                            "id":  "RtsMultiplayerFrontlineThreeProcessAcceptanceMod",
+                            "rootPath":  "C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod",
+                            "projectPath":  "C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod.csproj",
+                            "mainAssemblyPath":  "C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\\bin\\net8.0\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod.dll",
+                            "kind":  2,
+                            "buildState":  4,
+                            "bindingNames":  [
+                                                 "rts_multiplayer_frontline_three_process_uat"
+                                             ]
+                        }
+                    ],
+    "runtimeArtifacts":  {
+                             "bootstrapArtifactStrategy":  "file",
+                             "bootstrapArtifactPath":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260726T043646261Z\\server\\launcher.runtime.json",
+                             "graphArtifactPath":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260726T043646261Z\\server\\launcher.graph.json",
+                             "appOutputDirectory":  "C:\\001_AI\\LudotsProd_issue709\\src\\Apps\\Raylib\\Ludots.App.Raylib\\bin\\Release\\net8.0",
+                             "appAssemblyPath":  "C:\\001_AI\\LudotsProd_issue709\\src\\Apps\\Raylib\\Ludots.App.Raylib\\bin\\Release\\net8.0\\Ludots.App.Raylib.dll",
+                             "launchUrl":  ""
+                         },
+    "browserRuntime":  null,
+    "diagnostics":  {
+                        "settings":  [
+                                         {
+                                             "key":  "defaultCoreMod",
+                                             "effectiveValue":  "LudotsCoreMod",
+                                             "effectiveSource":  "assets/Configs/game.json",
+                                             "contributions":  [
+                                                                   {
+                                                                       "source":  "assets/Configs/game.json",
+                                                                       "ownerModId":  null,
+                                                                       "isRootSelection":  false,
+                                                                       "value":  "LudotsCoreMod"
+                                                                   }
+                                                               ]
+                                         },
+                                         {
+                                             "key":  "startupMapId",
+                                             "effectiveValue":  "rts_duel_v1",
+                                             "effectiveSource":  "mods/showcases/rts_multiplayer_frontline/RtsMultiplayerFrontlineMod/assets/game.json",
+                                             "contributions":  [
+                                                                   {
+                                                                       "source":  "mods/LudotsCoreMod/assets/game.json",
+                                                                       "ownerModId":  "LudotsCoreMod",
+                                                                       "isRootSelection":  false,
+                                                                       "value":  "entry"
+                                                                   },
+                                                                   {
+                                                                       "source":  "mods/showcases/rts_demo/RtsDemoMod/assets/game.json",
+                                                                       "ownerModId":  "RtsDemoMod",
+                                                                       "isRootSelection":  false,
+                                                                       "value":  "rts_entry"
+                                                                   },
+                                                                   {
+                                                                       "source":  "mods/showcases/rts_showcase/RtsShowcaseMod/assets/game.json",
+                                                                       "ownerModId":  "RtsShowcaseMod",
+                                                                       "isRootSelection":  false,
+                                                                       "value":  "sc2_highlands"
+                                                                   },
+                                                                   {
+                                                                       "source":  "mods/showcases/rts_multiplayer_frontline/RtsMultiplayerFrontlineMod/assets/game.json",
+                                                                       "ownerModId":  "RtsMultiplayerFrontlineMod",
+                                                                       "isRootSelection":  false,
+                                                                       "value":  "rts_duel_v1"
+                                                                   }
+                                                               ]
+                                         },
+                                         {
+                                             "key":  "startupInputContexts",
+                                             "effectiveValue":  [
+                                                                    "Default_Gameplay",
+                                                                    "Rts_Gameplay"
+                                                                ],
+                                             "effectiveSource":  "mods/showcases/rts_demo/RtsDemoMod/assets/game.json",
+                                             "contributions":  [
+                                                                   {
+                                                                       "source":  "mods/LudotsCoreMod/assets/game.json",
+                                                                       "ownerModId":  "LudotsCoreMod",
+                                                                       "isRootSelection":  false,
+                                                                       "value":  [
+                                                                                     "Default_Gameplay"
+                                                                                 ]
+                                                                   },
+                                                                   {
+                                                                       "source":  "mods/showcases/rts_demo/RtsDemoMod/assets/game.json",
+                                                                       "ownerModId":  "RtsDemoMod",
+                                                                       "isRootSelection":  false,
+                                                                       "value":  [
+                                                                                     "Default_Gameplay",
+                                                                                     "Rts_Gameplay"
+                                                                                 ]
+                                                                   }
+                                                               ]
+                                         },
+                                         {
+                                             "key":  "browserRuntime",
+                                             "effectiveValue":  null,
+                                             "effectiveSource":  null,
+                                             "contributions":  [
+
+                                                               ]
+                                         }
+                                     ],
+                        "warnings":  [
+                                         "Selected 2 root mods (RtsMultiplayerFrontlineNetworkedMod, RtsMultiplayerFrontlineThreeProcessAcceptanceMod). Runtime still boots a single startupMapId; inspect the effective startup settings below."
+                                     ]
+                    }
+}

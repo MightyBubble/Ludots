@@ -8,19 +8,19 @@
 - **TargetMode**: **None**
 - **Acquisition**: **Explicit**
 
-玩家按键切换感知模式（如侦探视觉、X光视野），视觉效果由 Performer 层响应 tag 变化；交互层仅切换 tag。
+玩家按键切换感知模式（如侦探视觉、X光视野），视觉效果由 Presenter 层响应 tag 变化；交互层仅切换 tag。
 
 ## Ludots实现
 
 ```
 Down → Toggle tag "detective_vision"
-  Performer rules:
+  Presenter rules:
     if HasTag("detective_vision"):
-      enable highlighting performers on all entities with specific tags
-      enable X-ray overlay performer
+      enable highlighting presenters on all entities with specific tags
+      enable X-ray overlay presenter
 ```
 
-感知模式切换是纯视觉效果，交互层仅添加/移除 `detective_vision` tag。Performer 系统监听 tag 变化，启用/禁用对应的高亮、X光、轮廓等视觉效果。
+感知模式切换是纯视觉效果，交互层仅添加/移除 `detective_vision` tag。Presenter 系统监听 tag 变化，启用/禁用对应的高亮、X光、轮廓等视觉效果。
 
 ## 依赖组件
 
@@ -28,7 +28,7 @@ Down → Toggle tag "detective_vision"
 |------|------|------|
 | InputOrderMapping (None) | ✅ 已有 | targetType: None |
 | GameplayTagContainer | ✅ 已有 | detective_vision tag 切换 |
-| Performer system | ✅ 已有 | 响应 tag 变化的视觉效果系统 |
+| Presenter system | ✅ 已有 | 响应 tag 变化的视觉效果系统 |
 | AbilityToggleSpec | ✅ 已有 | toggle 机制，与 J1 共用 |
 
 ## 新增需求

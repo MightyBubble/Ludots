@@ -313,7 +313,7 @@ foreach ($file in $filesToValidate) {
 }
 
 $namingRules = @(
-    @{ Prefix = 'gitbook/'; Pattern = '^(README|SUMMARY|[a-z0-9-]+)\.md$'; Rule = 'gitbook-name' },
+    @{ Prefix = 'gitbook/'; Pattern = '^(README|SUMMARY|[a-z0-9_-]+)\.md$'; Rule = 'gitbook-name' },
     @{ Prefix = 'docs/conventions/'; Pattern = '^(README|\d\d_[a-z0-9_]+)\.md$'; Rule = 'conventions-name' },
     @{ Prefix = 'docs/architecture/'; Pattern = '^(README|[a-z0-9_]+)\.md$'; Rule = 'architecture-name' },
     @{ Prefix = 'docs/reference/'; Pattern = '^(README|[a-z0-9_]+)\.md$'; Rule = 'reference-name' },

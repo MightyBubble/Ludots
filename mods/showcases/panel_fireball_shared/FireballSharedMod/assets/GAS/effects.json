@@ -1,0 +1,66 @@
+[
+  {
+    "id": "Effect.Fireball.ManaCost",
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Mana",
+        "op": "Add",
+        "value": -10
+      }
+    ],
+    "categories": [
+      "Effect.Fireball.ManaCost"
+    ]
+  },
+  {
+    "id": "Effect.Fireball.Projectile",
+    "presetType": "LaunchProjectile",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "projectile": {
+      "speed": 1800,
+      "range": 1200,
+      "arcHeight": 0,
+      "impactEffect": "Effect.Fireball.Damage",
+      "hitEffect": "Effect.Fireball.Damage",
+      "presentationEffect": "Effect.Fireball.ProjectileVisual",
+      "travelMode": "TrackTarget",
+      "impactPolicy": "DestroyOnFirstHit",
+      "collisionHalfWidth": 40,
+      "collisionRelationFilter": "Hostile",
+      "collisionExcludeSource": true,
+      "maxHitCount": 1
+    },
+    "categories": [
+      "Effect.Fireball.Projectile"
+    ]
+  },
+  {
+    "id": "Effect.Fireball.ProjectileVisual",
+    "presetType": "None",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "categories": [
+      "Effect.Fireball.ProjectileVisual"
+    ]
+  },
+  {
+    "id": "Effect.Fireball.Damage",
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -15
+      }
+    ],
+    "categories": [
+      "Effect.Fireball.Damage"
+    ]
+  }
+]

@@ -24,8 +24,6 @@ Canonical commands:
 .\scripts\run-mod-launcher.cmd cli <command> ...
 ```
 
-Legacy WPF launcher under `src/Tools/ModLauncher` is no longer the product path.
-
 Canonical web URLs:
 
 - product URL: `http://localhost:5299/launcher/index.html`

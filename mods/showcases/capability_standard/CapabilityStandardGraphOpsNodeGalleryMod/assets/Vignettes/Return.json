@@ -1,0 +1,34 @@
+{
+  "op": "Return",
+  "driver": "script",
+  "title": "办完差事，交回原点",
+  "beat": "差事办完这一步，人从驿站那格退回原点，虚影收回真人。",
+  "detailTemplate": "差事办完了，人退回{place}。",
+  "assertDetailContains": [
+    "退回"
+  ],
+  "featuredNodeId": "ret",
+  "graphKind": "Script",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "喝茶人",
+      "x": -4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "stop",
+      "role": "ally",
+      "template": "GraphOps.Ally",
+      "name": "驿站",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

@@ -2,7 +2,7 @@
   "name": "MinimapControlMod",
   "version": "1.0.0",
   "description": "Reusable zero-allocation 4X minimap control with ECS/GAS-aware zoom bands and screen overlay rendering.",
-  "main": "bin/net8.0/MinimapControlMod.dll",
+  "main": "bin/net9.0/MinimapControlMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0"

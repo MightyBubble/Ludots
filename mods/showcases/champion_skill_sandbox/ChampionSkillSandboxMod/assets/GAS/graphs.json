@@ -4,9 +4,46 @@
     "kind": "Effect",
     "entry": "target",
     "nodes": [
-      { "id": "target", "op": "LoadContextTarget", "next": "pop" },
-      { "id": "pop", "op": "ApplyEffectTemplate", "effectTemplate": "Effect.Champion.Ezreal.EssenceFluxPop", "inputs": [ "target" ], "next": "consume" },
-      { "id": "consume", "op": "RemoveEffectTemplate", "effectTemplate": "Effect.Champion.Ezreal.EssenceFluxHit", "inputs": [ "target" ] }
+      {
+        "id": "target",
+        "op": "LoadContextTarget"
+      },
+      {
+        "id": "pop",
+        "op": "ApplyEffectTemplate",
+        "effectTemplate": "Effect.Champion.Ezreal.EssenceFluxPop"
+      },
+      {
+        "id": "consume",
+        "op": "RemoveEffectTemplate",
+        "effectTemplate": "Effect.Champion.Ezreal.EssenceFluxHit"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "target",
+        "fromPort": "next",
+        "to": "pop"
+      },
+      {
+        "from": "pop",
+        "fromPort": "next",
+        "to": "consume"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "target",
+        "fromPort": "value",
+        "to": "pop",
+        "toPort": "target"
+      },
+      {
+        "from": "target",
+        "fromPort": "value",
+        "to": "consume",
+        "toPort": "target"
+      }
     ]
   }
 ]

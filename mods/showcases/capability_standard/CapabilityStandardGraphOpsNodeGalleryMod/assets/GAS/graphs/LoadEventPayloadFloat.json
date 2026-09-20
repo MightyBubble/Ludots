@@ -1,0 +1,16 @@
+[
+  {
+    "id": "showcase.graph_op.LoadEventPayloadFloat",
+    "kind": "Validation",
+    "entry": "payloadFloat",
+    "nodes": [
+      {
+        "id": "payloadFloat",
+        "op": "LoadEventPayloadFloat",
+        "slot": 0
+      }
+    ],
+    "controlEdges": [],
+    "valueEdges": []
+  }
+]

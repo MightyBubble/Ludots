@@ -1,0 +1,21 @@
+[
+  {
+    "id": "capability_standard.presenter_command_extension.signal_rules",
+    "rules": [
+      {
+        "event": {
+          "kind": "GameplayEvent",
+          "keyId": "CapabilityStandard.PresenterCommandExtension.Signal"
+        },
+        "command": {
+          "kind": "CapabilityStandardPresenterCommandExtensionShowcaseMod.EmitSignalPing",
+          "route": "ExistingInstances",
+          "scopeTag": "capability_standard.presenter_command_extension.signal",
+          "paramKey": "capability_standard.presenter_command_extension.signal_count",
+          "paramLane": "Int",
+          "valueSource": "EventPayloadA"
+        }
+      }
+    ]
+  }
+]

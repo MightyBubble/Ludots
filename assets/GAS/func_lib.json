@@ -1,0 +1,38 @@
+[
+  {
+    "name": "demo.const.seven",
+    "graph": "Graph.FuncLib.Demo.ConstSeven",
+    "kind": "Script",
+    "purity": "pure"
+  },
+  {
+    "name": "ability.slash",
+    "graph": "Graph.Ability.Slash",
+    "kind": "Script",
+    "purity": "pure"
+  },
+  {
+    "name": "ability.bash",
+    "graph": "Graph.Ability.Bash",
+    "kind": "Script",
+    "purity": "pure"
+  },
+  {
+    "name": "hfsm.cond.alwaysTrue",
+    "graph": "Graph.HFSM.Cond.AlwaysTrue",
+    "kind": "Script",
+    "purity": "pure"
+  },
+  {
+    "name": "bt.seeEnemy",
+    "graph": "Graph.BT.Leaf.SeeEnemy",
+    "kind": "Script",
+    "purity": "pure"
+  },
+  {
+    "name": "bt.inAttackRange",
+    "graph": "Graph.BT.Leaf.InAttackRange",
+    "kind": "Script",
+    "purity": "pure"
+  }
+]

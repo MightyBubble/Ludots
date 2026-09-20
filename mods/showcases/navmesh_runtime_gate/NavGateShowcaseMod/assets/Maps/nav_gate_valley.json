@@ -1,0 +1,41 @@
+{
+  "Id": "nav_gate_valley",
+  "Tuning": {
+    "LoadedChunkCapacity": 16
+  },
+  "Tags": [
+    "showcase",
+    "navmesh",
+    "runtime-update",
+    "Feature.NavMesh:On",
+    "Raylib.DebugGuides:Off"
+  ],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthCells": 256,
+      "HeightCells": 256,
+      "GridCellSizeCm": 100,
+      "TerrainHeightStepCm": 25
+    }
+  ],
+  "Entities": [],
+  "TriggerTypes": [],
+  "DefaultCamera": {
+    "VirtualCameraId": "NavDebug.OpenWorld",
+    "TargetXCm": 3500,
+    "TargetYCm": 3500,
+    "Yaw": 180,
+    "Pitch": 50,
+    "DistanceCm": 16000,
+    "FovYDeg": 60
+  },
+  "ContinuousHeightmap": {
+    "Asset": "assets/terrain/navmesh_debug_vhtm.height",
+    "RenderProfile": {
+      "AbsoluteColorPeakSpanCm": 1500,
+      "ColorContrast": 2.5
+    }
+  }
+}

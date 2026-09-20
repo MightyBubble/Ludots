@@ -1,0 +1,13 @@
+{
+  "op": "PointToDirection",
+  "driver": "aimsource",
+  "title": "朝落点转向",
+  "beat": "指挥转身，炮口指向地图东北的落点。",
+  "detailTemplate": "炮口指向 {deg} 度。",
+  "assertDetailContains": [
+    "炮口"
+  ],
+  "featuredNodeId": "dir",
+  "graphKind": "Query",
+  "field": "aim"
+}

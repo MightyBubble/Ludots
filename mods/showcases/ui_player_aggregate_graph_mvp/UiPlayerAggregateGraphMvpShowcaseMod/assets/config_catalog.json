@@ -1,0 +1,6 @@
+[
+  { "Path": "UiPlayerAggregateGraphMvpShowcaseConfig.json", "Policy": "Replace" },
+  { "Path": "Entities/templates.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "GAS/attribute_constraints.json", "Policy": "DeepObject" },
+  { "Path": "GAS/graphs.json", "Policy": "ArrayById", "IdField": "id" }
+]

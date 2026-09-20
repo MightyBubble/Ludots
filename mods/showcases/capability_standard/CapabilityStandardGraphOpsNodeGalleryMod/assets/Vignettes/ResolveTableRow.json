@@ -1,0 +1,38 @@
+{
+  "op": "ResolveTableRow",
+  "driver": "linear",
+  "title": "按编号翻名册点将",
+  "beat": "报出 2 号，名册翻到那一行，册上的扣血照着木桩落下。",
+  "detailTemplate": "按 2 号点名翻到名册第 {result} 行，木桩血量从 {healthBefore} 掉到 {healthAfter}。",
+  "assertDetailContains": [
+    "名册"
+  ],
+  "featuredNodeId": "row",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ],
+  "linear": {
+    "resultKind": "int",
+    "applyTo": "graphSettled"
+  }
+}

@@ -2,7 +2,7 @@
   "header": "Ownership Cascade Showcase",
   "summary": "Capture or reclaim a neutral city and watch garrison, warehouse, and production ownership follow the Owns chain.",
   "controls": "C capture city for Azure player | R reclaim city for Ember player",
-  "localPlayerName": "Azure Concord",
+  "playerRepName": "Azure Concord",
   "enemyPlayerName": "Ember Pact",
   "cityName": "Neutral Relay City",
   "garrisonName": "Relay Garrison",

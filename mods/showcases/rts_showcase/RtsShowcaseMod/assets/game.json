@@ -1,3 +1,9 @@
 {
-  "startupMapId": "sc2_highlands"
+  "startupMapId": "sc2_highlands",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
 }

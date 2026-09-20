@@ -1,0 +1,35 @@
+{
+  "op": "IsPointInCircle",
+  "driver": "event",
+  "title": "圈里圈外，当场见分晓",
+  "beat": "圈里的点亮绿勾，圈外的点吃红叉。",
+  "detailTemplate": "圈内点{resultIn}，圈外点{resultOut}。",
+  "assertDetailContains": [
+    "圈内",
+    "圈外"
+  ],
+  "featuredNodeId": "inCircle",
+  "graphKind": "Validation",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": 0,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "落点",
+      "x": 0.5,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

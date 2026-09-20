@@ -1,0 +1,12 @@
+{
+  "name": "RtsMultiplayerFrontlineThreeProcessAcceptanceMod",
+  "version": "1.0.0",
+  "description": "Player-path three-process acceptance driver for the Frontline RTS match.",
+  "main": "bin/net9.0/RtsMultiplayerFrontlineThreeProcessAcceptanceMod.dll",
+  "priority": 20,
+  "dependencies": {
+    "RtsMultiplayerFrontlineNetworkedMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["rts", "multiplayer", "acceptance", "three-process"]
+}

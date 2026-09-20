@@ -1,0 +1,16 @@
+[
+  {
+    "id": "gallery.op.offer_task",
+    "display_name": "点名派发任务",
+    "start_policy": "automatic",
+    "completion_rule": "all",
+    "objectives": [
+      {
+        "id": "stay_visible",
+        "kind": "signal",
+        "title": "等待后续信号",
+        "signal_key": "gallery.offer_task.complete"
+      }
+    ]
+  }
+]

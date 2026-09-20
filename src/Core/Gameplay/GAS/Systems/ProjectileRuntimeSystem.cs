@@ -11,6 +11,7 @@ using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Spatial;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
 {
@@ -424,7 +425,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             var request = new EffectRequest
             {
-                RootId = 0,
+                RootId = projectile.RootId,
                 Source = projectile.Source,
                 Target = target,
                 TargetContext = Entity.Null,

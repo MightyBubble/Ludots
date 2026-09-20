@@ -24,7 +24,7 @@ public sealed class OwnershipCascadeRuntime
     private readonly Entity[] _incomingScratch = new Entity[4];
     private GameEngine? _activeEngine;
     private OwnershipCascadeConfig? _config;
-    private Entity _localPlayer;
+    private Entity _solePossessedRep;
     private Entity _enemyPlayer;
     private Entity _city;
     private Entity _garrison;
@@ -79,10 +79,10 @@ public sealed class OwnershipCascadeRuntime
         return Task.CompletedTask;
     }
 
-    public void CaptureForLocalPlayer(GameEngine engine)
+    public void CaptureForSolePossessedRep(GameEngine engine)
     {
         EnsureScenario(engine);
-        ReassignCity(engine, _localPlayer, "Captured by local player.");
+        ReassignCity(engine, _solePossessedRep, "Captured by sole possessed player representative.");
     }
 
     public void ReclaimForEnemy(GameEngine engine)
@@ -147,7 +147,7 @@ public sealed class OwnershipCascadeRuntime
         }
 
         World world = engine.World;
-        _localPlayer = CreateNamed(world, _config.LocalPlayerName);
+        _solePossessedRep = CreateNamed(world, _config.PlayerRepName);
         _enemyPlayer = CreateNamed(world, _config.EnemyPlayerName);
         _city = CreateNamed(world, _config.CityName);
         _garrison = CreateNamed(world, _config.GarrisonName);
@@ -260,7 +260,7 @@ public sealed class OwnershipCascadeRuntime
     private void ResetScenario()
     {
         _scenarioReady = false;
-        _localPlayer = Entity.Null;
+        _solePossessedRep = Entity.Null;
         _enemyPlayer = Entity.Null;
         _city = Entity.Null;
         _garrison = Entity.Null;

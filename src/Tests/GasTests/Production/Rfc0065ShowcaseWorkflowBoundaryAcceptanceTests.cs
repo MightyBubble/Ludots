@@ -19,6 +19,7 @@ using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.CommandSources;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Tests;
 using NUnit.Framework;
@@ -69,7 +70,7 @@ namespace Ludots.Tests.GAS.Production
 
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
 
-            Entity localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             Assert.That(localPlayer, Is.Not.EqualTo(Entity.Null), "interaction showcase must publish the local player command owner.");
             Entity arcweaver = FindEntityByName(engine.World, InteractionShowcaseIds.ArcweaverName);
             Entity vanguard = FindEntityByName(engine.World, InteractionShowcaseIds.VanguardName);
@@ -83,16 +84,26 @@ namespace Ludots.Tests.GAS.Production
             int schemeId = schemes.SchemeIdRegistry.GetId(DefaultSchemeId);
             Assert.That(schemes.ActiveSchemeId, Is.EqualTo(schemeId), "SHOW-6 requires scheme.default to be active from production startup.");
 
-            var stack = engine.GetService(CoreServiceKeys.InteractionContextStack)
-                ?? throw new InvalidOperationException("InteractionContextStack service is missing.");
-            Assert.That(stack.TryPeek(out InteractionContextFrame frame), Is.True);
-            Assert.That(stack.CollectionKeyRegistry.GetName(frame.ActiveCollectionKeyId), Is.EqualTo(EntityCollectionKeys.CommandSource));
+            var contextProfiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry)
+                ?? throw new InvalidOperationException("InteractionContextProfileRegistry service is missing.");
             Assert.That(
-                stack.CommandIntentProfileIdRegistry.GetName(CommandIntentArbiter.ResolveActiveCommandIntent(stack, schemes)),
-                Is.EqualTo(DefaultIntentId));
-
+                contextProfiles.TryGetSteadyStateRouting(out int steadyStateCollectionKeyId, out _),
+                Is.True,
+                "the engine must install the reserved steady-state context profile.");
+            var collectionsService = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
+            Assert.That(
+                collectionsService.KeyRegistry.GetName(steadyStateCollectionKeyId),
+                Is.EqualTo(EntityCollectionKeys.CommandSource));
+            Assert.That(engine.World.Has<InteractionContextInstance>(localPlayer), Is.False,
+                "steady state is the absence of mounted interaction state on the local rep.");
+            Assert.That(engine.World.TryGet<InteractionPref>(localPlayer, out InteractionPref localPlayerPref), Is.True,
+                "map binding must seed the player InteractionPref from Input/interaction_prefs.json.");
             var intents = engine.GetService(CoreServiceKeys.CommandIntentProfileRegistry)
                 ?? throw new InvalidOperationException("CommandIntentProfileRegistry service is missing.");
+            Assert.That(
+                intents.ProfileIdRegistry.GetName(CommandIntentArbiter.ResolveActiveCommandIntent(engine.World, localPlayer, in localPlayerPref)),
+                Is.EqualTo(DefaultIntentId));
             int intentProfileId = intents.ProfileIdRegistry.GetId(DefaultIntentId);
             Assert.That(intents.IsInstalled(intentProfileId), Is.True);
 
@@ -114,7 +125,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(hovered, Is.EqualTo(vanguard));
 
             Assert.That(engine.GetService(CoreServiceKeys.ActiveInputOrderMapping), Is.Not.Null,
-                "InteractionShowcaseLocalOrderSourceSystem must create the production InputOrderMappingSystem.");
+                "The declared local order source must create the production InputOrderMappingSystem.");
 
             Vector2 targetWorldCm = new(2080f, 1080f);
             DispatchVariantEvidence[] dispatchVariants = AssertDispatchVariants(dispatch, actors, engine.World, targetWorldCm);
@@ -211,7 +222,7 @@ namespace Ludots.Tests.GAS.Production
                 engine.LoadMap(InteractionShowcaseIds.HubMapId);
                 Tick(engine, 8);
 
-                Entity localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+                Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
                 Entity arcweaver = FindEntityByName(engine.World, InteractionShowcaseIds.ArcweaverName);
                 Entity vanguard = FindEntityByName(engine.World, InteractionShowcaseIds.VanguardName);
                 Entity commander = FindEntityByName(engine.World, InteractionShowcaseIds.CommanderName);
@@ -249,7 +260,7 @@ namespace Ludots.Tests.GAS.Production
                     expectedProfileId: NearestTopNDispatchId);
                 Assert.That(nearestRows.All(row => actors.Contains(row)), Is.True);
 
-                AssertInteractionBlinkPerformerRules(repoRoot);
+                AssertInteractionBlinkPresenterRules(repoRoot);
             }
             finally
             {
@@ -270,7 +281,7 @@ namespace Ludots.Tests.GAS.Production
             engine.LoadMap(InteractionShowcaseIds.HubMapId);
             Tick(engine, 8);
 
-            Entity localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             Assert.That(localPlayer, Is.Not.EqualTo(Entity.Null));
             Assert.That(engine.World.Has<WorldPositionCm>(localPlayer), Is.True);
 
@@ -580,24 +591,24 @@ namespace Ludots.Tests.GAS.Production
             collections.Replace(owner, descriptor, rows);
         }
 
-        private static void AssertInteractionBlinkPerformerRules(string repoRoot)
+        private static void AssertInteractionBlinkPresenterRules(string repoRoot)
         {
-            string performerPath = Path.Combine(repoRoot, LauncherTargetPath, "assets", "Presentation", "performers.json");
-            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(performerPath, Encoding.UTF8));
+            string presenterPath = Path.Combine(repoRoot, LauncherTargetPath, "assets", "Presentation", "presenters.json");
+            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(presenterPath, Encoding.UTF8));
             JsonElement root = document.RootElement;
 
             AssertGroundOverlayRingDefinition(root, InteractionShowcaseIds.BlinkDispatchEvidenceMarkerDefId);
-            AssertPerformerCollectionRule(
+            AssertPresenterCollectionRule(
                 root,
                 "EntityCollectionMemberAdded",
                 InteractionShowcaseIds.BlinkDispatchEvidenceCollectionKey,
-                "CreatePerformer",
+                "CreatePresenter",
                 InteractionShowcaseIds.BlinkDispatchEvidenceMarkerDefId);
-            AssertPerformerCollectionRule(
+            AssertPresenterCollectionRule(
                 root,
                 "EntityCollectionMemberRemoved",
                 InteractionShowcaseIds.BlinkDispatchEvidenceCollectionKey,
-                "DestroyScopedPerformer",
+                "DestroyScopedPresenter",
                 InteractionShowcaseIds.BlinkDispatchEvidenceMarkerDefId);
         }
 
@@ -628,13 +639,13 @@ namespace Ludots.Tests.GAS.Production
                     }
                 }
 
-                Assert.Fail($"Performer '{definitionId}' must bind a GroundOverlay Ring.");
+                Assert.Fail($"Presenter '{definitionId}' must bind a GroundOverlay Ring.");
             }
 
-            Assert.Fail($"Performer '{definitionId}' is missing.");
+            Assert.Fail($"Presenter '{definitionId}' is missing.");
         }
 
-        private static void AssertPerformerCollectionRule(
+        private static void AssertPresenterCollectionRule(
             JsonElement root,
             string eventKind,
             string collectionKey,
@@ -671,7 +682,7 @@ namespace Ludots.Tests.GAS.Production
             }
 
             Assert.Fail(
-                $"Performer rule missing: {eventKind} {collectionKey} -> {commandKind} {definitionId}.");
+                $"Presenter rule missing: {eventKind} {collectionKey} -> {commandKind} {definitionId}.");
         }
 
         private static Entity FindEntityByName(World world, string name)
@@ -747,6 +758,10 @@ namespace Ludots.Tests.GAS.Production
                 builder.Append(mapping.CommandActionId);
                 builder.Append(" aiming=");
                 builder.Append(mapping.IsAiming.ToString(CultureInfo.InvariantCulture));
+                builder.Append(" lastActivation=");
+                builder.Append(mapping.LastActivationResult.State);
+                builder.Append("/");
+                builder.Append(mapping.LastActivationResult.Rejection);
                 if (mapping.GetMapping("Command") is InputOrderMapping commandMapping)
                 {
                     builder.Append(" commandMapping=");
@@ -771,7 +786,7 @@ namespace Ludots.Tests.GAS.Production
 
         private static void AppendCommandRouteDiagnostics(GameEngine engine, Entity[] fallbackActors, StringBuilder builder)
         {
-            if (engine.GetService(CoreServiceKeys.InteractionContextStack) is not InteractionContextStack stack ||
+            if (engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry) is not InteractionContextProfileRegistry contextProfiles ||
                 engine.GetService(CoreServiceKeys.ControlSchemeRuntime) is not ControlSchemeRuntime schemes ||
                 engine.GetService(CoreServiceKeys.CommandIntentProfileRegistry) is not CommandIntentProfileRegistry intents ||
                 engine.GetService(CoreServiceKeys.CastDispatchProfileRegistry) is not CastDispatchProfileRegistry dispatch ||
@@ -782,42 +797,54 @@ namespace Ludots.Tests.GAS.Production
             }
 
             builder.Append(" commandRoute=");
-            if (!stack.TryPeek(out InteractionContextFrame frame))
+            if (!contextProfiles.TryGetSteadyStateRouting(out int steadyStateCollectionKeyId, out _))
             {
-                builder.Append("no-frame");
+                builder.Append("no-steady-state-profile");
                 return;
             }
 
-            int intentId = CommandIntentArbiter.ResolveActiveCommandIntent(stack, schemes);
+            InteractionPref repPref = default;
+            bool hasPref = ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity repEntity) &&
+                engine.World.TryGet<InteractionPref>(repEntity, out repPref);
+            builder.Append("pref=");
+            builder.Append(hasPref ? "seeded" : "missing");
+            if (!hasPref)
+            {
+                return;
+            }
+
+            int intentId = CommandIntentArbiter.ResolveActiveCommandIntent(engine.World, repEntity, in repPref);
             builder.Append("intent=");
-            builder.Append(stack.CommandIntentProfileIdRegistry.GetName(intentId));
+            builder.Append(intents.ProfileIdRegistry.GetName(intentId));
             builder.Append("(");
             builder.Append(intentId.ToString(CultureInfo.InvariantCulture));
             builder.Append(")");
             builder.Append(" dispatch=");
-            builder.Append(schemes.ActiveDefaultCastDispatchProfileId.ToString(CultureInfo.InvariantCulture));
+            builder.Append(repPref.ResolveCastDispatchProfile(abilityTemplateId: 0).ToString(CultureInfo.InvariantCulture));
 
             Entity owner = Entity.Null;
-            if (frame.ContextEntity != Entity.Null && engine.World.IsAlive(frame.ContextEntity))
+            if (engine.World.TryGet<InteractionContextInstance>(repEntity, out InteractionContextInstance activeContext) &&
+                engine.World.IsAlive(activeContext.ContextEntity))
             {
-                owner = frame.ContextEntity;
+                owner = activeContext.ContextEntity;
             }
-            else if (engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity localPlayer))
+            else
             {
-                owner = localPlayer;
+                owner = repEntity;
             }
 
             builder.Append(" owner=");
             builder.Append(owner);
-            builder.Append(" frameContext=");
-            builder.Append(frame.ContextEntity);
 
             if (owner == Entity.Null || intentId == 0)
             {
                 return;
             }
 
-            if (!collections.TryGet(owner, frame.ActiveCollectionKeyId, out EntityCollectionHandle handle) ||
+            int activeCollectionKeyId = engine.World.TryGet<InteractionContextInstance>(repEntity, out InteractionContextInstance routeContext)
+                ? routeContext.ActiveCollectionKeyId
+                : steadyStateCollectionKeyId;
+            if (!collections.TryGet(owner, activeCollectionKeyId, out EntityCollectionHandle handle) ||
                 !collections.TryGetView(handle, out EntityCollectionView view))
             {
                 builder.Append(" collection=missing");
@@ -862,7 +889,7 @@ namespace Ludots.Tests.GAS.Production
             builder.Append(" routeType=");
             builder.Append(firstRouteOrderTypeId.ToString(CultureInfo.InvariantCulture));
 
-            if (hasRouteCount <= 0 || schemes.ActiveDefaultCastDispatchProfileId == 0)
+            if (hasRouteCount <= 0)
             {
                 return;
             }
@@ -879,9 +906,9 @@ namespace Ludots.Tests.GAS.Production
 
             var selected = new Entity[hasRouteCount];
             int dispatchCount = dispatch.SelectDispatchTargets(
-                schemes.ActiveDefaultCastDispatchProfileId,
+                repPref.ResolveCastDispatchProfile(abilityTemplateId: 0),
                 routedActors,
-                new CastDispatchContext(engine.World, Vector3.Zero, frame.OwnerToken),
+                new CastDispatchContext(engine.World, Vector3.Zero, groupKey: 0),
                 selected,
                 out CastDispatchRouting routing);
             builder.Append(" selected=");
@@ -975,7 +1002,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("## Scenario Card");
             sb.AppendLine("- Player goal: issue a ground pointer command with three command-source actors active.");
             sb.AppendLine("- Gameplay domain: RFC-0065 SHOW-5 / SHOW-6 production pointer command workflow.");
-            sb.AppendLine("- Runtime path: `PlayerInputHandler` -> `InputRuntimeSystem` -> `AuthoritativeInputSnapshotSystem` -> `InteractionShowcaseLocalOrderSourceSystem` -> `InputOrderMappingSystem` -> `CommandIntentArbiter` -> `CommandIntentProfileRegistry.RouteGroup` -> `CastDispatchProfileRegistry.SelectDispatchTargets` -> `OrderQueue` -> `OrderBufferSystem`.");
+            sb.AppendLine("- Runtime path: `PlayerInputHandler` -> `InputRuntimeSystem` -> `AuthoritativeInputSnapshotSystem` -> `LocalOrderSourceSystem` -> `InputOrderMappingSystem` -> `CommandIntentArbiter` -> `CommandIntentProfileRegistry.RouteGroup` -> `CastDispatchProfileRegistry.SelectDispatchTargets` -> `OrderQueue` -> `OrderBufferSystem`.");
             sb.AppendLine($"- Launcher binding: `{LauncherBindingName}` (`{ManualGuiLaunchCommand}`).");
             sb.AppendLine("- Primary success condition: Arcweaver, Vanguard, and Commander all receive unique moveTo order receipts in one atomic admission batch at the target point, even when the hover collection contains an entity.");
             sb.AppendLine("- Failure branch condition: no active scheme intent, no command-source collection, hidden legacy fallback, split admission batch, duplicate order receipts, or missing OrderBuffer promotion.");
@@ -1123,7 +1150,7 @@ namespace Ludots.Tests.GAS.Production
                 "    C --> D[\"Publish collection.command.source for 3 actors\"]",
                 "    D --> E[\"Right mouse Command captured by PlayerInputHandler\"]",
                 "    E --> F[\"InputRuntimeSystem writes authoritative snapshot + ground override\"]",
-                "    F --> G[\"InteractionShowcaseLocalOrderSourceSystem updates production mapping\"]",
+                "    F --> G[\"LocalOrderSourceSystem updates production mapping\"]",
                 "    G --> H[\"CommandIntentArbiter.ResolveActiveCommandIntent\"]",
                 "    H --> I[\"CommandIntentProfileRegistry.RouteGroup -> moveTo\"]",
                 "    I --> J[\"CastDispatchProfileRegistry.SelectDispatchTargets dispatch.all_together\"]",

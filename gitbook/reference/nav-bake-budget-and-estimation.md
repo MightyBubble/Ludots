@@ -9,12 +9,12 @@ This page is a design reference for planning navmesh bake cost before running th
 The target production pipeline is:
 
 ```text
-Board -> VisualHeightmap -> LogicTerrain -> NavMesh
+Board -> ContinuousHeightmap -> LogicTerrain -> NavMesh
 ```
 
 NodeGraph boards use the short graph path and do not bake navmesh. Grid and HexGrid boards bake only when navigation is enabled and a `LogicTerrainField` exists for the board.
 
-Current status note: CLI `nav estimate-recast-react` / `nav bake-recast-react` and Editor Bridge resolve the primary navigation board and choose grid or hex `LogicTerrainField` by topology. NAV-15 #373 still owns the final single-source asset closure from official `VisualHeightmap`/classification assets into `LogicTerrain`; until then, React `map_data.bin` is the production editing upload format for the current toolchain.
+Current status note: CLI `nav estimate-recast-react` / `nav bake-recast-react` and Editor Bridge resolve the primary navigation board and choose grid or hex `LogicTerrainField` by topology. NAV-15 #373 still owns the final single-source asset closure from official `ContinuousHeightmap`/classification assets into `LogicTerrain`; until then, React `map_data.bin` is the production editing upload format for the current toolchain.
 
 The old branch `origin/codex/mass-navigation-bake-data-showcase` is useful as a reference for chunked logic-terrain materialization and tile-window reads. It must not be merged as-is: it carried a private `.lhtm` lane, huge baked fixtures, fallback-like heightmap sampling, hardcoded area classification, and baked/runtime scale mapping drift. Reuse the ideas, not the data source.
 
@@ -22,7 +22,7 @@ The old branch `origin/codex/mass-navigation-bake-data-showcase` is useful as a 
 
 | Input | Unit | Owner | Cost effect |
 |---|---:|---|---|
-| `WidthInMacroTiles` / `HeightInMacroTiles` | macro tiles | board config | Multiplies world cells by `MacroTileCells` |
+| `WidthInMacroTiles` / `HeightInMacroTiles` | macro tiles | board config | Multiplies world cells by `TerrainPageCells` |
 | `GridCellSizeCm` / `CellCm` | cm | board config / scale SSOT | Smaller cells increase world cell count for the same physical map |
 | `TerrainChunkCells` | cells | terrain chunk owner | Defines current nav tile footprint; default is 64 cells |
 | `Targets` | tiles | `NavBakeContext.Targets` | Full bake targets every terrain chunk; dirty bake targets only changed chunks |
@@ -38,7 +38,7 @@ The estimator has three parameter groups. Each group must be reported separately
 
 | Group | Parameter | Required in estimate | Notes |
 |---|---|---|---|
-| Map extent | `WidthInMacroTiles`, `HeightInMacroTiles`, `CellCm`, `MacroTileCells` | Yes | Defines world cells and world cm; `MacroTileCells` is fixed at `MapTile.Size` / 256. |
+| Map extent | `WidthInMacroTiles`, `HeightInMacroTiles`, `CellCm`, `TerrainPageCells` | Yes | Defines world cells and world cm; `TerrainPageCells` is fixed at `MapTile.Size` / 256. |
 | Terrain footprint | `TerrainChunkCells`, terrain width/height chunks, source chain | Yes | Defines full nav tile count and whether the source is projected `LogicTerrain`. |
 | Target mode | `full`, `dirty`, or `window` | Yes | Full = all terrain chunks; dirty = changed chunks plus optional neighbors; window = explicit chunk rectangle. |
 | Multipliers | nav layer count, nav profile count | Yes | Every target tile bakes per layer and per profile. |
@@ -88,8 +88,8 @@ The estimator must never silently reinterpret one mode as another. If dirty data
 For grid maps:
 
 ```text
-worldWidthCells  = WidthInMacroTiles  * MacroTileCells(256)
-worldHeightCells = HeightInMacroTiles * MacroTileCells(256)
+worldWidthCells  = WidthInMacroTiles  * TerrainPageCells(256)
+worldHeightCells = HeightInMacroTiles * TerrainPageCells(256)
 
 worldWidthCm  = worldWidthCells  * CellCm
 worldHeightCm = worldHeightCells * CellCm

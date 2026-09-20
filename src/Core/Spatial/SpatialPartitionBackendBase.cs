@@ -1,6 +1,7 @@
 using System;
 using Arch.Core;
 using Ludots.Core.Mathematics;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Spatial
 {
@@ -19,6 +20,8 @@ namespace Ludots.Core.Spatial
             if (cellSizeCm <= 0) throw new ArgumentOutOfRangeException(nameof(cellSizeCm));
             _cellSizeCm = cellSizeCm;
         }
+
+        public void Clear() => _world.Clear();
 
         public int QueryAabb(in WorldAabbCm bounds, Span<Entity> buffer, out int dropped)
         {

@@ -24,6 +24,10 @@ internal sealed class UiTransitionChannelState
 
 	public UiColor EndColor { get; }
 
+	public UiTransform StartTransform { get; }
+
+	public UiTransform EndTransform { get; }
+
 	public bool IsCompleted => ElapsedSeconds >= DelaySeconds + DurationSeconds;
 
 	public float CurrentFloat
@@ -52,6 +56,26 @@ internal sealed class UiTransitionChannelState
 		}
 	}
 
+	public UiTransform CurrentTransform
+	{
+		get
+		{
+			UiTransform start = StartTransform ?? UiTransform.Identity;
+			UiTransform end = EndTransform ?? UiTransform.Identity;
+			if (ElapsedSeconds <= DelaySeconds)
+			{
+				return start;
+			}
+			float progress = Math.Clamp((ElapsedSeconds - DelaySeconds) / DurationSeconds, 0f, 1f);
+			float eased = UiTransitionMath.Evaluate(Easing, progress);
+			if (!UiTransitionMath.TryLerp(start, end, eased, out UiTransform lerped))
+			{
+				return start;
+			}
+			return lerped;
+		}
+	}
+
 	public UiTransitionChannelState(string propertyName, float durationSeconds, float delaySeconds, UiTransitionEasing easing, float startFloat, float endFloat)
 	{
 		PropertyName = propertyName;
@@ -61,6 +85,8 @@ internal sealed class UiTransitionChannelState
 		ValueKind = UiTransitionValueKind.Float;
 		StartFloat = startFloat;
 		EndFloat = endFloat;
+		StartTransform = UiTransform.Identity;
+		EndTransform = UiTransform.Identity;
 	}
 
 	public UiTransitionChannelState(string propertyName, float durationSeconds, float delaySeconds, UiTransitionEasing easing, UiColor startColor, UiColor endColor)
@@ -72,6 +98,19 @@ internal sealed class UiTransitionChannelState
 		ValueKind = UiTransitionValueKind.Color;
 		StartColor = startColor;
 		EndColor = endColor;
+		StartTransform = UiTransform.Identity;
+		EndTransform = UiTransform.Identity;
+	}
+
+	public UiTransitionChannelState(string propertyName, float durationSeconds, float delaySeconds, UiTransitionEasing easing, UiTransform startTransform, UiTransform endTransform)
+	{
+		PropertyName = propertyName;
+		DurationSeconds = Math.Max(0.0001f, durationSeconds);
+		DelaySeconds = Math.Max(0f, delaySeconds);
+		Easing = easing;
+		ValueKind = UiTransitionValueKind.Transform;
+		StartTransform = startTransform ?? UiTransform.Identity;
+		EndTransform = endTransform ?? UiTransform.Identity;
 	}
 
 	public void Advance(float deltaSeconds)

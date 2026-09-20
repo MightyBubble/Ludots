@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Arch.System;
+using CoreInputMod.Systems;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.EntityCollections;
@@ -15,12 +16,15 @@ using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
+using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using MobaDemoMod.Triggers;
+using Ludots.Platform.Abstractions;
 
 namespace MobaDemoMod.Systems
 {
@@ -144,7 +148,7 @@ namespace MobaDemoMod.Systems
             // Entity collection providers
             _inputOrderMapping.SetActorProvider((out Entity entity) =>
             {
-                entity = TryGetLocalPlayerId(out int playerId)
+                entity = TryGetSolePossessedPlayerId(out int playerId)
                     ? GetControlledActor(playerId)
                     : default;
                 return _world.IsAlive(entity);
@@ -172,19 +176,35 @@ namespace MobaDemoMod.Systems
             });
             
             // Order submit handler
-            // Visual feedback (markers, lockout text) is handled by Core PerformerRuleSystem
+            // Visual feedback (markers, lockout text) is handled by Core PresenterRuleSystem
             // via GAS -> PresentationEvent bridge; no mod-level marker logic needed.
             _inputOrderMapping.SetOrderSubmitHandler((in Order order) =>
             {
+                if (IsReplicatedClient())
+                {
+                    if (!_globals.TryGetValue(CoreServiceKeys.ReplicatedClientCommandPort.Name, out object? portValue) ||
+                        portValue is not IReplicatedClientCommandPort port)
+                    {
+                        throw new InvalidOperationException(
+                            "Replicated-client MOBA input requires the platform-neutral client command port.");
+                    }
+
+                    ReplicatedClientCommandSubmitResult networkResult = port.Submit(in order);
+                    _globals[LocalOrderSourceHelper.LastNetworkSubmitResultDebugKey] = networkResult;
+                    return networkResult == ReplicatedClientCommandSubmitResult.Submitted
+                        ? OrderSubmitResult.Queued
+                        : OrderSubmitResult.RejectedByRule;
+                }
+
                 return _orders.Submit(in order);
             });
 
-            // Aiming state -> Performer direct API (for AimCast mode)
-            // Uses PerformerCommandBuffer to create/destroy a performer scope.
-            if (_globals.TryGetValue(CoreServiceKeys.PerformerCommandBuffer.Name, out var cmdObj) && cmdObj is PerformerCommandBuffer commands)
+            // Aiming state -> Presenter direct API (for AimCast mode)
+            // Uses PresenterCommandBuffer to create/destroy a presenter scope.
+            if (_globals.TryGetValue(CoreServiceKeys.PresenterCommandBuffer.Name, out var cmdObj) && cmdObj is PresenterCommandBuffer commands)
             {
                 var mc = (MobaConfig)_globals[InstallMobaDemoOnGameStartTrigger.MobaConfigKey];
-                var perfReg = _globals.TryGetValue(CoreServiceKeys.PerformerDefinitionRegistry.Name, out var prObj) && prObj is PerformerDefinitionRegistry pr ? pr : null;
+                var perfReg = _globals.TryGetValue(CoreServiceKeys.PresenterDefinitionRegistry.Name, out var prObj) && prObj is PresenterDefinitionRegistry pr ? pr : null;
                 int rangeCircleDefId = perfReg?.GetId(mc.Presentation.RangeCircleIndicatorDefKey) ?? 0;
 
                 _inputOrderMapping.SetAimingStateChangedHandler((isAiming, mapping) =>
@@ -192,12 +212,12 @@ namespace MobaDemoMod.Systems
                     int scopeId = mapping.ActionId.GetHashCode();
                     if (isAiming)
                     {
-                        commands.TryAdd(new PerformerCommand
+                        commands.TryAdd(new PresenterCommand
                         {
-                            CommandKind = PerformerCommandKind.CreatePerformer,
-                            PerformerDefinitionId = rangeCircleDefId,
+                            CommandKind = PresenterCommandKind.CreatePresenter,
+                            PresenterDefinitionId = rangeCircleDefId,
                             ScopeTag = scopeId,
-                            Source = TryGetLocalPlayerId(out int playerId)
+                            Source = TryGetSolePossessedPlayerId(out int playerId)
                                 ? GetControlledActor(playerId)
                                 : default
                         });
@@ -205,15 +225,15 @@ namespace MobaDemoMod.Systems
                     else
                     {
                         // Destroy the entire aiming scope
-                        commands.TryAdd(new PerformerCommand
+                        commands.TryAdd(new PresenterCommand
                         {
-                            CommandKind = PerformerCommandKind.DestroyPerformerScope,
+                            CommandKind = PresenterCommandKind.DestroyPresenterScope,
                             ScopeTag = scopeId
                         });
                     }
                 });
 
-                // No update handler needed; performer position resolves from Owner entity each frame.
+                // No update handler needed; presenter position resolves from Owner entity each frame.
             }
         }
 
@@ -227,11 +247,10 @@ namespace MobaDemoMod.Systems
             {
                 CheckModeSwitchKeys(input, _inputOrderMapping);
 
-                if (_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var actorObj) &&
-                    actorObj is Entity localPlayer &&
+                if (ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity localPlayer) &&
                     _world.IsAlive(localPlayer))
                 {
-                    if (!TryGetLocalPlayerId(out int playerId))
+                    if (!TryGetSolePossessedPlayerId(out int playerId))
                     {
                         return;
                     }
@@ -242,7 +261,7 @@ namespace MobaDemoMod.Systems
                         return;
                     }
 
-                    _inputOrderMapping.SetLocalPlayer(actor, playerId);
+                    _inputOrderMapping.SetSolePossessedActor(actor, playerId);
                     _inputOrderMapping.Update(dt);
                 }
             }
@@ -250,19 +269,22 @@ namespace MobaDemoMod.Systems
             RenderModeHud();
         }
 
-        private bool TryGetLocalPlayerId(out int playerId)
+        private bool TryGetSolePossessedPlayerId(out int playerId)
         {
             playerId = 0;
-            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerId.Name, out object? value) ||
-                value is not int candidate ||
-                candidate <= 0)
+            ClientLocalSeatRegistry seats = ClientLocalSeatAccess.RequireRegistry(_globals);
+            if (!seats.TryGetSoleSeat(out ClientLocalSeat seat) || !seat.HasPossession)
             {
                 return false;
             }
 
-            playerId = candidate;
+            playerId = seat.PossessedPlayerId;
             return true;
         }
+
+        private bool IsReplicatedClient() =>
+            _globals.TryGetValue(CoreServiceKeys.NetworkProcessRole.Name, out object? roleValue) &&
+            roleValue is NetworkProcessRole.ReplicatedClient;
 
         private Entity GetControlledActor(int playerId)
         {
@@ -271,16 +293,12 @@ namespace MobaDemoMod.Systems
                 return default;
             }
 
-            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var actorObj) || actorObj is not Entity localPlayer)
-                return default;
-            if (!_world.IsAlive(localPlayer)) return default;
-
             if (TryGetCollectionPrimary(EntityCollectionKeys.CommandSource, out var commandSourcePrimary))
             {
                 if (_world.TryGet(commandSourcePrimary, out Ludots.Core.Gameplay.Components.PlayerOwner owner) && owner.PlayerId == playerId)
                     return commandSourcePrimary;
             }
-            return localPlayer;
+            return default;
         }
 
         private bool TryGetCollectionPrimary(string collectionKey, out Entity target)
@@ -369,8 +387,7 @@ namespace MobaDemoMod.Systems
         private bool TryGetLocalCollectionOwner(out Entity owner)
         {
             owner = default;
-            return _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
-                   localObj is Entity local &&
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity local) &&
                    _world.IsAlive(local) &&
                    (owner = local) != Entity.Null;
         }
@@ -411,19 +428,19 @@ namespace MobaDemoMod.Systems
         {
             if (input.PressedThisFrame("ModeWoW"))
             {
-                mapping.SetInteractionMode(InteractionModeType.TargetFirst);
+                mapping.SetInteractionMode(CastModeType.TargetFirst);
             }
             else if (input.PressedThisFrame("ModeLoL"))
             {
-                mapping.SetInteractionMode(InteractionModeType.SmartCast);
+                mapping.SetInteractionMode(CastModeType.SmartCast);
             }
             else if (input.PressedThisFrame("ModeSC2"))
             {
-                mapping.SetInteractionMode(InteractionModeType.AimCast);
+                mapping.SetInteractionMode(CastModeType.AimCast);
             }
             else if (input.PressedThisFrame("ModeIndicator"))
             {
-                mapping.SetInteractionMode(InteractionModeType.SmartCastWithIndicator);
+                mapping.SetInteractionMode(CastModeType.SmartCastWithIndicator);
             }
         }
 
@@ -443,14 +460,14 @@ namespace MobaDemoMod.Systems
             overlay.AddText(16, 42, "F1 WoW(TargetFirst) | F2 LoL(SmartCast) | F3 SC2(AimCast) | F4 Indicator", 16, new Vector4(0.78f, 0.92f, 1f, 1f));
         }
 
-        private static string ToModeLabel(InteractionModeType mode)
+        private static string ToModeLabel(CastModeType mode)
         {
             return mode switch
             {
-                InteractionModeType.TargetFirst => "WoW / target first",
-                InteractionModeType.SmartCast => "LoL / smart cast",
-                InteractionModeType.AimCast => "SC2 / aim then confirm",
-                InteractionModeType.SmartCastWithIndicator => "LoL Indicator / hold to show, release to cast",
+                CastModeType.TargetFirst => "WoW / target first",
+                CastModeType.SmartCast => "LoL / smart cast",
+                CastModeType.AimCast => "SC2 / aim then confirm",
+                CastModeType.SmartCastWithIndicator => "LoL Indicator / hold to show, release to cast",
                 _ => mode.ToString()
             };
         }

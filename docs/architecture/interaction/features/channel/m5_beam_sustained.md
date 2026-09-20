@@ -48,7 +48,7 @@ AbilityExecSpec:
 
 **视觉表现**:
 ```
-Performer: BeamRenderer(origin=caster, direction=cursor_direction)
+Presenter: BeamRenderer(origin=caster, direction=cursor_direction)
   width: 50cm
   color: blue
   lifetime: 与 EffectClip 同步
@@ -62,7 +62,7 @@ Performer: BeamRenderer(origin=caster, direction=cursor_direction)
 | EffectClip (持续效果) | ✅ 已有 |
 | RaycastDirection Graph op | ⚠️ 需扩展 |
 | Cursor direction write | ⚠️ 需扩展 |
-| BeamRenderer Performer | ⚠️ 需扩展 |
+| BeamRenderer Presenter | ⚠️ 需扩展 |
 
 ## 新增需求
 
@@ -70,5 +70,5 @@ Performer: BeamRenderer(origin=caster, direction=cursor_direction)
 |------|--------|------|
 | RaycastDirection Graph op | P1 | 方向射线检测 |
 | Cursor direction 持续写入 | P1 | 每帧更新方向 |
-| BeamRenderer Performer | P2 | 光束渲染 (表现层) |
+| BeamRenderer Presenter | P2 | 光束渲染 (表现层) |
 | EffectClip until_up | P1 | 按住期间持续生效 |

@@ -1,0 +1,38 @@
+[
+  {
+    "id": "panel.fireball.status",
+    "graph": "Graph.Fireball.Panel.Values",
+    "pins": [
+      {
+        "name": "health",
+        "key": "fireball.panel.health",
+        "mode": "realtime",
+        "default": 0
+      },
+      {
+        "name": "mana",
+        "key": "fireball.panel.mana",
+        "mode": "realtime",
+        "default": 0
+      },
+      {
+        "name": "attack",
+        "key": "fireball.panel.attack",
+        "mode": "realtime",
+        "default": 0
+      },
+      {
+        "name": "healthBase",
+        "key": "fireball.panel.healthBase",
+        "mode": "snapshot",
+        "default": 100
+      },
+      {
+        "name": "manaBase",
+        "key": "fireball.panel.manaBase",
+        "mode": "snapshot",
+        "default": 80
+      }
+    ]
+  }
+]

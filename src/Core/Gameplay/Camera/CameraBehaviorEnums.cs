@@ -34,7 +34,7 @@ namespace Ludots.Core.Gameplay.Camera
     public enum CameraFollowTargetKind
     {
         None,
-        LocalPlayer,
+        SolePossessedRep,
         EntityCollectionPrimary,
         EntityCollectionGroup
     }
@@ -62,6 +62,6 @@ namespace Ludots.Core.Gameplay.Camera
     public enum VirtualCameraTargetHeightMode
     {
         Flat,
-        VisualHeightmap
+        ContinuousHeightmap
     }
 }

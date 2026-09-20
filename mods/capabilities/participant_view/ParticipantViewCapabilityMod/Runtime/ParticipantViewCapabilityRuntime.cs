@@ -4,6 +4,7 @@ using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Map;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using ParticipantViewCapabilityMod.Systems;
@@ -164,8 +165,7 @@ internal sealed class ParticipantViewCapabilityRuntime
             return;
         }
 
-        if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) ||
-            localObj is not Entity commandSourceOwner ||
+        if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out var commandSourceOwner) ||
             commandSourceOwner == Entity.Null ||
             !engine.World.IsAlive(commandSourceOwner))
         {

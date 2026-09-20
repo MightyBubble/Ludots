@@ -14,15 +14,17 @@ using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Surfaces;
 using Ludots.Core.Physics;
 using Ludots.Core.Physics2D.Components;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using RoadNetworkShowcaseMod.Gameplay;
 using CoreInputMod.Systems;
 using RoadNetworkShowcaseMod.Runtime;
+using Ludots.Platform.Abstractions;
 
 namespace RoadNetworkShowcaseMod.Systems
 {
@@ -44,13 +46,13 @@ namespace RoadNetworkShowcaseMod.Systems
         private readonly GameEngine _engine;
         private readonly PrimitiveDrawBuffer? _primitives;
         private readonly ScreenOverlayBuffer? _overlay;
-        private readonly PerformerCommandBuffer? _commands;
+        private readonly PresenterCommandBuffer? _commands;
         private readonly SurfaceSourcePayloadRegistry? _surfacePayloads;
-        private readonly PerformerDefinitionRegistry? _performers;
+        private readonly PresenterDefinitionRegistry? _presenters;
         private readonly int _cubeMeshId;
         private readonly int _sphereMeshId;
         private readonly Dictionary<long, int> _activeSurfaceScopes = new();
-        private int _roadSurfacePerformerDefinitionId;
+        private int _roadSurfacePresenterDefinitionId;
 
         public RoadNetworkPresentationSystem(GameEngine engine, RoadNetworkShowcaseRuntime runtime)
         {
@@ -59,9 +61,9 @@ namespace RoadNetworkShowcaseMod.Systems
             _runtime = runtime;
             _primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
             _overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer);
-            _commands = engine.GetService(CoreServiceKeys.PerformerCommandBuffer);
+            _commands = engine.GetService(CoreServiceKeys.PresenterCommandBuffer);
             _surfacePayloads = engine.GetService(CoreServiceKeys.SurfaceSourcePayloadRegistry);
-            _performers = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry);
+            _presenters = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry);
             MeshAssetRegistry? meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry);
             _cubeMeshId = meshes?.GetId(WellKnownMeshKeys.Cube) ?? 1;
             _sphereMeshId = meshes?.GetId(WellKnownMeshKeys.Sphere) ?? 2;
@@ -126,22 +128,22 @@ namespace RoadNetworkShowcaseMod.Systems
 
         private void SyncRoadSurfaceChunks()
         {
-            if (_commands == null || _surfacePayloads == null || _performers == null || _runtime.ActiveBoard == null || _runtime.Scenario == null)
+            if (_commands == null || _surfacePayloads == null || _presenters == null || _runtime.ActiveBoard == null || _runtime.Scenario == null)
             {
                 return;
             }
 
-            PerformerCommandBuffer commandBuffer = _commands;
+            PresenterCommandBuffer commandBuffer = _commands;
 
-            if (_roadSurfacePerformerDefinitionId <= 0)
+            if (_roadSurfacePresenterDefinitionId <= 0)
             {
-                _roadSurfacePerformerDefinitionId = _performers.GetId(RoadNetworkShowcaseIds.RoadSurfacePerformerId);
+                _roadSurfacePresenterDefinitionId = _presenters.GetId(RoadNetworkShowcaseIds.RoadSurfacePresenterId);
             }
 
             var desiredChunkKeys = new HashSet<long>(_runtime.ActiveBoard.LoadedChunksSource.ActiveChunkKeys);
             foreach (long chunkKey in _runtime.ActiveBoard.LoadedChunksSource.ActiveChunkKeys)
             {
-                if (!_runtime.Scenario.TryGetRoadSplineChunk(chunkKey, out RoadNetworkScenarioDefinition.RoadSplineSpec[]? chunkSplines))
+                if (!_runtime.Scenario.TryGetRoadRibbonChunk(chunkKey, out RoadNetworkScenarioDefinition.RoadRibbonSpec[]? chunkSplines))
                 {
                     continue;
                 }
@@ -149,17 +151,17 @@ namespace RoadNetworkShowcaseMod.Systems
                 int scopeId = ComposeRoadSurfaceScopeId(chunkKey);
                 if (!_activeSurfaceScopes.ContainsKey(chunkKey))
                 {
-                    if (!commandBuffer.TryAdd(new PerformerCommand
+                    if (!commandBuffer.TryAdd(new PresenterCommand
                         {
-                            CommandKind = PerformerCommandKind.CreatePerformer,
-                            PerformerDefinitionId = _roadSurfacePerformerDefinitionId,
+                            CommandKind = PresenterCommandKind.CreatePresenter,
+                            PresenterDefinitionId = _roadSurfacePresenterDefinitionId,
                             ScopeTag = scopeId,
                             Source = Entity.Null,
                             AnchorKind = PresentationAnchorKind.WorldPosition,
                             Position = ResolveChunkCenter(chunkKey, _runtime.ActiveBoard.LoadedChunksSource.ChunkSizeCm),
                         }))
                     {
-                        throw new InvalidOperationException("RoadNetwork showcase failed to queue CreatePerformer for authoritative road surface.");
+                        throw new InvalidOperationException("RoadNetwork showcase failed to queue CreatePresenter for authoritative road surface.");
                     }
                     _activeSurfaceScopes.Add(chunkKey, scopeId);
                 }
@@ -167,7 +169,7 @@ namespace RoadNetworkShowcaseMod.Systems
                 var segments = new SurfaceSplineSegment[chunkSplines.Length];
                 for (int i = 0; i < chunkSplines.Length; i++)
                 {
-                    ref readonly RoadNetworkScenarioDefinition.RoadSplineSpec spec = ref chunkSplines[i];
+                    ref readonly RoadNetworkScenarioDefinition.RoadRibbonSpec spec = ref chunkSplines[i];
                     segments[i] = new SurfaceSplineSegment(spec.P0, spec.P1, spec.P2, spec.P3, spec.Width);
                 }
 
@@ -185,13 +187,13 @@ namespace RoadNetworkShowcaseMod.Systems
                 chunksToRemove ??= new List<long>();
                 chunksToRemove.Add(chunkKey);
                 _surfacePayloads.Remove(scopeId);
-                if (!commandBuffer.TryAdd(new PerformerCommand
+                if (!commandBuffer.TryAdd(new PresenterCommand
                     {
-                        CommandKind = PerformerCommandKind.DestroyPerformerScope,
+                        CommandKind = PresenterCommandKind.DestroyPresenterScope,
                         ScopeTag = scopeId,
                     }))
                 {
-                    throw new InvalidOperationException("RoadNetwork showcase failed to queue DestroyPerformerScope for authoritative road surface.");
+                    throw new InvalidOperationException("RoadNetwork showcase failed to queue DestroyPresenterScope for authoritative road surface.");
                 }
             }
 
@@ -376,8 +378,7 @@ namespace RoadNetworkShowcaseMod.Systems
                 return true;
             }
 
-            if (_engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? actorObj) &&
-                actorObj is Entity local &&
+            if (ClientLocalSeatAccess.TryGetSolePossessedRep(_engine, out Entity local) &&
                 _world.IsAlive(local))
             {
                 actor = local;
@@ -420,7 +421,7 @@ namespace RoadNetworkShowcaseMod.Systems
         private bool TryResolveLocalCommandSourceOwner(out Entity owner)
         {
             owner = Entity.Null;
-            Entity local = _engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity local = ClientLocalSeatAccess.RequireSolePossessedRep(_engine);
             if (local == Entity.Null || !_world.IsAlive(local))
             {
                 return false;

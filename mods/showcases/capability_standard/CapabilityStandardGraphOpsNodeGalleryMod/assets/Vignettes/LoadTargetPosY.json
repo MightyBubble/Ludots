@@ -1,0 +1,13 @@
+{
+  "op": "LoadTargetPosY",
+  "driver": "event",
+  "title": "读出落点在南北标尺上的读数",
+  "beat": "虚线打到标尺上，亮出 200。",
+  "detailTemplate": "落点南北读数 {result}。",
+  "assertDetailContains": [
+    "南北"
+  ],
+  "featuredNodeId": "posY",
+  "graphKind": "Validation",
+  "field": "pos"
+}

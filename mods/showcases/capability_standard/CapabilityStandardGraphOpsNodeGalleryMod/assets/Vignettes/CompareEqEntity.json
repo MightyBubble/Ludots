@@ -1,0 +1,34 @@
+{
+  "op": "CompareEqEntity",
+  "driver": "attr",
+  "title": "先对脸：打的是不是自己",
+  "beat": "残影演示点名自己→同一个人，收手；点名木桩→不是同一人，一刀扣 18。",
+  "detailTemplate": "木桩不是施法者本人，这一刀打了出去，木桩从 {healthBefore} 掉到 {healthAfter}。",
+  "assertDetailContains": [
+    "不是"
+  ],
+  "featuredNodeId": "notSelf",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+[
+  {
+    "id": "showcase.graph_op.WriteMapVarFloat",
+    "kind": "Script",
+    "entry": "boost",
+    "nodes": [
+      {
+        "id": "boost",
+        "op": "ConstFloat",
+        "floatValue": 12.5
+      },
+      {
+        "id": "writeMorale",
+        "op": "WriteMapVarFloat",
+        "var": "gallery.morale"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "boost",
+        "fromPort": "next",
+        "to": "writeMorale"
+      },
+      {
+        "from": "writeMorale",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "boost",
+        "fromPort": "value",
+        "to": "writeMorale",
+        "toPort": "value"
+      }
+    ]
+  }
+]

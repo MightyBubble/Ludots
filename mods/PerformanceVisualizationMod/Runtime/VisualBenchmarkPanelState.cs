@@ -18,8 +18,8 @@ namespace PerformanceVisualizationMod.Runtime
             Hint: "Load the showcase map to begin.",
             Actions: new[]
             {
-                "Run 2K performer HUD",
-                "Run 8K performer HUD",
+                "Run 2K presenter HUD",
+                "Run 8K presenter HUD",
                 "Run 32K visual stress",
                 "Run HUD 100K direct",
                 "Run Skia 10K direct",

@@ -1,0 +1,42 @@
+[
+  {
+    "id": "showcase.graph_op.OfferActivity",
+    "kind": "Script",
+    "entry": "explicit",
+    "nodes": [
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "featured",
+        "op": "OfferActivity",
+        "activityId": "gallery.op.offer_activity"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "featured"
+      },
+      {
+        "from": "featured",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "featured",
+        "toPort": "source"
+      }
+    ]
+  }
+]

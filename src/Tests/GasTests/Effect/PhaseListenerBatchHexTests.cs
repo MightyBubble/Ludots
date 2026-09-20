@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS;
@@ -277,7 +277,9 @@ namespace Ludots.Tests.GAS
                 E = eRegs,
                 Targets = targetBuffer,
                 TargetList = targetList,
-            };
+            CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
 
             // I[0] = 1 (index)
             iRegs[0] = 1;
@@ -337,7 +339,9 @@ namespace Ludots.Tests.GAS
                 E = eRegs,
                 Targets = targetBuffer,
                 TargetList = targetList,
-            };
+            CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
 
             var program = new GraphProgramBuffer();
             program.Add((ushort)GraphNodeOp.FanOutApplyEffect, imm: 42); // templateId = 42
@@ -491,7 +495,7 @@ namespace Ludots.Tests.GAS
             That(setup.TryAddTemplate(10, 42, EffectPhaseId.OnApply, PhaseListenerScope.Source,
                 PhaseListenerActionFlags.Both, 100, 200, 50), Is.True);
             That(setup.Count, Is.EqualTo(1));
-            That(setup.ListenTagIds[0], Is.EqualTo(10));
+            That(setup.ListenCategoryIds[0], Is.EqualTo(10));
             That(setup.ListenEffectIds[0], Is.EqualTo(42));
             That(setup.Phases[0], Is.EqualTo((byte)EffectPhaseId.OnApply));
             That(setup.Scopes[0], Is.EqualTo((byte)PhaseListenerScope.Source));
@@ -533,6 +537,13 @@ namespace Ludots.Tests.GAS
 
             var behavior = new EffectPhaseGraphBindings();
             var api = new GasGraphRuntimeApi(world, null, null, eventBus);
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = target,
+                TargetContext = default,
+            };
             var transaction = new EffectPhaseSideEffectTransaction(
                 world,
                 tagOps: null,
@@ -543,9 +554,9 @@ namespace Ludots.Tests.GAS
             transaction.Begin();
             api.BeginEffectSideEffectTransaction(transaction);
 
-            // Execute OnApply with effectTagId=10 (non-zero to trigger dispatch)
+            // Execute OnApply with effectCategoryId=10 (non-zero to trigger dispatch)
             executor.ExecutePhase(world, api, caster, target, default, default,
-                EffectPhaseId.OnApply, in behavior, EffectPresetType.None, effectTagId: 10, effectTemplateId: 1);
+                EffectPhaseId.OnApply, in behavior, EffectPresetType.None, effectCategoryId: 10, effectTemplateId: 1);
             transaction.Commit();
             api.EndEffectSideEffectTransaction(transaction);
 
@@ -570,12 +581,13 @@ namespace Ludots.Tests.GAS
             programs.Register(graphId,
             [
                 new GraphInstruction { Op = (ushort)GraphNodeOp.BeginLifecycleTransaction },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             ], GraphKind.Effect);
             var globalListeners = new GlobalPhaseListenerRegistry();
             if (useGlobalListener)
             {
                 That(globalListeners.Register(
-                    listenTagId: 0,
+                    listenCategoryId: 0,
                     listenEffectId: 0,
                     EffectPhaseId.OnApply,
                     PhaseListenerActionFlags.ExecuteGraph,
@@ -587,7 +599,7 @@ namespace Ludots.Tests.GAS
             {
                 var listenerBuffer = new EffectPhaseListenerBuffer();
                 That(listenerBuffer.TryAdd(
-                    listenTagId: 0,
+                    listenCategoryId: 0,
                     listenEffectId: 0,
                     EffectPhaseId.OnApply,
                     PhaseListenerScope.Target,
@@ -621,7 +633,7 @@ namespace Ludots.Tests.GAS
                     EffectPhaseId.OnApply,
                     in behavior,
                     EffectPresetType.None,
-                    effectTagId: 1,
+                    effectCategoryId: 1,
                     effectTemplateId: 1))!;
 
             That(error.Message, Does.StartWith(GraphKindOperationPolicy.ListenerOperationNotAllowedError));
@@ -642,6 +654,7 @@ namespace Ludots.Tests.GAS
                     Op = (ushort)GraphNodeOp.InvokeBuiltin,
                     Imm = (int)BuiltinHandlerId.ApplyModifiers,
                 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             ], GraphKind.Effect);
             EffectPhaseListenerBuffer listeners = default;
             That(listeners.TryAdd(
@@ -667,7 +680,7 @@ namespace Ludots.Tests.GAS
                     EffectPhaseId.OnApply,
                     in behavior,
                     EffectPresetType.None,
-                    effectTagId: 1,
+                    effectCategoryId: 1,
                     effectTemplateId: 1))!;
 
             That(error.Message, Does.StartWith(GraphKindOperationPolicy.ListenerOperationNotAllowedError));
@@ -680,7 +693,7 @@ namespace Ludots.Tests.GAS
             EffectPhaseListenerBuffer buffer = default;
             InvalidOperationException entityError = Throws<InvalidOperationException>(() =>
                 buffer.TryAdd(
-                    listenTagId: 0,
+                    listenCategoryId: 0,
                     listenEffectId: 0,
                     EffectPhaseId.OnApply,
                     PhaseListenerScope.Target,
@@ -692,7 +705,7 @@ namespace Ludots.Tests.GAS
             var globalListeners = new GlobalPhaseListenerRegistry();
             InvalidOperationException globalError = Throws<InvalidOperationException>(() =>
                 globalListeners.Register(
-                    listenTagId: 0,
+                    listenCategoryId: 0,
                     listenEffectId: 0,
                     EffectPhaseId.OnApply,
                     PhaseListenerActionFlags.Both,
@@ -804,7 +817,7 @@ namespace Ludots.Tests.GAS
             EffectPhaseListenerBuffer buffer = default;
             InvalidOperationException entityError = Throws<InvalidOperationException>(() =>
                 buffer.TryAdd(
-                    listenTagId: 0,
+                    listenCategoryId: 0,
                     listenEffectId: 0,
                     phase,
                     PhaseListenerScope.Target,
@@ -816,7 +829,7 @@ namespace Ludots.Tests.GAS
             var globalListeners = new GlobalPhaseListenerRegistry();
             InvalidOperationException globalError = Throws<InvalidOperationException>(() =>
                 globalListeners.Register(
-                    listenTagId: 0,
+                    listenCategoryId: 0,
                     listenEffectId: 0,
                     phase,
                     PhaseListenerActionFlags.PublishEvent,
@@ -838,7 +851,7 @@ namespace Ludots.Tests.GAS
             var target = world.Create();
             EffectPhaseListenerBuffer listeners = default;
             That(listeners.TryAdd(
-                listenTagId: 0,
+                listenCategoryId: 0,
                 listenEffectId: 0,
                 EffectPhaseId.OnApply,
                 PhaseListenerScope.Target,
@@ -867,7 +880,7 @@ namespace Ludots.Tests.GAS
                     EffectPhaseId.OnApply,
                     in behavior,
                     EffectPresetType.None,
-                    effectTagId: 1,
+                    effectCategoryId: 1,
                     effectTemplateId: 1))!;
 
             That(error.Message, Does.StartWith(EffectPhaseExecutor.MissingListenerEventBusError));
@@ -936,7 +949,7 @@ namespace Ludots.Tests.GAS
                     default,
                     default,
                     EffectPhaseId.OnApply,
-                    effectTagId: 1,
+                    effectCategoryId: 1,
                     effectTemplateId: 1))!;
 
             That(error.Message, Does.StartWith(EffectPhaseSideEffectTransaction.CapacityExceededError));
@@ -994,7 +1007,7 @@ namespace Ludots.Tests.GAS
                     default,
                     default,
                     EffectPhaseId.OnApply,
-                    effectTagId: 1,
+                    effectCategoryId: 1,
                     effectTemplateId: 1))!;
 
             eventBus.Update();
@@ -1014,6 +1027,7 @@ namespace Ludots.Tests.GAS
             programs.Register(graphId,
             [
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 1f },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             ], GraphKind.Effect);
             EffectPhaseListenerBuffer listeners = default;
             That(listeners.TryAdd(
@@ -1046,7 +1060,7 @@ namespace Ludots.Tests.GAS
                 executor.ExecutePhase(
                     world, api, caster, target, default, default,
                     EffectPhaseId.OnApply, in behavior, EffectPresetType.None,
-                    effectTagId: 1, effectTemplateId: 1);
+                    effectCategoryId: 1, effectTemplateId: 1);
                 transaction.Commit();
                 api.EndEffectSideEffectTransaction(transaction);
             }
@@ -1055,7 +1069,8 @@ namespace Ludots.Tests.GAS
             eventBus.Update();
 
             programs.Clear();
-            programs.Register(graphId,
+            InvalidOperationException error = Throws<InvalidOperationException>(() =>
+                programs.Register(graphId,
             [
                 new GraphInstruction
                 {
@@ -1063,16 +1078,11 @@ namespace Ludots.Tests.GAS
                     Dst = GraphVmLimits.MaxFloatRegisters,
                     ImmF = 1f,
                 },
-            ], GraphKind.Effect);
-
-            InvalidOperationException error = Throws<InvalidOperationException>(() =>
-                executor.ExecutePhase(
-                    world, api, caster, target, default, default,
-                    EffectPhaseId.OnApply, in behavior, EffectPresetType.None,
-                    effectTagId: 1, effectTemplateId: 1))!;
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+            ], GraphKind.Effect))!;
 
             eventBus.Update();
-            That(error.Message, Does.StartWith(EffectPhaseExecutor.GraphProgramScratchCapacityExceededError));
+            That(error.Message, Does.StartWith(GraphKindOperationPolicy.RegisterOutOfRangeError));
             That(error.Message, Does.Contain("operand=Dst"));
             That(error.Message, Does.Contain($"registerIndex={GraphVmLimits.MaxFloatRegisters}"));
             That(eventBus.Events.Count, Is.Zero);
@@ -1094,10 +1104,12 @@ namespace Ludots.Tests.GAS
                 new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = -25f },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 0, B = 0, Imm = healthId },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             ], GraphKind.Effect);
             programs.Register(listenerGraphId,
             [
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 1f },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             ], GraphKind.Effect);
             EffectPhaseGraphBindings behavior = default;
             That(behavior.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Pre, phaseGraphId), Is.True);
@@ -1124,7 +1136,7 @@ namespace Ludots.Tests.GAS
                     EffectPhaseId.OnApply,
                     in behavior,
                     EffectPresetType.None,
-                    effectTagId: 1,
+                    effectCategoryId: 1,
                     effectTemplateId: 1))!;
 
             That(error.Message, Does.StartWith(EffectPhaseExecutor.ListenerTransactionRequiredError));
@@ -1147,10 +1159,12 @@ namespace Ludots.Tests.GAS
                 new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = -25f },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 0, B = 0, Imm = healthId },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             ], GraphKind.Effect);
             programs.Register(listenerGraphId,
             [
                 new GraphInstruction { Op = (ushort)GraphNodeOp.SendEvent, Imm = 1 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             ], GraphKind.Effect);
             EffectPhaseGraphBindings behavior = default;
             That(behavior.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Pre, phaseGraphId), Is.True);
@@ -1181,7 +1195,7 @@ namespace Ludots.Tests.GAS
                 executor.ExecutePhase(
                     world, api, caster, target, default, default,
                     EffectPhaseId.OnApply, in behavior, EffectPresetType.None,
-                    effectTagId: 1, effectTemplateId: 1))!;
+                    effectCategoryId: 1, effectTemplateId: 1))!;
             api.EndEffectSideEffectTransaction(transaction);
             transaction.Rollback();
 
@@ -1205,6 +1219,7 @@ namespace Ludots.Tests.GAS
                 new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = -25f },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 0, B = 0, Imm = healthId },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             ], GraphKind.Effect);
             EffectPhaseGraphBindings behavior = default;
             That(behavior.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Pre, phaseGraphId), Is.True);
@@ -1231,7 +1246,7 @@ namespace Ludots.Tests.GAS
                     EffectPhaseId.OnApply,
                     in behavior,
                     EffectPresetType.None,
-                    effectTagId: 1,
+                    effectCategoryId: 1,
                     effectTemplateId: 1));
 
             That(world.Get<AttributeBuffer>(target).GetCurrent(healthId), Is.EqualTo(100f));
@@ -1275,10 +1290,11 @@ namespace Ludots.Tests.GAS
             programs.Register(graphId,
             [
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 1 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             ], GraphKind.Validation);
             EffectPhaseListenerBuffer listeners = default;
             That(listeners.TryAdd(
-                listenTagId: 0,
+                listenCategoryId: 0,
                 listenEffectId: 0,
                 EffectPhaseId.OnPropose,
                 PhaseListenerScope.Target,
@@ -1307,7 +1323,7 @@ namespace Ludots.Tests.GAS
                 EffectPhaseId.OnPropose,
                 in behavior,
                 EffectPresetType.None,
-                effectTagId: 1,
+                effectCategoryId: 1,
                 effectTemplateId: 1,
                 in mergedParams);
 
@@ -1315,50 +1331,17 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void Executor_OnProposeEmptyValidationListener_FailsClosed()
+        public void Registry_EmptyValidationListenerGraph_FailsClosed()
         {
-            using var world = World.Create();
-            var caster = world.Create();
-            var target = world.Create();
             const int graphId = 33;
             var programs = new GraphProgramRegistry();
-            programs.Register(graphId, Array.Empty<GraphInstruction>(), GraphKind.Validation);
-            EffectPhaseListenerBuffer listeners = default;
-            That(listeners.TryAdd(
-                listenTagId: 0,
-                listenEffectId: 0,
-                EffectPhaseId.OnPropose,
-                PhaseListenerScope.Target,
-                PhaseListenerActionFlags.ExecuteGraph,
-                graphId,
-                eventTagId: 0,
-                priority: 0,
-                ownerEffectId: 1), Is.True);
-            world.Add(target, listeners);
-            var executor = new EffectPhaseExecutor(
-                programs,
-                new PresetTypeRegistry(),
-                new BuiltinHandlerRegistry(),
-                GasGraphOpHandlerTable.Instance,
-                new EffectTemplateRegistry());
-            EffectPhaseGraphBindings behavior = default;
-            EffectConfigParams mergedParams = default;
 
-            bool accepted = executor.ExecutePhaseWithValidationResult(
-                world,
-                new GasGraphRuntimeApi(world),
-                caster,
-                target,
-                default,
-                default,
-                EffectPhaseId.OnPropose,
-                in behavior,
-                EffectPresetType.None,
-                effectTagId: 1,
-                effectTemplateId: 1,
-                in mergedParams);
+            InvalidOperationException error = Throws<InvalidOperationException>(() =>
+                programs.Register(graphId, Array.Empty<GraphInstruction>(), GraphKind.Validation))!;
 
-            That(accepted, Is.False);
+            That(error.Message, Does.StartWith(GraphKindOperationPolicy.MissingHaltError));
+            That(error.Message, Does.Contain("GraphProgramRegistry"));
+            That(error.Message, Does.Contain("graphId=33"));
         }
 
         [Test]
@@ -1373,10 +1356,12 @@ namespace Ludots.Tests.GAS
             programs.Register(rejectGraphId,
             [
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 0 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             ], GraphKind.Validation);
             programs.Register(passGraphId,
             [
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 1 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             ], GraphKind.Validation);
             EffectPhaseListenerBuffer listeners = default;
             That(listeners.TryAdd(
@@ -1405,7 +1390,7 @@ namespace Ludots.Tests.GAS
                 EffectPhaseId.OnPropose,
                 in behavior,
                 EffectPresetType.None,
-                effectTagId: 1,
+                effectCategoryId: 1,
                 effectTemplateId: 1,
                 in mergedParams);
 
@@ -1427,6 +1412,7 @@ namespace Ludots.Tests.GAS
                 new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = -25f },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 0, B = 0, Imm = healthId },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             ], GraphKind.Effect);
             EffectPhaseListenerBuffer listeners = default;
             That(listeners.TryAdd(
@@ -1452,13 +1438,67 @@ namespace Ludots.Tests.GAS
                     EffectPhaseId.OnCalculate,
                     in behavior,
                     EffectPresetType.None,
-                    effectTagId: 1,
+                    effectCategoryId: 1,
                     effectTemplateId: 1))!;
 
             That(error.Message, Does.StartWith(GraphKindOperationPolicy.ListenerOperationNotAllowedError));
             That(world.Get<AttributeBuffer>(target).GetCurrent(healthId), Is.EqualTo(100f));
         }
 
+        [Test]
+        public void ExecutorDispatch_ListenerGraphBuiltin_IsRejectedByListenerOperationPolicy()
+        {
+            // Main's GraphKindOperationPolicy bans InvokeBuiltin in listener graphs because listener
+            // execution carries no owner EffectTemplate context; the PR-era "listener builtin receives
+            // effect context" contract was retired with that policy decision.
+            using var world = World.Create();
+            var caster = world.Create();
+            var target = world.Create();
+            var programs = new GraphProgramRegistry();
+            const int graphId = 2;
+            programs.Register(graphId,
+            [
+                new GraphInstruction { Op = (ushort)GraphNodeOp.InvokeBuiltin, Imm = (int)BuiltinHandlerId.ApplyModifiers },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+            ], GraphKind.Effect);
+            var listenerBuffer = new EffectPhaseListenerBuffer();
+            That(listenerBuffer.TryAdd(
+                listenCategoryId: 0,
+                listenEffectId: 0,
+                EffectPhaseId.OnApply,
+                PhaseListenerScope.Target,
+                PhaseListenerActionFlags.ExecuteGraph,
+                graphId,
+                eventTagId: 0,
+                priority: 0,
+                ownerEffectId: 1), Is.True);
+            world.Add(target, listenerBuffer);
+
+            var executor = new EffectPhaseExecutor(
+                programs,
+                new PresetTypeRegistry(),
+                new BuiltinHandlerRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                new EffectTemplateRegistry());
+            var api = new GasGraphRuntimeApi(world);
+            EffectPhaseGraphBindings behavior = default;
+
+            InvalidOperationException error = Throws<InvalidOperationException>(() =>
+                executor.ExecutePhase(
+                    world,
+                    api,
+                    caster,
+                    target,
+                    default,
+                    default,
+                    EffectPhaseId.OnApply,
+                    in behavior,
+                    EffectPresetType.None,
+                    effectCategoryId: 1,
+                    effectTemplateId: 1))!;
+
+            That(error.Message, Does.StartWith(GraphKindOperationPolicy.ListenerOperationNotAllowedError));
+        }
         [Test]
         public void ExecutorDispatch_PublishesEvent_OnCasterBuffer()
         {
@@ -1484,6 +1524,13 @@ namespace Ludots.Tests.GAS
 
             var behavior = new EffectPhaseGraphBindings();
             var api = new GasGraphRuntimeApi(world, null, null, eventBus);
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = target,
+                TargetContext = default,
+            };
             using var transaction = new EffectPhaseSideEffectTransaction(
                 world,
                 tagOps: null,
@@ -1495,7 +1542,7 @@ namespace Ludots.Tests.GAS
             api.BeginEffectSideEffectTransaction(transaction);
 
             executor.ExecutePhase(world, api, caster, target, default, default,
-                EffectPhaseId.OnApply, in behavior, EffectPresetType.None, effectTagId: 10, effectTemplateId: 1);
+                EffectPhaseId.OnApply, in behavior, EffectPresetType.None, effectCategoryId: 10, effectTemplateId: 1);
             transaction.Commit();
             api.EndEffectSideEffectTransaction(transaction);
 
@@ -1544,7 +1591,9 @@ namespace Ludots.Tests.GAS
                 E = eRegs,
                 Targets = targetBuffer,
                 TargetList = targetList,
-            };
+            CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
 
             var program = new GraphProgramBuffer();
             program.Add((ushort)GraphNodeOp.FanOutApplyEffect, imm: 1);
@@ -1614,7 +1663,7 @@ namespace Ludots.Tests.GAS
                             EffectPhaseId.OnPropose,
                             in behavior,
                             EffectPresetType.None,
-                            effectTagId: 1,
+                            effectCategoryId: 1,
                             effectTemplateId: 1,
                             in mergedParams);
                     }
@@ -1622,7 +1671,7 @@ namespace Ludots.Tests.GAS
                     {
                         executor.ExecutePhase(world, api, caster, targets[i], default, default,
                             (EffectPhaseId)phase, in behavior, EffectPresetType.None,
-                            effectTagId: 1, effectTemplateId: 1);
+                            effectCategoryId: 1, effectTemplateId: 1);
                     }
                 }
             }
@@ -1691,12 +1740,33 @@ namespace Ludots.Tests.GAS
             var behavior = new EffectPhaseGraphBindings();
             int fireballHitTag = 10;
             int fireballHitTemplate = 42;
+            var victim1Context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = victim1,
+                TargetContext = default,
+            };
+            var victim2Context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = victim2,
+                TargetContext = default,
+            };
+            var victim3Context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = victim3,
+                TargetContext = default,
+            };
 
-            executor.ExecutePhase(world, api, caster, victim1, default, default,
+            executor.ExecutePhase(world, api, victim1Context.Source, victim1Context.Target, victim1Context.TargetContext, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.None, fireballHitTag, fireballHitTemplate);
-            executor.ExecutePhase(world, api, caster, victim2, default, default,
+            executor.ExecutePhase(world, api, victim2Context.Source, victim2Context.Target, victim2Context.TargetContext, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.None, fireballHitTag, fireballHitTemplate);
-            executor.ExecutePhase(world, api, caster, victim3, default, default,
+            executor.ExecutePhase(world, api, victim3Context.Source, victim3Context.Target, victim3Context.TargetContext, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.None, fireballHitTag, fireballHitTemplate);
             transaction.Commit();
             api.EndEffectSideEffectTransaction(transaction);
@@ -1729,7 +1799,7 @@ namespace Ludots.Tests.GAS
             ref var buf = ref world.Get<EffectPhaseListenerBuffer>(target);
             unsafe
             {
-                buf.TryAdd(templateSetup.ListenTagIds[0], templateSetup.ListenEffectIds[0],
+                buf.TryAdd(templateSetup.ListenCategoryIds[0], templateSetup.ListenEffectIds[0],
                     (EffectPhaseId)templateSetup.Phases[0], (PhaseListenerScope)templateSetup.Scopes[0],
                     (PhaseListenerActionFlags)templateSetup.ActionFlags[0],
                     templateSetup.GraphProgramIds[0], templateSetup.EventTagIds[0], templateSetup.Priorities[0],
@@ -1787,14 +1857,22 @@ namespace Ludots.Tests.GAS
                 E = _testEntityRegs,
                 Targets = _testTargetBuffer,
                 TargetList = targetList,
-            };
+            CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
         }
 
         private static GraphInstruction[] ExtractInstructions(GraphProgramBuffer program)
         {
-            var instructions = new GraphInstruction[program.Count];
+            var hasHalt = program.Count > 0 &&
+                program.Get(program.Count - 1).Op == (ushort)GraphNodeOp.HaltReturnInt;
+            var instructions = new GraphInstruction[program.Count + (hasHalt ? 0 : 1)];
             for (int i = 0; i < program.Count; i++)
                 instructions[i] = program.Get(i);
+            if (!hasHalt)
+            {
+                instructions[^1] = new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt };
+            }
             return instructions;
         }
     }

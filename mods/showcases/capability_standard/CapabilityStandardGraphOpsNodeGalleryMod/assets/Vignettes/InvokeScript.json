@@ -1,0 +1,24 @@
+{
+  "op": "InvokeScript",
+  "driver": "script",
+  "title": "叫另一张图来帮忙算",
+  "beat": "主卷轴上叫一声外援，旁边那张小卷轴亮起来，算完把 7 送回来。",
+  "detailTemplate": "叫了另一张图帮忙，送回来的数是 {result}。",
+  "assertDetailContains": [
+    "送回来"
+  ],
+  "featuredNodeId": "invoke",
+  "graphKind": "Script",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "喝茶人",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

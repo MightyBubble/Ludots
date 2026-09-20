@@ -1,8 +1,10 @@
 using System;
+using Ludots.Platform.Abstractions;
+using Ludots.Core.Presentation.Rendering;
 
 namespace Ludots.Core.Presentation.Rendering
 {
-    public sealed class SkinnedVisualBatchBuffer
+    public sealed class SkinnedVisualBatchBuffer : ISkinnedVisualBatchSnapshot
     {
         private readonly SkinnedVisualBatchItem[] _buffer;
         private int _count;
@@ -37,6 +39,26 @@ namespace Ludots.Core.Presentation.Rendering
         {
             _directWrittenThisFrame = true;
             return TryAdd(in item);
+        }
+
+        public bool TryReserveDirect(out int reservedIndex)
+        {
+            _directWrittenThisFrame = true;
+            if (_count >= _buffer.Length)
+            {
+                DroppedSinceClear++;
+                DroppedTotal++;
+                reservedIndex = -1;
+                return false;
+            }
+
+            reservedIndex = _count++;
+            return true;
+        }
+
+        public ref SkinnedVisualBatchItem ReservedItem(int reservedIndex)
+        {
+            return ref _buffer[reservedIndex];
         }
 
         public ReadOnlySpan<SkinnedVisualBatchItem> GetSpan() => new ReadOnlySpan<SkinnedVisualBatchItem>(_buffer, 0, _count);

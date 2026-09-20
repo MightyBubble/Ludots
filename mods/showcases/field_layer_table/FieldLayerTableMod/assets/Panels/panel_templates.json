@@ -1,0 +1,32 @@
+[
+  {
+    "id": "panel.field_layer_table.progress",
+    "graph": "Graph.FieldLayerTable.Panel.Values",
+    "pins": [
+      {
+        "name": "stage",
+        "key": "field.layertable.panel.stage",
+        "mode": "realtime",
+        "default": 0
+      },
+      {
+        "name": "layerCount",
+        "key": "field.layertable.panel.layerCount",
+        "mode": "realtime",
+        "default": 0
+      },
+      {
+        "name": "regionCount",
+        "key": "field.layertable.panel.regionCount",
+        "mode": "realtime",
+        "default": 0
+      },
+      {
+        "name": "nonDefaultCount",
+        "key": "field.layertable.panel.nonDefaultCount",
+        "mode": "realtime",
+        "default": 0
+      }
+    ]
+  }
+]

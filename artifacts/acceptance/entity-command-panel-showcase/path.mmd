@@ -1,0 +1,15 @@
+﻿flowchart TD
+    A["Load EntityCommandPanelShowcaseMod on interaction_showcase_hub"] --> B["EntityCommandPanelMod registers gas.collection-ability-slots source"]
+    B --> C["ConfigPipeline installs Core template/ability profiles"]
+    C --> D["ArrayById fragment installs aggregation.by_family catalog.castFamily"]
+    D --> E["Showcase host publishes collection.command.source for 3 heroes"]
+    E --> F["Aggregation toolbar binds CollectionGasEntityCommandPanelSource"]
+    F --> G{"Runtime profile button"}
+    G -->|Family| H["SetAggregationProfile aggregation.by_family"]
+    G -->|Template| I["SetAggregationProfile aggregation.by_template"]
+    G -->|Ability| J["SetAggregationProfile aggregation.by_ability_id"]
+    H --> K["EntityCommandPanelSourceDispatch.CopySlots"]
+    I --> K
+    J --> K
+    K --> L["Assert 8 family slots, 24 template slots, or 21 ability slots"]
+    L --> M["Write battle-report, trace.jsonl, path.mmd"]

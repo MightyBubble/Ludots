@@ -1,5 +1,6 @@
 {
   "startupMapId": "tcg_modify",
-  "startupInputContexts": ["Default_Gameplay"]
+  "startupInputContexts": [
+    "Default_Gameplay"
+  ]
 }
-

@@ -20,6 +20,7 @@ using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Spatial;
 using Ludots.Core.Vision;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
 {
@@ -73,6 +74,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly ResponseChainOrderTypes _responseChainOrderTypes;
         private readonly GasPresentationEventBuffer? _presentationEvents;
         private readonly TagOps? _tagOps;
+        private readonly AttributeAggregateDirtyRegistry? _aggregateDirty;
 
         // Phase Graph execution (optional)
         private readonly EffectPhaseExecutor? _phaseExecutor;
@@ -316,7 +318,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        public EffectProposalProcessingSystem(World world, EffectRequestQueue queue, int fanOutCommandCapacity, Ludots.Core.Engine.IClock clock, GasBudget? budget = null, EffectTemplateRegistry? templates = null, InputRequestQueue? inputRequests = null, OrderQueue? chainOrders = null, ResponseChainTelemetryBuffer? telemetry = null, OrderRequestQueue? orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer? presentationEvents = null, EffectPhaseExecutor? phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi? graphApi = null, TagOps? tagOps = null, ISpatialQueryService? spatialQueries = null, RuntimeEntitySpawnQueue? spawnRequests = null, RuntimeEntityLifecycleQueue? lifecycleRequests = null, EntityLifecycleRuntimeServices? lifecycleServices = null, ExchangeRuntime? exchangeRuntime = null, ProgressionRequirementEvaluator? progressionEvaluator = null, OrderTypeRegistry? orderTypeRegistry = null, OrderRuleRegistry? orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime? relationshipRuntime = null, KnowledgeAreaRevealRuntime? knowledgeAreaRevealRuntime = null, OrderQueue? orderIntake = null, RootBudgetTable? fanOutBudget = null)
+        public EffectProposalProcessingSystem(World world, EffectRequestQueue queue, int fanOutCommandCapacity, Ludots.Core.Engine.IClock clock, GasBudget? budget = null, EffectTemplateRegistry? templates = null, InputRequestQueue? inputRequests = null, OrderQueue? chainOrders = null, ResponseChainTelemetryBuffer? telemetry = null, OrderRequestQueue? orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer? presentationEvents = null, EffectPhaseExecutor? phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi? graphApi = null, TagOps? tagOps = null, ISpatialQueryService? spatialQueries = null, RuntimeEntitySpawnQueue? spawnRequests = null, RuntimeEntityLifecycleQueue? lifecycleRequests = null, EntityLifecycleRuntimeServices? lifecycleServices = null, ExchangeRuntime? exchangeRuntime = null, ProgressionRequirementEvaluator? progressionEvaluator = null, OrderTypeRegistry? orderTypeRegistry = null, OrderRuleRegistry? orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime? relationshipRuntime = null, KnowledgeAreaRevealRuntime? knowledgeAreaRevealRuntime = null, OrderQueue? orderIntake = null, RootBudgetTable? fanOutBudget = null, Ludots.Core.Movement.PoseAuthorityArbiter? poseAuthorityArbiter = null, Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry? aggregateDirty = null)
             : base(world)
         {
             _queue = queue ?? throw new ArgumentNullException(nameof(queue));
@@ -336,6 +338,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 nameof(EffectProposalProcessingSystem));
             _presentationEvents = presentationEvents;
             _tagOps = tagOps;
+            _aggregateDirty = aggregateDirty;
             _phaseExecutor = phaseExecutor;
             _graphApi = graphApi;
             _graphApiHost = graphApi;
@@ -346,7 +349,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 spawnRequests,
                 presentationEvents,
                 Math.Max(1, fanOutCommandCapacity),
-                _fanOutBudget);
+                _fanOutBudget,
+                poseAuthorityArbiter,
+                aggregateDirty);
             _builtinRuntime.SpatialQueries = spatialQueries;
             _builtinRuntime.FanOutBudget = _fanOutBudget;
             _builtinRuntime.FanOutCommands = _instantFanOutCommands;
@@ -360,6 +365,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _builtinRuntime.KnowledgeAreaReveal = knowledgeAreaRevealRuntime;
             _builtinRuntime.TagOps = _tagOps;
             _builtinRuntime.OrderIntake = orderIntake;
+            _builtinRuntime.PoseAuthorityArbiter = poseAuthorityArbiter;
             _builtinOrderTypeRegistry = orderTypeRegistry;
             _builtinOrderRuleRegistry = orderRuleRegistry;
             _builtinStepRateHz = GasStepRate.RequirePositive(stepRateHz, nameof(EffectProposalProcessingSystem));
@@ -464,7 +470,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         Target = req.Target,
                         TargetContext = req.TargetContext,
                         TemplateId = req.TemplateId,
-                        TagId = rootTpl.TagId,
+                        CategoryId = rootTpl.CategoryId,
                         ClockId = req.ClockId,
                         HasClockId = req.HasClockId,
                         ParticipatesInResponse = rootTpl.ParticipatesInResponse,
@@ -485,7 +491,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             Kind = ResponseChainTelemetryKind.WindowOpened,
                             RootId = req.RootId,
                             TemplateId = req.TemplateId,
-                            TagId = rootTpl.TagId,
+                            CategoryId = rootTpl.CategoryId,
                             ProposalIndex = 0,
                             Source = req.Source,
                             Target = req.Target,
@@ -502,7 +508,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                     if (rootTpl.ParticipatesInResponse)
                     {
-                        EnqueueResponsesForEffect(proposalIndex: 0, effectTagId: rootTpl.TagId);
+                        EnqueueResponsesForEffect(proposalIndex: 0, firingCategoryId: rootTpl.CategoryId);
                         if (_budget != null) _budget.ResponseWindows++;
                     }
 
@@ -557,7 +563,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                             Target = _activeReq.Target,
                                             TargetContext = _activeReq.TargetContext,
                                             TemplateId = response.EffectTemplateId,
-                                            TagId = tpl.TagId,
+                                            CategoryId = tpl.CategoryId,
                                             ParticipatesInResponse = tpl.ParticipatesInResponse,
                                             Cancelled = false,
                                             Modifiers = chainedModifiers
@@ -573,7 +579,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                                         if (tpl.ParticipatesInResponse)
                                         {
-                                            EnqueueResponsesForEffect(newIndex, tpl.TagId);
+                                            EnqueueResponsesForEffect(newIndex, tpl.CategoryId);
                                         }
                                         break;
 
@@ -632,7 +638,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 $"{InputRequestQueueFullError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, requestTagId={_inputRequestTagId}, capacity={_inputRequests.Capacity}.");
                         }
 
-                        int playerId = 0;
                         var src = _window[0].Source;
                         OrderRequest orderRequest = default;
                         if (_orderRequests != null)
@@ -643,9 +648,17 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                     $"{OrderRequestQueueFullError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, requestTagId={_inputRequestTagId}, capacity={_orderRequests.Capacity}.");
                             }
 
-                            if (World.IsAlive(src) && World.Has<PlayerOwner>(src))
+                            if (!World.IsAlive(src) || !World.Has<PlayerOwner>(src))
                             {
-                                playerId = World.Get<PlayerOwner>(src).PlayerId;
+                                throw new InvalidOperationException(
+                                    $"Response-chain order request requires a live source with PlayerOwner: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}.");
+                            }
+
+                            int playerId = World.Get<PlayerOwner>(src).PlayerId;
+                            if (playerId <= 0)
+                            {
+                                throw new InvalidOperationException(
+                                    $"Response-chain order request requires a positive PlayerOwner.PlayerId: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, playerId={playerId}.");
                             }
 
                             orderRequest = new OrderRequest
@@ -695,7 +708,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 Kind = ResponseChainTelemetryKind.PromptRequested,
                                 RootId = _activeReq.RootId,
                                 TemplateId = _activeReq.TemplateId,
-                                TagId = _window[0].TagId,
+                                CategoryId = _window[0].CategoryId,
                                 ProposalIndex = 0,
                                 PromptTagId = _inputRequestTagId,
                                 Source = _window[0].Source,
@@ -747,7 +760,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                             Kind = ResponseChainTelemetryKind.OrderConsumed,
                                             RootId = _activeReq.RootId,
                                             TemplateId = _activeReq.TemplateId,
-                                            TagId = _window[0].TagId,
+                                            CategoryId = _window[0].CategoryId,
                                             ProposalIndex = 0,
                                             OrderTypeId = order.OrderTypeId,
                                             Source = order.Actor,
@@ -782,7 +795,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                             Kind = ResponseChainTelemetryKind.OrderConsumed,
                                             RootId = _activeReq.RootId,
                                             TemplateId = _activeReq.TemplateId,
-                                            TagId = _window[0].TagId,
+                                            CategoryId = _window[0].CategoryId,
                                             ProposalIndex = 0,
                                             OrderTypeId = order.OrderTypeId,
                                             Source = order.Actor,
@@ -810,7 +823,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                             Kind = ResponseChainTelemetryKind.OrderConsumed,
                                             RootId = _activeReq.RootId,
                                             TemplateId = order.Args.I0,
-                                            TagId = _window[0].TagId,
+                                            CategoryId = _window[0].CategoryId,
                                             ProposalIndex = 0,
                                             OrderTypeId = order.OrderTypeId,
                                             Source = order.Actor,
@@ -833,7 +846,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                     ref readonly var tpl = ref _templates.GetRef(tplIdx);
 
                                     if (tpl.ParticipatesInResponse &&
-                                        CountResponsesForEffect(tpl.TagId) > _responseQueue.AvailableCapacity)
+                                        CountResponsesForEffect(tpl.CategoryId) > _responseQueue.AvailableCapacity)
                                     {
                                         if (_budget != null) _budget.ResponseQueueOverflowDropped++;
                                         CompleteConsumedResponseChainOrder(
@@ -854,7 +867,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                         Target = _activeReq.Target,
                                         TargetContext = _activeReq.TargetContext,
                                         TemplateId = order.Args.I0,
-                                        TagId = tpl.TagId,
+                                        CategoryId = tpl.CategoryId,
                                         ParticipatesInResponse = tpl.ParticipatesInResponse,
                                         Cancelled = false,
                                         Modifiers = chainedModifiers
@@ -883,7 +896,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                                 Kind = ResponseChainTelemetryKind.ProposalAdded,
                                                 RootId = _activeReq.RootId,
                                                 TemplateId = chained.TemplateId,
-                                                TagId = chained.TagId,
+                                                CategoryId = chained.CategoryId,
                                                 ProposalIndex = newIndex,
                                                 Source = chained.Source,
                                                 Target = chained.Target,
@@ -893,7 +906,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                                         if (tpl.ParticipatesInResponse)
                                         {
-                                            EnqueueResponsesForEffect(newIndex, tpl.TagId);
+                                            EnqueueResponsesForEffect(newIndex, tpl.CategoryId);
                                         }
                                     }
                                     catch (InvalidOperationException ex)
@@ -1004,7 +1017,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                     Kind = ResponseChainTelemetryKind.ProposalResolved,
                                     RootId = _activeReq.RootId,
                                     TemplateId = e.TemplateId,
-                                    TagId = e.TagId,
+                                    CategoryId = e.CategoryId,
                                     ProposalIndex = i,
                                     Outcome = ResponseChainResolveOutcome.Cancelled,
                                     Source = e.Source,
@@ -1026,7 +1039,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                     Kind = ResponseChainTelemetryKind.ProposalResolved,
                                     RootId = _activeReq.RootId,
                                     TemplateId = e.TemplateId,
-                                    TagId = e.TagId,
+                                    CategoryId = e.CategoryId,
                                     ProposalIndex = i,
                                     Outcome = ResponseChainResolveOutcome.Negated,
                                     Source = e.Source,
@@ -1047,7 +1060,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                     Kind = ResponseChainTelemetryKind.ProposalResolved,
                                     RootId = _activeReq.RootId,
                                     TemplateId = e.TemplateId,
-                                    TagId = e.TagId,
+                                    CategoryId = e.CategoryId,
                                     ProposalIndex = i,
                                     Outcome = ResponseChainResolveOutcome.TargetDead,
                                     Source = e.Source,
@@ -1068,7 +1081,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                     Kind = ResponseChainTelemetryKind.ProposalResolved,
                                     RootId = _activeReq.RootId,
                                     TemplateId = e.TemplateId,
-                                    TagId = e.TagId,
+                                    CategoryId = e.CategoryId,
                                     ProposalIndex = i,
                                     Outcome = ResponseChainResolveOutcome.TemplateMissing,
                                     Source = e.Source,
@@ -1095,7 +1108,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                     Kind = ResponseChainTelemetryKind.ProposalResolved,
                                     RootId = _activeReq.RootId,
                                     TemplateId = e.TemplateId,
-                                    TagId = e.TagId,
+                                    CategoryId = e.CategoryId,
                                     ProposalIndex = i,
                                     Outcome = ResponseChainResolveOutcome.AppliedInstant,
                                     Source = e.Source,
@@ -1114,7 +1127,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                     Kind = ResponseChainTelemetryKind.ProposalResolved,
                                     RootId = _activeReq.RootId,
                                     TemplateId = e.TemplateId,
-                                    TagId = e.TagId,
+                                    CategoryId = e.CategoryId,
                                     ProposalIndex = i,
                                     Outcome = ResponseChainResolveOutcome.CreatedEffect,
                                     Source = e.Source,
@@ -1136,7 +1149,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             Kind = ResponseChainTelemetryKind.WindowClosed,
                             RootId = _activeReq.RootId,
                             TemplateId = _activeReq.TemplateId,
-                            TagId = _window.Count > 0 ? _window[0].TagId : 0,
+                            CategoryId = _window.Count > 0 ? _window[0].CategoryId : 0,
                             ProposalIndex = _window.Count,
                             Source = _activeReq.Source,
                             Target = _activeReq.Target,
@@ -1255,7 +1268,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             OrderSpatialPayloadOps.Release(World, in order);
         }
 
-        private unsafe int CountResponsesForEffect(int effectTagId)
+        private unsafe int CountResponsesForEffect(int firingCategoryId)
         {
             int matched = 0;
             for (int li = 0; li < _listeners.Count; li++)
@@ -1274,8 +1287,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 for (int i = 0; i < listener.Count; i++)
                 {
-                    int eventTagId = listener.EventTagIds[i];
-                    if (eventTagId != 0 && effectTagId != eventTagId)
+                    int listenCategoryId = listener.EffectCategoryIds[i];
+                    if (listenCategoryId != 0 && firingCategoryId != listenCategoryId)
                     {
                         continue;
                     }
@@ -1334,7 +1347,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        private unsafe void EnqueueResponsesForEffect(int proposalIndex, int effectTagId)
+        private unsafe void EnqueueResponsesForEffect(int proposalIndex, int firingCategoryId)
         {
             for (int li = 0; li < _listeners.Count; li++)
             {
@@ -1345,8 +1358,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 if (!hasListener) continue;
                 for (int i = 0; i < listener.Count; i++)
                 {
-                    int eventTagId = listener.EventTagIds[i];
-                    if (eventTagId != 0 && effectTagId != eventTagId) continue;
+                    int listenCategoryId = listener.EffectCategoryIds[i];
+                    if (listenCategoryId != 0 && firingCategoryId != listenCategoryId) continue;
 
                     var responseType = (ResponseType)listener.ResponseTypes[i];
                     if (!_responseQueue.TryEnqueue(new ProposalResponseItem
@@ -1363,7 +1376,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     {
                         if (_budget != null) _budget.ResponseQueueOverflowDropped++;
                         throw new InvalidOperationException(
-                            $"{ResponseQueueOverflowError}: proposalIndex={proposalIndex}, effectTagId={effectTagId}, responseType={responseType}, capacity={GasConstants.MAX_RESPONSES_PER_WINDOW}.");
+                            $"{ResponseQueueOverflowError}: proposalIndex={proposalIndex}, effectCategoryId={firingCategoryId}, responseType={responseType}, capacity={GasConstants.MAX_RESPONSES_PER_WINDOW}.");
                     }
                 }
             }
@@ -1483,16 +1496,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 IntVector2 targetPosCm = PlacementPhaseTargetPosResolver.Resolve(World, in context, in mergedConfig);
                 phaseExecutor.ExecutePhase(
                     World, graphApi, proposal.Source, proposal.Target, proposal.TargetContext, targetPosCm,
-                    EffectPhaseId.OnResolve, in tpl.PhaseGraphBindings, tpl.PresetType,
-                    tpl.TagId, proposal.TemplateId, in mergedConfig, _builtinRuntime, BuildInstantExecutionSeed(in proposal, EffectPhaseId.OnResolve), proposal.RootId);
+                    EffectPhaseId.OnResolve, in tpl.PhaseGraphBindings, tpl.EffectivePresetTypeId,
+                    tpl.CategoryId, proposal.TemplateId, in mergedConfig, _builtinRuntime, BuildInstantExecutionSeed(in proposal, EffectPhaseId.OnResolve), proposal.RootId);
                 phaseExecutor.ExecutePhase(
                     World, graphApi, proposal.Source, proposal.Target, proposal.TargetContext, targetPosCm,
-                    EffectPhaseId.OnHit, in tpl.PhaseGraphBindings, tpl.PresetType,
-                    tpl.TagId, proposal.TemplateId, in mergedConfig, _builtinRuntime, BuildInstantExecutionSeed(in proposal, EffectPhaseId.OnHit), proposal.RootId);
+                    EffectPhaseId.OnHit, in tpl.PhaseGraphBindings, tpl.EffectivePresetTypeId,
+                    tpl.CategoryId, proposal.TemplateId, in mergedConfig, _builtinRuntime, BuildInstantExecutionSeed(in proposal, EffectPhaseId.OnHit), proposal.RootId);
                 phaseExecutor.ExecutePhase(
                     World, graphApi, proposal.Source, proposal.Target, proposal.TargetContext, targetPosCm,
-                    EffectPhaseId.OnApply, in tpl.PhaseGraphBindings, tpl.PresetType,
-                    tpl.TagId, proposal.TemplateId, in mergedConfig, _builtinRuntime, BuildInstantExecutionSeed(in proposal, EffectPhaseId.OnApply), proposal.RootId);
+                    EffectPhaseId.OnApply, in tpl.PhaseGraphBindings, tpl.EffectivePresetTypeId,
+                    tpl.CategoryId, proposal.TemplateId, in mergedConfig, _builtinRuntime, BuildInstantExecutionSeed(in proposal, EffectPhaseId.OnApply), proposal.RootId);
 
                 if (_builtinRuntime.HasAttributeDelta)
                 {
@@ -1506,7 +1519,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     ApplyInstantModifiersAndPublish(in proposal);
                 }
 
-                PublishBuiltinFanOutCommandsAndRecordDrops();
+                PublishBuiltinFanOutCommands();
                 if (useGasTransaction)
                 {
                     _instantPhaseTransaction.Commit();
@@ -1541,7 +1554,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 proposal.Source,
                 proposal.Target,
                 phase,
-                template.TagId,
+                template.CategoryId,
                 proposal.TemplateId);
         }
 
@@ -1769,10 +1782,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 return;
             }
 
-            if (!World.Has<AttributeAggregateDirty>(target))
-            {
-                World.Add(target, new AttributeAggregateDirty());
-            }
+            _aggregateDirty?.MarkDirty(target);
         }
 
         /// <summary>
@@ -1800,8 +1810,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 targetPos,
                 EffectPhaseId.OnPropose,
                 in tpl.PhaseGraphBindings,
-                tpl.PresetType,
-                proposal.TagId,
+                tpl.PresetTypeId,
+                proposal.CategoryId,
                 proposal.TemplateId,
                 in mergedConfig,
                 rootId: proposal.RootId);
@@ -1834,14 +1844,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     targetPos,
                     EffectPhaseId.OnCalculate,
                     in tpl.PhaseGraphBindings,
-                    tpl.PresetType,
-                    proposal.TagId,
+                    tpl.EffectivePresetTypeId,
+                    proposal.CategoryId,
                     proposal.TemplateId,
                     in mergedConfig,
                     _builtinRuntime,
                     BuildInstantExecutionSeed(in proposal, EffectPhaseId.OnCalculate),
                     proposal.RootId);
-                PublishBuiltinFanOutCommandsAndRecordDrops();
+                PublishBuiltinFanOutCommands();
             }
             finally
             {
@@ -1849,13 +1859,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        private void PublishBuiltinFanOutCommandsAndRecordDrops()
+        private void PublishBuiltinFanOutCommands()
         {
-            if (_builtinRuntime.DroppedCount > 0 && _budget != null)
-            {
-                _budget.EffectProposalFanOutDropped += _builtinRuntime.DroppedCount;
-            }
-
             for (int i = 0; i < _instantFanOutCommands.Count; i++)
             {
                 FanOutCommand command = _instantFanOutCommands[i];
@@ -1871,12 +1876,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _instantFanOutCommands.Clear();
         }
 
+
         public override void Dispose()
         {
             _instantPhaseTransaction.Dispose();
             base.Dispose();
         }
-
         private EffectConfigParams BuildMergedConfig(in EffectTemplateData tpl, in EffectProposal proposal)
         {
             if (proposal.HasCallerParams)

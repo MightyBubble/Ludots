@@ -1,0 +1,47 @@
+{
+  "feature": "graph-editor-live-debug",
+  "map": "night_raid",
+  "graph": "Graph.NightRaid.Flow",
+  "launcher": "scripts/run-mod-launcher.cmd cli launch $map_trigger_night_raid mod:NightRaidShowcaseMod mod:AgentBridgeMod --adapter raylib",
+  "bridge": "http://127.0.0.1:47921",
+  "session": {
+    "tick": 7025,
+    "pacemaker": "RealtimePacemaker",
+    "mods": [
+      "LudotsCoreMod",
+      "CoreInputMod",
+      "MapTriggerNightRaidMod",
+      "NightRaidShowcaseMod",
+      "AgentBridgeMod"
+    ],
+    "camera": {
+      "targetCm": {
+        "x": 150,
+        "y": 0
+      },
+      "pitch": 52,
+      "distanceCm": 2200
+    },
+    "bridge": {
+      "pendingRequests": 0,
+      "toolCount": 28
+    },
+    "resolution": {
+      "width": 1600,
+      "height": 900
+    },
+    "localPlayerId": 1,
+    "localSeatId": "seat.0",
+    "mapId": "night_raid"
+  },
+  "mountCount": 8,
+  "initialRaiderCount": 0,
+  "finalSceneVersion": 39565,
+  "screenshots": [
+    "artifacts/acceptance/graph-editor-live-debug/wave1-spawned.png",
+    "artifacts/acceptance/graph-editor-live-debug/boss-spawned.png",
+    "artifacts/acceptance/graph-editor-live-debug/victory-stage5.png"
+  ],
+  "trace": "artifacts/acceptance/graph-editor-live-debug/trace.jsonl",
+  "path": "artifacts/acceptance/graph-editor-live-debug/path.mmd"
+}

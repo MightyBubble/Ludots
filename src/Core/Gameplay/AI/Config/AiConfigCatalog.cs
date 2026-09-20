@@ -13,6 +13,8 @@ namespace Ludots.Core.Gameplay.AI.Config
             c.Add(new ConfigCatalogEntry("AI/goap_actions.json", ConfigMergePolicy.ArrayById));
             c.Add(new ConfigCatalogEntry("AI/goap_goals.json", ConfigMergePolicy.ArrayById));
             c.Add(new ConfigCatalogEntry("AI/htn_domain.json", ConfigMergePolicy.DeepObject));
+            c.Add(new ConfigCatalogEntry("AI/behavior_trees.json", ConfigMergePolicy.ArrayById));
+            c.Add(new ConfigCatalogEntry("AI/hfsm.json", ConfigMergePolicy.ArrayById));
             c.Add(new ConfigCatalogEntry("AI/profiles.json", ConfigMergePolicy.ArrayById));
             c.Add(new ConfigCatalogEntry("AI/decision_makers.json", ConfigMergePolicy.ArrayById));
             c.Add(new ConfigCatalogEntry("AI/decisions.json", ConfigMergePolicy.ArrayById));

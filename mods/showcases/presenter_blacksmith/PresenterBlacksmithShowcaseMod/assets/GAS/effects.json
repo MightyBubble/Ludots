@@ -1,0 +1,78 @@
+[
+  {
+    "id": "Effect.Showcase.Blacksmith.RandomDrift",
+    "presetType": "DoT",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 0,
+      "periodTicks": 60,
+      "clockId": "FixedFrame"
+    },
+    "phaseGraphs": {
+      "OnPeriod": {
+        "post": "Graph.Showcase.Blacksmith.RandomDrift"
+      }
+    },
+    "categories": [
+      "Effect.Showcase.Blacksmith.RandomDrift"
+    ]
+  },
+  {
+    "id": "Effect.Showcase.Blacksmith.SetDurabilityIntact",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 1,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Showcase.Blacksmith.SetDurabilityIntact"
+      }
+    },
+    "categories": [
+      "Effect.Showcase.Blacksmith.Control"
+    ]
+  },
+  {
+    "id": "Effect.Showcase.Blacksmith.SetDurabilityDamaged",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 1,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Showcase.Blacksmith.SetDurabilityDamaged"
+      }
+    },
+    "categories": [
+      "Effect.Showcase.Blacksmith.Control"
+    ]
+  },
+  {
+    "id": "Effect.Showcase.Blacksmith.SetDurabilityRuined",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 1,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Showcase.Blacksmith.SetDurabilityRuined"
+      }
+    },
+    "categories": [
+      "Effect.Showcase.Blacksmith.Control"
+    ]
+  }
+]

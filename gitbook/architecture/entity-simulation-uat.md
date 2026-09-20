@@ -161,7 +161,7 @@ Feature: 统一实体仿真展示
 
 - 已实现的后端 authority 仿真和 crowd 表演同时成立；不得把 #643 未决车道写入通过结论
 - 远距离只裁剪或降频 budgeted entity
-- performer 只负责表现，不承载逻辑真相
+- presenter 只负责表现，不承载逻辑真相
 - 面板能展示：
   - lane 分布
   - LOD 分布

@@ -1,5 +1,4 @@
 using System;
-using Ludots.Core.Presentation.Components;
 using Ludots.Core.Registry;
 
 namespace Ludots.Core.Presentation.Assets
@@ -9,6 +8,10 @@ namespace Ludots.Core.Presentation.Assets
         private readonly StringIntRegistry _ids;
         private AnimationProfileDefinition[] _definitions;
         private bool[] _hasDefinitions;
+
+        public int Count => _ids.Count;
+
+        public int Revision { get; private set; }
 
         public AnimationProfileRegistry(int capacity = 256)
         {
@@ -27,6 +30,7 @@ namespace Ludots.Core.Presentation.Assets
             definition.ProfileId = id;
             _definitions[id] = definition;
             _hasDefinitions[id] = true;
+            Revision++;
             return id;
         }
 
@@ -50,17 +54,6 @@ namespace Ludots.Core.Presentation.Assets
             if (TryGet(profileId, out var definition))
             {
                 return definition.TryResolveStateClipId(packedStateIndex, out clipAssetId);
-            }
-
-            clipAssetId = 0;
-            return false;
-        }
-
-        public bool TryResolveBuiltinClipId(int profileId, AnimatorBuiltinClipId builtinClipId, out int clipAssetId)
-        {
-            if (TryGet(profileId, out var definition))
-            {
-                return definition.TryResolveBuiltinClipId(builtinClipId, out clipAssetId);
             }
 
             clipAssetId = 0;

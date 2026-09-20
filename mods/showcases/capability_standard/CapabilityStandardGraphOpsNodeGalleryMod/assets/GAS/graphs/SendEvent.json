@@ -1,0 +1,81 @@
+[
+  {
+    "id": "showcase.graph_op.SendEvent",
+    "kind": "Effect",
+    "entry": "explicit",
+    "nodes": [
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "wound",
+        "op": "ConstFloat",
+        "floatValue": -18
+      },
+      {
+        "id": "hit",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      },
+      {
+        "id": "magnitude",
+        "op": "ConstFloat",
+        "floatValue": 18
+      },
+      {
+        "id": "send",
+        "op": "SendEvent",
+        "tag": "Event.DamageDealt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "wound"
+      },
+      {
+        "from": "wound",
+        "fromPort": "next",
+        "to": "hit"
+      },
+      {
+        "from": "hit",
+        "fromPort": "next",
+        "to": "magnitude"
+      },
+      {
+        "from": "magnitude",
+        "fromPort": "next",
+        "to": "send"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "target"
+      },
+      {
+        "from": "wound",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "value"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "send",
+        "toPort": "target"
+      },
+      {
+        "from": "magnitude",
+        "fromPort": "value",
+        "to": "send",
+        "toPort": "value"
+      }
+    ]
+  }
+]

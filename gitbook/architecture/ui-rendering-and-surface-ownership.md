@@ -161,9 +161,13 @@ Ludots 同屏混排两类 UI，**职责不重叠**：
 
 1. 从 `ScriptContext` / engine 取 `CoreServiceKeys.UiSurfaceHost`（拿到 `IUiSurfaceHost`）。
 2. 持有一个 `UiSurfaceLeaseHandle _lease` 字段。
-3. 显示：`host.PublishReactivePage(ref _lease, new UiSurfaceLeaseRequest("YourMod.Panel", segment, priority), page)`（`UiSurfaceHostExtensions` 提供 `EnsureLease` / `PublishReactivePage` / `ReleaseLease` 便捷封装）。
-4. 内容变化：`host.InvalidateLease(_lease)`。
+3. 显示：`host.PublishReactivePage(ref _lease, new UiSurfaceLeaseRequest("YourMod.Panel", segment, priority), page)`（`UiSurfaceHostExtensions` 提供 `EnsureLease` / `PublishReactivePage` / `ReleaseLease` 便捷封装）。**`Publish` 只在首次挂载（或租约失效后重新挂载）时调用。** 它会走 `RebuildNow()`，整棵 retained 场景重建。
+4. 内容变化：`page.SetState(...)` 改文案/按钮态，再 `host.InvalidateLease(_lease)` 标脏。不要每帧 `Publish`。
 5. 退出/卸载：`host.ReleaseLease(ref _lease)`。
+
+**Raylib 叠层顺序（面板开着也要保住世界 HUD）：**
+
+GPU UnderUi HUD（血条/名字等世界批）→ Skia 面板层 → TopMost。铁匠铺左侧操作条挂上后，**不得**因为 `hasUiLayer` 就把世界 HUD 踢回整窗 raster。
 
 **按写法选构建器：**
 
@@ -187,6 +191,7 @@ Ludots 同屏混排两类 UI，**职责不重叠**：
 - 所有权护栏：`src/Tests/ArchitectureTests/UiSurfaceOwnershipGuardTests.cs`（生产代码禁止直写 `MountScene/ClearScene`；`UIRoot` 不得暴露 public 写场景方法）。
 - 输入帧安全回归：`src/Tests/UiShowcaseTests/UiShowcaseAcceptanceTests.cs` 的 `UIRoot_ClickThatClearsScene_CompletesInputFrame`。
 - 统一 UI 三写法验收：`src/Tests/UiShowcaseTests/UiShowcaseAcceptanceTests.cs`。
+- 铁匠铺玩家操作条（默认不挂工程师诊断）：`src/Tests/PresentationTests/Presenter/PresenterBlacksmithShowcaseRuntimeTests.cs` 的 `BlacksmithShowcase_InteractiveMap_MountsPlayerControlStrip_WithoutEngineerDump`。
 
 ---
 

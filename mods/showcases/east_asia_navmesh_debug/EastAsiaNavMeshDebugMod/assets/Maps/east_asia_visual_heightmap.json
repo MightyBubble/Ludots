@@ -1,0 +1,34 @@
+{
+  "Id": "east_asia_visual_heightmap",
+  "Tuning": {
+    "LoadedChunkCapacity": 512
+  },
+  "Tags": [
+    "Feature.NavMesh:On",
+    "navmesh",
+    "walkability-texture",
+    "transport-waterways"
+  ],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthCells": 1792,
+      "HeightCells": 1024,
+      "GridCellSizeCm": 3571,
+      "TerrainHeightStepCm": 100,
+      "TerrainBlockedAtOrBelowHeightCm": 0
+    }
+  ],
+  "Metadata": {
+    "navWalkabilityOverlay": {
+      "textureUri": "EastAsiaNavMeshDebugMod:assets/Textures/nav_walkability.png",
+      "boundsCm": {
+        "minX": -3199616,
+        "minZ": -1828352,
+        "maxX": 3199616,
+        "maxZ": 1828352
+      }
+    }
+  }
+}

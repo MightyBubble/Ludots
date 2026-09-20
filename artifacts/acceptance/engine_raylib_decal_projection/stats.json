@@ -1,0 +1,8 @@
+{
+  "scene": "decal_projection",
+  "frames": 120,
+  "avgFrameMs": 3.745,
+  "p95FrameMs": 1.598,
+  "maxFrameMs": 321.405,
+  "wallMs": 2567.3
+}

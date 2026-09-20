@@ -1,0 +1,65 @@
+[
+  {
+    "id": "showcase.graph_op.RelationshipSetFlag",
+    "kind": "Effect",
+    "entry": "source",
+    "nodes": [
+      {
+        "id": "source",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "target",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "on",
+        "op": "ConstBool",
+        "boolValue": true
+      },
+      {
+        "id": "setFlag",
+        "op": "RelationshipSetFlag",
+        "relationshipType": "SocialBond",
+        "flag": "Estranged"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "source",
+        "fromPort": "next",
+        "to": "target"
+      },
+      {
+        "from": "target",
+        "fromPort": "next",
+        "to": "on"
+      },
+      {
+        "from": "on",
+        "fromPort": "next",
+        "to": "setFlag"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "setFlag",
+        "toPort": "source"
+      },
+      {
+        "from": "target",
+        "fromPort": "value",
+        "to": "setFlag",
+        "toPort": "target"
+      },
+      {
+        "from": "on",
+        "fromPort": "value",
+        "to": "setFlag",
+        "toPort": "value"
+      }
+    ]
+  }
+]

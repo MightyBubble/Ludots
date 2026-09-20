@@ -1,0 +1,6 @@
+{"event_id":"presenter-1092-001","step":"definition_load","source":"PresenterDefinitionConfigLoaderTests","result":"pass","top_level_output_mirrors":false}
+{"event_id":"presenter-1092-002","step":"slot_isolation","source":"PresenterDefinitionConfigLoaderTests.Load_TwoIndependentWorldTextSlots_KeepPerSlotStyleMotionAndWorldText","slot_indices":[0,11],"result":"pass"}
+{"event_id":"presenter-1092-003","step":"compiled_world_text_view","source":"PresenterDefinitionConfigLoaderTests.Load_WorldTextAssetId_ResolvesThroughTextTokenRegistry","result":"pass","compiled_view":"BehaviorSlot.AssetBinding"}
+{"event_id":"presenter-1092-004","step":"runtime_emit","source":"PresenterCompiledLaneTests|InstancedBatchContractTests","result":"pass","result_detail":"slot motion, alpha, surface and batch lanes read from BehaviorSlot"}
+{"event_id":"presenter-1092-005","step":"raylib_launch","map":"presenter_blacksmith_showcase","mod":"PresenterBlacksmithShowcaseMod","result":"pass"}
+{"event_id":"presenter-1092-006","step":"adapter_visible_screenshot","artifact":"blacksmith.png","result":"pass","player_visible":"Blacksmith scene, world HUD and control panel"}

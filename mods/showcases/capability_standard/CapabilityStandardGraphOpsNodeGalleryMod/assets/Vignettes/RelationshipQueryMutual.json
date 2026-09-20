@@ -1,0 +1,13 @@
+{
+  "op": "RelationshipQueryMutual",
+  "driver": "rel",
+  "title": "互相都认的朋友",
+  "beat": "两头都有箭头的链才亮。",
+  "detailTemplate": "互相都认的有 {friendCount} 人：{friend}。",
+  "assertDetailContains": [
+    "互相都认"
+  ],
+  "featuredNodeId": "mutual",
+  "graphKind": "Query",
+  "field": "rel"
+}

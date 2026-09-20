@@ -1,0 +1,35 @@
+{
+  "id": "east_asia_terrain_control_weights_v1",
+  "seaLevelCm": 0,
+  "output": {
+    "file": "assets/Textures/terrain_control_weights.png",
+    "columns": 2048,
+    "rows": 1170
+  },
+  "layers": {
+    "sand": {
+      "bandCm": { "riseStart": -30000, "riseEnd": -400, "fallStart": 140, "fallEnd": 420 },
+      "slopeFactor": 0.65,
+      "noiseFrequency": 0.035,
+      "noiseAmplitude": 0.10
+    },
+    "grass": {
+      "bandCm": { "riseStart": 40, "riseEnd": 260, "fallStart": 1300, "fallEnd": 2100 },
+      "slopeFactor": 1.1,
+      "noiseFrequency": 0.05,
+      "noiseAmplitude": 0.35
+    },
+    "dirt": {
+      "bandCm": { "riseStart": 800, "riseEnd": 1500, "fallStart": 2500, "fallEnd": 3300 },
+      "slopeFactor": 0.4,
+      "noiseFrequency": 0.08,
+      "noiseAmplitude": 0.30
+    },
+    "rock": {
+      "bandCm": { "riseStart": 3000, "riseEnd": 3700, "fallStart": 100000, "fallEnd": 110000 },
+      "slopeFactor": -1.4,
+      "noiseFrequency": 0.06,
+      "noiseAmplitude": 0.20
+    }
+  }
+}

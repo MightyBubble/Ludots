@@ -1,0 +1,8 @@
+{
+  "startupMapId": "capability_standard_config_shards_showcase",
+  "windowTitle": "Ludots Engine - Capability Standard Config Shards",
+  "targetFps": 0,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true
+}

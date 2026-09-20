@@ -1,3 +1,4 @@
+using System;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -130,13 +131,14 @@ namespace Ludots.Tests.GAS
             int healthId = EnsureAttribute("Health");
             AttributeRegistry.SetConstraints(healthId, AttributeRegistry.AttributeConstraints.ClampToBase());
 
+            var registry = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
             using var world = World.Create();
             var entity = world.Create(new AttributeBuffer(), new ActiveEffectContainer());
             ref var attr = ref world.Get<AttributeBuffer>(entity);
             attr.SetBase(healthId, 100f);
             attr.SetCurrent(healthId, 70f);
 
-            var aggregator = new AttributeAggregatorSystem(world, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
+            var aggregator = new AttributeAggregatorSystem(world, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: registry), aggregateDirty: registry);
             aggregator.Update(0f);
 
             That(attr.GetCurrent(healthId), Is.EqualTo(70f));
@@ -150,7 +152,7 @@ namespace Ludots.Tests.GAS
             AttributeRegistry.SetConstraints(healthId, AttributeRegistry.AttributeConstraints.ClampToBase());
 
             using var world = World.Create();
-            var entity = world.Create(new AttributeBuffer(), new ActiveEffectContainer(), new AttributeAggregateDirty(), new DirtyFlags());
+            var entity = world.Create(new AttributeBuffer(), new ActiveEffectContainer(), new DirtyFlags());
             ref var attr = ref world.Get<AttributeBuffer>(entity);
             attr.SetBase(healthId, 100f);
             attr.SetCurrent(healthId, 70f);
@@ -167,7 +169,9 @@ namespace Ludots.Tests.GAS
             ref var container = ref world.Get<ActiveEffectContainer>(entity);
             That(container.Add(effect), Is.True);
 
-            var aggregator = new AttributeAggregatorSystem(world, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
+            var tagOps = CreateTagOps();
+            var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps, aggregateDirty: tagOps.AggregateDirty);
+            tagOps.AggregateDirty.MarkDirty(entity);
             aggregator.Update(0f);
 
             ref var aggregatedAttr = ref world.Get<AttributeBuffer>(entity);
@@ -186,7 +190,8 @@ namespace Ludots.Tests.GAS
             attr.SetBase(durabilityId, 100f);
             attr.SetCurrent(durabilityId, 93f);
 
-            var aggregator = new AttributeAggregatorSystem(world, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
+            var tagOps = CreateTagOps();
+            var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps, aggregateDirty: tagOps.AggregateDirty);
             aggregator.Update(0f);
 
             That(attr.GetCurrent(durabilityId), Is.EqualTo(93f));
@@ -214,7 +219,8 @@ namespace Ludots.Tests.GAS
             ref var container = ref world.Get<ActiveEffectContainer>(entity);
             That(container.Add(effect), Is.True);
 
-            var aggregator = new AttributeAggregatorSystem(world, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
+            var tagOps = CreateTagOps();
+            var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps, aggregateDirty: tagOps.AggregateDirty);
             aggregator.Update(0f);
 
             That(attr.GetCurrent(healthId), Is.EqualTo(70f));
@@ -227,7 +233,7 @@ namespace Ludots.Tests.GAS
             int moveSpeedId = EnsureAttribute("MoveSpeed");
 
             using var world = World.Create();
-            var entity = world.Create(new AttributeBuffer(), new ActiveEffectContainer(), new AttributeAggregateDirty(), new DirtyFlags());
+            var entity = world.Create(new AttributeBuffer(), new ActiveEffectContainer(), new DirtyFlags());
             ref var attr = ref world.Get<AttributeBuffer>(entity);
             attr.SetBase(moveSpeedId, 100f);
 
@@ -243,18 +249,156 @@ namespace Ludots.Tests.GAS
             ref var container = ref world.Get<ActiveEffectContainer>(entity);
             That(container.Add(effect), Is.True);
 
-            var aggregator = new AttributeAggregatorSystem(world, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
+            var registry = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
+            var aggregator = new AttributeAggregatorSystem(world, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: registry), aggregateDirty: registry);
+            registry.MarkDirty(entity);
             aggregator.Update(0f);
-            That(world.Get<AttributeBuffer>(entity).GetCurrent(moveSpeedId), Is.EqualTo(118f));
+            That(world.Get<AttributeBuffer>(entity).GetCurrent(moveSpeedId), Is.EqualTo(100f));
+            That(world.Get<AttributeBuffer>(entity).GetCap(moveSpeedId), Is.EqualTo(118f));
 
             world.Get<GameplayEffect>(effect).CancelRequested = true;
-            world.Add(entity, new AttributeAggregateDirty());
+            registry.MarkDirty(entity);
 
             aggregator.Update(0f);
 
             ref var recomputedAttr = ref world.Get<AttributeBuffer>(entity);
             That(recomputedAttr.GetCurrent(moveSpeedId), Is.EqualTo(100f));
+            That(recomputedAttr.GetCap(moveSpeedId), Is.EqualTo(100f));
             That(recomputedAttr.GetBase(moveSpeedId), Is.EqualTo(100f));
+        }
+
+        [Test]
+        public unsafe void UnconstrainedAttribute_DirectCurrentWriteSurvivesActiveAggregation()
+        {
+            int moveSpeedId = EnsureAttribute($"MoveSpeed.DirectWrite.{Guid.NewGuid():N}");
+            var tagOps = CreateTagOps();
+
+            using var world = World.Create();
+            var entity = world.Create(new AttributeBuffer(), new ActiveEffectContainer(), new DirtyFlags());
+            AttributeMutationOps.SetBase(world, entity, moveSpeedId, 100f, tagOps);
+            AttachAddModifier(world, entity, moveSpeedId, 18f);
+            AttributeMutationOps.SetCurrent(world, entity, moveSpeedId, 50f, tagOps);
+
+            using var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps, aggregateDirty: tagOps.AggregateDirty);
+            tagOps.AggregateDirty.MarkDirty(entity);
+            aggregator.Update(0f);
+
+            ref var attributes = ref world.Get<AttributeBuffer>(entity);
+            That(attributes.GetCurrent(moveSpeedId), Is.EqualTo(50f));
+            That(attributes.GetCap(moveSpeedId), Is.EqualTo(118f));
+            That(attributes.GetBase(moveSpeedId), Is.EqualTo(100f));
+        }
+
+        [Test]
+        public unsafe void ClampToBaseAttribute_DirectCurrentWriteSurvivesActiveAggregation()
+        {
+            int healthId = EnsureAttribute($"Health.DirectWrite.{Guid.NewGuid():N}");
+            AttributeRegistry.SetConstraints(healthId, AttributeRegistry.AttributeConstraints.ClampToBase());
+            var tagOps = CreateTagOps();
+
+            using var world = World.Create();
+            var entity = world.Create(new AttributeBuffer(), new ActiveEffectContainer(), new DirtyFlags());
+            AttributeMutationOps.SetBase(world, entity, healthId, 100f, tagOps);
+            AttachAddModifier(world, entity, healthId, 18f);
+            AttributeMutationOps.SetCurrent(world, entity, healthId, 50f, tagOps);
+
+            using var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps, aggregateDirty: tagOps.AggregateDirty);
+            tagOps.AggregateDirty.MarkDirty(entity);
+            aggregator.Update(0f);
+
+            ref var attributes = ref world.Get<AttributeBuffer>(entity);
+            That(attributes.GetCurrent(healthId), Is.EqualTo(50f));
+            That(attributes.GetCap(healthId), Is.EqualTo(118f));
+            That(attributes.GetBase(healthId), Is.EqualTo(118f));
+        }
+
+        [Test]
+        public unsafe void FirstRegisteredAttribute_ApplyForceWritesIdZero()
+        {
+            AttributeRegistry.Clear();
+            try
+            {
+                EffectParamKeys.Initialize();
+                int forceXId = AttributeRegistry.Register("S2.ForceX");
+                int forceYId = AttributeRegistry.Register("S2.ForceY");
+                That(forceXId, Is.EqualTo(0));
+                That(AttributeRegistry.IsValidId(forceXId), Is.True);
+
+                using var world = World.Create();
+                var target = world.Create(new AttributeBuffer(), new DirtyFlags());
+                var effect = world.Create();
+                var registry = new BuiltinHandlerRegistry();
+                BuiltinHandlers.RegisterAll(registry);
+                var runtime = new BuiltinHandlerExecutionContext { TagOps = CreateTagOps() };
+                var ctx = new EffectContext { Source = effect, Target = target };
+                var tpl = new EffectTemplateData { PresetAttribute0 = forceXId, PresetAttribute1 = forceYId };
+                var mergedParams = new EffectConfigParams();
+                mergedParams.TryAddFloat(EffectParamKeys.ForceXAttribute, 10f);
+                mergedParams.TryAddFloat(EffectParamKeys.ForceYAttribute, -3f);
+
+                registry.Invoke(BuiltinHandlerId.ApplyForce, world, effect, ref ctx, in mergedParams, in tpl, runtime);
+
+                ref var attributes = ref world.Get<AttributeBuffer>(target);
+                That(attributes.GetCurrent(forceXId), Is.EqualTo(10f));
+                That(attributes.GetCurrent(forceYId), Is.EqualTo(-3f));
+            }
+            finally
+            {
+                AttributeRegistry.Clear();
+            }
+        }
+
+        [Test]
+        public void RequireId_UnknownName_ThrowsAndNamesTheAttribute()
+        {
+            var error = Throws<ArgumentException>(() => AttributeRegistry.RequireId("S2.Missing.NamedWrite"));
+            That(error!.Message, Does.Contain("S2.Missing.NamedWrite"));
+        }
+
+        [Test]
+        public unsafe void InvalidAndOutOfRangeAttributeIds_FailClosed()
+        {
+            var buffer = default(AttributeBuffer);
+            Throws<ArgumentOutOfRangeException>(() => buffer.GetCurrent(AttributeRegistry.InvalidId));
+            Throws<ArgumentOutOfRangeException>(() => buffer.SetCurrent(AttributeRegistry.InvalidId, 1f));
+            Throws<ArgumentOutOfRangeException>(() => buffer.SetCurrent(AttributeBuffer.MAX_ATTRS, 1f));
+            Throws<ArgumentOutOfRangeException>(() => buffer.GetCap(-1));
+
+            using var world = World.Create();
+            var tagOps = CreateTagOps();
+            var target = world.Create(new AttributeBuffer(), new DirtyFlags());
+            int missingId = AttributeRegistry.GetId("S2.Missing.WriteCurrent");
+            That(missingId, Is.EqualTo(AttributeRegistry.InvalidId));
+            Throws<ArgumentOutOfRangeException>(() =>
+                AttributeMutationOps.SetCurrent(world, target, missingId, 7f, tagOps));
+            var named = Throws<ArgumentException>(() =>
+                AttributeMutationOps.SetCurrent(
+                    world,
+                    target,
+                    AttributeRegistry.RequireId("S2.Missing.WriteCurrent"),
+                    7f,
+                    tagOps));
+            That(named!.Message, Does.Contain("S2.Missing.WriteCurrent"));
+        }
+
+        [Test]
+        public void AttributeRegistry_Freeze_RejectsNewIdentitiesAndKeepsExisting()
+        {
+            try
+            {
+                int existing = EnsureAttribute("S2.Frozen.Existing");
+                AttributeRegistry.Freeze();
+                That(AttributeRegistry.IsFrozen, Is.True);
+                That(AttributeRegistry.Register("S2.Frozen.Existing"), Is.EqualTo(existing));
+                var error = Throws<InvalidOperationException>(() => AttributeRegistry.Register("S2.Frozen.New"));
+                That(error!.Message, Does.Contain("S2.Frozen.New"));
+            }
+            finally
+            {
+                AttributeRegistry.Clear();
+            }
+
+            That(AttributeRegistry.IsFrozen, Is.False);
         }
 
         [Test]
@@ -274,7 +418,7 @@ namespace Ludots.Tests.GAS
             modifiers.Add(healthId, ModifierOp.Add, -10f);
             templates.Register(1101, new EffectTemplateData
             {
-                TagId = 1,
+                CategoryId = 1,
                 PresetType = EffectPresetType.InstantDamage,
                 LifetimeKind = EffectLifetimeKind.Instant,
                 ClockId = GasClockId.Step,
@@ -286,7 +430,8 @@ namespace Ludots.Tests.GAS
             FinalizeDamageHealPresets(templates, EffectPresetType.InstantDamage);
 
             var requests = new EffectRequestQueue();
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            var registry = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: registry);
             var proposal = new EffectProposalProcessingSystem(
                 world,
                 requests,
@@ -296,7 +441,7 @@ namespace Ludots.Tests.GAS
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                 tagOps: tagOps);
             var application = new EffectApplicationSystem(world, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, new Ludots.Core.Engine.DiscreteClock(), requests, templates: templates, tagOps: tagOps);
-            var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps);
+            var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps, aggregateDirty: tagOps.AggregateDirty);
 
             requests.Publish(new EffectRequest
             {
@@ -309,6 +454,7 @@ namespace Ludots.Tests.GAS
 
             proposal.Update(0f);
             application.Update(0f);
+            registry.MarkDirty(target);
             aggregator.Update(0f);
 
             That(world.Get<AttributeBuffer>(target).GetCurrent(healthId), Is.EqualTo(50f));
@@ -336,7 +482,7 @@ namespace Ludots.Tests.GAS
             modifiers.Add(healthId, ModifierOp.Add, -10f);
             templates.Register(1201, new EffectTemplateData
             {
-                TagId = 1,
+                CategoryId = 1,
                 PresetType = EffectPresetType.InstantDamage,
                 LifetimeKind = EffectLifetimeKind.Instant,
                 ClockId = GasClockId.Step,
@@ -349,7 +495,8 @@ namespace Ludots.Tests.GAS
 
             var requests = new EffectRequestQueue();
             var presentationEvents = new GasPresentationEventBuffer(8);
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            var registry = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: registry);
             var proposal = new EffectProposalProcessingSystem(
                 world,
                 requests,
@@ -400,7 +547,7 @@ namespace Ludots.Tests.GAS
             modifiers.Add(healthId, ModifierOp.Add, 15f);
             templates.Register(1102, new EffectTemplateData
             {
-                TagId = 2,
+                CategoryId = 2,
                 PresetType = EffectPresetType.Heal,
                 LifetimeKind = EffectLifetimeKind.Instant,
                 ClockId = GasClockId.Step,
@@ -412,7 +559,8 @@ namespace Ludots.Tests.GAS
             FinalizeDamageHealPresets(templates, EffectPresetType.Heal);
 
             var requests = new EffectRequestQueue();
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            var registry = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: registry);
             var proposal = new EffectProposalProcessingSystem(
                 world,
                 requests,
@@ -422,7 +570,7 @@ namespace Ludots.Tests.GAS
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                 tagOps: tagOps);
             var application = new EffectApplicationSystem(world, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, new Ludots.Core.Engine.DiscreteClock(), requests, templates: templates, tagOps: tagOps);
-            var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps);
+            var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps, aggregateDirty: tagOps.AggregateDirty);
 
             requests.Publish(new EffectRequest
             {
@@ -435,6 +583,7 @@ namespace Ludots.Tests.GAS
 
             proposal.Update(0f);
             application.Update(0f);
+            registry.MarkDirty(target);
             aggregator.Update(0f);
 
             That(world.Get<AttributeBuffer>(target).GetCurrent(healthId), Is.EqualTo(75f));
@@ -448,15 +597,16 @@ namespace Ludots.Tests.GAS
 
             using var world = World.Create();
             var active = new DirtyEntityQueue(1);
-            var tagOps = new TagOps(active, new TagRuleRegistry());
+            var registry = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
+            var tagOps = new TagOps(active, new TagRuleRegistry(), aggregateDirty: registry);
             var blocker = world.Create(new DirtyFlags());
             active.Track(world, blocker);
 
             var target = world.Create(
                 new AttributeBuffer(),
                 new ActiveEffectContainer(),
-                new AttributeAggregateDirty(),
                 new DirtyFlags());
+            registry.MarkDirty(target);
             ref var attributes = ref world.Get<AttributeBuffer>(target);
             attributes.SetBase(healthId, 100f);
             attributes.SetCurrent(healthId, 100f);
@@ -470,7 +620,7 @@ namespace Ludots.Tests.GAS
             world.Get<EffectModifiers>(effect).Add(healthId, ModifierOp.Add, 25f);
             That(world.Get<ActiveEffectContainer>(target).Add(effect), Is.True);
 
-            using var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps);
+            using var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps, aggregateDirty: tagOps.AggregateDirty);
             var error = Throws<InvalidOperationException>(() => aggregator.Update(0f));
 
             That(error!.Message, Does.Contain(DirtyEntityQueue.CapacityExceededError));
@@ -479,7 +629,7 @@ namespace Ludots.Tests.GAS
             That(world.Get<DirtyFlags>(target).IsAnyAttributeDirty(), Is.False);
             That(world.Get<DirtyFlags>(target).DeferredTriggerQueued, Is.EqualTo(0));
             That(world.Has<GameplayAttributeChangedBits>(target), Is.False);
-            That(world.Has<AttributeAggregateDirty>(target), Is.True);
+            That(registry.Contains(target), Is.True);
         }
 
         private static void FinalizeDamageHealPresets(
@@ -500,6 +650,23 @@ namespace Ludots.Tests.GAS
                 builtinHandlers,
                 new GraphProgramRegistry(),
                 $"Test/AttributeAggregatorTests.{presetType}.json");
+        }
+
+        private static TagOps CreateTagOps()
+        {
+            return new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry());
+        }
+
+        private static void AttachAddModifier(World world, Entity entity, int attributeId, float value)
+        {
+            var gameplayEffect = new GameplayEffect
+            {
+                AggregatesModifiers = true,
+                State = EffectState.Committed,
+            };
+            var effect = world.Create(gameplayEffect, new EffectModifiers());
+            world.Get<EffectModifiers>(effect).Add(attributeId, ModifierOp.Add, value);
+            That(world.Get<ActiveEffectContainer>(entity).Add(effect), Is.True);
         }
 
         private static int EnsureAttribute(string name)

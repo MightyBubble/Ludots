@@ -1,0 +1,19 @@
+  已通过 VisionSystem_OwnedEmitterWithoutFormalPlayerRepresentative_FailsExplicitly [3 ms]
+
+测试总数: 768
+     通过数: 765
+     失败数: 3
+测试运行失败。
+总时间: 39.7378 秒
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。
+NUnit Adapter 4.6.0.0: Test execution complete
+  已通过 EastAsiaAdmin_LoadsMaterializesAndProjectsDiscreteOwnership [284 ms]
+  已通过 EastAsiaCountry_LoadsMaterializesAndProjectsDiscreteOwnership [225 ms]
+
+测试运行成功。
+测试总数: 3
+     通过数: 3
+总时间: 4.3684 秒
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。

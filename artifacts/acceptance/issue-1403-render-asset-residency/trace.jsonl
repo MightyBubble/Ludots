@@ -1,0 +1,10 @@
+{"eventId":"manifest-001","timestamp":"T+000","phase":"manifest","action":"build","result":"sealed","requiredAssets":4,"coverage":["map-entity","recursive-template-child","presenter-create-plan-child","asset-swap"],"excluded":["non-render-binding"]}
+{"eventId":"gate-001","timestamp":"T+001","phase":"map-load-gate","action":"poll","result":"pending","required":2,"resident":1,"inFlight":1,"failed":0}
+{"eventId":"gate-002","timestamp":"T+002","phase":"map-load-gate","action":"poll","result":"ready","required":2,"resident":2,"inFlight":0,"failed":0}
+{"eventId":"gate-003","timestamp":"T+003","phase":"map-load-gate","action":"poll","result":"failed","reason":"required asset failure includes identity, URI, and backend reason","releasedResident":true,"releasedInFlight":true}
+{"eventId":"gate-004","timestamp":"T+004","phase":"map-session","action":"cancel-old-session","result":"isolated","sharedLeasePerSession":true}
+{"eventId":"raylib-001","timestamp":"frame=1","phase":"raylib-residency","action":"poll","result":"pending","required":6,"resident":0,"inFlight":6,"failed":0}
+{"eventId":"raylib-002","timestamp":"frame=2","phase":"raylib-residency","action":"poll","result":"pending","required":6,"resident":5,"inFlight":1,"failed":0,"agentBridgePumpCountBefore":0,"agentBridgePumpCountAfter":1}
+{"eventId":"raylib-003","timestamp":"frame=3","phase":"raylib-residency","action":"poll","result":"pending","required":6,"resident":5,"inFlight":1,"failed":0}
+{"eventId":"raylib-004","timestamp":"frame=4","phase":"raylib-residency","action":"poll","result":"pending","required":6,"resident":5,"inFlight":1,"failed":0}
+{"eventId":"tests-001","timestamp":"verification","phase":"tests","action":"selected-suites","result":"passed","core":13,"raylibAssetStore":4,"boneTransform":8,"total":25}

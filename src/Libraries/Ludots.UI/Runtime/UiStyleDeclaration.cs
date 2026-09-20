@@ -60,10 +60,15 @@ public sealed class UiStyleDeclaration : IEnumerable<KeyValuePair<string, string
 		{
 			return;
 		}
-		foreach (KeyValuePair<string, string> item in other)
+		foreach (KeyValuePair<string, string> item in other._values)
 		{
 			_values[item.Key] = item.Value;
 		}
+	}
+
+	internal Dictionary<string, string>.Enumerator EnumerateValues()
+	{
+		return _values.GetEnumerator();
 	}
 
 	public IEnumerator<KeyValuePair<string, string>> GetEnumerator()

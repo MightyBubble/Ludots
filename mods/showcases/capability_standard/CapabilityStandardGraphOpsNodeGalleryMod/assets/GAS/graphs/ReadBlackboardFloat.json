@@ -1,0 +1,79 @@
+[
+  {
+    "id": "showcase.graph_op.ReadBlackboardFloat",
+    "kind": "Effect",
+    "entry": "src",
+    "nodes": [
+      {
+        "id": "src",
+        "op": "LoadContextSource"
+      },
+      {
+        "id": "readF",
+        "op": "ReadBlackboardFloat",
+        "blackboardKey": "showcase.bb.power"
+      },
+      {
+        "id": "neg",
+        "op": "NegFloat"
+      },
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "hit",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "src",
+        "fromPort": "next",
+        "to": "readF"
+      },
+      {
+        "from": "readF",
+        "fromPort": "next",
+        "to": "neg"
+      },
+      {
+        "from": "neg",
+        "fromPort": "next",
+        "to": "explicit"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "hit"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "src",
+        "fromPort": "value",
+        "to": "readF",
+        "toPort": "source"
+      },
+      {
+        "from": "readF",
+        "fromPort": "value",
+        "to": "neg",
+        "toPort": "value"
+      },
+      {
+        "from": "neg",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "value"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "target"
+      }
+    ]
+  }
+]

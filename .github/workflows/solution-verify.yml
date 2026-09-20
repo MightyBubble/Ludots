@@ -15,6 +15,9 @@ on:
       - 'scripts/acceptance/MassNavigationEvidencePortability.psm1'
       - 'scripts/acceptance/assert-portable-evidence.ps1'
       - 'scripts/acceptance/run-mass-navigation-large-world-uat.ps1'
+      - 'scripts/generate-graph-op-node-galleries.py'
+      - 'scripts/graph_op_coverage_index.py'
+      - 'showcase.registry.json'
       - 'src/**'
   push:
     branches:
@@ -32,6 +35,9 @@ on:
       - 'scripts/acceptance/MassNavigationEvidencePortability.psm1'
       - 'scripts/acceptance/assert-portable-evidence.ps1'
       - 'scripts/acceptance/run-mass-navigation-large-world-uat.ps1'
+      - 'scripts/generate-graph-op-node-galleries.py'
+      - 'scripts/graph_op_coverage_index.py'
+      - 'showcase.registry.json'
       - 'src/**'
   workflow_dispatch:
 
@@ -43,12 +49,35 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          lfs: true
+
+      - name: Check graph-op gallery generator has no drift
+        shell: pwsh
+        env:
+          PYTHONDONTWRITEBYTECODE: 1
+        run: |
+          python scripts/generate-graph-op-node-galleries.py --strict
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+          git diff --exit-code
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "Graph-op gallery generator drifted. Run scripts/generate-graph-op-node-galleries.py --strict and commit the result."
+            exit 1
+          }
+          $porcelain = git status --porcelain
+          if ($porcelain) {
+            Write-Host "Graph-op gallery generator produced untracked or unstaged files:"
+            Write-Host $porcelain
+            exit 1
+          }
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            8.0.x
             9.0.x
 
       - name: Build maintained test project graphs
@@ -70,11 +99,19 @@ jobs:
             exit $LASTEXITCODE
           }
 
+          # Bench instruments are manual (never run in CI) but must still compile, or API
+          # drift rots them silently between runs.
+          dotnet build src/Benchmarks/NavBake64Bench/NavBake64Bench.csproj -c Debug -v minimal
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
       - name: Run architecture guard tests
         shell: pwsh
         run: |
           $guardFilter = @(
             'FullyQualifiedName~ArchitectureGuardTests',
+            'FullyQualifiedName~S14LayeringRatchetTests',
             'FullyQualifiedName~GasRuntimeStateContractTests',
             'FullyQualifiedName~GraphRuntimeArchitectureGuardTests'
           ) -join '|'
@@ -124,7 +161,9 @@ jobs:
             'FullyQualifiedName~FormationCapabilityMoveBatch_SharedOrderIdPreservesRelativeLayout',
             'FullyQualifiedName~FormationCapabilityOrderBatch_',
             'FullyQualifiedName~OrderIngestion_RouteEnabledWithoutConfiguredAgentType',
-            'FullyQualifiedName~FormationCapabilityOrders_RejectRetiredOrCrossOrderPayloadFields'
+            'FullyQualifiedName~FormationCapabilityOrders_RejectRetiredOrCrossOrderPayloadFields',
+            'FullyQualifiedName~PresentationRequestChannelTests',
+            'FullyQualifiedName~PresentationRequestFlushIncrementalStaticTests'
           ) -join '|'
 
           dotnet test src/Tests/PresentationTests/PresentationTests.csproj -c Debug --no-build --filter $presentationFilter -v minimal
@@ -140,6 +179,24 @@ jobs:
         shell: pwsh
         run: |
           dotnet test src/Tests/GasTests/GasTests.csproj -c Debug --no-build --filter "TestCategory=ci-gate" -v minimal
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+      # RNG core suite shares the ci-gate slice membership.
+      - name: Test Rng core (ci-gate)
+        shell: pwsh
+        run: |
+          dotnet test src/Tests/RngCoreTests/RngCoreTests.csproj -c Debug --no-build --filter "TestCategory=ci-gate" -v minimal
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+      # Full persistence suite gates save/restore fidelity and determinism.
+      - name: Test persistence suite
+        shell: pwsh
+        run: |
+          dotnet test src/Tests/PersistenceTests/PersistenceTests.csproj -c Debug --no-build -v minimal
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }

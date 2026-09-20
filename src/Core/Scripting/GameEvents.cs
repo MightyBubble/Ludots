@@ -11,6 +11,12 @@ namespace Ludots.Core.Scripting
         public static readonly EventKey GameStart = new EventKey("GameStart");
 
         /// <summary>
+        /// Fired for networked processes after GameStart schema registration and runtime activation complete.
+        /// Network-dependent systems can resolve all role-specific ports during this event.
+        /// </summary>
+        public static readonly EventKey NetworkRuntimeReady = new EventKey("NetworkRuntimeReady");
+
+        /// <summary>
         /// Fired when a map has finished loading and dependencies are resolved.
         /// If a host-side async world switch participates in completion, this fires only after the host world
         /// and required host-bound entities are ready.
@@ -21,17 +27,26 @@ namespace Ludots.Core.Scripting
         /// Fired when the game session ends or the application is closing.
         /// </summary>
         public static readonly EventKey GameEnd = new EventKey("GameEnd");
-        
-        /// <summary>
-        /// Fired every frame (Use with caution!)
-        /// </summary>
-        public static readonly EventKey Tick = new EventKey("Tick");
 
         /// <summary>
         /// Fired after a mod is successfully loaded.
         /// Context contains "ModId".
         /// </summary>
         public static readonly EventKey ModLoaded = new EventKey("ModLoaded");
+
+        /// <summary>
+        /// Internal global pulse used to resume suspended Mod-domain TriggerGraph
+        /// entries. Mod graphs are not registered in a map event index, so they
+        /// cannot use the map heartbeat as their continuation clock.
+        /// </summary>
+        public static readonly EventKey ModTriggerResume = new EventKey("ModTriggerResume");
+
+        /// <summary>
+        /// Map-scoped continuation pulse for suspended map/entity-domain TriggerGraph
+        /// entries (replaces the retired MapHeartbeat think-wave as the resume cadence).
+        /// Fired per active map only while the map carries a suspended run.
+        /// </summary>
+        public static readonly EventKey MapTriggerResume = new EventKey("MapTriggerResume");
 
         public static readonly EventKey SimulationBudgetFused = new EventKey("SimulationBudgetFused");
 
@@ -60,5 +75,114 @@ namespace Ludots.Core.Scripting
         /// Fired when a previously suspended map is restored to active.
         /// </summary>
         public static readonly EventKey MapResumed = new EventKey("MapResumed");
+
+        /// <summary>
+        /// Map-scoped: fired when an entity carrying a MapEntity component joins the map
+        /// (entity lifecycle observer, change-driven). Payload: SourceEntity, SourceTeamId.
+        /// </summary>
+        public static readonly EventKey EntitySpawned = new EventKey("EntitySpawned");
+
+        /// <summary>
+        /// Map-scoped: fired on the destroy tick for entities carrying a MapEntity component
+        /// (entity lifecycle observer, change-driven). The entity may already
+        /// be recycled when the event fires; SourceTeamId was captured at destroy time.
+        /// Payload: SourceEntity, SourceTeamId.
+        /// </summary>
+        public static readonly EventKey EntityDied = new EventKey("EntityDied");
+
+        /// <summary>
+        /// Map-scoped payload-schema name for TriggerGraph entries that bind a semantic
+        /// input action directly. Action-bound mounts do not subscribe on the event bus
+        /// under this key; the binding system stamps the shared InputAction payload and
+        /// dispatches the mount.
+        /// </summary>
+        public static readonly EventKey InputAction = new EventKey("InputAction");
+
+        /// <summary>
+        /// Map-scoped: fired when a team's alive-entity count (entities with AttributeBuffer)
+        /// changes across a lifecycle-observer diff (change-driven).
+        /// Payload: SourceTeamId, Count, Delta.
+        /// </summary>
+        public static readonly EventKey EntityAliveCountChanged = new EventKey("EntityAliveCountChanged");
+
+        /// <summary>
+        /// Map-scoped: fired by the region system when an entity enters a region.
+        /// Payload: SourceEntity, RegionId.
+        /// </summary>
+        public static readonly EventKey RegionEntered = new EventKey("RegionEntered");
+
+        /// <summary>
+        /// Map-scoped: fired by the region system when an entity exits a region.
+        /// Payload: SourceEntity, RegionId.
+        /// </summary>
+        public static readonly EventKey RegionExited = new EventKey("RegionExited");
+
+        /// <summary>
+        /// <summary>
+        /// Map-scoped: fired whenever any declared map variable's value changes
+        /// (int and float alike). Payload: VarName plus the old/new pair matching
+        /// the variable's type (VarValueInt/OldValueInt or VarValueFloat/OldValueFloat).
+        /// </summary>
+        public static readonly EventKey MapVariableChanged = new EventKey("MapVariableChanged");
+
+        /// <summary>
+        /// Map-scoped: fired by the field membership system when a tracked entity's
+        /// discrete-id field ownership changes to a new region. Payload: SourceEntity,
+        /// RegionId, FieldLayer. Independent from the circle/rect trigger line above.
+        /// </summary>
+        public static readonly EventKey FieldRegionEntered = new EventKey("FieldRegionEntered");
+
+        /// <summary>
+        /// Map-scoped: fired by the field membership system when a tracked entity leaves
+        /// its discrete-id field region. Payload: SourceEntity, RegionId, FieldLayer.
+        /// </summary>
+        public static readonly EventKey FieldRegionExited = new EventKey("FieldRegionExited");
+        /// <summary>
+        /// Map-scoped: fired when a relationship edge is created (relationship change buffer,
+        /// one tick after the mutation). Payload: SourceEntity, TargetEntity, RelationTypeId.
+        /// </summary>
+        public static readonly EventKey RelationLinkAdded = new EventKey("RelationLinkAdded");
+
+        /// <summary>
+        /// Map-scoped: fired when a relationship edge is removed (relationship change buffer,
+        /// one tick after the mutation). Payload: SourceEntity, TargetEntity, RelationTypeId.
+        /// </summary>
+        public static readonly EventKey RelationLinkRemoved = new EventKey("RelationLinkRemoved");
+
+        /// <summary>
+        /// Map-scoped: fired when a relationship metric changes (relationship change buffer,
+        /// one tick after the mutation). Payload: SourceEntity, TargetEntity, RelationTypeId,
+        /// RelationMetricId, OldValueInt, NewValueInt.
+        /// </summary>
+        public static readonly EventKey RelationMetricChanged = new EventKey("RelationMetricChanged");
+
+        /// <summary>
+        /// Map-scoped: fired when a relationship flag changes (relationship change buffer,
+        /// one tick after the mutation). Payload: SourceEntity, TargetEntity, RelationTypeId,
+        /// OldValueInt/NewValueInt carrying flag words.
+        /// </summary>
+        public static readonly EventKey RelationFlagChanged = new EventKey("RelationFlagChanged");
+
+        public static bool IsMapScoped(string eventName)
+        {
+            return eventName == MapLoaded.Value ||
+                eventName == MapUnloaded.Value ||
+                eventName == MapSuspended.Value ||
+                eventName == MapResumed.Value ||
+                eventName == MapTriggerResume.Value ||
+                eventName == EntitySpawned.Value ||
+                eventName == EntityDied.Value ||
+                eventName == EntityAliveCountChanged.Value ||
+                eventName == InputAction.Value ||
+                eventName == RegionEntered.Value ||
+                eventName == RegionExited.Value ||
+                eventName == MapVariableChanged.Value ||
+                eventName == FieldRegionEntered.Value ||
+                eventName == FieldRegionExited.Value ||
+                eventName == RelationLinkAdded.Value ||
+                eventName == RelationLinkRemoved.Value ||
+                eventName == RelationMetricChanged.Value ||
+                eventName == RelationFlagChanged.Value;
+        }
     }
 }

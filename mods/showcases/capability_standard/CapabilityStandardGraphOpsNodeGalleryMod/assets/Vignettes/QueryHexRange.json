@@ -1,0 +1,14 @@
+{
+  "op": "QueryHexRange",
+  "driver": "spatial",
+  "title": "两格以内的六角范围",
+  "beat": "范围内格子描黄框，第三格描灰框，人也不亮。",
+  "detailTemplate": "两格内{count}人亮，第三格不算。",
+  "assertDetailContains": [
+    "两格内",
+    "第三格"
+  ],
+  "featuredNodeId": "hexRange",
+  "graphKind": "Query",
+  "field": "hex_range"
+}

@@ -1,0 +1,39 @@
+[
+  {
+    "id": "showcase.graph_op.RelationshipQueryMutual",
+    "kind": "Query",
+    "entry": "source",
+    "nodes": [
+      {
+        "id": "source",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "mutual",
+        "op": "RelationshipQueryMutual",
+        "relationshipType": "SocialBond"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "source",
+        "fromPort": "next",
+        "to": "mutual"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "mutual",
+        "toPort": "source"
+      },
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "mutual",
+        "toPort": "b"
+      }
+    ]
+  }
+]

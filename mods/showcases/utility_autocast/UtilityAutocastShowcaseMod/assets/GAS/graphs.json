@@ -4,8 +4,30 @@
     "kind": "Score",
     "entry": "target",
     "nodes": [
-      { "id": "target", "op": "LoadExplicitTarget", "next": "health" },
-      { "id": "health", "op": "LoadAttribute", "attribute": "Health", "inputs": ["target"] }
+      {
+        "id": "target",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "health",
+        "op": "LoadAttribute",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "target",
+        "fromPort": "next",
+        "to": "health"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "target",
+        "fromPort": "value",
+        "to": "health",
+        "toPort": "source"
+      }
     ]
   }
 ]

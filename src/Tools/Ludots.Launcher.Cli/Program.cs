@@ -24,7 +24,11 @@ try
         case "resolve":
         {
             var selectors = ResolveRequestedSelectors(service, command, allowDefaultPreset: true);
-            var result = service.Resolve(selectors, ResolveRequestedAdapter(service, command), command.BuildMode);
+            var result = service.Resolve(
+                selectors,
+                ResolveRequestedAdapter(service, command),
+                command.BuildMode,
+                command.BrowserProvider);
             PrintResolveResult(result, command.Json);
             return 0;
         }
@@ -36,7 +40,11 @@ try
                 return await RunRecordedLaunchAsync(service, repoRoot, selectors, ResolveRequestedAdapter(service, command), command, args);
             }
 
-            var result = await service.LaunchAsync(selectors, ResolveRequestedAdapter(service, command), command.BuildMode);
+            var result = await service.LaunchAsync(
+                selectors,
+                ResolveRequestedAdapter(service, command),
+                command.BuildMode,
+                command.BrowserProvider);
             if (!result.Ok)
             {
                 Console.Error.WriteLine(result.Error);
@@ -45,7 +53,22 @@ try
 
             Console.WriteLine($"adapter={result.Plan?.AdapterId ?? ResolveRequestedAdapter(service, command)}");
             Console.WriteLine($"pid={result.Pid}");
-            Console.WriteLine($"bootstrap={result.BootstrapPath}");
+            if (result.Plan is { IsExecutableTarget: true })
+            {
+                Console.WriteLine($"executable={result.Plan.AppAssemblyPath}");
+                Console.WriteLine($"executableArgs={JoinExecutableArgs(result.Plan.ExecutableArgs)}");
+            }
+            else
+            {
+                Console.WriteLine($"bootstrap={result.BootstrapPath}");
+            }
+
+            foreach (LauncherStartedProcess process in result.Processes)
+            {
+                Console.WriteLine(
+                    $"process={process.Id} role={process.ProcessRole} pid={process.Pid} bootstrap={process.BootstrapPath}");
+            }
+
             if (result.Plan != null)
             {
                 Console.WriteLine($"rootMods={string.Join(", ", result.Plan.RootModIds)}");
@@ -60,6 +83,52 @@ try
 
             return 0;
         }
+        case "artifacts" when command.Secondary == "process-group":
+        {
+            var selectors = ResolveRequestedSelectors(service, command, allowDefaultPreset: true);
+            LauncherProcessGroupArtifacts artifacts = service.WriteProcessGroupArtifacts(selectors, command.BuildMode);
+            if (command.Json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(artifacts, new JsonSerializerOptions { WriteIndented = true }));
+            }
+            else
+            {
+                Console.WriteLine($"preset={artifacts.PresetId}");
+                Console.WriteLine($"artifactDirectory={artifacts.ArtifactDirectory}");
+                foreach (LauncherNetworkRoleArtifact process in artifacts.Processes)
+                {
+                    Console.WriteLine(
+                        $"process={process.ProcessId} role={process.ProcessRole} app={process.ApplicationId} bootstrap={process.BootstrapPath}");
+                }
+            }
+
+            return 0;
+        }
+        case "evidence" when command.Secondary == "inspect-framebuffer":
+        {
+            if (command.Operands.Count != 1)
+            {
+                throw new InvalidOperationException("evidence inspect-framebuffer requires exactly one request JSON path.");
+            }
+
+            string requestPath = Path.GetFullPath(command.Operands[0]);
+            if (!File.Exists(requestPath))
+            {
+                throw new FileNotFoundException("Framebuffer inspection request does not exist.", requestPath);
+            }
+
+            var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            FramebufferPixelInspectionRequest request = JsonSerializer.Deserialize<FramebufferPixelInspectionRequest>(
+                File.ReadAllText(requestPath),
+                jsonOptions) ?? throw new InvalidOperationException("Framebuffer inspection request is empty.");
+            FramebufferPixelInspectionResult result = FramebufferPixelEvidenceInspector.Inspect(request);
+            Console.WriteLine(JsonSerializer.Serialize(result, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = true
+            }));
+            return 0;
+        }
         case "build" when command.Secondary == "app":
         {
             var result = await service.BuildAppAsync(ResolveRequestedAdapter(service, command));
@@ -69,7 +138,11 @@ try
         case "build":
         {
             var selectors = ResolveRequestedSelectors(service, command, allowDefaultPreset: true);
-            var results = await service.BuildAsync(selectors, ResolveRequestedAdapter(service, command), command.BuildMode);
+            var results = await service.BuildAsync(
+                selectors,
+                ResolveRequestedAdapter(service, command),
+                command.BuildMode,
+                browserProviderOverride: command.BrowserProvider);
             return PrintBuildResults(results);
         }
         case "adapter" when command.Secondary == "list":
@@ -293,8 +366,17 @@ static async Task<int> RunRecordedLaunchAsync(
     CliCommand command,
     string[] rawArgs)
 {
-    var resolveResult = service.Resolve(selectors, adapterId, command.BuildMode);
-    var buildResults = await service.BuildAsync(selectors, adapterId, command.BuildMode);
+    var resolveResult = service.Resolve(selectors, adapterId, command.BuildMode, command.BrowserProvider);
+    if (resolveResult.Plan.IsExecutableTarget)
+    {
+        return await RunRecordedExecutableLaunchAsync(service, selectors, adapterId, resolveResult.Plan, command);
+    }
+
+    var buildResults = await service.BuildAsync(
+        selectors,
+        adapterId,
+        command.BuildMode,
+        browserProviderOverride: command.BrowserProvider);
     int buildExitCode = PrintBuildResults(buildResults);
     if (buildExitCode != 0)
     {
@@ -328,6 +410,38 @@ static async Task<int> RunRecordedLaunchAsync(
     return 0;
 }
 
+static async Task<int> RunRecordedExecutableLaunchAsync(
+    LauncherService service,
+    IReadOnlyList<string> selectors,
+    string adapterId,
+    LauncherLaunchPlan plan,
+    CliCommand command)
+{
+    var buildResults = await service.BuildAsync(selectors, adapterId, command.BuildMode);
+    int buildExitCode = PrintBuildResults(buildResults);
+    if (buildExitCode != 0)
+    {
+        return buildExitCode;
+    }
+
+    var run = await service.ExecuteExecutableTargetAsync(plan);
+    Console.WriteLine($"adapter={plan.AdapterId}");
+    Console.WriteLine($"executableProject={plan.ExecutableProjectPath}");
+    Console.WriteLine($"command={run.CommandLine}");
+    if (!string.IsNullOrWhiteSpace(run.Output))
+    {
+        Console.WriteLine(run.Output);
+    }
+
+    Console.WriteLine($"exitCode={run.ExitCode}");
+    return run.ExitCode;
+}
+
+static string JoinExecutableArgs(IReadOnlyList<string>? args)
+{
+    return args == null || args.Count == 0 ? string.Empty : string.Join(' ', args);
+}
+
 static void PrintResolveResult(LauncherResolveResult result, bool asJson)
 {
     if (asJson)
@@ -341,7 +455,17 @@ static void PrintResolveResult(LauncherResolveResult result, bool asJson)
     Console.WriteLine($"selectors={string.Join(", ", result.Plan.Selectors)}");
     Console.WriteLine($"rootMods={string.Join(", ", result.Plan.RootModIds)}");
     Console.WriteLine($"orderedMods={string.Join(", ", result.Plan.OrderedModIds)}");
-    Console.WriteLine($"bootstrap={result.Plan.BootstrapArtifactPath}");
+    if (result.Plan.IsExecutableTarget)
+    {
+        Console.WriteLine($"executableProject={result.Plan.ExecutableProjectPath}");
+        Console.WriteLine($"executableAssembly={result.Plan.AppAssemblyPath}");
+        Console.WriteLine($"executableArgs={JoinExecutableArgs(result.Plan.ExecutableArgs)}");
+    }
+    else
+    {
+        Console.WriteLine($"bootstrap={result.Plan.BootstrapArtifactPath}");
+    }
+
     PrintPlanDiagnostics(result.Plan.Diagnostics);
     Console.WriteLine();
     foreach (var mod in result.Plan.Mods)
@@ -533,16 +657,18 @@ Ludots launcher CLI
 
 Commands
   catalog
-  resolve [selectors...] [--adapter raylib|web] [--build auto|always|never] [--json]
-  build [selectors...] [--adapter raylib|web] [--build auto|always|never]
+  resolve [selectors...] [--adapter raylib|web] [--browser-provider cef|ultralight] [--build auto|always|never] [--json]
+  build [selectors...] [--adapter raylib|web] [--browser-provider cef|ultralight] [--build auto|always|never]
   build app [--adapter raylib|web]
-  launch [selectors...] [--adapter raylib|web] [--build auto|always|never] [--record <artifactDir>]
+  launch [selectors...] [--adapter raylib|web] [--browser-provider cef|ultralight] [--build auto|always|never] [--record <artifactDir>]
+  artifacts process-group preset:<id> [--build auto|always|never] [--json]
+  evidence inspect-framebuffer <request.json>
   adapter list
   adapter select --adapter raylib|web
   workspace list
   workspace add --path <mod-root-parent>
   binding list
-  binding set <name> (--path <modRoot> | --mod <modId>) [--project <relativeOrAbsoluteCsproj>]
+  binding set <name> (--path <modRoot> | --mod <modId> | --target-type project --target <repoRelativeCsproj>) [--project <relativeOrAbsoluteCsproj>]
   binding delete <name>
   preset list
   preset save --name <name> [selectors...] [--adapter raylib|web] [--build auto|always|never]
@@ -565,6 +691,10 @@ Examples
   .\scripts\run-mod-launcher.cmd cli resolve camera_acceptance --adapter web
   .\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter web
   .\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter raylib --record artifacts/acceptance/launcher-camera-acceptance-raylib
+  .\scripts\run-mod-launcher.cmd cli launch panel_skin_web --adapter raylib --browser-provider ultralight
+  .\scripts\run-mod-launcher.cmd cli resolve preset:browser_react_flow_cef_raylib --browser-provider ultralight --adapter raylib
+  .\scripts\run-mod-launcher.cmd cli resolve engine_gallery
+  .\scripts\run-mod-launcher.cmd cli launch preset:engine_gallery_skybox --record artifacts/acceptance/engine-gallery-skybox
   .\scripts\run-mod-launcher.cmd cli binding set camera_acceptance --path mods/fixtures/camera/CameraAcceptanceMod
   .\scripts\run-mod-launcher.cmd cli preset save --name camera-web camera_acceptance --adapter web
 """);
@@ -575,6 +705,7 @@ internal sealed class CliCommand
     public string Primary { get; private set; } = string.Empty;
     public string Secondary { get; private set; } = string.Empty;
     public string? AdapterId { get; private set; }
+    public string? BrowserProvider { get; private set; }
     public string? PresetId { get; private set; }
     public string? Name { get; private set; }
     public string? Template { get; private set; }
@@ -608,6 +739,9 @@ internal sealed class CliCommand
             {
                 case "--adapter" when index + 1 < args.Length:
                     command.AdapterId = args[++index].Trim().ToLowerInvariant();
+                    break;
+                case "--browser-provider" when index + 1 < args.Length:
+                    command.BrowserProvider = NormalizeBrowserProvider(args[++index]);
                     break;
                 case "--preset" when index + 1 < args.Length:
                     command.PresetId = args[++index].Trim();
@@ -678,6 +812,8 @@ internal sealed class CliCommand
             "workspace" => secondary is "list" or "add",
             "binding" => secondary is "list" or "set" or "delete",
             "preset" => secondary is "list" or "save" or "select" or "delete",
+            "artifacts" => secondary is "process-group",
+            "evidence" => secondary is "inspect-framebuffer",
             "sdk" => secondary is "export",
             "mod" => secondary is "create" or "fix-project" or "solution",
             _ => false
@@ -689,6 +825,18 @@ internal sealed class CliCommand
         return Enum.TryParse<LauncherBuildMode>(raw, true, out var parsed)
             ? parsed
             : throw new InvalidOperationException($"Unsupported build mode: {raw}");
+    }
+
+    private static string NormalizeBrowserProvider(string raw)
+    {
+        string provider = raw.Trim().ToLowerInvariant();
+        if (provider is not ("cef" or "ultralight"))
+        {
+            throw new InvalidOperationException(
+                $"Unsupported browser provider '{raw}'. Expected 'cef' or 'ultralight'.");
+        }
+
+        return provider;
     }
 }
 

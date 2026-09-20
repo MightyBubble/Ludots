@@ -18,8 +18,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         public void SetCount(int count)
         {
-            if (count < 0) count = 0;
-            if (count > _buffer.Length) count = _buffer.Length;
+            if (count < 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.InvalidTargetListCount: count={count}.");
+            }
+
+            if (count > _buffer.Length)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.TargetListCapacityExceeded: count={count}, capacity={_buffer.Length}.");
+            }
+
             Count = count;
         }
     }

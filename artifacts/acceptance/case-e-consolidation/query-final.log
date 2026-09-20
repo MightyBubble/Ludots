@@ -1,0 +1,28 @@
+C:\001_AI\wt-case-e-consolidation\src\Tests\GasTests\bin\Release\net9.0\GasTests.dll (.NETCoreApp,Version=v9.0)的测试运行
+VSTest 版本 17.14.1 (x64)
+
+正在启动测试执行，请稍候...
+总共 1 个测试文件与指定模式相匹配。
+NUnit Adapter 4.6.0.0: Test execution started
+Running selected tests in C:\001_AI\wt-case-e-consolidation\src\Tests\GasTests\bin\Release\net9.0\GasTests.dll
+   NUnit3TestExecutor discovered 4 of 4 NUnit test cases using Current Discovery mode, Non-Explicit run
+population=1000, changes=10000, elapsed_ms=4.3983, bytes=0, evaluated=10000
+
+population=10000, changes=10000, elapsed_ms=4.3583, bytes=0, evaluated=10000
+
+restrict_map=False, population=10000, runs=2000, elapsed_ms=9.9960, bytes=0
+
+restrict_map=True, population=10000, runs=2000, elapsed_ms=49.2484, bytes=0
+
+NUnit Adapter 4.6.0.0: Test execution complete
+  已通过 WarmSingleEntityChanges_HaveConstantEvaluationCountAndNoAllocations(1000) [56 ms]
+  已通过 WarmSingleEntityChanges_HaveConstantEvaluationCountAndNoAllocations(10000) [5 ms]
+  已通过 QueryMap_At10kEntities_PreservesOrderAndAllocatesNothingAfterWarmup(False) [69 ms]
+  已通过 QueryMap_At10kEntities_PreservesOrderAndAllocatesNothingAfterWarmup(True) [55 ms]
+
+测试运行成功。
+测试总数: 4
+     通过数: 4
+总时间: 1.2085 秒
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。

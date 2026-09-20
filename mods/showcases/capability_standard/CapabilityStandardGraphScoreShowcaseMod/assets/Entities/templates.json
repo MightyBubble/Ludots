@@ -1,0 +1,48 @@
+[
+  {
+    "id": "graph_score_caster",
+    "components": {
+      "Name": { "Value": "会打分的队友" },
+      "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
+      "WorldPositionCm": { "Value": { "X": 5000, "Y": 5000 } },
+      "AttributeBuffer": { "base": { "Health": 100 }, "current": { "Health": 100 } },
+      "AbilityStateBuffer": {
+        "abilityIds": ["Ability.GraphScore.Strike"]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "UtilityAiAgent": { "profile": "Profile.GraphScore.Caster" },
+      "UtilityAiState": {},
+      "UtilityAiDecisionTrace": {},
+      "UtilityAiCombatMemory": {}
+    }
+  },
+  {
+    "id": "graph_score_full_dummy",
+    "components": {
+      "Name": { "Value": "满血木桩" },
+      "Team": { "Id": 2 },
+      "WorldPositionCm": { "Value": { "X": 5400, "Y": 5000 } },
+      "AttributeBuffer": { "base": { "Health": 100 }, "current": { "Health": 100 } },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "graph_score_wounded_dummy",
+    "components": {
+      "Name": { "Value": "残血木桩" },
+      "Team": { "Id": 2 },
+      "WorldPositionCm": { "Value": { "X": 4600, "Y": 5000 } },
+      "AttributeBuffer": { "base": { "Health": 100 }, "current": { "Health": 30 } },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  }
+]

@@ -35,7 +35,7 @@ AbilityExecSpec:
     → Duration: 300 ticks
 ```
 
-- Performer: GroundOverlay(Circle, radius, pulsing alpha) 持续显示直到区域消失
+- Presenter: GroundOverlay(Circle, radius, pulsing alpha) 持续显示直到区域消失
 
 ## 依赖组件
 
@@ -45,7 +45,7 @@ AbilityExecSpec:
 | PeriodicSearch preset | ✅ 已有 |
 | EffectClip | ✅ 已有 |
 | FanOutApplyEffect | ✅ 已有 |
-| GroundOverlay Performer | ✅ 已有 |
+| GroundOverlay Presenter | ✅ 已有 |
 
 ## 新增需求
 

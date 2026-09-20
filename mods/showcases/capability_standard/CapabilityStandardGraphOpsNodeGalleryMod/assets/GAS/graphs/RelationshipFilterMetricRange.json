@@ -1,0 +1,88 @@
+[
+  {
+    "id": "showcase.graph_op.RelationshipFilterMetricRange",
+    "kind": "Query",
+    "entry": "source",
+    "nodes": [
+      {
+        "id": "source",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "minLoyalty",
+        "op": "ConstFloat",
+        "floatValue": 30
+      },
+      {
+        "id": "maxLoyalty",
+        "op": "ConstFloat",
+        "floatValue": 80
+      },
+      {
+        "id": "outgoing",
+        "op": "RelationshipQueryOutgoing",
+        "relationshipType": "SocialBond"
+      },
+      {
+        "id": "range",
+        "op": "RelationshipFilterMetricRange",
+        "relationshipType": "SocialBond",
+        "metric": "Loyalty"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "source",
+        "fromPort": "next",
+        "to": "minLoyalty"
+      },
+      {
+        "from": "minLoyalty",
+        "fromPort": "next",
+        "to": "maxLoyalty"
+      },
+      {
+        "from": "maxLoyalty",
+        "fromPort": "next",
+        "to": "outgoing"
+      },
+      {
+        "from": "outgoing",
+        "fromPort": "next",
+        "to": "range"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "outgoing",
+        "toPort": "source"
+      },
+      {
+        "from": "outgoing",
+        "fromPort": "list",
+        "to": "range",
+        "toPort": "list"
+      },
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "range",
+        "toPort": "source"
+      },
+      {
+        "from": "minLoyalty",
+        "fromPort": "value",
+        "to": "range",
+        "toPort": "min"
+      },
+      {
+        "from": "maxLoyalty",
+        "fromPort": "value",
+        "to": "range",
+        "toPort": "max"
+      }
+    ]
+  }
+]

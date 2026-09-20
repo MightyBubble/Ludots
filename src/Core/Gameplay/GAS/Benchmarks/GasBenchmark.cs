@@ -7,6 +7,8 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Physics;
 using Ludots.Core.Gameplay.GAS; // Added for GameplayEventBus
+using Ludots.Core.GraphRuntime;
+using Ludots.Core.NodeLibraries.GASGraph;
 
 namespace Ludots.Core.Gameplay.GAS.Benchmarks
 {
@@ -39,13 +41,13 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
             var clock = new DiscreteClock();
             var clocks = new GasClocks(clock);
             var conditions = new GasConditionRegistry();
-            var tagOps = new TagOps(new DirtyEntityQueue(entityCount), new TagRuleRegistry());
+            var tagOps = new TagOps(new DirtyEntityQueue(entityCount), new TagRuleRegistry(), aggregateDirty: new AttributeAggregateDirtyRegistry());
 
             var mods = new EffectModifiers();
             mods.Add(healthId, ModifierOp.Add, 5.0f);
             effectTemplates.Register(1, new EffectTemplateData
             {
-                TagId = 0,
+                CategoryId = 0,
                 LifetimeKind = EffectLifetimeKind.Instant,
                 ClockId = GasClockId.FixedFrame,
                 DurationTicks = 0,
@@ -55,10 +57,18 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
                 Modifiers = mods
             });
             
+            EffectExecutionPlanCompiler.FinalizeAll(
+                effectTemplates,
+                new PresetTypeRegistry(),
+                new BuiltinHandlerRegistry(),
+                new GraphProgramRegistry(),
+                new GasGraphOpHandlerTable());
             // 3. Create Systems
             var appSystem = new EffectApplicationSystem(world, fanOutCommandCapacity: 65536, clock, effectRequests, tagOps: tagOps);
             var durSystem = new EffectLifetimeSystem(world, clock, conditions, snapshotCapacity: 4096, fanOutCommandCapacity: 65536, effectRequests: effectRequests, tagOps: tagOps);
-            var aggSystem = new AttributeAggregatorSystem(world, tagOps: tagOps);
+            var aggSystem = new AttributeAggregatorSystem(
+                world, tagOps: tagOps, aggregateDirty: tagOps.AggregateDirty
+                ?? new AttributeAggregateDirtyRegistry());
 
             var proposalSystem = new EffectProposalProcessingSystem(
                 world,

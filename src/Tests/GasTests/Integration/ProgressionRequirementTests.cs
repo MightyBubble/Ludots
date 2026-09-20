@@ -545,7 +545,7 @@ namespace Ludots.Tests.GAS
                 graphPrograms,
                 presetTypes,
                 builtinHandlers,
-                GasGraphOpHandlerTable.Instance,
+                new GasGraphOpHandlerTable(),
                 templates);
             var loop = new EffectProcessingLoopSystem(
                 world,
@@ -1160,22 +1160,22 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "Progression"));
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "scopes.json"),
+                Directory.CreateDirectory(Path.Combine(root, "Progression"));
+                File.WriteAllText(Path.Combine(root, "Progression", "scopes.json"),
                     """
                     [
                       { "id": "city" },
                       { "id": "province" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "progressions.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "progressions.json"),
                     """
                     [
                       { "id": "Progression.CityArchery", "scope": "city" },
                       { "id": "Progression.ProvinceTrade", "scope": "province" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "requirements.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "requirements.json"),
                     """
                     [
                       {
@@ -1226,20 +1226,20 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "Progression"));
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "scopes.json"),
+                Directory.CreateDirectory(Path.Combine(root, "Progression"));
+                File.WriteAllText(Path.Combine(root, "Progression", "scopes.json"),
                     """
                     [
                       { "id": "team", "memberSource": "EntityCollection", "collection": "team.members" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "progressions.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "progressions.json"),
                     """
                     [
                       { "id": "Progression.TeamLogistics", "scope": "team" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "requirements.json"), "[]");
+                File.WriteAllText(Path.Combine(root, "Progression", "requirements.json"), "[]");
 
                 using var world = World.Create();
                 var collectionKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
@@ -1268,20 +1268,20 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "Progression"));
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "scopes.json"),
+                Directory.CreateDirectory(Path.Combine(root, "Progression"));
+                File.WriteAllText(Path.Combine(root, "Progression", "scopes.json"),
                     """
                     [
                       { "id": "city" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "progressions.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "progressions.json"),
                     """
                     [
                       { "id": "Progression.CityArchery" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "requirements.json"), "[]");
+                File.WriteAllText(Path.Combine(root, "Progression", "requirements.json"), "[]");
 
                 var loader = CreateProgressionLoader(root, out _, out _);
                 var ex = Assert.Throws<AggregateException>(() => loader.Load(CreateProgressionCatalog()));
@@ -1299,20 +1299,20 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "Progression"));
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "scopes.json"),
+                Directory.CreateDirectory(Path.Combine(root, "Progression"));
+                File.WriteAllText(Path.Combine(root, "Progression", "scopes.json"),
                     """
                     [
                       { "id": "city" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "progressions.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "progressions.json"),
                     """
                     [
                       { "id": "Progression.CityArchery", "scope": "city" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "requirements.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "requirements.json"),
                     """
                     [
                       {
@@ -1343,20 +1343,20 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "Progression"));
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "scopes.json"),
+                Directory.CreateDirectory(Path.Combine(root, "Progression"));
+                File.WriteAllText(Path.Combine(root, "Progression", "scopes.json"),
                     """
                     [
                       { "id": "city" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "progressions.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "progressions.json"),
                     """
                     [
                       { "id": "Progression.CityArchery", "scope": "city" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "requirements.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "requirements.json"),
                     """
                     [
                       {
@@ -1387,22 +1387,22 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "Progression"));
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "scopes.json"),
+                Directory.CreateDirectory(Path.Combine(root, "Progression"));
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "Progression", "scopes.json"),
                     """
                     [
                       { "id": "city" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "progressions.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "progressions.json"),
                     """
                     [
                       { "id": "Progression.CityArmor", "scope": "city" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "requirements.json"), "[]");
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "requirements.json"), "[]");
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -1445,22 +1445,22 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "Progression"));
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "scopes.json"),
+                Directory.CreateDirectory(Path.Combine(root, "Progression"));
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "Progression", "scopes.json"),
                     """
                     [
                       { "id": "city" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "progressions.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "progressions.json"),
                     """
                     [
                       { "id": "Progression.CityArmor", "scope": "city" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "requirements.json"), "[]");
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "requirements.json"), "[]");
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {

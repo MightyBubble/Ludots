@@ -21,14 +21,17 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
 using Ludots.UI;
 using Ludots.UI.Skia;
 using NUnit.Framework;
 using RtsDemoMod.Systems;
+using Ludots.Platform.Abstractions;
+using Ludots.Tests.TestCommon;
 
 namespace Ludots.Tests.GAS.Production
 {
@@ -298,7 +301,7 @@ namespace Ludots.Tests.GAS.Production
                 "001_peasant_build_palette",
                 previewSlotIndex: 0,
                 previewWorldCm: new Vector2(-1950f, -1150f));
-            Assert.That(peasantPanel.Preview?.PerformerId, Is.EqualTo("core_input_preview_build_site"));
+            Assert.That(peasantPanel.Preview?.PresenterId, Is.EqualTo("core_input_preview_build_site"));
 
             float peasantMineralsBeforeLumberMill = ReadAttribute(world, peasant, mineralsAttrId);
             float peasantLumberBeforeLumberMill = ReadAttribute(world, peasant, lumberAttrId);
@@ -487,7 +490,7 @@ namespace Ludots.Tests.GAS.Production
                 previewSlotIndex: 0,
                 previewWorldCm: new Vector2(300f, 2380f));
             Assert.That(warpgatePanel.Slots[0].DisplayLabel, Is.EqualTo("折跃狂热者"));
-            Assert.That(warpgatePanel.Preview?.PerformerId, Is.EqualTo("core_input_preview_warp_site"));
+            Assert.That(warpgatePanel.Preview?.PresenterId, Is.EqualTo("core_input_preview_warp_site"));
 
             var zealotIdsBeforeWarp = SnapshotEntityIdsByName(world, "Zealot");
             CastAbilityAtWorldPoint(engine, gateway, slot: 0, new Vector2(300f, 2380f));
@@ -522,7 +525,7 @@ namespace Ludots.Tests.GAS.Production
                 "005_drone_morph_preview",
                 previewSlotIndex: 0,
                 previewWorldCm: new Vector2(3250f, 2200f));
-            Assert.That(dronePanel.Preview?.PerformerId, Is.EqualTo("core_input_preview_morph_site"));
+            Assert.That(dronePanel.Preview?.PresenterId, Is.EqualTo("core_input_preview_morph_site"));
             CastAbilityAtWorldPoint(engine, drone, slot: 0, new Vector2(3250f, 2200f));
             TickUntil(engine, frameTimesMs, () => CountEntitiesByName(world, "Spawning Pool") == spawningPoolIdsBefore.Count + 1, maxFrames: 20, "Drone morph should spawn a Spawning Pool.");
             Entity spawningPool = FindNewestEntityByName(world, "Spawning Pool", spawningPoolIdsBefore);
@@ -1164,15 +1167,15 @@ namespace Ludots.Tests.GAS.Production
                 ?? throw new InvalidOperationException("SpatialQueryService service is missing.");
             var overlays = engine.GetService(CoreServiceKeys.GroundOverlayBuffer)
                 ?? throw new InvalidOperationException("GroundOverlayBuffer service is missing.");
-            var performerDefinitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
-                ?? throw new InvalidOperationException("PerformerDefinitionRegistry service is missing.");
-            var performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
-                ?? throw new InvalidOperationException("PerformerEntityRuntime missing.");
+            var presenterDefinitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
+                ?? throw new InvalidOperationException("PresenterDefinitionRegistry service is missing.");
+            var presenters = engine.GetService(CoreServiceKeys.PresenterEntityRuntime)
+                ?? throw new InvalidOperationException("PresenterEntityRuntime missing.");
             var presentationEvents = engine.GetService(CoreServiceKeys.PresentationEventStream)
                 ?? throw new InvalidOperationException("PresentationEventStream service is missing.");
 
             overlays.Clear();
-            performers.Clear();
+            presenters.Clear();
             presentationEvents.Clear();
 
             var runtime = new AbilityAimPresentationRuntime(
@@ -1211,18 +1214,18 @@ namespace Ludots.Tests.GAS.Production
 
             RtsPreviewSnapshot? preview = null;
             RtsPreviewSnapshot? genericPreview = null;
-            var performerQuery = new QueryDescription().WithAll<PerformerState, PerformerWorldPosition>();
-            engine.World.Query(in performerQuery, (Entity entity, ref PerformerState state, ref PerformerWorldPosition worldPos) =>
+            var presenterQuery = new QueryDescription().WithAll<PresenterState, PresenterWorldPosition>();
+            engine.World.Query(in presenterQuery, (Entity entity, ref PresenterState state, ref PresenterWorldPosition worldPos) =>
             {
-                string performerId = performerDefinitions.GetName(state.DefId);
-                if (!IsRtsAimPreviewPerformer(performerId) &&
-                    !string.Equals(performerId, "core_input.ability_aim.preview", StringComparison.Ordinal))
+                string presenterId = presenterDefinitions.GetName(state.DefId);
+                if (!IsRtsAimPreviewPresenter(presenterId) &&
+                    !string.Equals(presenterId, "core_input.ability_aim.preview", StringComparison.Ordinal))
                 {
                     return;
                 }
 
                 var candidate = new RtsPreviewSnapshot(
-                    performerId,
+                    presenterId,
                     worldPos.Value.X,
                     worldPos.Value.Y,
                     worldPos.Value.Z,
@@ -1230,7 +1233,7 @@ namespace Ludots.Tests.GAS.Production
                     0f,
                     0f,
                     overlaySummary);
-                if (IsRtsAimPreviewPerformer(performerId))
+                if (IsRtsAimPreviewPresenter(presenterId))
                 {
                     preview = candidate;
                     return;
@@ -1254,18 +1257,18 @@ namespace Ludots.Tests.GAS.Production
             return null;
         }
 
-        private static bool IsRtsAimPreviewPerformer(string performerId)
+        private static bool IsRtsAimPreviewPresenter(string presenterId)
         {
-            return string.Equals(performerId, "core_input_preview_build_site", StringComparison.Ordinal) ||
-                   string.Equals(performerId, "core_input_preview_warp_site", StringComparison.Ordinal) ||
-                   string.Equals(performerId, "core_input_preview_morph_site", StringComparison.Ordinal);
+            return string.Equals(presenterId, "core_input_preview_build_site", StringComparison.Ordinal) ||
+                   string.Equals(presenterId, "core_input_preview_warp_site", StringComparison.Ordinal) ||
+                   string.Equals(presenterId, "core_input_preview_morph_site", StringComparison.Ordinal);
         }
 
         private static void SelectEntity(GameEngine engine, Entity target)
         {
             var collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
-            Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             Assert.That(engine.World.IsAlive(owner), Is.True, "Local player selection owner should exist on RTS map.");
             Assert.That(engine.World.IsAlive(target), Is.True, "Selection target should exist.");
 
@@ -1280,7 +1283,7 @@ namespace Ludots.Tests.GAS.Production
                 title: "RTS strategic command source",
                 summary: "1 actor");
             collections.Replace(owner, in descriptor, next, owner);
-            engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
+            ClientLocalSeatTestBindings.BindSoleSeat(engine.GlobalContext, owner, 1, "seat.0");
         }
 
         private static string ReadName(World world, Entity entity)
@@ -1346,7 +1349,7 @@ namespace Ludots.Tests.GAS.Production
                 ? new[] { "preview unavailable" }
                 : new[]
                 {
-                    $"performer={preview.Value.PerformerId}",
+                    $"presenter={preview.Value.PresenterId}",
                     $"worldPos=({preview.Value.WorldX:0.##}, {preview.Value.WorldY:0.##}, {preview.Value.WorldZ:0.##})",
                     $"scale=({preview.Value.ScaleX:0.##}, {preview.Value.ScaleY:0.##}, {preview.Value.ScaleZ:0.##})",
                     $"overlays={preview.Value.OverlaySummary}"
@@ -1363,7 +1366,7 @@ namespace Ludots.Tests.GAS.Production
   {{RenderPanelSectionSvg("Statuses", statusLines, 790, 170, 746)}}
   {{RenderPanelSectionSvg("Order Queue", queueLines, 790, 170 + statusHeight, 746)}}
   {{RenderPanelSectionSvg("Preview Ghost", previewLines, 790, 170 + statusHeight + queueHeight, 746)}}
-  <text x="64" y="{{height - 40}}" fill="#9db4cc" font-size="18" font-family="Consolas, monospace">Data source: gas.ability-slots + toolbar provider + AbilityAimPresentationRuntime performer preview.</text>
+  <text x="64" y="{{height - 40}}" fill="#9db4cc" font-size="18" font-family="Consolas, monospace">Data source: gas.ability-slots + toolbar provider + AbilityAimPresentationRuntime presenter preview.</text>
 </svg>
 """;
             File.WriteAllText(path, svg, Encoding.UTF8);
@@ -1376,7 +1379,7 @@ namespace Ludots.Tests.GAS.Production
             for (int i = 0; i < snapshots.Count; i++)
             {
                 RtsPanelSnapshot snapshot = snapshots[i];
-                string preview = snapshot.Preview == null ? "preview=none" : $"preview={snapshot.Preview.Value.PerformerId}";
+                string preview = snapshot.Preview == null ? "preview=none" : $"preview={snapshot.Preview.Value.PresenterId}";
                 lines.Add($"""  <text x="56" y="{y}" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">{EscapeSvg($"{i + 1:000} {snapshot.Step}")}</text>""");
                 lines.Add($"""  <text x="460" y="{y}" fill="#ffffff" font-size="20" font-family="Consolas, monospace">{EscapeSvg($"focus={snapshot.FocusEntity} | slots={snapshot.Slots.Count} | statuses={snapshot.Statuses.Count} | queue={snapshot.QueueItems.Count} | {preview}")}</text>""");
                 y += 72;
@@ -1429,7 +1432,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(world.IsAlive(entity), Is.True, $"{label} should exist.");
             Assert.That(world.Has<VisualTransform>(entity), Is.True, $"{label} should expose VisualTransform for RTS markers.");
             Assert.That(world.Has<PreviousWorldPositionCm>(entity), Is.True, $"{label} should expose PreviousWorldPositionCm for interpolation.");
-            Assert.That(world.Has<PresentationStableId>(entity), Is.True, $"{label} should expose PresentationStableId for entity-scoped performers.");
+            Assert.That(world.Has<PresentationStableId>(entity), Is.True, $"{label} should expose PresentationStableId for entity-scoped presenters.");
 
             VisualTransform visual = world.Get<VisualTransform>(entity);
             Assert.That(visual.Scale, Is.Not.EqualTo(Vector3.Zero), $"{label} should have a non-zero marker scale.");
@@ -1510,7 +1513,7 @@ namespace Ludots.Tests.GAS.Production
             string AccentColorHex);
 
         private readonly record struct RtsPreviewSnapshot(
-            string PerformerId,
+            string PresenterId,
             float WorldX,
             float WorldY,
             float WorldZ,

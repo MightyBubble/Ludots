@@ -1,0 +1,104 @@
+[
+  {
+    "id": "showcase.graph_op.CompareEqInt",
+    "kind": "Effect",
+    "entry": "current",
+    "nodes": [
+      {
+        "id": "current",
+        "op": "ConstInt",
+        "intValue": 3
+      },
+      {
+        "id": "full",
+        "op": "ConstInt",
+        "intValue": 3
+      },
+      {
+        "id": "stacked",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "jif",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "strike",
+        "op": "ApplyEffectTemplate",
+        "effectTemplate": "Effect.GraphOps.Strike"
+      },
+      {
+        "id": "done",
+        "op": "ConstFloat",
+        "floatValue": 0
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "current",
+        "fromPort": "next",
+        "to": "full"
+      },
+      {
+        "from": "full",
+        "fromPort": "next",
+        "to": "stacked"
+      },
+      {
+        "from": "stacked",
+        "fromPort": "next",
+        "to": "jif"
+      },
+      {
+        "from": "jif",
+        "fromPort": "true",
+        "to": "explicit"
+      },
+      {
+        "from": "jif",
+        "fromPort": "false",
+        "to": "done"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "strike"
+      },
+      {
+        "from": "strike",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "current",
+        "fromPort": "value",
+        "to": "stacked",
+        "toPort": "a"
+      },
+      {
+        "from": "full",
+        "fromPort": "value",
+        "to": "stacked",
+        "toPort": "b"
+      },
+      {
+        "from": "stacked",
+        "fromPort": "value",
+        "to": "jif",
+        "toPort": "condition"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "strike",
+        "toPort": "target"
+      }
+    ]
+  }
+]

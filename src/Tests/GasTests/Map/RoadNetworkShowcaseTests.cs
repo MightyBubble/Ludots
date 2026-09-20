@@ -31,6 +31,7 @@ using Ludots.Core.Map.Board;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
@@ -43,6 +44,7 @@ using RoadNetworkShowcaseMod.Gameplay;
 using RoadNetworkShowcaseMod.Runtime;
 using RoadNetworkShowcaseMod.Systems;
 using RoadNetworkShowcaseMod.UI;
+using Ludots.Tests.TestCommon;
 
 namespace Ludots.Tests.GAS
 {
@@ -79,9 +81,9 @@ namespace Ludots.Tests.GAS
             Assert.That(westernChunk.Graph.NodeCount, Is.GreaterThanOrEqualTo(1));
             Assert.That(scenario.TryGetGraphChunk(easternChunkKey, out var easternChunk), Is.True);
             Assert.That(easternChunk.Graph.NodeCount, Is.GreaterThanOrEqualTo(1));
-            Assert.That(scenario.TryGetRoadSplineChunk(centralChunkKey, out var centralSplines), Is.True);
+            Assert.That(scenario.TryGetRoadRibbonChunk(centralChunkKey, out var centralSplines), Is.True);
             Assert.That(centralSplines.Length, Is.GreaterThanOrEqualTo(1));
-            Assert.That(scenario.TryGetRoadSplineChunk(easternChunkKey, out var easternSplines), Is.True);
+            Assert.That(scenario.TryGetRoadRibbonChunk(easternChunkKey, out var easternSplines), Is.True);
             Assert.That(easternSplines.Length, Is.GreaterThanOrEqualTo(1));
         }
 
@@ -759,7 +761,7 @@ namespace Ludots.Tests.GAS
             int loadedSplineCount = 0;
             foreach (long chunkKey in loadedChunks.ActiveChunkKeys)
             {
-                if (scenario.TryGetRoadSplineChunk(chunkKey, out var splines))
+                if (scenario.TryGetRoadRibbonChunk(chunkKey, out var splines))
                 {
                     loadedSplineCount += splines.Length;
                 }
@@ -871,9 +873,9 @@ namespace Ludots.Tests.GAS
             Assert.That(owner, Is.Not.EqualTo(Entity.Null));
             Assert.That(runtime.LoadedChunkCount, Is.GreaterThan(0), "Initial showcase focus should prime the first chunk window so the first move command does not depend on a later streaming tick.");
             Assert.That(runtime.LoadedNodeCount, Is.GreaterThan(0), "Chunk priming should populate the graph store before the player issues the first road move.");
-            Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj), Is.True);
+            Assert.That(ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out Entity localObj), Is.True);
             Assert.That(localObj, Is.EqualTo(owner));
-            Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewOwnerObj), Is.True);
+            Assert.That(ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out Entity viewOwnerObj), Is.True);
             Assert.That(viewOwnerObj, Is.EqualTo(owner));
             Assert.That(engine.World.Has<CommandSourceDragState>(owner), Is.True);
             EntityCollectionStore collections = GetEntityCollectionStore(engine);
@@ -900,11 +902,11 @@ namespace Ludots.Tests.GAS
             Assert.That(owner, Is.Not.EqualTo(Entity.Null));
 
             ReplaceCommandSource(engine, owner, ReadOnlySpan<Entity>.Empty);
-            engine.GlobalContext.Remove(CoreServiceKeys.LocalPlayerEntity.Name);
+            ClientLocalSeatAccess.RequireRegistry(engine).Clear();
 
             runtime.UpdateLoadedChunks(engine);
 
-            Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj), Is.True);
+            Assert.That(ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out Entity localObj), Is.True);
             Assert.That(localObj, Is.EqualTo(owner));
             Assert.That(TryGetCommandSourcePrimary(engine, owner, out Entity repairedPrimary), Is.True);
             Assert.That(repairedPrimary, Is.EqualTo(owner));
@@ -929,11 +931,11 @@ namespace Ludots.Tests.GAS
             Span<Entity> selectedUnits = stackalloc Entity[1];
             selectedUnits[0] = selected;
             ReplaceCommandSource(engine, owner, selectedUnits);
-            engine.GlobalContext.Remove(CoreServiceKeys.LocalPlayerEntity.Name);
+            ClientLocalSeatAccess.RequireRegistry(engine).Clear();
 
             runtime.UpdateLoadedChunks(engine);
 
-            Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj), Is.True);
+            Assert.That(ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out Entity localObj), Is.True);
             Assert.That(localObj, Is.EqualTo(owner));
             Assert.That(TryGetCommandSourcePrimary(engine, owner, out Entity preservedPrimary), Is.True);
             Assert.That(preservedPrimary, Is.EqualTo(selected));
@@ -1132,6 +1134,142 @@ namespace Ludots.Tests.GAS
             Assert.That(furthestXcm, Is.GreaterThan(17000), $"Column should traverse the full eastward road route, not stop in the currently loaded chunk window. Final=({finalPosition.X},{finalPosition.Y}), IncomingQueue={orderQueue.Count}");
             Assert.That(finalPosition.X, Is.EqualTo(18000).Within(80));
             Assert.That(finalPosition.Y, Is.EqualTo(0).Within(80));
+        }
+
+        /// <summary>稀疏探测组件：只验证「结构变更」本身，无任何系统消费，避免引入语义噪音。</summary>
+        private struct SparseComponentAddProbe
+        {
+            public int Value;
+        }
+
+        private static void RunEngineFarRoadMoveAndAssertArrival(GameEngine engine, Entity actor)
+        {
+            var orderQueue = engine.GetService(CoreServiceKeys.OrderQueue);
+            Assert.That(orderQueue, Is.Not.Null);
+            int moveToOrderTypeId = engine.MergedConfig.Constants.OrderTypeIds["moveTo"];
+            var expander = new RoadMoveOrderExpander(
+                engine.World,
+                engine.GlobalContext,
+                orderQueue!,
+                RoadNetworkShowcaseIds.PathPlannerAgentTypeId,
+                statusKey: string.Empty);
+
+            var order = CreateMoveOrder(actor, moveToOrderTypeId, xcm: 18000, ycm: 0, submitMode: OrderSubmitMode.Immediate);
+            Assert.That(expander.TrySubmit(in order), Is.EqualTo(OrderSubmitResult.Queued), ReadRoadStatus(engine));
+
+            bool movementStarted = false;
+            bool completed = false;
+            int furthestXcm = engine.World.Get<WorldPositionCm>(actor).ToWorldCmInt2().X;
+            for (int i = 0; i < 2400; i++)
+            {
+                engine.Tick(1f / 60f);
+
+                bool hasActiveOrder = engine.World.Get<OrderBuffer>(actor).HasActive;
+                if (!movementStarted && (hasActiveOrder || orderQueue.Count == 0))
+                {
+                    movementStarted = true;
+                }
+
+                int currentXcm = engine.World.Get<WorldPositionCm>(actor).ToWorldCmInt2().X;
+                if (currentXcm > furthestXcm)
+                {
+                    furthestXcm = currentXcm;
+                }
+
+                if (movementStarted && !hasActiveOrder && orderQueue.Count == 0)
+                {
+                    completed = true;
+                    break;
+                }
+            }
+
+            var finalPosition = engine.World.Get<WorldPositionCm>(actor).ToWorldCmInt2();
+            string diagnostics = BuildPlayableMoveDiagnostics(engine, BlueVanguardInstanceId);
+            Assert.That(movementStarted, Is.True, "Road move never entered the fixed-step movement pipeline.");
+            Assert.That(completed, Is.True, $"Road move should complete instead of stalling mid-route. FurthestX={furthestXcm}, Final=({finalPosition.X},{finalPosition.Y}), IncomingQueue={orderQueue.Count}. {diagnostics}");
+            Assert.That(furthestXcm, Is.GreaterThan(17000), $"Column should traverse the full eastward road route, not stop in the currently loaded chunk window. FurthestX={furthestXcm}, Final=({finalPosition.X},{finalPosition.Y}), IncomingQueue={orderQueue.Count}");
+            Assert.That(finalPosition.X, Is.EqualTo(18000).Within(80), diagnostics);
+            Assert.That(finalPosition.Y, Is.EqualTo(0).Within(80), diagnostics);
+        }
+
+        [Test]
+        public void RoadNetworkShowcase_EngineFarRoadMove_SparseComponentAddOnMovingAgent_KeepsMoveAlive()
+        {
+            using var engine = CreateRoadShowcaseEngine();
+            engine.LoadStartupMap();
+
+            Entity actor = FindEntityByInstanceId(engine, BlueVanguardInstanceId);
+            Assert.That(actor, Is.Not.EqualTo(Entity.Null));
+
+            bool movementStarted = false;
+            var orderQueue = engine.GetService(CoreServiceKeys.OrderQueue);
+            Assert.That(orderQueue, Is.Not.Null);
+            int moveToOrderTypeId = engine.MergedConfig.Constants.OrderTypeIds["moveTo"];
+            var expander = new RoadMoveOrderExpander(
+                engine.World,
+                engine.GlobalContext,
+                orderQueue!,
+                RoadNetworkShowcaseIds.PathPlannerAgentTypeId,
+                statusKey: string.Empty);
+
+            var order = CreateMoveOrder(actor, moveToOrderTypeId, xcm: 18000, ycm: 0, submitMode: OrderSubmitMode.Immediate);
+            Assert.That(expander.TrySubmit(in order), Is.EqualTo(OrderSubmitResult.Queued), ReadRoadStatus(engine));
+
+            bool completed = false;
+            for (int i = 0; i < 2400; i++)
+            {
+                engine.Tick(1f / 60f);
+
+                bool hasActiveOrder = engine.World.Get<OrderBuffer>(actor).HasActive;
+                if (!movementStarted && (hasActiveOrder || orderQueue.Count == 0))
+                {
+                    movementStarted = true;
+                    engine.World.Add(actor, new SparseComponentAddProbe { Value = 1 });
+                }
+
+                if (movementStarted && !hasActiveOrder && orderQueue.Count == 0)
+                {
+                    completed = true;
+                    break;
+                }
+            }
+
+            var finalPosition = engine.World.Get<WorldPositionCm>(actor).ToWorldCmInt2();
+            string diagnostics = BuildPlayableMoveDiagnostics(engine, BlueVanguardInstanceId);
+            Assert.That(movementStarted, Is.True, "Road move never entered the fixed-step movement pipeline.");
+            Assert.That(completed, Is.True, $"Sparse component add on a moving agent must not stall the road move. Final=({finalPosition.X},{finalPosition.Y}), IncomingQueue={orderQueue.Count}. {diagnostics}");
+            Assert.That(finalPosition.X, Is.EqualTo(18000).Within(80), $"Sparse component add on a moving agent must not stall the road move. {diagnostics}");
+            Assert.That(finalPosition.Y, Is.EqualTo(0).Within(80), diagnostics);
+        }
+
+        [Test]
+        public void RoadNetworkShowcase_EngineFarRoadMove_SparseComponentAddAtMapBinding_KeepsMoveAlive()
+        {
+            using var engine = CreateRoadShowcaseEngine();
+            engine.LoadStartupMap();
+
+            Entity actor = FindEntityByInstanceId(engine, BlueVanguardInstanceId);
+            Assert.That(actor, Is.Not.EqualTo(Entity.Null));
+            Assert.That(engine.CurrentMapSession!.PlayerEntityLookup.Get(RoadTestPlayerId), Is.EqualTo(actor),
+                "Player 1's map representative is the moving vanguard; a seed-style component add targets exactly this entity.");
+
+            engine.World.Add(actor, new SparseComponentAddProbe { Value = 1 });
+            RunEngineFarRoadMoveAndAssertArrival(engine, actor);
+        }
+
+        [Test]
+        public void RoadNetworkShowcase_EngineFarRoadMove_InteractionModeAddAtMapBinding_KeepsMoveAlive()
+        {
+            using var engine = CreateRoadShowcaseEngine();
+            engine.LoadStartupMap();
+
+            Entity actor = FindEntityByInstanceId(engine, BlueVanguardInstanceId);
+            Assert.That(actor, Is.Not.EqualTo(Entity.Null));
+            var modeMap = engine.GetService(CoreServiceKeys.InteractionModeMap) as Ludots.Core.Input.Interaction.InteractionModeMap;
+            Assert.That(modeMap, Is.Not.Null, "Engine init must install the interaction mode map.");
+
+            engine.World.Add(actor, new Ludots.Core.Input.Interaction.InteractionMode { ModeId = modeMap!.NormalModeId });
+            RunEngineFarRoadMoveAndAssertArrival(engine, actor);
         }
 
         [Test]
@@ -1953,7 +2091,10 @@ namespace Ludots.Tests.GAS
 
         private static NavQueryServiceRegistry CreateNavRegistry()
         {
-            return new NavQueryServiceRegistry(new Dictionary<NavQueryServiceKey, NavTileStore>());
+            return new NavQueryServiceRegistry(
+                new Dictionary<NavQueryServiceKey, NavTileStore>(),
+                tileWidthCm: SpatialScaleDefaults.TerrainChunkCells * SpatialScaleDefaults.CellCm,
+                tileHeightCm: SpatialScaleDefaults.TerrainChunkCells * SpatialScaleDefaults.CellCm);
         }
 
         private static PathingConfig CreatePathingConfig()
@@ -2102,6 +2243,7 @@ namespace Ludots.Tests.GAS
                 Path.Combine(repoRoot, "mods", "CoreInputMod"),
                 Path.Combine(repoRoot, "mods", "capabilities", "camera", "CameraProfilesMod"),
                 Path.Combine(repoRoot, "mods", "capabilities", "navigation", "MassNavigationMod"),
+                Path.Combine(repoRoot, "mods", "capabilities", "input", "SelectionInteractionMod"),
                 Path.Combine(repoRoot, "mods", "showcases", "road_network", "RoadNetworkShowcaseMod"),
             };
 
@@ -2122,10 +2264,10 @@ namespace Ludots.Tests.GAS
 
             var view = new StubViewController(1920f, 1080f);
             engine.SetService(CoreServiceKeys.ViewController, view);
-            engine.SetService(CoreServiceKeys.ScreenRayProvider, new CoreScreenRayProvider(engine.GameSession.Camera, view));
-            engine.SetService(CoreServiceKeys.ScreenProjector, new CoreScreenProjector(engine.GameSession.Camera, view));
+            engine.SetService(CoreServiceKeys.ScreenRayProvider, new CoreScreenRayProvider(engine.AuthorityCamera(), view));
+            engine.SetService(CoreServiceKeys.ScreenProjector, new CoreScreenProjector(engine.AuthorityCamera(), view));
 
-            var culling = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, view, cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
+            var culling = new CameraCullingSystem(engine.World, engine.AuthorityCamera(), engine.SpatialQueries, view, cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
             engine.RegisterPresentationSystem(culling);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
             return engine;
@@ -2139,9 +2281,7 @@ namespace Ludots.Tests.GAS
             }
             else
             {
-                MapLaunchContext? launchContext = engine.MergedConfig.StartupLocalPlayerId > 0
-                    ? MapLaunchContext.Create(engine.MergedConfig.StartupLocalPlayerId)
-                    : null;
+                MapLaunchContext? launchContext = engine.MergedConfig.CreateStartupLaunchContext();
                 engine.LoadMap(MapLoadRequest.FromMapId(mapId, launchContext));
             }
             Assert.That(engine.CurrentMapSession, Is.Not.Null, $"{mapId} should create a live map session.");
@@ -2266,7 +2406,7 @@ namespace Ludots.Tests.GAS
             Assert.That(entity, Is.Not.EqualTo(Entity.Null), $"Entity instance '{instanceId}' was not found.");
 
             ref WorldPositionCm position = ref engine.World.Get<WorldPositionCm>(entity);
-            return GetScreenPositionForWorld(engine, WorldUnits.WorldCmToVisualMeters(position.Value, yMeters: 0f));
+            return GetScreenPositionForWorld(engine, WorldUnitsFix64.WorldCmToVisualMeters(position.Value, yMeters: 0f));
         }
 
         private static Vector2 GetScreenPositionForWorld(GameEngine engine, Vector3 worldMeters)
@@ -2334,8 +2474,7 @@ namespace Ludots.Tests.GAS
 
         private static Entity GetLocalPlayer(GameEngine engine)
         {
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) ||
-                localObj is not Entity local ||
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out var local) ||
                 !engine.World.IsAlive(local))
             {
                 return Entity.Null;
@@ -2362,7 +2501,7 @@ namespace Ludots.Tests.GAS
                 title: "Road network command source",
                 summary: "Test-owned command-source collection.");
             Assert.That(collections.Replace(owner, in descriptor, entities, owner).IsValid, Is.True);
-            engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
+            ClientLocalSeatTestBindings.BindSoleSeat(engine.GlobalContext, owner, 1, "seat.0");
         }
 
         private static bool TryGetCommandSourcePrimary(GameEngine engine, Entity owner, out Entity primary)
@@ -2491,7 +2630,7 @@ namespace Ludots.Tests.GAS
         {
             var sb = new StringBuilder();
             sb.Append("cameraTarget=");
-            Vector2 target = engine.GameSession.Camera.State.TargetCm;
+            Vector2 target = engine.AuthorityCamera().State.TargetCm;
             sb.Append('(');
             sb.Append(target.X.ToString("0.##"));
             sb.Append(',');

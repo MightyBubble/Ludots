@@ -1,0 +1,8 @@
+[
+  {
+    "id": "DM.GraphScore.Caster",
+    "SelectionMode": "UtilityScore",
+    "SwitchMargin": 0,
+    "Decisions": ["Decision.GraphScore.Strike"]
+  }
+]

@@ -9,7 +9,9 @@ internal static class UiRetainedTreeReconciler
 	{
 		ArgumentNullException.ThrowIfNull(current, "current");
 		ArgumentNullException.ThrowIfNull(next, "next");
-		if (current.Kind != next.Kind || !string.Equals(current.TagName, next.TagName, StringComparison.Ordinal))
+		if (current.Kind != next.Kind ||
+			current.PseudoElement != next.PseudoElement ||
+			!string.Equals(current.TagName, next.TagName, StringComparison.Ordinal))
 		{
 			return false;
 		}

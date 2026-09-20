@@ -9,7 +9,7 @@ namespace Ludots.Core.Presentation.Instancing
         private readonly Dictionary<SubmissionKey, SubmissionState> _states = new();
         private readonly List<SubmissionKey> _scratch = new(256);
 
-        public bool ShouldSubmit(Entity performer, int performerStableId, int batchAssetId, int groupIndex, int totalInstances, out int start, out int count, int budget)
+        public bool ShouldSubmit(Entity presenter, int presenterStableId, int batchAssetId, int groupIndex, int totalInstances, out int start, out int count, int budget)
         {
             if (totalInstances <= 0)
             {
@@ -18,7 +18,7 @@ namespace Ludots.Core.Presentation.Instancing
                 return false;
             }
 
-            var key = new SubmissionKey(performer, performerStableId, batchAssetId, groupIndex);
+            var key = new SubmissionKey(presenter, presenterStableId, batchAssetId, groupIndex);
             if (!_states.TryGetValue(key, out SubmissionState state))
             {
                 state = new SubmissionState();
@@ -46,13 +46,13 @@ namespace Ludots.Core.Presentation.Instancing
             return count > 0;
         }
 
-        public void MarkDirty(Entity performer, int performerStableId, int batchAssetId)
+        public void MarkDirty(Entity presenter, int presenterStableId, int batchAssetId)
         {
             _scratch.Clear();
             foreach (SubmissionKey key in _states.Keys)
             {
-                if (key.Performer == performer &&
-                    key.PerformerStableId == performerStableId &&
+                if (key.Presenter == presenter &&
+                    key.PresenterStableId == presenterStableId &&
                     key.BatchAssetId == batchAssetId)
                 {
                     _scratch.Add(key);
@@ -65,12 +65,12 @@ namespace Ludots.Core.Presentation.Instancing
             }
         }
 
-        public void Remove(Entity performer, int performerStableId)
+        public void Remove(Entity presenter, int presenterStableId)
         {
             _scratch.Clear();
             foreach (SubmissionKey key in _states.Keys)
             {
-                if (key.Performer == performer && key.PerformerStableId == performerStableId)
+                if (key.Presenter == presenter && key.PresenterStableId == presenterStableId)
                 {
                     _scratch.Add(key);
                 }
@@ -84,30 +84,30 @@ namespace Ludots.Core.Presentation.Instancing
 
         private readonly struct SubmissionKey : IEquatable<SubmissionKey>
         {
-            public readonly Entity Performer;
-            public readonly int PerformerStableId;
+            public readonly Entity Presenter;
+            public readonly int PresenterStableId;
             public readonly int BatchAssetId;
             public readonly int GroupIndex;
 
-            public SubmissionKey(Entity performer, int performerStableId, int batchAssetId, int groupIndex)
+            public SubmissionKey(Entity presenter, int presenterStableId, int batchAssetId, int groupIndex)
             {
-                Performer = performer;
-                PerformerStableId = performerStableId;
+                Presenter = presenter;
+                PresenterStableId = presenterStableId;
                 BatchAssetId = batchAssetId;
                 GroupIndex = groupIndex;
             }
 
             public bool Equals(SubmissionKey other)
             {
-                return Performer == other.Performer &&
-                       PerformerStableId == other.PerformerStableId &&
+                return Presenter == other.Presenter &&
+                       PresenterStableId == other.PresenterStableId &&
                        BatchAssetId == other.BatchAssetId &&
                        GroupIndex == other.GroupIndex;
             }
 
             public override bool Equals(object? obj) => obj is SubmissionKey other && Equals(other);
 
-            public override int GetHashCode() => HashCode.Combine(Performer, PerformerStableId, BatchAssetId, GroupIndex);
+            public override int GetHashCode() => HashCode.Combine(Presenter, PresenterStableId, BatchAssetId, GroupIndex);
         }
 
         private struct SubmissionState

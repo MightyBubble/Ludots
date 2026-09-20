@@ -6,9 +6,75 @@
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
   line-height: 1.5;
   font-weight: 400;
+  color-scheme: dark;
+
+  /* shadcn/ui zinc dark + chart（Vercel AI Elements / assistant-ui 共用这张表）。
+     灰阶取 Tailwind zinc；语义色取 chart-1 / chart-3 / chart-5。禁止在 TS 再抄一份。 */
+  --studio-bg: #09090b;
+  --studio-surface: #18181b;
+  --studio-elevated: #27272a;
+  --studio-fill: #3f3f46;
+  --studio-label: #fafafa;
+  --studio-secondary: #a1a1aa;
+  --studio-muted: #71717a;
+  --studio-separator: #27272a;
+  --studio-blue: hsl(220 70% 50%);
+  --studio-yellow: hsl(30 80% 55%);
+  --studio-red: hsl(340 75% 55%);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+html,
+body,
+#root {
+  background: var(--studio-bg);
+  color: var(--studio-label);
+  scrollbar-color: var(--studio-fill) var(--studio-bg);
+  scrollbar-width: thin;
+}
+
+* {
+  scrollbar-color: var(--studio-fill) var(--studio-bg);
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--studio-bg);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--studio-fill);
+  border-radius: 8px;
+  border: 2px solid var(--studio-bg);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--studio-muted);
+}
+
+.react-flow {
+  --xy-theme-color-primary: var(--studio-blue);
+  --xy-selection-background-color: color-mix(in srgb, var(--studio-yellow) 12%, transparent);
+  --xy-selection-border-color: var(--studio-yellow);
+  --xy-controls-button-background-color: var(--studio-surface);
+  --xy-controls-button-background-color-hover: var(--studio-elevated);
+  --xy-controls-button-color: var(--studio-label);
+  --xy-controls-button-color-hover: var(--studio-label);
+  --xy-controls-button-border-color: var(--studio-elevated);
+  --xy-controls-box-shadow: none;
+  --xy-minimap-background-color: var(--studio-bg);
+  --xy-minimap-mask-background-color: color-mix(in srgb, var(--studio-bg) 55%, transparent);
+  --xy-attribution-background-color: var(--studio-surface);
+  --xy-background-color: var(--studio-bg);
+  --xy-edge-label-background-color: var(--studio-surface);
+  --xy-edge-label-color: var(--studio-label);
 }

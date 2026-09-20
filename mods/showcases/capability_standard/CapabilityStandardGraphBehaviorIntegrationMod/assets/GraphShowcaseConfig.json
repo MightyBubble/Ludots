@@ -1,0 +1,12 @@
+{
+  "FeaturedAgentCount": 12,
+  "CrowdBandCount": 10000,
+  "ShowCrowdBand": true,
+  "ThinkPeriodSeconds": 0.2,
+  "ThinkBudgetMs": 5,
+  "SightRadius": 5.5,
+  "AttackRadius": 1.25,
+  "AlertRadius": 5,
+  "PatrolSpeed": 3.2,
+  "ChaseSpeed": 5.5
+}

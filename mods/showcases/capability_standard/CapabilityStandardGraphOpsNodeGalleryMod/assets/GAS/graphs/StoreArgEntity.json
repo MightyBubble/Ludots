@@ -1,0 +1,65 @@
+[
+  {
+    "id": "showcase.graph_op.StoreArgEntity",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "loadWho"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "loadWho",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "store",
+        "op": "StoreArgEntity",
+        "argKey": "GraphOps.Who"
+      },
+      {
+        "id": "call",
+        "op": "InvokeGraph",
+        "functionName": "showcase.graph_op._invokeArgCallee",
+        "entryLabel": "who"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "loadWho",
+        "fromPort": "next",
+        "to": "store"
+      },
+      {
+        "from": "store",
+        "fromPort": "next",
+        "to": "call"
+      },
+      {
+        "from": "call",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "loadWho",
+        "fromPort": "value",
+        "to": "store",
+        "toPort": "value"
+      },
+      {
+        "from": "call",
+        "fromPort": "value",
+        "to": "done",
+        "toPort": "value"
+      }
+    ]
+  }
+]

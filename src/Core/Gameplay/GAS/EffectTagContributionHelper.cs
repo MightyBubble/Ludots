@@ -12,23 +12,6 @@ namespace Ludots.Core.Gameplay.GAS
     {
         public static void GrantToEntity(World world, Entity target, in EffectGrantedTags grantedTags, int stackCount, TagOps tagOps, GasBudget budget = null)
         {
-            GrantToEntityCore(world, target, in grantedTags, stackCount, tagOps, budget, trackDirtyEntity: true);
-        }
-
-        internal static void PrepareGrantToEntity(World world, Entity target, in EffectGrantedTags grantedTags, int stackCount, TagOps tagOps, GasBudget budget = null)
-        {
-            GrantToEntityCore(world, target, in grantedTags, stackCount, tagOps, budget, trackDirtyEntity: false);
-        }
-
-        private static void GrantToEntityCore(
-            World world,
-            Entity target,
-            in EffectGrantedTags grantedTags,
-            int stackCount,
-            TagOps tagOps,
-            GasBudget budget,
-            bool trackDirtyEntity)
-        {
             if (!world.IsAlive(target) || grantedTags.Count <= 0)
             {
                 return;
@@ -53,7 +36,7 @@ namespace Ludots.Core.Gameplay.GAS
                             throw new System.InvalidOperationException(TagOps.RuleRejectedError);
                     }
                 }
-                if (trackDirtyEntity && dirtyFlags.IsAnyTagDirty()) tagOps.MarkDirtyEntity(world, target);
+                if (dirtyFlags.IsAnyTagDirty()) tagOps.MarkDirtyEntity(world, target);
             }
             catch
             {

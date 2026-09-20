@@ -1,0 +1,39 @@
+{
+  "Id": "presenter_blacksmith_dynamic_worker_benchmark",
+  "Tuning": {
+    "LoadedChunkCapacity": 256
+  },
+  "Tags": [
+    "showcase",
+    "presenter",
+    "benchmark",
+    "dynamic",
+    "skinned",
+    "animator"
+  ],
+  "ContinuousHeightmapAsset": "assets/terrain/presenter_blacksmith_dynamic_worker_hills.height",
+  "Metadata": {
+    "presenterBlacksmith": {
+      "dynamicWorkerBenchmarkTotal": 10000,
+      "dynamicWorkerScatterSeed": 61543,
+      "dynamicWorkerScatterPaddingCm": 6000.0,
+      "dynamicWorkerScatterJitterCm": 210.0,
+      "dynamicWorkerMovementPaddingCm": 6000.0,
+      "dynamicWorkerMovementSpeedCmPerSecond": 42.0
+    }
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthCells": 1280,
+      "HeightCells": 1280,
+      "GridCellSizeCm": 100
+    }
+  ],
+  "DefaultCamera": {
+    "TargetXCm": 0,
+    "TargetYCm": 0
+  },
+  "Entities": []
+}

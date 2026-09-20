@@ -1,6 +1,7 @@
 using System.Numerics;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Rendering
 {
@@ -46,6 +47,12 @@ namespace Ludots.Core.Presentation.Rendering
         {
             readonly get => Payload.StableId;
             set => Payload.StableId = value;
+        }
+
+        public int OwnerStableId
+        {
+            readonly get => Payload.OwnerStableId;
+            set => Payload.OwnerStableId = value;
         }
 
         public int MaterialId

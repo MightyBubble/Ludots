@@ -1,0 +1,41 @@
+[
+  {
+    "id": "instanced_batch.demo.presenter",
+    "behaviors": [
+      {
+        "slot": "instancedBatch",
+        "kind": "InstancedBatch",
+        "activeByDefault": true,
+        "instancedBatch": {
+          "batchAssetId": "instanced_batch.demo.grid"
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "instanced_batch_demo_anchor"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "instanced_batch.demo.presenter"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "instanced_batch_demo_anchor"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  }
+]

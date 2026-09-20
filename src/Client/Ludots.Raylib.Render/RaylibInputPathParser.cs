@@ -1,0 +1,78 @@
+using System;
+using Raylib_cs;
+
+namespace Ludots.Raylib.Render
+{
+    public static class RaylibInputPathParser
+    {
+        public static KeyboardKey? ParseKeyboardKey(string path)
+        {
+            // Expected format: "<Keyboard>/w" or "<Keyboard>/space"
+            if (!path.StartsWith("<Keyboard>/", StringComparison.OrdinalIgnoreCase)) return null;
+
+            string keyName = path.Substring(11).ToUpper();
+            
+            // Map common keys
+            if (keyName.Length == 1)
+            {
+                // Single char keys (A-Z, 0-9)
+                char c = keyName[0];
+                if (c >= 'A' && c <= 'Z') return (KeyboardKey)((int)KeyboardKey.KEY_A + (c - 'A'));
+                if (c >= '0' && c <= '9') return (KeyboardKey)((int)KeyboardKey.KEY_ZERO + (c - '0'));
+            }
+
+            if (keyName.Length >= 2 &&
+                keyName[0] == 'F' &&
+                int.TryParse(keyName.AsSpan(1), out int fNum) &&
+                fNum >= 1 && fNum <= 12)
+            {
+                return (KeyboardKey)((int)KeyboardKey.KEY_F1 + (fNum - 1));
+            }
+
+            return keyName switch
+            {
+                "SPACE" => KeyboardKey.KEY_SPACE,
+                "ENTER" => KeyboardKey.KEY_ENTER,
+                "ESCAPE" => KeyboardKey.KEY_ESCAPE,
+                "TAB" => KeyboardKey.KEY_TAB,
+                "BACKSPACE" => KeyboardKey.KEY_BACKSPACE,
+                "INSERT" => KeyboardKey.KEY_INSERT,
+                "DELETE" => KeyboardKey.KEY_DELETE,
+                "PAGEUP" => KeyboardKey.KEY_PAGE_UP,
+                "PAGEDOWN" => KeyboardKey.KEY_PAGE_DOWN,
+                "HOME" => KeyboardKey.KEY_HOME,
+                "END" => KeyboardKey.KEY_END,
+                "MINUS" => KeyboardKey.KEY_MINUS,
+                "EQUAL" => KeyboardKey.KEY_EQUAL,
+                "EQUALS" => KeyboardKey.KEY_EQUAL,
+                "LEFT" => KeyboardKey.KEY_LEFT,
+                "RIGHT" => KeyboardKey.KEY_RIGHT,
+                "UP" => KeyboardKey.KEY_UP,
+                "DOWN" => KeyboardKey.KEY_DOWN,
+                "LEFTSHIFT" => KeyboardKey.KEY_LEFT_SHIFT,
+                "LEFTCONTROL" => KeyboardKey.KEY_LEFT_CONTROL,
+                "LEFTALT" => KeyboardKey.KEY_LEFT_ALT,
+                "RIGHTSHIFT" => KeyboardKey.KEY_RIGHT_SHIFT,
+                "RIGHTCONTROL" => KeyboardKey.KEY_RIGHT_CONTROL,
+                "RIGHTCTRL" => KeyboardKey.KEY_RIGHT_CONTROL,
+                "RIGHTALT" => KeyboardKey.KEY_RIGHT_ALT,
+                "LEFTCTRL" => KeyboardKey.KEY_LEFT_CONTROL,
+                _ => null
+            };
+        }
+
+        public static MouseButton? ParseMouseButton(string path)
+        {
+            if (!path.StartsWith("<Mouse>/", StringComparison.OrdinalIgnoreCase)) return null;
+            string btnName = path.Substring(8).ToUpper();
+
+            return btnName switch
+            {
+                "LEFTBUTTON" => MouseButton.MOUSE_LEFT_BUTTON,
+                "RIGHTBUTTON" => MouseButton.MOUSE_RIGHT_BUTTON,
+                "MIDDLEBUTTON" => MouseButton.MOUSE_MIDDLE_BUTTON,
+                _ => null
+            };
+        }
+    }
+}

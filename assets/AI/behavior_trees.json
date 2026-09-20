@@ -1,0 +1,124 @@
+[
+  {
+    "id": "bt.patrolChaseAttack",
+    "root": "root",
+    "nodes": [
+      {
+        "id": "root",
+        "kind": "Selector",
+        "children": [
+          "engage",
+          "patrol"
+        ]
+      },
+      {
+        "id": "engage",
+        "kind": "Sequence",
+        "children": [
+          "seeEnemy",
+          "engageSelect"
+        ]
+      },
+      {
+        "id": "patrol",
+        "kind": "Action",
+        "leaf": "ScriptSlice",
+        "action": "bt.patrol"
+      },
+      {
+        "id": "seeEnemy",
+        "kind": "Condition",
+        "leaf": "ScriptSlice",
+        "action": "bt.seeEnemy"
+      },
+      {
+        "id": "engageSelect",
+        "kind": "Selector",
+        "children": [
+          "attackSeq",
+          "chase"
+        ]
+      },
+      {
+        "id": "attackSeq",
+        "kind": "Sequence",
+        "children": [
+          "inRange",
+          "attack"
+        ]
+      },
+      {
+        "id": "chase",
+        "kind": "Action",
+        "leaf": "ScriptSlice",
+        "action": "bt.chase"
+      },
+      {
+        "id": "inRange",
+        "kind": "Condition",
+        "leaf": "ScriptSlice",
+        "action": "bt.inAttackRange"
+      },
+      {
+        "id": "attack",
+        "kind": "Action",
+        "leaf": "ScriptSlice",
+        "action": "bt.attack"
+      }
+    ]
+  },
+  {
+    "id": "bt.arenaCrowd",
+    "root": "root",
+    "nodes": [
+      {
+        "id": "root",
+        "kind": "Sequence",
+        "children": [
+          "l1",
+          "l2",
+          "l3",
+          "l4",
+          "l5",
+          "l6",
+          "l7"
+        ]
+      },
+      {
+        "id": "l1",
+        "kind": "Action",
+        "leaf": "AlwaysSuccess"
+      },
+      {
+        "id": "l2",
+        "kind": "Action",
+        "leaf": "AlwaysSuccess"
+      },
+      {
+        "id": "l3",
+        "kind": "Action",
+        "leaf": "AlwaysSuccess"
+      },
+      {
+        "id": "l4",
+        "kind": "Action",
+        "leaf": "AlwaysSuccess"
+      },
+      {
+        "id": "l5",
+        "kind": "Action",
+        "leaf": "AlwaysSuccess"
+      },
+      {
+        "id": "l6",
+        "kind": "Action",
+        "leaf": "AlwaysSuccess"
+      },
+      {
+        "id": "l7",
+        "kind": "Action",
+        "leaf": "AlwaysSuccess"
+      }
+    ]
+  }
+]

@@ -1,0 +1,12 @@
+Assets in this directory are sourced from CC0-licensed packs:
+
+- KayKit Medieval Hexagon Pack 1.0 by Kay Lousberg (CC0)
+  https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0
+  Files: building_blacksmith_blue.*, building_blacksmith_red.*, building_destroyed.*,
+         building_scaffolding.*, building_mine_blue.*, hexagons_medieval.png
+
+- KayKit Character Pack Adventures 1.0 by Kay Lousberg (CC0)
+  https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0
+  Files: Knight.glb, knight_texture.png
+
+All assets are free to use in any project, including commercially, with no attribution required.

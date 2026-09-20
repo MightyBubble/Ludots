@@ -1,0 +1,13 @@
+{
+  "name": "@ludots/dataplane-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/client.js",
+  "exports": {
+    ".": "./src/client.js"
+  },
+  "scripts": {
+    "test": "node --test src/client.test.mjs"
+  }
+}

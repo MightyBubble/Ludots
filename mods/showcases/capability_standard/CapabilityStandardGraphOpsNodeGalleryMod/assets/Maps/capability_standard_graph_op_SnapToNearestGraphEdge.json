@@ -1,0 +1,67 @@
+{
+  "Id": "capability_standard_graph_op_SnapToNearestGraphEdge",
+  "Tags": [
+    "showcase",
+    "capability-standard",
+    "gas",
+    "graph-ops",
+    "per-op"
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.GraphOpsGallery",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "DistanceCm": 2600,
+    "Pitch": 75,
+    "Yaw": 180,
+    "FovYDeg": 50
+  },
+  "Entities": [
+    {
+      "InstanceId": "caster",
+      "Template": "GraphOps.Caster",
+      "Overrides": {
+        "Name": {
+          "Value": "施法者"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": -200,
+            "Y": 0
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "target",
+      "Template": "GraphOps.Target",
+      "Overrides": {
+        "Name": {
+          "Value": "落点"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 36,
+            "Y": 20
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        }
+      }
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "target"
+    }
+  ]
+}

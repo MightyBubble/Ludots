@@ -1,0 +1,12 @@
+{
+  "name": "DualSeatPanelsShowcaseMod",
+  "version": "1.0.0",
+  "description": "Dual-seat split-screen panel showcase: one template panel per seat plus one shared panel, driven by the panel triaxis (ownerKind/audienceSeats/surface) #1315",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "main": "bin/net9.0/DualSeatPanelsShowcaseMod.dll",
+  "author": "Ludots Team",
+  "tags": ["showcase", "panel", "dual-seat", "ui"]
+}

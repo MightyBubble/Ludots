@@ -8,7 +8,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
-$launcher = Join-Path $repoRoot "src\Tools\Ludots.Launcher.Cli\bin\Release\net8.0\Ludots.Launcher.Cli.exe"
+$launcher = Join-Path $repoRoot "src\Tools\Ludots.Launcher.Cli\bin\Release\net9.0\Ludots.Launcher.Cli.exe"
 
 if ([string]::IsNullOrWhiteSpace($ScreenshotPath)) {
     throw "ScreenshotPath is required."

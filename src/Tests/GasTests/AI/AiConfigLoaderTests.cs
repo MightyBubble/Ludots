@@ -43,7 +43,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void AiConfigLoader_RejectsLegacyOrderTagId()
         {
-            using var fixture = AiConfigFixture.Create(orderJson: "{ \"OrderTagId\": 1234, \"SubmitMode\": 0, \"PlayerId\": 0 }");
+            using var fixture = AiConfigFixture.Create(orderJson: "{ \"OrderTagId\": 1234, \"SubmitMode\": 0, \"PlayerId\": 1 }");
 
             var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
 
@@ -54,7 +54,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void AiConfigLoader_RejectsUnknownOrderTypeId()
         {
-            using var fixture = AiConfigFixture.Create(orderJson: "{ \"OrderPayloadKind\": \"TargetEntity\", \"OrderTypeId\": 1234, \"SubmitMode\": 0, \"PlayerId\": 0 }");
+            using var fixture = AiConfigFixture.Create(orderJson: "{ \"OrderPayloadKind\": \"TargetEntity\", \"OrderTypeId\": 1234, \"SubmitMode\": 0, \"PlayerId\": 1 }");
 
             var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
 
@@ -64,7 +64,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void AiConfigLoader_RejectsUnknownOrderTypeKey()
         {
-            using var fixture = AiConfigFixture.Create(orderJson: "{ \"OrderPayloadKind\": \"TargetEntity\", \"OrderTypeKey\": \"missingOrder\", \"SubmitMode\": 0, \"PlayerId\": 0 }");
+            using var fixture = AiConfigFixture.Create(orderJson: "{ \"OrderPayloadKind\": \"TargetEntity\", \"OrderTypeKey\": \"missingOrder\", \"SubmitMode\": 0, \"PlayerId\": 1 }");
 
             var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
 
@@ -135,7 +135,7 @@ namespace Ludots.Tests.GAS
         public void AiConfigLoader_RejectsGoapBareOrderArgBinding()
         {
             using var fixture = AiConfigFixture.Create();
-            fixture.WriteGoapActionsJson("[ { \"id\": \"A0\", \"Cost\": 1, \"Pre\": {\"Mask\":[],\"Values\":[]}, \"Post\": {\"Mask\":[],\"Values\":[]}, \"Order\": { \"OrderPayloadKind\": \"CastAbility\", \"OrderTypeKey\": \"castAbility\", \"SubmitMode\": 0, \"PlayerId\": 0 }, \"Bindings\": [ { \"Op\": \"IntToOrderArg0\", \"SourceKey\": 1 } ] } ]");
+            fixture.WriteGoapActionsJson("[ { \"id\": \"A0\", \"Cost\": 1, \"Pre\": {\"Mask\":[],\"Values\":[]}, \"Post\": {\"Mask\":[],\"Values\":[]}, \"Order\": { \"OrderPayloadKind\": \"CastAbility\", \"OrderTypeKey\": \"castAbility\", \"SubmitMode\": 0, \"PlayerId\": 1 }, \"Bindings\": [ { \"Op\": \"IntToOrderArg0\", \"SourceKey\": 1 } ] } ]");
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => fixture.Load())!;
 
@@ -147,12 +147,60 @@ namespace Ludots.Tests.GAS
         public void AiConfigLoader_RejectsGoapTargetEntityOrderWithoutTargetBinding()
         {
             using var fixture = AiConfigFixture.Create();
-            fixture.WriteGoapActionsJson("[ { \"id\": \"A0\", \"Cost\": 1, \"Pre\": {\"Mask\":[],\"Values\":[]}, \"Post\": {\"Mask\":[],\"Values\":[]}, \"Order\": { \"OrderPayloadKind\": \"TargetEntity\", \"OrderTypeKey\": \"attackTarget\", \"SubmitMode\": 0, \"PlayerId\": 0 }, \"Bindings\": [] } ]");
+            fixture.WriteGoapActionsJson("[ { \"id\": \"A0\", \"Cost\": 1, \"Pre\": {\"Mask\":[],\"Values\":[]}, \"Post\": {\"Mask\":[],\"Values\":[]}, \"Order\": { \"OrderPayloadKind\": \"TargetEntity\", \"OrderTypeKey\": \"attackTarget\", \"SubmitMode\": 0, \"PlayerId\": 1 }, \"Bindings\": [] } ]");
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => fixture.Load())!;
 
             Assert.That(ex.Message, Does.Contain("EntityToTarget"));
             Assert.That(ex.Message, Does.Contain("TargetEntity"));
+        }
+
+        [Test]
+        public void AiConfigLoader_RejectsMissingGoapOrderPlayerId()
+        {
+            using var fixture = AiConfigFixture.Create(orderJson: "{ \"OrderPayloadKind\": \"TargetEntity\", \"OrderTypeKey\": \"attackTarget\", \"SubmitMode\": 0 }");
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => fixture.Load())!;
+
+            Assert.That(ex.Message, Does.Contain("PlayerId"));
+            Assert.That(ex.Message, Does.Contain("must declare"));
+        }
+
+        [TestCase(0)]
+        [TestCase(-1)]
+        public void AiConfigLoader_RejectsNonPositiveGoapOrderPlayerId(int playerId)
+        {
+            using var fixture = AiConfigFixture.Create(orderJson: $"{{ \"OrderPayloadKind\": \"TargetEntity\", \"OrderTypeKey\": \"attackTarget\", \"SubmitMode\": 0, \"PlayerId\": {playerId} }}");
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => fixture.Load())!;
+
+            Assert.That(ex.Message, Does.Contain("PlayerId"));
+            Assert.That(ex.Message, Does.Contain("positive"));
+        }
+
+        [Test]
+        public void AiConfigLoader_RejectsMissingUtilityTaskPlayerId()
+        {
+            using var fixture = AiConfigFixture.Create();
+            fixture.WriteUtilityConfig(includeTaskPlayerId: false);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => fixture.Load())!;
+
+            Assert.That(ex.Message, Does.Contain("PlayerId"));
+            Assert.That(ex.Message, Does.Contain("must declare"));
+        }
+
+        [TestCase(0)]
+        [TestCase(-1)]
+        public void AiConfigLoader_RejectsNonPositiveUtilityTaskPlayerId(int playerId)
+        {
+            using var fixture = AiConfigFixture.Create();
+            fixture.WriteUtilityConfig(taskPlayerId: playerId);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => fixture.Load())!;
+
+            Assert.That(ex.Message, Does.Contain("PlayerId"));
+            Assert.That(ex.Message, Does.Contain("positive"));
         }
 
         [Test]
@@ -229,27 +277,13 @@ namespace Ludots.Tests.GAS
         public void AiConfigLoader_RejectsUtilityAiGraphScoreWriteOp()
         {
             using var fixture = AiConfigFixture.Create();
-            fixture.RegisterScoreGraph(new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat });
-            fixture.WriteUtilityConfig(includeGraphInput: true, considerationInput: "Input.Graph");
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                fixture.RegisterScoreGraph(
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt }))!;
 
-            var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
-
-            Assert.That(ex!.Message, Does.Contain("GAS.GRAPH_KIND.ERR.OperationNotAllowed"));
+            Assert.That(ex.Message, Does.StartWith(GraphKindOperationPolicy.OperationNotAllowedError));
             Assert.That(ex.Message, Does.Contain("WriteBlackboardFloat"));
-        }
-
-        [Test]
-        public void AiConfigLoader_RejectsInfluenceSample01UntilMainLoopWiring()
-        {
-            using var fixture = AiConfigFixture.Create();
-            fixture.WriteUtilityConfig();
-            fixture.WriteUtilityInputsJson(
-                "[ { \"id\": \"Input.Threat\", \"Kind\": \"InfluenceSample01\", \"FieldKey\": \"threat\" } ]");
-
-            var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
-
-            Assert.That(ex!.Message, Does.Contain("InfluenceSample01"));
-            Assert.That(ex.Message, Does.Contain("runtime-injected"));
         }
 
         [Test]
@@ -374,20 +408,20 @@ namespace Ludots.Tests.GAS
 
                 string core = Path.Combine(root, "Core");
                 string mod = Path.Combine(root, "ModA");
-                Directory.CreateDirectory(Path.Combine(core, "Configs", "AI"));
-                Directory.CreateDirectory(Path.Combine(mod, "assets", "Configs", "AI"));
+                Directory.CreateDirectory(Path.Combine(core, "AI"));
+                Directory.CreateDirectory(Path.Combine(mod, "assets", "AI"));
 
-                orderJson ??= "{ \"OrderPayloadKind\": \"TargetEntity\", \"OrderTypeKey\": \"attackTarget\", \"SubmitMode\": 0, \"PlayerId\": 0 }";
+                orderJson ??= "{ \"OrderPayloadKind\": \"TargetEntity\", \"OrderTypeKey\": \"attackTarget\", \"SubmitMode\": 0, \"PlayerId\": 1 }";
                 projectionJson ??= "[ { \"id\": \"R0\", \"Atom\": \"HasEnemy\", \"Op\": \"EntityIsNonNull\", \"EntityKey\": \"Attack.TargetEntity\" } ]";
 
-                File.WriteAllText(Path.Combine(core, "Configs", "AI", "atoms.json"), "[ { \"id\": \"HasEnemy\" } ]");
-                File.WriteAllText(Path.Combine(core, "Configs", "AI", "projection.json"), projectionJson);
-                File.WriteAllText(Path.Combine(core, "Configs", "AI", "utility.json"), "[ { \"id\": \"G0\", \"GoalPresetId\": 1, \"PlanningStrategyId\": 1, \"Weight\": 1, \"Bool\": [ { \"Atom\": \"HasEnemy\", \"TrueScore\": 1, \"FalseScore\": 0 } ] } ]");
-                File.WriteAllText(Path.Combine(core, "Configs", "AI", "goap_actions.json"), $"[ {{ \"id\": \"A0\", \"Cost\": 1, \"Pre\": {{\"Mask\":[],\"Values\":[]}}, \"Post\": {{\"Mask\":[],\"Values\":[]}}, \"Order\": {orderJson}, \"Bindings\": [ {{ \"Op\": \"EntityToTarget\", \"SourceKey\": \"Attack.TargetEntity\" }} ] }} ]");
-                File.WriteAllText(Path.Combine(core, "Configs", "AI", "goap_goals.json"), "[ { \"id\": \"GG0\", \"GoalPresetId\": 1, \"HeuristicWeight\": 1, \"Goal\": { \"Mask\": [\"HasEnemy\"], \"Values\": [\"HasEnemy\"] } } ]");
-                File.WriteAllText(Path.Combine(core, "Configs", "AI", "htn_domain.json"), "{ \"Tasks\": [], \"Methods\": [], \"Subtasks\": [], \"Roots\": [] }");
+                File.WriteAllText(Path.Combine(core, "AI", "atoms.json"), "[ { \"id\": \"HasEnemy\" } ]");
+                File.WriteAllText(Path.Combine(core, "AI", "projection.json"), projectionJson);
+                File.WriteAllText(Path.Combine(core, "AI", "utility.json"), "[ { \"id\": \"G0\", \"GoalPresetId\": 1, \"PlanningStrategyId\": 1, \"Weight\": 1, \"Bool\": [ { \"Atom\": \"HasEnemy\", \"TrueScore\": 1, \"FalseScore\": 0 } ] } ]");
+                File.WriteAllText(Path.Combine(core, "AI", "goap_actions.json"), $"[ {{ \"id\": \"A0\", \"Cost\": 1, \"Pre\": {{\"Mask\":[],\"Values\":[]}}, \"Post\": {{\"Mask\":[],\"Values\":[]}}, \"Order\": {orderJson}, \"Bindings\": [ {{ \"Op\": \"EntityToTarget\", \"SourceKey\": \"Attack.TargetEntity\" }} ] }} ]");
+                File.WriteAllText(Path.Combine(core, "AI", "goap_goals.json"), "[ { \"id\": \"GG0\", \"GoalPresetId\": 1, \"HeuristicWeight\": 1, \"Goal\": { \"Mask\": [\"HasEnemy\"], \"Values\": [\"HasEnemy\"] } } ]");
+                File.WriteAllText(Path.Combine(core, "AI", "htn_domain.json"), "{ \"Tasks\": [], \"Methods\": [], \"Subtasks\": [], \"Roots\": [] }");
 
-                File.WriteAllText(Path.Combine(mod, "assets", "Configs", "AI", "atoms.json"), "[ { \"id\": \"HasCover\" } ]");
+                File.WriteAllText(Path.Combine(mod, "assets", "AI", "atoms.json"), "[ { \"id\": \"HasCover\" } ]");
 
                 var vfs = new VirtualFileSystem();
                 vfs.Mount("Core", core);
@@ -415,7 +449,10 @@ namespace Ludots.Tests.GAS
 
                 var graphs = new GraphProgramRegistry();
                 int graphId = GraphIdRegistry.Register("Graph.AI.Score");
-                graphs.Register(graphId, Array.Empty<GraphInstruction>(), GraphKind.Score);
+                graphs.Register(graphId, new[]
+                {
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+                }, GraphKind.Score);
 
                 return new AiConfigFixture(root, core, pipeline, new AiConfigValidationContext(orderTypes, graphs), graphs, graphId);
             }
@@ -434,9 +471,11 @@ namespace Ludots.Tests.GAS
                 string graphKey = "Graph.AI.Score",
                 string inputKind = "DistanceToTarget",
                 string inputTag = "",
-                string? defaultStance = null)
+                string? defaultStance = null,
+                int taskPlayerId = 1,
+                bool includeTaskPlayerId = true)
             {
-                string ai = Path.Combine(_core, "Configs", "AI");
+                string ai = Path.Combine(_core, "AI");
                 File.WriteAllText(Path.Combine(ai, "target_filters.json"),
                     "[ { \"id\": \"TF.Hostile\", \"MaxResults\": 32, \"Ops\": [ " +
                     "{ \"Kind\": \"SpatialRadius\", \"RadiusCm\": 900 }, " +
@@ -454,8 +493,11 @@ namespace Ludots.Tests.GAS
                     "[ { \"id\": \"Norm.Close\", \"Kind\": \"RangeInverse\", \"Min\": 0, \"Max\": 900 } ]");
                 File.WriteAllText(Path.Combine(ai, "curves.json"),
                     "[ { \"id\": \"Curve.Linear\", \"Kind\": \"Linear\" } ]");
+                string taskPlayerProperty = includeTaskPlayerId
+                    ? $", \"PlayerId\": {taskPlayerId}"
+                    : string.Empty;
                 File.WriteAllText(Path.Combine(ai, "tasks.json"),
-                    $"[ {{ \"id\": \"Task.Attack\", \"Kind\": \"SubmitOrder\", \"OrderPayloadKind\": \"CastAbility\", \"OrderTypeKey\": \"{taskOrderTypeKey}\", \"AbilitySlotIndex\": 0, \"SubmitMode\": 0, \"PlayerId\": 0 }} ]");
+                    $"[ {{ \"id\": \"Task.Attack\", \"Kind\": \"SubmitOrder\", \"OrderPayloadKind\": \"CastAbility\", \"OrderTypeKey\": \"{taskOrderTypeKey}\", \"AbilitySlotIndex\": 0, \"SubmitMode\": 0{taskPlayerProperty} }} ]");
                 File.WriteAllText(Path.Combine(ai, "decisions.json"),
                     "[ { \"id\": \"Decision.Attack\", " +
                     $"\"TargetFilter\": \"{decisionTargetFilter}\", " +
@@ -478,27 +520,27 @@ namespace Ludots.Tests.GAS
 
             public void WriteProfilesJson(string json)
             {
-                File.WriteAllText(Path.Combine(_core, "Configs", "AI", "profiles.json"), json);
+                File.WriteAllText(Path.Combine(_core, "AI", "profiles.json"), json);
             }
 
             public void WriteUtilityInputsJson(string json)
             {
-                File.WriteAllText(Path.Combine(_core, "Configs", "AI", "inputs.json"), json);
+                File.WriteAllText(Path.Combine(_core, "AI", "inputs.json"), json);
             }
 
             public void WriteUtilityActuatorsJson(string json)
             {
-                File.WriteAllText(Path.Combine(_core, "Configs", "AI", "actuators.json"), json);
+                File.WriteAllText(Path.Combine(_core, "AI", "actuators.json"), json);
             }
 
             public void WriteUtilityTasksJson(string json)
             {
-                File.WriteAllText(Path.Combine(_core, "Configs", "AI", "tasks.json"), json);
+                File.WriteAllText(Path.Combine(_core, "AI", "tasks.json"), json);
             }
 
             public void WriteGoapActionsJson(string json)
             {
-                File.WriteAllText(Path.Combine(_core, "Configs", "AI", "goap_actions.json"), json);
+                File.WriteAllText(Path.Combine(_core, "AI", "goap_actions.json"), json);
             }
 
             public AiCompiledRuntime Load()
@@ -522,6 +564,20 @@ namespace Ludots.Tests.GAS
                 {
                 }
             }
+        }
+
+                [Test]
+        public void AiConfigLoader_RejectsInfluenceSample01UntilMainLoopWiring()
+        {
+            using var fixture = AiConfigFixture.Create();
+            fixture.WriteUtilityConfig();
+            fixture.WriteUtilityInputsJson(
+                "[ { \"id\": \"Input.Threat\", \"Kind\": \"InfluenceSample01\", \"FieldKey\": \"threat\" } ]");
+
+            var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
+
+            Assert.That(ex!.Message, Does.Contain("InfluenceSample01"));
+            Assert.That(ex.Message, Does.Contain("runtime-injected"));
         }
     }
 }

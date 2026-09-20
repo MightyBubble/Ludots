@@ -1,13 +1,6 @@
 {
   "mapId": "formation_capability_showcase",
   "presentation": {
-    "requiredMeshAssetIds": [
-      "mass_navigation.agent.soldier",
-      "mass_navigation.command.marker"
-    ],
-    "blockerPerformerId": null,
-    "hotspotPerformerId": null,
-    "hotspotTemplateId": null,
     "teams": []
   },
   "scenario": {

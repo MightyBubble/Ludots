@@ -19,6 +19,7 @@ using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {
@@ -97,7 +98,7 @@ namespace Ludots.Tests.GAS
                     new UtilityAiCurveDefinition(UtilityAiCurveKind.Linear, 1f),
                     new UtilityAiCurveDefinition(UtilityAiCurveKind.Linear, 1f)
                 },
-                new[] { new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, AiOrderPayloadKind.CastAbility, 102, 0, (int)OrderSubmitMode.Immediate, 0) },
+                new[] { new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, AiOrderPayloadKind.CastAbility, 102, 0, (int)OrderSubmitMode.Immediate, 1) },
                 Array.Empty<UtilityAiStanceDefinition>(),
                 Array.Empty<UtilityAiActuatorDefinition>());
             fixture.AddActor();
@@ -239,25 +240,12 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void UtilityAiDecisionSystem_InfluenceSample01_WithoutRegistry_Throws()
-        {
-            using var fixture = RuntimeFixture.Create();
-            _ = fixture.CreateHostile(100, 0);
-            var runtime = fixture.CreateSingleDecisionRuntime(
-                orderTypeId: 102,
-                inputKind: UtilityAiInputKind.InfluenceSample01);
-            fixture.AddActor();
-
-            Assert.Throws<InvalidOperationException>(() => fixture.RunDecision(runtime));
-        }
-
-        [Test]
         public void UtilityAiDecisionSystem_ScoreGraphBudgetExhaustionIsObservable()
         {
             using var fixture = RuntimeFixture.Create();
             _ = fixture.CreateHostile(100, 0);
             const int graphId = 3001;
-            fixture.Graphs.Register(graphId, Array.Empty<GraphInstruction>(), GraphKind.Score);
+            fixture.Graphs.Register(graphId, new[] { new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt } }, GraphKind.Score);
             var runtime = fixture.CreateGraphScoreRuntime(orderTypeId: 102, graphId: graphId, maxCandidates: 1, graphConsiderationCount: 2);
             fixture.AddActor();
 
@@ -588,7 +576,7 @@ namespace Ludots.Tests.GAS
                     new[] { new UtilityAiInputDefinition(inputKind, inputKind == UtilityAiInputKind.Constant ? 1 : 0, 0) },
                     new[] { new UtilityAiNormalizationDefinition(inputKind == UtilityAiInputKind.Constant ? UtilityAiNormalizationKind.Identity : UtilityAiNormalizationKind.RangeInverse, 0f, 250000f) },
                     new[] { new UtilityAiCurveDefinition(UtilityAiCurveKind.Linear, 1f) },
-                    new[] { new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, AiOrderPayloadKind.CastAbility, orderTypeId, abilitySlotIndex, (int)OrderSubmitMode.Immediate, 0) },
+                    new[] { new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, AiOrderPayloadKind.CastAbility, orderTypeId, abilitySlotIndex, (int)OrderSubmitMode.Immediate, 1) },
                     Array.Empty<UtilityAiStanceDefinition>(),
                     Array.Empty<UtilityAiActuatorDefinition>());
             }
@@ -619,8 +607,8 @@ namespace Ludots.Tests.GAS
                     new[] { new UtilityAiCurveDefinition(UtilityAiCurveKind.Linear, 1f) },
                     new[]
                     {
-                        new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, AiOrderPayloadKind.CastAbility, 201, 0, (int)OrderSubmitMode.Immediate, 0),
-                        new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, AiOrderPayloadKind.CastAbility, 202, 0, (int)OrderSubmitMode.Immediate, 0)
+                        new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, AiOrderPayloadKind.CastAbility, 201, 0, (int)OrderSubmitMode.Immediate, 1),
+                        new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, AiOrderPayloadKind.CastAbility, 202, 0, (int)OrderSubmitMode.Immediate, 1)
                     },
                     Array.Empty<UtilityAiStanceDefinition>(),
                     Array.Empty<UtilityAiActuatorDefinition>());
@@ -653,7 +641,7 @@ namespace Ludots.Tests.GAS
                     new[] { new UtilityAiInputDefinition(UtilityAiInputKind.GraphScore, 0, graphId) },
                     new[] { new UtilityAiNormalizationDefinition(UtilityAiNormalizationKind.Identity, 0f, 1f) },
                     new[] { new UtilityAiCurveDefinition(UtilityAiCurveKind.Linear, 1f) },
-                    new[] { new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, AiOrderPayloadKind.CastAbility, orderTypeId, 0, (int)OrderSubmitMode.Immediate, 0) },
+                    new[] { new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, AiOrderPayloadKind.CastAbility, orderTypeId, 0, (int)OrderSubmitMode.Immediate, 1) },
                     Array.Empty<UtilityAiStanceDefinition>(),
                     Array.Empty<UtilityAiActuatorDefinition>());
             }
@@ -725,6 +713,21 @@ namespace Ludots.Tests.GAS
             public void WriteBlackboardEntity(Entity entity, int keyId, Entity value) { }
             public bool TryLoadConfigFloat(int keyId, out float value) { value = 0f; return false; }
             public bool TryLoadConfigInt(int keyId, out int value) { value = 0; return false; }
+            public void SetWorldPosition(Entity target, int xCm, int yCm) { }
+            public void SpawnTemplate(int templateKeyId, Entity source, float xCm, float yCm, bool hasPosition) { }
+        }
+
+                [Test]
+        public void UtilityAiDecisionSystem_InfluenceSample01_WithoutRegistry_Throws()
+        {
+            using var fixture = RuntimeFixture.Create();
+            _ = fixture.CreateHostile(100, 0);
+            var runtime = fixture.CreateSingleDecisionRuntime(
+                orderTypeId: 102,
+                inputKind: UtilityAiInputKind.InfluenceSample01);
+            fixture.AddActor();
+
+            Assert.Throws<InvalidOperationException>(() => fixture.RunDecision(runtime));
         }
     }
 }

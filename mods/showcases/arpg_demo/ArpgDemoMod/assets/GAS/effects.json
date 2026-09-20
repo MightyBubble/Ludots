@@ -1,9 +1,6 @@
 [
   {
     "id": "Effect.Arpg.Poison",
-    "tags": [
-      "Effect.Arpg.Poison"
-    ],
     "presetType": "DoT",
     "lifetime": "After",
     "duration": {
@@ -23,13 +20,13 @@
       "policy": "RefreshDuration",
       "overflowPolicy": "RejectNew"
     },
-    "participatesInResponse": false
+    "participatesInResponse": false,
+    "categories": [
+      "Effect.Arpg.Poison"
+    ]
   },
   {
     "id": "Effect.Arpg.HealPotion",
-    "tags": [
-      "Effect.Arpg.HealPotion"
-    ],
     "presetType": "Heal",
     "lifetime": "Instant",
     "modifiers": [
@@ -39,13 +36,13 @@
         "value": 25
       }
     ],
-    "participatesInResponse": false
+    "participatesInResponse": false,
+    "categories": [
+      "Effect.Arpg.HealPotion"
+    ]
   },
   {
     "id": "Effect.Arpg.FireArrow",
-    "tags": [
-      "Effect.Arpg.FireArrow"
-    ],
     "presetType": "LaunchProjectile",
     "lifetime": "Instant",
     "projectile": {
@@ -71,13 +68,13 @@
         "value": 1
       }
     },
-    "participatesInResponse": false
+    "participatesInResponse": false,
+    "categories": [
+      "Effect.Arpg.FireArrow"
+    ]
   },
   {
     "id": "Effect.Arpg.SummonWolf",
-    "tags": [
-      "Effect.Arpg.SummonWolf"
-    ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "unitCreation": {
@@ -87,13 +84,13 @@
       "onSpawnEffect": "Effect.Arpg.WolfSpawnBuff",
       "placementPattern": "Scatter"
     },
-    "participatesInResponse": false
+    "participatesInResponse": false,
+    "categories": [
+      "Effect.Arpg.SummonWolf"
+    ]
   },
   {
     "id": "Effect.Arpg.WolfSpawnBuff",
-    "tags": [
-      "Effect.Arpg.WolfSpawnBuff"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "duration": {
@@ -108,13 +105,13 @@
         "value": 5
       }
     ],
-    "participatesInResponse": false
+    "participatesInResponse": false,
+    "categories": [
+      "Effect.Arpg.WolfSpawnBuff"
+    ]
   },
   {
     "id": "Effect.Arpg.Bleed",
-    "tags": [
-      "Effect.Arpg.Bleed"
-    ],
     "presetType": "DoT",
     "lifetime": "After",
     "participatesInResponse": true,
@@ -141,13 +138,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Arpg.Bleed"
     ]
   },
   {
     "id": "Effect.Arpg.IronSkin",
-    "tags": [
-      "Effect.Arpg.Buff"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -169,6 +166,9 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Arpg.Buff"
     ]
   }
 ]

@@ -141,7 +141,7 @@ namespace Ludots.Core.UI.ProductionOverview
         {
             if (sourceKind is ProductionOverviewSourceKind.EntityCollection
                 or ProductionOverviewSourceKind.ControlPlaneView
-                or ProductionOverviewSourceKind.LocalPlayerRep)
+                or ProductionOverviewSourceKind.SolePossessedRep)
             {
                 if (string.IsNullOrWhiteSpace(definition.SourceRef))
                 {
@@ -264,7 +264,7 @@ namespace Ludots.Core.UI.ProductionOverview
         {
             return value switch
             {
-                ProductionOverviewSourceKindIds.LocalPlayerRep => ProductionOverviewSourceKind.LocalPlayerRep,
+                ProductionOverviewSourceKindIds.SolePossessedRep => ProductionOverviewSourceKind.SolePossessedRep,
                 ProductionOverviewSourceKindIds.ExplicitEntity => ProductionOverviewSourceKind.ExplicitEntity,
                 ProductionOverviewSourceKindIds.EntityCollection => ProductionOverviewSourceKind.EntityCollection,
                 ProductionOverviewSourceKindIds.ControlPlaneView => ProductionOverviewSourceKind.ControlPlaneView,

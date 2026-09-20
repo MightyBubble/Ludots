@@ -1,7 +1,7 @@
 [
   {
     "id": "Ability.Showcase.Superweapon.Context",
-    "catalogTags": [
+    "categories": [
       "ability.family.superweapon",
       "ability.catalog.superweapon_context"
     ],

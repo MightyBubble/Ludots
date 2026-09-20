@@ -6,7 +6,8 @@ using Arch.System;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Systems
 {
@@ -19,20 +20,20 @@ namespace Ludots.Core.Presentation.Systems
         private const int FeedbackValue0Offset = 5;
 
         private readonly AnimatorControllerRegistry _controllers;
-        private readonly PerformerEntityRuntime _runtime;
-        private readonly PerformerDefinitionRegistry _definitions;
-        private readonly PerformerAnimatorStateBuffer _animatorStates;
+        private readonly PresenterEntityRuntime _runtime;
+        private readonly PresenterDefinitionRegistry _definitions;
+        private readonly PresenterAnimatorStateBuffer _animatorStates;
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private readonly QueryDescription _activeAnimatorQuery = new QueryDescription()
-            .WithAll<PerformerState, PerfHasAnimator, PerformerFloatParams, PerformerFloatDefaults, PerformerParent>();
-        private PerformerAnimatorSlot _scratchAnimatorSlot;
+            .WithAll<PresenterState, PerfHasAnimator, PresenterFloatParams, PresenterFloatDefaults, PresenterParent>();
+        private PresenterAnimatorSlot _scratchAnimatorSlot;
 
         public AnimatorRuntimeSystem(
             World world,
             AnimatorControllerRegistry controllers,
-            PerformerEntityRuntime runtime,
-            PerformerDefinitionRegistry definitions,
-            PerformerAnimatorStateBuffer animatorStates,
+            PresenterEntityRuntime runtime,
+            PresenterDefinitionRegistry definitions,
+            PresenterAnimatorStateBuffer animatorStates,
             PresentationTimingDiagnostics? timingDiagnostics = null)
             : base(world)
         {
@@ -48,27 +49,27 @@ namespace Ludots.Core.Presentation.Systems
             long start = _timingDiagnostics != null ? Stopwatch.GetTimestamp() : 0L;
             float tickDt = dt;
             int cachedDefId = -1;
-            PerformerDefinition? cachedDefinition = null;
+            PresenterDefinition? cachedDefinition = null;
             int cachedControllerId = -1;
             AnimatorControllerDefinition? cachedController = null;
             foreach (ref var chunk in World.Query(in _activeAnimatorQuery))
             {
                 ref Entity entityFirst = ref chunk.Entity(0);
-                Span<PerformerState> states = chunk.GetSpan<PerformerState>();
-                Span<PerformerFloatParams> floatParams = chunk.GetSpan<PerformerFloatParams>();
-                Span<PerformerFloatDefaults> floatDefaults = chunk.GetSpan<PerformerFloatDefaults>();
-                Span<PerformerParent> parents = chunk.GetSpan<PerformerParent>();
-                bool hasAnimatorSlots = chunk.Has<PerformerAnimatorSlot>();
-                Span<PerformerAnimatorSlot> animatorSlots = hasAnimatorSlots
-                    ? chunk.GetSpan<PerformerAnimatorSlot>()
+                Span<PresenterState> states = chunk.GetSpan<PresenterState>();
+                Span<PresenterFloatParams> floatParams = chunk.GetSpan<PresenterFloatParams>();
+                Span<PresenterFloatDefaults> floatDefaults = chunk.GetSpan<PresenterFloatDefaults>();
+                Span<PresenterParent> parents = chunk.GetSpan<PresenterParent>();
+                bool hasAnimatorSlots = chunk.Has<PresenterAnimatorSlot>();
+                Span<PresenterAnimatorSlot> animatorSlots = hasAnimatorSlots
+                    ? chunk.GetSpan<PresenterAnimatorSlot>()
                     : default;
                 foreach (int index in chunk)
                 {
-                    ref PerformerState state = ref states[index];
+                    ref PresenterState state = ref states[index];
                     if (state.DefId != cachedDefId)
                     {
                         cachedDefId = state.DefId;
-                        cachedDefinition = _definitions.TryGet(state.DefId, out PerformerDefinition definition)
+                        cachedDefinition = _definitions.TryGet(state.DefId, out PresenterDefinition definition)
                             ? definition
                             : null;
                     }
@@ -93,7 +94,7 @@ namespace Ludots.Core.Presentation.Systems
                                 _scratchAnimatorSlot.Value = -1;
                             }
 
-                            ref PerformerAnimatorSlot animatorSlot = ref hasAnimatorSlots
+                            ref PresenterAnimatorSlot animatorSlot = ref hasAnimatorSlots
                                 ? ref animatorSlots[index]
                                 : ref _scratchAnimatorSlot;
                             UpdateAnimator(
@@ -125,7 +126,7 @@ namespace Ludots.Core.Presentation.Systems
                             _scratchAnimatorSlot.Value = -1;
                         }
 
-                        ref PerformerAnimatorSlot animatorSlot = ref hasAnimatorSlots
+                        ref PresenterAnimatorSlot animatorSlot = ref hasAnimatorSlots
                             ? ref animatorSlots[index]
                             : ref _scratchAnimatorSlot;
                         UpdateAnimator(
@@ -143,16 +144,16 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             if (_timingDiagnostics != null)
-                _timingDiagnostics.ObservePerformerAnimator((Stopwatch.GetTimestamp() - start) * 1000d / Stopwatch.Frequency);
+                _timingDiagnostics.ObservePresenterAnimator((Stopwatch.GetTimestamp() - start) * 1000d / Stopwatch.Frequency);
         }
 
         private void UpdateAnimator(
             Entity entity,
             in AnimatorConfig config,
-            ref PerformerFloatParams floatParams,
-            ref PerformerFloatDefaults floatDefaults,
-            in PerformerParent parent,
-            ref PerformerAnimatorSlot animatorSlot,
+            ref PresenterFloatParams floatParams,
+            ref PresenterFloatDefaults floatDefaults,
+            in PresenterParent parent,
+            ref PresenterAnimatorSlot animatorSlot,
             float dt,
             ref int cachedControllerId,
             ref AnimatorControllerDefinition? cachedController)
@@ -323,9 +324,9 @@ namespace Ludots.Core.Presentation.Systems
             AnimatorControllerDefinition definition,
             ref AnimatorRuntimeState runtime,
             ref AnimatorFeedbackBuffer feedback,
-            ref PerformerFloatParams floatParams,
-            ref PerformerFloatDefaults floatDefaults,
-            in PerformerParent parent,
+            ref PresenterFloatParams floatParams,
+            ref PresenterFloatDefaults floatDefaults,
+            in PresenterParent parent,
             in AnimatorStateDefinition currentState,
             float normalizedTime,
             float currentPlaybackSpeed)
@@ -370,9 +371,9 @@ namespace Ludots.Core.Presentation.Systems
             AnimatorControllerDefinition definition,
             ref AnimatorRuntimeState runtime,
             ref AnimatorFeedbackBuffer feedback,
-            ref PerformerFloatParams floatParams,
-            ref PerformerFloatDefaults floatDefaults,
-            in PerformerParent parent,
+            ref PresenterFloatParams floatParams,
+            ref PresenterFloatDefaults floatDefaults,
+            in PresenterParent parent,
             in AnimatorStateDefinition currentState,
             float currentNormalizedTime,
             float currentPlaybackSpeed)
@@ -496,9 +497,9 @@ namespace Ludots.Core.Presentation.Systems
             AnimatorControllerDefinition definition,
             ref AnimatorRuntimeState runtime,
             ref AnimatorFeedbackBuffer feedback,
-            ref PerformerFloatParams floatParams,
-            ref PerformerFloatDefaults floatDefaults,
-            in PerformerParent parent,
+            ref PresenterFloatParams floatParams,
+            ref PresenterFloatDefaults floatDefaults,
+            in PresenterParent parent,
             int sourceStateIndex,
             in AnimatorStateDefinition sourceState,
             float normalizedTime,
@@ -601,12 +602,12 @@ namespace Ludots.Core.Presentation.Systems
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private float ResolvePlaybackSpeed(
-            Entity performer,
+            Entity presenter,
             in AnimatorConfig config,
             in AnimatorStateDefinition currentState,
-            ref PerformerFloatParams floatParams,
-            ref PerformerFloatDefaults floatDefaults,
-            in PerformerParent parent)
+            ref PresenterFloatParams floatParams,
+            ref PresenterFloatDefaults floatDefaults,
+            in PresenterParent parent)
         {
             if (config.SpeedParamKey < 0)
             {
@@ -614,7 +615,7 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             float multiplier = ResolveRequiredFloatParam(
-                performer,
+                presenter,
                 config.SpeedParamKey,
                 ref floatParams,
                 ref floatDefaults,
@@ -630,11 +631,11 @@ namespace Ludots.Core.Presentation.Systems
         }
 
         private float ResolveRequiredFloatParam(
-            Entity performer,
+            Entity presenter,
             int paramKey,
-            ref PerformerFloatParams floatParams,
-            ref PerformerFloatDefaults floatDefaults,
-            in PerformerParent parent,
+            ref PresenterFloatParams floatParams,
+            ref PresenterFloatDefaults floatDefaults,
+            in PresenterParent parent,
             string context)
         {
             if (paramKey < 0)
@@ -642,10 +643,10 @@ namespace Ludots.Core.Presentation.Systems
                 throw new InvalidOperationException($"Animator {context} requires a concrete float parameter key.");
             }
 
-            if (!TryResolveFloatFast(performer, paramKey, ref floatParams, ref floatDefaults, in parent, out float value))
+            if (!TryResolveFloatFast(presenter, paramKey, ref floatParams, ref floatDefaults, in parent, out float value))
             {
                 throw new InvalidOperationException(
-                    $"Animator {context} requires float parameter key {paramKey}, but it is missing from performer {performer.Id} and its performer parent chain.");
+                    $"Animator {context} requires float parameter key {paramKey}, but it is missing from presenter {presenter.Id} and its presenter parent chain.");
             }
 
             if (!float.IsFinite(value))
@@ -657,28 +658,28 @@ namespace Ludots.Core.Presentation.Systems
             return value;
         }
 
-        private int ResolveRequiredIntParam(Entity performer, int paramKey, string context)
+        private int ResolveRequiredIntParam(Entity presenter, int paramKey, string context)
         {
             if (paramKey < 0)
             {
                 throw new InvalidOperationException($"Animator {context} requires a concrete int parameter key.");
             }
 
-            if (!_runtime.TryResolveInt(performer, paramKey, out int value))
+            if (!_runtime.TryResolveInt(presenter, paramKey, out int value))
             {
                 throw new InvalidOperationException(
-                    $"Animator {context} requires int parameter key {paramKey}, but it is missing from performer {performer.Id} and its performer parent chain.");
+                    $"Animator {context} requires int parameter key {paramKey}, but it is missing from presenter {presenter.Id} and its presenter parent chain.");
             }
 
             return value;
         }
 
         private bool TryResolveFloatFast(
-            Entity performer,
+            Entity presenter,
             int paramKey,
-            ref PerformerFloatParams floatParams,
-            ref PerformerFloatDefaults floatDefaults,
-            in PerformerParent parent,
+            ref PresenterFloatParams floatParams,
+            ref PresenterFloatDefaults floatDefaults,
+            in PresenterParent parent,
             out float value)
         {
             if (floatParams.TryGet(paramKey, out value) ||
@@ -690,30 +691,30 @@ namespace Ludots.Core.Presentation.Systems
             Entity current = parent.Parent;
             while (current != Entity.Null && World.IsAlive(current))
             {
-                if (World.Has<PerformerFloatParams>(current))
+                if (World.Has<PresenterFloatParams>(current))
                 {
-                    ref PerformerFloatParams parentParams = ref World.Get<PerformerFloatParams>(current);
+                    ref PresenterFloatParams parentParams = ref World.Get<PresenterFloatParams>(current);
                     if (parentParams.TryGet(paramKey, out value))
                     {
                         return true;
                     }
                 }
 
-                if (World.Has<PerformerFloatDefaults>(current))
+                if (World.Has<PresenterFloatDefaults>(current))
                 {
-                    ref PerformerFloatDefaults parentDefaults = ref World.Get<PerformerFloatDefaults>(current);
+                    ref PresenterFloatDefaults parentDefaults = ref World.Get<PresenterFloatDefaults>(current);
                     if (parentDefaults.TryGet(paramKey, out value))
                     {
                         return true;
                     }
                 }
 
-                if (!World.Has<PerformerParent>(current))
+                if (!World.Has<PresenterParent>(current))
                 {
                     break;
                 }
 
-                current = World.Get<PerformerParent>(current).Parent;
+                current = World.Get<PresenterParent>(current).Parent;
             }
 
             value = default;

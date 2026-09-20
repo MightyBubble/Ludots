@@ -1,0 +1,42 @@
+{
+  "op": "WriteMapVarFloat",
+  "driver": "script",
+  "title": "士气补给",
+  "beat": "一次补给写回士气变量，地图记得这份涨幅。",
+  "detailTemplate": "补给到账，士气变量写回了新读数。",
+  "assertDetailContains": [
+    "士气变量",
+    "补给"
+  ],
+  "featuredNodeId": "writeMorale",
+  "graphKind": "Script",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "补给官",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ],
+  "variables": [
+    {
+      "name": "gallery.morale",
+      "type": "float",
+      "initial": 0.5
+    }
+  ]
+}

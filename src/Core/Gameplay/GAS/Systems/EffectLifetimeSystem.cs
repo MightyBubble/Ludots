@@ -26,8 +26,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         public const string ResetAfterExternalCommitError =
             "GAS.EFFECT_LIFETIME.ERR.ResetAfterExternalCommit";
 
-        private static readonly QueryDescription _activeEffectsQuery = new QueryDescription()
-            .WithAll<GameplayEffect, EffectContext>();
         private readonly EffectRequestQueue? _effectRequests;
         private readonly GasBudget? _budget;
         private readonly Ludots.Core.Engine.IClock _clock;
@@ -53,7 +51,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly Entity[] _resolverBuffer = new Entity[256];
         private readonly BuiltinHandlerExecutionContext _builtinRuntime = new BuiltinHandlerExecutionContext();
         private readonly EffectPhaseSideEffectTransaction _phaseTransaction;
-        private int _fanOutDropped;
 
 
         /// <summary>
@@ -75,6 +72,23 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly List<Entity> _dirtyTargets;
         private readonly List<Entity> _effectsToDestroy;
         private readonly Entity[] _effectSnapshot;
+        private readonly List<Entity> _dueEffectsThisSlice;
+
+        private EffectDueWheel? _dueWheel;
+
+        /// <summary>
+        /// 共享到期时间轮（由 EffectProcessingLoopSystem 注入；未注入时懒建私有轮，
+        /// 此时提交钩子不可达，效果入轮依赖首个 slice 的 Rebuild）。
+        /// </summary>
+        internal EffectDueWheel? DueWheel
+        {
+            get => _dueWheel;
+            set
+            {
+                _dueWheel = value;
+                _phaseTransaction.DueWheel = value;
+            }
+        }
 
         private enum LifetimeStage : byte
         {
@@ -92,15 +106,18 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private LifetimeStage _stage;
         private int _snapshotCount;
         private int _cursor;
+        private int _dueCursor;
         private bool _externalWorkCommitted;
         private bool _graphTransactionBound;
 
         public int MaxWorkUnitsPerSlice { get; set; } = int.MaxValue;
         public int SnapshotCapacity => _effectSnapshot.Length;
         public int LastSliceProcessed { get; private set; }
-        public int DeferredEntityCount => _sliceActive && _stage == LifetimeStage.Scan ? _snapshotCount - _cursor : 0;
+        public int DeferredEntityCount => _sliceActive && _stage == LifetimeStage.Scan
+            ? (_dueEffectsThisSlice.Count - _dueCursor) + (_snapshotCount - _cursor)
+            : 0;
 
-        public EffectLifetimeSystem(World world, Ludots.Core.Engine.IClock clock, GasConditionRegistry conditions, int snapshotCapacity, int fanOutCommandCapacity, EffectRequestQueue? effectRequests = null, GasBudget? budget = null, EffectTemplateRegistry? templates = null, ISpatialQueryService? spatialQueries = null, RuntimeEntitySpawnQueue? spawnRequests = null, RuntimeEntityLifecycleQueue? lifecycleRequests = null, EntityLifecycleRuntimeServices? lifecycleServices = null, EffectPhaseExecutor? phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi? graphApi = null, TagOps? tagOps = null, ExchangeRuntime? exchangeRuntime = null, ProgressionRequirementEvaluator? progressionEvaluator = null, OrderTypeRegistry? orderTypeRegistry = null, OrderRuleRegistry? orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime? relationshipRuntime = null, GasPresentationEventBuffer? presentationEvents = null, KnowledgeAreaRevealRuntime? knowledgeAreaRevealRuntime = null, OrderQueue? orderIntake = null, RootBudgetTable? fanOutBudget = null) : base(world)
+        public EffectLifetimeSystem(World world, Ludots.Core.Engine.IClock clock, GasConditionRegistry conditions, int snapshotCapacity, int fanOutCommandCapacity, EffectRequestQueue? effectRequests = null, GasBudget? budget = null, EffectTemplateRegistry? templates = null, ISpatialQueryService? spatialQueries = null, RuntimeEntitySpawnQueue? spawnRequests = null, RuntimeEntityLifecycleQueue? lifecycleRequests = null, EntityLifecycleRuntimeServices? lifecycleServices = null, EffectPhaseExecutor? phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi? graphApi = null, TagOps? tagOps = null, ExchangeRuntime? exchangeRuntime = null, ProgressionRequirementEvaluator? progressionEvaluator = null, OrderTypeRegistry? orderTypeRegistry = null, OrderRuleRegistry? orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime? relationshipRuntime = null, GasPresentationEventBuffer? presentationEvents = null, KnowledgeAreaRevealRuntime? knowledgeAreaRevealRuntime = null, OrderQueue? orderIntake = null, RootBudgetTable? fanOutBudget = null, Ludots.Core.Movement.PoseAuthorityArbiter? poseAuthorityArbiter = null, Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry? aggregateDirty = null) : base(world)
         {
             if (snapshotCapacity <= 0)
             {
@@ -116,6 +133,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _removePhaseGraphs = new List<PhaseGraphEntry>(snapshotCapacity);
             _dirtyTargets = new List<Entity>(snapshotCapacity);
             _effectsToDestroy = new List<Entity>(snapshotCapacity);
+            _dueEffectsThisSlice = new List<Entity>(snapshotCapacity);
             _effectRequests = effectRequests;
             _budget = budget;
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
@@ -140,6 +158,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _builtinRuntime.KnowledgeAreaReveal = knowledgeAreaRevealRuntime;
             _builtinRuntime.TagOps = _tagOps;
             _builtinRuntime.OrderIntake = orderIntake;
+            _builtinRuntime.PoseAuthorityArbiter = poseAuthorityArbiter;
             _orderTypeRegistry = orderTypeRegistry;
             _orderRuleRegistry = orderRuleRegistry;
             _stepRateHz = GasStepRate.RequirePositive(stepRateHz, nameof(EffectLifetimeSystem));
@@ -150,7 +169,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 spawnRequests,
                 presentationEvents,
                 snapshotCapacity,
-                _fanOutBudget);
+                _fanOutBudget,
+                poseAuthorityArbiter,
+                aggregateDirty);
         }
 
         private void RefreshBuiltinOrderContext()
@@ -199,6 +220,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             {
                 if (_stage == LifetimeStage.Scan)
                 {
+                    if (_dueCursor < _dueEffectsThisSlice.Count)
+                    {
+                        Entity dueEntity = _dueEffectsThisSlice[_dueCursor++];
+                        CountWork(ref workUnits);
+                        ProcessDueEffect(dueEntity);
+                        continue;
+                    }
+
                     if (_cursor >= _snapshotCount)
                     {
                         _stage = LifetimeStage.PeriodGraphs;
@@ -208,33 +237,29 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                     Entity entity = _effectSnapshot[_cursor++];
                     CountWork(ref workUnits);
-                    if (!World.IsAlive(entity) || !World.Has<GameplayEffect>(entity) || !World.Has<EffectContext>(entity))
-                    {
-                        continue;
-                    }
-
-                    GameplayEffect effect = World.Get<GameplayEffect>(entity);
-                    EffectContext context = World.Get<EffectContext>(entity);
-                    bool stageEffectState = false;
-                    if (World.Has<EffectPeriodicTick>(entity))
-                    {
-                        ProcessPeriod(entity, ref effect, ref context);
-                        stageEffectState = true;
-                    }
-                    if (World.Has<EffectExpirationCheck>(entity))
-                    {
-                        ProcessExpiration(entity, ref effect, ref context);
-                        stageEffectState = true;
-                    }
-                    if (stageEffectState)
-                    {
-                        _phaseTransaction.StageGameplayEffectState(entity, in effect);
-                    }
+                    ProcessScannedEffect(entity);
                     continue;
                 }
 
-                if (ProcessPhaseStage(LifetimeStage.PeriodGraphs, LifetimeStage.ExpireGraphs, _periodPhaseGraphs, EffectPhaseId.OnPeriod, ref workUnits) ||
-                    ProcessPhaseStage(LifetimeStage.ExpireGraphs, LifetimeStage.RemoveGraphs, _expirePhaseGraphs, EffectPhaseId.OnExpire, ref workUnits) ||
+                if (_stage == LifetimeStage.PeriodGraphs)
+                {
+                    if (_cursor < _periodPhaseGraphs.Count)
+                    {
+                        PhaseGraphEntry entry = _periodPhaseGraphs[_cursor++];
+                        if (!TryExecutePeriodKernelEntry(in entry))
+                        {
+                            ExecutePhaseGraphEntry(in entry, EffectPhaseId.OnPeriod, _builtinRuntime);
+                        }
+
+                        CountWork(ref workUnits);
+                        continue;
+                    }
+
+                    AdvanceTo(LifetimeStage.ExpireGraphs);
+                    continue;
+                }
+
+                if (ProcessPhaseStage(LifetimeStage.ExpireGraphs, LifetimeStage.RemoveGraphs, _expirePhaseGraphs, EffectPhaseId.OnExpire, ref workUnits) ||
                     ProcessPhaseStage(LifetimeStage.RemoveGraphs, LifetimeStage.FanOut, _removePhaseGraphs, EffectPhaseId.OnRemove, ref workUnits))
                 {
                     continue;
@@ -315,6 +340,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _stage = LifetimeStage.Scan;
             _snapshotCount = 0;
             _cursor = 0;
+            _dueCursor = 0;
+            _dueEffectsThisSlice.Clear();
             ClearPendingWork();
             ClearRollbackState();
         }
@@ -342,6 +369,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _stage = LifetimeStage.Scan;
             _snapshotCount = 0;
             _cursor = 0;
+            _dueCursor = 0;
+            _dueEffectsThisSlice.Clear();
             ClearPendingWork();
             ClearRollbackState();
         }
@@ -353,22 +382,198 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             {
                 _fanOutBudget.NextFrame();
             }
-            _fanOutDropped = 0;
             ClearPendingWork();
             ClearRollbackState();
 
-            _snapshotCount = World.CountEntities(in _activeEffectsQuery);
-            if (_snapshotCount > _effectSnapshot.Length)
+            if (_dueWheel == null)
             {
-                throw new InvalidOperationException(
-                    $"GAS.EFFECT_LIFETIME.ERR.SnapshotCapacityExceeded: required={_snapshotCount}, capacity={_effectSnapshot.Length}.");
+                DueWheel = new EffectDueWheel(_clock, _effectSnapshot.Length);
             }
 
-            World.GetEntities(in _activeEffectsQuery, _effectSnapshot);
+            EffectDueWheel wheel = _dueWheel!;
+            int now = _clock.Now(Ludots.Core.Engine.ClockDomainId.FixedFrame);
+            if (wheel.IsDirty || now < wheel.Watermark)
+            {
+                wheel.Rebuild(World);
+            }
+
+            _dueEffectsThisSlice.Clear();
+            wheel.AdvanceTo(now, _dueEffectsThisSlice);
+            _dueCursor = 0;
+            CompactLegacyIntoSnapshot();
+
             _cursor = 0;
             _stage = LifetimeStage.Scan;
             BeginPhaseTransaction();
             _sliceActive = true;
+            RefreshAfterEffectRemainingTicks(now);
+        }
+
+        /// <summary>
+        /// 快道 After 效果的 RemainingTicks 逐 slice 刷新，与原全量扫描语义一致；
+        /// 经事务暂存而非直写，保证 slice 中止回滚后数值与原扫描一致。
+        /// </summary>
+        private void RefreshAfterEffectRemainingTicks(int now)
+        {
+            List<Entity> afterEffects = _dueWheel!.AfterEffects;
+            for (int i = 0; i < afterEffects.Count; i++)
+            {
+                Entity entity = afterEffects[i];
+                if (!World.IsAlive(entity) || !World.Has<GameplayEffect>(entity))
+                {
+                    RemoveAfterEffectAt(afterEffects, i);
+                    i--;
+                    continue;
+                }
+
+                GameplayEffect effect = World.Get<GameplayEffect>(entity);
+                if (effect.LifetimeKind != EffectLifetimeKind.After ||
+                    effect.ClockId != GasClockId.FixedFrame ||
+                    effect.CancelRequested)
+                {
+                    RemoveAfterEffectAt(afterEffects, i);
+                    i--;
+                    continue;
+                }
+
+                if (effect.ExpiresAtTick > 0)
+                {
+                    int remaining = Math.Max(0, effect.ExpiresAtTick - now);
+                    if (effect.RemainingTicks != remaining)
+                    {
+                        effect.RemainingTicks = remaining;
+                        _phaseTransaction.StageGameplayEffectState(entity, in effect);
+                    }
+                }
+            }
+        }
+
+        private static void RemoveAfterEffectAt(List<Entity> afterEffects, int index)
+        {
+            afterEffects[index] = afterEffects[^1];
+            afterEffects.RemoveAt(afterEffects.Count - 1);
+        }
+
+        /// <summary>遗留道压缩进快照数组：顺带剔除已销毁实体，维持原快照容量失败语义。</summary>
+        private void CompactLegacyIntoSnapshot()
+        {
+            List<Entity> legacy = _dueWheel!.LegacyEffects;
+            int write = 0;
+            int snapshotCount = 0;
+            for (int read = 0; read < legacy.Count; read++)
+            {
+                Entity entity = legacy[read];
+                if (!World.IsAlive(entity))
+                {
+                    continue;
+                }
+
+                if (write != read)
+                {
+                    legacy[write] = entity;
+                }
+
+                write++;
+                if (snapshotCount >= _effectSnapshot.Length)
+                {
+                    throw new InvalidOperationException(
+                        $"GAS.EFFECT_LIFETIME.ERR.SnapshotCapacityExceeded: required={legacy.Count}, capacity={_effectSnapshot.Length}.");
+                }
+
+                _effectSnapshot[snapshotCount++] = entity;
+            }
+
+            if (write < legacy.Count)
+            {
+                legacy.RemoveRange(write, legacy.Count - write);
+            }
+
+            _snapshotCount = snapshotCount;
+        }
+
+        /// <summary>快道到期效果：与遗留道同一套 Period/Expiration 处理，结束后按作业结果收敛注册。</summary>
+        private void ProcessDueEffect(Entity entity)
+        {
+            if (!World.IsAlive(entity) || !World.Has<GameplayEffect>(entity) || !World.Has<EffectContext>(entity))
+            {
+                return;
+            }
+
+            GameplayEffect effect = World.Get<GameplayEffect>(entity);
+            EffectContext context = World.Get<EffectContext>(entity);
+            bool stageEffectState = false;
+            if (World.Has<EffectPeriodicTick>(entity))
+            {
+                stageEffectState |= ProcessPeriod(entity, ref effect, ref context);
+            }
+
+            int destroyCountBefore = _effectsToDestroy.Count;
+            if (World.Has<EffectExpirationCheck>(entity))
+            {
+                stageEffectState |= ProcessExpiration(entity, ref effect, ref context);
+            }
+
+            if (stageEffectState)
+            {
+                _phaseTransaction.StageGameplayEffectState(entity, in effect);
+            }
+
+            if (_effectsToDestroy.Count > destroyCountBefore)
+            {
+                _dueWheel!.CancelAll(entity);
+                return;
+            }
+
+            ReconcileDueRegistration(entity, in effect);
+        }
+
+        private void ProcessScannedEffect(Entity entity)
+        {
+            if (!World.IsAlive(entity) || !World.Has<GameplayEffect>(entity) || !World.Has<EffectContext>(entity))
+            {
+                return;
+            }
+
+            GameplayEffect effect = World.Get<GameplayEffect>(entity);
+            EffectContext context = World.Get<EffectContext>(entity);
+            bool stageEffectState = false;
+            if (World.Has<EffectPeriodicTick>(entity))
+            {
+                stageEffectState |= ProcessPeriod(entity, ref effect, ref context);
+            }
+            if (World.Has<EffectExpirationCheck>(entity))
+            {
+                stageEffectState |= ProcessExpiration(entity, ref effect, ref context);
+            }
+            if (stageEffectState)
+            {
+                _phaseTransaction.StageGameplayEffectState(entity, in effect);
+            }
+        }
+
+        /// <summary>
+        /// 出桶后的注册收敛：以作业后的组件值为权威重新入轮。作业自身推进的到期与外部改写
+        /// （堆叠 RefreshDuration/AddDuration）在此统一收敛；可调度性丢失（如被置取消标记）则降级遗留道。
+        /// </summary>
+        private void ReconcileDueRegistration(Entity entity, in GameplayEffect effect)
+        {
+            EffectDueKind kinds = EffectDueWheel.ComputeFastLaneKinds(World, entity, in effect);
+            if (kinds == EffectDueKind.None)
+            {
+                _dueWheel!.CancelAll(entity);
+                _dueWheel.LegacyEffects.Add(entity);
+                return;
+            }
+
+            if ((kinds & EffectDueKind.PeriodDue) != 0)
+            {
+                _dueWheel!.Register(entity, effect.NextTickAtTick, EffectDueKind.PeriodDue);
+            }
+
+            if ((kinds & EffectDueKind.ExpireDue) != 0)
+            {
+                _dueWheel!.Register(entity, effect.ExpiresAtTick, EffectDueKind.ExpireDue);
+            }
         }
 
         private void ClearPendingWork()
@@ -419,6 +624,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             {
                 UnbindPhaseTransaction();
             }
+
+            // 回滚恢复了被暂存的到期字段，轮内注册可能已与组件脱节，下一 slice 先 Rebuild。
+            _dueWheel?.MarkDirty();
         }
 
         private void UnbindPhaseTransaction()
@@ -431,8 +639,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _builtinRuntime.EffectSideEffects = null;
         }
 
-        private void ProcessPeriod(Entity entity, ref GameplayEffect effect, ref EffectContext context)
+        private bool ProcessPeriod(Entity entity, ref GameplayEffect effect, ref EffectContext context)
         {
+            int previousNextTick = effect.NextTickAtTick;
             var job = new LifetimeTickJob
             {
                 World = World,
@@ -441,10 +650,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 PeriodPhaseGraphs = _periodPhaseGraphs,
             };
             job.Update(entity, ref effect, ref context);
+            return effect.NextTickAtTick != previousNextTick;
         }
 
-        private void ProcessExpiration(Entity entity, ref GameplayEffect effect, ref EffectContext context)
+        private bool ProcessExpiration(Entity entity, ref GameplayEffect effect, ref EffectContext context)
         {
+            int previousExpiresAt = effect.ExpiresAtTick;
+            int previousRemaining = effect.RemainingTicks;
             var job = new LifetimeCleanupJob
             {
                 World = World,
@@ -458,6 +670,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 SideEffects = _phaseTransaction,
             };
             job.Update(entity, ref effect, ref context);
+            return effect.ExpiresAtTick != previousExpiresAt || effect.RemainingTicks != previousRemaining;
         }
 
         private bool ProcessPhaseStage(
@@ -479,17 +692,71 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return true;
         }
 
-        private void CompleteSlice()
+        /// <summary>
+        /// PeriodGraphs 阶段的快车道路由：命中内核表、无 Phase Listener 干涉、无解释路径
+        /// 失败面的到期条目由内核求值并直写事务（同事务、同 RNG 种子、同写入顺序）。
+        /// 任何不命中原样落回逐事件解释路径——双车道合同，不是 fallback。
+        /// </summary>
+        private bool TryExecutePeriodKernelEntry(in PhaseGraphEntry entry)
         {
-            if (_fanOutDropped > 0 && _budget != null)
+            if (_phaseExecutor == null || _graphApi == null || _templates == null)
             {
-                _budget.EffectLifetimeFanOutDropped += _fanOutDropped;
+                return false;
             }
 
+            EffectPeriodKernelTable? table = _templates.PeriodKernelTable;
+            if (table == null || !table.TryGetProgram(entry.TemplateId, out EffectPeriodKernelProgram program))
+            {
+                return false;
+            }
+
+            if (HasPeriodListenerInterference(in entry))
+            {
+                return false;
+            }
+
+            if (!program.TryEvaluate(World, entry.EffectEntity, in entry.Context, entry.ClockTick, out Entity target, out float delta))
+            {
+                return false;
+            }
+
+            if (target != Entity.Null)
+            {
+                _phaseTransaction.StageAttributeAdd(target, program.AttributeId, delta);
+            }
+
+            return true;
+        }
+
+        private bool HasPeriodListenerInterference(in PhaseGraphEntry entry)
+        {
+            if ((World.IsAlive(entry.Context.Target) && World.Has<EffectPhaseListenerBuffer>(entry.Context.Target)) ||
+                (World.IsAlive(entry.Context.Source) && World.Has<EffectPhaseListenerBuffer>(entry.Context.Source)))
+            {
+                return true;
+            }
+
+            return _phaseExecutor != null &&
+                _phaseExecutor.HasGlobalPhaseListener(
+                    EffectPhaseId.OnPeriod,
+                    ResolveTemplateCategoryId(entry.TemplateId),
+                    entry.TemplateId);
+        }
+
+        private int ResolveTemplateCategoryId(int templateId)
+        {
+            return _templates!.TryGetRef(templateId, out int templateIndex)
+                ? _templates.GetRef(templateIndex).CategoryId
+                : 0;
+        }
+
+        private void CompleteSlice()
+        {
             _sliceActive = false;
             _stage = LifetimeStage.Scan;
             _snapshotCount = 0;
             _cursor = 0;
+            _dueCursor = 0;
         }
 
         private void AdvanceTo(LifetimeStage stage)
@@ -674,7 +941,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 if (World.IsAlive(context.Target) && World.Has<ActiveEffectContainer>(context.Target))
                 {
                     bool removed = SideEffects.StageActiveEffectRemoval(context.Target, entity);
-                    if (removed && effect.AggregatesModifiers && !World.Has<AttributeAggregateDirty>(context.Target))
+                    if (removed && effect.AggregatesModifiers)
                     {
                         SideEffects.StageAggregateDirty(context.Target);
                     }
@@ -704,18 +971,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 default,
                 phase,
                 in tpl.PhaseGraphBindings,
-                tpl.PresetType,
-                tpl.TagId,
+                tpl.EffectivePresetTypeId,
+                tpl.CategoryId,
                 entry.TemplateId,
                 in mergedConfig,
                 builtinRuntime,
                 BuildExecutionSeed(entry.EffectEntity, phase, entry.TemplateId, entry.ClockTick, entry.Context),
                 entry.Context.RootId);
-
-            if (builtinRuntime != null)
-            {
-                _fanOutDropped += builtinRuntime.DroppedCount;
-            }
 
             if (phase == EffectPhaseId.OnExpire || phase == EffectPhaseId.OnRemove)
             {
@@ -743,6 +1005,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             hash = Mix(hash, (int)phase);
             hash = Mix(hash, clockTick);
             return hash == 0u ? 1u : hash;
+        }
+
+        /// <summary>周期内核与解释 VM 的执行种子共享点：同输入必得同种子。</summary>
+        internal static uint BuildExecutionSeedForKernel(Entity effectEntity, EffectPhaseId phase, int templateId, int clockTick, in Components.EffectContext context)
+        {
+            return BuildExecutionSeed(effectEntity, phase, templateId, clockTick, in context);
         }
 
         private static uint Mix(uint hash, int value)

@@ -412,7 +412,7 @@ z
     <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="1278" y="879.032188" transform="rotate(-0 1278 879.032188)">BeginMode2D/3D</text>
    </g>
    <g id="text_20">
-    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="1278" y="961.832188" transform="rotate(-0 1278 961.832188)">DrawPerformer</text>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="1278" y="961.832188" transform="rotate(-0 1278 961.832188)">DrawPresenter</text>
    </g>
    <g id="text_21">
     <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="1278" y="1044.632188" transform="rotate(-0 1278 1044.632188)">EndMode2D/3D</text>
@@ -433,7 +433,7 @@ z
     <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="554.4" y="540.992188" transform="rotate(-0 554.4 540.992188)">Draw</text>
    </g>
    <g id="text_27">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="554.4" y="557.873625" transform="rotate(-0 554.4 557.873625)">Performer.Render</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="554.4" y="557.873625" transform="rotate(-0 554.4 557.873625)">Presenter.Render</text>
    </g>
    <g id="text_28">
     <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="720" y="855.992188" transform="rotate(-0 720 855.992188)">Raylib Core API Calls</text>

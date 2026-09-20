@@ -1,0 +1,18 @@
+[
+  {
+    "id": "Effect.GraphScore.StrikeHit",
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -20
+      }
+    ],
+    "categories": [
+      "Effect.GraphScore.Damage"
+    ]
+  }
+]

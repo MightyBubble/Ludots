@@ -1,0 +1,18 @@
+{
+  "Id": "capability_standard_live_skill_workbench",
+  "Tags": [
+    "showcase",
+    "capability-standard",
+    "live-skill-workbench"
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.Tactical",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "DistanceCm": 2600,
+    "Pitch": 75,
+    "Yaw": 180,
+    "FovYDeg": 50
+  },
+  "Entities": []
+}

@@ -181,6 +181,19 @@ namespace Ludots.Core.Gameplay.GAS.Components
             }
             return 0;
         }
+
+        /// <summary>Number of bits set in both this container and <paramref name="other"/>.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int CountCommonTags(in GameplayTagContainer other)
+        {
+            int count = 0;
+            for (int i = 0; i < ULONG_COUNT; i++)
+            {
+                count += System.Numerics.BitOperations.PopCount(Bits[i] & other.Bits[i]);
+            }
+
+            return count;
+        }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Clear()

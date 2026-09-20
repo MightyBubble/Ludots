@@ -1,0 +1,24 @@
+{
+  "Id": "capability_standard_hfsm_sentry_arena",
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  },
+  "Tags": [
+    "showcase",
+    "capability-standard",
+    "hfsm",
+    "graph"
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.FixedArena",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "DistanceCm": 2600,
+    "Pitch": 75,
+    "Yaw": 180,
+    "FovYDeg": 50
+  },
+  "Entities": []
+}

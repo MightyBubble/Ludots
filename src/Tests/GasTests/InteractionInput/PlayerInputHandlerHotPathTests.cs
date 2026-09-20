@@ -55,7 +55,7 @@ namespace Ludots.Tests.GAS
             backend.Buttons["<Keyboard>/w"] = true;
             backend.Buttons["<Keyboard>/d"] = true;
 
-            handler.Update();
+            handler.Update(1f / 60f);
             var move = handler.ReadAction<Vector2>("Move");
 
             Assert.That(move.X, Is.EqualTo(1.4142135f).Within(0.01f));
@@ -100,10 +100,10 @@ namespace Ludots.Tests.GAS
             handler.PushContext("Camera");
 
             backend.MousePosition = new Vector2(320f, 240f);
-            handler.Update();
+            handler.Update(1f / 60f);
 
             backend.MousePosition = new Vector2(356f, 216f);
-            handler.Update();
+            handler.Update(1f / 60f);
 
             var pointerDelta = handler.ReadAction<Vector2>("PointerDelta");
             var look = handler.ReadAction<Vector2>("Look");
@@ -151,11 +151,11 @@ namespace Ludots.Tests.GAS
             handler.PushContext("Gameplay");
 
             backend.Buttons["<Keyboard>/q"] = true;
-            handler.Update();
+            handler.Update(1f / 60f);
             Assert.That(handler.IsDown("RunicAttack"), Is.False);
 
             backend.Buttons["<Keyboard>/e"] = true;
-            handler.Update();
+            handler.Update(1f / 60f);
             Assert.That(handler.IsDown("RunicAttack"), Is.True);
             Assert.That(handler.PressedThisFrame("RunicAttack"), Is.True);
         }
@@ -190,17 +190,17 @@ namespace Ludots.Tests.GAS
             handler.PushContext("Camera");
 
             backend.MousePosition = new Vector2(320f, 240f);
-            handler.Update();
+            handler.Update(1f / 60f);
 
             backend.HasMousePosition = false;
-            handler.Update();
+            handler.Update(1f / 60f);
 
             Assert.That(handler.ReadAction<Vector2>("PointerPos"), Is.EqualTo(new Vector2(-1f, -1f)));
             Assert.That(handler.ReadAction<Vector2>("PointerDelta"), Is.EqualTo(Vector2.Zero));
 
             backend.HasMousePosition = true;
             backend.MousePosition = new Vector2(680f, 420f);
-            handler.Update();
+            handler.Update(1f / 60f);
 
             Assert.That(handler.ReadAction<Vector2>("PointerPos"), Is.EqualTo(new Vector2(680f, 420f)));
             Assert.That(handler.ReadAction<Vector2>("PointerDelta"), Is.EqualTo(Vector2.Zero));
@@ -248,7 +248,7 @@ namespace Ludots.Tests.GAS
 
             backend.MousePosition = new Vector2(640f, 360f);
             backend.MouseWheel = 2f;
-            handler.Update();
+            handler.Update(1f / 60f);
 
             Assert.That(handler.ReadAction<Vector2>("PointerPos"), Is.EqualTo(new Vector2(640f, 360f)));
             Assert.That(handler.ReadAction<float>("Zoom"), Is.EqualTo(2f));

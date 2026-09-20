@@ -9,9 +9,10 @@ using Ludots.Core.Engine;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
+using Ludots.Platform.Abstractions;
 
 namespace FormationCapabilityShowcaseMod.Runtime;
 
@@ -27,7 +28,7 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
     private readonly GameEngine _engine;
     private readonly FormationCapabilityShowcaseRuntime _runtime;
     private readonly PresentationWorldFactPublisher _facts;
-    private readonly IVisualHeightmap _heightmap;
+    private readonly IContinuousHeightmap _heightmap;
     private readonly int _stableIdCapacity;
     private readonly int _ownerCapacity;
     private readonly List<int> _currentStableIds;
@@ -68,8 +69,8 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
             throw new InvalidOperationException("Formation Capability formation outline presentation requires PresentationEventStream.");
         }
 
-        _heightmap = engine.GetService(CoreServiceKeys.VisualHeightmap)
-            ?? throw new InvalidOperationException("Formation Capability formation outline requires VisualHeightmap.");
+        _heightmap = engine.GetService(CoreServiceKeys.ContinuousHeightmap)
+            ?? throw new InvalidOperationException("Formation Capability formation outline requires ContinuousHeightmap.");
     }
 
     public void Initialize() { }
@@ -516,7 +517,7 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
             throw new InvalidOperationException($"Formation Capability formation outline sample index {sampleIndex} is outside configured curve samples {sampleCount}.");
         }
 
-        return PerformerBehaviorRuntimeUtility.ComposeVisualStableId(
+        return PresenterBehaviorRuntimeUtility.ComposeVisualStableId(
             ownerStableId,
             ((int)segment * sampleCount) + sampleIndex,
             AssetKind.Spline,

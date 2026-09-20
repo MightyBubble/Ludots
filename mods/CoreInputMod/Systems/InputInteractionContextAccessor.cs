@@ -12,11 +12,14 @@ using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
+using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Utils;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
+using Ludots.Platform.Abstractions;
 
 namespace CoreInputMod.Systems
 {
@@ -25,7 +28,6 @@ namespace CoreInputMod.Systems
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
         private readonly EntityCollectionStore? _entityCollections;
-        private readonly InteractionContextStack? _interactionContextStack;
         private readonly Entity[] _collectionScratch;
 
         public InputInteractionContextAccessor(World world, Dictionary<string, object> globals)
@@ -36,10 +38,6 @@ namespace CoreInputMod.Systems
             _entityCollections = globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var collectionsObj) &&
                                  collectionsObj is EntityCollectionStore collections
                 ? collections
-                : null;
-            _interactionContextStack = globals.TryGetValue(CoreServiceKeys.InteractionContextStack.Name, out var stackObj) &&
-                                       stackObj is InteractionContextStack stack
-                ? stack
                 : null;
         }
 
@@ -79,8 +77,7 @@ namespace CoreInputMod.Systems
         public bool TryResolveLocalCommandSourceOwner(out Entity owner)
         {
             owner = default;
-            return _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
-                   localObj is Entity local &&
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity local) &&
                    _world.IsAlive(local) &&
                    (owner = local) != Entity.Null;
         }
@@ -97,62 +94,57 @@ namespace CoreInputMod.Systems
             return AuthoritativeGroundPointerHelper.TryRead(input, out worldCm);
         }
 
-        public bool TryGetLocalPlayerId(out int playerId)
+        public bool TryGetSolePossessedPlayerId(out int playerId)
         {
             playerId = 0;
-            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerId.Name, out object? value) ||
-                value is not int candidate ||
-                candidate <= 0)
+            Ludots.Core.Client.ClientLocalSeatRegistry seats = Ludots.Core.Client.ClientLocalSeatAccess.RequireRegistry(_globals);
+            if (!seats.TryGetSoleSeat(out Ludots.Core.Client.ClientLocalSeat seat) || !seat.HasPossession)
             {
                 return false;
             }
 
-            playerId = candidate;
+            playerId = seat.PossessedPlayerId;
             return true;
         }
 
         public Entity GetControlledActor(int playerId)
         {
-            if (playerId <= 0)
-            {
-                return default;
-            }
-
-            Entity commandOwner = TryGetCommandSourceOwner(out Entity resolvedOwner)
-                ? resolvedOwner
+            return TryGetSolePossessedPlayerId(out int possessedPlayerId) &&
+                   possessedPlayerId == playerId
+                ? GetSolePossessedRepOrNull()
                 : Entity.Null;
-            if (commandOwner != Entity.Null &&
-                TryGetCommandSourcePrimary(commandOwner, out var commandSourcePrimary) &&
-                _world.IsAlive(commandSourcePrimary) &&
-                _world.TryGet(commandSourcePrimary, out PlayerOwner owner) &&
-                owner.PlayerId == playerId)
-            {
-                return commandSourcePrimary;
-            }
-
-            if (commandOwner != Entity.Null &&
-                TryGetCollectionPrimary(commandOwner, EntityCollectionKeys.CommandSource, out var collectionPrimary) &&
-                _world.IsAlive(collectionPrimary) &&
-                _world.TryGet(collectionPrimary, out PlayerOwner collectionOwner) &&
-                collectionOwner.PlayerId == playerId)
-            {
-                return collectionPrimary;
-            }
-
-            if (_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
-                localObj is Entity local &&
-                _world.IsAlive(local))
-            {
-                return local;
-            }
-
-            return default;
         }
 
-        public Entity GetLocalPlayerEntityOrNull()
+        internal static string RequireActiveActorCollectionKey(World world, Dictionary<string, object> globals, Entity owner)
         {
-            return _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
-                   localObj is Entity local &&
+            if (!globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var storeValue) ||
+                storeValue is not EntityCollectionStore collections)
+            {
+                throw new InvalidOperationException("Active actor collection requires EntityCollectionStore.");
+            }
+
+            int keyId;
+            if (world.IsAlive(owner) && world.TryGet(owner, out InteractionContextInstance context))
+            {
+                keyId = context.ActiveCollectionKeyId;
+            }
+            else
+            {
+                if (!globals.TryGetValue(CoreServiceKeys.InteractionContextProfileRegistry.Name, out var profilesValue) ||
+                    profilesValue is not InteractionContextProfileRegistry profiles ||
+                    !profiles.TryGetSteadyStateRouting(out keyId, out _))
+                {
+                    throw new InvalidOperationException("Active actor collection requires steady-state interaction routing.");
+                }
+            }
+
+            return collections.KeyRegistry.GetName(keyId)
+                ?? throw new InvalidOperationException($"Active actor collection key {keyId} is not registered.");
+        }
+
+        public Entity GetSolePossessedRepOrNull()
+        {
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity local) &&
                    _world.IsAlive(local)
                 ? local
                 : Entity.Null;
@@ -263,20 +255,25 @@ namespace CoreInputMod.Systems
         public bool TryGetCommandSourceOwner(out Entity owner)
         {
             owner = default;
-            if (_interactionContextStack != null &&
-                _interactionContextStack.TryPeek(out InteractionContextFrame frame) &&
-                HasEntityValue(frame.ContextEntity))
+            if (!TryResolveLocalCommandSourceOwner(out Entity subject) ||
+                !_world.IsAlive(subject))
             {
-                if (!_world.IsAlive(frame.ContextEntity))
+                return false;
+            }
+
+            if (_world.TryGet<InteractionContextInstance>(subject, out InteractionContextInstance context))
+            {
+                if (!HasEntityValue(context.ContextEntity) || !_world.IsAlive(context.ContextEntity))
                 {
                     return false;
                 }
 
-                owner = frame.ContextEntity;
+                owner = context.ContextEntity;
                 return true;
             }
 
-            return TryResolveLocalCommandSourceOwner(out owner);
+            owner = subject;
+            return true;
         }
 
         private static bool HasEntityValue(Entity entity)
@@ -369,6 +366,16 @@ namespace CoreInputMod.Systems
                                                    graphProgramsObj is GraphProgramRegistry resolvedGraphPrograms
                 ? resolvedGraphPrograms
                 : null;
+            GasGraphOpHandlerTable? graphHandlers = _globals.TryGetValue(CoreServiceKeys.GasGraphOpHandlerTable.Name, out var graphHandlersObj) &&
+                                                     graphHandlersObj is GasGraphOpHandlerTable resolvedGraphHandlers
+                ? resolvedGraphHandlers
+                : null;
+            if (graphPrograms != null && graphHandlers == null)
+            {
+                throw new InvalidOperationException(
+                    "Ability aim presentation graph support requires CoreServiceKeys.GasGraphOpHandlerTable.");
+            }
+
             GasGraphRuntimeApi? graphApi = null;
             if (graphPrograms != null)
             {
@@ -391,8 +398,10 @@ namespace CoreInputMod.Systems
                 events,
                 session,
                 graphPrograms,
-                graphApi);
+                graphApi,
+                graphHandlers);
             return true;
         }
+
     }
 }

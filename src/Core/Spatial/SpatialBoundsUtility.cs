@@ -1,6 +1,9 @@
 using System;
 using System.Numerics;
 using Arch.Core;
+using Ludots.Core.Components;
+using Ludots.Core.Mathematics;
+using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Components;
 using Ludots.Platform.Abstractions;
 
@@ -38,14 +41,23 @@ namespace Ludots.Core.Spatial
             IScreenProjector projector,
             out ScreenRect bounds)
         {
+            ScreenProjectionPoseContext context = ScreenProjectionPoseContext.CurrentSimulation;
+            return TryProjectScreenBounds(world, entity, projector, out bounds, in context);
+        }
+
+        public static bool TryProjectScreenBounds(
+            World world,
+            Entity entity,
+            IScreenProjector projector,
+            out ScreenRect bounds,
+            in ScreenProjectionPoseContext context)
+        {
             bounds = default;
-            if (!world.IsAlive(entity) ||
-                !world.Has<VisualTransform>(entity))
+            if (!TryGetSimulationPose(world, entity, in context, out SimPose pose))
             {
                 return false;
             }
 
-            ref readonly var transform = ref world.Get<VisualTransform>(entity);
             SpatialBounds spatialBounds = world.Has<SpatialBounds>(entity)
                 ? world.Get<SpatialBounds>(entity)
                 : SpatialBounds.Point;
@@ -54,7 +66,7 @@ namespace Ludots.Core.Spatial
             {
                 case SpatialBoundsKind.Point:
                     {
-                        if (!TryProjectPoint(projector, ResolveWorldPoint(transform, in spatialBounds), out Vector2 point))
+                        if (!TryProjectPoint(projector, ResolveWorldPoint(in pose, in spatialBounds), out Vector2 point))
                         {
                             return false;
                         }
@@ -69,7 +81,7 @@ namespace Ludots.Core.Spatial
                         throw new InvalidOperationException($"Entity {entity} declares SpatialBounds.Box3D but is missing SpatialBox3D.");
                     }
 
-                    return TryProjectBox(projector, transform, in spatialBounds, world.Get<SpatialBox3D>(entity), out bounds);
+                    return TryProjectBox(projector, in pose, in spatialBounds, world.Get<SpatialBox3D>(entity), out bounds);
 
                 case SpatialBoundsKind.Footprint2D:
                     if (!world.Has<SpatialFootprint2D>(entity))
@@ -77,7 +89,7 @@ namespace Ludots.Core.Spatial
                         throw new InvalidOperationException($"Entity {entity} declares SpatialBounds.Footprint2D but is missing SpatialFootprint2D.");
                     }
 
-                    return TryProjectFootprintBounds(projector, transform, in spatialBounds, world.Get<SpatialFootprint2D>(entity), out bounds);
+                    return TryProjectFootprintBounds(projector, in pose, in spatialBounds, world.Get<SpatialFootprint2D>(entity), out bounds);
 
                 default:
                     throw new InvalidOperationException($"Unsupported SpatialBoundsKind '{spatialBounds.Kind}'.");
@@ -92,16 +104,28 @@ namespace Ludots.Core.Spatial
             Span<Vector2> destination,
             out int count)
         {
+            ScreenProjectionPoseContext context = ScreenProjectionPoseContext.CurrentSimulation;
+            return TryProjectFootprintScreenPolygon(
+                world, entity, projector, polygonIndex, destination, out count, in context);
+        }
+
+        public static bool TryProjectFootprintScreenPolygon(
+            World world,
+            Entity entity,
+            IScreenProjector projector,
+            int polygonIndex,
+            Span<Vector2> destination,
+            out int count,
+            in ScreenProjectionPoseContext context)
+        {
             count = 0;
-            if (!world.IsAlive(entity) ||
-                !world.Has<VisualTransform>(entity) ||
+            if (!TryGetSimulationPose(world, entity, in context, out SimPose pose) ||
                 !world.Has<SpatialBounds>(entity) ||
                 !world.Has<SpatialFootprint2D>(entity))
             {
                 return false;
             }
 
-            ref readonly var transform = ref world.Get<VisualTransform>(entity);
             SpatialBounds spatialBounds = world.Get<SpatialBounds>(entity);
             if (spatialBounds.Kind != SpatialBoundsKind.Footprint2D)
             {
@@ -110,7 +134,7 @@ namespace Ludots.Core.Spatial
 
             return TryProjectFootprintPolygon(
                 projector,
-                transform,
+                in pose,
                 in spatialBounds,
                 world.Get<SpatialFootprint2D>(entity),
                 polygonIndex,
@@ -125,23 +149,34 @@ namespace Ludots.Core.Spatial
             Vector2 pointer,
             float pointPickRadiusPixels)
         {
-            if (!world.IsAlive(entity) || !world.Has<VisualTransform>(entity))
+            ScreenProjectionPoseContext context = ScreenProjectionPoseContext.CurrentSimulation;
+            return PointerHitsEntity(world, entity, projector, pointer, pointPickRadiusPixels, in context);
+        }
+
+        public static bool PointerHitsEntity(
+            World world,
+            Entity entity,
+            IScreenProjector projector,
+            Vector2 pointer,
+            float pointPickRadiusPixels,
+            in ScreenProjectionPoseContext context)
+        {
+            if (!TryGetSimulationPose(world, entity, in context, out SimPose pose))
             {
                 return false;
             }
 
-            ref readonly var transform = ref world.Get<VisualTransform>(entity);
             SpatialBounds spatialBounds = world.Has<SpatialBounds>(entity)
                 ? world.Get<SpatialBounds>(entity)
                 : SpatialBounds.Point;
 
             return spatialBounds.Kind switch
             {
-                SpatialBoundsKind.Point => PointerHitsPoint(projector, transform, in spatialBounds, pointer, pointPickRadiusPixels),
+                SpatialBoundsKind.Point => PointerHitsPoint(projector, in pose, in spatialBounds, pointer, pointPickRadiusPixels),
                 SpatialBoundsKind.Box3D => world.Has<SpatialBox3D>(entity) &&
-                                           PointerHitsBox(projector, transform, in spatialBounds, world.Get<SpatialBox3D>(entity), pointer),
+                                           PointerHitsBox(projector, in pose, in spatialBounds, world.Get<SpatialBox3D>(entity), pointer),
                 SpatialBoundsKind.Footprint2D => world.Has<SpatialFootprint2D>(entity) &&
-                                                 PointerHitsFootprint(projector, transform, in spatialBounds, world.Get<SpatialFootprint2D>(entity), pointer),
+                                                 PointerHitsFootprint(projector, in pose, in spatialBounds, world.Get<SpatialFootprint2D>(entity), pointer),
                 _ => false,
             };
         }
@@ -152,37 +187,47 @@ namespace Ludots.Core.Spatial
             IScreenProjector projector,
             in ScreenRect marquee)
         {
-            if (!world.IsAlive(entity) || !world.Has<VisualTransform>(entity))
+            ScreenProjectionPoseContext context = ScreenProjectionPoseContext.CurrentSimulation;
+            return EntityIntersectsScreenRect(world, entity, projector, in marquee, in context);
+        }
+
+        public static bool EntityIntersectsScreenRect(
+            World world,
+            Entity entity,
+            IScreenProjector projector,
+            in ScreenRect marquee,
+            in ScreenProjectionPoseContext context)
+        {
+            if (!TryGetSimulationPose(world, entity, in context, out SimPose pose))
             {
                 return false;
             }
 
-            ref readonly var transform = ref world.Get<VisualTransform>(entity);
             SpatialBounds spatialBounds = world.Has<SpatialBounds>(entity)
                 ? world.Get<SpatialBounds>(entity)
                 : SpatialBounds.Point;
 
             return spatialBounds.Kind switch
             {
-                SpatialBoundsKind.Point => TryProjectPoint(projector, ResolveWorldPoint(transform, in spatialBounds), out Vector2 point) &&
+                SpatialBoundsKind.Point => TryProjectPoint(projector, ResolveWorldPoint(in pose, in spatialBounds), out Vector2 point) &&
                                            marquee.Contains(point),
                 SpatialBoundsKind.Box3D => world.Has<SpatialBox3D>(entity) &&
-                                           TryProjectBox(projector, transform, in spatialBounds, world.Get<SpatialBox3D>(entity), out ScreenRect boxRect) &&
+                                           TryProjectBox(projector, in pose, in spatialBounds, world.Get<SpatialBox3D>(entity), out ScreenRect boxRect) &&
                                            marquee.Intersects(in boxRect),
                 SpatialBoundsKind.Footprint2D => world.Has<SpatialFootprint2D>(entity) &&
-                                                 FootprintIntersectsRect(projector, transform, in spatialBounds, world.Get<SpatialFootprint2D>(entity), in marquee),
+                                                 FootprintIntersectsRect(projector, in pose, in spatialBounds, world.Get<SpatialFootprint2D>(entity), in marquee),
                 _ => false,
             };
         }
 
         private static bool PointerHitsPoint(
             IScreenProjector projector,
-            in VisualTransform transform,
+            in SimPose pose,
             in SpatialBounds spatialBounds,
             Vector2 pointer,
             float radiusPixels)
         {
-            if (!TryProjectPoint(projector, ResolveWorldPoint(transform, in spatialBounds), out Vector2 point))
+            if (!TryProjectPoint(projector, ResolveWorldPoint(in pose, in spatialBounds), out Vector2 point))
             {
                 return false;
             }
@@ -194,18 +239,18 @@ namespace Ludots.Core.Spatial
 
         private static bool PointerHitsBox(
             IScreenProjector projector,
-            in VisualTransform transform,
+            in SimPose pose,
             in SpatialBounds spatialBounds,
             in SpatialBox3D box,
             Vector2 pointer)
         {
-            return TryProjectBox(projector, transform, in spatialBounds, in box, out ScreenRect bounds) &&
+            return TryProjectBox(projector, in pose, in spatialBounds, in box, out ScreenRect bounds) &&
                    bounds.Contains(pointer);
         }
 
         private static bool PointerHitsFootprint(
             IScreenProjector projector,
-            in VisualTransform transform,
+            in SimPose pose,
             in SpatialBounds spatialBounds,
             in SpatialFootprint2D footprint,
             Vector2 pointer)
@@ -219,7 +264,7 @@ namespace Ludots.Core.Spatial
                     continue;
                 }
 
-                if (!TryProjectFootprintPolygon(projector, transform, in spatialBounds, in footprint, polygonIndex, projected, out int projectedCount))
+                if (!TryProjectFootprintPolygon(projector, in pose, in spatialBounds, in footprint, polygonIndex, projected, out int projectedCount))
                 {
                     continue;
                 }
@@ -235,7 +280,7 @@ namespace Ludots.Core.Spatial
 
         private static bool FootprintIntersectsRect(
             IScreenProjector projector,
-            in VisualTransform transform,
+            in SimPose pose,
             in SpatialBounds spatialBounds,
             in SpatialFootprint2D footprint,
             in ScreenRect marquee)
@@ -249,7 +294,7 @@ namespace Ludots.Core.Spatial
                     continue;
                 }
 
-                if (!TryProjectFootprintPolygon(projector, transform, in spatialBounds, in footprint, polygonIndex, projected, out int projectedCount))
+                if (!TryProjectFootprintPolygon(projector, in pose, in spatialBounds, in footprint, polygonIndex, projected, out int projectedCount))
                 {
                     continue;
                 }
@@ -265,7 +310,7 @@ namespace Ludots.Core.Spatial
 
         private static bool TryProjectFootprintBounds(
             IScreenProjector projector,
-            in VisualTransform transform,
+            in SimPose pose,
             in SpatialBounds spatialBounds,
             in SpatialFootprint2D footprint,
             out ScreenRect bounds)
@@ -280,7 +325,7 @@ namespace Ludots.Core.Spatial
 
             for (int polygonIndex = 0; polygonIndex < footprint.PolygonCount; polygonIndex++)
             {
-                if (!TryProjectFootprintPolygon(projector, transform, in spatialBounds, in footprint, polygonIndex, projected, out int projectedCount))
+                if (!TryProjectFootprintPolygon(projector, in pose, in spatialBounds, in footprint, polygonIndex, projected, out int projectedCount))
                 {
                     continue;
                 }
@@ -315,18 +360,18 @@ namespace Ludots.Core.Spatial
 
         private static bool TryProjectBox(
             IScreenProjector projector,
-            in VisualTransform transform,
+            in SimPose pose,
             in SpatialBounds spatialBounds,
             in SpatialBox3D box,
             out ScreenRect bounds)
         {
             bounds = default;
 
-            Vector3 center = ResolveWorldPoint(transform, in spatialBounds);
+            Vector3 center = ResolveWorldPoint(in pose, in spatialBounds);
             Vector3 half = new(
-                CmToMeters(box.HalfSizeXCm) * transform.Scale.X,
-                CmToMeters(box.HalfSizeYCm) * transform.Scale.Y,
-                CmToMeters(box.HalfSizeZCm) * transform.Scale.Z);
+                CmToMeters(box.HalfSizeXCm),
+                CmToMeters(box.HalfSizeYCm),
+                CmToMeters(box.HalfSizeZCm));
 
             Span<Vector3> corners = stackalloc Vector3[8];
             corners[0] = new Vector3(-half.X, -half.Y, -half.Z);
@@ -345,7 +390,7 @@ namespace Ludots.Core.Spatial
             float maxY = 0f;
             for (int i = 0; i < corners.Length; i++)
             {
-                Vector3 worldPoint = center + Vector3.Transform(corners[i], transform.Rotation);
+                Vector3 worldPoint = center + Vector3.Transform(corners[i], pose.Rotation);
                 if (!TryProjectPoint(projector, worldPoint, out Vector2 projected))
                 {
                     continue;
@@ -377,7 +422,7 @@ namespace Ludots.Core.Spatial
 
         private static bool TryProjectFootprintPolygon(
             IScreenProjector projector,
-            in VisualTransform transform,
+            in SimPose pose,
             in SpatialBounds spatialBounds,
             in SpatialFootprint2D footprint,
             int polygonIndex,
@@ -391,15 +436,15 @@ namespace Ludots.Core.Spatial
                 return false;
             }
 
-            Vector3 center = ResolveWorldPoint(transform, in spatialBounds);
+            Vector3 center = ResolveWorldPoint(in pose, in spatialBounds);
             for (int i = 0; i < count; i++)
             {
                 var vertex = footprint.GetVertex(polygonIndex, i);
                 Vector3 local = new(
-                    CmToMeters(vertex.X) * transform.Scale.X,
+                    CmToMeters(vertex.X),
                     0f,
-                    CmToMeters(vertex.Y) * transform.Scale.Z);
-                Vector3 worldPoint = center + Vector3.Transform(local, transform.Rotation);
+                    CmToMeters(vertex.Y));
+                Vector3 worldPoint = center + Vector3.Transform(local, pose.Rotation);
                 if (!TryProjectPoint(projector, worldPoint, out destination[i]))
                 {
                     count = 0;
@@ -410,14 +455,63 @@ namespace Ludots.Core.Spatial
             return true;
         }
 
-        private static Vector3 ResolveWorldPoint(in VisualTransform transform, in SpatialBounds spatialBounds)
+        private static Vector3 ResolveWorldPoint(in SimPose pose, in SpatialBounds spatialBounds)
         {
             Vector3 local = new(
-                CmToMeters(spatialBounds.LocalCenterXCm) * transform.Scale.X,
-                CmToMeters(spatialBounds.LocalCenterYCm) * transform.Scale.Y,
-                CmToMeters(spatialBounds.LocalCenterZCm) * transform.Scale.Z);
-            return transform.Position + Vector3.Transform(local, transform.Rotation);
+                CmToMeters(spatialBounds.LocalCenterXCm),
+                CmToMeters(spatialBounds.LocalCenterYCm),
+                CmToMeters(spatialBounds.LocalCenterZCm));
+            return pose.Position + Vector3.Transform(local, pose.Rotation);
         }
+
+        private static bool TryGetSimulationPose(
+            World world,
+            Entity entity,
+            in ScreenProjectionPoseContext context,
+            out SimPose pose)
+        {
+            pose = default;
+            if (!world.IsAlive(entity) || !world.Has<WorldPositionCm>(entity))
+            {
+                return false;
+            }
+
+            WorldPositionCm worldPosition = world.Get<WorldPositionCm>(entity);
+            Fix64Vec2 projectedPosition = worldPosition.Value;
+            if (world.TryGet(entity, out PreviousWorldPositionCm previousPosition))
+            {
+                projectedPosition = Fix64Vec2.Lerp(
+                    previousPosition.Value,
+                    worldPosition.Value,
+                    Fix64.FromFloat(context.InterpolationAlpha));
+            }
+
+            Quaternion rotation = Quaternion.Identity;
+            if (world.Has<FacingDirection>(entity))
+            {
+                rotation = WorldPlane2D.FacingRadToVisualYRotation(world.Get<FacingDirection>(entity).AngleRad);
+            }
+
+            float heightMeters = 0f;
+            IContinuousHeightmap? groundHeightmap = context.GroundHeightmap;
+            if (groundHeightmap != null && world.Has<ContinuousHeightmapSampleState>(entity))
+            {
+                float xCm = projectedPosition.X.ToFloat();
+                float yCm = projectedPosition.Y.ToFloat();
+                if (!groundHeightmap.TrySampleHeightCm(xCm, yCm, out float heightCm) || !float.IsFinite(heightCm))
+                {
+                    throw new InvalidOperationException(
+                        $"SPATIAL.ERR.GroundHeightSampleFailed: entity={entity.Id}, xCm={xCm}, yCm={yCm}");
+                }
+
+                heightMeters = heightCm / 100f;
+            }
+
+            pose = new SimPose(WorldPlane2D.LogicCmToVisualMeters(in projectedPosition, heightMeters), rotation);
+            return true;
+        }
+
+        private readonly record struct SimPose(Vector3 Position, Quaternion Rotation);
 
         private static bool TryProjectPoint(IScreenProjector projector, Vector3 worldPoint, out Vector2 projected)
         {

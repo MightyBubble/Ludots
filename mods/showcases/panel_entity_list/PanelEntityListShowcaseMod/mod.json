@@ -1,0 +1,10 @@
+{
+  "name": "PanelEntityListShowcaseMod",
+  "version": "1.0.0",
+  "description": "Entity roster panel: declarative lists/layout with filter, sort, health bars and stun badges",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "main": "bin/net9.0/PanelEntityListShowcaseMod.dll"
+}

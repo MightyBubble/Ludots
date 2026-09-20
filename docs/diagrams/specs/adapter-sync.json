@@ -42,9 +42,9 @@
     { "id": "physics", "title": "Physics", "tint": "clay",
       "x": 80, "y": 820, "w": 520, "h": 100, "items": ["Collision/Transform"] },
 
-    { "id": "pm", "title": "PerformerManager", "tint": "sand",
+    { "id": "pm", "title": "PresenterManager", "tint": "sand",
       "x": 765, "y": 260, "w": 520, "h": 100, "items": ["Sync from World"] },
-    { "id": "pf", "title": "PerformerFactory", "tint": "sand",
+    { "id": "pf", "title": "PresenterFactory", "tint": "sand",
       "x": 765, "y": 400, "w": 520, "h": 100, "items": ["Create/Destroy"] },
     { "id": "bs", "title": "BehaviorSlot", "tint": "sand",
       "x": 765, "y": 540, "w": 520, "h": 100, "items": ["Update States"] },

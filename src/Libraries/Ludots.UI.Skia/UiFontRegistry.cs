@@ -16,6 +16,17 @@ public static class UiFontRegistry
 
 	private static readonly Dictionary<string, SKTypeface> CachedTypefaces = new Dictionary<string, SKTypeface>(StringComparer.OrdinalIgnoreCase);
 
+	private static readonly string[] GlyphFallbackFamilies =
+	{
+		"WenQuanYi Micro Hei",
+		"Noto Sans CJK SC",
+		"Noto Sans SC",
+		"Source Han Sans SC",
+		"Droid Sans Fallback",
+		"Segoe UI",
+		"Arial Unicode MS"
+	};
+
 	public static void RegisterFile(string familyName, string fontPath)
 	{
 		if (string.IsNullOrWhiteSpace(familyName))
@@ -38,35 +49,35 @@ public static class UiFontRegistry
 		}
 	}
 
-	public static SKTypeface ResolveTypeface(string? familyList, bool bold)
+	public static SKTypeface ResolveTypeface(string? familyList, bool bold, bool italic = false)
 	{
-		string key = $"{familyList ?? string.Empty}|{bold}";
+		string key = $"{familyList ?? string.Empty}|{bold}|{italic}";
 		lock (Sync)
 		{
 			if (CachedTypefaces.TryGetValue(key, out SKTypeface value))
 			{
 				return value;
 			}
-			SKTypeface sKTypeface = CreateTypeface(familyList, bold);
+			SKTypeface sKTypeface = CreateTypeface(familyList, bold, italic);
 			CachedTypefaces[key] = sKTypeface;
 			return sKTypeface;
 		}
 	}
 
-	public static SKTypeface ResolveTypefaceForTextElement(string? familyList, bool bold, string textElement)
+	public static SKTypeface ResolveTypefaceForTextElement(string? familyList, bool bold, string textElement, bool italic = false)
 	{
 		if (string.IsNullOrEmpty(textElement))
 		{
-			return ResolveTypeface(familyList, bold);
+			return ResolveTypeface(familyList, bold, italic);
 		}
-		string key = $"glyph|{familyList ?? string.Empty}|{bold}|{textElement}";
+		string key = $"glyph|{familyList ?? string.Empty}|{bold}|{italic}|{textElement}";
 		lock (Sync)
 		{
 			if (CachedTypefaces.TryGetValue(key, out SKTypeface value))
 			{
 				return value;
 			}
-			SKTypeface sKTypeface = CreateTypefaceForTextElement(familyList, bold, textElement);
+			SKTypeface sKTypeface = CreateTypefaceForTextElement(familyList, bold, textElement, italic);
 			CachedTypefaces[key] = sKTypeface;
 			return sKTypeface;
 		}
@@ -79,108 +90,145 @@ public static class UiFontRegistry
 		return left == right || string.Equals(left.FamilyName, right.FamilyName, StringComparison.OrdinalIgnoreCase);
 	}
 
-	private static SKTypeface CreateTypeface(string? familyList, bool bold)
+	private static SKTypeface CreateTypeface(string? familyList, bool bold, bool italic)
 	{
 		foreach (string item in ParseFamilyList(familyList))
 		{
-			SKTypeface sKTypeface = ResolveSingleFamilyTypeface(item, bold);
-			if (sKTypeface != SKTypeface.Default)
+			SKTypeface sKTypeface = ResolveSingleFamilyTypeface(item, bold, italic);
+			if (!IsUnresolvedFallback(sKTypeface, item))
 			{
 				return sKTypeface;
 			}
 		}
-		return ResolveDefaultTypeface(bold);
+		return ResolveDefaultTypeface(bold, italic);
 	}
 
-	private static SKTypeface CreateTypefaceForTextElement(string? familyList, bool bold, string textElement)
+	private static SKTypeface CreateTypefaceForTextElement(string? familyList, bool bold, string textElement, bool italic)
 	{
-		SKTypeface sKTypeface = ResolveTypeface(familyList, bold);
-		if (ContainsGlyphs(sKTypeface, textElement))
+		SKTypeface preferred = ResolveTypeface(familyList, bold, italic);
+		if (ContainsGlyphs(preferred, textElement))
 		{
-			return sKTypeface;
+			return preferred;
 		}
 		foreach (string item in ParseFamilyList(familyList))
 		{
-			SKTypeface sKTypeface2 = ResolveSingleFamilyTypeface(item, bold);
-			if (ContainsGlyphs(sKTypeface2, textElement))
+			SKTypeface candidate = ResolveSingleFamilyTypeface(item, bold, italic);
+			if (!IsUnresolvedFallback(candidate, item) && ContainsGlyphs(candidate, textElement))
 			{
-				return sKTypeface2;
+				return candidate;
 			}
 		}
-		if (TryGetFirstCodePoint(textElement, out var codePoint))
+		if (TryGetFirstCodePoint(textElement, out int codePoint))
 		{
-			try
+			SKTypeface matched = SKFontManager.Default.MatchCharacter(codePoint);
+			if (matched != null && ContainsGlyphs(matched, textElement))
 			{
-				SKTypeface sKTypeface3 = SKFontManager.Default.MatchCharacter(codePoint);
-				if (sKTypeface3 != null)
+				string familyName = matched.FamilyName;
+				if (!string.IsNullOrWhiteSpace(familyName))
 				{
-					string familyName = sKTypeface3.FamilyName;
-					if (!string.IsNullOrWhiteSpace(familyName))
+					SKTypeface named = ResolveSingleFamilyTypeface(familyName, bold, italic);
+					if (ContainsGlyphs(named, textElement))
 					{
-						SKTypeface sKTypeface4 = ResolveSingleFamilyTypeface(familyName, bold);
-						if (ContainsGlyphs(sKTypeface4, textElement))
-						{
-							return sKTypeface4;
-						}
-					}
-					if (ContainsGlyphs(sKTypeface3, textElement))
-					{
-						return sKTypeface3;
+						return named;
 					}
 				}
-			}
-			catch
-			{
+				return matched;
 			}
 		}
-		return sKTypeface;
+		foreach (string fallbackFamily in GlyphFallbackFamilies)
+		{
+			SKTypeface fallback = ResolveSingleFamilyTypeface(fallbackFamily, bold, italic);
+			if (!IsUnresolvedFallback(fallback, fallbackFamily) && ContainsGlyphs(fallback, textElement))
+			{
+				return fallback;
+			}
+		}
+		throw new InvalidOperationException(
+			$"No installed typeface contains glyphs for text element '{textElement}'. Register a covering font via UiFontRegistry.RegisterFile or install a CJK-capable family such as WenQuanYi Micro Hei.");
 	}
 
-	private static SKTypeface ResolveSingleFamilyTypeface(string familyName, bool bold)
+	private static SKTypeface ResolveSingleFamilyTypeface(string familyName, bool bold, bool italic)
 	{
 		string text = familyName.Trim();
-		string key = $"family|{text}|{bold}";
+		string key = $"family|{text}|{bold}|{italic}";
 		if (CachedTypefaces.TryGetValue(key, out SKTypeface value))
 		{
 			return value;
 		}
-		SKTypeface sKTypeface = CreateSingleFamilyTypeface(text, bold);
+		SKTypeface sKTypeface = CreateSingleFamilyTypeface(text, bold, italic);
 		CachedTypefaces[key] = sKTypeface;
 		return sKTypeface;
 	}
 
-	private static SKTypeface CreateSingleFamilyTypeface(string familyName, bool bold)
+	private static SKFontStyle ResolveFontStyle(bool bold, bool italic)
 	{
-		SKFontStyle style = (bold ? SKFontStyle.Bold : SKFontStyle.Normal);
+		if (bold && italic)
+		{
+			return SKFontStyle.BoldItalic;
+		}
+
+		if (bold)
+		{
+			return SKFontStyle.Bold;
+		}
+
+		if (italic)
+		{
+			return SKFontStyle.Italic;
+		}
+
+		return SKFontStyle.Normal;
+	}
+
+	private static SKTypeface CreateSingleFamilyTypeface(string familyName, bool bold, bool italic)
+	{
+		SKFontStyle style = ResolveFontStyle(bold, italic);
 		if (RegisteredFiles.TryGetValue(familyName, out string value))
 		{
-			try
+			SKTypeface fromFile = SKTypeface.FromFile(value);
+			if (fromFile == null)
 			{
-				return SKTypeface.FromFile(value);
+				throw new InvalidOperationException($"UiFontRegistry.RegisterFile typeface failed to load from '{value}'.");
 			}
-			catch
-			{
-			}
+			return fromFile;
 		}
-		string familyName2 = MapGenericFamily(familyName);
-		try
+		string mappedFamily = MapGenericFamily(familyName);
+		SKTypeface fromFamily = SKTypeface.FromFamilyName(mappedFamily, style) ?? SKTypeface.Default;
+		if (mappedFamily == null)
 		{
-			return SKTypeface.FromFamilyName(familyName2, style) ?? SKTypeface.Default;
+			return fromFamily;
 		}
-		catch
+		if (!string.Equals(fromFamily.FamilyName, mappedFamily, StringComparison.OrdinalIgnoreCase) &&
+			!string.Equals(fromFamily.FamilyName, familyName, StringComparison.OrdinalIgnoreCase))
 		{
 			return SKTypeface.Default;
 		}
+		return fromFamily;
 	}
 
-	private static SKTypeface ResolveDefaultTypeface(bool bold)
+	private static bool IsUnresolvedFallback(SKTypeface typeface, string requestedFamily)
 	{
-		string key = $"default|{bold}";
+		if (typeface == SKTypeface.Default)
+		{
+			return true;
+		}
+		string mappedFamily = MapGenericFamily(requestedFamily);
+		if (mappedFamily == null)
+		{
+			return false;
+		}
+		return !string.Equals(typeface.FamilyName, mappedFamily, StringComparison.OrdinalIgnoreCase) &&
+			!string.Equals(typeface.FamilyName, requestedFamily, StringComparison.OrdinalIgnoreCase);
+	}
+
+	private static SKTypeface ResolveDefaultTypeface(bool bold, bool italic = false)
+	{
+		string key = $"default|{bold}|{italic}";
 		if (CachedTypefaces.TryGetValue(key, out SKTypeface value))
 		{
 			return value;
 		}
-		SKFontStyle style = (bold ? SKFontStyle.Bold : SKFontStyle.Normal);
+		SKFontStyle style = ResolveFontStyle(bold, italic);
 		SKTypeface sKTypeface = SKTypeface.FromFamilyName(null, style) ?? SKTypeface.Default;
 		CachedTypefaces[key] = sKTypeface;
 		return sKTypeface;
@@ -194,8 +242,7 @@ public static class UiFontRegistry
 			yield break;
 		}
 		string[] parts = familyList.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-		string[] array = parts;
-		foreach (string part in array)
+		foreach (string part in parts)
 		{
 			string normalized = part.Trim().Trim('"', '\'');
 			if (!string.IsNullOrWhiteSpace(normalized))
@@ -208,43 +255,18 @@ public static class UiFontRegistry
 	private static string? MapGenericFamily(string familyName)
 	{
 		string text = familyName.ToLowerInvariant();
-		if (1 == 0)
+		return text switch
 		{
-		}
-		string result;
-		switch (text)
-		{
-		case "system-ui":
-		case "sans-serif":
-			result = null;
-			break;
-		case "serif":
-			result = "Times New Roman";
-			break;
-		case "monospace":
-			result = "Consolas";
-			break;
-		default:
-			result = familyName;
-			break;
-		}
-		if (1 == 0)
-		{
-		}
-		return result;
+			"system-ui" or "sans-serif" => null,
+			"serif" => "Times New Roman",
+			"monospace" => "Consolas",
+			_ => familyName,
+		};
 	}
 
 	private static bool ContainsGlyphs(SKTypeface typeface, string text)
 	{
-		try
-		{
-			return typeface.ContainsGlyphs(text);
-		}
-		catch
-		{
-			using SKFont sKFont = new SKFont(typeface);
-			return sKFont.ContainsGlyphs(text);
-		}
+		return typeface.ContainsGlyphs(text);
 	}
 
 	private static bool TryGetFirstCodePoint(string textElement, out int codePoint)
@@ -254,13 +276,10 @@ public static class UiFontRegistry
 		{
 			return false;
 		}
-		using (StringRuneEnumerator stringRuneEnumerator = textElement.EnumerateRunes().GetEnumerator())
+		foreach (Rune rune in textElement.EnumerateRunes())
 		{
-			if (stringRuneEnumerator.MoveNext())
-			{
-				codePoint = stringRuneEnumerator.Current.Value;
-				return true;
-			}
+			codePoint = rune.Value;
+			return true;
 		}
 		return false;
 	}

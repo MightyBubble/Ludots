@@ -1,0 +1,13 @@
+{
+  "op": "QueryCollectAbilitySlots",
+  "driver": "query",
+  "title": "点出技能格",
+  "beat": "英雄身上的技能格被点名线牵住。",
+  "detailTemplate": "点到{count}个技能格。",
+  "assertDetailContains": [
+    "技能格"
+  ],
+  "featuredNodeId": "collect",
+  "graphKind": "Query",
+  "field": "query"
+}

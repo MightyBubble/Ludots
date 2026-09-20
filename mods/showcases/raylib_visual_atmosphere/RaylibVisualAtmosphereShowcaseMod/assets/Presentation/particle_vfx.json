@@ -1,0 +1,196 @@
+[
+  {
+    "id": "raylib_visual_atmosphere.vfx_blend",
+    "version": "quarks.ludots.v1",
+    "spawnMode": "Loop",
+    "shape": "Sphere",
+    "renderMode": "Billboard",
+    "blendMode": "Alpha",
+    "primitive": "Sphere",
+    "maxParticles": 64,
+    "seed": 2026081501,
+    "durationSeconds": 2.4,
+    "emissionRatePerSecond": 16,
+    "burstCount": 24,
+    "shapeRadius": 1.0,
+    "shapeAngleRadians": 0.0,
+    "shapeThickness": 0.6,
+    "startLife": [
+      1.6,
+      2.4
+    ],
+    "startSpeed": [
+      0.04,
+      0.18
+    ],
+    "startSize": [
+      0.5,
+      0.8
+    ],
+    "startColor": [
+      0.35,
+      0.85,
+      1.0,
+      0.42
+    ],
+    "textureSheet": {
+      "textureAssetId": "raylib_visual_atmosphere.vfx_blend",
+      "columns": 1,
+      "rows": 1,
+      "frameCount": 1,
+      "framesPerSecond": 8,
+      "startFrame": [
+        0,
+        0
+      ],
+      "playbackMode": "Loop"
+    },
+    "sizeOverLife": [
+      {
+        "position": 0.0,
+        "value": 0.6
+      },
+      {
+        "position": 0.5,
+        "value": 1.0
+      },
+      {
+        "position": 1.0,
+        "value": 0.35
+      }
+    ],
+    "colorOverLife": [
+      {
+        "position": 0.0,
+        "color": [
+          0.42,
+          0.9,
+          1.0,
+          0.5
+        ]
+      },
+      {
+        "position": 0.55,
+        "color": [
+          0.25,
+          0.72,
+          0.9,
+          0.32
+        ]
+      },
+      {
+        "position": 1.0,
+        "color": [
+          0.12,
+          0.3,
+          0.42,
+          0.0
+        ]
+      }
+    ],
+    "gravity": [
+      0.0,
+      0.08,
+      0.0
+    ],
+    "drag": 0.06,
+    "worldSpace": true
+  },
+  {
+    "id": "raylib_visual_atmosphere.vfx_additive",
+    "version": "quarks.ludots.v1",
+    "spawnMode": "Loop",
+    "shape": "Sphere",
+    "renderMode": "Billboard",
+    "blendMode": "Additive",
+    "primitive": "Sphere",
+    "maxParticles": 64,
+    "seed": 2026081502,
+    "durationSeconds": 2.2,
+    "emissionRatePerSecond": 18,
+    "burstCount": 28,
+    "shapeRadius": 1.0,
+    "shapeAngleRadians": 0.0,
+    "shapeThickness": 0.6,
+    "startLife": [
+      1.4,
+      2.2
+    ],
+    "startSpeed": [
+      0.03,
+      0.15
+    ],
+    "startSize": [
+      0.55,
+      0.9
+    ],
+    "startColor": [
+      1.0,
+      0.45,
+      0.12,
+      0.6
+    ],
+    "textureSheet": {
+      "textureAssetId": "raylib_visual_atmosphere.vfx_additive",
+      "columns": 1,
+      "rows": 1,
+      "frameCount": 1,
+      "framesPerSecond": 8,
+      "startFrame": [
+        0,
+        0
+      ],
+      "playbackMode": "Loop"
+    },
+    "sizeOverLife": [
+      {
+        "position": 0.0,
+        "value": 0.6
+      },
+      {
+        "position": 0.5,
+        "value": 1.0
+      },
+      {
+        "position": 1.0,
+        "value": 0.3
+      }
+    ],
+    "colorOverLife": [
+      {
+        "position": 0.0,
+        "color": [
+          1.0,
+          0.62,
+          0.2,
+          0.7
+        ]
+      },
+      {
+        "position": 0.55,
+        "color": [
+          1.0,
+          0.3,
+          0.08,
+          0.45
+        ]
+      },
+      {
+        "position": 1.0,
+        "color": [
+          0.45,
+          0.12,
+          0.02,
+          0.0
+        ]
+      }
+    ],
+    "gravity": [
+      0.0,
+      0.06,
+      0.0
+    ],
+    "drag": 0.05,
+    "worldSpace": true
+  }
+]

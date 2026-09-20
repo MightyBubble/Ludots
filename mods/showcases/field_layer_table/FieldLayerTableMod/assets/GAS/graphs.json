@@ -1,0 +1,78 @@
+[
+  {
+    "id": "Graph.FieldLayerTable.Flow",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "load_scope",
+        "once": true
+      }
+    ],
+    "nodes": [
+      { "id": "load_scope", "op": "LoadExplicitTarget" },
+      { "id": "load_one", "op": "ConstInt", "intValue": 1 },
+      { "id": "write_stage_one", "op": "WriteMapVarInt", "var": "stage" },
+      { "id": "layer_one", "op": "ConstInt", "intValue": 1 },
+      { "id": "write_layer_count", "op": "WriteMapVarInt", "var": "layer_count" },
+      { "id": "region_three", "op": "ConstInt", "intValue": 3 },
+      { "id": "write_region_count", "op": "WriteMapVarInt", "var": "region_count" },
+      { "id": "cells_twelve", "op": "ConstInt", "intValue": 12 },
+      { "id": "write_non_default", "op": "WriteMapVarInt", "var": "non_default_count" },
+      {
+        "id": "progress_panel",
+        "op": "CreatePanel",
+        "panelType": "panel.field_layer_table.progress",
+        "panelAnchor": "screen.topLeft"
+      },
+      { "id": "progress_show", "op": "ShowPanel", "panelType": "panel.field_layer_table.progress" },
+      { "id": "load_ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "load_done", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "load_scope", "fromPort": "next", "to": "load_one" },
+      { "from": "load_one", "fromPort": "next", "to": "write_stage_one" },
+      { "from": "write_stage_one", "fromPort": "next", "to": "layer_one" },
+      { "from": "layer_one", "fromPort": "next", "to": "write_layer_count" },
+      { "from": "write_layer_count", "fromPort": "next", "to": "region_three" },
+      { "from": "region_three", "fromPort": "next", "to": "write_region_count" },
+      { "from": "write_region_count", "fromPort": "next", "to": "cells_twelve" },
+      { "from": "cells_twelve", "fromPort": "next", "to": "write_non_default" },
+      { "from": "write_non_default", "fromPort": "next", "to": "progress_panel" },
+      { "from": "progress_panel", "fromPort": "next", "to": "progress_show" },
+      { "from": "progress_show", "fromPort": "next", "to": "load_ok" },
+      { "from": "load_ok", "fromPort": "next", "to": "load_done" }
+    ],
+    "valueEdges": [
+      { "from": "load_one", "fromPort": "value", "to": "write_stage_one", "toPort": "value" },
+      { "from": "layer_one", "fromPort": "value", "to": "write_layer_count", "toPort": "value" },
+      { "from": "region_three", "fromPort": "value", "to": "write_region_count", "toPort": "value" },
+      { "from": "cells_twelve", "fromPort": "value", "to": "write_non_default", "toPort": "value" },
+      { "from": "load_ok", "fromPort": "value", "to": "load_done", "toPort": "value" }
+    ]
+  },
+  {
+    "id": "Graph.FieldLayerTable.Panel.Values",
+    "kind": "Query",
+    "entry": "stage_rd",
+    "nodes": [
+      { "id": "stage_rd", "op": "ReadMapVarInt", "var": "stage" },
+      { "id": "layer_rd", "op": "ReadMapVarInt", "var": "layer_count" },
+      { "id": "region_rd", "op": "ReadMapVarInt", "var": "region_count" },
+      { "id": "non_default_rd", "op": "ReadMapVarInt", "var": "non_default_count" }
+    ],
+    "controlEdges": [
+      { "from": "stage_rd", "fromPort": "next", "to": "layer_rd" },
+      { "from": "layer_rd", "fromPort": "next", "to": "region_rd" },
+      { "from": "region_rd", "fromPort": "next", "to": "non_default_rd" }
+    ],
+    "valueEdges": [],
+    "outputs": [
+      { "id": "stage", "destination": "Summary", "type": "Int", "source": "stage_rd", "key": "field.layertable.panel.stage" },
+      { "id": "layerCount", "destination": "Summary", "type": "Int", "source": "layer_rd", "key": "field.layertable.panel.layerCount" },
+      { "id": "regionCount", "destination": "Summary", "type": "Int", "source": "region_rd", "key": "field.layertable.panel.regionCount" },
+      { "id": "nonDefaultCount", "destination": "Summary", "type": "Int", "source": "non_default_rd", "key": "field.layertable.panel.nonDefaultCount" }
+    ]
+  }
+]

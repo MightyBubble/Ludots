@@ -13,25 +13,25 @@ namespace PerformanceVisualizationMod.Runtime
     {
         public static readonly VisualBenchmarkScenarioConfig Small = new(
             Key: "small",
-            Label: "2K Performer HUD",
+            Label: "2K Presenter HUD",
             EntityCount: 2048,
             Rows: 32,
             Columns: 64,
             SpacingCm: 240,
             CameraDistanceCm: 22000,
             AttachHealthAttributes: true,
-            WorkloadKind: VisualBenchmarkWorkloadKind.PerformerWorldHud);
+            WorkloadKind: VisualBenchmarkWorkloadKind.PresenterWorldHud);
 
         public static readonly VisualBenchmarkScenarioConfig Medium = new(
             Key: "medium",
-            Label: "8K Performer HUD",
+            Label: "8K Presenter HUD",
             EntityCount: 8192,
             Rows: 64,
             Columns: 128,
             SpacingCm: 210,
             CameraDistanceCm: 34000,
             AttachHealthAttributes: true,
-            WorkloadKind: VisualBenchmarkWorkloadKind.PerformerWorldHud);
+            WorkloadKind: VisualBenchmarkWorkloadKind.PresenterWorldHud);
 
         public static readonly VisualBenchmarkScenarioConfig Large = new(
             Key: "large",
@@ -42,7 +42,7 @@ namespace PerformanceVisualizationMod.Runtime
             SpacingCm: 180,
             CameraDistanceCm: 62000,
             AttachHealthAttributes: false,
-            WorkloadKind: VisualBenchmarkWorkloadKind.PerformerWorldHud);
+            WorkloadKind: VisualBenchmarkWorkloadKind.PresenterWorldHud);
 
         public static readonly VisualBenchmarkScenarioConfig Hud100k = new(
             Key: "hud100k",
@@ -91,7 +91,7 @@ namespace PerformanceVisualizationMod.Runtime
 
     public enum VisualBenchmarkWorkloadKind : byte
     {
-        PerformerWorldHud = 0,
+        PresenterWorldHud = 0,
         DirectScreenHud100k = 1,
         DirectScreenHudHotpath = 2,
     }

@@ -1,0 +1,92 @@
+{
+  "camera": {
+    "virtualCameraId": "Camera.Profile.GraphOpsGallery",
+    "targetXCm": 0,
+    "targetYCm": 0,
+    "distanceCm": 3400,
+    "pitch": 70,
+    "yaw": 180,
+    "fovYDeg": 50
+  },
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": 0.0,
+      "y": 0.0,
+      "health": 100,
+      "healthMax": 100,
+      "team": 1
+    },
+    {
+      "id": "innerEast",
+      "role": "enemy",
+      "template": "GraphOps.Target",
+      "name": "里圈东",
+      "x": 6.93,
+      "y": 0.0,
+      "health": 100,
+      "healthMax": 100,
+      "team": 2
+    },
+    {
+      "id": "innerSouth",
+      "role": "enemy",
+      "template": "GraphOps.Target",
+      "name": "里圈东南",
+      "x": 3.46,
+      "y": 6.0,
+      "health": 100,
+      "healthMax": 100,
+      "team": 2
+    },
+    {
+      "id": "ringEast",
+      "role": "enemy",
+      "template": "GraphOps.Target",
+      "name": "环上东",
+      "x": 13.86,
+      "y": 0.0,
+      "health": 100,
+      "healthMax": 100,
+      "team": 2
+    },
+    {
+      "id": "ringSouth",
+      "role": "enemy",
+      "template": "GraphOps.Target",
+      "name": "环上东南",
+      "x": 6.93,
+      "y": 12.0,
+      "health": 100,
+      "healthMax": 100,
+      "team": 2
+    },
+    {
+      "id": "ringWest",
+      "role": "enemy",
+      "template": "GraphOps.Target",
+      "name": "环上西",
+      "x": -13.86,
+      "y": 0.0,
+      "health": 100,
+      "healthMax": 100,
+      "team": 2
+    },
+    {
+      "id": "outer",
+      "role": "enemy",
+      "template": "GraphOps.Target",
+      "name": "环外东",
+      "x": 20.78,
+      "y": 0.0,
+      "health": 100,
+      "healthMax": 100,
+      "team": 2
+    }
+  ],
+  "collections": [],
+  "links": []
+}

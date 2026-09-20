@@ -47,10 +47,13 @@ namespace Ludots.Core.Navigation.NavMesh.Config
             _ = config.ParsedMode;
             _ = config.ParsedAlgorithm;
 
+            ValidatePerMapTileGranularity(config);
+
             if (config.ParsedMode == NavBakeMode.RuntimeIncremental &&
-                config.ParsedAlgorithm != NavBakeAlgorithmKind.Cdt)
+                config.ParsedAlgorithm != NavBakeAlgorithmKind.Cdt &&
+                config.ParsedAlgorithm != NavBakeAlgorithmKind.Recast)
             {
-                throw new InvalidOperationException("NavMeshBakeConfig runtime-incremental mode must use algorithm 'cdt'.");
+                throw new InvalidOperationException("NavMeshBakeConfig runtime-incremental mode must use algorithm 'cdt' or 'recast'.");
             }
 
             if (config.Profiles == null || config.Profiles.Count == 0)
@@ -181,13 +184,97 @@ namespace Ludots.Core.Navigation.NavMesh.Config
             return result;
         }
 
+        /// <summary>
+        /// One map carries one nav tile grid (#1346): runtime tile addressing and
+        /// artifact paths share a single (width, height) granularity per map, so
+        /// boards declaring different sizes would be silently misaddressed by the
+        /// max-size grid.
+        /// </summary>
+        internal static void ValidatePerMapTileGranularity(NavMeshBakeConfig config)
+        {
+            foreach ((string mapId, NavMapNavBoardsConfig? mapBoards) in config.Maps)
+            {
+                if (mapBoards?.Boards is not { Count: > 1 })
+                {
+                    continue;
+                }
+
+                string? firstName = null;
+                int firstW = 0, firstH = 0;
+                foreach ((string boardName, NavTileGridConfig? grid) in mapBoards.Boards)
+                {
+                    if (grid == null || grid.TileWorldWidthCm <= 0 || grid.TileWorldHeightCm <= 0)
+                    {
+                        continue;
+                    }
+
+                    if (firstName == null)
+                    {
+                        firstName = boardName;
+                        firstW = grid.TileWorldWidthCm;
+                        firstH = grid.TileWorldHeightCm;
+                        continue;
+                    }
+
+                    if (grid.TileWorldWidthCm != firstW || grid.TileWorldHeightCm != firstH)
+                    {
+                        throw new InvalidOperationException(
+                            $"NavMeshBakeConfig.maps.{mapId}.boards declare mixed tile granularities: '{boardName}' {grid.TileWorldWidthCm}x{grid.TileWorldHeightCm}cm vs '{firstName}' {firstW}x{firstH}cm; one map carries one nav grid until per-board tile addressing lands (#1567 slice 2 follow-up).");
+                    }
+                }
+            }
+        }
+
         private void ValidateRaw(JsonObject root, string relativePath)
         {
-            RequireOnlyProperties(root, "NavMeshBakeConfig", "mode", "algorithm", "profiles", "layers", "areas", "runtimeIncremental");
+            RequireOnlyProperties(root, "NavMeshBakeConfig", new[] { "mode", "algorithm", "profiles", "layers", "areas", "runtimeIncremental" }, new[] { "terrainFeed", "maps" });
             string mode = RequireString(root, "mode", "NavMeshBakeConfig");
             string algorithm = RequireString(root, "algorithm", "NavMeshBakeConfig");
             _ = NavBakeNames.ParseMode(mode, "NavMeshBakeConfig.mode");
             _ = NavBakeNames.ParseAlgorithm(algorithm, "NavMeshBakeConfig.algorithm");
+            if (root.TryGetPropertyValue("terrainFeed", out var terrainFeedNode))
+            {
+                if (terrainFeedNode is null)
+                {
+                    throw new InvalidOperationException("NavMeshBakeConfig.terrainFeed must be 'triangles' or 'direct', not null.");
+                }
+
+                _ = NavBakeNames.ParseTerrainFeed(RequireString(root, "terrainFeed", "NavMeshBakeConfig"), "NavMeshBakeConfig.terrainFeed");
+            }
+
+            if (root.TryGetPropertyValue("maps", out var mapsNode))
+            {
+                if (mapsNode is not JsonObject maps)
+                {
+                    throw new InvalidOperationException("NavMeshBakeConfig.maps must be an object keyed by map id.");
+                }
+
+                foreach (var mapEntry in maps)
+                {
+                    if (mapEntry.Value is not JsonObject mapObj)
+                    {
+                        throw new InvalidOperationException($"NavMeshBakeConfig.maps.{mapEntry.Key} must be an object.");
+                    }
+
+                    RequireOnlyProperties(mapObj, $"NavMeshBakeConfig.maps.{mapEntry.Key}", new[] { "boards" });
+                    if (mapObj.TryGetPropertyValue("boards", out var boardsNode) && boardsNode is JsonObject boards)
+                    {
+                        foreach (var boardEntry in boards)
+                        {
+                            if (boardEntry.Value is not JsonObject boardObj)
+                            {
+                                throw new InvalidOperationException($"NavMeshBakeConfig.maps.{mapEntry.Key}.boards.{boardEntry.Key} must be an object.");
+                            }
+
+                            RequireOnlyProperties(
+                                boardObj,
+                                $"NavMeshBakeConfig.maps.{mapEntry.Key}.boards.{boardEntry.Key}",
+                                new[] { "tileWorldWidthCm", "tileWorldHeightCm" },
+                                new[] { "originXcm", "originYcm" });
+                        }
+                    }
+                }
+            }
 
             if (root["profiles"] is not JsonArray profiles || profiles.Count == 0)
             {
@@ -254,7 +341,13 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                 string path = $"NavMeshBakeConfig.areas[{i}]";
                 RequireOnlyProperties(area, path, "id", "areaId", "cost");
                 RequireString(area, "id", path);
-                RequireNumber(area, "areaId", path);
+                int authoredAreaId = RequireInt(area, "areaId", path);
+                if (authoredAreaId >= RecastNavTileBaker.ReservedWalkableAreaId)
+                {
+                    throw new InvalidOperationException(
+                        $"{path}.areaId {authoredAreaId} is reserved: ids >= {RecastNavTileBaker.ReservedWalkableAreaId} collide with the Recast walkable marker on the direct terrain feed.");
+                }
+
                 RequireNumber(area, "cost", path);
             }
 
@@ -298,6 +391,12 @@ namespace Ludots.Core.Navigation.NavMesh.Config
         }
 
         private static void RequireOnlyProperties(JsonObject obj, string path, params string[] allowed)
+            => RequireOnlyProperties(obj, path, allowed, Array.Empty<string>());
+
+        /// <summary>Unknown-key rejection is absolute; `optional` keys are validated when
+        /// present but carry no presence requirement, so new vocabulary lands without
+        /// forcing every existing navmesh.json to repeat it.</summary>
+        private static void RequireOnlyProperties(JsonObject obj, string path, string[] allowed, string[] optional)
         {
             foreach (var property in obj)
             {
@@ -305,6 +404,15 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                 for (int i = 0; i < allowed.Length; i++)
                 {
                     if (string.Equals(property.Key, allowed[i], StringComparison.Ordinal))
+                    {
+                        known = true;
+                        break;
+                    }
+                }
+
+                for (int i = 0; !known && i < optional.Length; i++)
+                {
+                    if (string.Equals(property.Key, optional[i], StringComparison.Ordinal))
                     {
                         known = true;
                         break;

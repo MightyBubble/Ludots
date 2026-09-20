@@ -1,0 +1,48 @@
+[
+  {
+    "id": "showcase.graph_op.LoadConfigEffectId",
+    "kind": "Effect",
+    "entry": "cfgFx",
+    "nodes": [
+      {
+        "id": "cfgFx",
+        "op": "LoadConfigEffectId",
+        "configKey": "showcase.config.chainEffect"
+      },
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "applyDyn",
+        "op": "ApplyEffectDynamic"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "cfgFx",
+        "fromPort": "next",
+        "to": "explicit"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "applyDyn"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "cfgFx",
+        "fromPort": "value",
+        "to": "applyDyn",
+        "toPort": "value"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "applyDyn",
+        "toPort": "target"
+      }
+    ]
+  }
+]

@@ -11,6 +11,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Client;
 
 namespace ModdingTest
 {
@@ -51,7 +52,8 @@ namespace ModdingTest
             // 2. Create game.json (Launcher Responsibility)
             var gameConfig = new GameConfig
             {
-                ModPaths = new List<string> { testModPath, inputPatchModPath }
+                ModPaths = new List<string> { testModPath, inputPatchModPath },
+                StartupMapId = "smoke_world"
             };
 
             string gameJsonPath = Path.Combine(rootDir, "game.json");
@@ -65,7 +67,7 @@ namespace ModdingTest
                 // Note: GameBootstrapper expects "assets" folder to be discoverable from baseDirectory or parents
                 // But our assetsDir might be far away if we are in bin/Debug...
                 // GameBootstrapper.FindAssetsRootStrict looks up parent directories.
-                // If we are in bin/Debug/net8.0, and assets is in project root, it should find it.
+                // If we are in bin/Debug/net9.0, and assets is in project root, it should find it.
                 // Let's verify.
                 
                 Console.WriteLine("[Bootstrapper] Initializing...");
@@ -137,7 +139,7 @@ namespace ModdingTest
                     if (health == "999" && mana == "50" && name == "Base Unit")
                     {
                         Console.ForegroundColor = ConsoleColor.Green;
-                        Console.WriteLine("SUCCESS: ModLauncher Architecture & Pipeline Verified!");
+                        Console.WriteLine("SUCCESS: Launcher Architecture & Pipeline Verified!");
                     }
                     else
                     {
@@ -183,14 +185,14 @@ namespace ModdingTest
 
                 backend.MousePos = new Vector2(100, 100);
                 backend.MiddleDown = true;
-                inputHandler.Update();
+                inputHandler.Update(1f / 60f);
                 engine.Tick(0.016f);
 
                 backend.MousePos = new Vector2(140, 100);
-                inputHandler.Update();
+                inputHandler.Update(1f / 60f);
                 engine.Tick(0.016f);
 
-                var yaw = engine.GameSession.Camera.State.Yaw;
+                var yaw = ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State.Yaw;
                 Console.WriteLine($"Camera Yaw After Drag: {yaw:F2} (Expected > 0)");
                 if (yaw > 0.1f)
                 {
@@ -238,6 +240,9 @@ namespace ModdingTest
             Directory.CreateDirectory(modPath);
             File.WriteAllText(Path.Combine(modPath, "mod.json"), 
                 @"{ ""name"": ""PipelineTestMod"", ""version"": ""1.0.0"" }");
+            Directory.CreateDirectory(Path.Combine(modPath, "assets", "Maps"));
+            File.WriteAllText(Path.Combine(modPath, "assets", "Maps", "smoke_world.json"),
+                @"{ ""Id"": ""smoke_world"", ""World"": { ""WidthCm"": 1638400, ""HeightCm"": 1638400, ""CellSizeCm"": 100 } }");
             
             string entitiesDir = Path.Combine(modPath, "assets", "Entities");
             Directory.CreateDirectory(entitiesDir);

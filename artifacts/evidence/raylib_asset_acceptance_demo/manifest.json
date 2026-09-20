@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0",
+  "evidence_id": "raylib_asset_acceptance_demo",
+  "subject": {
+    "kind": "tool",
+    "key": "raylib_asset_acceptance",
+    "scenario_id": "demo",
+    "branch": "codex/arch-wiki",
+    "commit": "f507584eb610a7935016d3aeb9b23d561479f33b"
+  },
+  "capture": {
+    "kind": "video",
+    "tool": "scripts/record-raylib-asset-acceptance.py（宿主静帧合同 LUDOTS_TAKE_SCREENSHOT_PATH/_FRAMES + ffmpeg 拼接）",
+    "requested_by": "用户：录屏证明 + 教程素材",
+    "started_at_utc": "2026-08-24T17:01:00Z",
+    "completed_at_utc": "2026-08-24T17:02:30Z",
+    "notes": "mannequin_large_walk.glb + --demo 时间线（720 帧 = 最终/Albedo/法线/粗糙度/缺省标量消融/回到最终，每段 120 帧）；时间戳由产物 mtime 与录制窗口推算。textured-cube.png / error-panel.png 来自同版本真实运行的 --screenshot 通道。"
+  },
+  "artifacts": [
+    {
+      "kind": "video",
+      "path": "artifacts/evidence/raylib_asset_acceptance_demo/play.mp4",
+      "media_type": "video/mp4",
+      "description": "验收台功能演示：视图拆通道 + 贴图/缺省标量消融 + 转台 + 昼夜太阳"
+    },
+    {
+      "kind": "screenshot",
+      "path": "artifacts/evidence/raylib_asset_acceptance_demo/poster.png",
+      "media_type": "image/png",
+      "description": "演示录像封面帧（第 3 张静帧）"
+    },
+    {
+      "kind": "screenshot",
+      "path": "artifacts/evidence/raylib_asset_acceptance_demo/textured-cube.png",
+      "media_type": "image/png",
+      "description": "带 map_Kd 贴图 OBJ → GLB 转换后纹理正常嵌入渲染（HUD albedo 1/1）"
+    }
+  ]
+}

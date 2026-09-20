@@ -174,7 +174,7 @@ namespace Ludots.Tests.GAS.Production
             {
                 playerInput.InjectAction(AuthoritativeGroundPointerHelper.ActionId, new System.Numerics.Vector3(worldCm.X, 0f, worldCm.Y));
                 playerInput.InjectAction(bindings.PointerPositionActionId, new System.Numerics.Vector3(worldCm.X, worldCm.Y, 0f));
-                playerInput.Update();
+                playerInput.Update(1f / 60f);
             }
             else
             {
@@ -279,7 +279,6 @@ namespace Ludots.Tests.GAS.Production
                 "capability_standard",
                 "CapabilityStandardPhysics2DShowcaseMod",
                 "assets",
-                "Configs",
                 "config_catalog.json");
             using JsonDocument document = JsonDocument.Parse(File.ReadAllText(catalogPath));
             AssertCatalogEntry(document.RootElement, ShowcaseConfigPath, "Replace", null);

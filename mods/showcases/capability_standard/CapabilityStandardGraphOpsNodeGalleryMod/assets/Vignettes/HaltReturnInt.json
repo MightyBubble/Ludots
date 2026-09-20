@@ -1,0 +1,24 @@
+{
+  "op": "HaltReturnInt",
+  "driver": "script",
+  "title": "算出一个整数就收工",
+  "beat": "数落进托盘、卷轴拉下打烊条、人挪到答案旁边——这三件事同时发生，就是收工。",
+  "detailTemplate": "算完了，托盘里是 {result} 枚，卷轴打烊，人站在答案旁。",
+  "assertDetailContains": [
+    "托盘"
+  ],
+  "featuredNodeId": "halt",
+  "graphKind": "Script",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "喝茶人",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

@@ -1,0 +1,87 @@
+[
+  {
+    "id": "blacksmith.smoke",
+    "version": "quarks.ludots.v1",
+    "spawnMode": "Loop",
+    "shape": "Cone",
+    "renderMode": "Primitive",
+    "blendMode": "Alpha",
+    "primitive": "Sphere",
+    "maxParticles": 128,
+    "seed": 2026080613,
+    "durationSeconds": 1.4,
+    "emissionRatePerSecond": 32,
+    "burstCount": 32,
+    "shapeRadius": 0.42,
+    "shapeAngleRadians": 0.46,
+    "shapeThickness": 0.8,
+    "startLife": [
+      0.9,
+      1.7
+    ],
+    "startSpeed": [
+      0.32,
+      0.95
+    ],
+    "startSize": [
+      0.08,
+      0.2
+    ],
+    "startColor": [
+      0.68,
+      0.67,
+      0.61,
+      0.45
+    ],
+    "sizeOverLife": [
+      {
+        "position": 0.0,
+        "value": 0.35
+      },
+      {
+        "position": 0.4,
+        "value": 1.0
+      },
+      {
+        "position": 1.0,
+        "value": 1.7
+      }
+    ],
+    "colorOverLife": [
+      {
+        "position": 0.0,
+        "color": [
+          0.86,
+          0.83,
+          0.74,
+          0.42
+        ]
+      },
+      {
+        "position": 0.55,
+        "color": [
+          0.72,
+          0.72,
+          0.67,
+          0.28
+        ]
+      },
+      {
+        "position": 1.0,
+        "color": [
+          0.3,
+          0.31,
+          0.29,
+          0.0
+        ]
+      }
+    ],
+    "gravity": [
+      0.0,
+      0.3,
+      0.0
+    ],
+    "drag": 0.2,
+    "worldSpace": true
+  }
+]

@@ -1,15 +1,14 @@
 using System.Collections.Generic;
 using System;
 using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Networking.Simulation;
 
 namespace Ludots.Core.Gameplay
 {
     public sealed record GameSessionSnapshot(
         int CurrentTick,
-        int LocalPlayerId,
         IReadOnlyList<PlayerSnapshot> Players,
-        IReadOnlyDictionary<string, object> Globals,
-        CameraStateSnapshot Camera);
+        IReadOnlyDictionary<string, object> Globals);
 
     public sealed record PlayerSnapshot(int Id, int TeamId, CameraStateSnapshot Camera);
 
@@ -17,21 +16,29 @@ namespace Ludots.Core.Gameplay
     {
         private readonly List<Player> _players = new List<Player>();
         private readonly Dictionary<int, PlayerInputFrame> _inputCache = new Dictionary<int, PlayerInputFrame>();
+        private readonly AuthoritativeSimulationTickState _simulationTicks;
+
+        public GameSession()
+            : this(new AuthoritativeSimulationTickState())
+        {
+        }
+
+        public GameSession(AuthoritativeSimulationTickState simulationTicks)
+        {
+            _simulationTicks = simulationTicks ?? throw new ArgumentNullException(nameof(simulationTicks));
+        }
 
         public Dictionary<string, object> Globals { get; } = new Dictionary<string, object>();
 
-        public int CurrentTick { get; private set; } = 0;
+        public int CurrentTick => _simulationTicks.IsExecuting
+            ? _simulationTicks.ExecutingTick
+            : _simulationTicks.CommittedTick;
 
-        public CameraManager Camera { get; } = new CameraManager();
-        public int LocalPlayerId { get; private set; }
+        public AuthoritativeSimulationTickState SimulationTicks => _simulationTicks;
 
         public void AddPlayer(Player player)
         {
             _players.Add(player);
-            if (LocalPlayerId <= 0)
-            {
-                LocalPlayerId = player.Id;
-            }
         }
 
         public void RemovePlayer(Player player)
@@ -41,19 +48,53 @@ namespace Ludots.Core.Gameplay
 
         public void FixedUpdate()
         {
-            // Gather inputs for the current tick
+            BeginSimulationTick();
+            CollectFixedUpdateInputs();
+            CommitFixedUpdate();
+        }
+
+        public void BeginFixedUpdate()
+        {
+            BeginSimulationTick();
+            CollectFixedUpdateInputs();
+        }
+
+        public void BeginSimulationTick()
+        {
+            int tick = _simulationTicks.CommittedTick + 1;
+            _simulationTicks.Begin(tick);
+        }
+
+        public void CollectFixedUpdateInputs()
+        {
+            if (!_simulationTicks.IsExecuting)
+            {
+                throw new InvalidOperationException(
+                    "Cannot collect fixed-step inputs outside an executing authoritative simulation tick.");
+            }
+
+            int tick = _simulationTicks.ExecutingTick;
             _inputCache.Clear();
             foreach (var player in _players)
             {
-                var input = player.Source.GetInput(CurrentTick);
+                var input = player.Source.GetInput(tick);
                 _inputCache[player.Id] = input;
             }
+        }
 
-            CurrentTick++;
+        public void CommitFixedUpdate()
+        {
+            _simulationTicks.Commit(_simulationTicks.ExecutingTick);
         }
 
         public GameSessionSnapshot CaptureSnapshot()
         {
+            if (_simulationTicks.IsExecuting)
+            {
+                throw new InvalidOperationException(
+                    $"Cannot capture GameSession while authoritative simulation tick {_simulationTicks.ExecutingTick} is executing.");
+            }
+
             var players = new PlayerSnapshot[_players.Count];
             for (int i = 0; i < _players.Count; i++)
             {
@@ -71,11 +112,9 @@ namespace Ludots.Core.Gameplay
             }
 
             return new GameSessionSnapshot(
-                CurrentTick,
-                LocalPlayerId,
+                _simulationTicks.CommittedTick,
                 players,
-                globals,
-                CameraStateSnapshot.FromState(Camera.State));
+                globals);
         }
 
         public void RestoreSnapshot(GameSessionSnapshot snapshot)
@@ -110,11 +149,8 @@ namespace Ludots.Core.Gameplay
                 Globals[pair.Key] = CopySerializableGlobal(pair.Key, pair.Value);
             }
 
-            CurrentTick = snapshot.CurrentTick;
-            LocalPlayerId = snapshot.LocalPlayerId;
-            snapshot.Camera.ApplyTo(Camera.State);
-            snapshot.Camera.ApplyTo(Camera.PreviousState);
-        }
+            _simulationTicks.RestoreCommittedTick(snapshot.CurrentTick);
+    }
 
         public void Update(float dt)
         {
@@ -132,16 +168,6 @@ namespace Ludots.Core.Gameplay
         }
 
         public IReadOnlyList<Player> Players => _players;
-
-        public void SelectLocalPlayer(int playerId)
-        {
-            if (playerId <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(playerId), "Local player id must be positive.");
-            }
-
-            LocalPlayerId = playerId;
-        }
 
         private static object CopySerializableGlobal(string key, object value)
         {

@@ -1,0 +1,16 @@
+[
+  {
+    "id": "Task.CollectionBags.NightWatch",
+    "display_name": "巡夜差事",
+    "start_policy": "automatic",
+    "completion_rule": "all",
+    "objectives": [
+      {
+        "id": "watch",
+        "kind": "signal",
+        "signal_key": "task.state_changed",
+        "title": "完成巡夜"
+      }
+    ]
+  }
+]

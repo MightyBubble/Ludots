@@ -1,4 +1,5 @@
 using System;
+using Ludots.Adapter.Raylib.Rendering;
 using Ludots.Client.Raylib.Diagnostics;
 using Ludots.Client.Raylib.Input;
 using Ludots.Core.Config;
@@ -7,6 +8,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Hosting;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Scripting;
@@ -25,11 +27,15 @@ namespace Ludots.Adapter.Raylib
         GameConfig Config,
         UIRoot UiRoot,
         SkiaUiRenderer Renderer,
-        IBrowserRuntime? BrowserRuntime);
+        IBrowserRuntime? BrowserRuntime,
+        RaylibInstancedBatchLaneStore InstancedBatchLaneStore);
 
     internal static class RaylibHostComposer
     {
-        public static RaylibHostSetup Compose(string baseDir, string? gameConfigFile = null)
+        public static RaylibHostSetup Compose(
+            string baseDir,
+            string? gameConfigFile = null,
+            Action<GameBootstrapResult>? configure = null)
         {
             // Initialize log with colored console backend before anything else
             var consoleBackend = new RaylibConsoleLogBackend();
@@ -39,6 +45,7 @@ namespace Ludots.Adapter.Raylib
             Log.Initialize(effectiveBackend);
 
             var result = GameBootstrapper.InitializeFromBaseDirectory(baseDir, gameConfigFile ?? "launcher.runtime.json");
+            configure?.Invoke(result);
             var engine = result.Engine;
             var config = result.Config;
             IBrowserRuntime? browserRuntime = RaylibBrowserRuntimeInstaller.InstallIfConfigured(engine, config, baseDir);
@@ -76,9 +83,15 @@ namespace Ludots.Adapter.Raylib
             engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)textMeasurer);
             engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)imageSizeProvider);
             engine.SetService(CoreServiceKeys.UISystem, (Core.UI.IUiSystem)new MarkupUiSystem(uiSurfaceHost));
+            Ludots.UI.Panels.PanelPresentationInstaller.Install(engine);
+            if (browserRuntime != null)
+            {
+                Ludots.WebUI.Browser.PanelWebSkinInstaller.TryInstall(engine, browserRuntime);
+            }
 
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
-            IInputBackend inputBackend = new RaylibInputBackend();
+            var syntheticInput = new SyntheticInputDevice();
+            IInputBackend inputBackend = new RaylibInputBackend(syntheticInput);
             var inputHandler = new PlayerInputHandler(inputBackend, inputConfig);
             if (config.StartupInputContexts != null)
             {
@@ -92,10 +105,46 @@ namespace Ludots.Adapter.Raylib
             }
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.InputBackend, (Core.Input.Runtime.IInputBackend)inputBackend);
+            engine.SetService(CoreServiceKeys.SyntheticInput, syntheticInput);
+            engine.SetService(CoreServiceKeys.HostFrameCapture, (IHostFrameCapture)new Services.RaylibFrameCaptureService());
+
+            var instancedBatchLaneStore = new RaylibInstancedBatchLaneStore();
+            engine.SetService(RaylibInstancedBatchLaneStore.LaneStoreServiceKey, instancedBatchLaneStore);
+
+            engine.SetService(
+                CoreServiceKeys.SaveStorage,
+                (Ludots.Platform.Abstractions.ISaveStorage)new Ludots.Platform.Desktop.DesktopSaveStorage(
+                    System.IO.Path.Combine(baseDir, "Saves")));
+
+            engine.RegisterPresentationAdapterCapabilities(
+                new PresentationAdapterCapabilities(ComposePresentationVisualCapabilities()));
 
             ValidateRequiredContextBeforeStart(engine);
 
-            return new RaylibHostSetup(engine, config, uiRoot, renderer, browserRuntime);
+            return new RaylibHostSetup(engine, config, uiRoot, renderer, browserRuntime, instancedBatchLaneStore);
+        }
+
+        internal static PresentationVisualCapabilities ComposePresentationVisualCapabilities()
+        {
+            // InstancedStaticMeshBatch is flat-only on purpose: raylib has no hierarchical ISM,
+            // so HierarchicalInstancedStaticMeshBatch stays undeclared and fail-loud at the
+            // tick-tail validator rather than silently degrading to a flat draw.
+            return PresentationVisualCapabilities.Decal |
+                   PresentationVisualCapabilities.Vfx |
+                   PresentationVisualCapabilities.Surface |
+                   PresentationVisualCapabilities.NavMeshTileGeometry |
+                   PresentationVisualCapabilities.InstancedStaticMeshBatch;
+        }
+
+        internal static void EnsureInstancedBatchLaneSourceBound(
+            PresentationVisualCapabilities visuals,
+            bool laneSourceBound)
+        {
+            if (visuals.HasFlag(PresentationVisualCapabilities.InstancedStaticMeshBatch) && !laneSourceBound)
+            {
+                throw new InvalidOperationException(
+                    $"Raylib host declared {nameof(PresentationVisualCapabilities.InstancedStaticMeshBatch)} without binding an instanced batch lane source; bind {nameof(RaylibInstancedBatchLaneStore)} in the same compose step or drop the capability bit.");
+            }
         }
 
         private static void ValidateRequiredContextBeforeStart(GameEngine engine)
@@ -105,6 +154,12 @@ namespace Ludots.Adapter.Raylib
             ValidateKey(engine, CoreServiceKeys.UISystem);
             ValidateKey(engine, CoreServiceKeys.InputHandler);
             ValidateKey(engine, CoreServiceKeys.InputBackend);
+            PresentationVisualCapabilities visuals = engine
+                .GetService(CoreServiceKeys.PresentationAdapterCapabilities)
+                .Visuals;
+            EnsureInstancedBatchLaneSourceBound(
+                visuals,
+                engine.TryGetService(RaylibInstancedBatchLaneStore.LaneStoreServiceKey, out _));
         }
 
         private static void ValidateKey<T>(GameEngine engine, ServiceKey<T> key)

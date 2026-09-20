@@ -10,6 +10,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Spatial;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Presentation;
 
@@ -75,7 +76,7 @@ public sealed class MassNavigationOrderChainTests
         float workAreaX = simulation.FlowWorkAreaCenterXCm;
         float workAreaY = simulation.FlowWorkAreaCenterYCm;
         float originX = simulation.MassNavigationFlow.WorldOriginXCm;
-        float originY = simulation.MassNavigationFlow.WorldOriginYCm;
+        float originY = simulation.MassNavigationFlow.WorldOriginYcm;
         Vector2 localPosition = simulation.GetAgentLocalPositionCm(0);
         Vector2 worldPosition = simulation.GetAgentWorldPositionCm(0);
         long[] loadedBefore = simulation.LoadedChunks.ActiveChunkKeys.OrderBy(key => key).ToArray();
@@ -89,7 +90,7 @@ public sealed class MassNavigationOrderChainTests
         Assert.That(simulation.FlowWorkAreaCenterXCm, Is.EqualTo(workAreaX));
         Assert.That(simulation.FlowWorkAreaCenterYCm, Is.EqualTo(workAreaY));
         Assert.That(simulation.MassNavigationFlow.WorldOriginXCm, Is.EqualTo(originX));
-        Assert.That(simulation.MassNavigationFlow.WorldOriginYCm, Is.EqualTo(originY));
+        Assert.That(simulation.MassNavigationFlow.WorldOriginYcm, Is.EqualTo(originY));
         Assert.That(simulation.GetAgentLocalPositionCm(0), Is.EqualTo(localPosition));
         Assert.That(simulation.GetAgentWorldPositionCm(0), Is.EqualTo(worldPosition));
         Assert.That(simulation.LoadedChunks.ActiveChunkKeys.OrderBy(key => key).ToArray(), Is.EqualTo(loadedBefore));
@@ -256,6 +257,36 @@ public sealed class MassNavigationOrderChainTests
         config.AgentProfiles.Validate();
         config.AgentProfiles.BindAgentProfiles(CreateAgentProfilesForTests());
         return config;
+    }
+
+    /// <summary>
+    /// 基座 config 在 Separation 模式下不再携带 orca/sonar 节；测试切换到 Orca/Sonar 时
+    /// 必须显式补齐该模式的必填键（值取自原基座 showcase 实测值）。
+    /// </summary>
+    internal static void PopulateModeSpecificAvoidance(MassNavigationFlowAvoidanceTuning avoidance, string mode)
+    {
+        if (mode == "Orca")
+        {
+            avoidance.Orca = new MassNavigationFlowOrcaAvoidanceConfig
+            {
+                TimeHorizonSeconds = 0.85f,
+                MaxNeighbors = 16,
+            };
+        }
+        else if (mode == "Sonar")
+        {
+            avoidance.Sonar = new MassNavigationFlowSonarAvoidanceConfig
+            {
+                MaxSteerAngleDeg = 280,
+                BackwardPenaltyAngleDeg = 230,
+                PredictionTimeScale = 0.9f,
+                IgnoreBehindMovingAgents = true,
+                BlockedStop = false,
+                UsePreferredVelocityWhenBlocked = true,
+                TimeHorizonSeconds = 0.85f,
+                MaxNeighbors = 16,
+            };
+        }
     }
 
     private static MassNavigationConfig LoadBaseMassNavigationConfig()

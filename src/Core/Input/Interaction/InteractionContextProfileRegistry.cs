@@ -1,41 +1,136 @@
 using System;
+using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.GraphRuntime;
+using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Registry;
 
 namespace Ludots.Core.Input.Interaction
 {
     /// <summary>
+    /// Reference catalogs the profile install chain resolves <c>bindings[]</c>,
+    /// <c>triggers[]</c>, and <c>whileActive</c> against: the graph
+    /// program registry for trigger mounts and whileActive mounts (graphs that
+    /// WriteCollection their preview collection), and the input action id space for
+    /// semantic action bindings. A profile declaring any of those fields fails fast at install
+    /// when its catalog is absent or incomplete.
+    /// </summary>
+    public sealed class InteractionContextProfileReferenceCatalog
+    {
+        public InteractionContextProfileReferenceCatalog(
+            GraphProgramRegistry programs,
+            IEnumerable<string> inputActionIds,
+            GraphOutputSchemaRegistry? outputSchemas = null)
+        {
+            Programs = programs ?? throw new ArgumentNullException(nameof(programs));
+            if (inputActionIds == null)
+            {
+                throw new ArgumentNullException(nameof(inputActionIds));
+            }
+
+            var actionIds = new HashSet<string>(StringComparer.Ordinal);
+            foreach (string actionId in inputActionIds)
+            {
+                if (!string.IsNullOrWhiteSpace(actionId))
+                {
+                    actionIds.Add(actionId);
+                }
+            }
+
+            InputActionIds = actionIds;
+            OutputSchemas = outputSchemas;
+        }
+
+        public GraphProgramRegistry Programs { get; }
+
+        public IReadOnlyCollection<string> InputActionIds { get; }
+
+        /// <summary>Required when any profile declares <c>whileActive</c>; null otherwise.</summary>
+        public GraphOutputSchemaRegistry? OutputSchemas { get; }
+    }
+
+    /// <summary>
     /// InteractionContextProfile registry (RFC-0065 CTX-6, §5.3). Profiles are declared in
-    /// <c>Input/interaction_context_profiles.json</c> and installed as immutable rows; frame pushers
-    /// (ability exec lifecycle, cast commit ops) materialize an
-    /// <see cref="InteractionContextFrameDescriptor"/> per push. Descriptor creation is
-    /// allocation free after install (strings are pre-trimmed rows).
+    /// <c>Input/interaction_context_profiles.json</c> and installed as immutable rows with
+    /// every id field resolved up front: profile ids and input context ids register into this
+    /// registry's own spaces, collection keys register into the shared
+    /// <c>EntityCollectionStore</c> key space, and filter / command intent names must already
+    /// be registered in their kernel registries (install those first — unknown names fail fast
+    /// here). Context mounting (<see cref="TryCreateActiveContext"/>) is allocation free after
+    /// install because it only copies pre-resolved ints.
     /// </summary>
     public sealed class InteractionContextProfileRegistry
     {
         private readonly StringIntRegistry _profileIds;
+        private readonly StringIntRegistry _inputContextIds;
         private InteractionContextProfileDefinition[] _profiles = new InteractionContextProfileDefinition[8];
+        private int[] _collectionKeyIds = new int[8];
+        private int[] _filterProfileIds = new int[8];
+        private int[] _commandIntentProfileIds = new int[8];
+        private int[] _inputContextIdsByProfile = new int[8];
+        private bool[] _isForeground = new bool[8];
+        private int[][] _onActivatedGraphIds = new int[8][];
+        private int[][] _onDeactivatedGraphIds = new int[8][];
 
         public InteractionContextProfileRegistry(StringIntRegistry profileIdRegistry)
         {
             _profileIds = profileIdRegistry ?? throw new ArgumentNullException(nameof(profileIdRegistry));
+            _inputContextIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
         }
 
-        /// <summary>Profile id space; frame pushers resolve profile names through it.</summary>
+        /// <summary>Profile id space; ability declarations and mounts resolve profile names through it.</summary>
         public StringIntRegistry ProfileIdRegistry => _profileIds;
 
-        /// <summary>Install every profile in the config; fails fast on duplicates.</summary>
-        public void Install(InteractionContextProfilesConfig config)
+        /// <summary>
+        /// IMC input context id space for profile-declared <c>inputContextId</c> values; the
+        /// input context projection reads names back through it.
+        /// </summary>
+        public StringIntRegistry InputContextIdRegistry => _inputContextIds;
+
+        /// <summary>
+        /// Install every profile in the config, resolving id fields against the given spaces;
+        /// fails fast on duplicates, unknown filter or command intent names. Profiles declaring
+        /// <c>bindings[]</c> or <c>triggers[]</c> additionally require
+        /// <paramref name="referenceCatalog"/> and resolve against it (unknown semantic action
+        /// ids and trigger graph/event names fail fast).
+        /// </summary>
+        public void Install(
+            InteractionContextProfilesConfig config,
+            StringIntRegistry collectionKeyRegistry,
+            StringIntRegistry filterProfileIdRegistry,
+            StringIntRegistry commandIntentProfileIdRegistry,
+            InteractionContextProfileReferenceCatalog? referenceCatalog = null)
         {
             if (config == null)
             {
                 throw new ArgumentNullException(nameof(config));
             }
 
+            if (collectionKeyRegistry == null)
+            {
+                throw new ArgumentNullException(nameof(collectionKeyRegistry));
+            }
+
+            if (filterProfileIdRegistry == null)
+            {
+                throw new ArgumentNullException(nameof(filterProfileIdRegistry));
+            }
+
+            if (commandIntentProfileIdRegistry == null)
+            {
+                throw new ArgumentNullException(nameof(commandIntentProfileIdRegistry));
+            }
+
             InteractionContextProfileConfigLoader.Validate(config, nameof(InteractionContextProfilesConfig));
             for (int i = 0; i < config.Profiles.Count; i++)
             {
-                InstallProfile(config.Profiles[i]);
+                InstallProfile(
+                    config.Profiles[i],
+                    collectionKeyRegistry,
+                    filterProfileIdRegistry,
+                    commandIntentProfileIdRegistry,
+                    referenceCatalog);
             }
         }
 
@@ -45,32 +140,117 @@ namespace Ludots.Core.Input.Interaction
             return profileId > 0 && profileId < _profiles.Length && _profiles[profileId] != null;
         }
 
-        /// <summary>
-        /// Materialize a frame descriptor for the profile with <paramref name="contextEntity"/> as
-        /// the owning entity (e.g. the ability exec instance carrier; default for client-initiated
-        /// pushes). Returns false when the profile id is not installed.
-        /// </summary>
-        public bool TryCreateFrameDescriptor(int profileId, Entity contextEntity, out InteractionContextFrameDescriptor descriptor)
+        /// <summary>Installed profile row by id; false when not installed.</summary>
+        public bool TryGetDefinition(int profileId, out InteractionContextProfileDefinition definition)
         {
             if (!IsInstalled(profileId))
             {
-                descriptor = default;
+                definition = null!;
                 return false;
             }
 
-            InteractionContextProfileDefinition profile = _profiles[profileId];
-            descriptor = new InteractionContextFrameDescriptor(
-                profile.Id,
-                profile.ActiveCollectionKey,
-                profile.ActiveEntityViewKey,
-                contextEntity,
-                profile.FilterProfileId ?? string.Empty,
-                profile.CommandIntentId ?? string.Empty,
-                profile.InputContextId ?? string.Empty);
+            definition = _profiles[profileId];
             return true;
         }
 
-        private void InstallProfile(InteractionContextProfileDefinition definition)
+        /// <summary>
+        /// Materialize the entity-mounted active context for the profile with
+        /// <paramref name="contextEntity"/> as the carrier entity and
+        /// <paramref name="source"/> as the mounting lifecycle. Returns false when the profile
+        /// id is not installed. Allocation free after install.
+        /// </summary>
+        public bool TryCreateActiveContext(
+            int profileId,
+            Entity contextEntity,
+            InteractionContextInstanceSource source,
+            out InteractionContextInstance context)
+        {
+            if (!IsInstalled(profileId))
+            {
+                context = default;
+                return false;
+            }
+
+            context = new InteractionContextInstance
+            {
+                ContextId = profileId,
+                ContextEntity = contextEntity,
+                ActiveCollectionKeyId = _collectionKeyIds[profileId],
+                FilterProfileId = _filterProfileIds[profileId],
+                CommandIntentProfileId = _commandIntentProfileIds[profileId],
+                InputContextId = _inputContextIdsByProfile[profileId],
+                Source = source,
+            };
+            return true;
+        }
+
+        /// <summary>
+        /// Graph-body ids for one lifecycle slot of the profile; empty when the
+        /// profile declares no <c>onActivated</c> / <c>onDeactivated</c>. Allocation free
+        /// after install. The slot is ambiguity-free by construction: it belongs to the
+        /// profile, so no owner matching is ever required.
+        /// </summary>
+        public bool TryGetLifecycleGraphIds(
+            int profileId,
+            InteractionContextLifecycleSlot slot,
+            out ReadOnlySpan<int> graphIds)
+        {
+            if (!IsInstalled(profileId))
+            {
+                graphIds = default;
+                return false;
+            }
+
+            int[]? ids = slot == InteractionContextLifecycleSlot.Activated
+                ? _onActivatedGraphIds[profileId]
+                : _onDeactivatedGraphIds[profileId];
+            graphIds = ids ?? Array.Empty<int>();
+            return graphIds.Length > 0;
+        }
+
+        /// <summary>
+        /// Foreground declaration: true while this profile's active instance parks
+        /// the interactive (input-action bound) trigger mounts of its active ancestors.
+        /// </summary>
+        public bool IsForeground(int profileId)
+        {
+            return profileId > 0 && profileId < _isForeground.Length && _isForeground[profileId];
+        }
+
+        /// <summary>
+        /// Steady-state routing anchor: the reserved default profile's resolved collection key
+        /// and filter profile ids (the data-declared home of the retired engine default frame).
+        /// Returns false when the default profile is not installed.
+        /// </summary>
+        public bool TryGetSteadyStateRouting(out int collectionKeyId, out int filterProfileId)
+        {
+            int defaultProfileId = _profileIds.GetId(InteractionContextIds.Default);
+            if (!IsInstalled(defaultProfileId))
+            {
+                collectionKeyId = 0;
+                filterProfileId = 0;
+                return false;
+            }
+
+            collectionKeyId = _collectionKeyIds[defaultProfileId];
+            filterProfileId = _filterProfileIds[defaultProfileId];
+            return true;
+        }
+
+        private int _inputContextIdsFor(int profileId)
+        {
+            string inputContextId = _profiles[profileId].InputContextId;
+            return string.IsNullOrWhiteSpace(inputContextId)
+                ? _inputContextIds.InvalidId
+                : _inputContextIds.Register(inputContextId);
+        }
+
+        private void InstallProfile(
+            InteractionContextProfileDefinition definition,
+            StringIntRegistry collectionKeyRegistry,
+            StringIntRegistry filterProfileIdRegistry,
+            StringIntRegistry commandIntentProfileIdRegistry,
+            InteractionContextProfileReferenceCatalog? referenceCatalog)
         {
             int profileId = _profileIds.Register(definition.Id);
             if (profileId < _profiles.Length && _profiles[profileId] != null)
@@ -87,9 +267,176 @@ namespace Ludots.Core.Input.Interaction
                 }
 
                 Array.Resize(ref _profiles, next);
+                Array.Resize(ref _collectionKeyIds, next);
+                Array.Resize(ref _filterProfileIds, next);
+                Array.Resize(ref _commandIntentProfileIds, next);
+                Array.Resize(ref _inputContextIdsByProfile, next);
+                Array.Resize(ref _isForeground, next);
+                Array.Resize(ref _onActivatedGraphIds, next);
+                Array.Resize(ref _onDeactivatedGraphIds, next);
             }
 
+            int filterProfileId = ResolveDeclaredId(
+                filterProfileIdRegistry,
+                definition.FilterProfileId,
+                definition.Id,
+                nameof(definition.FilterProfileId),
+                "filter profile");
+            int commandIntentProfileId = ResolveDeclaredId(
+                commandIntentProfileIdRegistry,
+                definition.CommandIntentId,
+                definition.Id,
+                nameof(definition.CommandIntentId),
+                "command intent profile");
+
             _profiles[profileId] = definition;
+            _collectionKeyIds[profileId] = string.IsNullOrWhiteSpace(definition.ActiveCollectionKey)
+                ? collectionKeyRegistry.InvalidId
+                : collectionKeyRegistry.Register(definition.ActiveCollectionKey.Trim());
+            _filterProfileIds[profileId] = filterProfileId;
+            _commandIntentProfileIds[profileId] = commandIntentProfileId;
+            _isForeground[profileId] = definition.Foreground;
+            _inputContextIdsByProfile[profileId] = _inputContextIdsFor(profileId);
+            _onActivatedGraphIds[profileId] = ResolveLifecycleGraphIds(
+                definition.OnActivated,
+                "onActivated",
+                definition.Id,
+                referenceCatalog);
+            _onDeactivatedGraphIds[profileId] = ResolveLifecycleGraphIds(
+                definition.OnDeactivated,
+                "onDeactivated",
+                definition.Id,
+                referenceCatalog);
+            ValidateBindings(definition, referenceCatalog);
+            ValidateTriggers(definition, referenceCatalog);
+        }
+
+        private static int[] ResolveLifecycleGraphIds(
+            List<string>? graphNames,
+            string slotLabel,
+            string profileId,
+            InteractionContextProfileReferenceCatalog? referenceCatalog)
+        {
+            if (graphNames is not { Count: > 0 })
+            {
+                return Array.Empty<int>();
+            }
+
+            if (referenceCatalog == null)
+            {
+                throw new InvalidOperationException(
+                    $"Interaction context profile '{profileId}' declares {slotLabel} but no reference catalog was provided at install; lifecycle graph slots require the graph program registry.");
+            }
+
+            var ids = new int[graphNames.Count];
+            for (int i = 0; i < graphNames.Count; i++)
+            {
+                string graphName = graphNames[i];
+                if (string.IsNullOrWhiteSpace(graphName))
+                {
+                    throw new InvalidOperationException(
+                        $"Interaction context profile '{profileId}' {slotLabel}[{i}] must be a non-empty graph id.");
+                }
+
+                int graphId = GraphIdRegistry.GetId(graphName);
+                if (graphId == GraphIdRegistry.InvalidId ||
+                    !referenceCatalog.Programs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program))
+                {
+                    throw new InvalidOperationException(
+                        $"Interaction context profile '{profileId}' {slotLabel}[{i}] references unknown graph '{graphName}'.");
+                }
+
+                if (!referenceCatalog.Programs.TryGetKind(graphId, out GraphKind mountedKind))
+                {
+                    throw new InvalidOperationException(
+                        $"Interaction context profile '{profileId}' {slotLabel}[{i}] graph '{graphName}' has no registered kind.");
+                }
+
+                // A lifecycle slot is a plain graph body executed via GraphReturnWriter
+                // (settlement/clear graph bodies write collections themselves, akin to the
+                // retired whileActive contract — no GraphReturnWriter output steal).
+                GraphKindOperationPolicy.RequireAllowed(
+                    mountedKind,
+                    program,
+                    GasGraphOpHandlerTable.Instance,
+                    graphId,
+                    nameof(ResolveLifecycleGraphIds));
+                ids[i] = graphId;
+            }
+
+            return ids;
+        }
+
+        private static void ValidateBindings(
+            InteractionContextProfileDefinition definition,
+            InteractionContextProfileReferenceCatalog? referenceCatalog)
+        {
+            if (definition.Bindings is not { Count: > 0 })
+            {
+                return;
+            }
+
+            if (referenceCatalog == null)
+            {
+                throw new InvalidOperationException(
+                    $"Interaction context profile '{definition.Id}' declares bindings but no reference catalog was provided at install; semantic action bindings require the input action id space.");
+            }
+
+            for (int i = 0; i < definition.Bindings.Count; i++)
+            {
+                string actionId = definition.Bindings[i];
+                if (!referenceCatalog.InputActionIds.Contains(actionId))
+                {
+                    throw new InvalidOperationException(
+                        $"Interaction context profile '{definition.Id}' bindings[{i}] references unknown semantic action '{actionId}'.");
+                }
+            }
+        }
+
+        private static void ValidateTriggers(
+            InteractionContextProfileDefinition definition,
+            InteractionContextProfileReferenceCatalog? referenceCatalog)
+        {
+            if (definition.Triggers is not { Count: > 0 })
+            {
+                return;
+            }
+
+            if (referenceCatalog == null)
+            {
+                throw new InvalidOperationException(
+                    $"Interaction context profile '{definition.Id}' declares triggers but no reference catalog was provided at install; trigger mounts require the graph program registry.");
+            }
+
+            string ownerLabel = $"Interaction context profile '{definition.Id}'";
+            for (int i = 0; i < definition.Triggers.Count; i++)
+            {
+                Gameplay.MapTriggers.TriggerGraphMounting.ValidateContextTriggerMount(
+                    referenceCatalog.Programs,
+                    definition.Triggers[i],
+                    ownerLabel);
+            }
+        }
+
+        private static int ResolveDeclaredId(
+            StringIntRegistry registry,
+            string declaredName,
+            string profileId,
+            string fieldName,
+            string kindLabel)
+        {
+            if (string.IsNullOrWhiteSpace(declaredName))
+            {
+                return registry.InvalidId;
+            }
+
+            if (!registry.TryGetId(declaredName, out int id))
+            {
+                throw new InvalidOperationException(
+                    $"Interaction context profile '{profileId}' {fieldName} references unknown {kindLabel} '{declaredName}'.");
+            }
+
+            return id;
         }
     }
 }

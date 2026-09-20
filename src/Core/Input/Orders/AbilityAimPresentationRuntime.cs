@@ -18,6 +18,7 @@ using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Spatial;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Input.Orders
 {
@@ -92,11 +93,14 @@ namespace Ludots.Core.Input.Orders
         private readonly AbilityDefinitionRegistry _abilities;
         private readonly EffectTemplateRegistry _effects;
         private readonly EntityCollectionStore _collections;
+        private readonly int _aimHoverCollectionKeyId;
+        private readonly int _aimAffectedCollectionKeyId;
         private readonly ISpatialQueryService _spatialQueries;
         private readonly PresentationEventStream _events;
         private readonly GameSession? _session;
         private readonly GraphProgramRegistry? _graphPrograms;
         private readonly GasGraphRuntimeApi? _graphApi;
+        private readonly GasGraphOpHandlerTable? _graphHandlers;
         private readonly Entity[] _candidateBuffer = new Entity[MaxPreviewTargets];
         private readonly int[] _rowRoleIdBuffer = new int[MaxPreviewTargets];
         private readonly EntityCollectionRowFlags[] _rowFlagBuffer = new EntityCollectionRowFlags[MaxPreviewTargets];
@@ -137,17 +141,21 @@ namespace Ludots.Core.Input.Orders
             PresentationEventStream events,
             GameSession? session = null,
             GraphProgramRegistry? graphPrograms = null,
-            GasGraphRuntimeApi? graphApi = null)
+            GasGraphRuntimeApi? graphApi = null,
+            GasGraphOpHandlerTable? graphHandlers = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _abilities = abilities ?? throw new ArgumentNullException(nameof(abilities));
             _effects = effects ?? throw new ArgumentNullException(nameof(effects));
             _collections = collections ?? throw new ArgumentNullException(nameof(collections));
+            _aimHoverCollectionKeyId = _collections.KeyRegistry.Register(EntityCollectionKeys.AbilityAimHover);
+            _aimAffectedCollectionKeyId = _collections.KeyRegistry.Register(EntityCollectionKeys.AbilityAimAffected);
             _spatialQueries = spatialQueries ?? throw new ArgumentNullException(nameof(spatialQueries));
             _events = events ?? throw new ArgumentNullException(nameof(events));
             _session = session;
             _graphPrograms = graphPrograms;
             _graphApi = graphApi;
+            _graphHandlers = graphHandlers;
         }
 
         public void UpdateAiming(Entity actor, InputOrderMapping mapping, in AbilityAimInputState input)
@@ -214,8 +222,8 @@ namespace Ludots.Core.Input.Orders
             }
 
             Entity viewer = ResolveActiveViewer(actor);
-            _collections.Remove(actor, EntityCollectionKeys.AbilityAimAffected);
-            _collections.Remove(actor, EntityCollectionKeys.AbilityAimHover);
+            _collections.Remove(actor, _aimAffectedCollectionKeyId);
+            _collections.Remove(actor, _aimHoverCollectionKeyId);
             ClearAimSessionState(actor);
             PublishEnded(actor, viewer, AbilityAimPresentationEventKeys.Range, RangeScopeOffset);
             PublishEnded(actor, viewer, AbilityAimPresentationEventKeys.AreaCircle, AreaScopeOffset);
@@ -246,6 +254,7 @@ namespace Ludots.Core.Input.Orders
             {
                 _collections.Replace(
                     actor,
+                    _aimAffectedCollectionKeyId,
                     EntityCollectionDescriptor.Create(
                         EntityCollectionKeys.AbilityAimAffected,
                         EntityCollectionSourceKind.Explicit,
@@ -285,6 +294,7 @@ namespace Ludots.Core.Input.Orders
 
             _collections.Replace(
                 actor,
+                _aimAffectedCollectionKeyId,
                 EntityCollectionDescriptor.Create(
                     EntityCollectionKeys.AbilityAimAffected,
                     ResolveCollectionSourceKind(in impact),
@@ -336,8 +346,7 @@ namespace Ludots.Core.Input.Orders
                     _candidateBuffer,
                     candidateCount,
                     _budget,
-                    _fanOutCommands,
-                    ref dropped);
+                    _fanOutCommands);
             }
 
             for (int i = 0; i < _fanOutCommands.Count; i++)
@@ -362,10 +371,10 @@ namespace Ludots.Core.Input.Orders
                 throw new InvalidOperationException("Ability aim GraphProgram target query requires a positive graph program id.");
             }
 
-            if (_graphPrograms == null || _graphApi == null)
+            if (_graphPrograms == null || _graphApi == null || _graphHandlers == null)
             {
                 throw new InvalidOperationException(
-                    $"Ability aim GraphProgram target query '{query.GraphProgramId}' requires {nameof(GraphProgramRegistry)} and {nameof(GasGraphRuntimeApi)}.");
+                    $"Ability aim GraphProgram target query '{query.GraphProgramId}' requires {nameof(GraphProgramRegistry)}, {nameof(GasGraphRuntimeApi)}, and {nameof(GasGraphOpHandlerTable)}.");
             }
 
             if (!_graphPrograms.TryGetProgram(query.GraphProgramId, out ReadOnlySpan<GraphInstruction> program))
@@ -382,7 +391,7 @@ namespace Ludots.Core.Input.Orders
             GraphKindOperationPolicy.RequireAllowed(
                 GraphKind.Query,
                 program,
-                GasGraphOpHandlerTable.Instance,
+                _graphHandlers,
                 query.GraphProgramId,
                 nameof(AbilityAimPresentationRuntime));
 
@@ -390,32 +399,31 @@ namespace Ludots.Core.Input.Orders
             Span<int> ints = stackalloc int[GraphVmLimits.MaxIntRegisters];
             Span<byte> bools = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
             Span<Entity> entities = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
+            Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
+            Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
             Span<Entity> targets = _candidateBuffer;
-            entities[0] = actor;
-            entities[1] = previewTarget;
-            entities[2] = previewTarget;
-            var targetList = new GraphTargetList(targets);
-            var state = new GraphExecutionState
-            {
-                World = _world,
-                Caster = actor,
-                ExplicitTarget = previewTarget,
-                TargetContext = previewTarget,
-                TargetPosCm = ToGraphTargetPos(aimWorldCm),
-                Api = _graphApi,
-                F = floats,
-                I = ints,
-                B = bools,
-                E = entities,
-                Targets = targets,
-                TargetList = targetList,
-            };
+            GraphFrame frame = GraphFrame.Bind(
+                GraphKind.Query,
+                GraphEntityPreset.PreviewTarget(previewTarget),
+                _world,
+                actor,
+                previewTarget,
+                ToGraphTargetPos(aimWorldCm),
+                _graphApi,
+                _graphPrograms,
+                floats,
+                ints,
+                bools,
+                entities,
+                targets,
+                intIds,
+                callStack);
 
             _graphApi.SetConfigContext(in previewParams);
             try
             {
-                GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
-                return state.TargetList.Count;
+                GraphExecutor.Execute(ref frame, program, programAlreadyValidated: true, _graphHandlers);
+                return frame.TargetList.Count;
             }
             finally
             {
@@ -660,11 +668,11 @@ namespace Ludots.Core.Input.Orders
                 rowRoleIds[0] = PrimaryAimTargetRoleId;
                 Span<EntityCollectionRowFlags> rowFlags = stackalloc EntityCollectionRowFlags[1];
                 rowFlags[0] = EntityCollectionRowFlags.Primary;
-                _collections.Replace(actor, descriptor, single, rowRoleIds, rowFlags);
+                _collections.Replace(actor, _aimHoverCollectionKeyId, descriptor, single, rowRoleIds, rowFlags);
                 return;
             }
 
-            _collections.Replace(actor, descriptor, ReadOnlySpan<Entity>.Empty);
+            _collections.Replace(actor, _aimHoverCollectionKeyId, descriptor, ReadOnlySpan<Entity>.Empty);
         }
 
         private void PublishLifecycleEvents(
@@ -809,7 +817,21 @@ namespace Ludots.Core.Input.Orders
 
         private static int ResolveSemanticEventKeyId(in EffectTemplateData effect)
         {
-            return effect.TagId > 0 ? effect.TagId : 0;
+            if (effect.CategoryId <= 0)
+            {
+                return 0;
+            }
+
+            string categoryName = EffectCategoryRegistry.GetName(effect.CategoryId);
+            if (string.IsNullOrWhiteSpace(categoryName))
+            {
+                throw new InvalidOperationException(
+                    $"Effect category id {effect.CategoryId} has no registered name; cannot publish AbilityAim semantic preview key.");
+            }
+
+            // Presenter AbilityAim* rules register the category *name* into PresentationEventKeyRegistry.
+            // Never publish EffectCategoryRegistry ids as presentation KeyId — different identity tables.
+            return ResolveEventKeyId(categoryName);
         }
 
         private static string ResolveActiveAreaEventKey(in TargetQueryDescriptor query)
@@ -832,15 +854,15 @@ namespace Ludots.Core.Input.Orders
 
         private static int ResolveEventKeyId(string key)
         {
-            int existing = TagRegistry.GetId(key);
-            return existing > 0 ? existing : TagRegistry.Register(key);
+            int existing = PresentationEventKeyRegistry.GetId(key);
+            return existing > 0 ? existing : PresentationEventKeyRegistry.Register(key);
         }
 
         private static int ResolveActionKeyId(string actionId)
         {
             return string.IsNullOrWhiteSpace(actionId)
                 ? 0
-                : TagRegistry.Register($"input.action.{actionId.Trim()}");
+                : PresentationEventKeyRegistry.Register($"input.action.{actionId.Trim()}");
         }
 
         private static Entity ResolveViewer(Entity actor, in AbilityAimInputState input)

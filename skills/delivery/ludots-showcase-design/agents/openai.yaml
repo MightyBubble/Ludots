@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ludots Showcase Design"
+  short_description: "Derive a user-readable showcase design from a vague feature request"
+  default_prompt: "Use $ludots-showcase-design to turn this one-line feature request into a complete showcase design document (dynamic loop, ablation, explainability HUD, runtime knobs, structure, portal assets, reverse API audit), then review it against the anti-pattern checklist."

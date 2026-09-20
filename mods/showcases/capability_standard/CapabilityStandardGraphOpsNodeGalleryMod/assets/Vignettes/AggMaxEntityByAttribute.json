@@ -1,0 +1,13 @@
+{
+  "op": "AggMaxEntityByAttribute",
+  "driver": "query",
+  "title": "点名最能扛的",
+  "beat": "全场退成灰影，满血条那个被点名徽钉住。",
+  "detailTemplate": "被点名的是{label}，血{hp}，血条顶格还顶着点名徽。",
+  "assertDetailContains": [
+    "点名徽"
+  ],
+  "featuredNodeId": "maxEnt",
+  "graphKind": "Query",
+  "field": "query"
+}

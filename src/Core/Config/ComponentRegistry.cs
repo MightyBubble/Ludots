@@ -9,12 +9,18 @@ using Arch.Core.Utils;
 using Arch.Core.Extensions;
 using Ludots.Core.Association;
 using Ludots.Core.Components;
+using Ludots.Core.Fields;
 using Ludots.Core.Gameplay.AI.Components;
 using Ludots.Core.Gameplay.AI.Utility;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GraphBrains;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Items;
+using Ludots.Core.Gameplay.MapTriggers;
+using Ludots.Core.Physics2D;
+using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Progression.Components;
 using Ludots.Core.Gameplay.Progression.Registry;
@@ -28,7 +34,10 @@ using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Physics;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Networking.Replication;
 using Ludots.Core.Spatial;
+using Ludots.Core.Vision;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Config
 {
@@ -59,8 +68,13 @@ namespace Ludots.Core.Config
             Register<Ludots.Core.Gameplay.Components.PlayerOwner>("PlayerOwner");
             Register<Ludots.Core.Gameplay.Components.TeamIdentity>("TeamIdentity");
             Register<Ludots.Core.Gameplay.Components.PlayerIdentity>("PlayerIdentity");
+            Register("ReplicationSchemaRef", SetReplicationSchemaRef, null, Component<ReplicationSchemaRef>.ComponentType);
             Register<Ludots.Core.Gameplay.Components.TeamEntityRef>("TeamEntityRef");
+            Register<Ludots.Core.Gameplay.Components.EntityTriggerGraphAggregateRoot>("EntityTriggerGraphAggregateRoot");
             Register("EntityLayer", SetEntityLayer, null, Component<Ludots.Core.Gameplay.Components.EntityLayer>.ComponentType);
+            Register("Position2D", SetPosition2D, null, Component<Position2D>.ComponentType);
+            Register("Mass2D", SetMass2D, null, Component<Mass2D>.ComponentType);
+            Register("ContactEventEmitter2D", SetContactEventEmitter2D, null, Component<ContactEventEmitter2D>.ComponentType);
             Register("AttributeBuffer", SetAttributeBuffer);
             Register("EntityLocalClock", SetEntityLocalClock, null, Component<EntityLocalClock>.ComponentType);
             Register("AttributeDerivedGraphBinding", SetAttributeDerivedGraphBinding, null, Component<AttributeDerivedGraphBinding>.ComponentType);
@@ -71,26 +85,36 @@ namespace Ludots.Core.Config
             Register("ProgressionScopeHost", SetProgressionScopeHost);
             Register("ProgressionScopeBinding", SetProgressionScopeBinding);
             Register("AbilityFormSetRef", SetAbilityFormSetRef);
+            Register("ItemInstanceCm", SetItemInstanceCm, null, Component<ItemInstanceCm>.ComponentType);
             Register<ForceInput2D>("ForceInput2D");
-            Register<GameplayTagContainer>("GameplayTagContainer");
+            Register<GameplayTagContainer>("GameplayTagContainer", SetGameplayTagContainer);
             Register<TagCountContainer>("TagCountContainer");
             Register<DirtyFlags>("DirtyFlags");
             Register<TimedTagBuffer>("TimedTagBuffer");
             Register<AbilityTagGrantReceiver>("AbilityTagGrantReceiver");
             Register("OrderBuffer", SetOrderBuffer, null, Component<OrderBuffer>.ComponentType);
+            GraphBrainComponentAuthoring.Register();
             Register<OrderSpatialPayloadBuffer>("OrderSpatialPayloadBuffer");
             Register<CommandSourceSelectableTag>("CommandSourceSelectableTag");
             Register("CommandSourceSelectableState", SetCommandSourceSelectableState, null, Component<CommandSourceSelectableState>.ComponentType);
             Register<CommandSourceDragState>("CommandSourceDragState");
+            Register("VisionEmitterCm", SetVisionEmitterCm, null, Component<VisionEmitterCm>.ComponentType);
+            Register("FogOccupantCm", SetFogOccupantCm, null, Component<FogOccupantCm>.ComponentType);
+            Register("FieldTrackedCm", SetFieldTrackedCm, null, Component<FieldTrackedCm>.ComponentType);
+            Register("RegionVolumeCm", SetRegionVolumeCm, null, Component<RegionVolumeCm>.ComponentType);
+            Register("RegionVolumeEmissionCm", SetRegionVolumeEmissionCm, null, Component<RegionVolumeEmissionCm>.ComponentType);
+            Register("RegionVolumeTagFilterCm", SetRegionVolumeTagFilterCm, null, Component<RegionVolumeTagFilterCm>.ComponentType);
             Register("SpatialBounds", SetSpatialBounds);
             Register("SpatialBox3D", SetSpatialBox3D);
             Register("SpatialFootprint2D", SetSpatialFootprint2D);
             Register<BlackboardSpatialBuffer>("BlackboardSpatialBuffer");
             Register<BlackboardEntityBuffer>("BlackboardEntityBuffer");
             Register<BlackboardIntBuffer>("BlackboardIntBuffer");
+            Register<BlackboardFloatBuffer>("BlackboardFloatBuffer");
             Register("AbilityExecAimSync", SetAbilityExecAimSync);
             Register<VisualTransform>("VisualTransform");
-            Register<VisualHeightmapSampleState>("VisualHeightmapSampleState");
+            Register("CullState", SetCullState, null, Component<CullState>.ComponentType);
+            Register<ContinuousHeightmapSampleState>("ContinuousHeightmapSampleState");
             Register("PresentationStaticTransform", SetPresentationStaticTransform);
             Register<PresentationStaticHeightPending>("PresentationStaticHeightPending");
             Register("ManifestationObstacleIntent2D", SetManifestationObstacleIntent2D);
@@ -98,6 +122,7 @@ namespace Ludots.Core.Config
             Register("CompoundObstacle2D", SetCompoundObstacle2D);
             Register<RuntimeNavMeshStructuralObstacle>("RuntimeNavMeshStructuralObstacle");
             Register("ManifestationMotion2D", SetManifestationMotion2D);
+            Register("AttachedLocalPose", SetAttachedLocalPose);
             Register("DestroyWhenParentExecutionEnds", SetDestroyWhenParentExecutionEnds);
             Register<UtilityAiAgent>("UtilityAiAgent", SetUtilityAiAgent);
             Register<UtilityAiState>("UtilityAiState", SetUtilityAiState);
@@ -127,7 +152,15 @@ namespace Ludots.Core.Config
                     throw new InvalidOperationException($"Component '{name}' failed strict deserialization: {ex.Message}", ex);
                 }
 
-                entity.Add<T>(component);
+                if (entity.Has<T>())
+                {
+                    // Overrides and re-authoring replace the whole component.
+                    entity.Set<T>(component);
+                }
+                else
+                {
+                    entity.Add<T>(component);
+                }
             }, modId, Component<T>.ComponentType);
         }
 
@@ -139,6 +172,20 @@ namespace Ludots.Core.Config
         public static void SetUtilityAiAuthoringCatalog(UtilityAiAuthoringCatalog authoring)
         {
             _utilityAiAuthoring = authoring ?? UtilityAiAuthoringCatalog.Empty;
+        }
+
+        private static void SetReplicationSchemaRef(Entity entity, JsonNode data)
+        {
+            JsonObject obj = data as JsonObject
+                ?? throw new InvalidOperationException("ReplicationSchemaRef authoring must be an object.");
+            ValidateProperties(obj, "ReplicationSchemaRef", "SchemaId");
+            int schemaId = ReadIntProperty(obj, "SchemaId", "ReplicationSchemaRef");
+            if (schemaId <= 0)
+            {
+                throw new InvalidOperationException("ReplicationSchemaRef.SchemaId must be a positive integer.");
+            }
+
+            entity.Add(new ReplicationSchemaRef(schemaId));
         }
 
         public static void Register(string name, ComponentSetter setter, string modId = null)
@@ -157,6 +204,19 @@ namespace Ludots.Core.Config
         }
 
         public static void Register<T>(string name, ComponentSetter setter, string modId = null)
+        {
+            Register(name, setter, modId, Component<T>.ComponentType);
+        }
+
+        /// <summary>
+        /// Public authoring registration for downstream assemblies (#1480): the
+        /// physics project registers its own component setters this way at install
+        /// time (same delegate shape as the built-ins).
+        /// </summary>
+        public static void RegisterAuthoring<T>(
+            string name,
+            ComponentSetterWithContext setter,
+            string modId = null)
         {
             Register(name, setter, modId, Component<T>.ComponentType);
         }
@@ -546,6 +606,111 @@ namespace Ludots.Core.Config
             entity.Add(new CommandSourceSelectableState { IsEnabled = enabled });
         }
 
+        private static void SetVisionEmitterCm(Entity entity, JsonNode data, ComponentAuthoringContext context)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("VisionEmitterCm requires an object payload.");
+            }
+
+            ValidateProperties(
+                obj,
+                "VisionEmitterCm",
+                "scope",
+                "layers",
+                "polarity",
+                "aperture",
+                "altitudeBand",
+                "priority",
+                "detectionStrength",
+                "trueSightStrength");
+
+            entity.Add(new VisionEmitterCm
+            {
+                ScopeKeyId = ResolveVisionScopeKeyId(context, RequireStringProperty(obj, "scope", "VisionEmitterCm")),
+                LayerMask = ResolveFogLayerMask(context, RequireArrayProperty(obj, "layers", "VisionEmitterCm.layers"), "VisionEmitterCm.layers"),
+                Polarity = ParseVisionPolarity(RequireStringProperty(obj, "polarity", "VisionEmitterCm")),
+                Aperture = ParseVisionAperture(RequireObjectProperty(obj, "aperture", "VisionEmitterCm.aperture")),
+                AltitudeBand = ReadOptionalIntProperty(obj, "altitudeBand"),
+                Priority = ReadOptionalIntProperty(obj, "priority"),
+                DetectionStrength = ReadOptionalByteProperty(obj, "detectionStrength", "VisionEmitterCm.detectionStrength"),
+                TrueSightStrength = ReadOptionalByteProperty(obj, "trueSightStrength", "VisionEmitterCm.trueSightStrength"),
+            });
+        }
+
+        private static void SetFogOccupantCm(Entity entity, JsonNode data, ComponentAuthoringContext context)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("FogOccupantCm requires an object payload.");
+            }
+
+            ValidateProperties(obj, "FogOccupantCm", "layers", "altitudeBand", "stealthLevel");
+            entity.Add(new FogOccupantCm
+            {
+                ExposeLayerMask = ResolveFogLayerMask(context, RequireArrayProperty(obj, "layers", "FogOccupantCm.layers"), "FogOccupantCm.layers"),
+                AltitudeBand = ReadOptionalIntProperty(obj, "altitudeBand"),
+                StealthLevel = ReadOptionalByteProperty(obj, "stealthLevel", "FogOccupantCm.stealthLevel"),
+            });
+        }
+
+        private static void SetRegionVolumeCm(Entity entity, JsonNode data, ComponentAuthoringContext context)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("RegionVolumeCm requires an object payload.");
+            }
+
+            const string componentContext = "RegionVolumeCm";
+            string volumeKey = RegionVolumeComponentAuthoring.ParseVolumeKey(obj, componentContext);
+            RegionVolumeShape shape = RegionVolumeComponentAuthoring.ParseShape(obj, componentContext);
+            SetOrAdd(entity, new RegionVolumeCm { VolumeKey = volumeKey, Shape = shape });
+        }
+
+        private static void SetRegionVolumeEmissionCm(Entity entity, JsonNode data, ComponentAuthoringContext context)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("RegionVolumeEmissionCm requires an object payload.");
+            }
+
+            RegionVolumeEmissionCm emission = RegionVolumeComponentAuthoring.ParseEmission(obj, "RegionVolumeEmissionCm");
+            SetOrAdd(entity, emission);
+        }
+
+        private static void SetRegionVolumeTagFilterCm(Entity entity, JsonNode data, ComponentAuthoringContext context)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("RegionVolumeTagFilterCm requires an object payload.");
+            }
+
+            ValidateProperties(obj, "RegionVolumeTagFilterCm", "tags");
+            JsonArray tags = RequireArrayProperty(obj, "tags", "RegionVolumeTagFilterCm");
+            GameplayTagContainer filter = RegionVolumeComponentAuthoring.ParseTagFilter(tags, "RegionVolumeTagFilterCm");
+            SetOrAdd(entity, new RegionVolumeTagFilterCm { Filter = filter });
+        }
+
+        private static void SetFieldTrackedCm(Entity entity, JsonNode data, ComponentAuthoringContext context)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("FieldTrackedCm requires an object payload.");
+            }
+
+            ValidateProperties(obj, "FieldTrackedCm", "layer");
+            string layerKey = RequireStringProperty(obj, "layer", "FieldTrackedCm");
+            FieldLayerRegistry registry = context.Require<FieldLayerRegistry>(ComponentAuthoringServiceKeys.FieldLayerRegistry);
+            FieldLayerId layerId = registry.GetId(layerKey);
+            if (layerId.Value <= 0 || !registry.TryGet(layerId, out _))
+            {
+                throw new InvalidOperationException(
+                    $"FieldTrackedCm.layer references unknown field layer '{layerKey}'. Declare it in Fields/layers.json.");
+            }
+
+            entity.Add(new FieldTrackedCm { LayerId = layerId });
+        }
+
         private static void SetSpatialBounds(Entity entity, JsonNode data)
         {
             if (data is not JsonObject obj)
@@ -851,11 +1016,63 @@ namespace Ludots.Core.Config
             int x = ReadIntProperty(valueObj, "X", "WorldPositionCm.Value");
             int y = ReadIntProperty(valueObj, "Y", "WorldPositionCm.Value");
             var fix64Pos = Fix64Vec2.FromInt(x, y);
-            entity.Add(new WorldPositionCm { Value = fix64Pos });
-            // Add the companion components required by interpolation, rendering, and culling.
-            entity.Add(new PreviousWorldPositionCm { Value = fix64Pos });
-            entity.Add(VisualTransform.Default);
-            entity.Add(new CullState { IsVisible = false, LOD = LODLevel.Low });
+            SetOrAdd(entity, new WorldPositionCm { Value = fix64Pos });
+            SetOrAdd(entity, new PreviousWorldPositionCm { Value = fix64Pos });
+            if (!entity.Has<VisualTransform>())
+            {
+                entity.Add(VisualTransform.Default);
+            }
+            if (!entity.Has<CullState>())
+            {
+                entity.Add(new CullState { IsVisible = false, LOD = LODLevel.Low });
+            }
+        }
+
+        private static void SetOrAdd<T>(Entity entity, in T component)
+        {
+            if (entity.Has<T>())
+            {
+                entity.Set(component);
+            }
+            else
+            {
+                entity.Add(component);
+            }
+        }
+
+        private static void SetVisualTransform(Entity entity, JsonNode data)
+        {
+            SetOrAddAuthoredComponent<VisualTransform>(entity, data, "VisualTransform");
+        }
+
+        private static void SetCullState(Entity entity, JsonNode data)
+        {
+            SetOrAddAuthoredComponent<CullState>(entity, data, "CullState");
+        }
+
+        private static void SetOrAddAuthoredComponent<T>(Entity entity, JsonNode data, string componentName)
+        {
+            T component;
+            try
+            {
+                component = data.Deserialize<T>(StrictJsonOptions.CreateExact(includeFields: true))
+                    ?? throw new InvalidOperationException($"Component '{componentName}' failed to deserialize.");
+            }
+            catch (JsonException ex)
+            {
+                throw new InvalidOperationException(
+                    $"Component '{componentName}' failed strict deserialization: {ex.Message}",
+                    ex);
+            }
+
+            if (entity.Has<T>())
+            {
+                entity.Set(component);
+            }
+            else
+            {
+                entity.Add(component);
+            }
         }
 
         private static void SetPresentationStaticTransform(Entity entity, JsonNode data)
@@ -893,6 +1110,150 @@ namespace Ludots.Core.Config
             }
         }
 
+        private static void SetItemInstanceCm(Entity entity, JsonNode data, ComponentAuthoringContext context)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("ItemInstanceCm requires an object payload.");
+            }
+
+            RejectNumericIdAuthoring(obj, "ItemInstanceCm", "DefinitionId", "definitionId");
+            ValidateProperties(obj, "ItemInstanceCm", "definitionId", "stackCount", "charges", "durability");
+
+            string definitionKey = RequireStringProperty(obj, "definitionId", "ItemInstanceCm");
+            ItemDefinitionRegistry definitions =
+                context.Require<ItemDefinitionRegistry>(ComponentAuthoringServiceKeys.ItemDefinitionRegistry);
+            int definitionId = definitions.GetId(definitionKey);
+            if (definitionId <= 0 || !definitions.TryGet(definitionId, out _))
+            {
+                throw new InvalidOperationException(
+                    $"ItemInstanceCm.definitionId references unknown item definition '{definitionKey}'. Declare it in Items/definitions.json.");
+            }
+
+            int stackCount = TryReadIntProperty(obj, out int authoredStackCount, "stackCount")
+                ? authoredStackCount
+                : 1;
+            if (stackCount <= 0)
+            {
+                throw new InvalidOperationException("ItemInstanceCm.stackCount must be positive.");
+            }
+
+            entity.Add(new ItemInstanceCm
+            {
+                DefinitionId = definitionId,
+                StackCount = stackCount,
+                Charges = ReadOptionalIntProperty(obj, "charges"),
+                Durability = ReadOptionalIntProperty(obj, "durability"),
+            });
+        }
+
+
+        private static void SetPosition2D(Entity entity, JsonNode data, ComponentAuthoringContext context)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("Position2D requires an object payload.");
+            }
+
+            ValidateProperties(obj, "Position2D", "xCm", "yCm");
+            SetOrAdd(entity, Position2D.FromCm(
+                ReadIntProperty(obj, "xCm", "Position2D.xCm"),
+                ReadIntProperty(obj, "yCm", "Position2D.yCm")));
+        }
+
+private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringContext context)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("Mass2D requires an object payload.");
+            }
+
+            ValidateProperties(obj, "Mass2D", "bodyType", "inverseMass", "inverseInertia");
+            string bodyType = RequireStringProperty(obj, "bodyType", "Mass2D");
+            Mass2D mass;
+            switch (bodyType)
+            {
+                case "static":
+                    mass = Mass2D.Static;
+                    break;
+                case "kinematic":
+                    mass = Mass2D.Kinematic;
+                    break;
+                case "dynamic":
+                {
+                    if (!obj.TryGetPropertyValue("inverseMass", out _))
+                    {
+                        throw new InvalidOperationException(
+                            "Mass2D.bodyType 'dynamic' requires 'inverseMass' and 'inverseInertia' (1/mass, 1/inertia).");
+                    }
+
+                    mass = Mass2D.FromFloat(
+                        ReadFloatProperty(obj, "inverseMass", "Mass2D.inverseMass"),
+                        ReadFloatProperty(obj, "inverseInertia", "Mass2D.inverseInertia"));
+                    break;
+                }
+
+                default:
+                    throw new InvalidOperationException(
+                        $"Mass2D.bodyType '{bodyType}' is not one of 'static', 'kinematic', 'dynamic'.");
+            }
+
+            SetOrAdd(entity, mass);
+        }
+
+        /// <summary>
+        /// Static body authoring also stamps the initial cache-dirty marker so the
+        /// static broadphase layer picks the body up on the first physics build.
+        /// </summary>
+        private static void SetContactEventEmitter2D(Entity entity, JsonNode data, ComponentAuthoringContext context)
+        {
+            if (data is not JsonObject)
+            {
+                throw new InvalidOperationException("ContactEventEmitter2D requires an object payload.");
+            }
+
+            SetOrAdd(entity, new ContactEventEmitter2D());
+        }
+
+        private static Fix64Vec2 ReadOptionalLocalCenter(JsonObject obj)
+        {
+            bool hasX = obj.TryGetPropertyValue("localCenterXCm", out _);
+            bool hasY = obj.TryGetPropertyValue("localCenterYCm", out _);
+            if (hasX != hasY)
+            {
+                throw new InvalidOperationException("Collider2D local center requires both localCenterXCm and localCenterYCm.");
+            }
+
+            return hasX
+                ? new Fix64Vec2(
+                    Fix64.FromFloat(ReadFloatProperty(obj, "localCenterXCm", "Collider2D.localCenterXCm")),
+                    Fix64.FromFloat(ReadFloatProperty(obj, "localCenterYCm", "Collider2D.localCenterYCm")))
+                : Fix64Vec2.Zero;
+        }
+
+        private static Fix64 RequirePositiveFloatProperty(JsonObject obj, string field, string context)
+        {
+            Fix64 value = Fix64.FromFloat(ReadFloatProperty(obj, field, context));
+            if (value <= Fix64.Zero)
+            {
+                throw new InvalidOperationException($"{context}.{field} must be a positive number.");
+            }
+
+            return value;
+        }
+
+        private static float ReadFiniteFloatNode(JsonNode? node, string context)
+        {
+            if (node is not JsonValue value ||
+                !value.TryGetValue<float>(out float raw) ||
+                !float.IsFinite(raw))
+            {
+                throw new InvalidOperationException($"{context} requires a finite number.");
+            }
+
+            return raw;
+        }
+
         private static void SetEntityLayer(Entity entity, JsonNode data)
         {
             LayerMask layerMask = EntityLayerAuthoring.ReadLayerMask(data, "EntityLayer component");
@@ -923,7 +1284,7 @@ namespace Ludots.Core.Config
                     }
 
                     float v = kvp.Value.GetValue<float>();
-                    int attrId = AttributeRegistry.Register(kvp.Key);
+                    int attrId = ResolveAttributeBufferAttributeId(kvp.Key, $"AttributeBuffer.base.{kvp.Key}");
                     buffer.SetBase(attrId, v);
                 }
             }
@@ -943,7 +1304,7 @@ namespace Ludots.Core.Config
                     }
 
                     float v = kvp.Value.GetValue<float>();
-                    int attrId = AttributeRegistry.Register(kvp.Key);
+                    int attrId = ResolveAttributeBufferAttributeId(kvp.Key, $"AttributeBuffer.current.{kvp.Key}");
                     buffer.SetCurrent(attrId, v);
                 }
             }
@@ -959,6 +1320,87 @@ namespace Ludots.Core.Config
 
             entity.Add(buffer);
             entity.Add(snapshot);
+        }
+
+        private static int ResolveAttributeBufferAttributeId(string attributeName, string context)
+        {
+            int attributeId = AttributeRegistry.GetId(attributeName);
+            if (attributeId != AttributeRegistry.InvalidId)
+            {
+                return attributeId;
+            }
+
+            if (!AttributeRegistry.IsFrozen)
+            {
+                return AttributeRegistry.Register(attributeName);
+            }
+
+            throw new InvalidOperationException(
+                $"{context} references unregistered attribute '{attributeName}'. Declare it in startup GAS attribute config before map loading.");
+        }
+
+        private static void SetGameplayTagContainer(Entity entity, JsonNode data)
+        {
+            if (entity.Has<TagCountContainer>())
+            {
+                throw new InvalidOperationException(
+                    "Templates must not declare both 'GameplayTagContainer.tags' (derives the count container) and an explicit 'TagCountContainer'.");
+            }
+
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("GameplayTagContainer requires an object payload.");
+            }
+            ValidateProperties(obj, "GameplayTagContainer", "tags");
+
+            var container = new GameplayTagContainer();
+            var counts = new TagCountContainer();
+            if (obj.TryGetPropertyValue("tags", out var tagsNode))
+            {
+                if (tagsNode is not JsonArray tags)
+                {
+                    throw new InvalidOperationException("GameplayTagContainer.tags requires an array payload.");
+                }
+
+                foreach (JsonNode? tag in tags)
+                {
+                    if (tag == null)
+                    {
+                        throw new InvalidOperationException("GameplayTagContainer.tags requires non-null string entries.");
+                    }
+
+                    string tagName = ReadStringNode(tag, "GameplayTagContainer.tags");
+                    int tagId = ResolveGameplayTagId(tagName, $"GameplayTagContainer.tags.{tagName}");
+                    container.AddTag(tagId);
+                    if (!counts.AddCount(tagId))
+                    {
+                        throw new InvalidOperationException("GameplayTagContainer.tags exceeds TagCountContainer capacity.");
+                    }
+                }
+            }
+
+            entity.Add(container);
+            if (counts.Count > 0)
+            {
+                entity.Add(counts);
+            }
+        }
+
+        private static int ResolveGameplayTagId(string tagName, string context)
+        {
+            int tagId = TagRegistry.GetId(tagName);
+            if (tagId != TagRegistry.InvalidId)
+            {
+                return tagId;
+            }
+
+            if (!TagRegistry.IsFrozen)
+            {
+                return TagRegistry.Register(tagName);
+            }
+
+            throw new InvalidOperationException(
+                $"{context} references unregistered tag '{tagName}'. Declare it in startup GAS tag config before loading.");
         }
 
         private static void SetEntityLocalClock(Entity entity, JsonNode data)
@@ -1302,12 +1744,50 @@ namespace Ludots.Core.Config
             }
             ValidateProperties(obj, "ManifestationMotion2D", "followParentPosition", "facingSource", "sweepDegreesPerSecond", "forwardOffsetCm");
 
+            byte followParentPosition = ParseBooleanByte(RequireProperty(obj, "followParentPosition", "ManifestationMotion2D"), "ManifestationMotion2D.followParentPosition");
+            int forwardOffsetCm = ReadIntProperty(obj, "forwardOffsetCm", "ManifestationMotion2D");
             entity.Add(new ManifestationMotion2D
             {
-                FollowParentPosition = ParseBooleanByte(RequireProperty(obj, "followParentPosition", "ManifestationMotion2D"), "ManifestationMotion2D.followParentPosition"),
+                FollowParentPosition = followParentPosition,
                 FacingSource = ParseManifestationFacingSource(RequireStringProperty(obj, "facingSource", "ManifestationMotion2D")),
                 SweepDegreesPerSecond = ReadFloatProperty(obj, "sweepDegreesPerSecond", "ManifestationMotion2D"),
-                ForwardOffsetCm = ReadIntProperty(obj, "forwardOffsetCm", "ManifestationMotion2D"),
+                ForwardOffsetCm = forwardOffsetCm,
+            });
+
+            // 位置跟随职责已并入通用 AttachmentPositionSyncSystem：跟随父的 manifestation
+            // 在装配期取得 AttachedLocalPose（前向偏移沿自身朝向旋转），朝向仍由
+            // ManifestationMotion2DSystem 计算。既有模板 JSON 无需变更。
+            if (followParentPosition != 0)
+            {
+                entity.Add(new Ludots.Core.Components.AttachedLocalPose
+                {
+                    OffsetCm = Ludots.Core.Mathematics.FixedPoint.Fix64Vec2.FromInt(forwardOffsetCm, 0),
+                    LocalFacingRad = Ludots.Core.Mathematics.FixedPoint.Fix64.Zero,
+                    InheritParentFacing = 0,
+                    OffsetRotation = Ludots.Core.Components.AttachedOffsetRotation.OwnFacing,
+                });
+            }
+        }
+
+        private static void SetAttachedLocalPose(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("AttachedLocalPose requires an object payload.");
+            }
+            ValidateProperties(obj, "AttachedLocalPose", "offsetXCm", "offsetYCm", "facingDeg", "inheritParentFacing", "offsetRotation");
+
+            entity.Add(new Ludots.Core.Components.AttachedLocalPose
+            {
+                OffsetCm = Ludots.Core.Mathematics.FixedPoint.Fix64Vec2.FromInt(
+                    ReadIntProperty(obj, "offsetXCm", "AttachedLocalPose"),
+                    ReadIntProperty(obj, "offsetYCm", "AttachedLocalPose")),
+                LocalFacingRad = Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(
+                    ReadIntProperty(obj, "facingDeg", "AttachedLocalPose")) * (Ludots.Core.Mathematics.FixedPoint.Fix64.Pi / Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(180)),
+                InheritParentFacing = ParseBooleanByte(RequireProperty(obj, "inheritParentFacing", "AttachedLocalPose"), "AttachedLocalPose.inheritParentFacing"),
+                OffsetRotation = Ludots.Core.Gameplay.Attachment.AttachedLocalPoseAuthoring.ParseOffsetRotation(
+                    RequireStringProperty(obj, "offsetRotation", "AttachedLocalPose"),
+                    "AttachedLocalPose"),
             });
         }
 
@@ -1678,6 +2158,71 @@ namespace Ludots.Core.Config
             return requirementId;
         }
 
+        private static int ResolveVisionScopeKeyId(ComponentAuthoringContext context, string scopeKey)
+        {
+            ScopeKeyRegistry scopeKeys = context.Require<ScopeKeyRegistry>(ComponentAuthoringServiceKeys.ScopeKeyRegistry);
+            return scopeKeys.TryGetId(scopeKey, out int scopeKeyId) && scopeKeyId > 0
+                ? scopeKeyId
+                : throw new InvalidOperationException(
+                    $"VisionEmitterCm.scope references unknown progression scope '{scopeKey}'. Declare it in Progression/scopes.json.");
+        }
+
+        private static uint ResolveFogLayerMask(ComponentAuthoringContext context, JsonArray layers, string contextName)
+        {
+            if (layers.Count == 0)
+            {
+                throw new InvalidOperationException($"{contextName} requires at least one fog layer.");
+            }
+
+            FogLayerRegistry registry = context.Require<FogLayerRegistry>(ComponentAuthoringServiceKeys.VisionFogLayerRegistry);
+            uint mask = 0u;
+            for (int i = 0; i < layers.Count; i++)
+            {
+                string layerKey = ReadStringNode(
+                    layers[i] ?? throw new InvalidOperationException($"{contextName}[{i}] requires a non-null fog layer key."),
+                    $"{contextName}[{i}]");
+                FogLayerId layerId = registry.GetId(layerKey);
+                if (layerId.Value <= 0)
+                {
+                    throw new InvalidOperationException($"{contextName}[{i}] references unknown fog layer '{layerKey}'.");
+                }
+
+                mask |= registry.ToMask(layerId);
+            }
+
+            return mask;
+        }
+
+        private static VisionPolarity ParseVisionPolarity(string value)
+        {
+            return value switch
+            {
+                "Reveal" => VisionPolarity.Reveal,
+                "Deny" => VisionPolarity.Deny,
+                _ => throw new InvalidOperationException($"Unsupported VisionEmitterCm.polarity '{value}'. Expected Reveal or Deny."),
+            };
+        }
+
+        private static VisionAperture ParseVisionAperture(JsonObject obj)
+        {
+            ValidateProperties(obj, "VisionEmitterCm.aperture", "kind", "rangeCm", "halfAngleDeg", "halfWidthCm", "halfHeightCm", "lengthCm");
+            string kind = RequireStringProperty(obj, "kind", "VisionEmitterCm.aperture");
+            return kind switch
+            {
+                "Disk" => VisionAperture.Disk(ReadIntProperty(obj, "rangeCm", "VisionEmitterCm.aperture")),
+                "Cone" => VisionAperture.Cone(
+                    ReadIntProperty(obj, "rangeCm", "VisionEmitterCm.aperture"),
+                    ReadIntProperty(obj, "halfAngleDeg", "VisionEmitterCm.aperture")),
+                "Box" => VisionAperture.Box(
+                    ReadIntProperty(obj, "halfWidthCm", "VisionEmitterCm.aperture"),
+                    ReadIntProperty(obj, "halfHeightCm", "VisionEmitterCm.aperture")),
+                "Line" => VisionAperture.Line(
+                    ReadIntProperty(obj, "lengthCm", "VisionEmitterCm.aperture"),
+                    ReadIntProperty(obj, "halfWidthCm", "VisionEmitterCm.aperture")),
+                _ => throw new InvalidOperationException($"Unsupported VisionEmitterCm.aperture.kind '{kind}'. Expected Disk, Cone, Box, or Line."),
+            };
+        }
+
         private static string ReadStringNode(JsonNode node, string context)
         {
             if (node == null || node.GetValueKind() == JsonValueKind.Null)
@@ -1754,6 +2299,17 @@ namespace Ludots.Core.Config
             throw new InvalidOperationException($"{context} requires explicit '{name}'.");
         }
 
+        private static byte ReadByteProperty(JsonObject obj, string name, string context)
+        {
+            int value = ReadIntProperty(obj, name, context);
+            if ((uint)value > byte.MaxValue)
+            {
+                throw new InvalidOperationException($"{context}.{name} must be between 0 and {byte.MaxValue}.");
+            }
+
+            return (byte)value;
+        }
+
         private static bool TryReadPointProperty(JsonObject obj, out WorldCmInt2 point, string name, string context)
         {
             if (!obj.TryGetPropertyValue(name, out var node))
@@ -1793,6 +2349,40 @@ namespace Ludots.Core.Config
             }
 
             return node;
+        }
+
+        private static JsonObject RequireObjectProperty(JsonObject obj, string name, string context)
+        {
+            JsonNode node = RequireProperty(obj, name, context);
+            return node as JsonObject
+                ?? throw new InvalidOperationException($"{context}.{name} requires an object payload.");
+        }
+
+        private static JsonArray RequireArrayProperty(JsonObject obj, string name, string context)
+        {
+            JsonNode node = RequireProperty(obj, name, context);
+            return node as JsonArray
+                ?? throw new InvalidOperationException($"{context} requires an array.");
+        }
+
+        private static int ReadOptionalIntProperty(JsonObject obj, string name)
+        {
+            return TryReadIntProperty(obj, out int value, name) ? value : 0;
+        }
+
+        private static byte ReadOptionalByteProperty(JsonObject obj, string name, string context)
+        {
+            if (!TryReadIntProperty(obj, out int value, name))
+            {
+                return 0;
+            }
+
+            if (value < byte.MinValue || value > byte.MaxValue)
+            {
+                throw new InvalidOperationException($"{context} must be between {byte.MinValue} and {byte.MaxValue}.");
+            }
+
+            return (byte)value;
         }
 
         private static string RequireStringProperty(JsonObject obj, string name, string context)

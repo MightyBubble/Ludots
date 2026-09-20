@@ -1,0 +1,34 @@
+{
+  "op": "WriteSelfAttribute",
+  "driver": "attr",
+  "title": "把血直接写成 90",
+  "beat": "施法者血 60，一道写入线落下，血条直接抬到 90，头顶浮出 =90。",
+  "detailTemplate": "直接写入生命值，从 {casterBefore} 写成 {casterAfter}。",
+  "assertDetailContains": [
+    "写成"
+  ],
+  "featuredNodeId": "healSelf",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 60,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

@@ -9,6 +9,7 @@ using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Navigation.MultiLayerGraph;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {

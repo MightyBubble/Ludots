@@ -17,8 +17,9 @@ using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Spatial;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Config
 {
@@ -30,8 +31,8 @@ namespace Ludots.Core.Config
         PresentationStableId = 1 << 1,
         PresentationLifecycleState = 1 << 2,
         SpatialCellRef = 1 << 3,
-        PerformerRootBootstrapHandled = 1 << 4,
-        PresentationOwnerHasPerformerPayload = 1 << 5,
+        PresenterRootBootstrapHandled = 1 << 4,
+        PresentationOwnerHasPresenterPayload = 1 << 5,
     }
 
     internal sealed class TemplateEntityBatchSpawner
@@ -179,14 +180,14 @@ namespace Ludots.Core.Config
                 signature += Component<SpatialCellRef>.Signature;
             }
 
-            if ((features & TemplateBatchSpawnFeatures.PerformerRootBootstrapHandled) != 0)
+            if ((features & TemplateBatchSpawnFeatures.PresenterRootBootstrapHandled) != 0)
             {
-                signature += Component<PerformerRootBootstrapHandled>.Signature;
+                signature += Component<PresenterRootBootstrapHandled>.Signature;
             }
 
-            if ((features & TemplateBatchSpawnFeatures.PresentationOwnerHasPerformerPayload) != 0)
+            if ((features & TemplateBatchSpawnFeatures.PresentationOwnerHasPresenterPayload) != 0)
             {
-                signature += Component<PresentationOwnerHasPerformerPayload>.Signature;
+                signature += Component<PresentationOwnerHasPresenterPayload>.Signature;
             }
 
             long createStart = Stopwatch.GetTimestamp();
@@ -229,8 +230,8 @@ namespace Ludots.Core.Config
             bool includeStableId = (features & TemplateBatchSpawnFeatures.PresentationStableId) != 0;
             bool includeLifecycleState = (features & TemplateBatchSpawnFeatures.PresentationLifecycleState) != 0;
             bool includeSpatialCellRef = (features & TemplateBatchSpawnFeatures.SpatialCellRef) != 0;
-            bool includeBootstrapHandled = (features & TemplateBatchSpawnFeatures.PerformerRootBootstrapHandled) != 0;
-            bool includeOwnerPayload = (features & TemplateBatchSpawnFeatures.PresentationOwnerHasPerformerPayload) != 0;
+            bool includeBootstrapHandled = (features & TemplateBatchSpawnFeatures.PresenterRootBootstrapHandled) != 0;
+            bool includeOwnerPayload = (features & TemplateBatchSpawnFeatures.PresentationOwnerHasPresenterPayload) != 0;
             bool includeDynamicHeightSampling = descriptor.HasDynamicHeightSampling;
             int batchIndex = 0;
             int chunkIndex = slot.ChunkIndex;
@@ -246,19 +247,23 @@ namespace Ludots.Core.Config
                 Span<PreviousWorldPositionCm> previousPositions = chunk.GetSpan<PreviousWorldPositionCm>();
                 Span<FacingDirection> facings = chunk.GetSpan<FacingDirection>();
                 Span<VisualTransform> visuals = chunk.GetSpan<VisualTransform>();
-                Span<VisualHeightmapSampleState> heightSamples = includeDynamicHeightSampling
-                    ? chunk.GetSpan<VisualHeightmapSampleState>()
+                Span<ContinuousHeightmapSampleState> heightSamples = includeDynamicHeightSampling
+                    ? chunk.GetSpan<ContinuousHeightmapSampleState>()
                     : default;
                 Span<CullState> culls = chunk.GetSpan<CullState>();
                 Span<AttributeBuffer> attributes = descriptor.HasAttributeBuffer ? chunk.GetSpan<AttributeBuffer>() : default;
                 Span<AttributeLastSnapshot> attributeSnapshots = descriptor.HasAttributeBuffer ? chunk.GetSpan<AttributeLastSnapshot>() : default;
                 Span<GameplayTagContainer> gameplayTags = descriptor.HasGameplayTagContainer ? chunk.GetSpan<GameplayTagContainer>() : default;
                 Span<TagCountContainer> tagCounts = descriptor.HasTagCountContainer ? chunk.GetSpan<TagCountContainer>() : default;
+                Span<GameplayTagSnapshot> tagSnapshots = descriptor.HasGameplayTagContainer ? chunk.GetSpan<GameplayTagSnapshot>() : default;
+                Span<GameplayTagEffectiveCache> effectiveCaches = descriptor.HasGameplayTagContainer ? chunk.GetSpan<GameplayTagEffectiveCache>() : default;
+                Span<TagCountSnapshot> countSnapshots = descriptor.HasTagCountContainer ? chunk.GetSpan<TagCountSnapshot>() : default;
                 Span<DirtyFlags> dirtyFlags = descriptor.HasDirtyFlags ? chunk.GetSpan<DirtyFlags>() : default;
                 Span<TimedTagBuffer> timedTags = descriptor.HasTimedTagBuffer ? chunk.GetSpan<TimedTagBuffer>() : default;
                 Span<EntityTemplateKeyRef> templateKeys = chunk.GetSpan<EntityTemplateKeyRef>();
                 Span<OrderBuffer> orderBuffers = descriptor.HasOrderBuffer ? chunk.GetSpan<OrderBuffer>() : default;
                 Span<BlackboardIntBuffer> blackboardInts = descriptor.HasOrderBuffer ? chunk.GetSpan<BlackboardIntBuffer>() : default;
+                Span<BlackboardFloatBuffer> blackboardFloats = descriptor.HasOrderBuffer ? chunk.GetSpan<BlackboardFloatBuffer>() : default;
                 Span<BlackboardSpatialBuffer> blackboardSpatial = descriptor.HasOrderBuffer ? chunk.GetSpan<BlackboardSpatialBuffer>() : default;
                 Span<BlackboardEntityBuffer> blackboardEntities = descriptor.HasOrderBuffer ? chunk.GetSpan<BlackboardEntityBuffer>() : default;
                 Span<CommandSourceSelectableState> commandSourceStates = descriptor.HasCommandSourceSelectableState ? chunk.GetSpan<CommandSourceSelectableState>() : default;
@@ -269,8 +274,8 @@ namespace Ludots.Core.Config
                 Span<PresentationStableId> stableIds = includeStableId ? chunk.GetSpan<PresentationStableId>() : default;
                 Span<PresentationLifecycleState> lifecycleStates = includeLifecycleState ? chunk.GetSpan<PresentationLifecycleState>() : default;
                 Span<SpatialCellRef> spatialRefs = includeSpatialCellRef ? chunk.GetSpan<SpatialCellRef>() : default;
-                Span<PerformerRootBootstrapHandled> bootstrapHandled = includeBootstrapHandled ? chunk.GetSpan<PerformerRootBootstrapHandled>() : default;
-                Span<PresentationOwnerHasPerformerPayload> ownerPayloads = includeOwnerPayload ? chunk.GetSpan<PresentationOwnerHasPerformerPayload>() : default;
+                Span<PresenterRootBootstrapHandled> bootstrapHandled = includeBootstrapHandled ? chunk.GetSpan<PresenterRootBootstrapHandled>() : default;
+                Span<PresentationOwnerHasPresenterPayload> ownerPayloads = includeOwnerPayload ? chunk.GetSpan<PresentationOwnerHasPresenterPayload>() : default;
 
                 for (int offset = 0; offset < run; offset++)
                 {
@@ -308,11 +313,16 @@ namespace Ludots.Core.Config
                     if (descriptor.HasGameplayTagContainer)
                     {
                         gameplayTags[componentIndex] = descriptor.GameplayTags;
+                        GameplayTagContainer seedTags = descriptor.GameplayTags;
+                        tagSnapshots[componentIndex] = System.Runtime.CompilerServices.Unsafe.As<GameplayTagContainer, GameplayTagSnapshot>(ref seedTags);
+                        effectiveCaches[componentIndex] = System.Runtime.CompilerServices.Unsafe.As<GameplayTagContainer, GameplayTagEffectiveCache>(ref seedTags);
                     }
 
                     if (descriptor.HasTagCountContainer)
                     {
                         tagCounts[componentIndex] = descriptor.TagCounts;
+                        TagCountContainer seedCounts = descriptor.TagCounts;
+                        countSnapshots[componentIndex] = TagCountSnapshot.From(ref seedCounts);
                     }
                     if (descriptor.HasDirtyFlags)
                     {
@@ -327,6 +337,7 @@ namespace Ludots.Core.Config
                     {
                         orderBuffers[componentIndex] = OrderBuffer.CreateEmpty();
                         blackboardInts[componentIndex] = default;
+                        blackboardFloats[componentIndex] = default;
                         blackboardSpatial[componentIndex] = default;
                         blackboardEntities[componentIndex] = default;
                     }
@@ -405,7 +416,7 @@ namespace Ludots.Core.Config
                         {
                             CellX = cellX,
                             CellY = cellY,
-                            Initialized = 1,
+                            State = SpatialMembershipState.Active,
                         };
                         _partition!.Add(entity, cellX, cellY);
                     }
@@ -417,11 +428,11 @@ namespace Ludots.Core.Config
 
                     if (includeOwnerPayload)
                     {
-                        ownerPayloads[componentIndex] = new PresentationOwnerHasPerformerPayload
+                        ownerPayloads[componentIndex] = new PresentationOwnerHasPresenterPayload
                         {
                             Count = 0,
                             RootCount = 0,
-                            SingleRootPerformer = Entity.Null,
+                            SingleRootPresenter = Entity.Null,
                             SingleRootTransformSync = 0,
                         };
                     }
@@ -462,7 +473,7 @@ namespace Ludots.Core.Config
                 bool hasMapEntity = false,
                 int presentationStableId = 0,
                 bool hasPresentationStableId = false,
-                ParamDefault[]? performerParamOverrides = null)
+                ParamDefault[]? presenterParamOverrides = null)
             {
                 WorldPositionCm = worldPositionCm;
                 HasWorldPosition = hasWorldPosition;
@@ -472,7 +483,7 @@ namespace Ludots.Core.Config
                 HasMapEntity = hasMapEntity;
                 PresentationStableId = presentationStableId;
                 HasPresentationStableId = hasPresentationStableId;
-                PerformerParamOverrides = performerParamOverrides ?? Array.Empty<ParamDefault>();
+                PresenterParamOverrides = presenterParamOverrides ?? Array.Empty<ParamDefault>();
             }
 
             public Ludots.Core.Mathematics.FixedPoint.Fix64Vec2 WorldPositionCm { get; }
@@ -491,7 +502,7 @@ namespace Ludots.Core.Config
 
             public bool HasPresentationStableId { get; }
 
-            public ParamDefault[] PerformerParamOverrides { get; }
+            public ParamDefault[] PresenterParamOverrides { get; }
         }
 
         private readonly struct TemplateSpawnDescriptor
@@ -642,6 +653,12 @@ namespace Ludots.Core.Config
                     throw new InvalidOperationException($"Entity template '{templateId}' requires an explicit components object.");
                 }
 
+                // children 预置组合需要逐子挂接与局部姿落位，只能走单实体 spawn lane。
+                if (template.Children is { Count: > 0 })
+                {
+                    return Incompatible(onSpawnEffectTemplateId);
+                }
+
                 if (!IsBatchCandidate(template.Components))
                 {
                     return Incompatible(onSpawnEffectTemplateId);
@@ -675,7 +692,7 @@ namespace Ludots.Core.Config
 
                 bool hasStaticTransform = template.Components.ContainsKey("PresentationStaticTransform");
                 bool hasStaticHeightPending = template.Components.ContainsKey("PresentationStaticHeightPending");
-                bool hasDynamicHeightSampling = template.Components.ContainsKey("VisualHeightmapSampleState");
+                bool hasDynamicHeightSampling = template.Components.ContainsKey("ContinuousHeightmapSampleState");
                 bool hasSpatialPartitionExcluded = template.Components.ContainsKey("SpatialPartitionExcluded");
                 bool hasAttributeBuffer = template.Components.ContainsKey("AttributeBuffer");
                 bool hasAbilityTagGrantReceiver = template.Components.ContainsKey("AbilityTagGrantReceiver");
@@ -740,7 +757,7 @@ namespace Ludots.Core.Config
 
                 if (hasDynamicHeightSampling)
                 {
-                    RequireEmptyObject(templateId, template.Components, "VisualHeightmapSampleState");
+                    RequireEmptyObject(templateId, template.Components, "ContinuousHeightmapSampleState");
                 }
 
                 if (hasSpatialPartitionExcluded)
@@ -771,11 +788,16 @@ namespace Ludots.Core.Config
                 if (hasGameplayTagContainer)
                 {
                     signature += Component<GameplayTagContainer>.Signature;
+                    // 出生即种 Quick 快照/缓存：DeferredTriggerCollection 的标签比较走
+                    // 引用更新路径，避免收集时对实体做结构性补件（CommandBuffer.Add）。
+                    signature += Component<GameplayTagSnapshot>.Signature;
+                    signature += Component<GameplayTagEffectiveCache>.Signature;
                 }
 
                 if (hasTagCountContainer)
                 {
                     signature += Component<TagCountContainer>.Signature;
+                    signature += Component<TagCountSnapshot>.Signature;
                 }
 
                 if (hasTimedTagBuffer)
@@ -790,7 +812,7 @@ namespace Ludots.Core.Config
 
                 if (hasDynamicHeightSampling)
                 {
-                    signature += Component<VisualHeightmapSampleState>.Signature;
+                    signature += Component<ContinuousHeightmapSampleState>.Signature;
                 }
 
                 if (hasStaticTransform)
@@ -814,6 +836,7 @@ namespace Ludots.Core.Config
                 {
                     signature += Component<OrderBuffer>.Signature;
                     signature += Component<BlackboardIntBuffer>.Signature;
+                    signature += Component<BlackboardFloatBuffer>.Signature;
                     signature += Component<BlackboardSpatialBuffer>.Signature;
                     signature += Component<BlackboardEntityBuffer>.Signature;
                     signature += Component<OrderContinuationBuffer>.Signature;
@@ -922,7 +945,7 @@ namespace Ludots.Core.Config
                     if (string.Equals(componentName, "Name", StringComparison.Ordinal) ||
                         string.Equals(componentName, "WorldPositionCm", StringComparison.Ordinal) ||
                         string.Equals(componentName, "FacingDirection", StringComparison.Ordinal) ||
-                        string.Equals(componentName, "VisualHeightmapSampleState", StringComparison.Ordinal) ||
+                        string.Equals(componentName, "ContinuousHeightmapSampleState", StringComparison.Ordinal) ||
                         string.Equals(componentName, "AttributeBuffer", StringComparison.Ordinal) ||
                         string.Equals(componentName, "GameplayTagContainer", StringComparison.Ordinal) ||
                         string.Equals(componentName, "TagCountContainer", StringComparison.Ordinal) ||
@@ -987,7 +1010,7 @@ namespace Ludots.Core.Config
                 return string.Equals(componentName, "Name", StringComparison.Ordinal) ||
                        string.Equals(componentName, "WorldPositionCm", StringComparison.Ordinal) ||
                        string.Equals(componentName, "FacingDirection", StringComparison.Ordinal) ||
-                       string.Equals(componentName, "VisualHeightmapSampleState", StringComparison.Ordinal) ||
+                       string.Equals(componentName, "ContinuousHeightmapSampleState", StringComparison.Ordinal) ||
                        string.Equals(componentName, "AttributeBuffer", StringComparison.Ordinal) ||
                        string.Equals(componentName, "GameplayTagContainer", StringComparison.Ordinal) ||
                        string.Equals(componentName, "TagCountContainer", StringComparison.Ordinal) ||
@@ -1302,9 +1325,18 @@ namespace Ludots.Core.Config
             private static int ResolveAttributeId(string attributeName)
             {
                 int attributeId = AttributeRegistry.GetId(attributeName);
-                return attributeId == AttributeRegistry.InvalidId
-                    ? AttributeRegistry.Register(attributeName)
-                    : attributeId;
+                if (attributeId != AttributeRegistry.InvalidId)
+                {
+                    return attributeId;
+                }
+
+                if (!AttributeRegistry.IsFrozen)
+                {
+                    return AttributeRegistry.Register(attributeName);
+                }
+
+                throw new InvalidOperationException(
+                    $"Entity template AttributeBuffer references unregistered attribute '{attributeName}'. Declare it in startup GAS attribute config before map loading.");
             }
 
             private static void UpsertAttributeSeed(

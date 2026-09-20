@@ -23,6 +23,7 @@ using Ludots.Core.Spatial;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 using GraphInstruction = Ludots.Core.GraphRuntime.GraphInstruction;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {
@@ -92,8 +93,9 @@ namespace Ludots.Tests.GAS
                 requests.Publish(req);
 
                 var chainOrders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
-                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
-                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
+                Entity chainSource = world.Create();
+                chainOrders.TryEnqueue(new Order { Actor = chainSource, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
+                chainOrders.TryEnqueue(new Order { Actor = chainSource, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
 
                 var proposalSys = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(
                     world, requests, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, new Ludots.Core.Engine.DiscreteClock(), budget: new GasBudget(), templates: templates,
@@ -211,8 +213,9 @@ namespace Ludots.Tests.GAS
                 requests.Publish(req);
 
                 var chainOrders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
-                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
-                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
+                Entity chainSource = world.Create();
+                chainOrders.TryEnqueue(new Order { Actor = chainSource, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
+                chainOrders.TryEnqueue(new Order { Actor = chainSource, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
 
                 var proposalSys = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(
                     world, requests, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, new Ludots.Core.Engine.DiscreteClock(), budget: new GasBudget(), templates: templates,
@@ -242,6 +245,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var requests = new EffectRequestQueue();
             var api = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null, effectRequests: requests);
+            api.AggregateDirty = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
 
             var target = world.Create();
 
@@ -251,6 +255,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 5.5f },
                 new() { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 1, ImmF = -3.3f },
                 new() { Op = (ushort)GraphNodeOp.ApplyEffectTemplate, A = 1, B = 0, C = 1, Flags = 2, Imm = 777 },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
             };
 
             GraphExecutor.Execute(world, caster: default, explicitTarget: target, targetPosCm: new IntVector2(0, 0), program, api);
@@ -356,7 +361,6 @@ namespace Ludots.Tests.GAS
             var mergedParams = default(EffectConfigParams);
             mergedParams.TryAddEffectTemplateId(EffectParamKeys.PayloadEffectId, 902);
 
-            int dropped = 0;
             int count = TargetResolverFanOutHelper.ValidateAndCollect(
                 world,
                 new EffectContext
@@ -383,8 +387,7 @@ namespace Ludots.Tests.GAS
                 buffer,
                 candidateCount: 1,
                 budget,
-                commands,
-                ref dropped);
+                commands);
 
             That(count, Is.EqualTo(1));
             That(commands.Count, Is.EqualTo(1));
@@ -415,6 +418,7 @@ namespace Ludots.Tests.GAS
                 new GraphInstruction { Op = (ushort)GraphNodeOp.LoadContextTarget, Dst = 0 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 1, ImmF = 2f },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 0, B = 1, Imm = pulseAttributeId },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             }, GraphKind.Effect);
 
             var phaseBindings = new EffectPhaseGraphBindings();
@@ -528,6 +532,7 @@ namespace Ludots.Tests.GAS
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                 tagOps: tagOps);
             var graphApi = new GasGraphRuntimeApi(world, tagOps: tagOps);
+            graphApi.AggregateDirty = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
             var phaseExecutor = new EffectPhaseExecutor(
                 programs,
                 presetTypes,
@@ -552,8 +557,10 @@ namespace Ludots.Tests.GAS
                 effectRequests: requests,
                 templates: templates,
                 phaseExecutor: phaseExecutor,
+                aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry(),
                 graphApi: graphApi,
-                tagOps: tagOps);
+                tagOps: tagOps,
+                presentationEvents: new Ludots.Core.Gameplay.GAS.Presentation.GasPresentationEventBuffer(16));
 
             abilityExec.Update(0f);
             That(requests.Count, Is.EqualTo(1));
@@ -595,20 +602,20 @@ namespace Ludots.Tests.GAS
 
         private static void SetupEffectsJson(string root)
         {
-            Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-            File.WriteAllText(Path.Combine(root, "Configs", "config_catalog.json"),
+            Directory.CreateDirectory(Path.Combine(root, "GAS"));
+            File.WriteAllText(Path.Combine(root, "config_catalog.json"),
                 """
                 [
                   { "Path": "GAS/effects.json", "Policy": "ArrayById", "IdField": "id" },
                   { "Path": "GAS/preset_types.json", "Policy": "ArrayById", "IdField": "id" }
                 ]
                 """);
-            File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+            File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                 """
                 [
                   {
                     "id": "Effect.Preset.ApplyForce2D",
-                    "tags": ["Effect.ApplyForce"],
+                    "categories": ["Effect.ApplyForce"],
                     "presetType": "ApplyForce2D",
                     "lifetime": "Instant",
                     "participatesInResponse": true,
@@ -619,7 +626,7 @@ namespace Ludots.Tests.GAS
                   }
                 ]
                 """);
-            File.WriteAllText(Path.Combine(root, "Configs", "GAS", "preset_types.json"),
+            File.WriteAllText(Path.Combine(root, "GAS", "preset_types.json"),
                 """
                 [
                   {
@@ -637,20 +644,20 @@ namespace Ludots.Tests.GAS
 
         private static void SetupEffectsJsonWithDefaultForce(string root)
         {
-            Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-            File.WriteAllText(Path.Combine(root, "Configs", "config_catalog.json"),
+            Directory.CreateDirectory(Path.Combine(root, "GAS"));
+            File.WriteAllText(Path.Combine(root, "config_catalog.json"),
                 """
                 [
                   { "Path": "GAS/effects.json", "Policy": "ArrayById", "IdField": "id" },
                   { "Path": "GAS/preset_types.json", "Policy": "ArrayById", "IdField": "id" }
                 ]
                 """);
-            File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+            File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                 """
                 [
                   {
                     "id": "Effect.Preset.ApplyForce2D",
-                    "tags": ["Effect.ApplyForce"],
+                    "categories": ["Effect.ApplyForce"],
                     "presetType": "ApplyForce2D",
                     "lifetime": "Instant",
                     "participatesInResponse": true,
@@ -663,7 +670,7 @@ namespace Ludots.Tests.GAS
                   }
                 ]
                 """);
-            File.WriteAllText(Path.Combine(root, "Configs", "GAS", "preset_types.json"),
+            File.WriteAllText(Path.Combine(root, "GAS", "preset_types.json"),
                 """
                 [
                   {
@@ -685,9 +692,9 @@ namespace Ludots.Tests.GAS
             EffectTemplateRegistry templates)
         {
             var presetTypes = new PresetTypeRegistry();
-            new PresetTypeLoader(pipeline, presetTypes).Load(catalog);
             var builtinHandlers = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(builtinHandlers);
+            new PresetTypeLoader(pipeline, presetTypes, builtinHandlers).Load(catalog);
             EffectExecutionPlanCompiler.FinalizeAll(
                 templates,
                 presetTypes,

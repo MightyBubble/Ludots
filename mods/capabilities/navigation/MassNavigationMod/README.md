@@ -1,6 +1,6 @@
 # MassNavigation Foundation
 
-`MassNavigationMod` is the reusable large-scale navigation foundation asset pack. The runtime is owned by `src/Core/MassNavigation`; this mod contributes config, templates, performers, and maps that exercise the formal navigation chain.
+`MassNavigationMod` is the reusable large-scale navigation foundation asset pack. The runtime is owned by `src/Core/MassNavigation`; this mod contributes config, templates, presenters, and maps that exercise the formal navigation chain.
 
 Start here if you are new:
 
@@ -25,10 +25,10 @@ Foundation-owned files stay under `mods/capabilities/navigation/MassNavigationMo
 | File | Responsibility |
 | --- | --- |
 | `mods/capabilities/navigation/MassNavigationMod/assets/MassNavigationConfig.json` | Solver window, cadence, flow, arrival, avoidance, crowd semantics, scenario teams, and view residency. |
-| `mods/capabilities/navigation/MassNavigationMod/assets/Configs/Camera/virtual_cameras.json` | Foundation visual-heightmap-aware camera profile for the large-world map. |
+| `mods/capabilities/navigation/MassNavigationMod/assets/Camera/virtual_cameras.json` | Foundation visual-heightmap-aware camera profile for the large-world map. |
 | `mods/capabilities/navigation/MassNavigationMod/assets/GAS/order_types.json` | `massNavigationMove` order registration and rule authoring. |
 | `mods/capabilities/navigation/MassNavigationMod/assets/Entities/templates.json` | Foundation example templates and required component contract examples. |
-| `mods/capabilities/navigation/MassNavigationMod/assets/Presentation/performers.json` | Foundation example performer authoring. |
+| `mods/capabilities/navigation/MassNavigationMod/assets/Presentation/presenters.json` | Foundation example presenter authoring. |
 | `mods/capabilities/navigation/MassNavigationMod/assets/Maps/mass_navigation.json` | Foundation example map, board bounds, and visual terrain binding. |
 
 Game-specific mods can provide their own files with the same kinds of data. They should not create a private loader.
@@ -71,14 +71,14 @@ The mod-owned source surface is intentionally small:
 | File | Boundary |
 | --- | --- |
 | `MassNavigationModEntry.cs` | Installs the GAS Order-to-MovePlan adapter around the typed MassNavigation consumer. |
-| `mods/capabilities/navigation/MassNavigationMod/assets/**` | Default MassNavigation config, templates, performers, input, and map data. |
+| `mods/capabilities/navigation/MassNavigationMod/assets/**` | Default MassNavigation config, templates, presenters, input, and map data. |
 
 ## Rules For Follow-Up Work
 
-- No fallback paths for missing services, config, templates, performers, map bounds, or visual heightmap.
-- No parallel config loader, registry, spawn path, selection runtime, order runtime, performer runtime, or minimap runtime.
+- No fallback paths for missing services, config, templates, presenters, map bounds, or visual heightmap.
+- No parallel config loader, registry, spawn path, selection runtime, order runtime, presenter runtime, or minimap runtime.
 - No game-specific group-layout ownership inside the MassNavigation foundation.
 - No physical input action id, Formation business state, rotation shortcut, camera, HUD, outline, colour or showcase scenario policy inside Core MassNavigation.
 - No MassNavigation-owned post-spawn lifecycle or bootstrap path inside this mod; runtime entity discovery is core-owned and component-authored.
-- No private MassNavigation marker lifecycle system when performer rules can express the lifecycle.
+- No private MassNavigation marker lifecycle system when presenter rules can express the lifecycle.
 - Move reusable behavior into `MassNavigationFlow`, `MassNavigation`, Core, or another formal reusable mod when two or more mods need it.

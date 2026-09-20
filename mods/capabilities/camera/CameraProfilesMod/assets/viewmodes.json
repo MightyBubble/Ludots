@@ -12,7 +12,7 @@
     "Id": "Camera.Mode.Follow",
     "DisplayName": "Follow",
     "VirtualCameraId": "Camera.Profile.Follow",
-    "FollowTargetKind": "LocalPlayer",
+    "FollowTargetKind": "SolePossessedRep",
     "InteractionMode": "SmartCast",
     "SkillBarEnabled": false,
     "SwitchActionId": "CameraModeFollow"

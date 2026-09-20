@@ -14,16 +14,19 @@ using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Spatial;
 using CoreComponentRegistry = Ludots.Core.Config.ComponentRegistry;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Gameplay.Spawning
 {
@@ -41,16 +44,16 @@ namespace Ludots.Core.Gameplay.Spawning
         private readonly RuntimeEntitySpawnRequest[] _batchRequests = new RuntimeEntitySpawnRequest[BatchEntityScratchCapacity];
         private readonly TemplateEntityBatchSpawner.TemplateBatchSpawnRequest[] _templateBatchRequests = new TemplateEntityBatchSpawner.TemplateBatchSpawnRequest[BatchEntityScratchCapacity];
         private readonly SpawnRelationshipPlan[] _batchRelationshipPlans = new SpawnRelationshipPlan[BatchEntityScratchCapacity];
-        private readonly Entity[] _performerBatchOwners = new Entity[BatchEntityScratchCapacity];
-        private readonly int[] _performerBatchScopeIds = new int[BatchEntityScratchCapacity];
-        private readonly int[] _performerBatchStableIds = new int[BatchEntityScratchCapacity];
-        private readonly Entity[] _performerBatchCreated = new Entity[BatchEntityScratchCapacity];
-        private readonly VisualTransform[] _performerBatchOwnerTransforms = new VisualTransform[BatchEntityScratchCapacity];
-        private readonly CullState[] _performerBatchOwnerCulls = new CullState[BatchEntityScratchCapacity];
+        private readonly Entity[] _presenterBatchOwners = new Entity[BatchEntityScratchCapacity];
+        private readonly int[] _presenterBatchScopeIds = new int[BatchEntityScratchCapacity];
+        private readonly int[] _presenterBatchStableIds = new int[BatchEntityScratchCapacity];
+        private readonly Entity[] _presenterBatchCreated = new Entity[BatchEntityScratchCapacity];
+        private readonly VisualTransform[] _presenterBatchOwnerTransforms = new VisualTransform[BatchEntityScratchCapacity];
+        private readonly CullState[] _presenterBatchOwnerCulls = new CullState[BatchEntityScratchCapacity];
         private readonly TemplateEntityBatchSpawner _templateBatchSpawner;
-        private readonly PerformerEntityRuntime? _performerRuntime;
-        private readonly PerformerDefinitionRegistry? _performerDefinitions;
-        private readonly CompiledPerformerBootstrapRegistry? _performerBootstrap;
+        private readonly PresenterEntityRuntime? _presenterRuntime;
+        private readonly PresenterDefinitionRegistry? _presenterDefinitions;
+        private readonly CompiledPresenterBootstrapRegistry? _presenterBootstrap;
         private readonly PresentationEventStream? _presentationEvents;
         private readonly ISpatialPartitionWorld? _spatialPartition;
         private readonly WorldSizeSpec _worldSizeSpec;
@@ -61,6 +64,9 @@ namespace Ludots.Core.Gameplay.Spawning
         private readonly TeamEntityLookup? _teamLookup;
         private readonly RelationshipRuntime? _relationships;
         private readonly int _memberOfTypeId;
+        private readonly int _ownsTypeId;
+        private readonly EntityTriggerGraphMounts? _entityTriggerGraphMounts;
+        private readonly Ludots.Core.Input.Interaction.InteractionContextProfileRegistry? _initialInteractionContexts;
 
         private readonly struct SpawnRelationshipPlan
         {
@@ -90,8 +96,8 @@ namespace Ludots.Core.Gameplay.Spawning
             PresentationStableIdAllocator stableIds,
             EffectRequestQueue effectRequests = null,
             RuntimeEntitySpawnReceiptQueue? receipts = null,
-            PerformerEntityRuntime? performerRuntime = null,
-            PerformerDefinitionRegistry? performerDefinitions = null,
+            PresenterEntityRuntime? presenterRuntime = null,
+            PresenterDefinitionRegistry? presenterDefinitions = null,
             PresentationEventStream? presentationEvents = null,
             ISpatialPartitionWorld? spatialPartition = null,
             WorldSizeSpec worldSizeSpec = default,
@@ -101,7 +107,10 @@ namespace Ludots.Core.Gameplay.Spawning
             PlayerEntityLookup? playerLookup = null,
             TeamEntityLookup? teamLookup = null,
             RelationshipRuntime? relationships = null,
-            int memberOfTypeId = -1)
+            int memberOfTypeId = -1,
+            int ownsTypeId = -1,
+            EntityTriggerGraphMounts? entityTriggerGraphMounts = null,
+            Ludots.Core.Input.Interaction.InteractionContextProfileRegistry? initialInteractionContexts = null)
             : base(world)
         {
             _requests = requests ?? throw new ArgumentNullException(nameof(requests));
@@ -121,9 +130,9 @@ namespace Ludots.Core.Gameplay.Spawning
                 spatialPartition,
                 worldSizeSpec,
                 BatchEntityScratchCapacity);
-            _performerRuntime = performerRuntime;
-            _performerDefinitions = performerDefinitions;
-            _performerBootstrap = performerDefinitions?.BootstrapRegistry;
+            _presenterRuntime = presenterRuntime;
+            _presenterDefinitions = presenterDefinitions;
+            _presenterBootstrap = presenterDefinitions?.BootstrapRegistry;
             _presentationEvents = presentationEvents;
             _timingDiagnostics = timingDiagnostics;
             _ownership = ownership;
@@ -131,6 +140,9 @@ namespace Ludots.Core.Gameplay.Spawning
             _teamLookup = teamLookup;
             _relationships = relationships;
             _memberOfTypeId = memberOfTypeId;
+            _ownsTypeId = ownsTypeId;
+            _entityTriggerGraphMounts = entityTriggerGraphMounts;
+            _initialInteractionContexts = initialInteractionContexts;
         }
 
         public override void Update(in float dt)
@@ -143,40 +155,45 @@ namespace Ludots.Core.Gameplay.Spawning
                     TryGetTemplate(peek.TemplateId, out EntityTemplate template) &&
                     _templateBatchSpawner.IsBatchCompatible(peek.TemplateId, template))
                 {
-                    if (!TryCopyTemplateBatch(peek.TemplateId, out int batchCount))
+                    if (TryCopyTemplateBatch(peek.TemplateId, out int batchCount) && batchCount > 0)
                     {
-                        break;
-                    }
+                        if (batchCount > 1)
+                        {
+                            PreflightTemplateBatchBeforeDrain(peek.TemplateId, template, batchCount);
+                            if (!TryDrainCopiedTemplateBatch(peek.TemplateId, batchCount))
+                            {
+                                break;
+                            }
 
-                    if (batchCount > 1)
-                    {
-                        PreflightTemplateBatchBeforeDrain(peek.TemplateId, template, batchCount);
+                            if (!TrySpawnTemplateBatch(peek.TemplateId, template, batchCount))
+                            {
+                                throw new InvalidOperationException(
+                                    $"Runtime template batch spawn failed after template '{peek.TemplateId}' was classified as batch-compatible. " +
+                                    "The production path must stay on the validated bulk lane.");
+                            }
+
+                            continue;
+                        }
+
+                        SpawnRelationshipPlan singleRelationshipPlan = PreflightSingleSpawnBeforeDrain(in peek);
                         if (!TryDrainCopiedTemplateBatch(peek.TemplateId, batchCount))
                         {
                             break;
                         }
 
-                        if (!TrySpawnTemplateBatch(peek.TemplateId, template, batchCount))
-                        {
-                            throw new InvalidOperationException(
-                                $"Runtime template batch spawn failed after template '{peek.TemplateId}' was classified as batch-compatible. " +
-                                "The production path must stay on the validated bulk lane.");
-                        }
-
+                        var singleRequest = _batchRequests[0];
+                        var spawnedSingle = SpawnTemplate(singleRequest, in singleRelationshipPlan);
+                        PublishSpawnReceipt(in singleRequest, spawnedSingle);
+                        PublishOnSpawnEffect(in singleRequest, spawnedSingle);
+                        MountTemplateTriggerGraphs(spawnedSingle, peek.TemplateId, template);
+                        MountTemplateInitialInteractionContext(spawnedSingle, peek.TemplateId, template);
                         continue;
                     }
 
-                    SpawnRelationshipPlan singleRelationshipPlan = PreflightSingleSpawnBeforeDrain(in peek);
-                    if (!TryDrainCopiedTemplateBatch(peek.TemplateId, batchCount))
-                    {
-                        break;
-                    }
-
-                    var singleRequest = _batchRequests[0];
-                    var spawnedSingle = SpawnTemplate(singleRequest, in singleRelationshipPlan);
-                    PublishSpawnReceipt(in singleRequest, spawnedSingle);
-                    PublishOnSpawnEffect(in singleRequest, spawnedSingle);
-                    continue;
+                    // 队头的模板请求虽 "batch-compatible"，但它是带父链接/attachment 的子件
+                    // （Parent 或 HasAttachedLocalPose 已设置），进不了批（IsTemplateBatchMember 为 false），
+                    // TryCopyTemplateBatch 于是返回 0。此时必须落到单实体 lane，否则 break 会让
+                    // 队列头永远卡死、并连带饿死排在其后的所有 spawn。S2-1 / S2-14 命中的正是这里。
                 }
 
                 SpawnRelationshipPlan relationshipPlan = PreflightSingleSpawnBeforeDrain(in peek);
@@ -195,7 +212,41 @@ namespace Ludots.Core.Gameplay.Spawning
 
                 PublishOnSpawnEffect(in request, spawned);
                 PublishSpawnReceipt(in request, spawned);
+                if (request.Kind == RuntimeEntitySpawnKind.Template &&
+                    TryGetTemplate(request.TemplateId, out EntityTemplate spawnedTemplate))
+                {
+                    MountTemplateTriggerGraphs(spawned, request.TemplateId, spawnedTemplate);
+                    MountTemplateInitialInteractionContext(spawned, request.TemplateId, spawnedTemplate);
+                }
             }
+        }
+
+        private void MountTemplateTriggerGraphs(Entity spawned, string templateId, EntityTemplate template)
+        {
+            if (_entityTriggerGraphMounts == null || template.TriggerGraphs is not { Count: > 0 })
+            {
+                return;
+            }
+
+            _entityTriggerGraphMounts.MountRuntimeSpawned(spawned, templateId, template.TriggerGraphs);
+        }
+
+        private void MountTemplateInitialInteractionContext(Entity spawned, string templateId, EntityTemplate template)
+        {
+            if (string.IsNullOrWhiteSpace(template.InitialInteractionContext))
+            {
+                return;
+            }
+
+            Ludots.Core.Input.Interaction.InteractionContextProfileRegistry? profiles = _initialInteractionContexts
+                ?? throw new InvalidOperationException(
+                    $"Entity template '{templateId}' declares initialInteractionContext '{template.InitialInteractionContext}' but the spawn system has no interaction context profile registry.");
+            Ludots.Core.Input.Interaction.TemplateInteractionContextMounting.MountInitialContext(
+                World,
+                profiles,
+                spawned,
+                templateId,
+                template.InitialInteractionContext);
         }
 
         private Entity SpawnUnitType(in RuntimeEntitySpawnRequest request, in SpawnRelationshipPlan relationshipPlan)
@@ -264,8 +315,287 @@ namespace Ludots.Core.Gameplay.Spawning
             TryApplyParentLink(in request, entity);
             TryLinkOwnershipEdge(entity);
             ApplyRelationshipPlan(in relationshipPlan, entity);
-            TryBootstrapPerformer(entity, request.TemplateId);
+            TryBootstrapPresenter(entity, request.TemplateId);
+            EnqueueTemplateChildren(in request, entity);
             return entity;
+        }
+
+        /// <summary>
+        /// 模板 children 预置组合：以刚落位的父实体为原点，把每个 child 作为一个普通
+        /// Template spawn 请求（Parent + 派生世界位姿 + overrides 补丁）enqueue 进同一队列——
+        /// 复用既有 spawn 管线，不建第二条物化路径。本 Update 的 drain 循环会继续消费它们。
+        /// 节点自身的内联 children 随请求携带，待该子实体落地后由本方法再次展开；
+        /// 被引用模板自身的 children 亦在此展开。装载期已验证引用可解析且 children 图无环。
+        /// </summary>
+        private void EnqueueTemplateChildren(in RuntimeEntitySpawnRequest request, Entity parent)
+        {
+            EntityTemplate? template = TryGetTemplate(request.TemplateId, out EntityTemplate resolved) ? resolved : null;
+            List<EntityTemplateChild>? templateChildren = template?.Children is { Count: > 0 } ? template.Children : null;
+            List<EntityTemplateChild>? inlineChildren = request.InlineChildren is { Count: > 0 } ? request.InlineChildren : null;
+            if (templateChildren == null && inlineChildren == null)
+            {
+                return;
+            }
+
+            if (!World.IsAlive(parent) || !World.Has<WorldPositionCm>(parent))
+            {
+                throw new InvalidOperationException(
+                    $"SPAWN.RUNTIME.ERR.TemplateChildrenParentPositionMissing: template='{request.TemplateId}', parent={parent.Id}.");
+            }
+
+            // 可寻址路径 = 实例根 + localId 链；无实例根的子树会落进根名字空间与兄弟撞名。
+            // 实例根须"非空、首尾无空白"（与装载 lane MapLoadEntityIndex.Register 的 trim 约束同口径）。
+            if (EntityTemplate.HasAddressableDescendant(templateChildren, _templateRegistry) ||
+                EntityTemplate.HasAddressableDescendant(inlineChildren, _templateRegistry))
+            {
+                if (string.IsNullOrWhiteSpace(request.InstanceId))
+                {
+                    throw new InvalidOperationException(
+                        $"SPAWN.RUNTIME.ERR.AddressableDescendantMissingInstanceId: template='{request.TemplateId}', " +
+                        $"path='{request.AddressablePath ?? "<root>"}'——带可寻址（localId）后代的实体必须显式声明非空、首尾无空白的 InstanceId 作为全局命名空间根。");
+                }
+
+                if (!string.Equals(request.InstanceId, request.InstanceId.Trim(), StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"SPAWN.RUNTIME.ERR.AddressableInstanceIdUntrimmed: template='{request.TemplateId}', " +
+                        $"path='{request.AddressablePath ?? "<root>"}'——InstanceId 首尾不能有空白（默认是全局命名空间根，须可寻址路径的首段合法）。");
+                }
+            }
+
+            Fix64Vec2 parentPosition = World.Get<WorldPositionCm>(parent).Value;
+            float parentFacing = World.Has<FacingDirection>(parent) ? World.Get<FacingDirection>(parent).AngleRad : 0f;
+
+            // 运行时不能把"装载期已验证无环"当唯一防线：直接装配的 registry
+            // （mod / 工具 / 运行时 harness）不经 MapLoader.LoadTemplates 的图校验。
+            // 在此对可达模板 children 图做有向环检测，命中即 fail-fast，而不是让 spawn
+            // 队列无限增长到 TemplateChildrenQueueFull 再崩。
+            EnsureRuntimeChildrenAcyclic(request.TemplateId, templateChildren, inlineChildren, _templateRegistry);
+
+            // 展开序 = 声明序：先被引用模板自身的 children，再本节点的内联 children（对齐 MapLoader）。
+            if (templateChildren != null)
+            {
+                EnqueueChildNodes(templateChildren, in request, parent, parentPosition, parentFacing);
+            }
+
+            if (inlineChildren != null)
+            {
+                EnqueueChildNodes(inlineChildren, in request, parent, parentPosition, parentFacing);
+            }
+        }
+
+        /// <summary>
+        /// 对可引用的模板 children 有向图做环检测。被引用子模板可再引用其它模板（含其祖先），
+        /// 直接装配的 registry 不保证图无环；在此收到环就 fail-fast，消息指明循环路径。
+        /// 判定只沿模板引用边走（child.Template → 目标模板自己的 children）；内联 children 的
+        /// 模板引用同样要查（S3-c），否则经由内联引用的环要到下一步 drain 才现形。
+        /// </summary>
+        private void EnsureRuntimeChildrenAcyclic(
+            string rootTemplateId,
+            List<EntityTemplateChild>? rootChildren,
+            List<EntityTemplateChild>? inlineChildren,
+            DataRegistry<EntityTemplate> registry)
+        {
+            if (rootChildren is not { Count: > 0 } && inlineChildren is not { Count: > 0 })
+            {
+                return;
+            }
+
+            var visiting = new HashSet<string>(StringComparer.Ordinal);
+            if (rootChildren is { Count: > 0 })
+            {
+                DetectTemplateChildCycle(
+                    rootTemplateId,
+                    rootChildren,
+                    registry,
+                    visiting,
+                    $"template '{rootTemplateId}'");
+            }
+
+            if (inlineChildren is { Count: > 0 })
+            {
+                DetectTemplateChildCycle(
+                    rootTemplateId,
+                    inlineChildren,
+                    registry,
+                    visiting,
+                    $"template '{rootTemplateId}' (inline children)");
+            }
+        }
+
+        private void DetectTemplateChildCycle(
+            string templateId,
+            List<EntityTemplateChild>? children,
+            DataRegistry<EntityTemplate> registry,
+            HashSet<string> visiting,
+            string chain)
+        {
+            if (!visiting.Add(templateId))
+            {
+                throw new InvalidOperationException(
+                    $"SPAWN.RUNTIME.ERR.TemplateChildrenCycle: {chain} -> {templateId}——模板 children 引用图存在环；" +
+                    "直接装配的 registry 必须fail-fast，不能等到队列溢出。");
+            }
+
+            WalkChildNodes(templateId, children, registry, visiting, chain);
+            visiting.Remove(templateId);
+        }
+
+        /// <summary>不加键的内部遍历：模板展开边走 DetectTemplateChildCycle（加键），内联延伸走本方法（键已在栈上）。</summary>
+        private void WalkChildNodes(
+            string templateId,
+            List<EntityTemplateChild>? children,
+            DataRegistry<EntityTemplate> registry,
+            HashSet<string> visiting,
+            string chain)
+        {
+            if (children != null)
+            {
+                for (int i = 0; i < children.Count; i++)
+                {
+                    EntityTemplateChild child = children[i];
+                    if (child == null || string.IsNullOrWhiteSpace(child.Template))
+                    {
+                        continue;
+                    }
+
+                    EntityTemplate? referenced = registry?.Get(child.Template);
+                    if (referenced?.Children is { Count: > 0 })
+                    {
+                        DetectTemplateChildCycle(
+                            child.Template,
+                            referenced.Children,
+                            registry,
+                            visiting,
+                            $"{chain} -> '{child.Template}'");
+                    }
+
+                    // 嵌套内联边同样要查：child 自身声明的 children 里可能藏着指回祖先的引用，
+                    // 只走被引用模板的 children 会漏（A→[B+inline[A]] 型环即从此逃逸）。
+                    // 内联子树是当前模板展开的延伸，不引入新的 visiting 键——兄弟复用同一
+                    // 模板不是环，只有"被引用模板展开"的递归才会加键。
+                    if (child.Children is { Count: > 0 })
+                    {
+                        WalkChildNodes(
+                            templateId,
+                            child.Children,
+                            registry,
+                            visiting,
+                            $"{chain} (inline)");
+                    }
+                }
+            }
+
+        }
+
+        private void EnqueueChildNodes(
+            List<EntityTemplateChild> children,
+            in RuntimeEntitySpawnRequest request,
+            Entity parent,
+            Fix64Vec2 parentPosition,
+            float parentFacing)
+        {
+            string? parentPath = string.IsNullOrWhiteSpace(request.AddressablePath)
+                ? request.InstanceId
+                : request.AddressablePath;
+            for (int i = 0; i < children.Count; i++)
+            {
+                EntityTemplateChild child = children[i];
+                if (child == null || string.IsNullOrWhiteSpace(child.Template))
+                {
+                    throw new InvalidOperationException(
+                        $"SPAWN.RUNTIME.ERR.TemplateChildInvalid: template='{request.TemplateId}', index={i}.");
+                }
+
+                string? childPath = CombineAddressablePath(parentPath, child.LocalId);
+                if (child.Attach == false)
+                {
+                    throw new InvalidOperationException(
+                        $"SPAWN.RUNTIME.ERR.AttachFalseUnsupported: template='{request.TemplateId}', child='{child.Template}', " +
+                        $"path='{DescribeChildPath(parentPath, child.LocalId, i)}'——attach:false 的可动成员独立出生属切片E，出生前不支持（not yet, slice E）。");
+                }
+
+                Ludots.Core.Components.AttachedLocalPose localPose = Ludots.Core.Gameplay.Attachment
+                    .AttachedLocalPoseAuthoring.Parse(
+                        child.LocalPose,
+                        $"Entity template '{request.TemplateId}' children[{i}] '{child.Template}'");
+                // 新生子实体尚无 FacingDirection，OwnFacing 偏移走回退链（子→父→0）。
+                Fix64Vec2 childPosition = Ludots.Core.Gameplay.Attachment.AttachedPoseMath.ComposeWorldPosition(
+                    in parentPosition,
+                    parentFacing,
+                    ownFacingRad: parentFacing,
+                    in localPose);
+                float childFacing;
+                byte hasFacing;
+                if (localPose.InheritParentFacing != 0)
+                {
+                    childFacing = parentFacing + localPose.LocalFacingRad.ToFloat();
+                    hasFacing = 1;
+                }
+                else if (localPose.LocalFacingRad != Fix64.Zero)
+                {
+                    childFacing = localPose.LocalFacingRad.ToFloat();
+                    hasFacing = 1;
+                }
+                else
+                {
+                    childFacing = 0f;
+                    hasFacing = 0;
+                }
+
+                RuntimeEntitySpawnComponentPatch[]? patches = null;
+                if (child.Overrides is { Count: > 0 })
+                {
+                    patches = new RuntimeEntitySpawnComponentPatch[child.Overrides.Count];
+                    int patchIndex = 0;
+                    foreach (var kvp in child.Overrides)
+                    {
+                        patches[patchIndex++] = new RuntimeEntitySpawnComponentPatch(kvp.Key, kvp.Value);
+                    }
+                }
+
+                var childRequest = new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = child.Template,
+                    WorldPositionCm = childPosition,
+                    HasWorldPosition = 1,
+                    FacingAngleRad = childFacing,
+                    HasFacing = hasFacing,
+                    MapId = request.MapId,
+                    Parent = parent,
+                    ComponentPatches = patches,
+                    AttachedLocalPose = localPose,
+                    HasAttachedLocalPose = 1,
+                    InlineChildren = child.Children is { Count: > 0 } ? child.Children : null,
+                    InstanceId = request.InstanceId,
+                    AddressablePath = childPath,
+                };
+                if (!_requests.TryEnqueue(in childRequest))
+                {
+                    throw new InvalidOperationException(
+                        $"SPAWN.RUNTIME.ERR.TemplateChildrenQueueFull: template='{request.TemplateId}', child='{child.Template}'.");
+                }
+            }
+        }
+
+        private static string? CombineAddressablePath(string? parentPath, string? localId)
+        {
+            string? prefix = string.IsNullOrWhiteSpace(parentPath) ? null : parentPath;
+            if (string.IsNullOrWhiteSpace(localId))
+            {
+                return prefix;
+            }
+
+            return prefix == null ? localId : prefix + "." + localId;
+        }
+
+        private static string DescribeChildPath(string? parentPath, string? localId, int index)
+        {
+            string? combined = CombineAddressablePath(parentPath, localId);
+            return string.IsNullOrWhiteSpace(combined)
+                ? "#" + index.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                : combined;
         }
 
         private bool TryCopyTemplateBatch(string templateId, out int count)
@@ -310,8 +640,15 @@ namespace Ludots.Core.Gameplay.Spawning
 
         private static bool IsTemplateBatchMember(string templateId, in RuntimeEntitySpawnRequest request)
         {
+            // 带父链接/attachment 局部姿的请求只能走单实体 lane（batch lane 不处理父子链接）。
+            // 未设置 Parent 的请求字段是 default(Entity)（0,0,0），不等于 Entity.Null——
+            // 两种"无父"都要放行 batch lane（先例：EntityTriggerGraphMounts）。
             return request.Kind == RuntimeEntitySpawnKind.Template &&
                    !HasComponentPatches(in request) &&
+                   (request.Parent == Entity.Null || request.Parent == default) &&
+                   request.LinkSourceAsParent == 0 &&
+                   request.HasAttachedLocalPose == 0 &&
+                   request.InlineChildren is not { Count: > 0 } &&
                    !string.IsNullOrWhiteSpace(request.TemplateId) &&
                    string.Equals(request.TemplateId, templateId, StringComparison.Ordinal);
         }
@@ -342,7 +679,7 @@ namespace Ludots.Core.Gameplay.Spawning
             int onSpawnEffectTemplateId = _templateBatchSpawner.GetOnSpawnEffectTemplateId(templateId, template);
             if (_effectRequests != null && (hasRequestOnSpawnEffect || onSpawnEffectTemplateId > 0))
             {
-                _effectRequests.Reserve(_effectRequests.Count + _effectRequests.OverflowCount + count);
+                _effectRequests.RequireAvailable(count, "RuntimeEntitySpawnSystem.TemplateBatchOnSpawn");
             }
             else if (_effectRequests == null && (hasRequestOnSpawnEffect || onSpawnEffectTemplateId > 0))
             {
@@ -463,9 +800,9 @@ namespace Ludots.Core.Gameplay.Spawning
                 features |= TemplateBatchSpawnFeatures.MapEntity;
             }
 
-            if (TemplateBatchOwnerPayloadPreseedPolicy.CanPreseedOwnerPayloadMarker(_performerBootstrap, template, templateKeyId))
+            if (TemplateBatchOwnerPayloadPreseedPolicy.CanPreseedOwnerPayloadMarker(_presenterBootstrap, template, templateKeyId))
             {
-                features |= TemplateBatchSpawnFeatures.PresentationOwnerHasPerformerPayload;
+                features |= TemplateBatchSpawnFeatures.PresentationOwnerHasPresenterPayload;
             }
             double prepareMs = ElapsedMs(prepareStart);
 
@@ -475,9 +812,9 @@ namespace Ludots.Core.Gameplay.Spawning
                 _templateBatchRequests.AsSpan(0, count),
                 features,
                 out ReadOnlySpan<Entity> created,
-                _performerBatchStableIds.AsSpan(0, count),
-                _performerBatchOwnerTransforms.AsSpan(0, count),
-                _performerBatchOwnerCulls.AsSpan(0, count)))
+                _presenterBatchStableIds.AsSpan(0, count),
+                _presenterBatchOwnerTransforms.AsSpan(0, count),
+                _presenterBatchOwnerCulls.AsSpan(0, count)))
             {
                 return false;
             }
@@ -485,8 +822,7 @@ namespace Ludots.Core.Gameplay.Spawning
             double postSpawnMs = 0d;
             if (_effectRequests != null && (hasRequestOnSpawnEffect || onSpawnEffectTemplateId > 0))
             {
-                // Capacity was reserved before create; keep the post-create reserve for overflow refill safety.
-                _effectRequests.Reserve(_effectRequests.Count + _effectRequests.OverflowCount + created.Length);
+                _effectRequests.RequireAvailable(created.Length, "RuntimeEntitySpawnSystem.TemplateBatchOnSpawnPostCreate");
             }
 
             bool requiresPostSpawnLoop =
@@ -500,6 +836,8 @@ namespace Ludots.Core.Gameplay.Spawning
                 hasRequestOnSpawnEffect ||
                 hasReceiptWork ||
                 onSpawnEffectTemplateId > 0 ||
+                template.TriggerGraphs is { Count: > 0 } ||
+                !string.IsNullOrWhiteSpace(template.InitialInteractionContext) ||
                 !allHaveMapEntity;
             if (requiresPostSpawnLoop)
             {
@@ -542,73 +880,80 @@ namespace Ludots.Core.Gameplay.Spawning
                     {
                         PublishOnSpawnEffect(in request, entity, onSpawnEffectTemplateId);
                     }
+
+                    MountTemplateTriggerGraphs(entity, templateId, template);
+                    MountTemplateInitialInteractionContext(entity, templateId, template);
                 }
 
                 postSpawnMs = ElapsedMs(postSpawnStart);
             }
 
-            double performerBatchMs = 0d;
-            double performerCreateMs = 0d;
-            double performerBootstrapMarkMs = 0d;
-            double performerCreateSetupMs = 0d;
-            double performerWorldCreateMs = 0d;
-            double performerComponentFillMs = 0d;
-            double performerIndexWriteMs = 0d;
-            double performerOwnerPayloadMs = 0d;
-            double performerPostCreateMs = 0d;
-            double performerChildSetupMs = 0d;
-            double performerChildWorldCreateMs = 0d;
-            double performerChildComponentFillMs = 0d;
-            double performerChildIndexWriteMs = 0d;
-            double performerChildStableIdMs = 0d;
-            int performerCreated = 0;
+            // 注意：batch lane 不展开模板 children——IsBatchCompatible 按合同（TemplateSpawnDescriptor.Create）
+            // 把带 children 的模板判为 Incompatible，能进入批量 lane 的模板必无 children；
+            // 带 children 的请求一律由单实体 lane 的 EnqueueTemplateChildren 展开。
+
+            double presenterBatchMs = 0d;
+            double presenterCreateMs = 0d;
+            double presenterBootstrapMarkMs = 0d;
+            double presenterCreateSetupMs = 0d;
+            double presenterWorldCreateMs = 0d;
+            double presenterComponentFillMs = 0d;
+            double presenterIndexWriteMs = 0d;
+            double presenterOwnerPayloadMs = 0d;
+            double presenterPostCreateMs = 0d;
+            double presenterChildSetupMs = 0d;
+            double presenterChildWorldCreateMs = 0d;
+            double presenterChildComponentFillMs = 0d;
+            double presenterChildIndexWriteMs = 0d;
+            double presenterChildStableIdMs = 0d;
+            int presenterCreated = 0;
             if (hasDirectBootstrap)
             {
-                long performerBatchStart = Stopwatch.GetTimestamp();
-                TryBootstrapPerformerBatch(
+                long presenterBatchStart = Stopwatch.GetTimestamp();
+                TryBootstrapPresenterBatch(
                     templateKeyId,
                     created,
-                    _performerBatchStableIds.AsSpan(0, created.Length),
-                    _performerBatchOwnerTransforms.AsSpan(0, created.Length),
-                    _performerBatchOwnerCulls.AsSpan(0, created.Length),
-                    out performerCreated,
-                    out performerCreateMs,
-                    out performerBootstrapMarkMs,
-                    out performerCreateSetupMs,
-                    out performerWorldCreateMs,
-                    out performerComponentFillMs,
-                    out performerIndexWriteMs,
-                    out performerOwnerPayloadMs,
-                    out performerPostCreateMs,
-                    out performerChildSetupMs,
-                    out performerChildWorldCreateMs,
-                    out performerChildComponentFillMs,
-                    out performerChildIndexWriteMs,
-                    out performerChildStableIdMs);
-                performerBatchMs = ElapsedMs(performerBatchStart);
+                    _presenterBatchStableIds.AsSpan(0, created.Length),
+                    _presenterBatchOwnerTransforms.AsSpan(0, created.Length),
+                    _presenterBatchOwnerCulls.AsSpan(0, created.Length),
+                    out presenterCreated,
+                    out presenterCreateMs,
+                    out presenterBootstrapMarkMs,
+                    out presenterCreateSetupMs,
+                    out presenterWorldCreateMs,
+                    out presenterComponentFillMs,
+                    out presenterIndexWriteMs,
+                    out presenterOwnerPayloadMs,
+                    out presenterPostCreateMs,
+                    out presenterChildSetupMs,
+                    out presenterChildWorldCreateMs,
+                    out presenterChildComponentFillMs,
+                    out presenterChildIndexWriteMs,
+                    out presenterChildStableIdMs);
+                presenterBatchMs = ElapsedMs(presenterBatchStart);
             }
 
             _timingDiagnostics?.ObserveRuntimeSpawnBatch(
                 count,
-                performerCreated,
+                presenterCreated,
                 prepareMs,
                 _templateBatchSpawner.LastWorldCreateMs,
                 _templateBatchSpawner.LastFillCreatedBatchMs,
                 postSpawnMs,
-                performerBatchMs,
-                performerCreateMs,
-                performerBootstrapMarkMs,
-                performerCreateSetupMs,
-                performerWorldCreateMs,
-                performerComponentFillMs,
-                performerIndexWriteMs,
-                performerOwnerPayloadMs,
-                performerPostCreateMs,
-                performerChildSetupMs,
-                performerChildWorldCreateMs,
-                performerChildComponentFillMs,
-                performerChildIndexWriteMs,
-                performerChildStableIdMs);
+                presenterBatchMs,
+                presenterCreateMs,
+                presenterBootstrapMarkMs,
+                presenterCreateSetupMs,
+                presenterWorldCreateMs,
+                presenterComponentFillMs,
+                presenterIndexWriteMs,
+                presenterOwnerPayloadMs,
+                presenterPostCreateMs,
+                presenterChildSetupMs,
+                presenterChildWorldCreateMs,
+                presenterChildComponentFillMs,
+                presenterChildIndexWriteMs,
+                presenterChildStableIdMs);
 
             return true;
         }
@@ -768,6 +1113,15 @@ namespace Ludots.Core.Gameplay.Spawning
                 team = World.Get<Team>(request.Source);
             }
 
+            // #1570 真相源反转：可解析时先建 MemberOf(unit→teamEntity) 边再写组件（投影）。
+            // 不 fail-fast：出生期 teamRep 可能尚未进 lookup（参与者绑定在实体装载后完成），
+            // 拓扑由 ParticipantBindingResolver 在绑定时补齐——出生侧 best-effort，装载站收口。
+            if (_relationships != null && _memberOfTypeId >= 0 && _teamLookup != null &&
+                _teamLookup.TryGet(team.Id, out Entity teamEntity) && World.IsAlive(teamEntity))
+            {
+                _relationships.EnsureLink(entity, teamEntity, _memberOfTypeId);
+            }
+
             if (World.Has<Team>(entity))
             {
                 World.Set(entity, team);
@@ -776,6 +1130,7 @@ namespace Ludots.Core.Gameplay.Spawning
             {
                 World.Add(entity, team);
             }
+
         }
 
         private void TryApplyPlayerOwner(in RuntimeEntitySpawnRequest request, Entity entity)
@@ -804,6 +1159,13 @@ namespace Ludots.Core.Gameplay.Spawning
             else
             {
                 World.Add(entity, owner);
+            }
+
+            // #1570 真相源反转：Owns(playerRep→unit) 边是唯一真相，PlayerOwner 组件是投影。
+            if (_relationships != null && _ownsTypeId >= 0 && _playerLookup != null &&
+                _playerLookup.TryGet(owner.PlayerId, out Entity playerRep) && World.IsAlive(playerRep))
+            {
+                _relationships.EnsureLink(playerRep, entity, _ownsTypeId);
             }
         }
 
@@ -1036,7 +1398,7 @@ namespace Ludots.Core.Gameplay.Spawning
                     $"Runtime spawn on-spawn effect requires EffectRequestQueue: kind={request.Kind}, templateId={request.TemplateId}, effectTemplateId={effectTemplateId}.");
             }
 
-            _effectRequests.Reserve(_effectRequests.Count + _effectRequests.OverflowCount + 1);
+            _effectRequests.RequireAvailable(1, "RuntimeEntitySpawnSystem.OnSpawnEffect");
         }
 
         private int ResolveTemplateFinalTeamId(
@@ -1300,6 +1662,32 @@ namespace Ludots.Core.Gameplay.Spawning
             Entity parent = request.LinkSourceAsParent != 0 ? request.Source : request.Parent;
             if (!World.IsAlive(parent))
             {
+                if (request.HasAttachedLocalPose != 0)
+                {
+                    throw new InvalidOperationException(
+                        $"SPAWN.RUNTIME.ERR.AttachedChildParentInvalid: template='{request.TemplateId}', child={entity.Id}.");
+                }
+
+                return;
+            }
+
+            if (request.HasAttachedLocalPose != 0)
+            {
+                // 模板 children 的挂接：spawn 管线不授予写权——子模板在装载期被禁止声明
+                // MovementParticipation，sink 即其唯一位姿写者；持有写权的实体须走 AttachOp。
+                if (World.Has<PoseAuthority>(entity) &&
+                    World.Get<PoseAuthority>(entity).Value != PoseAuthorityKind.Attached)
+                {
+                    throw new InvalidOperationException(
+                        $"SPAWN.RUNTIME.ERR.AttachedChildPoseAuthority: template='{request.TemplateId}', child={entity.Id}——模板 children 禁止声明 MovementParticipation。");
+                }
+
+                RelationOps.SetParent(World, entity, parent);
+                Ludots.Core.Gameplay.Attachment.AttachmentOps.ApplyAttachedPose(
+                    World,
+                    entity,
+                    parent,
+                    request.AttachedLocalPose);
                 return;
             }
 
@@ -1377,7 +1765,7 @@ namespace Ludots.Core.Gameplay.Spawning
 
             _effectRequests.Publish(new EffectRequest
             {
-                RootId = 0,
+                RootId = request.RootId,
                 Source = useSpawnedAsSource ? spawned : request.Source,
                 Target = spawned,
                 TargetContext = useSpawnedAsSource ? spawned : request.TargetContext,
@@ -1421,16 +1809,16 @@ namespace Ludots.Core.Gameplay.Spawning
             return true;
         }
 
-        private void TryBootstrapPerformer(Entity owner, string templateId)
+        private void TryBootstrapPresenter(Entity owner, string templateId)
         {
-            if (_performerRuntime == null || _performerDefinitions == null || _performerBootstrap == null)
+            if (_presenterRuntime == null || _presenterDefinitions == null || _presenterBootstrap == null)
             {
                 return;
             }
 
             int templateKeyId = ResolveTemplateKeyId(templateId, owner);
             if (templateKeyId <= 0 ||
-                !_performerBootstrap.TryGetEntitySpawnCreates(templateKeyId, out CompiledPerformerBootstrapRegistry.BootstrapCreateRule[] rules))
+                !_presenterBootstrap.TryGetEntitySpawnCreates(templateKeyId, out CompiledPresenterBootstrapRegistry.BootstrapCreateRule[] rules))
             {
                 return;
             }
@@ -1446,9 +1834,9 @@ namespace Ludots.Core.Gameplay.Spawning
                     continue;
                 }
 
-                if (!_performerDefinitions.TryGet(rule.PerformerDefinitionId, out PerformerDefinition definition))
+                if (!_presenterDefinitions.TryGet(rule.PresenterDefinitionId, out PresenterDefinition definition))
                 {
-                    throw new InvalidOperationException($"Performer definition id={rule.PerformerDefinitionId} is not registered.");
+                    throw new InvalidOperationException($"Presenter definition id={rule.PresenterDefinitionId} is not registered.");
                 }
 
                 int scopeTag = rule.ResolveScopeTag(stableId);
@@ -1457,14 +1845,14 @@ namespace Ludots.Core.Gameplay.Spawning
                     continue;
                 }
 
-                if (_performerRuntime.HasActiveScopedInstance(rule.PerformerDefinitionId, owner, scopeTag, PresentationAnchorKind.Entity, default))
+                if (_presenterRuntime.HasActiveScopedInstance(rule.PresenterDefinitionId, owner, scopeTag, PresentationAnchorKind.Entity, default))
                 {
                     continue;
                 }
 
-                Entity root = _performerRuntime.CreateHierarchy(
-                    _performerDefinitions,
-                    rule.PerformerDefinitionId,
+                Entity root = _presenterRuntime.CreateHierarchy(
+                    _presenterDefinitions,
+                    rule.PresenterDefinitionId,
                     owner,
                     scopeTag,
                     PresentationAnchorKind.Entity,
@@ -1478,14 +1866,14 @@ namespace Ludots.Core.Gameplay.Spawning
             }
         }
 
-        private void TryBootstrapPerformerBatch(
+        private void TryBootstrapPresenterBatch(
             int templateKeyId,
             ReadOnlySpan<Entity> owners,
             ReadOnlySpan<int> stableIds,
             ReadOnlySpan<VisualTransform> ownerTransforms,
             ReadOnlySpan<CullState> ownerCulls)
         {
-            TryBootstrapPerformerBatch(
+            TryBootstrapPresenterBatch(
                 templateKeyId,
                 owners,
                 stableIds,
@@ -1507,42 +1895,42 @@ namespace Ludots.Core.Gameplay.Spawning
                 out _);
         }
 
-        private void TryBootstrapPerformerBatch(
+        private void TryBootstrapPresenterBatch(
             int templateKeyId,
             ReadOnlySpan<Entity> owners,
             ReadOnlySpan<int> stableIds,
             ReadOnlySpan<VisualTransform> ownerTransforms,
             ReadOnlySpan<CullState> ownerCulls,
             out int totalCreated,
-            out double performerCreateMs,
+            out double presenterCreateMs,
             out double bootstrapMarkMs,
-            out double performerCreateSetupMs,
-            out double performerWorldCreateMs,
-            out double performerComponentFillMs,
-            out double performerIndexWriteMs,
-            out double performerOwnerPayloadMs,
-            out double performerPostCreateMs,
-            out double performerChildSetupMs,
-            out double performerChildWorldCreateMs,
-            out double performerChildComponentFillMs,
-            out double performerChildIndexWriteMs,
-            out double performerChildStableIdMs)
+            out double presenterCreateSetupMs,
+            out double presenterWorldCreateMs,
+            out double presenterComponentFillMs,
+            out double presenterIndexWriteMs,
+            out double presenterOwnerPayloadMs,
+            out double presenterPostCreateMs,
+            out double presenterChildSetupMs,
+            out double presenterChildWorldCreateMs,
+            out double presenterChildComponentFillMs,
+            out double presenterChildIndexWriteMs,
+            out double presenterChildStableIdMs)
         {
             totalCreated = 0;
-            performerCreateMs = 0d;
+            presenterCreateMs = 0d;
             bootstrapMarkMs = 0d;
-            performerCreateSetupMs = 0d;
-            performerWorldCreateMs = 0d;
-            performerComponentFillMs = 0d;
-            performerIndexWriteMs = 0d;
-            performerOwnerPayloadMs = 0d;
-            performerPostCreateMs = 0d;
-            performerChildSetupMs = 0d;
-            performerChildWorldCreateMs = 0d;
-            performerChildComponentFillMs = 0d;
-            performerChildIndexWriteMs = 0d;
-            performerChildStableIdMs = 0d;
-            if (_performerRuntime == null || _performerDefinitions == null || _performerBootstrap == null || owners.Length == 0)
+            presenterCreateSetupMs = 0d;
+            presenterWorldCreateMs = 0d;
+            presenterComponentFillMs = 0d;
+            presenterIndexWriteMs = 0d;
+            presenterOwnerPayloadMs = 0d;
+            presenterPostCreateMs = 0d;
+            presenterChildSetupMs = 0d;
+            presenterChildWorldCreateMs = 0d;
+            presenterChildComponentFillMs = 0d;
+            presenterChildIndexWriteMs = 0d;
+            presenterChildStableIdMs = 0d;
+            if (_presenterRuntime == null || _presenterDefinitions == null || _presenterBootstrap == null || owners.Length == 0)
             {
                 return;
             }
@@ -1551,11 +1939,11 @@ namespace Ludots.Core.Gameplay.Spawning
                 owners.Length != ownerTransforms.Length ||
                 owners.Length != ownerCulls.Length)
             {
-                throw new ArgumentException("Performer bootstrap batch spans must have matching lengths.");
+                throw new ArgumentException("Presenter bootstrap batch spans must have matching lengths.");
             }
 
             if (templateKeyId <= 0 ||
-                !_performerBootstrap.TryGetEntitySpawnCreates(templateKeyId, out CompiledPerformerBootstrapRegistry.BootstrapCreateRule[] rules))
+                !_presenterBootstrap.TryGetEntitySpawnCreates(templateKeyId, out CompiledPresenterBootstrapRegistry.BootstrapCreateRule[] rules))
             {
                 return;
             }
@@ -1563,9 +1951,9 @@ namespace Ludots.Core.Gameplay.Spawning
             for (int ri = 0; ri < rules.Length; ri++)
             {
                 ref readonly var rule = ref rules[ri];
-                if (!_performerDefinitions.TryGet(rule.PerformerDefinitionId, out PerformerDefinition definition))
+                if (!_presenterDefinitions.TryGet(rule.PresenterDefinitionId, out PresenterDefinition definition))
                 {
-                    throw new InvalidOperationException($"Performer definition id={rule.PerformerDefinitionId} is not registered.");
+                    throw new InvalidOperationException($"Presenter definition id={rule.PresenterDefinitionId} is not registered.");
                 }
 
                 int createCount = 0;
@@ -1584,11 +1972,11 @@ namespace Ludots.Core.Gameplay.Spawning
                         continue;
                     }
 
-                    _performerBatchOwners[createCount] = owner;
-                    _performerBatchScopeIds[createCount] = scopeTag;
-                    _performerBatchStableIds[createCount] = _stableIds.Allocate();
-                    _performerBatchOwnerTransforms[createCount] = ownerTransforms[oi];
-                    _performerBatchOwnerCulls[createCount] = ownerCulls[oi];
+                    _presenterBatchOwners[createCount] = owner;
+                    _presenterBatchScopeIds[createCount] = scopeTag;
+                    _presenterBatchStableIds[createCount] = _stableIds.Allocate();
+                    _presenterBatchOwnerTransforms[createCount] = ownerTransforms[oi];
+                    _presenterBatchOwnerCulls[createCount] = ownerCulls[oi];
                     createCount++;
                 }
 
@@ -1598,36 +1986,36 @@ namespace Ludots.Core.Gameplay.Spawning
                 }
 
                 long createStart = Stopwatch.GetTimestamp();
-                _performerRuntime.CreateEntityAnchoredRootBatch(
-                    _performerDefinitions,
-                    rule.PerformerDefinitionId,
-                    _performerBatchOwners.AsSpan(0, createCount),
-                    _performerBatchScopeIds.AsSpan(0, createCount),
-                    _performerBatchStableIds.AsSpan(0, createCount),
-                    _performerBatchOwnerTransforms.AsSpan(0, createCount),
-                    _performerBatchOwnerCulls.AsSpan(0, createCount),
+                _presenterRuntime.CreateEntityAnchoredRootBatch(
+                    _presenterDefinitions,
+                    rule.PresenterDefinitionId,
+                    _presenterBatchOwners.AsSpan(0, createCount),
+                    _presenterBatchScopeIds.AsSpan(0, createCount),
+                    _presenterBatchStableIds.AsSpan(0, createCount),
+                    _presenterBatchOwnerTransforms.AsSpan(0, createCount),
+                    _presenterBatchOwnerCulls.AsSpan(0, createCount),
                     definition,
-                    _performerBatchCreated.AsSpan(0, createCount),
+                    _presenterBatchCreated.AsSpan(0, createCount),
                     _stableIds.Allocate);
-                performerCreateMs += ElapsedMs(createStart);
-                performerCreateSetupMs += _performerRuntime.LastRootBatchSetupMs;
-                performerWorldCreateMs += _performerRuntime.LastRootBatchWorldCreateMs;
-                performerComponentFillMs += _performerRuntime.LastRootBatchComponentFillMs;
-                performerIndexWriteMs += _performerRuntime.LastRootBatchIndexWriteMs;
-                performerOwnerPayloadMs += _performerRuntime.LastRootBatchOwnerPayloadMs;
-                performerPostCreateMs += _performerRuntime.LastRootBatchPostCreateMs;
-                performerChildSetupMs += _performerRuntime.LastChildBatchSetupMs;
-                performerChildWorldCreateMs += _performerRuntime.LastChildBatchWorldCreateMs;
-                performerChildComponentFillMs += _performerRuntime.LastChildBatchComponentFillMs;
-                performerChildIndexWriteMs += _performerRuntime.LastChildBatchIndexWriteMs;
-                performerChildStableIdMs += _performerRuntime.LastChildBatchStableIdMs;
+                presenterCreateMs += ElapsedMs(createStart);
+                presenterCreateSetupMs += _presenterRuntime.LastRootBatchSetupMs;
+                presenterWorldCreateMs += _presenterRuntime.LastRootBatchWorldCreateMs;
+                presenterComponentFillMs += _presenterRuntime.LastRootBatchComponentFillMs;
+                presenterIndexWriteMs += _presenterRuntime.LastRootBatchIndexWriteMs;
+                presenterOwnerPayloadMs += _presenterRuntime.LastRootBatchOwnerPayloadMs;
+                presenterPostCreateMs += _presenterRuntime.LastRootBatchPostCreateMs;
+                presenterChildSetupMs += _presenterRuntime.LastChildBatchSetupMs;
+                presenterChildWorldCreateMs += _presenterRuntime.LastChildBatchWorldCreateMs;
+                presenterChildComponentFillMs += _presenterRuntime.LastChildBatchComponentFillMs;
+                presenterChildIndexWriteMs += _presenterRuntime.LastChildBatchIndexWriteMs;
+                presenterChildStableIdMs += _presenterRuntime.LastChildBatchStableIdMs;
 
-                if (PerformerEntityRuntime.RequiresDeferredBootstrapAfterBatchCreateHierarchy(definition, _performerDefinitions))
+                if (PresenterEntityRuntime.RequiresDeferredBootstrapAfterBatchCreateHierarchy(definition, _presenterDefinitions))
                 {
                     long markStart = Stopwatch.GetTimestamp();
                     for (int i = 0; i < createCount; i++)
                     {
-                        MarkHierarchyForBootstrapAfterBatchCreateIfNeeded(_performerBatchCreated[i]);
+                        MarkHierarchyForBootstrapAfterBatchCreateIfNeeded(_presenterBatchCreated[i]);
                     }
 
                     bootstrapMarkMs += ElapsedMs(markStart);
@@ -1658,14 +2046,14 @@ namespace Ludots.Core.Gameplay.Spawning
                 : 0;
         }
 
-        private bool PassesBootstrapCondition(CompiledPerformerBootstrapRegistry.BootstrapCreateRule rule, Entity owner)
+        private bool PassesBootstrapCondition(CompiledPresenterBootstrapRegistry.BootstrapCreateRule rule, Entity owner)
         {
             return rule.InlineCondition switch
             {
                 InlineConditionKind.None => true,
                 InlineConditionKind.SourceHasVisualTransform => World.Has<VisualTransform>(owner),
                 InlineConditionKind.SourceHasAttributes => World.Has<AttributeBuffer>(owner),
-                _ => throw new InvalidOperationException($"Unsupported performer bootstrap inline condition '{rule.InlineCondition}'."),
+                _ => throw new InvalidOperationException($"Unsupported presenter bootstrap inline condition '{rule.InlineCondition}'."),
             };
         }
 
@@ -1677,13 +2065,13 @@ namespace Ludots.Core.Gameplay.Spawning
 
         private bool HasDirectEntitySpawnBootstrap(int templateKeyId)
         {
-            if (_performerBootstrap == null)
+            if (_presenterBootstrap == null)
             {
                 return false;
             }
 
             return templateKeyId > 0 &&
-                   _performerBootstrap.TryGetEntitySpawnCreates(templateKeyId, out CompiledPerformerBootstrapRegistry.BootstrapCreateRule[] rules) &&
+                   _presenterBootstrap.TryGetEntitySpawnCreates(templateKeyId, out CompiledPresenterBootstrapRegistry.BootstrapCreateRule[] rules) &&
                    rules.Length > 0;
         }
 
@@ -1694,23 +2082,23 @@ namespace Ludots.Core.Gameplay.Spawning
                 return false;
             }
 
-            if (!hasDirectBootstrap || _performerBootstrap == null)
+            if (!hasDirectBootstrap || _presenterBootstrap == null)
             {
                 return true;
             }
 
-            return _performerBootstrap.HasNonBootstrapEntitySpawnRules(templateKeyId);
+            return _presenterBootstrap.HasNonBootstrapEntitySpawnRules(templateKeyId);
         }
 
         private void MarkHierarchyForBootstrap(Entity root)
         {
-            if (!World.IsAlive(root) || !World.Has<PerformerState>(root))
+            if (!World.IsAlive(root) || !World.Has<PresenterState>(root))
             {
                 return;
             }
 
-            MarkPerformer(root);
-            ref PerformerChildren children = ref World.Get<PerformerChildren>(root);
+            MarkPresenter(root);
+            ref PresenterChildren children = ref World.Get<PresenterChildren>(root);
             for (int i = 0; i < children.Count; i++)
             {
                 Entity child = children.Get(i);
@@ -1721,32 +2109,32 @@ namespace Ludots.Core.Gameplay.Spawning
             }
         }
 
-        private void MarkPerformer(Entity performer)
+        private void MarkPresenter(Entity presenter)
         {
-            if (World.Has<PerformerBootstrapPending>(performer))
+            if (World.Has<PresenterBootstrapPending>(presenter))
             {
                 return;
             }
 
-            World.Add(performer, new PerformerBootstrapPending());
+            World.Add(presenter, new PresenterBootstrapPending());
         }
 
         private void MarkHierarchyForBootstrapIfNeeded(Entity root)
         {
-            if (!World.IsAlive(root) || !World.Has<PerformerState>(root))
+            if (!World.IsAlive(root) || !World.Has<PresenterState>(root))
             {
                 return;
             }
 
-            ref readonly PerformerState state = ref World.Get<PerformerState>(root);
-            if (_performerDefinitions != null &&
-                _performerDefinitions.TryGet(state.DefId, out PerformerDefinition definition) &&
+            ref readonly PresenterState state = ref World.Get<PresenterState>(root);
+            if (_presenterDefinitions != null &&
+                _presenterDefinitions.TryGet(state.DefId, out PresenterDefinition definition) &&
                 definition.RequiresBootstrapProcessing)
             {
-                MarkPerformer(root);
+                MarkPresenter(root);
             }
 
-            ref PerformerChildren children = ref World.Get<PerformerChildren>(root);
+            ref PresenterChildren children = ref World.Get<PresenterChildren>(root);
             for (int i = 0; i < children.Count; i++)
             {
                 Entity child = children.Get(i);
@@ -1759,20 +2147,20 @@ namespace Ludots.Core.Gameplay.Spawning
 
         private void MarkHierarchyForBootstrapAfterBatchCreateIfNeeded(Entity root)
         {
-            if (!World.IsAlive(root) || !World.Has<PerformerState>(root))
+            if (!World.IsAlive(root) || !World.Has<PresenterState>(root))
             {
                 return;
             }
 
-            ref readonly PerformerState state = ref World.Get<PerformerState>(root);
-            if (_performerDefinitions != null &&
-                _performerDefinitions.TryGet(state.DefId, out PerformerDefinition definition) &&
-                PerformerEntityRuntime.RequiresDeferredBootstrapAfterBatchCreate(definition))
+            ref readonly PresenterState state = ref World.Get<PresenterState>(root);
+            if (_presenterDefinitions != null &&
+                _presenterDefinitions.TryGet(state.DefId, out PresenterDefinition definition) &&
+                PresenterEntityRuntime.RequiresDeferredBootstrapAfterBatchCreate(definition))
             {
-                MarkPerformer(root);
+                MarkPresenter(root);
             }
 
-            ref PerformerChildren children = ref World.Get<PerformerChildren>(root);
+            ref PresenterChildren children = ref World.Get<PresenterChildren>(root);
             for (int i = 0; i < children.Count; i++)
             {
                 Entity child = children.Get(i);
@@ -1785,12 +2173,12 @@ namespace Ludots.Core.Gameplay.Spawning
 
         private void MarkOwnerBootstrapHandled(Entity owner)
         {
-            if (World.Has<PerformerRootBootstrapHandled>(owner))
+            if (World.Has<PresenterRootBootstrapHandled>(owner))
             {
                 return;
             }
 
-            World.Add(owner, new PerformerRootBootstrapHandled());
+            World.Add(owner, new PresenterRootBootstrapHandled());
         }
     }
 }

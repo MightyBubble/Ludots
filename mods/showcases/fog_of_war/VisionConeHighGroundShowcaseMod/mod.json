@@ -2,7 +2,7 @@
   "name": "VisionConeHighGroundShowcaseMod",
   "version": "1.0.0",
   "description": "Vision cone and high-ground showcase root.",
-  "main": "bin/net8.0/VisionConeHighGroundShowcaseMod.dll",
+  "main": "bin/net9.0/VisionConeHighGroundShowcaseMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0"

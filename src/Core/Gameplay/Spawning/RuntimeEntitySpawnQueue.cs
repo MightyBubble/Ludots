@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Text.Json.Nodes;
 using Arch.Core;
+using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics.FixedPoint;
@@ -21,6 +23,7 @@ namespace Ludots.Core.Gameplay.Spawning
     public struct RuntimeEntitySpawnRequest
     {
         public RuntimeEntitySpawnKind Kind;
+        public int RootId;
         public Entity Source;
         public Entity TargetContext;
         public Fix64Vec2 WorldPositionCm;
@@ -42,11 +45,22 @@ namespace Ludots.Core.Gameplay.Spawning
         public byte CopySourcePlayerOwner;
         public Entity Parent;
         public byte LinkSourceAsParent;
+        public Ludots.Core.Components.AttachedLocalPose AttachedLocalPose;
+        public byte HasAttachedLocalPose;
         public ProjectileState Projectile;
         public byte HasProjectileState;
         public int ReceiptChannelId;
         public int ReceiptId;
         public byte EmitReceipt;
+        /// <summary>
+        /// 本节点自身声明的内联 children（被引用模板 children 之外的递归子树）。
+        /// 随请求携带，待该子实体落地时由 spawn 系统再次展开——不另开物化路径。
+        /// </summary>
+        public List<EntityTemplateChild>? InlineChildren;
+        /// <summary>可寻址组的实例根（全局名）。带 localId 后代的运行时出生必须显式声明。</summary>
+        public string? InstanceId;
+        /// <summary>本请求物化节点的可寻址路径（实例根 + localId 链），仅用于上下文与诊断。</summary>
+        public string? AddressablePath;
     }
 
     public struct RuntimeEntitySpawnReceipt

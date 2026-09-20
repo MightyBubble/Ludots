@@ -1,0 +1,9 @@
+{
+  "startupMapId": "lsw_hot_apply_arena",
+  "startupInputContexts": ["Default_Gameplay", "ChampionSkillSandbox.Controls"],
+  "windowTitle": "Ludots - LSW Hot-Apply (Firebolt to Ice)",
+  "targetFps": 60,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true
+}

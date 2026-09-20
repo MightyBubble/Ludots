@@ -1,0 +1,15 @@
+[
+  {
+    "id": "showcase.graph_op.LoadEffectStack",
+    "kind": "Effect",
+    "entry": "stacks",
+    "nodes": [
+      {
+        "id": "stacks",
+        "op": "LoadEffectStack"
+      }
+    ],
+    "controlEdges": [],
+    "valueEdges": []
+  }
+]

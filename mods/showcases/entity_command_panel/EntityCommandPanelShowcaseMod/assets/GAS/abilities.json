@@ -2,7 +2,7 @@
   {
     "id": "Ability.Showcase.CommandPanel.Fireball",
     "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 0 } ] },
-    "catalogTags": [ "castFamily.projectile" ],
+    "categories": [ "castFamily.projectile" ],
     "presentation": {
       "displayName": "Fireball",
       "hintText": "Projectile spell shared by Arcweaver and Vanguard.",
@@ -12,7 +12,7 @@
   {
     "id": "Ability.Showcase.CommandPanel.StoneThrow",
     "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 0 } ] },
-    "catalogTags": [ "castFamily.projectile" ],
+    "categories": [ "castFamily.projectile" ],
     "presentation": {
       "displayName": "Stone Throw",
       "hintText": "Projectile attack owned by Commander.",
@@ -22,7 +22,7 @@
   {
     "id": "Ability.Showcase.CommandPanel.BlinkStep",
     "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 0 } ] },
-    "catalogTags": [ "castFamily.mobility" ],
+    "categories": [ "castFamily.mobility" ],
     "presentation": {
       "displayName": "Blink Step",
       "hintText": "Mobility command shared by Arcweaver and Commander.",
@@ -32,7 +32,7 @@
   {
     "id": "Ability.Showcase.CommandPanel.Leap",
     "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 0 } ] },
-    "catalogTags": [ "castFamily.mobility" ],
+    "categories": [ "castFamily.mobility" ],
     "presentation": {
       "displayName": "Leap",
       "hintText": "Mobility command owned by Vanguard.",
@@ -42,7 +42,7 @@
   {
     "id": "Ability.Showcase.CommandPanel.Guard",
     "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 0 } ] },
-    "catalogTags": [ "castFamily.defense" ],
+    "categories": [ "castFamily.defense" ],
     "presentation": {
       "displayName": "Guard",
       "hintText": "Defensive command shared by Vanguard and Commander.",
@@ -52,7 +52,7 @@
   {
     "id": "Ability.Showcase.CommandPanel.ArcShield",
     "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 0 } ] },
-    "catalogTags": [ "castFamily.defense" ],
+    "categories": [ "castFamily.defense" ],
     "presentation": {
       "displayName": "Arc Shield",
       "hintText": "Defensive command owned by Arcweaver.",
@@ -60,35 +60,35 @@
     }
   },
 
-  { "id": "Ability.Interaction.Arcweaver.DuelBolt", "catalogTags": [ "castFamily.projectile" ], "presentation": { "displayName": "Fireball", "hintText": "Arcweaver can cast Fireball.", "accentColor": "#E9663F" } },
-  { "id": "Ability.Interaction.Vanguard.Challenge", "catalogTags": [ "castFamily.projectile" ], "presentation": { "displayName": "Fireball", "hintText": "Vanguard can cast Fireball.", "accentColor": "#E9663F" } },
-  { "id": "Ability.Interaction.Commander.SupportBeam", "catalogTags": [ "castFamily.projectile" ], "presentation": { "displayName": "Stone Throw", "hintText": "Commander can throw Stone.", "accentColor": "#9EE493" } },
+  { "id": "Ability.Interaction.Arcweaver.DuelBolt", "categories": [ "castFamily.projectile" ], "presentation": { "displayName": "Fireball", "hintText": "Arcweaver can cast Fireball.", "accentColor": "#E9663F" } },
+  { "id": "Ability.Interaction.Vanguard.Challenge", "categories": [ "castFamily.projectile" ], "presentation": { "displayName": "Fireball", "hintText": "Vanguard can cast Fireball.", "accentColor": "#E9663F" } },
+  { "id": "Ability.Interaction.Commander.SupportBeam", "categories": [ "castFamily.projectile" ], "presentation": { "displayName": "Stone Throw", "hintText": "Commander can throw Stone.", "accentColor": "#9EE493" } },
 
-  { "id": "Ability.Interaction.Arcweaver.BlinkStep", "catalogTags": [ "castFamily.mobility" ], "presentation": { "displayName": "Blink Step", "hintText": "Arcweaver can Blink Step.", "accentColor": "#6EC6FF" } },
-  { "id": "Ability.Interaction.Vanguard.BannerLeap", "catalogTags": [ "castFamily.mobility" ], "presentation": { "displayName": "Leap", "hintText": "Vanguard can Leap.", "accentColor": "#F6D37A" } },
-  { "id": "Ability.Interaction.Commander.TacticalJump", "catalogTags": [ "castFamily.mobility" ], "presentation": { "displayName": "Blink Step", "hintText": "Commander can Blink Step.", "accentColor": "#6EC6FF" } },
+  { "id": "Ability.Interaction.Arcweaver.BlinkStep", "categories": [ "castFamily.mobility" ], "presentation": { "displayName": "Blink Step", "hintText": "Arcweaver can Blink Step.", "accentColor": "#6EC6FF" } },
+  { "id": "Ability.Interaction.Vanguard.BannerLeap", "categories": [ "castFamily.mobility" ], "presentation": { "displayName": "Leap", "hintText": "Vanguard can Leap.", "accentColor": "#F6D37A" } },
+  { "id": "Ability.Interaction.Commander.TacticalJump", "categories": [ "castFamily.mobility" ], "presentation": { "displayName": "Blink Step", "hintText": "Commander can Blink Step.", "accentColor": "#6EC6FF" } },
 
-  { "id": "Ability.Interaction.Arcweaver.FireLance", "catalogTags": [ "castFamily.defense" ], "presentation": { "displayName": "Arc Shield", "hintText": "Arcweaver can raise Arc Shield.", "accentColor": "#D59DFF" } },
-  { "id": "Ability.Interaction.Vanguard.CleaveCone", "catalogTags": [ "castFamily.defense" ], "presentation": { "displayName": "Guard", "hintText": "Vanguard can Guard.", "accentColor": "#C2D6FF" } },
-  { "id": "Ability.Interaction.Commander.VolleyLine", "catalogTags": [ "castFamily.defense" ], "presentation": { "displayName": "Guard", "hintText": "Commander can Guard.", "accentColor": "#C2D6FF" } }
+  { "id": "Ability.Interaction.Arcweaver.FireLance", "categories": [ "castFamily.defense" ], "presentation": { "displayName": "Arc Shield", "hintText": "Arcweaver can raise Arc Shield.", "accentColor": "#D59DFF" } },
+  { "id": "Ability.Interaction.Vanguard.CleaveCone", "categories": [ "castFamily.defense" ], "presentation": { "displayName": "Guard", "hintText": "Vanguard can Guard.", "accentColor": "#C2D6FF" } },
+  { "id": "Ability.Interaction.Commander.VolleyLine", "categories": [ "castFamily.defense" ], "presentation": { "displayName": "Guard", "hintText": "Commander can Guard.", "accentColor": "#C2D6FF" } }
 ,
-  { "id": "Ability.Interaction.Arcweaver.NovaPulse", "catalogTags": [ "castFamily.area" ] },
-  { "id": "Ability.Interaction.Vanguard.Shockwave", "catalogTags": [ "castFamily.area" ] },
-  { "id": "Ability.Interaction.Commander.Overclock", "catalogTags": [ "castFamily.area" ] },
+  { "id": "Ability.Interaction.Arcweaver.NovaPulse", "categories": [ "castFamily.area" ] },
+  { "id": "Ability.Interaction.Vanguard.Shockwave", "categories": [ "castFamily.area" ] },
+  { "id": "Ability.Interaction.Commander.Overclock", "categories": [ "castFamily.area" ] },
 
-  { "id": "Ability.Interaction.Arcweaver.ArcDash", "catalogTags": [ "castFamily.dash" ] },
-  { "id": "Ability.Interaction.Vanguard.ChargeDash", "catalogTags": [ "castFamily.dash" ] },
-  { "id": "Ability.Interaction.Commander.ThrustJump", "catalogTags": [ "castFamily.dash" ] },
+  { "id": "Ability.Interaction.Arcweaver.ArcDash", "categories": [ "castFamily.dash" ] },
+  { "id": "Ability.Interaction.Vanguard.ChargeDash", "categories": [ "castFamily.dash" ] },
+  { "id": "Ability.Interaction.Commander.ThrustJump", "categories": [ "castFamily.dash" ] },
 
-  { "id": "Ability.Interaction.Arcweaver.GuardToggle", "catalogTags": [ "castFamily.toggle" ] },
-  { "id": "Ability.Interaction.Vanguard.IronWall", "catalogTags": [ "castFamily.toggle" ] },
-  { "id": "Ability.Interaction.Commander.ShieldNet", "catalogTags": [ "castFamily.toggle" ] },
+  { "id": "Ability.Interaction.Arcweaver.GuardToggle", "categories": [ "castFamily.toggle" ] },
+  { "id": "Ability.Interaction.Vanguard.IronWall", "categories": [ "castFamily.toggle" ] },
+  { "id": "Ability.Interaction.Commander.ShieldNet", "categories": [ "castFamily.toggle" ] },
 
-  { "id": "Ability.Interaction.Arcweaver.ActionContext", "catalogTags": [ "castFamily.context" ] },
-  { "id": "Ability.Interaction.Vanguard.ActionContext", "catalogTags": [ "castFamily.context" ] },
-  { "id": "Ability.Interaction.Commander.ActionContext", "catalogTags": [ "castFamily.context" ] },
+  { "id": "Ability.Interaction.Arcweaver.ActionContext", "categories": [ "castFamily.context" ] },
+  { "id": "Ability.Interaction.Vanguard.ActionContext", "categories": [ "castFamily.context" ] },
+  { "id": "Ability.Interaction.Commander.ActionContext", "categories": [ "castFamily.context" ] },
 
-  { "id": "Ability.Interaction.Arcweaver.RuneBurst", "catalogTags": [ "castFamily.advanced" ] },
-  { "id": "Ability.Interaction.Vanguard.GroundSlam", "catalogTags": [ "castFamily.advanced" ] },
-  { "id": "Ability.Interaction.Commander.OrbitalStrike", "catalogTags": [ "castFamily.advanced" ] }
+  { "id": "Ability.Interaction.Arcweaver.RuneBurst", "categories": [ "castFamily.advanced" ] },
+  { "id": "Ability.Interaction.Vanguard.GroundSlam", "categories": [ "castFamily.advanced" ] },
+  { "id": "Ability.Interaction.Commander.OrbitalStrike", "categories": [ "castFamily.advanced" ] }
 ]

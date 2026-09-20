@@ -1,0 +1,22 @@
+[
+  {
+    "id": "raylib_client_parity.clip.idle",
+    "assetKind": "Clip",
+    "locators": [
+      {
+        "backendId": "raylib",
+        "assetRef": "RaylibClientParityShowcaseMod:assets/Models/mannequin_large_walk.glb#anim:0"
+      }
+    ]
+  },
+  {
+    "id": "raylib_client_parity.clip.walk",
+    "assetKind": "Clip",
+    "locators": [
+      {
+        "backendId": "raylib",
+        "assetRef": "RaylibClientParityShowcaseMod:assets/Models/mannequin_large_walk.glb#anim:3"
+      }
+    ]
+  }
+]

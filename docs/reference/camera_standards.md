@@ -99,7 +99,7 @@ engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
 
 禁止行为：
 
-- 直接写 `session.Camera.State`
+- 直接写已删除的 `GameSession.Camera` / 绕过 LogicView 写镜头权威
 - 在 Adapter / Presenter / Mod 内再造一套 camera tween
 - 引入 `CameraPresetRequest`、`ApplyPreset()` 之类的旧入口
 
@@ -157,7 +157,6 @@ engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
 | 模块 | 当前状态 | 目标 |
 |:--|:--|:--|
 | `TerrainBenchmarkMod` | 仍在 trigger 里补 pose | 尽量把基础机位前移到 `DefaultCamera` |
-| `Physics2DPlaygroundMod` | 仍有场景特定 pose override | 保留 override，避免重复声明基础 virtual camera |
 | `CapabilityStandardMassNavigationLargeWorld10kMod` | 使用大规模导航 showcase 相机 preset | 同上 |
 | `PerformanceVisualizationMod` | 仍有远景 pose override | 同上 |
 

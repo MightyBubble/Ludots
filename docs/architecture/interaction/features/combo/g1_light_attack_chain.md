@@ -20,17 +20,17 @@ Requires 3 separate `AbilityDefinition` instances bound to the same `InputBindin
 light_attack_1:
   precondition: NOT HasTag("combo_stage")
   exec: damage + AddTag("combo_stage:1", duration=30 ticks)
-  performer: swing_animation_1
+  presenter: swing_animation_1
 
 light_attack_2:
   precondition: HasTag("combo_stage:1")
   exec: damage + RemoveTag("combo_stage:1") + AddTag("combo_stage:2", duration=25 ticks)
-  performer: swing_animation_2
+  presenter: swing_animation_2
 
 light_attack_3:
   precondition: HasTag("combo_stage:2")
   exec: heavy_damage + RemoveTag("combo_stage:2")
-  performer: swing_animation_3
+  presenter: swing_animation_3
 ```
 
 **Routing Logic**: Same `InputBinding` → `OrderSubmitter` checks preconditions → activates matching ability.
@@ -60,7 +60,7 @@ light_attack_3:
           { "type": "AddTag", "tag": "combo_stage:1", "duration": 30 }
         ]
       },
-      "performer": "swing_animation_1"
+      "presenter": "swing_animation_1"
     },
     {
       "id": "light_attack_2",
@@ -73,7 +73,7 @@ light_attack_3:
           { "type": "AddTag", "tag": "combo_stage:2", "duration": 25 }
         ]
       },
-      "performer": "swing_animation_2"
+      "presenter": "swing_animation_2"
     },
     {
       "id": "light_attack_3",
@@ -85,7 +85,7 @@ light_attack_3:
           { "type": "RemoveTag", "tag": "combo_stage:2" }
         ]
       },
-      "performer": "swing_animation_3"
+      "presenter": "swing_animation_3"
     }
   ]
 }

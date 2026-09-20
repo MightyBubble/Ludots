@@ -66,20 +66,26 @@ namespace Ludots.Core.Presentation.Config
 
         public static bool TryParseTypedValueKind(string text, out PresentationTypedValueKind kind)
         {
-            if (Enum.TryParse(text, ignoreCase: true, out kind))
+            if (int.TryParse(text, out _))
+            {
+                kind = PresentationTypedValueKind.None;
+                return false;
+            }
+
+            if (Enum.TryParse(text, out kind) && Enum.IsDefined(typeof(PresentationTypedValueKind), kind))
             {
                 return true;
             }
 
             string normalized = NormalizeEnumToken(text);
-            if (string.Equals(normalized, "vector", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(normalized, "Vector", StringComparison.Ordinal))
             {
                 kind = PresentationTypedValueKind.Vector4;
                 return true;
             }
 
-            if (string.Equals(normalized, "asset", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(normalized, "assetreference", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(normalized, "Asset", StringComparison.Ordinal) ||
+                string.Equals(normalized, "AssetReference", StringComparison.Ordinal))
             {
                 kind = PresentationTypedValueKind.AssetRef;
                 return true;
@@ -88,7 +94,7 @@ namespace Ludots.Core.Presentation.Config
             string[] names = Enum.GetNames<PresentationTypedValueKind>();
             for (int i = 0; i < names.Length; i++)
             {
-                if (string.Equals(NormalizeEnumToken(names[i]), normalized, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(NormalizeEnumToken(names[i]), normalized, StringComparison.Ordinal))
                 {
                     kind = Enum.Parse<PresentationTypedValueKind>(names[i]);
                     return true;

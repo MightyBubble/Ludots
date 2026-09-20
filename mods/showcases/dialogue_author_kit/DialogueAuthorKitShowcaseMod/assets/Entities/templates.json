@@ -1,0 +1,12 @@
+[
+  {
+    "id": "author_kit_traveler",
+    "components": {
+      "Name": { "Value": "Traveler" },
+      "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
+      "CommandSourceSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 1200, "Y": 900 } }
+    }
+  }
+]

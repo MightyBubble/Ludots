@@ -1,15 +1,23 @@
 Set-StrictMode -Version Latest
 
 function Get-DotnetCommand {
-    $localAppData = [Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)
-    if (-not [string]::IsNullOrWhiteSpace($localAppData)) {
-        $bundledDotnet = Join-Path $localAppData 'X28L\sdk\Game\Plugins\UnrealMono\dotnet\sdk\dotnet.bat'
-        if (Test-Path $bundledDotnet) {
-            return $bundledDotnet
-        }
+    return 'dotnet'
+}
+
+function Get-ProjectTargetFramework {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ProjectPath
+    )
+
+    # 跟随 csproj 声明的 TFM，避免硬编码；多目标取第一个
+    $match = Select-String -Path $ProjectPath -Pattern '<TargetFrameworks?>\s*([^<]+)' |
+        Select-Object -First 1
+    if ($match -and $match.Matches.Count -gt 0) {
+        return ($match.Matches[0].Groups[1].Value.Trim() -split ';' | Select-Object -First 1)
     }
 
-    return 'dotnet'
+    throw "Cannot resolve TargetFramework from project: $ProjectPath"
 }
 
 function Get-DotnetProjectDllPath {
@@ -21,7 +29,8 @@ function Get-DotnetProjectDllPath {
 
     $projectDir = Split-Path -Parent $ProjectPath
     $projectName = [System.IO.Path]::GetFileNameWithoutExtension($ProjectPath)
-    return Join-Path $projectDir "bin\$Configuration\net8.0\$projectName.dll"
+    $targetFramework = Get-ProjectTargetFramework -ProjectPath $ProjectPath
+    return Join-Path $projectDir "bin\$Configuration\$targetFramework\$projectName.dll"
 }
 
 function Build-DotnetProject {

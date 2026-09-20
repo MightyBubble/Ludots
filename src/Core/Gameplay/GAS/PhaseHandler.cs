@@ -18,10 +18,11 @@ namespace Ludots.Core.Gameplay.GAS
     public struct PhaseHandler
     {
         public PhaseHandlerKind Kind;
-        /// <summary>BuiltinHandlerId (when Kind=Builtin) or GraphProgramId (when Kind=Graph).</summary>
+        /// <summary>Builtin handler id (when Kind=Builtin) or GraphProgramId (when Kind=Graph).</summary>
         public int HandlerId;
 
         public static PhaseHandler Builtin(BuiltinHandlerId id) => new() { Kind = PhaseHandlerKind.Builtin, HandlerId = (int)id };
+        public static PhaseHandler Builtin(int handlerId) => new() { Kind = PhaseHandlerKind.Builtin, HandlerId = handlerId };
         public static PhaseHandler Graph(int graphId) => new() { Kind = PhaseHandlerKind.Graph, HandlerId = graphId };
         public static PhaseHandler None => default;
         public bool IsValid => Kind != PhaseHandlerKind.None;

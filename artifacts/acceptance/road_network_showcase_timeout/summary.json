@@ -1,0 +1,11 @@
+{
+  "scenario": "road_network_showcase_timeout",
+  "refreshed": {
+    "Status": "Road route refreshed after timeout 1.",
+    "HasActiveOrder": true
+  },
+  "abandoned": {
+    "Status": "Road route abandoned after timeout replan: refresh plan build was rejected.",
+    "HasActiveOrder": false
+  }
+}

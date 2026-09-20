@@ -1,14 +1,17 @@
 {
   "startupMapId": "formation_capability_showcase",
-  "startupLocalPlayerId": 1,
   "windowTitle": "Ludots Engine - Formation Capability Showcase Movement",
   "targetFps": 0,
   "windowWidth": 1600,
   "windowHeight": 900,
   "windowResizable": true,
   "commandSource": {
-    "targetFilter": { "relationFilter": "Friendly" },
-    "movePathPreviewOrderTypeKeys": [ "massNavigationMove" ]
+    "targetFilter": {
+      "relationFilter": "Friendly"
+    },
+    "movePathPreviewOrderTypeKeys": [
+      "massNavigationMove"
+    ]
   },
   "presentation": {
     "cameraCulling": {
@@ -16,17 +19,17 @@
       "mediumLodDistanceCm": 42000,
       "lowLodDistanceCm": 90000
     },
-    "performerInstanceCapacity": 131072,
+    "presenterInstanceCapacity": 131072,
     "gasPresentationEventCapacity": 131072,
     "presentationEventStreamCapacity": 131072,
     "presentationOwnerChangeCapacity": 131072,
-    "performerCommandCapacity": 262144,
+    "presenterCommandCapacity": 262144,
     "primitiveDrawBufferCapacity": 131072,
     "visualSnapshotBufferCapacity": 131072,
     "visualProxyBufferCapacity": 131072,
     "presentationRequestCapacity": 262144,
     "groundOverlayCapacity": 65536,
-    "roadSplineCapacity": 65536,
+    "splineRibbonCapacity": 65536,
     "worldHudCapacity": 131072,
     "screenHudCapacity": 131072,
     "skinnedVisualBatchCapacity": 131072,
@@ -51,5 +54,11 @@
       "minZoomExplicitHalfExtentCm": 750.0,
       "maxZoomExplicitHalfExtentCm": 0.0
     }
-  }
+  },
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
 }

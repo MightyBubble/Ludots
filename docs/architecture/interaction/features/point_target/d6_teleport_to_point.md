@@ -31,7 +31,7 @@ AbilityExecSpec:
     → Phase Graph: 设置 caster position = order_position
 ```
 
-- Performer: GroundOverlay(Circle) 在目标点显示传送指示器
+- Presenter: GroundOverlay(Circle) 在目标点显示传送指示器
 - 可选: 添加 "interruptible" tag, 受击打断引导
 
 ## 依赖组件

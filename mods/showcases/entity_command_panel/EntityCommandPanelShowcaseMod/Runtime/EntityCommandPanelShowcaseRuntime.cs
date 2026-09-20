@@ -10,6 +10,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Commands;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
 
@@ -242,7 +243,7 @@ namespace EntityCommandPanelShowcaseMod.Runtime
         private static bool TryPublishAggregationCommandCollection(GameEngine engine, out Entity aggregationOwner)
         {
             aggregationOwner = Entity.Null;
-            if (!engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity localPlayer) ||
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity localPlayer) ||
                 localPlayer == Entity.Null ||
                 !engine.World.IsAlive(localPlayer))
             {
@@ -329,7 +330,7 @@ namespace EntityCommandPanelShowcaseMod.Runtime
 
         private static void ClearProfileProjectionCollections(GameEngine engine)
         {
-            if (!engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity localPlayer) ||
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity localPlayer) ||
                 localPlayer == Entity.Null ||
                 engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore collections)
             {

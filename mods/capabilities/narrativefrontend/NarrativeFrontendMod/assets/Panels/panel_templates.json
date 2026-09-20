@@ -1,0 +1,61 @@
+[
+  {
+    "id": "panel.narrative.choice.chip",
+    "subject": "DialogueChoice",
+    "graph": "Graph.Narrative.Choice.Chip",
+    "pins": [
+      {
+        "name": "ready",
+        "key": "panel.narrative.choice.chip.ready",
+        "mode": "realtime",
+        "default": 1
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "story-choice-item narrative-choice-chip",
+          "bind": "displayName"
+        }
+      ]
+    }
+  },
+  {
+    "id": "panel.narrative.choices",
+    "graph": "Graph.Narrative.Choices",
+    "width": 440,
+    "pins": [
+      {
+        "name": "ready",
+        "key": "panel.narrative.choices.ready",
+        "mode": "realtime",
+        "default": 1
+      }
+    ],
+    "collections": [
+      {
+        "name": "choices",
+        "source": "selfGraph",
+        "collectionKey": "panel.narrative.activeChoices",
+        "template": "panel.narrative.choice.chip"
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "story-eyebrow",
+          "text": "回话"
+        },
+        {
+          "type": "list",
+          "class": "story-choice-list narrative-choice-list",
+          "bind": "choices",
+          "viewportHeight": 180,
+          "itemExtent": 48
+        }
+      ]
+    }
+  }
+]

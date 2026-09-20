@@ -1,0 +1,142 @@
+{
+  "Id": "capability_standard_graph_op_RelationshipAggMinEntityByMetric",
+  "Tags": [
+    "showcase",
+    "capability-standard",
+    "gas",
+    "graph-ops",
+    "per-op"
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.GraphOpsGallery",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "DistanceCm": 2600,
+    "Pitch": 75,
+    "Yaw": 180,
+    "FovYDeg": 50
+  },
+  "Entities": [
+    {
+      "InstanceId": "self",
+      "Template": "GraphOps.Caster",
+      "Overrides": {
+        "Name": {
+          "Value": "自己"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 0,
+            "Y": 0
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "friend1",
+      "Template": "GraphOps.Ally",
+      "Overrides": {
+        "Name": {
+          "Value": "好友1"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": -430,
+            "Y": 390
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 85
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "friend2",
+      "Template": "GraphOps.Ally",
+      "Overrides": {
+        "Name": {
+          "Value": "好友2"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": -190,
+            "Y": 410
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 62
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "friend3",
+      "Template": "GraphOps.Ally",
+      "Overrides": {
+        "Name": {
+          "Value": "好友3"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 110,
+            "Y": 410
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 48
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "friend4",
+      "Template": "GraphOps.Ally",
+      "Overrides": {
+        "Name": {
+          "Value": "好友4"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 380,
+            "Y": 390
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 35
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "self"
+    }
+  ]
+}

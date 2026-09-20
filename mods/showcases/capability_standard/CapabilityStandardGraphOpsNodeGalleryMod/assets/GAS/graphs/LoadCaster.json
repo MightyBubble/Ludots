@@ -1,0 +1,47 @@
+[
+  {
+    "id": "showcase.graph_op.LoadCaster",
+    "kind": "Effect",
+    "entry": "loadSelf",
+    "nodes": [
+      {
+        "id": "loadSelf",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "alsoSelf",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "same",
+        "op": "CompareEqEntity"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "loadSelf",
+        "fromPort": "next",
+        "to": "alsoSelf"
+      },
+      {
+        "from": "alsoSelf",
+        "fromPort": "next",
+        "to": "same"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "loadSelf",
+        "fromPort": "value",
+        "to": "same",
+        "toPort": "a"
+      },
+      {
+        "from": "alsoSelf",
+        "fromPort": "value",
+        "to": "same",
+        "toPort": "b"
+      }
+    ]
+  }
+]

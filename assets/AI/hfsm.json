@@ -1,0 +1,44 @@
+[
+  {
+    "id": "hfsm.sentry",
+    "root": "root",
+    "states": [
+      { "id": "root", "kind": "Compound", "children": ["idle", "alerting"], "defaultChild": "idle" },
+      { "id": "idle", "kind": "Leaf" },
+      { "id": "alerting", "kind": "Compound", "children": ["alert", "combat", "retreat"], "defaultChild": "alert" },
+      { "id": "alert", "kind": "Leaf" },
+      { "id": "combat", "kind": "Leaf" },
+      { "id": "retreat", "kind": "Leaf" }
+    ],
+    "transitions": [
+      { "from": "idle", "to": "alert", "predicate": "StimulusLatched" },
+      { "from": "alert", "to": "combat", "predicate": "Always" },
+      { "from": "combat", "to": "retreat", "predicate": "Always" },
+      { "from": "retreat", "to": "idle", "predicate": "Always" }
+    ]
+  },
+  {
+    "id": "hfsm.sentry.scripted",
+    "root": "root",
+    "states": [
+      { "id": "root", "kind": "Compound", "children": ["idle", "alerting"], "defaultChild": "idle" },
+      { "id": "idle", "kind": "Leaf" },
+      { "id": "alerting", "kind": "Compound", "children": ["alert", "combat", "retreat"], "defaultChild": "alert" },
+      { "id": "alert", "kind": "Leaf" },
+      {
+        "id": "combat",
+        "kind": "Leaf",
+        "onEnter": "hfsm.combat.onEnter",
+        "onTick": "hfsm.combat.onTick",
+        "onExit": "hfsm.combat.onExit"
+      },
+      { "id": "retreat", "kind": "Leaf" }
+    ],
+    "transitions": [
+      { "from": "idle", "to": "alert", "predicate": "StimulusLatched" },
+      { "from": "alert", "to": "combat", "predicate": "Always", "condition": "hfsm.cond.alwaysTrue" },
+      { "from": "combat", "to": "retreat", "predicate": "Always" },
+      { "from": "retreat", "to": "idle", "predicate": "Always" }
+    ]
+  }
+]

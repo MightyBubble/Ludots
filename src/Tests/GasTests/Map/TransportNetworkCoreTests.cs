@@ -16,6 +16,7 @@ using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.TransportNetwork;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {
@@ -26,7 +27,7 @@ namespace Ludots.Tests.GAS
         public void TransportNetworkAssetLoader_LoadsStrictJsonThroughConfigPipeline()
         {
             string tempRoot = Path.Combine(Path.GetTempPath(), "ludots-transport-network-loader-" + Guid.NewGuid().ToString("N"));
-            string configsRoot = Path.Combine(tempRoot, "Configs");
+            string configsRoot = tempRoot;
             Directory.CreateDirectory(Path.Combine(configsRoot, "TransportNetwork"));
             File.WriteAllText(Path.Combine(configsRoot, "config_catalog.json"),
                 """
@@ -41,8 +42,8 @@ namespace Ludots.Tests.GAS
                   "sampleStepCm": 500,
                   "defaultVisualWidthMeters": 2.5,
                   "nodes": [
-                    { "id": "harbor_a", "xcm": 0, "ycm": 0, "kind": "Port", "tags": ["Transport.Hub"] },
-                    { "id": "harbor_b", "xcm": 1000, "ycm": 0, "kind": "Embark", "tags": [] }
+                    { "id": "harbor_a", "xcm": 0, "ycm": 0, "kind": "Port", "categories": ["Transport.Hub"] },
+                    { "id": "harbor_b", "xcm": 1000, "ycm": 0, "kind": "Embark", "categories": [] }
                   ],
                   "segments": [
                     {
@@ -52,7 +53,7 @@ namespace Ludots.Tests.GAS
                       "direction": "Bidirectional",
                       "flowDirection": "Forward",
                       "areaId": "Transport.Area.Canal",
-                      "tags": ["Transport.Area.Water"],
+                      "categories": ["Transport.Area.Water"],
                       "depthCm": 400,
                       "widthCm": 1200,
                       "laneCount": 0,

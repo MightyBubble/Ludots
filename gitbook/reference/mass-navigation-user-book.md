@@ -33,7 +33,7 @@
 | `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/Runtime/FormationCapabilityShowcaseRuntime.cs` | 场景生成与 showcase 生命周期 |
 | `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/Systems/FormationCommandActorExpander.cs` | anchor 到 member actor 的集群展开 |
 
-不要复制 `OrderQueue`、`OrderBuffer`、Command Router、spawn queue、MassNavigation runtime 或 performer runtime。
+不要复制 `OrderQueue`、`OrderBuffer`、Command Router、spawn queue、MassNavigation runtime 或 presenter runtime。
 
 ## Anchor 与 Member
 
@@ -130,12 +130,14 @@ Slot 只用于初始成员布局和稳定展开顺序。移动后的 command-gro
 ```json
 "groupMoveTargetLayout": {
   "mode": "Grid",
+  "assignment": "ActorOrder",
   "spacingCm": 1800,
   "orderTypeKeys": [ "massNavigationMove" ]
 }
 ```
 
 成员 fan-out 发生在每个中心目标确定之后；同一 anchor 的成员共享一个 command-group token，不同 anchor 使用不同 token。
+`ActorOrder` 是这里的显式合同：槽位由稳定的 anchor 顺序决定，不读取成员当前位置，也不会隐式切换为方向保持分配。
 
 ## 失败语义
 

@@ -56,7 +56,7 @@ namespace RelationshipShowcaseMod.Triggers
             }
 
             engine.RegisterSystem(new RelationshipShowcaseSimulationSystem(engine, _state), SystemGroup.InputCollection);
-            engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new RelationshipShowcasePresentationSystem(engine, _state));
+            engine.InsertPresentationSystemBefore<PresenterRuleSystem>(new RelationshipShowcasePresentationSystem(engine, _state));
 
             _context.Log(_config.Logs.SystemInstalled);
             return Task.CompletedTask;

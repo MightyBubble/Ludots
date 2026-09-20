@@ -27,7 +27,7 @@ Adapters do not add a parallel provider registry, a second browser runtime servi
 
 1. Resolve `browserRuntime` from the host's already-resolved app/runtime config.
 2. If `enabled=false` and `required=true`, fail fast.
-3. If `enabled=true`, require a known provider id. Today the built-in compatibility provider id is `cef`.
+3. If `enabled=true`, require a known provider id. Built-in providers: `cef` (Windows Chromium compatibility) and `ultralight` (cross-platform lightweight game UI; use this on cloud Linux).
 4. Resolve `providerAssemblyPath` relative to the host base directory when it is not rooted.
 5. Resolve `runtimeRootPath` relative to the host base directory when it is not rooted. For provider-loader installs it is required and must be the provider package root or a child of that package.
 6. Verify the provider assembly exists. Missing provider assemblies fail fast.
@@ -128,5 +128,16 @@ Recommended regression tests:
 ```text
 dotnet test src\Tests\RaylibAdapterTests\RaylibAdapterTests.csproj --filter BrowserRuntimeProviderLoaderTests
 dotnet test src\Tests\BrowserCefTests\BrowserCefTests.csproj --filter "CefBrowserRuntimeHostTests|CefBrowserRuntimeArchitectureTests|CefBrowserRuntimeAssemblyResolutionTests"
+dotnet test src\Tests\BrowserUltralightTests\BrowserUltralightTests.csproj
 dotnet test src\Tests\GasTests\GasTests.csproj --filter "RaylibHost_OwnsTerminalBrowserRuntimeShutdown|RaylibBrowserRuntimeInstaller_ResolvesProviderDependenciesThroughProviderPackage"
 ```
+
+### Ultralight provider notes
+
+- Package: UltralightNet 1.3.0 + AppCore binaries (linux-x64 / win-x64 / osx-x64).
+- Host type: `Ludots.UI.Browser.Ultralight.UltralightBrowserRuntimeHost`.
+- Collectible provider ALC is allowed (`useCollectibleLoadContext: true`).
+- Native work runs on a dedicated `Ludots.Ultralight` dispatcher thread; callers may use async/await freely.
+- Local `ludots-app://` pages are staged to disk and loaded via absolute `file://` URLs. AppCore FileSystem is rooted at the OS volume root with a relative `ResourcePathPrefix` so ICU data and staged apps both resolve.
+- JS facades must stay ES5-compatible for Ultralight's JavaScriptCore (no `??` / `?.`).
+- Do not silently fall back from `cef` to `ultralight`; configure the provider explicitly.

@@ -1,0 +1,8 @@
+{
+  "scene": "vegetation_cutout",
+  "frames": 120,
+  "avgFrameMs": 3.826,
+  "p95FrameMs": 2.388,
+  "maxFrameMs": 259.735,
+  "wallMs": 2371.1
+}

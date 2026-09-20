@@ -1,0 +1,14 @@
+{
+  "op": "QueryHexNeighbors",
+  "driver": "spatial",
+  "title": "贴身六格邻居",
+  "beat": "六个邻格描出来，格里的亮，多一格的灰着。",
+  "detailTemplate": "六格邻居{count}人亮，多一格都不算。",
+  "assertDetailContains": [
+    "六格邻居",
+    "多一格"
+  ],
+  "featuredNodeId": "hexN",
+  "graphKind": "Query",
+  "field": "hex_neighbors"
+}

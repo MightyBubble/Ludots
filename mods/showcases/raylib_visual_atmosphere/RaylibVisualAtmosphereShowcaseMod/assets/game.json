@@ -1,0 +1,11 @@
+{
+  "startupMapId": "raylib_visual_atmosphere_showcase",
+  "presentation": {
+    "groundOverlayCapacity": 256,
+    "cameraCulling": {
+      "highLodDistanceCm": 40000.0,
+      "mediumLodDistanceCm": 90000.0,
+      "lowLodDistanceCm": 180000.0
+    }
+  }
+}

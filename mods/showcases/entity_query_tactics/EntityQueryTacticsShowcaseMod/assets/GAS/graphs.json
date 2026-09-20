@@ -4,20 +4,222 @@
     "kind": "Query",
     "entry": "owner",
     "nodes": [
-      { "id": "owner", "op": "LoadCaster", "next": "minCommand" },
-      { "id": "minCommand", "op": "ConstFloat", "floatValue": 0, "next": "maxCommand" },
-      { "id": "maxCommand", "op": "ConstFloat", "floatValue": 1000, "next": "fromUiBox" },
-      { "id": "fromUiBox", "op": "QueryFromCollection", "collectionKey": "entityquery.collection.ui.box", "inputs": ["owner"], "next": "teamBlue" },
-      { "id": "teamBlue", "op": "QueryFilterTeam", "teamId": 1, "next": "squadOnly" },
-      { "id": "squadOnly", "op": "QueryFilterTemplate", "template": "entityquery_tactics_ally_squad", "next": "commandable" },
-      { "id": "commandable", "op": "QueryFilterTagAny", "tag": "Unit.Commandable", "next": "notRouted" },
-      { "id": "notRouted", "op": "QueryFilterTagNone", "tag": "State.Routed", "next": "commandRange" },
-      { "id": "commandRange", "op": "QueryFilterAttributeRange", "attribute": "CommandPower", "inputs": ["minCommand", "maxCommand"], "next": "sortCommand" },
-      { "id": "sortCommand", "op": "QuerySortByAttribute", "attribute": "CommandPower", "descending": true, "next": "selectedCount" },
-      { "id": "selectedCount", "op": "AggCount", "next": "commandSum" },
-      { "id": "commandSum", "op": "AggSumAttribute", "attribute": "CommandPower", "next": "supplySum" },
-      { "id": "supplySum", "op": "AggSumAttribute", "attribute": "Supply", "next": "bestCommand" },
-      { "id": "bestCommand", "op": "AggMaxEntityByAttribute", "attribute": "CommandPower" }
+      {
+        "id": "owner",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "minCommand",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "maxCommand",
+        "op": "ConstFloat",
+        "floatValue": 1000
+      },
+      {
+        "id": "fromUiBox",
+        "op": "QueryFromCollection",
+        "collectionKey": "entityquery.collection.ui.box"
+      },
+      {
+        "id": "teamBlue",
+        "op": "QueryFilterTeam",
+        "teamId": 1
+      },
+      {
+        "id": "squadOnly",
+        "op": "QueryFilterTemplate",
+        "template": "entityquery_tactics_ally_squad"
+      },
+      {
+        "id": "commandable",
+        "op": "QueryFilterTagAny",
+        "tag": "Unit.Commandable"
+      },
+      {
+        "id": "notRouted",
+        "op": "QueryFilterTagNone",
+        "tag": "State.Routed"
+      },
+      {
+        "id": "commandRange",
+        "op": "QueryFilterAttributeRange",
+        "attribute": "CommandPower"
+      },
+      {
+        "id": "sortCommand",
+        "op": "QuerySortByAttribute",
+        "attribute": "CommandPower",
+        "descending": true
+      },
+      {
+        "id": "selectedCount",
+        "op": "AggCount"
+      },
+      {
+        "id": "commandSum",
+        "op": "AggSumAttribute",
+        "attribute": "CommandPower"
+      },
+      {
+        "id": "supplySum",
+        "op": "AggSumAttribute",
+        "attribute": "Supply"
+      },
+      {
+        "id": "bestCommand",
+        "op": "AggMaxEntityByAttribute",
+        "attribute": "CommandPower"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "owner",
+        "fromPort": "next",
+        "to": "minCommand"
+      },
+      {
+        "from": "minCommand",
+        "fromPort": "next",
+        "to": "maxCommand"
+      },
+      {
+        "from": "maxCommand",
+        "fromPort": "next",
+        "to": "fromUiBox"
+      },
+      {
+        "from": "fromUiBox",
+        "fromPort": "next",
+        "to": "teamBlue"
+      },
+      {
+        "from": "teamBlue",
+        "fromPort": "next",
+        "to": "squadOnly"
+      },
+      {
+        "from": "squadOnly",
+        "fromPort": "next",
+        "to": "commandable"
+      },
+      {
+        "from": "commandable",
+        "fromPort": "next",
+        "to": "notRouted"
+      },
+      {
+        "from": "notRouted",
+        "fromPort": "next",
+        "to": "commandRange"
+      },
+      {
+        "from": "commandRange",
+        "fromPort": "next",
+        "to": "sortCommand"
+      },
+      {
+        "from": "sortCommand",
+        "fromPort": "next",
+        "to": "selectedCount"
+      },
+      {
+        "from": "selectedCount",
+        "fromPort": "next",
+        "to": "commandSum"
+      },
+      {
+        "from": "commandSum",
+        "fromPort": "next",
+        "to": "supplySum"
+      },
+      {
+        "from": "supplySum",
+        "fromPort": "next",
+        "to": "bestCommand"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "owner",
+        "fromPort": "value",
+        "to": "fromUiBox",
+        "toPort": "source"
+      },
+      {
+        "from": "fromUiBox",
+        "fromPort": "list",
+        "to": "teamBlue",
+        "toPort": "list"
+      },
+      {
+        "from": "teamBlue",
+        "fromPort": "list",
+        "to": "squadOnly",
+        "toPort": "list"
+      },
+      {
+        "from": "squadOnly",
+        "fromPort": "list",
+        "to": "commandable",
+        "toPort": "list"
+      },
+      {
+        "from": "commandable",
+        "fromPort": "list",
+        "to": "notRouted",
+        "toPort": "list"
+      },
+      {
+        "from": "notRouted",
+        "fromPort": "list",
+        "to": "commandRange",
+        "toPort": "list"
+      },
+      {
+        "from": "minCommand",
+        "fromPort": "value",
+        "to": "commandRange",
+        "toPort": "min"
+      },
+      {
+        "from": "maxCommand",
+        "fromPort": "value",
+        "to": "commandRange",
+        "toPort": "max"
+      },
+      {
+        "from": "commandRange",
+        "fromPort": "list",
+        "to": "sortCommand",
+        "toPort": "list"
+      },
+      {
+        "from": "sortCommand",
+        "fromPort": "list",
+        "to": "selectedCount",
+        "toPort": "list"
+      },
+      {
+        "from": "sortCommand",
+        "fromPort": "list",
+        "to": "commandSum",
+        "toPort": "list"
+      },
+      {
+        "from": "sortCommand",
+        "fromPort": "list",
+        "to": "supplySum",
+        "toPort": "list"
+      },
+      {
+        "from": "sortCommand",
+        "fromPort": "list",
+        "to": "bestCommand",
+        "toPort": "list"
+      }
     ],
     "outputs": [
       {
@@ -29,10 +231,34 @@
         "title": "Selected Friendlies",
         "summary": "UI box collection filtered by team, squad template, attrs, and tags."
       },
-      { "id": "selectedCount", "destination": "Summary", "type": "Int", "source": "selectedCount", "key": "entityquery.summary.selected.count" },
-      { "id": "commandSum", "destination": "Summary", "type": "Float", "source": "commandSum", "key": "entityquery.summary.selected.commandPower" },
-      { "id": "supplySum", "destination": "Summary", "type": "Float", "source": "supplySum", "key": "entityquery.summary.selected.supply" },
-      { "id": "bestCommand", "destination": "Summary", "type": "Entity", "source": "bestCommand", "key": "entityquery.summary.selected.bestEntity" }
+      {
+        "id": "selectedCount",
+        "destination": "Summary",
+        "type": "Int",
+        "source": "selectedCount",
+        "key": "entityquery.summary.selected.count"
+      },
+      {
+        "id": "commandSum",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "commandSum",
+        "key": "entityquery.summary.selected.commandPower"
+      },
+      {
+        "id": "supplySum",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "supplySum",
+        "key": "entityquery.summary.selected.supply"
+      },
+      {
+        "id": "bestCommand",
+        "destination": "Summary",
+        "type": "Entity",
+        "source": "bestCommand",
+        "key": "entityquery.summary.selected.bestEntity"
+      }
     ]
   },
   {
@@ -40,21 +266,292 @@
     "kind": "Query",
     "entry": "source",
     "nodes": [
-      { "id": "source", "op": "LoadCaster", "next": "minThreat" },
-      { "id": "minThreat", "op": "ConstFloat", "floatValue": 55, "next": "maxThreat" },
-      { "id": "maxThreat", "op": "ConstFloat", "floatValue": 2000, "next": "allMap" },
-      { "id": "allMap", "op": "QueryAllMapEntities", "next": "hostileTeam" },
-      { "id": "hostileTeam", "op": "QueryFilterTeam", "teamId": 2, "next": "enemyTemplate" },
-      { "id": "enemyTemplate", "op": "QueryFilterTemplate", "template": "entityquery_tactics_enemy_siege", "next": "threatValueRange" },
-      { "id": "threatValueRange", "op": "QueryFilterAttributeRange", "attribute": "ThreatValue", "inputs": ["minThreat", "maxThreat"], "next": "relationThreatRange" },
-      { "id": "relationThreatRange", "op": "RelationshipFilterMetricRange", "relationshipType": "TacticalIntel", "metric": "Threat", "inputs": ["source", "minThreat", "maxThreat"], "next": "priorityOnly" },
-      { "id": "priorityOnly", "op": "RelationshipFilterFlag", "relationshipType": "TacticalIntel", "flag": "PriorityTarget", "inputs": ["source"], "next": "sortThreat" },
-      { "id": "sortThreat", "op": "RelationshipSortByMetric", "relationshipType": "TacticalIntel", "metric": "Threat", "inputs": ["source"], "descending": true, "next": "threatCount" },
-      { "id": "threatCount", "op": "AggCount", "next": "threatSum" },
-      { "id": "threatSum", "op": "RelationshipAggSumMetric", "relationshipType": "TacticalIntel", "metric": "Threat", "inputs": ["source"], "next": "threatAverage" },
-      { "id": "threatAverage", "op": "RelationshipAggAverageMetric", "relationshipType": "TacticalIntel", "metric": "Threat", "inputs": ["source"], "next": "threatMax" },
-      { "id": "threatMax", "op": "RelationshipAggMaxMetric", "relationshipType": "TacticalIntel", "metric": "Threat", "inputs": ["source"], "next": "bestThreat" },
-      { "id": "bestThreat", "op": "RelationshipAggMaxEntityByMetric", "relationshipType": "TacticalIntel", "metric": "Threat", "inputs": ["source"] }
+      {
+        "id": "source",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "minThreat",
+        "op": "ConstFloat",
+        "floatValue": 55
+      },
+      {
+        "id": "maxThreat",
+        "op": "ConstFloat",
+        "floatValue": 2000
+      },
+      {
+        "id": "allMap",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "hostileTeam",
+        "op": "QueryFilterTeam",
+        "teamId": 2
+      },
+      {
+        "id": "enemyTemplate",
+        "op": "QueryFilterTemplate",
+        "template": "entityquery_tactics_enemy_siege"
+      },
+      {
+        "id": "threatValueRange",
+        "op": "QueryFilterAttributeRange",
+        "attribute": "ThreatValue"
+      },
+      {
+        "id": "relationThreatRange",
+        "op": "RelationshipFilterMetricRange",
+        "relationshipType": "TacticalIntel",
+        "metric": "Threat"
+      },
+      {
+        "id": "priorityOnly",
+        "op": "RelationshipFilterFlag",
+        "relationshipType": "TacticalIntel",
+        "flag": "PriorityTarget"
+      },
+      {
+        "id": "sortThreat",
+        "op": "RelationshipSortByMetric",
+        "relationshipType": "TacticalIntel",
+        "metric": "Threat",
+        "descending": true
+      },
+      {
+        "id": "threatCount",
+        "op": "AggCount"
+      },
+      {
+        "id": "threatSum",
+        "op": "RelationshipAggSumMetric",
+        "relationshipType": "TacticalIntel",
+        "metric": "Threat"
+      },
+      {
+        "id": "threatAverage",
+        "op": "RelationshipAggAverageMetric",
+        "relationshipType": "TacticalIntel",
+        "metric": "Threat"
+      },
+      {
+        "id": "threatMax",
+        "op": "RelationshipAggMaxMetric",
+        "relationshipType": "TacticalIntel",
+        "metric": "Threat"
+      },
+      {
+        "id": "bestThreat",
+        "op": "RelationshipAggMaxEntityByMetric",
+        "relationshipType": "TacticalIntel",
+        "metric": "Threat"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "source",
+        "fromPort": "next",
+        "to": "minThreat"
+      },
+      {
+        "from": "minThreat",
+        "fromPort": "next",
+        "to": "maxThreat"
+      },
+      {
+        "from": "maxThreat",
+        "fromPort": "next",
+        "to": "allMap"
+      },
+      {
+        "from": "allMap",
+        "fromPort": "next",
+        "to": "hostileTeam"
+      },
+      {
+        "from": "hostileTeam",
+        "fromPort": "next",
+        "to": "enemyTemplate"
+      },
+      {
+        "from": "enemyTemplate",
+        "fromPort": "next",
+        "to": "threatValueRange"
+      },
+      {
+        "from": "threatValueRange",
+        "fromPort": "next",
+        "to": "relationThreatRange"
+      },
+      {
+        "from": "relationThreatRange",
+        "fromPort": "next",
+        "to": "priorityOnly"
+      },
+      {
+        "from": "priorityOnly",
+        "fromPort": "next",
+        "to": "sortThreat"
+      },
+      {
+        "from": "sortThreat",
+        "fromPort": "next",
+        "to": "threatCount"
+      },
+      {
+        "from": "threatCount",
+        "fromPort": "next",
+        "to": "threatSum"
+      },
+      {
+        "from": "threatSum",
+        "fromPort": "next",
+        "to": "threatAverage"
+      },
+      {
+        "from": "threatAverage",
+        "fromPort": "next",
+        "to": "threatMax"
+      },
+      {
+        "from": "threatMax",
+        "fromPort": "next",
+        "to": "bestThreat"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "allMap",
+        "fromPort": "list",
+        "to": "hostileTeam",
+        "toPort": "list"
+      },
+      {
+        "from": "hostileTeam",
+        "fromPort": "list",
+        "to": "enemyTemplate",
+        "toPort": "list"
+      },
+      {
+        "from": "enemyTemplate",
+        "fromPort": "list",
+        "to": "threatValueRange",
+        "toPort": "list"
+      },
+      {
+        "from": "minThreat",
+        "fromPort": "value",
+        "to": "threatValueRange",
+        "toPort": "min"
+      },
+      {
+        "from": "maxThreat",
+        "fromPort": "value",
+        "to": "threatValueRange",
+        "toPort": "max"
+      },
+      {
+        "from": "threatValueRange",
+        "fromPort": "list",
+        "to": "relationThreatRange",
+        "toPort": "list"
+      },
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "relationThreatRange",
+        "toPort": "source"
+      },
+      {
+        "from": "minThreat",
+        "fromPort": "value",
+        "to": "relationThreatRange",
+        "toPort": "min"
+      },
+      {
+        "from": "maxThreat",
+        "fromPort": "value",
+        "to": "relationThreatRange",
+        "toPort": "max"
+      },
+      {
+        "from": "relationThreatRange",
+        "fromPort": "list",
+        "to": "priorityOnly",
+        "toPort": "list"
+      },
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "priorityOnly",
+        "toPort": "source"
+      },
+      {
+        "from": "priorityOnly",
+        "fromPort": "list",
+        "to": "sortThreat",
+        "toPort": "list"
+      },
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "sortThreat",
+        "toPort": "source"
+      },
+      {
+        "from": "sortThreat",
+        "fromPort": "list",
+        "to": "threatCount",
+        "toPort": "list"
+      },
+      {
+        "from": "sortThreat",
+        "fromPort": "list",
+        "to": "threatSum",
+        "toPort": "list"
+      },
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "threatSum",
+        "toPort": "source"
+      },
+      {
+        "from": "sortThreat",
+        "fromPort": "list",
+        "to": "threatAverage",
+        "toPort": "list"
+      },
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "threatAverage",
+        "toPort": "source"
+      },
+      {
+        "from": "sortThreat",
+        "fromPort": "list",
+        "to": "threatMax",
+        "toPort": "list"
+      },
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "threatMax",
+        "toPort": "source"
+      },
+      {
+        "from": "sortThreat",
+        "fromPort": "list",
+        "to": "bestThreat",
+        "toPort": "list"
+      },
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "bestThreat",
+        "toPort": "source"
+      }
     ],
     "outputs": [
       {
@@ -66,11 +563,41 @@
         "title": "Hostile Threats",
         "summary": "Hostile entities filtered by relationship metric and flag."
       },
-      { "id": "threatCount", "destination": "Summary", "type": "Int", "source": "threatCount", "key": "entityquery.summary.threat.count" },
-      { "id": "threatSum", "destination": "Summary", "type": "Int", "source": "threatSum", "key": "entityquery.summary.threat.sum" },
-      { "id": "threatAverage", "destination": "Summary", "type": "Int", "source": "threatAverage", "key": "entityquery.summary.threat.average" },
-      { "id": "threatMax", "destination": "Summary", "type": "Int", "source": "threatMax", "key": "entityquery.summary.threat.max" },
-      { "id": "bestThreat", "destination": "Summary", "type": "Entity", "source": "bestThreat", "key": "entityquery.summary.threat.bestEntity" }
+      {
+        "id": "threatCount",
+        "destination": "Summary",
+        "type": "Int",
+        "source": "threatCount",
+        "key": "entityquery.summary.threat.count"
+      },
+      {
+        "id": "threatSum",
+        "destination": "Summary",
+        "type": "Int",
+        "source": "threatSum",
+        "key": "entityquery.summary.threat.sum"
+      },
+      {
+        "id": "threatAverage",
+        "destination": "Summary",
+        "type": "Int",
+        "source": "threatAverage",
+        "key": "entityquery.summary.threat.average"
+      },
+      {
+        "id": "threatMax",
+        "destination": "Summary",
+        "type": "Int",
+        "source": "threatMax",
+        "key": "entityquery.summary.threat.max"
+      },
+      {
+        "id": "bestThreat",
+        "destination": "Summary",
+        "type": "Entity",
+        "source": "bestThreat",
+        "key": "entityquery.summary.threat.bestEntity"
+      }
     ]
   },
   {
@@ -78,19 +605,206 @@
     "kind": "Query",
     "entry": "owner",
     "nodes": [
-      { "id": "owner", "op": "LoadCaster", "next": "minSupply" },
-      { "id": "minSupply", "op": "ConstFloat", "floatValue": 0, "next": "maxSupply" },
-      { "id": "maxSupply", "op": "ConstFloat", "floatValue": 1000, "next": "fromFormation" },
-      { "id": "fromFormation", "op": "QueryFromCollection", "collectionKey": "entityquery.collection.formation.primary", "inputs": ["owner"], "next": "teamBlue" },
-      { "id": "teamBlue", "op": "QueryFilterTeam", "teamId": 1, "next": "commandable" },
-      { "id": "commandable", "op": "QueryFilterTagAny", "tag": "Unit.Commandable", "next": "notRouted" },
-      { "id": "notRouted", "op": "QueryFilterTagNone", "tag": "State.Routed", "next": "supplyRange" },
-      { "id": "supplyRange", "op": "QueryFilterAttributeRange", "attribute": "Supply", "inputs": ["minSupply", "maxSupply"], "next": "sortCommand" },
-      { "id": "sortCommand", "op": "QuerySortByAttribute", "attribute": "CommandPower", "descending": true, "next": "formationCount" },
-      { "id": "formationCount", "op": "AggCount", "next": "maxCommand" },
-      { "id": "maxCommand", "op": "AggMaxAttribute", "attribute": "CommandPower", "next": "minSupplyAgg" },
-      { "id": "minSupplyAgg", "op": "AggMinAttribute", "attribute": "Supply", "next": "bestCommand" },
-      { "id": "bestCommand", "op": "AggMaxEntityByAttribute", "attribute": "CommandPower" }
+      {
+        "id": "owner",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "minSupply",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "maxSupply",
+        "op": "ConstFloat",
+        "floatValue": 1000
+      },
+      {
+        "id": "fromFormation",
+        "op": "QueryFromCollection",
+        "collectionKey": "entityquery.collection.formation.primary"
+      },
+      {
+        "id": "teamBlue",
+        "op": "QueryFilterTeam",
+        "teamId": 1
+      },
+      {
+        "id": "commandable",
+        "op": "QueryFilterTagAny",
+        "tag": "Unit.Commandable"
+      },
+      {
+        "id": "notRouted",
+        "op": "QueryFilterTagNone",
+        "tag": "State.Routed"
+      },
+      {
+        "id": "supplyRange",
+        "op": "QueryFilterAttributeRange",
+        "attribute": "Supply"
+      },
+      {
+        "id": "sortCommand",
+        "op": "QuerySortByAttribute",
+        "attribute": "CommandPower",
+        "descending": true
+      },
+      {
+        "id": "formationCount",
+        "op": "AggCount"
+      },
+      {
+        "id": "maxCommand",
+        "op": "AggMaxAttribute",
+        "attribute": "CommandPower"
+      },
+      {
+        "id": "minSupplyAgg",
+        "op": "AggMinAttribute",
+        "attribute": "Supply"
+      },
+      {
+        "id": "bestCommand",
+        "op": "AggMaxEntityByAttribute",
+        "attribute": "CommandPower"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "owner",
+        "fromPort": "next",
+        "to": "minSupply"
+      },
+      {
+        "from": "minSupply",
+        "fromPort": "next",
+        "to": "maxSupply"
+      },
+      {
+        "from": "maxSupply",
+        "fromPort": "next",
+        "to": "fromFormation"
+      },
+      {
+        "from": "fromFormation",
+        "fromPort": "next",
+        "to": "teamBlue"
+      },
+      {
+        "from": "teamBlue",
+        "fromPort": "next",
+        "to": "commandable"
+      },
+      {
+        "from": "commandable",
+        "fromPort": "next",
+        "to": "notRouted"
+      },
+      {
+        "from": "notRouted",
+        "fromPort": "next",
+        "to": "supplyRange"
+      },
+      {
+        "from": "supplyRange",
+        "fromPort": "next",
+        "to": "sortCommand"
+      },
+      {
+        "from": "sortCommand",
+        "fromPort": "next",
+        "to": "formationCount"
+      },
+      {
+        "from": "formationCount",
+        "fromPort": "next",
+        "to": "maxCommand"
+      },
+      {
+        "from": "maxCommand",
+        "fromPort": "next",
+        "to": "minSupplyAgg"
+      },
+      {
+        "from": "minSupplyAgg",
+        "fromPort": "next",
+        "to": "bestCommand"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "owner",
+        "fromPort": "value",
+        "to": "fromFormation",
+        "toPort": "source"
+      },
+      {
+        "from": "fromFormation",
+        "fromPort": "list",
+        "to": "teamBlue",
+        "toPort": "list"
+      },
+      {
+        "from": "teamBlue",
+        "fromPort": "list",
+        "to": "commandable",
+        "toPort": "list"
+      },
+      {
+        "from": "commandable",
+        "fromPort": "list",
+        "to": "notRouted",
+        "toPort": "list"
+      },
+      {
+        "from": "notRouted",
+        "fromPort": "list",
+        "to": "supplyRange",
+        "toPort": "list"
+      },
+      {
+        "from": "minSupply",
+        "fromPort": "value",
+        "to": "supplyRange",
+        "toPort": "min"
+      },
+      {
+        "from": "maxSupply",
+        "fromPort": "value",
+        "to": "supplyRange",
+        "toPort": "max"
+      },
+      {
+        "from": "supplyRange",
+        "fromPort": "list",
+        "to": "sortCommand",
+        "toPort": "list"
+      },
+      {
+        "from": "sortCommand",
+        "fromPort": "list",
+        "to": "formationCount",
+        "toPort": "list"
+      },
+      {
+        "from": "sortCommand",
+        "fromPort": "list",
+        "to": "maxCommand",
+        "toPort": "list"
+      },
+      {
+        "from": "sortCommand",
+        "fromPort": "list",
+        "to": "minSupplyAgg",
+        "toPort": "list"
+      },
+      {
+        "from": "sortCommand",
+        "fromPort": "list",
+        "to": "bestCommand",
+        "toPort": "list"
+      }
     ],
     "outputs": [
       {
@@ -102,10 +816,34 @@
         "title": "Formation Cache",
         "summary": "Formation snapshot materialized through retained collection diff."
       },
-      { "id": "formationCount", "destination": "Summary", "type": "Int", "source": "formationCount", "key": "entityquery.summary.formation.count" },
-      { "id": "maxCommand", "destination": "Summary", "type": "Float", "source": "maxCommand", "key": "entityquery.summary.formation.maxCommandPower" },
-      { "id": "minSupplyAgg", "destination": "Summary", "type": "Float", "source": "minSupplyAgg", "key": "entityquery.summary.formation.minSupply" },
-      { "id": "bestCommand", "destination": "Summary", "type": "Entity", "source": "bestCommand", "key": "entityquery.summary.formation.bestEntity" }
+      {
+        "id": "formationCount",
+        "destination": "Summary",
+        "type": "Int",
+        "source": "formationCount",
+        "key": "entityquery.summary.formation.count"
+      },
+      {
+        "id": "maxCommand",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "maxCommand",
+        "key": "entityquery.summary.formation.maxCommandPower"
+      },
+      {
+        "id": "minSupplyAgg",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "minSupplyAgg",
+        "key": "entityquery.summary.formation.minSupply"
+      },
+      {
+        "id": "bestCommand",
+        "destination": "Summary",
+        "type": "Entity",
+        "source": "bestCommand",
+        "key": "entityquery.summary.formation.bestEntity"
+      }
     ]
   }
 ]

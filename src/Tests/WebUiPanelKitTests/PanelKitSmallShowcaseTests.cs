@@ -15,7 +15,7 @@ public sealed class PanelKitSmallShowcaseTests
 		("panel_kit_resource_showcase", "PanelKitResourceShowcaseMod", "resource-bar"),
 		("panel_kit_command_deck_showcase", "PanelKitCommandDeckShowcaseMod", "command-deck"),
 		("panel_kit_production_worker_showcase", "PanelKitProductionWorkerShowcaseMod", "production-overview"),
-		("panel_kit_quest_objective_showcase", "PanelKitQuestObjectiveShowcaseMod", "objective"),
+		("panel_kit_task_objective_showcase", "PanelKitTaskObjectiveShowcaseMod", "objective"),
 		("panel_kit_notification_showcase", "PanelKitNotificationShowcaseMod", "notification"),
 		("panel_kit_tooltip_showcase", "PanelKitTooltipShowcaseMod", "tooltip"),
 		("panel_kit_techtree_progression_showcase", "PanelKitTechTreeProgressionShowcaseMod", "techtree")
@@ -129,7 +129,7 @@ public sealed class PanelKitSmallShowcaseTests
 	}
 
 	[Test]
-	public void SampleManifest_StillLoadsSixPanels_WithoutGameFlavor()
+	public void SampleManifest_StillLoadsSevenPanels_WithoutGameFlavor()
 	{
 		var registered = new HashSet<string>(WebUiPanelKitSampleCatalog.SampleTopics, StringComparer.Ordinal);
 		WebUiPanelKitReferenceCatalog catalog = WebUiPanelKitSampleCatalog.Create(registered.Contains);
@@ -137,10 +137,11 @@ public sealed class PanelKitSmallShowcaseTests
 			WebUiPanelKitSampleCatalog.SampleManifestPath(),
 			catalog);
 
-		Assert.That(manifest.Panels, Has.Count.EqualTo(6));
+		Assert.That(manifest.Panels, Has.Count.EqualTo(7));
 		Assert.That(manifest.Panels.Select(p => p.PanelType), Does.Contain("notification"));
 		Assert.That(manifest.Panels.Select(p => p.PanelType), Does.Contain("production-overview"));
 		Assert.That(manifest.Panels.Select(p => p.PanelType), Does.Contain("techtree"));
+		Assert.That(manifest.Panels.Select(p => p.PanelType), Does.Contain("activity"));
 	}
 
 	private static string ResolveRepoPath(string relative)

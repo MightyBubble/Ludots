@@ -1,25 +1,39 @@
 {
   "startupMapId": "entry",
-  "startupInputContexts": ["Default_Gameplay"],
+  "startupInputContexts": [
+    "Default_Gameplay"
+  ],
   "presentation": {
-    "performerInstanceCapacity": 2048,
+    "presenterInstanceCapacity": 2048,
     "gasPresentationEventCapacity": 65536,
     "presentationEventStreamCapacity": 65536,
     "presentationOwnerChangeCapacity": 65536,
-    "performerCommandCapacity": 262144,
+    "presenterCommandCapacity": 262144,
+    "presenterTimerCapacity": 16384,
     "primitiveDrawBufferCapacity": 131072,
     "visualSnapshotBufferCapacity": 131072,
     "visualProxyBufferCapacity": 131072,
     "skinnedVisualBatchCapacity": 65536,
+    "gpuSkinned": {
+      "maxBatches": 64,
+      "maxUniquePoses": 128,
+      "maxBoneSlots": 1024,
+      "posePhaseBuckets": 16
+    },
     "presentationRequestCapacity": 262144,
+    "clearTransientVisualProjectionCapacity": 262144,
+    "instancedBatchRequestCapacity": 32768,
+    "instancedBatchOperationCapacity": 32768,
     "globalFieldVisualRecordCapacity": 256,
     "globalFieldVisualCellCapacity": 262144,
     "globalFieldVisualDirtyRectCapacity": 4096,
     "groundOverlayCapacity": 65536,
-    "roadSplineCapacity": 65536,
+    "splineRibbonCapacity": 65536,
+    "trailMeshCapacity": 64,
     "worldHudCapacity": 131072,
     "screenHudCapacity": 131072,
     "minimapMarkerCapacity": 131072,
+    "navMeshTileCapacity": 4096,
     "runtimeEntitySpawnQueueCapacity": 131072,
     "runtimeEntitySpawnReceiptQueueCapacity": 131072,
     "runtimeEntityLifecycleQueueCapacity": 131072,
@@ -60,11 +74,15 @@
     }
   },
   "commandSource": {
-    "targetFilter": { "relationFilter": "All" },
+    "targetFilter": {
+      "relationFilter": "All"
+    },
     "acquisition": {
       "collectionKey": "collection.ui.command.acquisition",
       "title": "UI acquisition"
     },
-    "movePathPreviewOrderTypeKeys": [ "moveTo" ]
+    "movePathPreviewOrderTypeKeys": [
+      "moveTo"
+    ]
   }
 }

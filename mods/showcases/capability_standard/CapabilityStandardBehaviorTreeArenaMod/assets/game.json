@@ -1,0 +1,15 @@
+{
+  "startupMapId": "capability_standard_behavior_tree_arena",
+  "windowTitle": "Ludots - Behavior Tree Arena",
+  "targetFps": 60,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true,
+  "presentation": {
+    "cameraCulling": {
+      "highLodDistanceCm": 12000,
+      "mediumLodDistanceCm": 36000,
+      "lowLodDistanceCm": 72000
+    }
+  }
+}

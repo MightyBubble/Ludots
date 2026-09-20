@@ -1,0 +1,13 @@
+flowchart TD
+    A[Load road_network_showcase_chunked] --> B[Resolve three player columns with distinct RoadMoveProfileRef presets]
+    B --> C[Plan Blue Vanguard -> East Gate]
+    B --> D[Plan Blue North Column -> East Gate]
+    B --> E[Plan Blue South Column -> East Gate]
+    C --> F[Direct corridor selected]
+    D --> G[North corridor selected]
+    E --> H[South corridor selected]
+    F --> I[Retarget all three columns to Central Crossing]
+    G --> I
+    H --> I
+    I --> J[Run 180 fixed ticks on shared corridor]
+    J --> K[Compare courier / vanguard / siege movement envelope]

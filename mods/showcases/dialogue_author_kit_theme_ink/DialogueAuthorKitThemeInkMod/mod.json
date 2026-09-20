@@ -1,0 +1,10 @@
+{
+  "name": "DialogueAuthorKitThemeInkMod",
+  "version": "1.0.0",
+  "description": "关口口令换肤壳（0 代码）：panelTheme=kit-ink",
+  "priority": 0,
+  "dependencies": {
+    "DialogueAuthorKitShowcaseMod": "^1.0.0",
+    "NarrativeFrontendMod": "^1.0.0"
+  }
+}

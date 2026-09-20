@@ -1,0 +1,7 @@
+[
+  {
+    "Path": "PanelThemes/themes.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  }
+]

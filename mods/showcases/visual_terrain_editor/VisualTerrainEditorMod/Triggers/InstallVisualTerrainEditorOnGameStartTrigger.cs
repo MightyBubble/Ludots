@@ -33,7 +33,7 @@ internal sealed class InstallVisualTerrainEditorOnGameStartTrigger : Trigger
         }
 
         engine.GlobalContext[InstalledKey] = true;
-        engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new VisualTerrainEditorPresentationSystem(engine, _runtime));
+        engine.InsertPresentationSystemBefore<PresenterRuleSystem>(new VisualTerrainEditorPresentationSystem(engine, _runtime));
         return Task.CompletedTask;
     }
 }

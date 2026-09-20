@@ -1,0 +1,3 @@
+[submodule "mods/showcases/east_asia_playable_terrain/EastAsiaPlayableTerrainMod/assets/samples/LudotsSample"]
+	path = mods/showcases/east_asia_playable_terrain/EastAsiaPlayableTerrainMod/assets/samples/LudotsSample
+	url = https://github.com/MightyBubble/LudotsSample.git

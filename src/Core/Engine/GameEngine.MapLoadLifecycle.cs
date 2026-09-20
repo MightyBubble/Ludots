@@ -4,22 +4,31 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
+using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
+using Ludots.Core.MovePlanning;
 using Ludots.Core.Persistence;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 using Ludots.Core.StructureCollision;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Engine
 {
     public partial class GameEngine
     {
+        private const string MassNavigationMovePlanOrderAdapterInstalledKey =
+            "GameEngine.MassNavigationMovePlanOrderAdapterInstalled";
+
         public MapSession CurrentMapSession { get; private set; }
 
         private readonly Dictionary<MapId, PendingMapLoadState> _pendingMapLoads = new();
         private readonly Dictionary<MapId, PendingMapResumeState> _pendingMapResumes = new();
         private readonly Dictionary<MapId, MapLoadStatus> _mapLoadStatuses = new();
+        private VertexMapContinuousHeightmap? _vertexMapContinuousHeightmap;
 
         private sealed class PendingMapLoadState
         {
@@ -59,6 +68,7 @@ namespace Ludots.Core.Engine
 
             mapSessions = new MapSessionManager();
             MapSessions = mapSessions;
+            TriggerManager.MapSessions = mapSessions;
             BoardIdRegistry = new BoardIdRegistry();
             SetService(CoreServiceKeys.MapSessions, mapSessions);
             SetService(CoreServiceKeys.BoardIdRegistry, BoardIdRegistry);
@@ -76,8 +86,8 @@ namespace Ludots.Core.Engine
             if (GameSession == null ||
                 MapSessions == null ||
                 GetService(CoreServiceKeys.TimeFlow) == null ||
-                GetService(CoreServiceKeys.QuestRuntimeService) == null ||
-                GetService(CoreServiceKeys.NarrativeDirector) == null)
+                GetService(CoreServiceKeys.TaskRuntimeService) == null ||
+                GetService(CoreServiceKeys.DialogueRuntime) == null)
             {
                 return;
             }
@@ -85,20 +95,32 @@ namespace Ludots.Core.Engine
             var registry = new SaveParticipantRegistry();
             CoreSaveParticipants.RegisterCore(this, registry);
             SetService(CoreServiceKeys.SaveParticipants, registry);
+            SetService(CoreServiceKeys.CheckpointCoordinator, new CheckpointCoordinator());
         }
 
         private void SetCurrentMapSession(MapSession session)
         {
+            if (CurrentMapSession != null && !ReferenceEquals(CurrentMapSession, session) &&
+                GetService(CoreServiceKeys.MapLoadCompletionGate) is IMapLoadCompletionGateLifetime gateLifetime)
+            {
+                gateLifetime.Release(CurrentMapSession);
+            }
+
             CurrentMapSession = session;
             if (session == null)
             {
-                GameSession.Camera.ResetVirtualCameras();
+                if (TryGetService(CoreServiceKeys.LogicViewRegistry, out Client.LogicViewRegistry? views) &&
+                    views != null)
+                {
+                    views.ResetAllVirtualCameras();
+                }
+
                 RemoveService(CoreServiceKeys.MapId);
                 RemoveService(CoreServiceKeys.MapSession);
                 RemoveService(CoreServiceKeys.MapFeatureFlags);
                 RemoveService(CoreServiceKeys.MapLoadStatus);
                 RemoveService(CoreServiceKeys.MapLaunchContext);
-                RemoveService(CoreServiceKeys.VisualHeightmap);
+                RemoveService(CoreServiceKeys.ContinuousHeightmap);
                 RemoveService(CoreServiceKeys.StructureCollisionAsset);
                 RemoveService(CoreServiceKeys.StructureCollisionRuntimeState);
                 RemoveService(CoreServiceKeys.GroundSurfaceSampler);
@@ -119,19 +141,20 @@ namespace Ludots.Core.Engine
             {
                 RemoveService(CoreServiceKeys.MapLaunchContext);
             }
-            if (session.VisualHeightmap != null)
+            IContinuousHeightmap? continuousHeightmap = ResolveSessionContinuousHeightmap(session);
+            if (continuousHeightmap != null)
             {
-                SetService(CoreServiceKeys.VisualHeightmap, session.VisualHeightmap);
+                SetService(CoreServiceKeys.ContinuousHeightmap, continuousHeightmap);
             }
             else
             {
-                RemoveService(CoreServiceKeys.VisualHeightmap);
+                RemoveService(CoreServiceKeys.ContinuousHeightmap);
             }
             if (session.StructureCollisionAsset != null)
             {
                 session.StructureCollisionRuntimeState ??= new StructureCollisionRuntimeState(session.StructureCollisionAsset);
                 session.GroundSurfaceSampler ??= new GroundSurfaceSampler(
-                    session.VisualHeightmap,
+                    continuousHeightmap,
                     session.StructureCollisionAsset,
                     session.StructureCollisionRuntimeState);
                 SetService(CoreServiceKeys.StructureCollisionAsset, session.StructureCollisionAsset);
@@ -142,9 +165,9 @@ namespace Ludots.Core.Engine
             {
                 RemoveService(CoreServiceKeys.StructureCollisionAsset);
                 RemoveService(CoreServiceKeys.StructureCollisionRuntimeState);
-                if (session.VisualHeightmap != null)
+                if (continuousHeightmap != null)
                 {
-                    session.GroundSurfaceSampler ??= new GroundSurfaceSampler(session.VisualHeightmap, null, null);
+                    session.GroundSurfaceSampler ??= new GroundSurfaceSampler(continuousHeightmap, null, null);
                     SetService(CoreServiceKeys.GroundSurfaceSampler, session.GroundSurfaceSampler);
                 }
                 else
@@ -159,6 +182,24 @@ namespace Ludots.Core.Engine
         internal void SetCurrentMapSessionForTests(MapSession session)
         {
             SetCurrentMapSession(session);
+        }
+
+        private IContinuousHeightmap? ResolveSessionContinuousHeightmap(MapSession session)
+        {
+            if (session.ContinuousHeightmap != null)
+            {
+                return session.ContinuousHeightmap;
+            }
+
+            // .height 是唯一权威视觉高度源；仅当会话未声明 .height 且引擎已持有 VertexMap 时用逻辑格点补高度服务。
+            // 适配器按需读取当前 VertexMap，地图热切换不会绑定到上一张图。
+            if (VertexMap != null)
+            {
+                _vertexMapContinuousHeightmap ??= new VertexMapContinuousHeightmap(() => VertexMap);
+                return _vertexMapContinuousHeightmap;
+            }
+
+            return null;
         }
 
         private MapLoadStatus GetMapLoadStatus(MapId mapId)
@@ -215,6 +256,42 @@ namespace Ludots.Core.Engine
             return ctx;
         }
 
+        private void WireMapVariableChangedDispatcher(MapSession session)
+        {
+            Gameplay.MapTriggers.MapVariableStore? variables = session?.Variables;
+            if (variables == null)
+            {
+                return;
+            }
+
+            // The closure is bound once per map load; same-value writes never reach it
+            // and the subscriber check below keeps unwatched hot-path writes at zero
+            // cost — no event context is even built.
+            variables.VariableChangedDispatcher = (mapId, varName, type, oldInt, newInt, oldFloat, newFloat) =>
+            {
+                if (!TriggerManager.HasMapEventSubscribers(mapId, GameEvents.MapVariableChanged))
+                {
+                    return;
+                }
+
+                ScriptContext ctx = CreateMapEventContext(session!);
+                ctx.Set(Gameplay.MapTriggers.MapVariableStore.PayloadKeyVarName, varName);
+                if (type == Gameplay.MapTriggers.MapVariableType.Int)
+                {
+                    ctx.Set(Gameplay.MapTriggers.MapVariableStore.PayloadKeyOldValueInt, oldInt);
+                    ctx.Set(Gameplay.MapTriggers.MapVariableStore.PayloadKeyNewValueInt, newInt);
+                }
+                else
+                {
+                    ctx.Set(Gameplay.MapTriggers.MapVariableStore.PayloadKeyOldValueFloat, oldFloat);
+                    ctx.Set(Gameplay.MapTriggers.MapVariableStore.PayloadKeyNewValueFloat, newFloat);
+                }
+
+                CompleteLifecycleEvent(
+                    TriggerManager.FireMapEventAsync(mapId, GameEvents.MapVariableChanged, ctx));
+            };
+        }
+
         private void RestoreFocusedMapSession(MapSession session)
         {
             SetCurrentMapSession(session);
@@ -244,7 +321,8 @@ namespace Ludots.Core.Engine
 
             try
             {
-                IPendingMapLoad pendingLoad = gate.BeginPendingLoad(new MapLoadCompletionRequest(this, session.MapId, mapConfig, session, isPush));
+                MapPresentationAssetManifest presentationAssets = MapLoader.BuildPresentationAssetManifest(mapConfig);
+                IPendingMapLoad pendingLoad = gate.BeginPendingLoad(new MapLoadCompletionRequest(this, session.MapId, mapConfig, session, isPush, presentationAssets));
                 if (pendingLoad == null)
                 {
                     return false;
@@ -254,7 +332,7 @@ namespace Ludots.Core.Engine
                 if (initialResult.State == MapLoadCompletionState.Pending)
                 {
                     _pendingMapLoads[session.MapId] = new PendingMapLoadState(session, mapConfig, pendingLoad);
-                    SetMapLoadStatus(session.MapId, MapLoadStatus.DeferredPending);
+                    SetMapLoadStatus(session.MapId, MapLoadStatus.FromCompletion(initialResult, isDeferred: true));
                     return true;
                 }
 
@@ -281,7 +359,8 @@ namespace Ludots.Core.Engine
 
             try
             {
-                IPendingMapLoad pendingLoad = gate.BeginPendingResume(new MapResumeCompletionRequest(this, session, closedSession));
+                MapPresentationAssetManifest presentationAssets = MapLoader.BuildPresentationAssetManifest(session.MapConfig);
+                IPendingMapLoad pendingLoad = gate.BeginPendingResume(new MapResumeCompletionRequest(this, session, closedSession, presentationAssets));
                 if (pendingLoad == null)
                 {
                     return false;
@@ -291,7 +370,7 @@ namespace Ludots.Core.Engine
                 if (initialResult.State == MapLoadCompletionState.Pending)
                 {
                     _pendingMapResumes[session.MapId] = new PendingMapResumeState(session, closedSession, pendingLoad);
-                    SetMapLoadStatus(session.MapId, MapLoadStatus.DeferredPending);
+                    SetMapLoadStatus(session.MapId, MapLoadStatus.FromCompletion(initialResult, isDeferred: true));
                     return true;
                 }
 
@@ -344,11 +423,20 @@ namespace Ludots.Core.Engine
 
                     if (result.State == MapLoadCompletionState.Pending)
                     {
+                        SetMapLoadStatus(pair.Key, MapLoadStatus.FromCompletion(result, isDeferred: true));
                         continue;
                     }
 
                     _pendingMapLoads.Remove(pair.Key);
-                    CompleteMapLoad(session, pendingState.MapConfig, MapLoadStatus.FromCompletion(result, isDeferred: true));
+                    try
+                    {
+                        CompleteMapLoad(session, pendingState.MapConfig, MapLoadStatus.FromCompletion(result, isDeferred: true));
+                    }
+                    catch (Exception ex)
+                    {
+                        RecordNetworkStartupFailure(session.MapId, ex);
+                        throw;
+                    }
                 }
             }
 
@@ -391,6 +479,7 @@ namespace Ludots.Core.Engine
 
                 if (result.State == MapLoadCompletionState.Pending)
                 {
+                    SetMapLoadStatus(pair.Key, MapLoadStatus.FromCompletion(result, isDeferred: true));
                     continue;
                 }
 
@@ -408,7 +497,10 @@ namespace Ludots.Core.Engine
             {
                 SetMapEntitiesSuspended(session.MapId, false);
                 ApplyDefaultCamera(mapConfig);
-                _massNavigationRuntime.HandleMapFocused(this, session.MapId);
+                if (_massNavigationRuntime.HandleMapFocused(this, session.MapId))
+                {
+                    InstallMassNavigationMovePlanOrderAdapter();
+                }
             }
             else
             {
@@ -416,6 +508,7 @@ namespace Ludots.Core.Engine
                 if (loadStatus.Failed)
                 {
                     Diagnostics.Log.Warn(in LogChannels.Engine, $"Map '{session.MapId.Value}' completed with failure: {loadStatus.ErrorMessage}");
+                    ThrowIfNetworkStartupMapLoadFailed(session.MapId, loadStatus.ErrorMessage);
                 }
 
                 return;
@@ -426,23 +519,41 @@ namespace Ludots.Core.Engine
             CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(session.MapId, GameEvents.MapLoaded, finalCtx));
             CaptureFocusedParticipantOverrides(session);
             session.TeamRelationships = TeamManager.CaptureSnapshot();
+            TryActivateNetworkRuntime();
         }
 
         private void SetSessionParticipants(MapSession session, ParticipantBindingResult participants)
         {
             session.TeamEntityLookup = participants.Teams;
             session.PlayerEntityLookup = participants.Players;
-            session.LocalPlayerId = participants.LocalPlayerId;
-            session.LocalPlayerEntity = participants.LocalPlayerEntity;
+            session.LocalSeats = participants.LocalSeats;
             session.TeamRelationships = participants.TeamRelationships;
-            if (participants.LocalPlayerId > 0)
-            {
-                GameSession.SelectLocalPlayer(participants.LocalPlayerId);
-            }
+
+            SeedPlayerInteractionPrefs(participants.Players);
 
             if (CurrentMapSession == session)
             {
                 ParticipantBindingResolver.PublishFocused(GlobalContext, participants);
+            }
+        }
+
+        /// <summary>
+        /// Plant the game-instance InteractionPref seed on every bound player representative that
+        /// carries no component yet (player data survives map switches and world saves; seeding
+        /// never overwrites an existing preference). Readers of the component fail fast on a
+        /// missing seed, so this is the only writer at map binding time.
+        /// </summary>
+        private void SeedPlayerInteractionPrefs(PlayerEntityLookup players)
+        {
+            foreach (KeyValuePair<int, Entity> entry in players.Entries)
+            {
+                Entity rep = entry.Value;
+                if (rep == Entity.Null || !World.IsAlive(rep) || World.Has<Input.Interaction.InteractionPref>(rep))
+                {
+                    continue;
+                }
+
+                World.Add(rep, Input.Interaction.InteractionPref.FromSeed(_interactionPrefSeed));
             }
         }
 
@@ -459,8 +570,7 @@ namespace Ludots.Core.Engine
                 new ParticipantBindingResult(
                     session.TeamEntityLookup,
                     session.PlayerEntityLookup,
-                    session.LocalPlayerId,
-                    session.LocalPlayerEntity,
+                    session.LocalSeats,
                     session.TeamRelationships));
         }
 
@@ -471,27 +581,30 @@ namespace Ludots.Core.Engine
                 return;
             }
 
-            if (GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object entityObj) &&
-                entityObj is Entity localPlayerEntity)
+            if (!GlobalContext.TryGetValue(CoreServiceKeys.ClientLocalSeatRegistry.Name, out object? seatsObj) ||
+                seatsObj is not Client.ClientLocalSeatRegistry seats)
             {
-                session.LocalPlayerEntity = localPlayerEntity;
-            }
-            else
-            {
-                session.LocalPlayerEntity = Entity.Null;
+                return;
             }
 
-            if (GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerId.Name, out object playerIdObj) &&
-                playerIdObj is int localPlayerId &&
-                localPlayerId > 0)
+            var snapshot = new List<ResolvedLocalSeatPossession>(seats.Count);
+            IReadOnlyList<string> ids = seats.SeatIds;
+            for (int i = 0; i < ids.Count; i++)
             {
-                session.LocalPlayerId = localPlayerId;
-                GameSession.SelectLocalPlayer(localPlayerId);
+                Client.ClientLocalSeat seat = seats.Require(ids[i]);
+                if (!seat.HasPossession)
+                {
+                    continue;
+                }
+
+                snapshot.Add(new ResolvedLocalSeatPossession(
+                    seat.SeatId,
+                    seat.PossessedPlayerId,
+                    seat.PossessedRep,
+                    seat.ControlSchemeId));
             }
-            else
-            {
-                session.LocalPlayerId = 0;
-            }
+
+            session.LocalSeats = snapshot;
         }
 
         private void CompleteMapResume(MapSession session, MapLoadStatus loadStatus)
@@ -510,11 +623,48 @@ namespace Ludots.Core.Engine
             }
 
             ApplyDefaultCamera(session.MapConfig);
-            _massNavigationRuntime.HandleMapFocused(this, session.MapId);
+            if (_massNavigationRuntime.HandleMapFocused(this, session.MapId))
+            {
+                InstallMassNavigationMovePlanOrderAdapter();
+            }
             ScriptContext resumeCtx = CreateMapEventContext(session);
             CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(session.MapId, GameEvents.MapResumed, resumeCtx));
             CaptureFocusedParticipantOverrides(session);
             session.TeamRelationships = TeamManager.CaptureSnapshot();
+        }
+
+        /// <summary>
+        /// MovePlan order adapter (Projection + Lifecycle) installs when the mass-navigation
+        /// runtime activates on its configured mapId — the activation contract — so downstream
+        /// mods never wire the adapter themselves. Lives in the engine composition layer because
+        /// RFC-0065 keeps the MassNavigation execution domain free of order-type knowledge; the
+        /// projection system anchors directly before the MovePlan execution system the runtime
+        /// installed during activation.
+        /// </summary>
+        internal void InstallMassNavigationMovePlanOrderAdapter()
+        {
+            if (GlobalContext.ContainsKey(MassNavigationMovePlanOrderAdapterInstalledKey))
+            {
+                return;
+            }
+
+            OrderTypeRegistry orderTypes = GetService(CoreServiceKeys.OrderTypeRegistry)
+                ?? throw new InvalidOperationException(
+                    "MassNavigation map focus requires OrderTypeRegistry before installing the MovePlan order adapter.");
+            if (!orderTypes.TryGetId(MassNavigationOrderKeys.Move, out int moveOrderTypeId))
+            {
+                throw new InvalidOperationException(
+                    $"MassNavigation map focus requires GAS/order_types.json to define '{MassNavigationOrderKeys.Move}' " +
+                    "before the MovePlan order adapter can install.");
+            }
+
+            InsertSystemBeforeRequired<IMovePlanCommandGroupExecutionSystem>(
+                new MovePlanOrderProjectionSystem(World, moveOrderTypeId),
+                SystemGroup.AbilityActivation);
+            RegisterSystem(
+                new MovePlanOrderLifecycleSystem(World, orderTypes, moveOrderTypeId),
+                SystemGroup.AbilityActivation);
+            GlobalContext[MassNavigationMovePlanOrderAdapterInstalledKey] = true;
         }
 
         private void CancelPendingMapLoad(MapId mapId, string reason, bool markFailed)
@@ -538,6 +688,11 @@ namespace Ludots.Core.Engine
             if (markFailed)
             {
                 SetMapLoadStatus(mapId, MapLoadStatus.DeferredFailure(reason));
+            }
+
+            if (markFailed || _isRunning)
+            {
+                ThrowIfNetworkStartupMapLoadFailed(mapId, reason);
             }
         }
 

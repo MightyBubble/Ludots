@@ -1,0 +1,13 @@
+{
+  "op": "QueryFilterTeam",
+  "driver": "query",
+  "title": "圈出对面十个",
+  "beat": "红的一排留圈，蓝的退成灰影。",
+  "detailTemplate": "红方{count}个个个有圈，蓝方两个全退成灰影。",
+  "assertDetailContains": [
+    "红方"
+  ],
+  "featuredNodeId": "team",
+  "graphKind": "Query",
+  "field": "query"
+}

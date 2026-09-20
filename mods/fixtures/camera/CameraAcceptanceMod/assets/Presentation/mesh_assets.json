@@ -1,0 +1,14 @@
+[
+  {
+    "id": "effect.camera.projection_cue",
+    "type": "Primitive",
+    "primitiveKind": "Sphere",
+    "vfx": {
+      "particleVfxId": "camera.projection_cue"
+    }
+  },
+  {
+    "id": "camera.acceptance.cue.decal",
+    "type": "Billboard"
+  }
+]

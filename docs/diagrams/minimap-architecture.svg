@@ -175,7 +175,7 @@ z
     <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="172.8" y="323.873625" transform="rotate(-0 172.8 323.873625)">Map Terrain Data</text>
    </g>
    <g id="text_6">
-    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="172.8" y="422.350391" transform="rotate(-0 172.8 422.350391)">Performer MinimapMarker</text>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="172.8" y="422.350391" transform="rotate(-0 172.8 422.350391)">Presenter MinimapMarker</text>
    </g>
    <g id="text_7">
     <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="172.8" y="439.073625" transform="rotate(-0 172.8 439.073625)">BehaviorSlot</text>

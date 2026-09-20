@@ -1,6 +1,7 @@
 using System;
 using System.Numerics;
 using Ludots.Core.Mathematics;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Gameplay.Camera
 {
@@ -25,11 +26,6 @@ namespace Ludots.Core.Gameplay.Camera
         public static Vector2 RightFromYawDegrees(float yawDeg)
         {
             return WorldPlane2D.CameraRightFromYawDegrees(yawDeg);
-        }
-
-        public static Vector2 ScreenRightFromYawDegrees(float yawDeg)
-        {
-            return WorldPlane2D.CameraScreenRightFromYawDegrees(yawDeg);
         }
 
         /// <summary>

@@ -1,0 +1,189 @@
+{
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "指挥",
+      "x": 0,
+      "y": -2.2,
+      "health": 100,
+      "healthMax": 100,
+      "team": 1
+    },
+    {
+      "id": "unit0",
+      "role": "soldier",
+      "template": "Unit.Soldier",
+      "name": "敌军1",
+      "x": -5.5,
+      "y": 1.2,
+      "health": 90,
+      "healthMax": 150,
+      "team": 2,
+      "tags": [
+        "Enemy"
+      ]
+    },
+    {
+      "id": "unit1",
+      "role": "soldier",
+      "template": "Unit.Soldier",
+      "name": "敌军2",
+      "x": -3.3,
+      "y": 1.2,
+      "health": 70,
+      "healthMax": 150,
+      "team": 2,
+      "tags": [
+        "Enemy"
+      ]
+    },
+    {
+      "id": "unit2",
+      "role": "soldier",
+      "template": "Unit.Soldier",
+      "name": "敌军3",
+      "x": -1.1,
+      "y": 1.2,
+      "health": 50,
+      "healthMax": 150,
+      "team": 2,
+      "tags": [
+        "Enemy"
+      ]
+    },
+    {
+      "id": "unit3",
+      "role": "soldier",
+      "template": "Unit.Soldier",
+      "name": "敌军4",
+      "x": 1.1,
+      "y": 1.2,
+      "health": 30,
+      "healthMax": 150,
+      "team": 2,
+      "tags": [
+        "Enemy"
+      ]
+    },
+    {
+      "id": "unit4",
+      "role": "soldier",
+      "template": "Unit.Soldier",
+      "name": "敌军5",
+      "x": 3.3,
+      "y": 1.2,
+      "health": 10,
+      "healthMax": 150,
+      "team": 2,
+      "tags": [
+        "Enemy"
+      ]
+    },
+    {
+      "id": "unit5",
+      "role": "soldier",
+      "template": "Unit.Soldier",
+      "name": "敌军6",
+      "x": 5.5,
+      "y": 1.2,
+      "health": 100,
+      "healthMax": 150,
+      "team": 2,
+      "tags": [
+        "Enemy"
+      ]
+    },
+    {
+      "id": "unit6",
+      "role": "soldier",
+      "template": "Unit.Soldier",
+      "name": "敌军7",
+      "x": -5.5,
+      "y": 4.0,
+      "health": 0,
+      "healthMax": 150,
+      "team": 2,
+      "tags": [
+        "Enemy"
+      ]
+    },
+    {
+      "id": "unit7",
+      "role": "soldier",
+      "template": "Unit.Soldier",
+      "name": "敌军8",
+      "x": -3.3,
+      "y": 4.0,
+      "health": 150,
+      "healthMax": 150,
+      "team": 2,
+      "tags": [
+        "Enemy"
+      ]
+    },
+    {
+      "id": "unit8",
+      "role": "soldier",
+      "template": "Unit.Soldier",
+      "name": "敌军9",
+      "x": -1.1,
+      "y": 4.0,
+      "health": 40,
+      "healthMax": 150,
+      "team": 2,
+      "tags": [
+        "Enemy",
+        "Dead"
+      ]
+    },
+    {
+      "id": "unit9",
+      "role": "scout",
+      "template": "Unit.Scout",
+      "name": "敌军10",
+      "x": 1.1,
+      "y": 4.0,
+      "health": 80,
+      "healthMax": 80,
+      "team": 2
+    },
+    {
+      "id": "unit10",
+      "role": "ally",
+      "template": "GraphOps.Ally",
+      "name": "友军11",
+      "x": 3.3,
+      "y": 4.0,
+      "health": 60,
+      "healthMax": 150,
+      "team": 1
+    },
+    {
+      "id": "unit11",
+      "role": "scout",
+      "template": "Unit.Scout",
+      "name": "友军12",
+      "x": 5.5,
+      "y": 4.0,
+      "health": 20,
+      "healthMax": 80,
+      "team": 1
+    }
+  ],
+  "collections": [
+    {
+      "key": "squad.members",
+      "members": [
+        "unit0",
+        "unit1",
+        "unit2",
+        "unit9",
+        "unit10",
+        "unit11"
+      ]
+    }
+  ],
+  "links": []
+}

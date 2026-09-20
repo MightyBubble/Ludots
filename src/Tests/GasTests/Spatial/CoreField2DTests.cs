@@ -3,6 +3,7 @@ using System.Numerics;
 using Ludots.Core.Fields;
 using Ludots.Core.Mathematics;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {

@@ -3,11 +3,13 @@ using System.Globalization;
 using System.Numerics;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
+using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Instancing;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Config
 {
@@ -19,6 +21,7 @@ namespace Ludots.Core.Presentation.Config
         private readonly InstancedBatchAssetRegistry _batches;
         private readonly MeshAssetRegistry _meshes;
         private readonly PresentationMaterialRegistry _materials;
+        private readonly InstancedBatchFactorizedSourceLoader _factorizedSources;
         private readonly Func<string, int> _resolveAttributeKey;
         private readonly Func<PresentationEventKind, string, int> _resolveGasEventKey;
         private readonly Func<PresentationEventKind, string, int> _resolvePresentationEventKey;
@@ -28,6 +31,7 @@ namespace Ludots.Core.Presentation.Config
             InstancedBatchAssetRegistry batches,
             MeshAssetRegistry meshes,
             PresentationMaterialRegistry materials,
+            IVirtualFileSystem vfs,
             Func<string, int>? resolveAttributeKey = null,
             Func<PresentationEventKind, string, int>? resolveGasEventKey = null,
             Func<PresentationEventKind, string, int>? resolvePresentationEventKey = null)
@@ -36,6 +40,8 @@ namespace Ludots.Core.Presentation.Config
             _batches = batches ?? throw new ArgumentNullException(nameof(batches));
             _meshes = meshes ?? throw new ArgumentNullException(nameof(meshes));
             _materials = materials ?? throw new ArgumentNullException(nameof(materials));
+            _factorizedSources = new InstancedBatchFactorizedSourceLoader(
+                vfs ?? throw new ArgumentNullException(nameof(vfs)));
             _resolveAttributeKey = resolveAttributeKey ?? (_ => 0);
             _resolveGasEventKey = resolveGasEventKey ?? ((_, _) => 0);
             _resolvePresentationEventKey = resolvePresentationEventKey ?? ((_, _) => 0);
@@ -44,7 +50,8 @@ namespace Ludots.Core.Presentation.Config
         public void Load(ConfigCatalog catalog = null, ConfigConflictReport report = null)
         {
             var entry = ConfigPipeline.RequireEntry(catalog, DefaultRelativePath, ConfigMergePolicy.ArrayById, "id");
-            var merged = _configs.MergeArrayByIdFromCatalog(in entry, report);
+            var fragments = PresentationAssetConfigIdGuard.CollectUniqueArrayByIdFragments(_configs, in entry);
+            var merged = ConfigMerger.MergeArrayByIdToEntries(fragments, in entry, report);
 
             for (int i = 0; i < merged.Count; i++)
             {
@@ -116,6 +123,7 @@ namespace Ludots.Core.Presentation.Config
                 string meshKey = RequireString(obj["meshAssetId"], $"Instanced batch '{batchKey}' group '{groupId}' meshAssetId");
                 int meshAssetId = ResolveMeshId(meshKey, batchKey, groupId);
                 int materialId = ResolveOptionalMaterialId(obj["materialId"], batchKey, groupId);
+                InstancedBatchInstanceSource source = ParseInstanceSource(obj["source"], obj["transforms"], batchKey, groupId);
 
                 groups[i] = new InstancedBatchGroup
                 {
@@ -125,11 +133,19 @@ namespace Ludots.Core.Presentation.Config
                     BucketId = ResolveBucketId(obj["bucketId"], batchKey, groupId),
                     InstanceSpanId = RequireString(obj["instanceSpanId"], $"Instanced batch '{batchKey}' group '{groupId}' instanceSpanId"),
                     Transforms = ParseTransforms(obj["transforms"], obj["source"], batchKey, groupId),
-                    Source = ParseInstanceSource(obj["source"], obj["transforms"], batchKey, groupId),
+                    Source = source,
+                    FactorizedSource = source.IsValid
+                        ? LoadFactorizedSource(in source, batchKey, groupId)
+                        : null,
                 };
             }
 
             return groups;
+        }
+
+        private InstancedBatchFactorizedSource LoadFactorizedSource(in InstancedBatchInstanceSource source, string batchKey, string groupId)
+        {
+            return _factorizedSources.Load(in source, batchKey, groupId);
         }
 
         private static string ResolveBucketId(JsonNode? node, string batchKey, string groupId)
@@ -242,7 +258,7 @@ namespace Ludots.Core.Presentation.Config
                 "assetUri",
                 "setId",
                 "instanceCount",
-                "groundToVisualHeightmap");
+                "groundToContinuousHeightmap");
 
             string format = RequireString(obj["format"], $"Instanced batch '{batchKey}' group '{groupId}' source.format");
             string assetUri = RequireString(obj["assetUri"], $"Instanced batch '{batchKey}' group '{groupId}' source.assetUri");
@@ -254,11 +270,11 @@ namespace Ludots.Core.Presentation.Config
                     $"Instanced batch '{batchKey}' group '{groupId}' source.instanceCount must be positive.");
             }
 
-            bool groundToVisualHeightmap = ParseOptionalBool(
-                obj["groundToVisualHeightmap"],
+            bool groundToContinuousHeightmap = ParseOptionalBool(
+                obj["groundToContinuousHeightmap"],
                 defaultValue: false,
-                $"Instanced batch '{batchKey}' group '{groupId}' source.groundToVisualHeightmap");
-            return new InstancedBatchInstanceSource(format, assetUri, setId, instanceCount, groundToVisualHeightmap);
+                $"Instanced batch '{batchKey}' group '{groupId}' source.groundToContinuousHeightmap");
+            return new InstancedBatchInstanceSource(format, assetUri, setId, instanceCount, groundToContinuousHeightmap);
         }
 
         private InstancedBatchCustomDataChannel[] ParseCustomDataChannels(JsonNode? node, string batchKey)
@@ -483,7 +499,7 @@ namespace Ludots.Core.Presentation.Config
             }
 
             if (kind == InstancedBatchSourceKind.PresentationEvent &&
-                eventKind is PresentationEventKind.PerformerCreated or PresentationEventKind.PerformerDestroyed &&
+                eventKind is PresentationEventKind.PresenterCreated or PresentationEventKind.PresenterDestroyed &&
                 keyId == -1)
             {
                 return false;
@@ -598,10 +614,16 @@ namespace Ludots.Core.Presentation.Config
                 node,
                 $"Instanced batch '{batchKey}' behavior '{behaviorKey}' target.effectAssetId");
             int effectAssetId = _meshes.GetId(effectKey);
-            if (effectAssetId <= 0 || !_meshes.TryGetDescriptor(effectAssetId, out _))
+            if (effectAssetId <= 0 || !_meshes.TryGetDescriptor(effectAssetId, out MeshAssetDescriptor descriptor))
             {
                 throw new InvalidOperationException(
                     $"Instanced batch '{batchKey}' behavior '{behaviorKey}' references unknown effect asset '{effectKey}'.");
+            }
+
+            if (!descriptor.VfxData.IsValid)
+            {
+                throw new InvalidOperationException(
+                    $"Instanced batch '{batchKey}' behavior '{behaviorKey}' references effect asset '{effectKey}' without VFX particle data.");
             }
 
             return effectAssetId;

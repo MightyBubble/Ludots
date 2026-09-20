@@ -4,9 +4,11 @@ using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Components;
 using Ludots.Core.Association;
+using Ludots.Core.Gameplay.Attachment;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Lifecycle;
@@ -18,6 +20,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Vision;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Gameplay.GAS
 {
@@ -27,6 +30,17 @@ namespace Ludots.Core.Gameplay.GAS
     /// </summary>
     public static class BuiltinHandlers
     {
+        private static bool HasAssignedAttribute(int attributeId)
+        {
+            return attributeId != AttributeRegistry.InvalidId;
+        }
+
+        public const string MissingHandlerRuntimeError = "GAS.BUILTIN.ERR.MissingHandlerRuntime";
+        public const string MissingSpatialQueriesError = "GAS.BUILTIN.ERR.MissingSpatialQueries";
+        public const string MissingFanOutBudgetError = "GAS.BUILTIN.ERR.MissingFanOutBudget";
+        public const string MissingFanOutCommandsError = "GAS.BUILTIN.ERR.MissingFanOutCommands";
+        public const string MissingResolverBufferError = "GAS.BUILTIN.ERR.MissingResolverBuffer";
+
         private static void RejectNonTransactionalPersistentSideEffect(string operation)
         {
             if (BuiltinHandlerRuntimeScope.Current?.EffectSideEffects?.IsActive == true)
@@ -34,6 +48,17 @@ namespace Ludots.Core.Gameplay.GAS
                 throw new InvalidOperationException(
                     $"{EffectPhaseSideEffectTransaction.UnsupportedSideEffectError}: operation={operation}.");
             }
+        }
+
+        private static BuiltinHandlerExecutionContext RequireHandlerRuntime()
+        {
+            BuiltinHandlerExecutionContext? runtime = BuiltinHandlerRuntimeScope.Current;
+            if (runtime == null)
+            {
+                throw new InvalidOperationException(MissingHandlerRuntimeError);
+            }
+
+            return runtime;
         }
 
         public static void RegisterAll(BuiltinHandlerRegistry registry)
@@ -111,16 +136,16 @@ namespace Ludots.Core.Gameplay.GAS
             var transaction = BuiltinHandlerRuntimeScope.Current?.EffectSideEffects;
             if (transaction?.IsActive == true)
             {
-                if (templateData.PresetAttribute0 > 0)
+                if (HasAssignedAttribute(templateData.PresetAttribute0))
                     transaction.StageAttributeAdd(context.Target, templateData.PresetAttribute0, fx);
-                if (templateData.PresetAttribute1 > 0)
+                if (HasAssignedAttribute(templateData.PresetAttribute1))
                     transaction.StageAttributeAdd(context.Target, templateData.PresetAttribute1, fy);
                 return;
             }
 
-            if (templateData.PresetAttribute0 > 0)
+            if (HasAssignedAttribute(templateData.PresetAttribute0))
                 AttributeMutationOps.AddCurrent(world, context.Target, templateData.PresetAttribute0, fx, BuiltinHandlerRuntimeScope.Current?.TagOps);
-            if (templateData.PresetAttribute1 > 0)
+            if (HasAssignedAttribute(templateData.PresetAttribute1))
                 AttributeMutationOps.AddCurrent(world, context.Target, templateData.PresetAttribute1, fy, BuiltinHandlerRuntimeScope.Current?.TagOps);
         }
 
@@ -131,10 +156,14 @@ namespace Ludots.Core.Gameplay.GAS
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
-            var runtime = BuiltinHandlerRuntimeScope.Current;
-            if (runtime?.SpatialQueries == null || runtime.ResolverBuffer == null)
+            var runtime = RequireHandlerRuntime();
+            if (runtime.SpatialQueries == null)
             {
-                return;
+                throw new InvalidOperationException(MissingSpatialQueriesError);
+            }
+            if (runtime.ResolverBuffer == null)
+            {
+                throw new InvalidOperationException(MissingResolverBufferError);
             }
 
             int candidateCount = TargetResolverFanOutHelper.ResolveTargets(
@@ -155,10 +184,18 @@ namespace Ludots.Core.Gameplay.GAS
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
-            var runtime = BuiltinHandlerRuntimeScope.Current;
-            if (runtime?.FanOutBudget == null || runtime.FanOutCommands == null || runtime.ResolverBuffer == null)
+            var runtime = RequireHandlerRuntime();
+            if (runtime.FanOutBudget == null)
             {
-                return;
+                throw new InvalidOperationException(MissingFanOutBudgetError);
+            }
+            if (runtime.FanOutCommands == null)
+            {
+                throw new InvalidOperationException(MissingFanOutCommandsError);
+            }
+            if (runtime.ResolverBuffer == null)
+            {
+                throw new InvalidOperationException(MissingResolverBufferError);
             }
 
             int candidateCount = runtime.ResolvedCandidateCount;
@@ -167,7 +204,6 @@ namespace Ludots.Core.Gameplay.GAS
                 return;
             }
 
-            int dropped = 0;
             TargetResolverFanOutHelper.ValidateAndCollect(
                 world,
                 in context,
@@ -178,10 +214,8 @@ namespace Ludots.Core.Gameplay.GAS
                 runtime.ResolverBuffer,
                 candidateCount,
                 runtime.FanOutBudget,
-                runtime.FanOutCommands,
-                ref dropped);
+                runtime.FanOutCommands);
 
-            runtime.AddDropped(dropped);
             runtime.ClearResolvedCandidates();
         }
 
@@ -192,10 +226,22 @@ namespace Ludots.Core.Gameplay.GAS
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
-            var runtime = BuiltinHandlerRuntimeScope.Current;
-            if (runtime?.SpatialQueries == null || runtime.FanOutBudget == null || runtime.FanOutCommands == null || runtime.ResolverBuffer == null)
+            var runtime = RequireHandlerRuntime();
+            if (runtime.SpatialQueries == null)
             {
-                return;
+                throw new InvalidOperationException(MissingSpatialQueriesError);
+            }
+            if (runtime.FanOutBudget == null)
+            {
+                throw new InvalidOperationException(MissingFanOutBudgetError);
+            }
+            if (runtime.FanOutCommands == null)
+            {
+                throw new InvalidOperationException(MissingFanOutCommandsError);
+            }
+            if (runtime.ResolverBuffer == null)
+            {
+                throw new InvalidOperationException(MissingResolverBufferError);
             }
 
             int candidateCount = TargetResolverFanOutHelper.ResolveTargets(
@@ -211,7 +257,6 @@ namespace Ludots.Core.Gameplay.GAS
                 return;
             }
 
-            int dropped = 0;
             TargetResolverFanOutHelper.ValidateAndCollect(
                 world,
                 in context,
@@ -222,10 +267,8 @@ namespace Ludots.Core.Gameplay.GAS
                 runtime.ResolverBuffer,
                 candidateCount,
                 runtime.FanOutBudget,
-                runtime.FanOutCommands,
-                ref dropped);
+                runtime.FanOutCommands);
 
-            runtime.AddDropped(dropped);
             runtime.ClearResolvedCandidates();
         }
 
@@ -270,6 +313,7 @@ namespace Ludots.Core.Gameplay.GAS
             var request = new RuntimeEntitySpawnRequest
             {
                 Kind = RuntimeEntitySpawnKind.Assembly,
+                RootId = context.RootId,
                 Source = context.Source,
                 TargetContext = context.TargetContext,
                 Projectile = new ProjectileState
@@ -286,6 +330,7 @@ namespace Ludots.Core.Gameplay.GAS
                     CollisionRelationFilter = proj.CollisionRelationFilter,
                     CollisionExcludeSource = (byte)(proj.CollisionExcludeSource ? 1 : 0),
                     MaxHitCount = proj.MaxHitCount,
+                    RootId = context.RootId,
                     Source = context.Source,
                     Target = context.Target,
                     LaunchOriginCm = launchOrigin,
@@ -339,6 +384,8 @@ namespace Ludots.Core.Gameplay.GAS
                 ComputeUnitCreationPlacement(
                     in unit,
                     context.Source,
+                    effectEntity,
+                    context.RootId,
                     unit.UnitTypeId,
                     i,
                     out Fix64Vec2 offsetCm,
@@ -348,6 +395,7 @@ namespace Ludots.Core.Gameplay.GAS
                 var request = new RuntimeEntitySpawnRequest
                 {
                     Kind = unit.UseTemplateSpawn ? RuntimeEntitySpawnKind.Template : RuntimeEntitySpawnKind.UnitType,
+                    RootId = context.RootId,
                     Source = context.Source,
                     TargetContext = context.TargetContext,
                     WorldPositionCm = origin + offsetCm,
@@ -483,18 +531,36 @@ namespace Ludots.Core.Gameplay.GAS
             var runtime = BuiltinHandlerRuntimeScope.Current;
             if (runtime?.EffectSideEffects?.IsActive == true)
             {
-                if (relation.Operation != RelationOperation.SetParent)
+                switch (relation.Operation)
                 {
-                    throw new InvalidOperationException(
-                        $"{EffectPhaseSideEffectTransaction.UnsupportedSideEffectError}: operation={relation.Operation}.");
+                    case RelationOperation.SetParent:
+                    {
+                        Entity stagedParent = ResolveRelationEntity(in context, relation.Parent);
+                        runtime.EffectSideEffects.StageSetParent(
+                            subject,
+                            stagedParent,
+                            relation.SnapSubjectToParentPosition);
+                        return;
+                    }
+                    case RelationOperation.Attach:
+                    {
+                        Entity stagedParent = ResolveRelationEntity(in context, relation.Parent);
+                        runtime.EffectSideEffects.StageAttach(subject, stagedParent, ToAttachedLocalPose(in relation));
+                        return;
+                    }
+                    case RelationOperation.Detach:
+                        runtime.EffectSideEffects.StageDetach(
+                            subject,
+                            relation.DetachPlacementKind,
+                            relation.DetachPerimeterRadiusCm);
+                        return;
+                    case RelationOperation.RemoveParent:
+                        runtime.EffectSideEffects.StageRemoveParent(subject);
+                        return;
+                    default:
+                        throw new InvalidOperationException(
+                            $"{EffectPhaseSideEffectTransaction.UnsupportedSideEffectError}: operation={relation.Operation}.");
                 }
-
-                Entity stagedParent = ResolveRelationEntity(in context, relation.Parent);
-                runtime.EffectSideEffects.StageSetParent(
-                    subject,
-                    stagedParent,
-                    relation.SnapSubjectToParentPosition);
-                return;
             }
 
             if (!world.IsAlive(subject))
@@ -528,6 +594,31 @@ namespace Ludots.Core.Gameplay.GAS
                 }
                 case RelationOperation.RemoveParent:
                     RelationOps.RemoveParent(world, subject);
+                    break;
+                case RelationOperation.Attach:
+                {
+                    Entity parent = ResolveRelationEntity(in context, relation.Parent);
+                    if (!world.IsAlive(parent))
+                    {
+                        throw new InvalidOperationException(
+                            $"GAS.RELATION.ERR.ParentInvalid: entity={parent.Id}.");
+                    }
+
+                    AttachmentOps.Attach(
+                        world,
+                        runtime?.PoseAuthorityArbiter,
+                        subject,
+                        parent,
+                        ToAttachedLocalPose(in relation));
+                    break;
+                }
+                case RelationOperation.Detach:
+                    AttachmentOps.Detach(
+                        world,
+                        runtime?.PoseAuthorityArbiter,
+                        subject,
+                        relation.DetachPlacementKind,
+                        relation.DetachPerimeterRadiusCm);
                     break;
                 case RelationOperation.EnsureLink:
                 {
@@ -563,15 +654,26 @@ namespace Ludots.Core.Gameplay.GAS
             return templateData.Relation.Operation switch
             {
                 RelationOperation.SetParent => EffectOperationMetadata.GasTransactional("ApplyRelation.SetParent"),
-                RelationOperation.RemoveParent => EffectOperationMetadata.Unsupported(
-                    EffectAtomicDomain.Relationship,
-                    "ApplyRelation.RemoveParent"),
+                RelationOperation.RemoveParent => EffectOperationMetadata.GasTransactional("ApplyRelation.RemoveParent"),
                 RelationOperation.EnsureLink => EffectOperationMetadata.Unsupported(
                     EffectAtomicDomain.Relationship,
                     "ApplyRelation.EnsureLink"),
+                RelationOperation.Attach => EffectOperationMetadata.GasTransactional("ApplyRelation.Attach"),
+                RelationOperation.Detach => EffectOperationMetadata.GasTransactional("ApplyRelation.Detach"),
                 _ => EffectOperationMetadata.Unsupported(
                     EffectAtomicDomain.Relationship,
                     "ApplyRelation.Invalid"),
+            };
+        }
+
+        private static Ludots.Core.Components.AttachedLocalPose ToAttachedLocalPose(in RelationDescriptor relation)
+        {
+            return new Ludots.Core.Components.AttachedLocalPose
+            {
+                OffsetCm = Fix64Vec2.FromInt(relation.AttachOffsetXCm, relation.AttachOffsetYCm),
+                LocalFacingRad = Fix64.FromInt(relation.AttachFacingDeg) * (Fix64.Pi / Fix64.FromInt(180)),
+                InheritParentFacing = relation.AttachInheritParentFacing ? (byte)1 : (byte)0,
+                OffsetRotation = relation.AttachOffsetRotation,
             };
         }
 
@@ -994,7 +1096,13 @@ namespace Ludots.Core.Gameplay.GAS
             return false;
         }
 
-        private static Fix64Vec2 ComputeScatterOffsetCm(Entity source, int unitTypeId, int index, int radiusCm)
+        private static Fix64Vec2 ComputeScatterOffsetCm(
+            Entity source,
+            Entity effectEntity,
+            int rootId,
+            int unitTypeId,
+            int index,
+            int radiusCm)
         {
             if (radiusCm <= 0)
             {
@@ -1003,11 +1111,13 @@ namespace Ludots.Core.Gameplay.GAS
 
             unchecked
             {
-                uint seed = (uint)(
-                    (source.Id * 73856093) ^
-                    (source.WorldId * 19349663) ^
-                    ((index + 1) * 83492791) ^
-                    (unitTypeId * 265443576));
+                uint seed = (uint)source.Id * 73856093u;
+                seed ^= (uint)source.Version * 83492791u;
+                seed ^= (uint)effectEntity.Id * 2654435761u;
+                seed ^= (uint)effectEntity.Version * 3266489917u;
+                seed ^= (uint)rootId * 1597334677u;
+                seed ^= (uint)(index + 1) * 668265263u;
+                seed ^= (uint)unitTypeId * 374761393u;
 
                 seed ^= seed << 13;
                 seed ^= seed >> 17;
@@ -1026,6 +1136,8 @@ namespace Ludots.Core.Gameplay.GAS
         private static void ComputeUnitCreationPlacement(
             in UnitCreationDescriptor unit,
             Entity source,
+            Entity effectEntity,
+            int rootId,
             int unitTypeId,
             int index,
             out Fix64Vec2 offsetCm,
@@ -1038,7 +1150,7 @@ namespace Ludots.Core.Gameplay.GAS
                     ComputeCirclePlacement(in unit, index, out offsetCm, out facingAngleRad, out hasFacing);
                     return;
                 default:
-                    offsetCm = ComputeScatterOffsetCm(source, unitTypeId, index, unit.OffsetRadius);
+                    offsetCm = ComputeScatterOffsetCm(source, effectEntity, rootId, unitTypeId, index, unit.OffsetRadius);
                     facingAngleRad = 0f;
                     hasFacing = false;
                     return;

@@ -1,0 +1,93 @@
+[
+  {
+    "id": "showcase.graph_op.CompareEqEntity",
+    "kind": "Effect",
+    "entry": "caster",
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "notSelf",
+        "op": "CompareEqEntity"
+      },
+      {
+        "id": "jif",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "done",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "strike",
+        "op": "ApplyEffectTemplate",
+        "effectTemplate": "Effect.GraphOps.Strike"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "explicit"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "notSelf"
+      },
+      {
+        "from": "notSelf",
+        "fromPort": "next",
+        "to": "jif"
+      },
+      {
+        "from": "jif",
+        "fromPort": "true",
+        "to": "done"
+      },
+      {
+        "from": "jif",
+        "fromPort": "false",
+        "to": "strike"
+      },
+      {
+        "from": "strike",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "notSelf",
+        "toPort": "a"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "notSelf",
+        "toPort": "b"
+      },
+      {
+        "from": "notSelf",
+        "fromPort": "value",
+        "to": "jif",
+        "toPort": "condition"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "strike",
+        "toPort": "target"
+      }
+    ]
+  }
+]

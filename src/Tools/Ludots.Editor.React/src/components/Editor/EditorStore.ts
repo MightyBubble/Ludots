@@ -17,7 +17,7 @@ import type { NavTile } from '../../Core/NavMesh/NavTileBinary';
 
 export type JsonRecord = Record<string, unknown>;
 export type EntityTemplatePayload = JsonRecord;
-export type PerformerPayload = JsonRecord;
+export type PresenterPayload = JsonRecord;
 
 export type ToolCategory = 'Height' | 'Water' | 'Area' | 'Blocked' | 'Biome' | 'Vegetation' | 'Ramp' | 'Layers' | 'Territory' | 'Entities' | 'Obstacle';
 export type ToolMode = 'Set' | 'Raise' | 'Lower' | 'Smooth' | 'Bucket'; // Added Bucket
@@ -37,7 +37,6 @@ export interface BoardInfo {
     cellSizeCm: number;
     hexEdgeLengthCm: number;
     chunkSizeCells: number;
-    navigationEnabled: boolean;
     hasDataFile: boolean;
     dataFileExists: boolean;
     dataFile: string | null;
@@ -49,17 +48,15 @@ export interface BoardInfo {
 export interface BoardCreateRequest {
     name: string;
     spatialType: BoardTopology;
-    widthInMacroTiles: number;
-    heightInMacroTiles: number;
+    widthCells: number;
+    heightCells: number;
     cellSizeCm: number;
     hexEdgeLengthCm?: number;
-    navigationEnabled: boolean;
 }
 
 export interface BoardUpdateRequest {
     cellSizeCm?: number;
     hexEdgeLengthCm?: number;
-    navigationEnabled?: boolean;
 }
 
 export interface MapInfo extends BoardInfo {
@@ -121,7 +118,7 @@ export interface EditorState {
     canvasSessionLabel: string | null;
     mapConfig: JsonRecord | null;
     templates: EntityTemplatePayload[];
-    performers: PerformerPayload[];
+    presenters: PresenterPayload[];
     navigationConfig: JsonRecord | null;
     navigationConfigVersion: number;
     selectedTemplateId: string | null;
@@ -249,7 +246,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     canvasSessionLabel: null,
     mapConfig: null,
     templates: [],
-    performers: [],
+    presenters: [],
     navigationConfig: null,
     navigationConfigVersion: 0,
     selectedTemplateId: null,
@@ -465,7 +462,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             canvasSessionLabel: null,
             mapConfig: null,
             templates: [],
-            performers: [],
+            presenters: [],
             navigationConfig: null,
             navigationConfigVersion: Date.now(),
             selectedTemplateId: null,
@@ -490,10 +487,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         const tJson = await tRes.json() as JsonRecord;
         const templates = arrayOfRecords(tJson.templates);
 
-        const pRes = await fetch(`${bridgeBaseUrl}/api/mods/${encodeURIComponent(modId)}/performers`);
+        const pRes = await fetch(`${bridgeBaseUrl}/api/mods/${encodeURIComponent(modId)}/presenters`);
         if (!pRes.ok) throw new Error(`Bridge error ${pRes.status}`);
         const pJson = await pRes.json() as JsonRecord;
-        const performers = arrayOfRecords(pJson.performers);
+        const presenters = arrayOfRecords(pJson.presenters);
 
         const defaultTemplateId = templates.length > 0 ? String(templates[0]?.Id ?? templates[0]?.id ?? '') : null;
         const obstacleTemplate = templates.find((t) => {
@@ -530,7 +527,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             selectedBoardName: defaultBoardInfo?.name ?? null,
             selectedBoardInfo: defaultBoardInfo,
             templates,
-            performers,
+            presenters,
             navigationConfig,
             navigationConfigVersion: Date.now(),
             selectedTemplateId: defaultTemplateId && defaultTemplateId.length > 0 ? defaultTemplateId : null,
@@ -570,12 +567,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             body: JSON.stringify({
                 name: request.name,
                 spatialType: request.spatialType,
-                widthInMacroTiles: request.widthInMacroTiles,
-                heightInMacroTiles: request.heightInMacroTiles,
+                widthCells: request.widthCells,
+                heightCells: request.heightCells,
                 cellSizeCm: request.cellSizeCm,
                 hexEdgeLengthCm: request.hexEdgeLengthCm ?? DEFAULT_BOARD_METRICS.hexEdgeLengthCm,
                 chunkSizeCells: DEFAULT_BOARD_METRICS.chunkSizeCells,
-                navigationEnabled: request.navigationEnabled,
             }),
         });
         const json = await res.json().catch(() => null) as JsonRecord | null;
@@ -606,7 +602,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             body: JSON.stringify({
                 cellSizeCm: request.cellSizeCm,
                 hexEdgeLengthCm: request.hexEdgeLengthCm,
-                navigationEnabled: request.navigationEnabled,
             }),
         });
         const json = await res.json().catch(() => null) as JsonRecord | null;
@@ -1066,7 +1061,6 @@ function normalizeBoardInfo(raw: JsonRecord | null | undefined): BoardInfo {
         cellSizeCm: numberOr(raw?.cellSizeCm ?? raw?.CellSizeCm, DEFAULT_BOARD_METRICS.cellSizeCm),
         hexEdgeLengthCm: numberOr(raw?.hexEdgeLengthCm ?? raw?.HexEdgeLengthCm, DEFAULT_BOARD_METRICS.hexEdgeLengthCm),
         chunkSizeCells: numberOr(raw?.chunkSizeCells ?? raw?.ChunkSizeCells, DEFAULT_BOARD_METRICS.chunkSizeCells),
-        navigationEnabled: Boolean(raw?.navigationEnabled ?? raw?.NavigationEnabled ?? false),
         hasDataFile: Boolean(raw?.hasDataFile ?? raw?.HasDataFile ?? false),
         dataFileExists: Boolean(raw?.dataFileExists ?? raw?.DataFileExists ?? false),
         dataFile: stringOrNull(raw?.dataFile ?? raw?.DataFile),
@@ -1086,7 +1080,6 @@ function normalizeMapInfo(raw: JsonRecord | null | undefined): MapInfo {
         CellSizeCm: raw?.cellSizeCm ?? raw?.CellSizeCm,
         HexEdgeLengthCm: raw?.hexEdgeLengthCm ?? raw?.HexEdgeLengthCm,
         ChunkSizeCells: raw?.chunkSizeCells ?? raw?.ChunkSizeCells,
-        NavigationEnabled: raw?.navigationEnabled ?? raw?.NavigationEnabled,
         HasDataFile: raw?.hasDataFile ?? raw?.HasDataFile,
         DataFileExists: raw?.dataFileExists ?? raw?.DataFileExists,
         DataFile: raw?.dataFile ?? raw?.DataFile,
@@ -1171,19 +1164,8 @@ function replaceMapInfo(mapInfos: MapInfo[], next: MapInfo): MapInfo[] {
 }
 
 function pickPrimaryBoard(boards: JsonRecord[]): JsonRecord | null {
-    const navigationDefault = boards.find((b) =>
-        isNavigationEnabled(b) && String(b?.Name ?? b?.name ?? '').toLowerCase() === 'default');
-    if (navigationDefault) return navigationDefault;
-
-    const navigationBoard = boards.find(isNavigationEnabled);
-    if (navigationBoard) return navigationBoard;
-
     const defaultBoard = boards.find((b) => String(b?.Name ?? b?.name ?? '').toLowerCase() === 'default');
     return defaultBoard ?? boards[0] ?? null;
-}
-
-function isNavigationEnabled(board: JsonRecord): boolean {
-    return Boolean(board?.NavigationEnabled ?? board?.navigationEnabled ?? false);
 }
 
 function addObstacleFootprintDirtyChunks(

@@ -14,7 +14,7 @@ namespace Ludots.Tests.WebUiPanelKit;
 public sealed class WebUiPanelKitManifestTests
 {
 	[Test]
-	public void LoadSampleManifest_RegistersSixPanels_OnSameUiSurfaceHost()
+	public void LoadSampleManifest_RegistersSevenPanels_OnSameUiSurfaceHost()
 	{
 		using var runtime = new WebUiDataPlaneRuntime();
 		RegisterSampleTopics(runtime);
@@ -23,7 +23,7 @@ public sealed class WebUiPanelKitManifestTests
 			WebUiPanelKitSampleCatalog.SampleManifestPath(),
 			catalog);
 
-		Assert.That(manifest.Panels, Has.Count.EqualTo(6));
+		Assert.That(manifest.Panels, Has.Count.EqualTo(7));
 		Assert.That(manifest.Panels.Select(panel => panel.PanelId), Is.EquivalentTo(new[]
 		{
 			"hud.resource-bar",
@@ -31,14 +31,15 @@ public sealed class WebUiPanelKitManifestTests
 			"hud.objective",
 			"hud.production-overview",
 			"hud.notification",
-			"hud.techtree"
+			"hud.techtree",
+			"hud.activity"
 		}));
 
 		UIRoot root = CreateRoot(out UiSurfaceHost host);
 		using var binder = new WebUiPanelKitSurfaceBinder(host, manifest);
 		binder.Bind();
 
-		Assert.That(binder.BoundPanelIds, Has.Count.EqualTo(6));
+		Assert.That(binder.BoundPanelIds, Has.Count.EqualTo(7));
 		Assert.That(root.Scene, Is.SameAs(host.Scene));
 		Assert.That(root.Scene!.FindByElementId("panel-kit-hud.resource-bar"), Is.Not.Null);
 		Assert.That(root.Scene.FindByElementId("panel-kit-hud.command-deck"), Is.Not.Null);
@@ -46,6 +47,7 @@ public sealed class WebUiPanelKitManifestTests
 		Assert.That(root.Scene.FindByElementId("panel-kit-hud.production-overview"), Is.Not.Null);
 		Assert.That(root.Scene.FindByElementId("panel-kit-hud.notification"), Is.Not.Null);
 		Assert.That(root.Scene.FindByElementId("panel-kit-hud.techtree"), Is.Not.Null);
+		Assert.That(root.Scene.FindByElementId("panel-kit-hud.activity"), Is.Not.Null);
 	}
 
 	[Test]
@@ -150,7 +152,7 @@ public sealed class WebUiPanelKitManifestTests
 	}
 
 	[Test]
-	public void NotificationPanelDescriptors_AreIndependentOfNarrativeAndQuest()
+	public void NotificationPanelDescriptors_AreIndependentOfNarrativeAndTask()
 	{
 		Assert.That(WebUiNotificationPanelDescriptors.PanelType, Is.EqualTo("notification"));
 		Assert.That(WebUiNotificationPanelDescriptors.GenericProfileId, Is.EqualTo("profile.notification.generic"));
@@ -176,17 +178,17 @@ public sealed class WebUiPanelKitManifestTests
 	}
 
 	[Test]
-	public void QuestObjectiveDescriptors_MatchSampleCatalogVocabulary()
+	public void TaskObjectiveDescriptors_MatchSampleCatalogVocabulary()
 	{
-		Assert.That(WebUiQuestObjectivePanelDescriptors.PanelType, Is.EqualTo("objective"));
-		Assert.That(WebUiQuestObjectivePanelDescriptors.GenericProfileId, Is.EqualTo("profile.objective.generic"));
-		Assert.That(WebUiQuestObjectivePanelDescriptors.SampleTopic, Is.EqualTo(WebUiPanelKitSampleCatalog.ObjectiveTopic));
-		Assert.That(WebUiQuestObjectivePanelDescriptors.VerticalListLayoutId, Is.EqualTo("layout.list.vertical"));
+		Assert.That(WebUiTaskObjectivePanelDescriptors.PanelType, Is.EqualTo("objective"));
+		Assert.That(WebUiTaskObjectivePanelDescriptors.GenericProfileId, Is.EqualTo("profile.objective.generic"));
+		Assert.That(WebUiTaskObjectivePanelDescriptors.SampleTopic, Is.EqualTo(WebUiPanelKitSampleCatalog.ObjectiveTopic));
+		Assert.That(WebUiTaskObjectivePanelDescriptors.VerticalListLayoutId, Is.EqualTo("layout.list.vertical"));
 
 		string json = File.ReadAllText(WebUiPanelKitSampleCatalog.SampleManifestPath());
-		Assert.That(json, Does.Contain(WebUiQuestObjectivePanelDescriptors.SampleTopic));
-		Assert.That(json, Does.Contain(WebUiQuestObjectivePanelDescriptors.GenericProfileId));
-		Assert.That(json, Does.Contain($"\"panelType\": \"{WebUiQuestObjectivePanelDescriptors.PanelType}\""));
+		Assert.That(json, Does.Contain(WebUiTaskObjectivePanelDescriptors.SampleTopic));
+		Assert.That(json, Does.Contain(WebUiTaskObjectivePanelDescriptors.GenericProfileId));
+		Assert.That(json, Does.Contain($"\"panelType\": \"{WebUiTaskObjectivePanelDescriptors.PanelType}\""));
 	}
 
 	[Test]

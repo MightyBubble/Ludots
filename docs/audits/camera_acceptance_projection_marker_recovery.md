@@ -4,7 +4,7 @@
 
 ## 1 问题定义
 
-在 `camera_acceptance_projection` 中，左键点击地面时，projection 验收需要通过共享输入链路触发射线投影，并生成一个短暂出现后消失的 performer marker。
+在 `camera_acceptance_projection` 中，左键点击地面时，projection 验收需要通过共享输入链路触发射线投影，并生成一个短暂出现后消失的 presenter marker。
 
 故障表现是：
 

@@ -47,7 +47,7 @@ tether_tick_effect:
 
 **视觉表现**:
 ```
-Performer: TetherLine(origin=caster, target=target)
+Presenter: TetherLine(origin=caster, target=target)
   color: purple
   lifetime: 与 EffectClip 同步
   break_visual: 距离过远时显示断裂特效
@@ -61,11 +61,11 @@ Performer: TetherLine(origin=caster, target=target)
 | CalcDistance Graph op | ✅ 已有 |
 | Conditional break logic | ✅ 已有 |
 | DestroyEffect | ✅ 已有 |
-| TetherLine Performer | ⚠️ 需扩展 |
+| TetherLine Presenter | ⚠️ 需扩展 |
 
 ## 新增需求
 
 | 需求 | 优先级 | 说明 |
 |------|--------|------|
-| TetherLine Performer | P2 | 连接线渲染 (表现层) |
+| TetherLine Presenter | P2 | 连接线渲染 (表现层) |
 | Distance-based break | P1 | 距离检测并销毁效果 |

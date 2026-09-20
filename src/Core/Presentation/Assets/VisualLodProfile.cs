@@ -1,4 +1,5 @@
 using System;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Assets
 {
@@ -51,13 +52,13 @@ namespace Ludots.Core.Presentation.Assets
 
         public VisualLodEntry Low { get; }
 
-        public readonly VisualLodEntry Resolve(Components.LODLevel lod)
+        public readonly VisualLodEntry Resolve(LODLevel lod)
         {
             return lod switch
             {
-                Components.LODLevel.High => High,
-                Components.LODLevel.Medium => Medium,
-                Components.LODLevel.Low => Low,
+                LODLevel.High => High,
+                LODLevel.Medium => Medium,
+                LODLevel.Low => Low,
                 _ => Low,
             };
         }

@@ -1,0 +1,13 @@
+{
+  "op": "QueryCollectPresentTags",
+  "driver": "query",
+  "title": "点出身上印记",
+  "beat": "身上的印记被点名线牵住。",
+  "detailTemplate": "点到{count}个印记。",
+  "assertDetailContains": [
+    "印记"
+  ],
+  "featuredNodeId": "collect",
+  "graphKind": "Query",
+  "field": "query"
+}

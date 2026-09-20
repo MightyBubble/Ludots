@@ -276,7 +276,7 @@ H2-H9 使用了不存在于 Ludots 的 Effect 类型 DSL:
 | M2 | ✅ | ⚠️ | ⚠️ | 瞄准引导, 依赖 CursorDirectionWriter (P1) |
 | M3 | ✅ | ✅ | ⚠️ | 移动引导, Tag 允许移动合理 |
 | M4 | ✅ | ✅ | ⚠️ | 叠层引导, 递增 Effect 正确 |
-| M5 | ✅ | ⚠️ | ⚠️ | 射线引导, 依赖 Beam performer (P2) |
+| M5 | ✅ | ⚠️ | ⚠️ | 射线引导, 依赖 Beam presenter (P2) |
 | M6 | ✅ | ⚠️ | ⚠️ | 栓绳引导, 依赖 Tether 组件 (P1) |
 | M7 | ✅ | ⚠️ | ⚠️ | 传送引导, 引导完成 → Teleport |
 

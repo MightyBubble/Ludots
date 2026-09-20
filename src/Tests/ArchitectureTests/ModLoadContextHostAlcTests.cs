@@ -39,7 +39,7 @@ namespace ArchitectureTests
                     Path.GetDirectoryName(hostRunnerPath)!,
                     "bin",
                     "Debug",
-                    "net8.0",
+                    "net9.0",
                     "HostAlcRunner.dll");
 
                 hostContext = new HostAssemblyLoadContext(hostRunnerDllPath);
@@ -76,7 +76,7 @@ namespace ArchitectureTests
             string projectXml = $$"""
             <Project Sdk="Microsoft.NET.Sdk">
               <PropertyGroup>
-                <TargetFramework>net8.0</TargetFramework>
+                <TargetFramework>net9.0</TargetFramework>
                 <ImplicitUsings>enable</ImplicitUsings>
                 <Nullable>enable</Nullable>
                 <BaseOutputPath>bin\</BaseOutputPath>
@@ -123,7 +123,7 @@ namespace ArchitectureTests
               "name": "{{modName}}",
               "version": "1.0.0",
               "description": "host ALC shared assembly regression mod",
-              "main": "bin/net8.0/{{modName}}.dll",
+              "main": "bin/net9.0/{{modName}}.dll",
               "priority": 0,
               "dependencies": {}{{processSharedJson}}
             }
@@ -144,7 +144,7 @@ namespace ArchitectureTests
             string projectXml = $$"""
             <Project Sdk="Microsoft.NET.Sdk">
               <PropertyGroup>
-                <TargetFramework>net8.0</TargetFramework>
+                <TargetFramework>net9.0</TargetFramework>
                 <ImplicitUsings>enable</ImplicitUsings>
                 <Nullable>enable</Nullable>
                 <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>

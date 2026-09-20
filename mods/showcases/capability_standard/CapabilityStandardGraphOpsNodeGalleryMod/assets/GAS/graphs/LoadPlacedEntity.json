@@ -1,0 +1,71 @@
+[
+  {
+    "id": "showcase.graph_op.LoadPlacedEntity",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "roll_call",
+        "event": "MapLoaded",
+        "start": "readBoss"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "readBoss",
+        "op": "LoadPlacedEntity",
+        "instanceId": "boss_camp"
+      },
+      {
+        "id": "readHealth",
+        "op": "LoadAttribute",
+        "attribute": "Health"
+      },
+      {
+        "id": "writeHealth",
+        "op": "WriteMapVarFloat",
+        "var": "gallery.boss_health"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "readBoss",
+        "fromPort": "next",
+        "to": "readHealth"
+      },
+      {
+        "from": "readHealth",
+        "fromPort": "next",
+        "to": "writeHealth"
+      },
+      {
+        "from": "writeHealth",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "readBoss",
+        "fromPort": "value",
+        "to": "readHealth",
+        "toPort": "source"
+      },
+      {
+        "from": "readBoss",
+        "fromPort": "value",
+        "to": "writeHealth",
+        "toPort": "source"
+      },
+      {
+        "from": "readHealth",
+        "fromPort": "value",
+        "to": "writeHealth",
+        "toPort": "value"
+      }
+    ]
+  }
+]

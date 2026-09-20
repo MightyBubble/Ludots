@@ -1,0 +1,9 @@
+{
+  "name": "AttachmentCapabilityMod",
+  "version": "1.0.0",
+  "description": "Entity attachment capability acceptance fixture: multi-layer turret tank, static settlement buildings, and Attach/Detach GAS effect templates.",
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "tags": ["attachment", "capability", "acceptance"]
+}

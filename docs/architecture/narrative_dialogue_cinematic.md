@@ -1,6 +1,8 @@
-# Narrative Dialogue / Cinematic Integration
+# （已废止）Narrative Dialogue / Cinematic Integration
 
-本文定义 Ludots 叙事基建在当前仓库中的正式落点：`Dialogue + Cinematic + Variables + Conditions + Actions + Callback` 统一建立在现有 `ConfigPipeline`、`Trigger`、`ECS`、`GAS`、`Camera`、`UI` 之上。Quest 长期进度已经抽到 Core，Narrative 只通过正式 Quest runtime 编排它，不额外引入平行运行时。Quest 本体的 SSOT 位于 [Quest Core Infrastructure](quest_core_infra.md)。
+> **本文不再是实现 SSOT。** Dialogue / Sequencer / Story Line / Presentation Profile 合同见 [Story Runtime：Dialogue / Sequencer](story_runtime_dialogue_sequencer.md)（Epic #1083）。旧 `NarrativeDirector`、`Narrative/*` 配置路径与条件/动作枚举已退役；加载期 fail-closed。下文仅作历史对照。
+
+本文曾定义 Ludots 叙事基建落点：`Dialogue + Cinematic + Variables + Conditions + Actions + Callback`。Quest 长期进度在 Core；Quest 本体 SSOT 仍位于 [Quest Core Infrastructure](quest_core_infra.md)。
 
 ## 1. 目标与约束
 
@@ -372,7 +374,7 @@ UI 面板仅是 narrative 当前状态的只读投影，位于：
 优先扩展方向：
 
 - 新的 condition kind：队伍成员、背包物品、地图标签、章节号
-- 新的 action kind：切 map、投递 UI inbox、派发 performer cue、注册 checkpoint
+- 新的 action kind：切 map、投递 UI inbox、派发 presenter cue、注册 checkpoint
 - 任务图谱层：在不破坏 Core QuestRuntimeService 单一真相的前提下，为复杂 CRPG 提供 quest graph authoring
 
 不建议的方向：

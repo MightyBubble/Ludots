@@ -65,7 +65,7 @@
    "Name": {
     "Value": "CrowdPhysicsArena.Agent.Azure.Light"
    },
-   "VisualHeightmapSampleState": {},
+   "ContinuousHeightmapSampleState": {},
    "FacingDirection": {
     "AngleRad": 0
    },
@@ -122,7 +122,7 @@
    "Name": {
     "Value": "CrowdPhysicsArena.Agent.Azure.Heavy"
    },
-   "VisualHeightmapSampleState": {},
+   "ContinuousHeightmapSampleState": {},
    "FacingDirection": {
     "AngleRad": 0
    },
@@ -179,7 +179,7 @@
    "Name": {
     "Value": "CrowdPhysicsArena.Agent.Crimson.Light"
    },
-   "VisualHeightmapSampleState": {},
+   "ContinuousHeightmapSampleState": {},
    "FacingDirection": {
     "AngleRad": 0
    },
@@ -236,7 +236,7 @@
    "Name": {
     "Value": "CrowdPhysicsArena.Agent.Crimson.Heavy"
    },
-   "VisualHeightmapSampleState": {},
+   "ContinuousHeightmapSampleState": {},
    "FacingDirection": {
     "AngleRad": 0
    },
@@ -414,7 +414,7 @@
      "Y": 0
     }
    },
-   "VisualHeightmapSampleState": {},
+   "ContinuousHeightmapSampleState": {},
    "FacingDirection": {
     "AngleRad": 0
    },

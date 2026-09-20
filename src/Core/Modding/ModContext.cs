@@ -14,10 +14,13 @@ namespace Ludots.Core.Modding
         public FunctionRegistry FunctionRegistry { get; }
         public SystemFactoryRegistry SystemFactoryRegistry { get; }
         public TriggerDecoratorRegistry TriggerDecorators { get; }
+        public IModExtensionRegistration Extensions { get; }
 
         private readonly TriggerManager _triggerManager;
         private readonly LogChannel _logChannel;
         public LogChannel LogChannel => _logChannel;
+        public ISystemRegistrar Systems { get; private set; } = UnavailableSystemRegistrar.Instance;
+        public IRegistrySetView Registries { get; private set; } = UnavailableRegistrySetView.Instance;
 
         public ModContext(
             string modId,
@@ -25,7 +28,8 @@ namespace Ludots.Core.Modding
             FunctionRegistry fr,
             TriggerManager tm,
             SystemFactoryRegistry sfr,
-            TriggerDecoratorRegistry tdr)
+            TriggerDecoratorRegistry tdr,
+            ModExtensionHub extensions)
         {
             ModId = modId;
             VFS = vfs;
@@ -33,7 +37,14 @@ namespace Ludots.Core.Modding
             _triggerManager = tm;
             SystemFactoryRegistry = sfr;
             TriggerDecorators = tdr;
+            Extensions = (extensions ?? throw new ArgumentNullException(nameof(extensions))).CreateRegistrationFacade(modId);
             _logChannel = Diagnostics.Log.GetOrCreateModChannel(modId);
+        }
+
+        public void BindHostPorts(ISystemRegistrar systems, IRegistrySetView registries)
+        {
+            Systems = systems ?? throw new ArgumentNullException(nameof(systems));
+            Registries = registries ?? throw new ArgumentNullException(nameof(registries));
         }
 
         public void OnEvent(EventKey eventKey, Func<ScriptContext, Task> handler)

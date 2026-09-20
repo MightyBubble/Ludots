@@ -1,0 +1,33 @@
+[
+  {
+    "id": "showcase.graph_op.ApplyEffectTemplate",
+    "kind": "Effect",
+    "entry": "explicit",
+    "nodes": [
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "apply",
+        "op": "ApplyEffectTemplate",
+        "effectTemplate": "Effect.GraphOpsAttr.Mark"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "apply"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "apply",
+        "toPort": "target"
+      }
+    ]
+  }
+]

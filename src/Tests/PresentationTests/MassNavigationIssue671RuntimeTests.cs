@@ -15,6 +15,7 @@ using Ludots.Core.Navigation.Avoidance;
 using Ludots.Core.Spatial;
 using NUnit.Framework;
 using Schedulers;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Presentation;
 
@@ -283,6 +284,7 @@ public sealed class MassNavigationIssue671RuntimeTests
         MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
         config.Solver.ParallelWorkerCount = workerCount;
         config.Avoidance.Mode = mode;
+        MassNavigationOrderChainTests.PopulateModeSpecificAvoidance(config.Avoidance, mode);
         config.Avoidance.Validate();
         var flow = new MassNavigationFlowSolverState(config.Solver);
         flow.ArrivalTuning.CopyFrom(config.Arrival);
@@ -293,6 +295,7 @@ public sealed class MassNavigationIssue671RuntimeTests
         flow.ResetAuthoredAgents(seeds);
         return flow;
     }
+
 
     private static MassNavigationGroupRuntime CreateGroupRuntime(int agentCapacity)
     {

@@ -627,7 +627,7 @@ internal sealed class ItemSystemShowcaseRuntime
         world.Add(_hero, new AbilityStateBuffer());
         world.Add(_hero, OrderBuffer.CreateEmpty());
         OrderBlackboardStateInstaller.EnsureInstalled(world, _hero);
-        InitAttributes(ref world.Get<AttributeBuffer>(_hero), true);
+        InitAttributes(engine, _hero, true);
 
         _dummy = world.Create(new Name { Value = "Target Dummy" });
         TrackMapEntity(engine, _dummy);
@@ -635,7 +635,7 @@ internal sealed class ItemSystemShowcaseRuntime
         world.Add(_dummy, new AttributeBuffer());
         world.Add(_dummy, new ActiveEffectContainer());
         TagStateInstaller.EnsureInstalled(world, _dummy);
-        InitAttributes(ref world.Get<AttributeBuffer>(_dummy), false);
+        InitAttributes(engine, _dummy, false);
 
         _vendor = world.Create(new Name { Value = "Quartermaster" });
         TrackMapEntity(engine, _vendor);
@@ -690,13 +690,16 @@ internal sealed class ItemSystemShowcaseRuntime
         Log("Coverage live: MOBA boots/mythic, ARPG rings/charm, extraction stash/secure, rifle sockets, ammo stacks, vendor trade, and forge sockets.");
     }
 
-    private void InitAttributes(ref AttributeBuffer attrs, bool hero)
+    private void InitAttributes(GameEngine engine, Entity entity, bool hero)
     {
-        attrs.SetBase(_healthAttrId, hero ? 100f : 140f);
-        attrs.SetBase(_shieldAttrId, hero ? 20f : 0f);
-        attrs.SetBase(_moveSpeedAttrId, hero ? 100f : 0f);
-        attrs.SetBase(_attackAttrId, hero ? 12f : 0f);
-        attrs.SetBase(_armorAttrId, hero ? 5f : 1f);
+        TagOps tagOps = engine.GetService(CoreServiceKeys.TagOps)
+            ?? throw new InvalidOperationException("ItemSystemShowcase requires TagOps.");
+        World world = engine.World;
+        AttributeMutationOps.SetBase(world, entity, _healthAttrId, hero ? 100f : 140f, tagOps);
+        AttributeMutationOps.SetBase(world, entity, _shieldAttrId, hero ? 20f : 0f, tagOps);
+        AttributeMutationOps.SetBase(world, entity, _moveSpeedAttrId, hero ? 100f : 0f, tagOps);
+        AttributeMutationOps.SetBase(world, entity, _attackAttrId, hero ? 12f : 0f, tagOps);
+        AttributeMutationOps.SetBase(world, entity, _armorAttrId, hero ? 5f : 1f, tagOps);
     }
 
     private void EquipNamed(GameEngine engine, Entity item, string slotId)

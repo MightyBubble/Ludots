@@ -1,0 +1,10 @@
+[
+  {
+    "id": "blacksmith.fixture.brick.north",
+    "domain": "Surface"
+  },
+  {
+    "id": "blacksmith.fixture.brick.south",
+    "domain": "Surface"
+  }
+]

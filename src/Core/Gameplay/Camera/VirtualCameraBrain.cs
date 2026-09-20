@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Tweening;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Gameplay.Camera
 {
@@ -362,7 +363,7 @@ namespace Ludots.Core.Gameplay.Camera
         private static float FacingRadToCameraYawDegrees(float facingRad)
         {
             return WorldPlane2D.NormalizeDegreesPositive(
-                WorldPlane2D.RadToDegValue(facingRad - (MathF.PI * 0.5f)));
+                VisualMath.RadToDegValue(facingRad - (MathF.PI * 0.5f)));
         }
 
         private void ResolveActiveCamera()

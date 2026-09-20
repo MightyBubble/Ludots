@@ -1,0 +1,8 @@
+{
+  "scene": "terrain_heightmap",
+  "frames": 120,
+  "avgFrameMs": 2.134,
+  "p95FrameMs": 1.378,
+  "maxFrameMs": 149.27,
+  "wallMs": 2271.3
+}

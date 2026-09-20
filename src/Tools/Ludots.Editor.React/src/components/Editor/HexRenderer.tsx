@@ -670,7 +670,7 @@ export const HexRenderer: React.FC = () => {
                 (m.material as THREE.MeshStandardMaterial).emissiveIntensity = 1.0;
             }
 
-            const bindings = asRecord(e.overrides?.PerformerBindings) ?? asRecord(e.overrides?.performerBindings);
+            const bindings = asRecord(e.overrides?.PresenterBindings) ?? asRecord(e.overrides?.presenterBindings);
             const ids = bindings?.Ids ?? bindings?.ids ?? bindings?.DefinitionIds ?? bindings?.definitionIds ?? null;
             if (Array.isArray(ids) && ids.length > 0) {
                 const sprite = buildTextSprite(String(ids[0]));

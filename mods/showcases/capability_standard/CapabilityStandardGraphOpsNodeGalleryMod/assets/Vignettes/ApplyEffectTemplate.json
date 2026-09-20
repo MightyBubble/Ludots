@@ -1,0 +1,34 @@
+{
+  "op": "ApplyEffectTemplate",
+  "driver": "attr",
+  "title": "给木桩挂上看得见的状态",
+  "beat": "红线贴附不扣血：木桩头顶钉上紫色标记，带光环，血条不动。",
+  "detailTemplate": "木桩被挂上标记，状态可见，血量 {healthAfter}。",
+  "assertDetailContains": [
+    "挂上"
+  ],
+  "featuredNodeId": "apply",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

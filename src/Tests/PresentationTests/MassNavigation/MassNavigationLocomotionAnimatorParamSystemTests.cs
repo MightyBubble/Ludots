@@ -8,7 +8,7 @@ using Ludots.Core.Map;
 using Ludots.Core.MassNavigation;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.MassNavigation.Systems;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Presentation
@@ -65,7 +65,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void MassNavigationLocomotionAnimatorParamSystem_VisibleOwnedPerformer_WritesNormalizedSpeed()
+        public void MassNavigationLocomotionAnimatorParamSystem_VisibleOwnedPresenter_WritesNormalizedSpeed()
         {
             using var engine = new GameEngine();
             string repoRoot = FindRepoRoot();
@@ -116,39 +116,39 @@ namespace Ludots.Tests.Presentation
             simulation.SetAgentNavigationTargetLocalCm(0, simulation.GetAgentLocalPositionCm(0).X + 800f, simulation.GetAgentLocalPositionCm(0).Y);
             simulation.StepNavigationForTests(world, 1f);
 
-            Entity movingPerformer = world.Create(
-                new PerformerState { OwnerEntity = movingAgent, Version = 10 },
-                new PerformerFloatParams(),
-                new PerformerCullState { OwnerCullVisible = true });
-            Entity idlePerformer = world.Create(
-                new PerformerState { OwnerEntity = idleAgent, Version = 20 },
-                new PerformerFloatParams(),
-                new PerformerCullState { OwnerCullVisible = true });
-            Entity culledPerformer = world.Create(
-                new PerformerState { OwnerEntity = movingAgent, Version = 30 },
-                new PerformerFloatParams(),
-                new PerformerCullState { OwnerCullVisible = false });
+            Entity movingPresenter = world.Create(
+                new PresenterState { OwnerEntity = movingAgent, Version = 10 },
+                new PresenterFloatParams(),
+                new PresenterCullState { OwnerCullVisible = true });
+            Entity idlePresenter = world.Create(
+                new PresenterState { OwnerEntity = idleAgent, Version = 20 },
+                new PresenterFloatParams(),
+                new PresenterCullState { OwnerCullVisible = true });
+            Entity culledPresenter = world.Create(
+                new PresenterState { OwnerEntity = movingAgent, Version = 30 },
+                new PresenterFloatParams(),
+                new PresenterCullState { OwnerCullVisible = false });
 
             var system = new MassNavigationLocomotionAnimatorParamSystem(engine);
             system.Update(0f);
 
             int speedParamKey = MassNavigationSimulationRuntime.ResolveAgentLocomotionSpeedParamKey();
-            ref PerformerFloatParams movingParams = ref world.Get<PerformerFloatParams>(movingPerformer);
-            ref PerformerFloatParams idleParams = ref world.Get<PerformerFloatParams>(idlePerformer);
-            ref PerformerFloatParams culledParams = ref world.Get<PerformerFloatParams>(culledPerformer);
+            ref PresenterFloatParams movingParams = ref world.Get<PresenterFloatParams>(movingPresenter);
+            ref PresenterFloatParams idleParams = ref world.Get<PresenterFloatParams>(idlePresenter);
+            ref PresenterFloatParams culledParams = ref world.Get<PresenterFloatParams>(culledPresenter);
             Assert.That(movingParams.TryGet(speedParamKey, out float movingSpeed), Is.True);
             Assert.That(movingSpeed, Is.GreaterThan(0f));
             Assert.That(idleParams.TryGet(speedParamKey, out float idleSpeed), Is.True);
             Assert.That(idleSpeed, Is.EqualTo(0f).Within(0.001f));
             Assert.That(culledParams.TryGet(speedParamKey, out _), Is.False);
-            Assert.That(world.Get<PerformerState>(movingPerformer).Version, Is.EqualTo(11));
-            Assert.That(world.Get<PerformerState>(idlePerformer).Version, Is.EqualTo(21));
-            Assert.That(world.Get<PerformerState>(culledPerformer).Version, Is.EqualTo(30));
+            Assert.That(world.Get<PresenterState>(movingPresenter).Version, Is.EqualTo(11));
+            Assert.That(world.Get<PresenterState>(idlePresenter).Version, Is.EqualTo(21));
+            Assert.That(world.Get<PresenterState>(culledPresenter).Version, Is.EqualTo(30));
 
             system.Update(0f);
 
-            Assert.That(world.Get<PerformerState>(movingPerformer).Version, Is.EqualTo(11));
-            Assert.That(world.Get<PerformerState>(idlePerformer).Version, Is.EqualTo(21));
+            Assert.That(world.Get<PresenterState>(movingPresenter).Version, Is.EqualTo(11));
+            Assert.That(world.Get<PresenterState>(idlePresenter).Version, Is.EqualTo(21));
         }
 
         private static string FindRepoRoot()

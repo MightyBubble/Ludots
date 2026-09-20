@@ -1,0 +1,11 @@
+[
+  {
+    "id": "night_raid.agent.soldier.raylib",
+    "assetKind": "Mesh",
+    "assetId": "night_raid.agent.soldier",
+    "backendId": "raylib",
+    "sourceUris": [
+      "MapTriggerNightRaidMod:assets/Models/night_raid_agent_soldier.glb"
+    ]
+  }
+]

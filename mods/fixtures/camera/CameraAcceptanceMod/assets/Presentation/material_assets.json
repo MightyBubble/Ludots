@@ -1,0 +1,7 @@
+[
+  {
+    "id": "camera.acceptance.cue.decal",
+    "domain": "Surface",
+    "flags": ["AlphaBlend", "Unlit", "DoubleSided"]
+  }
+]

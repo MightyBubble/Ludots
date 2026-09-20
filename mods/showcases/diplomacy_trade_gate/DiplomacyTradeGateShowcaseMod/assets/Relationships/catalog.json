@@ -1,18 +1,29 @@
 {
   "types": [
-    { "id": "Diplomacy", "isSymmetric": false }
+    {
+      "id": "Diplomacy",
+      "isSymmetric": false
+    }
   ],
   "metrics": [
-    { "id": "Trust", "minValue": -100, "maxValue": 100, "defaultValue": 0 }
+    {
+      "id": "Trust",
+      "minValue": -100,
+      "maxValue": 100,
+      "defaultValue": 0
+    }
   ],
   "flags": [
-    { "id": "Embargo" }
+    {
+      "id": "Embargo"
+    }
   ],
-  "bands": [],
   "reasons": [
-    { "id": "DiplomacyTradeGate.Pact" },
-    { "id": "DiplomacyTradeGate.Embargo" }
-  ],
-  "callbacks": [],
-  "synergies": []
+    {
+      "id": "DiplomacyTradeGate.Pact"
+    },
+    {
+      "id": "DiplomacyTradeGate.Embargo"
+    }
+  ]
 }

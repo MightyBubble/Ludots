@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Numerics;
 using Ludots.Core.Fields;
 using Ludots.Core.Mathematics;
+using Ludots.Platform.Abstractions;
+using Ludots.Core.Presentation.Rendering;
 
 namespace Ludots.Core.Presentation.Rendering
 {
@@ -14,6 +16,7 @@ namespace Ludots.Core.Presentation.Rendering
         Flow = 4,
         Heat = 5,
         Influence = 6,
+        DiscreteOwnership = 7,
     }
 
     public enum GlobalFieldVisualValueKind : byte

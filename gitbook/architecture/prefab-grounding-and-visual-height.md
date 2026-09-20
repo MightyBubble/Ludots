@@ -1,6 +1,6 @@
 # Prefab Grounding 与 Visual Height
 
-> **注意：** 本文描述的 Prefab 系统已被 [Performer-as-Actor 架构](performer-as-actor-architecture.md) 取代。Prefab 的"层级化视觉资产"概念现在由 Performer 树的 children + AssetBinding 实现，Grounding 语义由 `PerformerGroundingUtility` 承载。本文中关于 visual height 真相归属、Core-owned lowering、adapter 不拥有 grounding 语义等原则仍然有效，只是执行载体从 `PrefabFinalizationPipeline` 变为 `PerformerBehaviorSystem` + `PerformerEmitSystem`。
+> **注意：** 本文描述的 Prefab 系统已被 [Presenter-as-Actor 架构](presenter-as-actor-architecture.md) 取代。Prefab 的"层级化视觉资产"概念现在由 Presenter 树的 children + AssetBinding 实现，Grounding 语义由 `PresenterGroundingUtility` 承载。本文中关于 visual height 真相归属、Core-owned lowering、adapter 不拥有 grounding 语义等原则仍然有效，只是执行载体从 `PrefabFinalizationPipeline` 变为 `PresenterBehaviorSystem` + `PresenterEmitSystem`。
 
 本页用人话说明 Ludots 里 prefab grounding 这件事到底在解决什么问题，以及为什么这块工作必须按固定顺序推进。
 
@@ -48,7 +48,7 @@ Ludots 的正式答案应该只有一个：
 
 这是视觉层用来回答“这个世界点的地面高度是多少”“地面法线是什么”的真相。
 
-在当前设计里，这个真相应该统一收口到 `IVisualHeightmap`，并通过 `CoreServiceKeys.VisualHeightmap` 暴露。
+在当前设计里，这个真相应该统一收口到 `IContinuousHeightmap`，并通过 `CoreServiceKeys.ContinuousHeightmap` 暴露。
 
 这意味着：
 
@@ -124,7 +124,7 @@ Prefab 的正式含义应该是：
 人话就是：
 
 - 地图加载时，必须能正式声明“这张地图用哪个 visual height asset”
-- Core 必须在正常 map load 流程里把这个 asset 绑定成 `IVisualHeightmap`
+- Core 必须在正常 map load 流程里把这个 asset 绑定成 `IContinuousHeightmap`
 - 不是靠 showcase runtime 临时注入
 - 不是靠 adapter 自己猜
 
@@ -199,7 +199,7 @@ Core 仓库只保留 shared contract 和平台无关测试；UE5 render bridge �
 ### Core 负责什么
 
 - map load 时绑定 visual height asset
-- 提供统一的 `IVisualHeightmap`
+- 提供统一的 `IContinuousHeightmap`
 - 负责 prefab finalization
 - 负责 grounded part 的统一 lowering
 - 负责 shared validation
@@ -253,7 +253,8 @@ Core 仓库只保留 shared contract 和平台无关测试；UE5 render bridge �
 
 - `docs/architecture/presentation_snapshot_contract.md`
 - `docs/architecture/persistent_static_adapter_sync.md`
-- `src/Core/Presentation/Assets/PrefabFinalizationPipeline.cs`
+- `src/Core/Presentation/Presenters/PresenterGroundingUtility.cs`
+- `src/Core/Presentation/Systems/PresenterBehaviorSystem.cs`
 - 开发者仓库中的商业引擎 adapter render bridge
-- `src/Tests/PresentationTests/Rendering/PrefabFinalizationAndVisualHeightmapTests.cs`
+- `src/Tests/PresentationTests/Rendering/ContinuousHeightmapRuntimeTruthTests.cs`
 - `src/Tests/PresentationTests/Core/PresentationFoundationTests.cs`

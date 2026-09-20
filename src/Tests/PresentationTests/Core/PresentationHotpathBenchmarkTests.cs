@@ -116,6 +116,21 @@ namespace Ludots.Tests.Presentation
                 "camera_pan: expected composite upload to run every measured frame");
             Assert.That(valueChurn.CompositeSkipRate, Is.EqualTo(0d),
                 "value_churn: expected composite upload to run every measured frame");
+            Assert.That(steadyState.AllocatedBytesPerFrame, Is.LessThan(64d),
+                $"steady_same_view: alloc per frame must stay under 64 B (baseline 0.0 B); actual {steadyState.AllocatedBytesPerFrame:F1} B");
+            Assert.That(cameraPan.AllocatedBytesPerFrame, Is.LessThan(1024d),
+                $"camera_pan: alloc per frame must stay under 1024 B (数值文本走 glyph 直排后每帧 SKTextBlob wrapper 常数开销); actual {cameraPan.AllocatedBytesPerFrame:F1} B");
+            Assert.That(valueChurn.AllocatedBytesPerFrame, Is.LessThan(1024d),
+                $"value_churn: alloc per frame must stay under 1024 B (数值文本走 glyph 直排后每帧 SKTextBlob wrapper 常数开销); actual {valueChurn.AllocatedBytesPerFrame:F1} B");
+            Assert.That(valueChurnTextOnly.TotalTextSpriteCacheClears, Is.EqualTo(0),
+                "value_churn_text_only: 数值文本不得触发 retained sprite 缓存全清（glyph 直排合同）");
+            Assert.That(valueChurn.TotalTextSpriteCacheClears, Is.EqualTo(0),
+                "value_churn: 混合场景数值文本不得触发 retained sprite 缓存全清");
+            Assert.That(valueChurnTextOnly.TotalTextLayoutCacheClears, Is.EqualTo(0),
+                "value_churn_text_only: 有界数值字符串（900 distinct）不得溢出 8192 layout 缓存");
+            Assert.That(valueChurnTextOnly.AverageTotalMs,
+                Is.LessThan(valueChurnBarsOnly.AverageTotalMs * 1.5d),
+                $"value_churn: text-only 必须保持在 bars-only 的 1.5 倍以内（glyph 直排回归防线；text {valueChurnTextOnly.AverageTotalMs:F3}ms vs bars {valueChurnBarsOnly.AverageTotalMs:F3}ms）");
         }
 
         private static BenchmarkScenarioResult RunScenario(
@@ -138,6 +153,8 @@ namespace Ludots.Tests.Presentation
             int[] rebuiltLanes = new int[MeasuredFrames];
 
             long startAlloc = GC.GetAllocatedBytesForCurrentThread();
+            int totalTextSpriteCacheClears = 0;
+            int totalTextLayoutCacheClears = 0;
             for (int frame = 0; frame < MeasuredFrames; frame++)
             {
                 FrameConfig config = configFactory(frame);
@@ -147,6 +164,8 @@ namespace Ludots.Tests.Presentation
                 renderTimes[frame] = metrics.RenderMs;
                 dirtyLanes[frame] = metrics.DirtyLanes;
                 rebuiltLanes[frame] = metrics.RebuiltLanes;
+                totalTextSpriteCacheClears += metrics.TextSpriteCacheClears;
+                totalTextLayoutCacheClears += metrics.TextLayoutCacheClears;
             }
 
             long allocatedBytes = GC.GetAllocatedBytesForCurrentThread() - startAlloc;
@@ -158,7 +177,9 @@ namespace Ludots.Tests.Presentation
                 dirtyLanes,
                 rebuiltLanes,
                 allocatedBytes,
-                harness.CompositeSkipCount);
+                harness.CompositeSkipCount,
+                totalTextSpriteCacheClears,
+                totalTextLayoutCacheClears);
         }
 
         private static void Warmup(
@@ -196,13 +217,18 @@ namespace Ludots.Tests.Presentation
             double renderMs = harness.Render(scene, renderer, surface.Canvas, out int rebuiltLaneCount);
             double totalMs = (Stopwatch.GetTimestamp() - totalStart) * 1000d / Stopwatch.Frequency;
 
-            return new FrameMetrics(totalMs, buildMs, renderMs, dirtyLaneCount, rebuiltLaneCount);
+            return new FrameMetrics(
+                totalMs,
+                buildMs,
+                renderMs,
+                dirtyLaneCount,
+                rebuiltLaneCount,
+                renderer.LastTextSpriteCacheClears,
+                renderer.LastTextLayoutCacheClears);
         }
 
         private static void FillScreenHud(ScreenHudBatchBuffer screenHud, FrameConfig config)
         {
-            screenHud.Clear();
-
             const int columns = 64;
             const float baseBarX = 14f;
             const float baseBarY = 12f;
@@ -214,61 +240,83 @@ namespace Ludots.Tests.Presentation
             Vector4 barBackground = new(0.10f, 0.12f, 0.16f, 0.88f);
             Vector4 barForeground = new(0.15f, 0.82f, 0.46f, 0.96f);
             Vector4 textColor = new(0.96f, 0.96f, 0.90f, 1f);
+            int projectedBarCount = 0;
+            int projectedTextCount = 0;
 
-            for (int i = 0; i < VisibleEntityCount; i++)
+            screenHud.BeginProjectedBuild(retained: true);
+            try
             {
-                int row = i / columns;
-                int column = i % columns;
-                float x = baseBarX + (column * colSpacing) + config.PositionOffsetX;
-                float y = baseBarY + (row * rowSpacing) + config.PositionOffsetY;
-
-                float fill = config.PulseFill
-                    ? 0.18f + (((i + config.ValueOffset) % 12) * 0.06f)
-                    : 0.22f + ((i % 9) * 0.07f);
-                if (fill > 0.98f)
+                for (int i = 0; i < VisibleEntityCount; i++)
                 {
-                    fill = 0.98f;
-                }
+                    int row = i / columns;
+                    int column = i % columns;
+                    float x = baseBarX + (column * colSpacing) + config.PositionOffsetX;
+                    float y = baseBarY + (row * rowSpacing) + config.PositionOffsetY;
 
-                int numericValue = 100 + ((i + config.ValueOffset) % 900);
-
-                if (config.EmitBars)
-                {
-                    screenHud.TryAddBar(new ScreenHudBarItem
+                    float fill = config.PulseFill
+                        ? 0.18f + (((i + config.ValueOffset) % 12) * 0.06f)
+                        : 0.22f + ((i % 9) * 0.07f);
+                    if (fill > 0.98f)
                     {
-                        StableId = HudItemIdentity.ComposeStableId(i + 1, WorldHudItemKind.Bar, discriminator: 1),
-                        DirtySerial = HudItemIdentity.ComposeBarDirtySerial(barWidth, barHeight, fill, barBackground, barForeground),
-                        ScreenX = x,
-                        ScreenY = y,
-                        Width = barWidth,
-                        Height = barHeight,
-                        Value0 = fill,
-                        Color0 = barBackground,
-                        Color1 = barForeground,
-                    });
-                }
+                        fill = 0.98f;
+                    }
 
-                if (config.EmitText)
-                {
-                    screenHud.TryAddText(new ScreenHudTextItem
+                    int numericValue = 100 + ((i + config.ValueOffset) % 900);
+
+                    if (config.EmitBars)
                     {
-                        StableId = HudItemIdentity.ComposeStableId(i + 1, WorldHudItemKind.Text, discriminator: 2),
-                        DirtySerial = HudItemIdentity.ComposeTextDirtySerial(
-                            fontSize,
-                            stringTableId: 0,
-                            valueModeId: (int)WorldHudValueMode.AttributeCurrent,
-                            value0: numericValue,
-                            value1: 0f,
-                            color: textColor,
-                            packet: default),
-                        ScreenX = x + 1f,
-                        ScreenY = y - 9f,
-                        FontSize = fontSize,
-                        Color0 = textColor,
-                        Value0 = numericValue,
-                        Id1 = (int)WorldHudValueMode.AttributeCurrent,
-                    });
+                        var item = new ScreenHudBarItem
+                        {
+                            StableId = HudItemIdentity.ComposeStableId(i + 1, WorldHudItemKind.Bar, discriminator: 1),
+                            DirtySerial = HudItemIdentity.ComposeBarDirtySerial(barWidth, barHeight, fill, barBackground, barForeground),
+                            ScreenX = x,
+                            ScreenY = y,
+                            Width = barWidth,
+                            Height = barHeight,
+                            Value0 = fill,
+                            Color0 = barBackground,
+                            Color1 = barForeground,
+                        };
+                        if (!screenHud.TryUpsertProjectedBar(in item))
+                        {
+                            throw new InvalidOperationException("Screen HUD bar benchmark buffer overflowed.");
+                        }
+
+                        projectedBarCount++;
+                    }
+
+                    if (config.EmitText)
+                    {
+                        var item = new ScreenHudTextItem
+                        {
+                            StableId = HudItemIdentity.ComposeStableId(i + 1, WorldHudItemKind.Text, discriminator: 2),
+                            DirtySerial = HudItemIdentity.ComposeTextDirtySerial(
+                                fontSize,
+                                stringTableId: 0,
+                                valueModeId: (int)WorldHudValueMode.AttributeCurrent,
+                                value0: numericValue,
+                                value1: 0f,
+                                color: textColor,
+                                packet: default),
+                            ScreenX = x + 1f,
+                            ScreenY = y - 9f,
+                            FontSize = fontSize,
+                            Color0 = textColor,
+                            Value0 = numericValue,
+                            Id1 = (int)WorldHudValueMode.AttributeCurrent,
+                        };
+                        if (!screenHud.TryUpsertProjectedText(in item))
+                        {
+                            throw new InvalidOperationException("Screen HUD text benchmark buffer overflowed.");
+                        }
+
+                        projectedTextCount++;
+                    }
                 }
+            }
+            finally
+            {
+                screenHud.EndProjectedBuild(true, projectedBarCount, projectedTextCount);
             }
         }
 
@@ -394,7 +442,9 @@ namespace Ludots.Tests.Presentation
             double BuildMs,
             double RenderMs,
             int DirtyLanes,
-            int RebuiltLanes);
+            int RebuiltLanes,
+            int TextSpriteCacheClears,
+            int TextLayoutCacheClears);
 
         private sealed class UnderUiHostHarness
         {
@@ -496,7 +546,9 @@ namespace Ludots.Tests.Presentation
                 int[] dirtyLanes,
                 int[] rebuiltLanes,
                 long allocatedBytes,
-                int compositeSkipCount)
+                int compositeSkipCount,
+                int totalTextSpriteCacheClears,
+                int totalTextLayoutCacheClears)
             {
                 Name = name;
                 FrameTotals = frameTotals;
@@ -506,6 +558,8 @@ namespace Ludots.Tests.Presentation
                 RebuiltLanes = rebuiltLanes;
                 AllocatedBytes = allocatedBytes;
                 CompositeSkipCount = compositeSkipCount;
+                TotalTextSpriteCacheClears = totalTextSpriteCacheClears;
+                TotalTextLayoutCacheClears = totalTextLayoutCacheClears;
             }
 
             public string Name { get; }
@@ -516,6 +570,8 @@ namespace Ludots.Tests.Presentation
             public int[] RebuiltLanes { get; }
             public long AllocatedBytes { get; }
             public int CompositeSkipCount { get; }
+            public int TotalTextSpriteCacheClears { get; }
+            public int TotalTextLayoutCacheClears { get; }
 
             public double AverageTotalMs => Average(FrameTotals);
             public double P95TotalMs => Percentile(FrameTotals, 0.95);

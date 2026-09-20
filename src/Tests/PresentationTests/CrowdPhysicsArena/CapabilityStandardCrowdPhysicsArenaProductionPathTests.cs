@@ -25,7 +25,8 @@ using Ludots.Core.Physics2D;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Minimap;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
@@ -53,6 +54,7 @@ namespace Ludots.Tests.Presentation
         {
             "LudotsCoreMod",
             "CoreInputMod",
+            "SelectionInteractionMod",
             "MassNavigationMod",
             "CapabilityStandardCrowdPhysicsArenaMod"
         };
@@ -62,7 +64,7 @@ namespace Ludots.Tests.Presentation
         {
             AttributeRegistry.Clear();
             TagRegistry.Clear();
-            PerformerScopeTagRegistry.Clear();
+            PresenterScopeTagRegistry.Clear();
         }
 
         [TearDown]
@@ -70,7 +72,7 @@ namespace Ludots.Tests.Presentation
         {
             AttributeRegistry.Clear();
             TagRegistry.Clear();
-            PerformerScopeTagRegistry.Clear();
+            PresenterScopeTagRegistry.Clear();
         }
 
         [Test]
@@ -88,8 +90,13 @@ namespace Ludots.Tests.Presentation
             WaitForScenarioAgents(engine, simulation, expectedAgents);
 
             // Every squad agent must be a kinematic physics participant driven by the massnav bridge.
+            // NavigationAgentCount 只证明 solver 配置规模，spawn 队列排空并绑定到 kinematic 桥才算物化完成。
             var feedSystem = RequireService(engine, MovementPhysics2DBridgeKeys.KinematicPoseFeedSystem);
-            TickFrames(engine, 2);
+            WaitUntil(
+                engine,
+                MaxWarmupFrames,
+                () => feedSystem.LastFedParticipantCount == expectedAgents,
+                () => $"Kinematic pose feed did not reach {expectedAgents} participants within {MaxWarmupFrames} frames (last fed: {feedSystem.LastFedParticipantCount}).");
             Assert.That(feedSystem.LastFedParticipantCount, Is.EqualTo(expectedAgents),
                 "All arena squad agents must be fed into the kinematic pose buffer every fixed step.");
 
@@ -133,7 +140,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(cratesBefore, Has.Count.EqualTo(6), "The arena map authors six crates in the corridor.");
 
             var backend = RequireBackend(engine);
-            Entity localPlayer = RequireService(engine, CoreServiceKeys.LocalPlayerEntity);
+            Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             ReplaceCommandSource(engine, localPlayer, squad.ToArray());
 
             // The crate corridor sits at x 4250..4510; marching from the west spawn (~2400) to just
@@ -182,7 +189,7 @@ namespace Ludots.Tests.Presentation
             List<Entity> squad = CollectAgents(engine, controllable: true);
             Assert.That(squad, Has.Count.EqualTo(ExpectedSquadSize));
             var backend = RequireBackend(engine);
-            Entity localPlayer = RequireService(engine, CoreServiceKeys.LocalPlayerEntity);
+            Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
 
             // Phase 1: send exactly four units straight across the plate (plate box: x 5560..5640,
             // y 4580..5420), each on its own lane with its own arrival point so the runners never
@@ -234,7 +241,7 @@ namespace Ludots.Tests.Presentation
                     $"plateEnd={plate.AgentContactEndCount}, centroid={ComputeCentroid(engine, squad)}, " +
                     $"lastActivation={DescribeLastActivation(engine)}");
             Assert.That(plate.AgentContactBeginCount, Is.GreaterThanOrEqualTo(20));
-            AssertDoorObstacleSinksCleared(engine);
+            AssertOpenedDoorRemoved(engine);
         }
 
         [Test]
@@ -251,7 +258,7 @@ namespace Ludots.Tests.Presentation
             List<Entity> squad = CollectAgents(engine, controllable: true);
             Assert.That(squad, Has.Count.EqualTo(ExpectedSquadSize));
             var backend = RequireBackend(engine);
-            Entity localPlayer = RequireService(engine, CoreServiceKeys.LocalPlayerEntity);
+            Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             PoseAuthorityArbiter arbiter = RequireService(engine, CoreServiceKeys.PoseAuthorityArbiter);
 
             // March into the open south-western field: the knockback scenario asserts full-squad
@@ -432,7 +439,7 @@ namespace Ludots.Tests.Presentation
 
         private static void WriteKinematicBudgetOverrideMod(string modDir, int kinematicBodyCapacity)
         {
-            Directory.CreateDirectory(Path.Combine(modDir, "assets", "Configs", "Physics2D"));
+            Directory.CreateDirectory(Path.Combine(modDir, "assets", "Physics2D"));
             File.WriteAllText(
                 Path.Combine(modDir, "mod.json"),
                 "{\n" +
@@ -446,7 +453,7 @@ namespace Ludots.Tests.Presentation
                 "  \"author\": \"ProductionPathTests\"\n" +
                 "}\n");
             File.WriteAllText(
-                Path.Combine(modDir, "assets", "Configs", "Physics2D", "kinematic.json"),
+                Path.Combine(modDir, "assets", "Physics2D", "kinematic.json"),
                 $"{{\n  \"kinematicBodyCapacity\": {kinematicBodyCapacity}\n}}\n");
         }
 
@@ -572,7 +579,7 @@ namespace Ludots.Tests.Presentation
 
         private static List<Entity> CollectAgents(GameEngine engine, bool controllable)
         {
-            Entity localPlayer = RequireService(engine, CoreServiceKeys.LocalPlayerEntity);
+            Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             ControlDomainQuery domains = RequireService(engine, CoreServiceKeys.ControlDomainQuery);
             var result = new List<Entity>();
             var query = new QueryDescription().WithAll<MassNavigationAgent, MassNavigationAgentIndex, WorldPositionCm>();
@@ -741,17 +748,15 @@ namespace Ludots.Tests.Presentation
             return threshold;
         }
 
-        private static void AssertDoorObstacleSinksCleared(GameEngine engine)
+        private static void AssertOpenedDoorRemoved(GameEngine engine)
         {
             int doors = 0;
-            var query = new QueryDescription().WithAll<CrowdPhysicsArenaDoor, ManifestationObstacleIntent2D>();
-            engine.World.Query(in query, (ref CrowdPhysicsArenaDoor _, ref ManifestationObstacleIntent2D intent) =>
+            var query = new QueryDescription().WithAll<CrowdPhysicsArenaDoor>();
+            engine.World.Query(in query, (ref CrowdPhysicsArenaDoor _) =>
             {
                 doors++;
-                Assert.That(intent.SinkPhysicsCollider, Is.Zero, "Opened door must sink no physics collider.");
-                Assert.That(intent.SinkNavigationObstacle, Is.Zero, "Opened door must sink no navigation obstacle.");
             });
-            Assert.That(doors, Is.EqualTo(1), "The arena map authors exactly one door.");
+            Assert.That(doors, Is.EqualTo(0), "Opened door must leave no live blocking/visible door entity behind.");
         }
 
         private static void ReplaceCommandSource(GameEngine engine, Entity owner, ReadOnlySpan<Entity> members)
@@ -796,7 +801,7 @@ namespace Ludots.Tests.Presentation
         {
             // The relief heightmap sits hundreds of meters above y=0; projecting the ground point at
             // its sampled terrain height keeps it in front of the camera (finite screen coordinates).
-            var heightmap = RequireService(engine, CoreServiceKeys.VisualHeightmap);
+            var heightmap = RequireService(engine, CoreServiceKeys.ContinuousHeightmap);
             Assert.That(heightmap.TrySampleHeightCm(worldCm.X, worldCm.Y, out float groundHeightCm), Is.True,
                 $"Visual heightmap does not cover ground point {worldCm}.");
             var projector = RequireService(engine, CoreServiceKeys.ScreenProjector);
@@ -821,7 +826,8 @@ namespace Ludots.Tests.Presentation
         private static void StartStartupMap(GameEngine engine)
         {
             Assert.That(engine.MergedConfig.StartupMapId, Is.EqualTo("crowd_physics_arena"));
-            Assert.That(engine.MergedConfig.StartupLocalPlayerId, Is.GreaterThan(0));
+            Assert.That(engine.MergedConfig.HasStartupLocalSeats, Is.True);
+            Assert.That(engine.MergedConfig.StartupLocalSeats[0].PlayerId, Is.GreaterThan(0));
 
             engine.Start();
             engine.LoadStartupMap();

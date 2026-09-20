@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Spatial;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Navigation.Terrain
 {
@@ -98,6 +99,10 @@ namespace Ludots.Core.Navigation.Terrain
 
         public abstract int VerticalStepCm { get; }
 
+        public abstract int ChunkWidthCm { get; }
+
+        public abstract int ChunkHeightCm { get; }
+
         public bool IsInBounds(int col, int row)
             => (uint)col < (uint)WidthCells && (uint)row < (uint)HeightCells;
 
@@ -126,6 +131,13 @@ namespace Ludots.Core.Navigation.Terrain
         public override int HorizontalStepCm => HexCoordinates.EdgeLengthCm;
 
         public override int VerticalStepCm => HexCoordinates.EdgeLengthCm;
+
+        // Hex 列距/行距是 HexWidth/RowSpacing 而非 EdgeLength，chunk 世界尺寸不能由 step×数量推出
+        public override int ChunkWidthCm
+            => (int)MathF.Round(HexCoordinates.HexWidth * ChunkSizeCells * SpatialScaleDefaults.CellCm);
+
+        public override int ChunkHeightCm
+            => (int)MathF.Round(HexCoordinates.RowSpacing * ChunkSizeCells * SpatialScaleDefaults.CellCm);
 
         public override LogicTerrainCell GetCell(int col, int row)
         {
@@ -179,17 +191,23 @@ namespace Ludots.Core.Navigation.Terrain
     public sealed class FlatGridLogicTerrainField : LogicTerrainField
     {
         private readonly LogicTerrainCell _cell;
+        private readonly int _originXcm;
+        private readonly int _originZcm;
 
         public FlatGridLogicTerrainField(
             int widthCells,
             int heightCells,
             int cellSizeCm = SpatialScaleDefaults.CellCm,
             int chunkSizeCells = SpatialScaleDefaults.TerrainChunkCells,
-            LogicTerrainCell cell = default)
+            LogicTerrainCell cell = default,
+            int originXcm = 0,
+            int originZcm = 0)
             : base(widthCells, heightCells, chunkSizeCells)
         {
             if (cellSizeCm <= 0) throw new ArgumentOutOfRangeException(nameof(cellSizeCm));
             CellSizeCm = cellSizeCm;
+            _originXcm = originXcm;
+            _originZcm = originZcm;
             _cell = cell.Cost > 0f ? cell : new LogicTerrainCell(0, 0, LogicTerrainSurfaceFlags.None);
         }
 
@@ -201,13 +219,19 @@ namespace Ludots.Core.Navigation.Terrain
 
         public override int VerticalStepCm => CellSizeCm;
 
+        public override int ChunkWidthCm => checked(CellSizeCm * ChunkSizeCells);
+
+        public override int ChunkHeightCm => checked(CellSizeCm * ChunkSizeCells);
+
         public override LogicTerrainCell GetCell(int col, int row)
             => IsInBounds(col, row) ? _cell : default;
 
         public override void GetWorldPositionMeters(int col, int row, out float xMeters, out float zMeters)
         {
-            xMeters = col * SpatialScaleDefaults.CentimetersToMeters(CellSizeCm);
-            zMeters = row * SpatialScaleDefaults.CentimetersToMeters(CellSizeCm);
+            xMeters = SpatialScaleDefaults.CentimetersToMeters(
+                checked(_originXcm + (col * CellSizeCm)));
+            zMeters = SpatialScaleDefaults.CentimetersToMeters(
+                checked(_originZcm + (row * CellSizeCm)));
         }
     }
 
@@ -219,11 +243,15 @@ namespace Ludots.Core.Navigation.Terrain
             int widthCells,
             int heightCells,
             int cellSizeCm = SpatialScaleDefaults.CellCm,
-            int chunkSizeCells = SpatialScaleDefaults.TerrainChunkCells)
+            int chunkSizeCells = SpatialScaleDefaults.TerrainChunkCells,
+            int originXcm = 0,
+            int originZcm = 0)
             : base(widthCells, heightCells, chunkSizeCells)
         {
             if (cellSizeCm <= 0) throw new ArgumentOutOfRangeException(nameof(cellSizeCm));
             CellSizeCm = cellSizeCm;
+            OriginXcm = originXcm;
+            OriginYcm = originZcm;
             _cells = new LogicTerrainCell[checked(widthCells * heightCells)];
             Fill(new LogicTerrainCell(0, 0, LogicTerrainSurfaceFlags.None));
         }
@@ -232,9 +260,17 @@ namespace Ludots.Core.Navigation.Terrain
 
         public int CellSizeCm { get; }
 
+        public int OriginXcm { get; }
+
+        public int OriginYcm { get; }
+
         public override int HorizontalStepCm => CellSizeCm;
 
         public override int VerticalStepCm => CellSizeCm;
+
+        public override int ChunkWidthCm => checked(CellSizeCm * ChunkSizeCells);
+
+        public override int ChunkHeightCm => checked(CellSizeCm * ChunkSizeCells);
 
         public void SetCell(int col, int row, LogicTerrainCell cell)
         {
@@ -252,8 +288,8 @@ namespace Ludots.Core.Navigation.Terrain
 
         public override void GetWorldPositionMeters(int col, int row, out float xMeters, out float zMeters)
         {
-            xMeters = col * SpatialScaleDefaults.CentimetersToMeters(CellSizeCm);
-            zMeters = row * SpatialScaleDefaults.CentimetersToMeters(CellSizeCm);
+            xMeters = SpatialScaleDefaults.CentimetersToMeters(checked(OriginXcm + (col * CellSizeCm)));
+            zMeters = SpatialScaleDefaults.CentimetersToMeters(checked(OriginYcm + (row * CellSizeCm)));
         }
     }
 
@@ -284,6 +320,10 @@ namespace Ludots.Core.Navigation.Terrain
         public override int HorizontalStepCm => CellSizeCm;
 
         public override int VerticalStepCm => CellSizeCm;
+
+        public override int ChunkWidthCm => checked(CellSizeCm * ChunkSizeCells);
+
+        public override int ChunkHeightCm => checked(CellSizeCm * ChunkSizeCells);
 
         public void SetCell(int col, int row, LogicTerrainCell cell)
         {
@@ -354,40 +394,59 @@ namespace Ludots.Core.Navigation.Terrain
 
     public readonly struct LogicTerrainProjectionOptions
     {
-        public LogicTerrainProjectionOptions(int heightStepCm, int layerIndex = -1)
+        public LogicTerrainProjectionOptions(
+            int heightStepCm,
+            int layerIndex = -1,
+            float? blockedAtOrBelowHeightCm = null,
+            int originXcm = 0,
+            int originZcm = 0)
         {
             if (heightStepCm <= 0) throw new ArgumentOutOfRangeException(nameof(heightStepCm));
             HeightStepCm = heightStepCm;
             LayerIndex = layerIndex;
+            BlockedAtOrBelowHeightCm = blockedAtOrBelowHeightCm;
+            OriginXcm = originXcm;
+            OriginYcm = originZcm;
         }
 
         public int HeightStepCm { get; }
 
         public int LayerIndex { get; }
 
+        public float? BlockedAtOrBelowHeightCm { get; }
+
+        public int OriginXcm { get; }
+
+        public int OriginYcm { get; }
+
         public static LogicTerrainProjectionOptions Default { get; } =
             new LogicTerrainProjectionOptions(SpatialScaleDefaults.CellCm);
     }
 
-    public static class VisualHeightmapLogicTerrainProjection
+    public static class ContinuousHeightmapLogicTerrainProjection
     {
         public static MutableGridLogicTerrainField ProjectToGrid(
-            IVisualHeightmap visualHeightmap,
+            IContinuousHeightmap continuousHeightmap,
             int widthCells,
             int heightCells,
             int cellSizeCm,
             LogicTerrainProjectionOptions options)
         {
-            if (visualHeightmap == null) throw new ArgumentNullException(nameof(visualHeightmap));
+            if (continuousHeightmap == null) throw new ArgumentNullException(nameof(continuousHeightmap));
 
-            var field = new MutableGridLogicTerrainField(widthCells, heightCells, cellSizeCm);
+            var field = new MutableGridLogicTerrainField(
+                widthCells,
+                heightCells,
+                cellSizeCm,
+                originXcm: options.OriginXcm,
+                originZcm: options.OriginYcm);
             for (int row = 0; row < heightCells; row++)
             {
                 for (int col = 0; col < widthCells; col++)
                 {
-                    float xCm = col * cellSizeCm;
-                    float yCm = row * cellSizeCm;
-                    if (!visualHeightmap.TrySampleHeightCm(xCm, yCm, out float heightCm, options.LayerIndex))
+                    float xCm = options.OriginXcm + (col * cellSizeCm);
+                    float yCm = options.OriginYcm + (row * cellSizeCm);
+                    if (!continuousHeightmap.TrySampleHeightCm(xCm, yCm, out float heightCm, options.LayerIndex))
                     {
                         throw new InvalidOperationException(
                             $"Visual heightmap projection failed at grid cell ({col},{row}).");
@@ -395,7 +454,12 @@ namespace Ludots.Core.Navigation.Terrain
 
                     int level = (int)MathF.Round(heightCm / options.HeightStepCm);
                     level = Math.Clamp(level, 0, SpatialScaleDefaults.LogicTerrainMaxHeightLevel);
-                    field.SetCell(col, row, new LogicTerrainCell((byte)level, 0, LogicTerrainSurfaceFlags.None));
+                    LogicTerrainSurfaceFlags flags =
+                        options.BlockedAtOrBelowHeightCm.HasValue &&
+                        heightCm <= options.BlockedAtOrBelowHeightCm.Value
+                            ? LogicTerrainSurfaceFlags.Blocked
+                            : LogicTerrainSurfaceFlags.None;
+                    field.SetCell(col, row, new LogicTerrainCell((byte)level, 0, flags));
                 }
             }
 

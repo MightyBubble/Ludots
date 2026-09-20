@@ -1,0 +1,46 @@
+{
+  "Id": "instanced_batch_demo",
+  "Tuning": {
+    "LoadedChunkCapacity": 16
+  },
+  "Tags": [
+    "fixture",
+    "instanced-batch",
+    "typed-lane"
+  ],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthCells": 256,
+      "HeightCells": 256,
+      "GridCellSizeCm": 100
+    }
+  ],
+  "DefaultCamera": {
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "Yaw": 45,
+    "Pitch": 50,
+    "DistanceCm": 2400
+  },
+  "Entities": [
+    {
+      "Template": "instanced_batch_demo_anchor",
+      "InstanceId": "instanced-batch-demo-anchor"
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "instanced-batch-demo-anchor"
+    }
+  ],
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "instanced-batch-demo-anchor"
+    }
+  ]
+}

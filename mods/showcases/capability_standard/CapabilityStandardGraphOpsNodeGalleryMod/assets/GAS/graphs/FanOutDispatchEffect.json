@@ -1,0 +1,27 @@
+[
+  {
+    "id": "showcase.graph_op.FanOutDispatchEffect",
+    "kind": "Effect",
+    "entry": "explicit",
+    "nodes": [
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "fanDispatch",
+        "op": "FanOutDispatchEffect",
+        "effectTemplate": "Effect.GraphOps.Strike",
+        "payloadPreset": "TargetToResolved"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "fanDispatch"
+      }
+    ],
+    "valueEdges": []
+  }
+]

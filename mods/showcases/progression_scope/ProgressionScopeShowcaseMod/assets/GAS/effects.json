@@ -1,7 +1,6 @@
 [
   {
     "id": "Effect.Showcase.CompleteCityDrill",
-    "tags": ["Effect.Showcase.Progression"],
     "presetType": "CompleteProgression",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -9,11 +8,13 @@
       "id": "Progression.Showcase.CityDrill",
       "scope": "explicit",
       "level": 1
-    }
+    },
+    "categories": [
+      "Effect.Showcase.Progression"
+    ]
   },
   {
     "id": "Effect.Showcase.CompleteFactionMandate",
-    "tags": ["Effect.Showcase.Progression"],
     "presetType": "CompleteProgression",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -21,11 +22,13 @@
       "id": "Progression.Showcase.FactionMandate",
       "scope": "explicit",
       "level": 1
-    }
+    },
+    "categories": [
+      "Effect.Showcase.Progression"
+    ]
   },
   {
     "id": "Effect.Showcase.CompleteProvinceLogistics",
-    "tags": ["Effect.Showcase.Progression"],
     "presetType": "CompleteProgression",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -33,6 +36,9 @@
       "id": "Progression.Showcase.ProvinceLogistics",
       "scope": "explicit",
       "level": 1
-    }
+    },
+    "categories": [
+      "Effect.Showcase.Progression"
+    ]
   }
 ]

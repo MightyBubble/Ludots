@@ -78,8 +78,8 @@ export const categories = [
     code: 'PRS',
     name: 'Presentation & Rendering',
     diagrams: [
-      ['performer-lifecycle.svg', 'Performer 生命周期', 'Definition → Compile → Bootstrap → Create → Update → Destroy'],
-      ['performer-command-flow.svg', 'PerformerCommand 流', 'Event → CommandBuffer → EmitSystem → EntityRuntime 的完整流'],
+      ['presenter-lifecycle.svg', 'Presenter 生命周期', 'Definition → Compile → Bootstrap → Create → Update → Destroy'],
+      ['presenter-command-flow.svg', 'PresenterCommand 流', 'Event → CommandBuffer → EmitSystem → EntityRuntime 的完整流'],
       ['behavior-activation.svg', 'BehaviorSlot 激活', '7 种行为的激活、条件与输出关系'],
       ['presentation-pipeline.svg', 'Presentation 渲染管线', 'Logic → 10 Phase → 8 Buffer → Platform → Screen'],
       ['minimap-architecture.svg', 'Minimap 架构', 'Data → MarkerBuffer → Presentation → ScreenOverlay 的完整链路'],

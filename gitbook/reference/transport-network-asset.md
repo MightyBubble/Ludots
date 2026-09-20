@@ -4,7 +4,7 @@ Parent: [Epic #415](https://github.com/MightyBubble/Ludots/issues/415). This is 
 
 ## Catalog
 
-Every mod that owns a transport network asset must declare it in `assets/Configs/config_catalog.json`:
+Every mod that owns a transport network asset must declare it in `assets/config_catalog.json`:
 
 ```json
 { "Path": "TransportNetwork/transport_network.json", "Policy": "Replace" }

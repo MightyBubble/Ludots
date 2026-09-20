@@ -95,7 +95,10 @@ public sealed record LauncherLaunchPlan(
     int SchemaVersion,
     string GeneratedAtUtc,
     string PlanFingerprint,
-    string GraphArtifactPath);
+    string GraphArtifactPath,
+    bool IsExecutableTarget = false,
+    string ExecutableProjectPath = "",
+    IReadOnlyList<string>? ExecutableArgs = null);
 
 public sealed record LauncherResolveResult(
     LauncherLaunchPlan Plan,
@@ -107,4 +110,19 @@ public sealed record LauncherLaunchResult(
     int Pid,
     string Url,
     string BootstrapPath,
-    LauncherLaunchPlan? Plan);
+    LauncherLaunchPlan? Plan)
+{
+    public IReadOnlyList<LauncherStartedProcess> Processes { get; init; } = Array.Empty<LauncherStartedProcess>();
+}
+
+public sealed record LauncherStartedProcess(
+    string Id,
+    string ProcessRole,
+    int Pid,
+    string AppAssemblyPath,
+    string BootstrapPath);
+
+public sealed record LauncherExecutableTargetRun(
+    string CommandLine,
+    int ExitCode,
+    string Output);

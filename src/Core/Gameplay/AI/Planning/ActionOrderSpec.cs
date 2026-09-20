@@ -1,3 +1,4 @@
+using System;
 using Ludots.Core.Gameplay.GAS.Orders;
 
 namespace Ludots.Core.Gameplay.AI.Planning
@@ -18,8 +19,13 @@ namespace Ludots.Core.Gameplay.AI.Planning
         public readonly OrderSubmitMode SubmitMode;
         public readonly int PlayerId;
 
-        public ActionOrderSpec(AiOrderPayloadKind payloadKind, int orderTypeId, OrderSubmitMode submitMode, int playerId = 0)
+        public ActionOrderSpec(AiOrderPayloadKind payloadKind, int orderTypeId, OrderSubmitMode submitMode, int playerId)
         {
+            if (playerId <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(playerId), "AI orders must declare a positive player id.");
+            }
+
             PayloadKind = payloadKind;
             OrderTypeId = orderTypeId;
             SubmitMode = submitMode;

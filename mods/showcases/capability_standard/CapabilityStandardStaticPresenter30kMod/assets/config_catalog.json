@@ -1,0 +1,13 @@
+[
+  { "Path": "GAS/effects.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "GAS/graphs.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "GAS/attribute_constraints.json", "Policy": "DeepObject" },
+  { "Path": "Entities/templates.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Presentation/presenters.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Presentation/mesh_assets.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Presentation/host_assets.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Presentation/animator_controllers.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Presentation/animation_clips.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Presentation/animation_profiles.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Camera/virtual_cameras.json", "Policy": "ArrayById", "IdField": "id" }
+]

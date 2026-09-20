@@ -159,6 +159,116 @@ namespace Ludots.Core.Movement
         }
 
         /// <summary>
+        /// 申请把实体写权从 Nav 切到 Attached（attachment 绑定建立时授予）。
+        /// Attached 是无限期持有（无窗口时钟），detach 时经 <see cref="RequestAttachedHandback"/> 归还。
+        /// 实体当前已是 Attached（重挂接/换父）时为幂等无操作。
+        /// </summary>
+        public void RequestAttachedAuthority(World world, Entity entity)
+        {
+            ArgumentNullException.ThrowIfNull(world);
+            ThrowIfCommitting();
+            if (!world.IsAlive(entity))
+            {
+                throw new InvalidOperationException(
+                    $"PoseAuthorityArbiter cannot grant attached authority for dead entity {entity.Id}.");
+            }
+
+            if (!world.Has<PoseAuthority>(entity))
+            {
+                throw new InvalidOperationException(
+                    $"PoseAuthorityArbiter requires PoseAuthority on entity {entity.Id} before granting attached authority.");
+            }
+
+            PoseAuthority authority = world.Get<PoseAuthority>(entity);
+            if (authority.Value == PoseAuthorityKind.Attached)
+            {
+                return;
+            }
+
+            if (authority.Value != PoseAuthorityKind.Nav)
+            {
+                throw new InvalidOperationException(
+                    $"PoseAuthorityArbiter cannot grant attached authority for entity {entity.Id}: current pose authority is {authority.Value}, expected Nav or Attached.");
+            }
+
+            if (TryFindWindowIndex(entity, out _) || HasPendingTransition(entity))
+            {
+                throw new InvalidOperationException(
+                    $"PoseAuthorityArbiter already tracks a window or pending transition for entity {entity.Id}.");
+            }
+
+            _pending.Add(new PendingTransition
+            {
+                Entity = entity,
+                From = PoseAuthorityKind.Nav,
+                To = PoseAuthorityKind.Attached,
+                MaxDurationMs = 0,
+            });
+        }
+
+        /// <summary>
+        /// 申请把实体写权从 Attached 归还 Nav（attachment 解除时归还）。
+        /// 切换在下一个固定步边界生效。
+        /// </summary>
+        public void RequestAttachedHandback(World world, Entity entity)
+        {
+            ArgumentNullException.ThrowIfNull(world);
+            ThrowIfCommitting();
+            if (!world.IsAlive(entity))
+            {
+                throw new InvalidOperationException(
+                    $"PoseAuthorityArbiter cannot hand back attached authority for dead entity {entity.Id}.");
+            }
+
+            if (!world.Has<PoseAuthority>(entity))
+            {
+                throw new InvalidOperationException(
+                    $"PoseAuthorityArbiter requires PoseAuthority on entity {entity.Id} before handing back attached authority.");
+            }
+
+            PoseAuthority authority = world.Get<PoseAuthority>(entity);
+            if (authority.Value != PoseAuthorityKind.Attached)
+            {
+                throw new InvalidOperationException(
+                    $"PoseAuthorityArbiter cannot hand back entity {entity.Id}: current pose authority is {authority.Value}, expected Attached.");
+            }
+
+            if (HasPendingTransition(entity))
+            {
+                throw new InvalidOperationException(
+                    $"PoseAuthorityArbiter already has a pending transition for entity {entity.Id}.");
+            }
+
+            _pending.Add(new PendingTransition
+            {
+                Entity = entity,
+                From = PoseAuthorityKind.Attached,
+                To = PoseAuthorityKind.Nav,
+                MaxDurationMs = 0,
+            });
+        }
+
+        /// <summary>
+        /// 撤销实体尚未结算的写权切换待办（效果事务回滚用：事务里 stage 的授权切换
+        /// 从未生效，必须从仲裁器待办中摘除，否则下一固定步边界会结算出一个
+        /// 事务已回滚的写权状态）。
+        /// </summary>
+        internal bool RemovePendingTransition(Entity entity)
+        {
+            bool removed = false;
+            for (int i = _pending.Count - 1; i >= 0; i--)
+            {
+                if (_pending[i].Entity == entity)
+                {
+                    _pending.RemoveAt(i);
+                    removed = true;
+                }
+            }
+
+            return removed;
+        }
+
+        /// <summary>
         /// 取消实体的写权窗口与待结算切换（合法异常终止路径）。
         /// 幂等：既无窗口也无待办时为无操作——取消方（GAS 位移、地图生命周期、结构重建）
         /// 与仲裁器自身的死亡检测谁先发现都合法。实体仍存活时写权立即回 Nav（取消不等边界：

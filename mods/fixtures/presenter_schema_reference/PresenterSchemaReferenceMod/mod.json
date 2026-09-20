@@ -1,0 +1,6 @@
+{
+  "name": "PresenterSchemaReferenceMod",
+  "version": "1.0.0",
+  "description": "Schema reference fixture exercising every presenter field, BehaviorKind, and AssetKind.",
+  "dependencies": {}
+}

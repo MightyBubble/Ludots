@@ -10,6 +10,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Exchange;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Items;
@@ -368,8 +369,9 @@ public sealed class FourXAssociationRuntime
             new ScopeRefBuffer(),
             new ScopeMemberTag());
 
-        ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(_playerA);
-        attributes.SetCurrent(_goldAttributeId, config.StartingGold);
+        TagOps tagOps = engine.GetService(CoreServiceKeys.TagOps)
+            ?? throw new InvalidOperationException("FourXAssociationShowcase requires TagOps.");
+        AttributeMutationOps.SetCurrent(world, _playerA, _goldAttributeId, config.StartingGold, tagOps);
 
         OwnershipResolver ownership = engine.GetService(CoreServiceKeys.OwnershipResolver)
             ?? throw new InvalidOperationException("OwnershipResolver missing.");

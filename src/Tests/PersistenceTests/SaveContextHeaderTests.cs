@@ -74,6 +74,18 @@ public sealed class SaveContextHeaderTests
     }
 
     [Test]
+    public void MapMismatchFailsBeforeWorldImport()
+    {
+        using GameEngine engine = CreateInitializedEngine();
+        SaveContextHeader header = SaveContextFactory.Capture(engine) with { MapId = "other-map" };
+
+        SaveContextException error = Assert.Throws<SaveContextException>(() => SaveContextValidator.Validate(header, engine))!;
+
+        Assert.That(error.Message, Does.Contain("mapId mismatch"));
+        Assert.That(error.Message, Does.Contain("other-map"));
+    }
+
+    [Test]
     public void RegistryFingerprintIsStableAcrossDictionaryAndMappingEnumerationOrder()
     {
         var first = new Dictionary<string, IReadOnlyList<RegistryMapping>>

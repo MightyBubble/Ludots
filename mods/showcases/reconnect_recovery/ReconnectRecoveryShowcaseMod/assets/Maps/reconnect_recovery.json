@@ -1,0 +1,46 @@
+{
+  "Id": "reconnect_recovery",
+  "Tuning": {
+    "LoadedChunkCapacity": 16
+  },
+  "Tags": [
+    "showcase",
+    "reconnect",
+    "recovery"
+  ],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthCells": 256,
+      "HeightCells": 256,
+      "GridCellSizeCm": 100
+    }
+  ],
+  "Entities": [
+    {
+      "Template": "moba_hero",
+      "InstanceId": "reconnect_hero",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6400,
+            "Y": 6400
+          }
+        },
+        "Name": {
+          "Value": "Save Hero"
+        }
+      }
+    }
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Rts",
+    "TargetXCm": 6400,
+    "TargetYCm": 6400,
+    "Yaw": 180,
+    "Pitch": 50,
+    "DistanceCm": 5200,
+    "FovYDeg": 60
+  }
+}

@@ -28,7 +28,7 @@
     { "id": "terrain", "title": "Terrain / Board", "tint": "steel",
       "x": 90, "y": 380, "w": 300, "h": 110,
       "items": ["Map Terrain Data"] },
-    { "id": "performer", "title": "Performer MinimapMarker", "tint": "steel",
+    { "id": "presenter", "title": "Presenter MinimapMarker", "tint": "steel",
       "x": 90, "y": 540, "w": 300, "h": 110,
       "items": ["BehaviorSlot"] },
 
@@ -55,7 +55,7 @@
   "edges": [
     { "from": "worldpos", "to": "markerbuf", "route": "elbow", "from_side": "right", "to_side": "left" },
     { "from": "terrain", "to": "markerbuf", "route": "elbow", "from_side": "right", "to_side": "left" },
-    { "from": "performer", "to": "markerbuf", "route": "elbow", "from_side": "right", "to_side": "left" },
+    { "from": "presenter", "to": "markerbuf", "route": "elbow", "from_side": "right", "to_side": "left" },
     { "from": "markerbuf", "to": "present", "route": "elbow", "from_side": "right", "to_side": "left" },
     { "from": "runtime", "to": "present", "route": "elbow", "from_side": "bottom", "to_side": "top" },
     { "from": "present", "to": "screenmarker", "route": "elbow", "from_side": "bottom", "to_side": "top" },

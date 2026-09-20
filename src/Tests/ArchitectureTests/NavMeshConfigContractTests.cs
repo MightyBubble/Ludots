@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Map;
+using Ludots.Core.Map.Board;
 using Ludots.Core.Modding;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
@@ -49,6 +50,44 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void NavTileGranularity_MixedSizesAcrossBoardsAreRejected()
+        {
+            var config = new NavMeshBakeConfig();
+            var boards = new NavMapNavBoardsConfig();
+            boards.Boards["arena"] = new NavTileGridConfig { TileWorldWidthCm = 6400, TileWorldHeightCm = 6400 };
+            boards.Boards["harbor"] = new NavTileGridConfig { TileWorldWidthCm = 12800, TileWorldHeightCm = 6400 };
+            config.Maps["dual"] = boards;
+
+            var ex = Assert.Throws<InvalidOperationException>(
+                () => NavMeshBakeConfigLoader.ValidatePerMapTileGranularity(config));
+            Assert.That(ex!.Message, Does.Contain("mixed tile granularities"));
+        }
+
+        [Test]
+        public void NavTileGranularity_UniformNonSquareTilesAreAccepted()
+        {
+            var config = new NavMeshBakeConfig();
+            var boards = new NavMapNavBoardsConfig();
+            boards.Boards["arena"] = new NavTileGridConfig { TileWorldWidthCm = 12800, TileWorldHeightCm = 6400 };
+            boards.Boards["harbor"] = new NavTileGridConfig { TileWorldWidthCm = 12800, TileWorldHeightCm = 6400 };
+            config.Maps["dual"] = boards;
+
+            Assert.DoesNotThrow(() => NavMeshBakeConfigLoader.ValidatePerMapTileGranularity(config));
+        }
+
+        [Test]
+        public void NavTileGranularity_SingleBoardOrEmptyEntriesAreSkipped()
+        {
+            var config = new NavMeshBakeConfig();
+            var single = new NavMapNavBoardsConfig();
+            single.Boards["only"] = new NavTileGridConfig { TileWorldWidthCm = 6400, TileWorldHeightCm = 6400 };
+            config.Maps["solo"] = single;
+            config.Maps["empty"] = new NavMapNavBoardsConfig();
+
+            Assert.DoesNotThrow(() => NavMeshBakeConfigLoader.ValidatePerMapTileGranularity(config));
+        }
+
+        [Test]
         public void AgentProfileRegistry_LoadsAsNavigationArrayByIdContract()
         {
             string repoRoot = FindRepoRoot();
@@ -76,7 +115,7 @@ namespace Ludots.Tests.Architecture
         public void NavigationProfileConfigs_DoNotOwnDuplicateGeometryFields()
         {
             string repoRoot = FindRepoRoot();
-            JsonObject navmesh = ReadObject(Path.Combine(repoRoot, "assets", "Configs", "Navigation", "navmesh.json"));
+            JsonObject navmesh = ReadObject(Path.Combine(repoRoot, "assets", "Navigation", "navmesh.json"));
             JsonArray navProfiles = navmesh["profiles"]?.AsArray()
                 ?? throw new InvalidOperationException("Navigation/navmesh.json profiles missing.");
             foreach (JsonNode? node in navProfiles)
@@ -87,7 +126,7 @@ namespace Ludots.Tests.Architecture
                 Assert.That(profile.ContainsKey("heightCm"), Is.False);
             }
 
-            JsonObject pathing = ReadObject(Path.Combine(repoRoot, "assets", "Configs", "Navigation", "pathing.json"));
+            JsonObject pathing = ReadObject(Path.Combine(repoRoot, "assets", "Navigation", "pathing.json"));
             JsonArray agentTypes = pathing["agentTypes"]?.AsArray()
                 ?? throw new InvalidOperationException("Navigation/pathing.json agentTypes missing.");
             foreach (JsonNode? node in agentTypes)
@@ -102,7 +141,7 @@ namespace Ludots.Tests.Architecture
         public void AgentProfileRegistry_RejectsUnknownFieldsStrictly()
         {
             string tempRoot = Path.Combine(Path.GetTempPath(), "ludots-agent-profile-contract-" + Guid.NewGuid().ToString("N"));
-            string coreConfigs = Path.Combine(tempRoot, "Configs");
+            string coreConfigs = tempRoot;
             Directory.CreateDirectory(Path.Combine(coreConfigs, "Navigation"));
             File.WriteAllText(Path.Combine(coreConfigs, "config_catalog.json"),
                 "[{ \"Path\": \"Navigation/agent_profiles.json\", \"Policy\": \"ArrayById\", \"IdField\": \"id\" }]");
@@ -197,6 +236,40 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void GameEngine_NavBootstrap_PassesDeclaredTileGridDimensionsToQueryRegistry()
+        {
+            string repoRoot = FindRepoRoot();
+            string mapId = "nav_bootstrap_grid_tile_dims_contract";
+            string tempAssetsRoot = CreateTempAssetsRootWithNavTiles(repoRoot, mapId);
+            var config = NavMeshBakeConfigLoader.LoadFromRepoRoot(repoRoot);
+            var terrain = new FlatGridLogicTerrainField(192, 128, cellSizeCm: 250, chunkSizeCells: 64);
+
+            try
+            {
+                WriteAllChunkTileFiles(tempAssetsRoot, mapId, config, terrain, realTileCoord: (2, 1));
+
+                using var engine = CreateEngineWithTempNavAssets(repoRoot, tempAssetsRoot, mapId, terrain);
+
+                var registry = (NavQueryServiceRegistry)engine.GetService(CoreServiceKeys.NavQueryServices);
+                Assert.That(registry, Is.Not.Null);
+                Assert.That(registry.TryCreateQuery(layer: 0, profile: 0, areaCosts: null!, out NavQueryService query), Is.True);
+
+                // 世界点位于 tile (2,1)：x∈[32000,48000)，z∈[16000,32000)
+                Assert.That(query.TryProject(33000, 17000, out NavLocation loc), Is.True);
+                Assert.That(loc.TileId, Is.EqualTo(new NavTileId(2, 1, 0)));
+
+                NavPathResult path = query.TryFindPath(33000, 17000, 47000, 31000);
+                Assert.That(path.Status, Is.EqualTo(NavPathStatus.Ok));
+                Assert.That(path.PathXcm[0], Is.EqualTo(33000));
+                Assert.That(path.PathXcm[path.PathXcm.Length - 1], Is.EqualTo(47000));
+            }
+            finally
+            {
+                Directory.Delete(tempAssetsRoot, recursive: true);
+            }
+        }
+
+        [Test]
         public void NavMeshAndPathing_RejectLegacyProfileFields()
         {
             var agentProfiles = new AgentProfileRegistry(new[]
@@ -274,7 +347,7 @@ namespace Ludots.Tests.Architecture
         private static string CreateTempNavigationConfig(string navmeshJson, string pathingJson)
         {
             string tempRoot = Path.Combine(Path.GetTempPath(), "ludots-nav-contract-" + Guid.NewGuid().ToString("N"));
-            string coreConfigs = Path.Combine(tempRoot, "Configs");
+            string coreConfigs = tempRoot;
             Directory.CreateDirectory(Path.Combine(coreConfigs, "Navigation"));
             File.WriteAllText(Path.Combine(coreConfigs, "config_catalog.json"),
                 """
@@ -288,8 +361,13 @@ namespace Ludots.Tests.Architecture
             return tempRoot;
         }
 
-        private static GameEngine CreateEngineWithTempNavAssets(string repoRoot, string tempAssetsRoot, string mapId)
+        private static GameEngine CreateEngineWithTempNavAssets(string repoRoot, string tempAssetsRoot, string mapId, LogicTerrainField? terrain = null)
         {
+            var effectiveTerrain = terrain ?? new FlatGridLogicTerrainField(
+                SpatialScaleDefaults.TerrainChunkCells,
+                SpatialScaleDefaults.TerrainChunkCells,
+                chunkSizeCells: SpatialScaleDefaults.TerrainChunkCells);
+
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
                 new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") },
@@ -301,25 +379,120 @@ namespace Ludots.Tests.Architecture
 
             typeof(GameEngine)
                 .GetProperty(nameof(GameEngine.LogicTerrain), BindingFlags.Instance | BindingFlags.Public)!
-                .SetValue(engine, new FlatGridLogicTerrainField(
-                    SpatialScaleDefaults.TerrainChunkCells,
-                    SpatialScaleDefaults.TerrainChunkCells,
-                    chunkSizeCells: SpatialScaleDefaults.TerrainChunkCells));
+                .SetValue(engine, effectiveTerrain);
+
+            // The declared grid must match the tile geometry written by
+            // WriteAllChunkTileFiles: 64-cell chunks at 250 cm per cell.
+            Directory.CreateDirectory(Path.Combine(tempAssetsRoot, "Navigation"));
+            string catalogPath = Path.Combine(tempAssetsRoot, "config_catalog.json");
+            string catalog = File.Exists(catalogPath)
+                ? File.ReadAllText(catalogPath)
+                : "[]";
+            if (!catalog.Contains("Navigation/navmesh.json"))
+            {
+                var catalogNode = System.Text.Json.Nodes.JsonNode.Parse(catalog)!.AsArray();
+                var entry = new System.Text.Json.Nodes.JsonObject
+                {
+                    ["Path"] = "Navigation/navmesh.json",
+                    ["Policy"] = "DeepObject"
+                };
+                catalogNode.Add(entry);
+                File.WriteAllText(catalogPath, catalogNode.ToJsonString());
+            }
+
+            string navmeshPath = Path.Combine(tempAssetsRoot, "Navigation", "navmesh.json");
+            var navmesh = new System.Text.Json.Nodes.JsonObject
+            {
+                ["mode"] = "offline",
+                ["algorithm"] = "recast",
+                ["profiles"] = new System.Text.Json.Nodes.JsonArray(
+                    new System.Text.Json.Nodes.JsonObject { ["id"] = "Small", ["maxClimbCm"] = 40, ["maxSlopeDeg"] = 55 }),
+                ["layers"] = new System.Text.Json.Nodes.JsonArray(
+                    new System.Text.Json.Nodes.JsonObject { ["id"] = "ground", ["layer"] = 0 })
+            };
+            if (File.Exists(navmeshPath))
+            {
+                var existing = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(navmeshPath))!.AsObject();
+                foreach (var kv in existing)
+                {
+                    navmesh[kv.Key] = kv.Value?.DeepClone();
+                }
+            }
+            var mapsNode = navmesh["maps"] as System.Text.Json.Nodes.JsonObject ?? new System.Text.Json.Nodes.JsonObject();
+            navmesh["maps"] = mapsNode;
+            var mapNode = new System.Text.Json.Nodes.JsonObject();
+            mapsNode[mapId] = mapNode;
+            var boardsNode = new System.Text.Json.Nodes.JsonObject();
+            mapNode["boards"] = boardsNode;
+            var gridNode = new System.Text.Json.Nodes.JsonObject
+            {
+                ["tileWorldWidthCm"] = SpatialScaleDefaults.TerrainChunkCells * 250,
+                ["tileWorldHeightCm"] = SpatialScaleDefaults.TerrainChunkCells * 250
+            };
+            boardsNode["default"] = gridNode;
+            File.WriteAllText(navmeshPath, navmesh.ToJsonString());
 
             engine.LoadNavForMapForTests(
                 mapId,
                 new MapConfig
                 {
                     Id = mapId,
-                    Tags = new List<string> { MapTags.FeatureNavMeshOn.Name }
+                    Tags = new List<string> { MapTags.FeatureNavMeshOn.Name },
+                    Boards = new List<BoardConfig>
+                    {
+                        new BoardConfig
+                        {
+                            Name = "default",
+                            WidthCells = effectiveTerrain.WidthChunks * SpatialScaleDefaults.TerrainChunkCells,
+                            HeightCells = effectiveTerrain.HeightChunks * SpatialScaleDefaults.TerrainChunkCells,
+                            GridCellSizeCm = 250
+                        }
+                    }
                 });
 
             return engine;
         }
 
+        private static void WriteAllChunkTileFiles(
+            string tempAssetsRoot,
+            string mapId,
+            NavMeshBakeConfig config,
+            LogicTerrainField terrain,
+            (int ChunkX, int ChunkY) realTileCoord)
+        {
+            for (int layerIndex = 0; layerIndex < config.Layers.Count; layerIndex++)
+            {
+                int layer = config.Layers[layerIndex].Layer;
+                for (int profileIndex = 0; profileIndex < config.Profiles.Count; profileIndex++)
+                {
+                    string profileId = config.Profiles[profileIndex].Id;
+                    for (int cy = 0; cy < terrain.HeightChunks; cy++)
+                    {
+                        for (int cx = 0; cx < terrain.WidthChunks; cx++)
+                        {
+                            string rel = NavAssetPaths.GetNavTileRelativePath(mapId, layer, profileId, cx, cy);
+                            string tilePath = Path.Combine(tempAssetsRoot, rel.Replace('/', Path.DirectorySeparatorChar));
+                            Directory.CreateDirectory(Path.GetDirectoryName(tilePath)!);
+                            if (cx == realTileCoord.ChunkX && cy == realTileCoord.ChunkY)
+                            {
+                                using var ms = new MemoryStream();
+                                NavTileBinary.Write(ms, DefaultGridNavTileFactory.CreateFlatTile(
+                                    cx, cy, layer, tileVersion: 1, chunkSizeCells: 64, cellSizeCm: 250));
+                                File.WriteAllBytes(tilePath, ms.ToArray());
+                            }
+                            else
+                            {
+                                File.WriteAllBytes(tilePath, Array.Empty<byte>());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         private static void RewriteTempNavmeshMode(string tempAssetsRoot, string mode, string algorithm)
         {
-            string path = Path.Combine(tempAssetsRoot, "Configs", "Navigation", "navmesh.json");
+            string path = Path.Combine(tempAssetsRoot, "Navigation", "navmesh.json");
             JsonObject navmesh = ReadObject(path);
             navmesh["mode"] = mode;
             navmesh["algorithm"] = algorithm;
@@ -329,8 +502,8 @@ namespace Ludots.Tests.Architecture
         private static string CreateTempAssetsRootWithNavTiles(string repoRoot, string mapId)
         {
             string tempRoot = Path.Combine(Path.GetTempPath(), "ludots-nav-bootstrap-contract-" + Guid.NewGuid().ToString("N"));
-            string configSource = Path.Combine(repoRoot, "assets", "Configs");
-            string configTarget = Path.Combine(tempRoot, "Configs");
+            string configSource = Path.Combine(repoRoot, "assets");
+            string configTarget = tempRoot;
             CopyDirectory(configSource, configTarget);
 
             var config = NavMeshBakeConfigLoader.LoadFromRepoRoot(repoRoot);

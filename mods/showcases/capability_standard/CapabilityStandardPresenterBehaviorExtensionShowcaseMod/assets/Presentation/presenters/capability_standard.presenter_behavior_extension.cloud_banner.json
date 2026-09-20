@@ -1,0 +1,13 @@
+[
+  {
+    "id": "capability_standard.presenter_behavior_extension.cloud_banner",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "CapabilityStandardPresenterBehaviorExtensionShowcaseMod.CloudDrift",
+        "execution": { "lane": "ContinuousTick" },
+        "activeByDefault": true
+      }
+    ]
+  }
+]

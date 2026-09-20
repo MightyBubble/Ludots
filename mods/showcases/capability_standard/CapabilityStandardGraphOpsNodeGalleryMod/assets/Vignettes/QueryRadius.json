@@ -1,0 +1,94 @@
+{
+  "op": "QueryRadius",
+  "driver": "sandbox",
+  "title": "站圈心喊一嗓子，看看圈里有谁",
+  "beat": "黄圈内五个兵亮起来，施法者自己不算，圈外两人没反应。",
+  "detailTemplate": "圈内亮起{count}个兵，不含施法者；圈外两人不亮。",
+  "assertDetailContains": [
+    "个兵"
+  ],
+  "featuredNodeId": "radius",
+  "graphKind": "Query",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": 0,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "scout",
+      "role": "unit",
+      "template": "Unit.Scout",
+      "name": "侦察兵",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "nearA",
+      "role": "unit",
+      "template": "Unit.Soldier",
+      "name": "近处甲",
+      "x": 0,
+      "y": 4,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "nearB",
+      "role": "unit",
+      "template": "Unit.Soldier",
+      "name": "近处乙",
+      "x": -3,
+      "y": 3,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "nearC",
+      "role": "unit",
+      "template": "Unit.Soldier",
+      "name": "近处丙",
+      "x": 3,
+      "y": 3,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "nearD",
+      "role": "unit",
+      "template": "Unit.Soldier",
+      "name": "近处丁",
+      "x": -4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "farA",
+      "role": "unit",
+      "template": "Unit.Soldier",
+      "name": "远处甲",
+      "x": 12,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "farB",
+      "role": "unit",
+      "template": "Unit.Soldier",
+      "name": "远处乙",
+      "x": 0,
+      "y": 12,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

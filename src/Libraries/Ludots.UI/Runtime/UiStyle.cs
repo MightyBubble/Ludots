@@ -62,6 +62,16 @@ public sealed record UiStyle
 
 	public float ColumnGap { get; init; }
 
+	public IReadOnlyList<UiGridTrack> GridTemplateColumns { get; init; } = Array.Empty<UiGridTrack>();
+
+	public IReadOnlyList<UiGridTrack> GridTemplateRows { get; init; } = Array.Empty<UiGridTrack>();
+
+	public UiGridAutoFlow GridAutoFlow { get; init; } = UiGridAutoFlow.Row;
+
+	public UiGridPlacement GridColumn { get; init; } = UiGridPlacement.Auto;
+
+	public UiGridPlacement GridRow { get; init; } = UiGridPlacement.Auto;
+
 	public UiThickness Margin { get; init; } = UiThickness.Zero;
 
 	public UiThickness Padding { get; init; } = UiThickness.Zero;
@@ -106,9 +116,13 @@ public sealed record UiStyle
 
 	public float FontSize { get; init; } = 16f;
 
+	public float LineHeight { get; init; } = 1.4f;
+
 	public string? FontFamily { get; init; }
 
 	public bool Bold { get; init; }
+
+	public bool Italic { get; init; }
 
 	public UiTextDirection Direction { get; init; } = UiTextDirection.Ltr;
 
@@ -170,6 +184,11 @@ public sealed record UiStyle
 		Gap = original.Gap;
 		RowGap = original.RowGap;
 		ColumnGap = original.ColumnGap;
+		GridTemplateColumns = original.GridTemplateColumns;
+		GridTemplateRows = original.GridTemplateRows;
+		GridAutoFlow = original.GridAutoFlow;
+		GridColumn = original.GridColumn;
+		GridRow = original.GridRow;
 		Margin = original.Margin;
 		Padding = original.Padding;
 		BorderWidth = original.BorderWidth;
@@ -192,6 +211,7 @@ public sealed record UiStyle
 		Color = original.Color;
 		TextShadow = original.TextShadow;
 		FontSize = original.FontSize;
+		LineHeight = original.LineHeight;
 		FontFamily = original.FontFamily;
 		Bold = original.Bold;
 		Direction = original.Direction;

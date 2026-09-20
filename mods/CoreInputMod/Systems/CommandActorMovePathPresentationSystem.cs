@@ -10,13 +10,13 @@ using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Scripting;
+using Ludots.Platform.Abstractions;
 
 namespace CoreInputMod.Systems
 {
@@ -107,9 +107,9 @@ namespace CoreInputMod.Systems
         public void Update(in float dt)
         {
             Entity collectionOwner = ResolveCommandSourceOwner();
-            const string collectionKey = EntityCollectionKeys.CommandSource;
+            string collectionKey = InputInteractionContextAccessor.RequireActiveActorCollectionKey(_world, _globals, collectionOwner);
             Entity collectionContext = Entity.Null;
-            Entity primaryViewed = TryResolveCommandSourceView(collectionOwner, out EntityCollectionView commandSourceView)
+            Entity primaryViewed = TryResolveCommandSourceView(collectionOwner, collectionKey, out EntityCollectionView commandSourceView)
                 ? ResolveCollectionViewSummary(in commandSourceView, out collectionContext)
                 : Entity.Null;
 
@@ -130,9 +130,9 @@ namespace CoreInputMod.Systems
             }
 
             int frameId = _session?.CurrentTick ?? Environment.TickCount;
-            int viewedCount = GetCommandSourceCount(collectionOwner);
+            int viewedCount = GetCommandSourceCount(collectionOwner, collectionKey);
             EnsureCommandActorCapacity(viewedCount);
-            int count = CopyCommandSourceActors(collectionOwner, _commandActors);
+            int count = CopyCommandSourceActors(collectionOwner, collectionKey, _commandActors);
             if (count > 0)
             {
                 int emittedEntities = 0;
@@ -172,7 +172,7 @@ namespace CoreInputMod.Systems
                 : Entity.Null;
         }
 
-        private bool TryResolveCommandSourceView(Entity owner, out EntityCollectionView view)
+        private bool TryResolveCommandSourceView(Entity owner, string collectionKey, out EntityCollectionView view)
         {
             view = default;
             return owner != Entity.Null &&
@@ -181,25 +181,25 @@ namespace CoreInputMod.Systems
                    EntityCollectionContextRuntime.TryDescribeView(
                        collections,
                        owner,
-                       EntityCollectionKeys.CommandSource,
+                       collectionKey,
                        out view);
         }
 
-        private int GetCommandSourceCount(Entity owner)
+        private int GetCommandSourceCount(Entity owner, string collectionKey)
         {
             return owner != Entity.Null &&
                    _globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var collectionsObj) &&
                    collectionsObj is EntityCollectionStore collections
-                ? EntityCollectionContextRuntime.GetCount(collections, owner, EntityCollectionKeys.CommandSource)
+                ? EntityCollectionContextRuntime.GetCount(collections, owner, collectionKey)
                 : 0;
         }
 
-        private int CopyCommandSourceActors(Entity owner, Span<Entity> destination)
+        private int CopyCommandSourceActors(Entity owner, string collectionKey, Span<Entity> destination)
         {
             return owner != Entity.Null &&
                    _globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var collectionsObj) &&
                    collectionsObj is EntityCollectionStore collections
-                ? EntityCollectionContextRuntime.Copy(collections, owner, EntityCollectionKeys.CommandSource, destination)
+                ? EntityCollectionContextRuntime.Copy(collections, owner, collectionKey, destination)
                 : 0;
         }
 
@@ -390,7 +390,7 @@ namespace CoreInputMod.Systems
             }
 
             float widthMeters = WorldUnits.CmToM(isPrimary ? PrimaryLineWidthCm : SecondaryLineWidthCm);
-            float rotationDegrees = WorldPlane2D.RadToDegValue(WorldPlane2D.FacingRadFromDirection(dxCm, dzCm));
+            float rotationDegrees = VisualMath.RadToDegValue(WorldPlane2D.FacingRadFromDirection(dxCm, dzCm));
             PublishMovePathEvent(
                 PresentationEventKind.MovePathBegun,
                 _lineEventKeyId,
@@ -759,8 +759,10 @@ namespace CoreInputMod.Systems
 
         private static int ResolveEventKeyId(string key)
         {
-            int existing = TagRegistry.GetId(key);
-            return existing > 0 ? existing : TagRegistry.Register(key);
+            int existing = PresentationEventKeyRegistry.GetId(key);
+            return existing > PresentationEventKeyRegistry.InvalidId
+                ? existing
+                : PresentationEventKeyRegistry.Register(key);
         }
 
         private static Vector3 ToVisualMeters(Vector3 worldCm)

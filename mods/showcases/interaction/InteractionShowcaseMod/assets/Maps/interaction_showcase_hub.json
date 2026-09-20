@@ -1,7 +1,15 @@
 {
   "Id": "interaction_showcase_hub",
-  "VisualHeightmapAsset": "assets/terrain/interaction_showcase_flat.vhtm",
-  "Tags": ["interaction.showcase", "interaction.showcase.hub"],
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  },
+  "ContinuousHeightmapAsset": "assets/terrain/interaction_showcase_flat.height",
+  "Tags": [
+    "interaction.showcase",
+    "interaction.showcase.hub"
+  ],
   "DefaultCamera": {
     "VirtualCameraId": "Camera.Profile.Tactical",
     "TargetXCm": 1630,
@@ -15,88 +23,193 @@
       "Template": "interaction_arcweaver",
       "InstanceId": "interaction-arcweaver",
       "Overrides": {
-        "PlayerOwner": { "PlayerId": 1 },
-        "WorldPositionCm": { "Value": { "X": 1150, "Y": 900 } }
+        "PlayerOwner": {
+          "PlayerId": 1
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1150,
+            "Y": 900
+          }
+        }
       }
     },
     {
       "Template": "interaction_vanguard",
       "InstanceId": "interaction-vanguard",
       "Overrides": {
-        "PlayerOwner": { "PlayerId": 1 },
-        "WorldPositionCm": { "Value": { "X": 1500, "Y": 470 } }
+        "PlayerOwner": {
+          "PlayerId": 1
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1500,
+            "Y": 470
+          }
+        }
       }
     },
     {
       "Template": "interaction_commander",
       "InstanceId": "interaction-commander",
       "Overrides": {
-        "PlayerOwner": { "PlayerId": 1 },
-        "WorldPositionCm": { "Value": { "X": 1600, "Y": 1260 } }
+        "PlayerOwner": {
+          "PlayerId": 1
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1600,
+            "Y": 1260
+          }
+        }
       }
     },
     {
       "Template": "interaction_arcweaver_forms_demo",
       "InstanceId": "interaction-arcweaver-forms-demo",
       "Overrides": {
-        "Name": { "Value": "ArcweaverForms" },
-        "PlayerOwner": { "PlayerId": 1 },
-        "WorldPositionCm": { "Value": { "X": 1180, "Y": 1330 } }
+        "Name": {
+          "Value": "ArcweaverForms"
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1180,
+            "Y": 1330
+          }
+        }
       }
     },
     {
       "Template": "interaction_enemy_raider",
       "InstanceId": "interaction-enemy-skirmisher-a",
       "Overrides": {
-        "Name": { "Value": "EnemySkirmisherA" },
-        "WorldPositionCm": { "Value": { "X": 1730, "Y": 900 } }
+        "Name": {
+          "Value": "EnemySkirmisherA"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1730,
+            "Y": 900
+          }
+        }
       }
     },
     {
       "Template": "interaction_enemy_raider",
       "InstanceId": "interaction-enemy-skirmisher-b",
       "Overrides": {
-        "Name": { "Value": "EnemySkirmisherB" },
-        "WorldPositionCm": { "Value": { "X": 1880, "Y": 1050 } }
+        "Name": {
+          "Value": "EnemySkirmisherB"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1880,
+            "Y": 1050
+          }
+        }
       }
     },
     {
       "Template": "interaction_enemy_bruiser",
       "InstanceId": "interaction-enemy-bruiser-a",
       "Overrides": {
-        "Name": { "Value": "EnemyBruiserA" },
-        "WorldPositionCm": { "Value": { "X": 1770, "Y": 630 } }
+        "Name": {
+          "Value": "EnemyBruiserA"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1770,
+            "Y": 630
+          }
+        }
       }
     },
     {
       "Template": "interaction_enemy_bruiser",
       "InstanceId": "interaction-enemy-bruiser-b",
       "Overrides": {
-        "Name": { "Value": "EnemyBruiserB" },
-        "WorldPositionCm": { "Value": { "X": 2230, "Y": 1260 } }
+        "Name": {
+          "Value": "EnemyBruiserB"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2230,
+            "Y": 1260
+          }
+        }
       }
     }
   ],
   "Teams": [
-    { "TeamId": 1, "RepresentativeInstanceId": "interaction-commander" },
-    { "TeamId": 2, "RepresentativeInstanceId": "interaction-enemy-skirmisher-a" }
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "interaction-commander"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "interaction-enemy-skirmisher-a"
+    }
   ],
   "Players": [
-    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "interaction-commander" },
-    { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "interaction-enemy-skirmisher-a" }
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "interaction-commander"
+    },
+    {
+      "PlayerId": 2,
+      "TeamId": 2,
+      "RepresentativeInstanceId": "interaction-enemy-skirmisher-a"
+    }
   ],
   "ParticipantRelationships": {
     "Teams": [
-      { "TeamA": 1, "TeamB": 1, "TypeId": "InteractionShowcase.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 2, "TeamB": 2, "TypeId": "InteractionShowcase.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 1, "TeamB": 2, "TypeId": "InteractionShowcase.Participant", "Attitude": "Hostile", "Symmetric": true }
+      {
+        "TeamA": 1,
+        "TeamB": 1,
+        "TypeId": "InteractionShowcase.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 2,
+        "TeamB": 2,
+        "TypeId": "InteractionShowcase.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 1,
+        "TeamB": 2,
+        "TypeId": "InteractionShowcase.Participant",
+        "Attitude": "Hostile",
+        "Symmetric": true
+      }
     ],
     "Players": [
-      { "PlayerA": 1, "PlayerB": 2, "TypeId": "InteractionShowcase.Participant", "Symmetric": true }
+      {
+        "PlayerA": 1,
+        "PlayerB": 2,
+        "TypeId": "InteractionShowcase.Participant",
+        "Symmetric": true
+      }
     ],
     "PlayerTeams": [
-      { "PlayerId": 1, "TeamId": 1, "TypeId": "InteractionShowcase.Participant", "Symmetric": false },
-      { "PlayerId": 2, "TeamId": 2, "TypeId": "InteractionShowcase.Participant", "Symmetric": false }
+      {
+        "PlayerId": 1,
+        "TeamId": 1,
+        "TypeId": "InteractionShowcase.Participant",
+        "Symmetric": false
+      },
+      {
+        "PlayerId": 2,
+        "TeamId": 2,
+        "TypeId": "InteractionShowcase.Participant",
+        "Symmetric": false
+      }
     ]
   }
 }

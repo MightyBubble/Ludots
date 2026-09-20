@@ -1,5 +1,6 @@
 using System;
 using Ludots.Core.Presentation.Terrain;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.StructureCollision
 {
@@ -46,12 +47,12 @@ namespace Ludots.Core.StructureCollision
 
     public sealed class GroundSurfaceSampler : IGroundSurfaceSampler
     {
-        private readonly IVisualHeightmap? _terrain;
+        private readonly IContinuousHeightmap? _terrain;
         private readonly StructureCollisionAsset? _structureAsset;
         private readonly StructureCollisionRuntimeState? _runtimeState;
 
         public GroundSurfaceSampler(
-            IVisualHeightmap? terrain,
+            IContinuousHeightmap? terrain,
             StructureCollisionAsset? structureAsset,
             StructureCollisionRuntimeState? runtimeState = null)
         {

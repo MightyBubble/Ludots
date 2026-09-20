@@ -3,7 +3,7 @@ using System.Numerics;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Engine;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.MassNavigation.Runtime;
 
 namespace Ludots.Core.MassNavigation.Systems;
@@ -12,8 +12,8 @@ internal sealed class MassNavigationLocomotionAnimatorParamSystem : BaseSystem<W
 {
     private readonly GameEngine _engine;
     private readonly int _speedParamKey;
-    private readonly QueryDescription _performerQuery = new QueryDescription()
-        .WithAll<PerformerState, PerformerFloatParams, PerformerCullState>();
+    private readonly QueryDescription _presenterQuery = new QueryDescription()
+        .WithAll<PresenterState, PresenterFloatParams, PresenterCullState>();
 
     public MassNavigationLocomotionAnimatorParamSystem(GameEngine engine)
         : base((engine ?? throw new ArgumentNullException(nameof(engine))).World)
@@ -29,11 +29,11 @@ internal sealed class MassNavigationLocomotionAnimatorParamSystem : BaseSystem<W
             return;
         }
 
-        foreach (ref var chunk in World.Query(in _performerQuery))
+        foreach (ref var chunk in World.Query(in _presenterQuery))
         {
-            Span<PerformerState> states = chunk.GetSpan<PerformerState>();
-            Span<PerformerFloatParams> floatParams = chunk.GetSpan<PerformerFloatParams>();
-            Span<PerformerCullState> culls = chunk.GetSpan<PerformerCullState>();
+            Span<PresenterState> states = chunk.GetSpan<PresenterState>();
+            Span<PresenterFloatParams> floatParams = chunk.GetSpan<PresenterFloatParams>();
+            Span<PresenterCullState> culls = chunk.GetSpan<PresenterCullState>();
             foreach (int index in chunk)
             {
                 if (!culls[index].OwnerCullVisible ||
@@ -43,7 +43,7 @@ internal sealed class MassNavigationLocomotionAnimatorParamSystem : BaseSystem<W
                 }
 
                 float speed = ResolveNormalizedSpeed(simulation, agentIndex);
-                ref PerformerFloatParams parameters = ref floatParams[index];
+                ref PresenterFloatParams parameters = ref floatParams[index];
                 if (parameters.TryGet(_speedParamKey, out float current) && MathF.Abs(current - speed) <= 0.0001f)
                 {
                     continue;
@@ -57,7 +57,7 @@ internal sealed class MassNavigationLocomotionAnimatorParamSystem : BaseSystem<W
 
     private bool TryResolveAgentIndex(
         MassNavigationSimulationRuntime simulation,
-        in PerformerState state,
+        in PresenterState state,
         out int agentIndex)
     {
         agentIndex = -1;

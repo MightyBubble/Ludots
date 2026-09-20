@@ -17,7 +17,7 @@
 - ConfigPipeline：合并运行时配置
 - Mod Loading：解析 `mod.json`、排序依赖、挂载 VFS、调用 `IMod.OnLoad`
 - GAS Effect Pipeline：从 Ability 激活到 Effect 处理、属性计算与延迟触发
-- Presentation Pipeline：通过 Performer 和 ResponseChain 驱动表现
+- Presentation Pipeline：通过 Presenter 和 ResponseChain 驱动表现
 - Trigger Pipeline：通过 `TriggerManager.OnEvent` 组织脚本触发
 - UI Runtime：通过 `UiScene` 与 `IUiRenderer` 驱动 UI
 
@@ -25,7 +25,7 @@
 
 - TimeFlow：统一时间域、token 与时钟推进
 - Items：物品、背包、装备、布局与 showcase 套件
-- Narrative：quest、dialogue、cinematic 与 frontend kit
+- Story Runtime：Dialogue / Sequencer / Story Line；Quest 独立；屏幕 surface 可由 frontend kit 组合
 - Relationships：关系图谱、指标、回调、协同处理与 showcase
 - Selection / Insight：选择容器、控制组、实体信息面板
 - Order Navigation Movement：move order、nav runtime、多策略路径与路网 showcase
@@ -33,7 +33,7 @@
 ## 4 SystemGroup Phase
 
 ```text
-SchemaUpdate → InputCollection → PostMovement → AbilityActivation →
+`SchemaUpdate → InputCollection → PostMovement → AbilityActivation → EffectProcessing → RuntimeEntityBinding → AttributeCalculation → DeferredTriggerCollection → Continuation → Cleanup → EventDispatch → ClearPresentationFlags`
 EffectProcessing → AttributeCalculation → DeferredTriggerCollection →
 Cleanup → EventDispatch → ClearPresentationFlags
 ```
@@ -56,7 +56,8 @@ Cleanup → EventDispatch → ClearPresentationFlags
 - `docs/architecture/order_navigation_movement.md`
 - `docs/architecture/item_inventory_equipment_architecture.md`
 - `docs/architecture/quest_core_infra.md`
-- `docs/architecture/narrative_dialogue_cinematic.md`
-- `docs/architecture/narrative_frontend_kit.md`
+- `docs/architecture/story_runtime_dialogue_sequencer.md`（#1083 SSOT）
+- `docs/architecture/narrative_dialogue_cinematic.md`（已废止）
+- `docs/architecture/narrative_frontend_kit.md`（已废止）
 - `docs/architecture/time_flow.md`
 - `docs/architecture/ui_runtime_architecture.md`

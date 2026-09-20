@@ -30,6 +30,7 @@ namespace Ludots.Core.Gameplay.GAS
         public LifecycleTransactionState? LifecycleTransaction { get; set; }
         public ExchangeRuntime? Exchange { get; set; }
         public RelationshipRuntime? Relationships { get; set; }
+        public Ludots.Core.Movement.PoseAuthorityArbiter? PoseAuthorityArbiter { get; set; }
         public ProgressionRequirementEvaluator? ProgressionEvaluator { get; set; }
         public KnowledgeAreaRevealRuntime? KnowledgeAreaReveal { get; set; }
         public TagOps? TagOps { get; set; }
@@ -41,7 +42,6 @@ namespace Ludots.Core.Gameplay.GAS
         public int StepRateHz { get; set; }
 
         public int ResolvedCandidateCount { get; private set; }
-        public int DroppedCount { get; private set; }
         public bool HasExchangeResult { get; private set; }
         public ExchangeExecutionResult LastExchangeResult { get; private set; }
         public int AttributeDeltaId { get; private set; } = -1;
@@ -53,7 +53,6 @@ namespace Ludots.Core.Gameplay.GAS
         public void ResetPerEffect()
         {
             ResolvedCandidateCount = 0;
-            DroppedCount = 0;
             HasExchangeResult = false;
             LastExchangeResult = default;
             AttributeDeltaId = -1;
@@ -76,14 +75,6 @@ namespace Ludots.Core.Gameplay.GAS
         public void ClearResolvedCandidates()
         {
             ResolvedCandidateCount = 0;
-        }
-
-        public void AddDropped(int dropped)
-        {
-            if (dropped > 0)
-            {
-                DroppedCount += dropped;
-            }
         }
 
         public void RecordExchangeResult(ExchangeExecutionResult result)

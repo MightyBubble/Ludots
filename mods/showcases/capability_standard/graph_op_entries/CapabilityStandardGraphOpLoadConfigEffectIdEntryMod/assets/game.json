@@ -1,0 +1,15 @@
+{
+  "startupMapId": "capability_standard_graph_op_LoadConfigEffectId",
+  "windowTitle": "Ludots - 册上贴哪张效果票，就照票开打",
+  "targetFps": 60,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true,
+  "presentation": {
+    "cameraCulling": {
+      "highLodDistanceCm": 12000,
+      "mediumLodDistanceCm": 36000,
+      "lowLodDistanceCm": 72000
+    }
+  }
+}

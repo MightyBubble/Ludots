@@ -97,7 +97,7 @@ This bridges the attribute (numeric value) to the tag precondition system.
           { "type": "RemoveTag", "tag": "combo_ready" }
         ]
       },
-      "performer": "special_finisher_animation"
+      "presenter": "special_finisher_animation"
     }
   ]
 }

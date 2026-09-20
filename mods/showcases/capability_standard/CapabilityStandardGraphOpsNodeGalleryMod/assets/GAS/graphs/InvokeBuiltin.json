@@ -1,0 +1,36 @@
+[
+  {
+    "id": "showcase.graph_op.InvokeBuiltin",
+    "kind": "Effect",
+    "entry": "beginTx",
+    "nodes": [
+      {
+        "id": "beginTx",
+        "op": "BeginLifecycleTransaction"
+      },
+      {
+        "id": "materialize",
+        "op": "InvokeBuiltin",
+        "builtinHandler": "MaterializeTemplate"
+      },
+      {
+        "id": "invoke",
+        "op": "InvokeBuiltin",
+        "builtinHandler": "ClearActiveEffects"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "beginTx",
+        "fromPort": "next",
+        "to": "materialize"
+      },
+      {
+        "from": "materialize",
+        "fromPort": "next",
+        "to": "invoke"
+      }
+    ],
+    "valueEdges": []
+  }
+]

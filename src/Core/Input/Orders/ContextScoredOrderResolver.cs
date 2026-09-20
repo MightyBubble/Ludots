@@ -10,6 +10,7 @@ using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Spatial;
 using GasGraphExecutor = Ludots.Core.NodeLibraries.GASGraph.GraphExecutor;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Input.Orders
 {
@@ -17,6 +18,13 @@ namespace Ludots.Core.Input.Orders
     {
         public ContextScoredOrderResolution(int slotIndex, Entity target, Vector3 targetWorldCm, bool hasTargetWorldCm)
         {
+            if (target == default)
+            {
+                throw new ArgumentException(
+                    "Context-scored target must use Entity.Null when the resolved ability has no entity target.",
+                    nameof(target));
+            }
+
             SlotIndex = slotIndex;
             Target = target;
             TargetWorldCm = targetWorldCm;
@@ -42,6 +50,7 @@ namespace Ludots.Core.Input.Orders
         private readonly ContextGroupRegistry _contextGroups;
         private readonly GraphProgramRegistry _graphPrograms;
         private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi _graphApi;
+        private readonly Ludots.Core.NodeLibraries.GASGraph.GasGraphOpHandlerTable _graphHandlers;
         private readonly ISpatialQueryService _spatialQueries;
         private readonly ContextScoredCandidateGate _candidateGate;
         private readonly Entity[] _queryBuffer = new Entity[256];
@@ -52,7 +61,8 @@ namespace Ludots.Core.Input.Orders
             GraphProgramRegistry graphPrograms,
             ISpatialQueryService spatialQueries,
             Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi graphApi,
-            ContextScoredCandidateGate candidateGate)
+            ContextScoredCandidateGate candidateGate,
+            Ludots.Core.NodeLibraries.GASGraph.GasGraphOpHandlerTable graphHandlers)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _contextGroups = contextGroups ?? throw new ArgumentNullException(nameof(contextGroups));
@@ -60,6 +70,7 @@ namespace Ludots.Core.Input.Orders
             _spatialQueries = spatialQueries ?? throw new ArgumentNullException(nameof(spatialQueries));
             _graphApi = graphApi ?? throw new ArgumentNullException(nameof(graphApi));
             _candidateGate = candidateGate ?? throw new ArgumentNullException(nameof(candidateGate));
+            _graphHandlers = graphHandlers ?? throw new ArgumentNullException(nameof(graphHandlers));
         }
 
         public bool TryResolve(Entity actor, InputOrderMapping mapping, Entity hoveredEntity, out ContextScoredOrderResolution resolution)
@@ -128,7 +139,7 @@ namespace Ludots.Core.Input.Orders
                     {
                         bestScore = score;
                         bestSlotIndex = candidateSlotIndex;
-                        bestTarget = default;
+                        bestTarget = Entity.Null;
                     }
                     continue;
                 }
@@ -222,7 +233,7 @@ namespace Ludots.Core.Input.Orders
                     totalScore += normalized * candidate.AngleWeight;
                 }
 
-                if (!hoveredEntity.Equals(default) && hoveredEntity.Equals(target))
+                if (hoveredEntity != Entity.Null && hoveredEntity.Equals(target))
                 {
                     totalScore += candidate.HoveredBiasScore;
                 }
@@ -243,7 +254,8 @@ namespace Ludots.Core.Input.Orders
                         default,
                         preconditionProgram,
                         _graphApi,
-                        preconditionKind))
+                        preconditionKind,
+                        _graphHandlers, _graphPrograms))
                 {
                     return false;
                 }
@@ -328,7 +340,7 @@ namespace Ludots.Core.Input.Orders
             float dx = targetWorldCm.X - actorWorldCm.X;
             float dy = targetWorldCm.Y - actorWorldCm.Y;
             float targetAngle = WorldPlane2D.FacingRadFromDirection(dx, dy);
-            return WorldPlane2D.RadToDegValue(WorldPlane2D.AngleDistanceRad(targetAngle, facingAngleRad));
+            return VisualMath.RadToDegValue(WorldPlane2D.AngleDistanceRad(targetAngle, facingAngleRad));
         }
     }
 }

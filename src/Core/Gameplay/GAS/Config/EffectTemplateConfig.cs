@@ -6,7 +6,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
     public sealed class EffectTemplateConfig : IIdentifiable
     {
         public string Id { get; set; } = string.Empty;
-        public List<string>? Tags { get; set; }
+        /// <summary>Effect classification names (at most one). Not gameplay tags.</summary>
+        public List<string>? Categories { get; set; }
 
         // ── Top-level structural fields ──
         public string? PresetType { get; set; }
@@ -124,12 +125,14 @@ namespace Ludots.Core.Gameplay.GAS.Config
     /// </summary>
     public sealed class PhaseListenerConfig
     {
-        public string? ListenTag { get; set; }
+        /// <summary>Match firing effect <see cref="Ludots.Core.Gameplay.GAS.Registry.EffectCategoryRegistry"/> id; 0 / omit = wildcard.</summary>
+        public string? ListenCategory { get; set; }
         public string? ListenEffectId { get; set; }
         public string? Phase { get; set; }
         public string? Scope { get; set; }
         public string? Action { get; set; }
         public string? GraphProgram { get; set; }
+        /// <summary>Gameplay event tag published when the listener fires (real <see cref="Ludots.Core.Gameplay.GAS.Registry.TagRegistry"/> id).</summary>
         public string? EventTag { get; set; }
         public int? Priority { get; set; }
     }
@@ -228,6 +231,19 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public string? Parent { get; set; }
         public bool? SnapSubjectToParentPosition { get; set; }
         public string? RelationshipType { get; set; }
+        public AttachedLocalPoseConfig? LocalPose { get; set; }
+        public string? DetachPlacement { get; set; }
+        public int? DetachPerimeterRadiusCm { get; set; }
+    }
+
+    /// <summary>Attach 局部位姿参数（offset 旋转源与朝向继承声明）。</summary>
+    public sealed class AttachedLocalPoseConfig
+    {
+        public int? OffsetXCm { get; set; }
+        public int? OffsetYCm { get; set; }
+        public int? FacingDeg { get; set; }
+        public bool? InheritParentFacing { get; set; }
+        public string? OffsetRotation { get; set; }
     }
 
     public sealed class RevealAreaConfig

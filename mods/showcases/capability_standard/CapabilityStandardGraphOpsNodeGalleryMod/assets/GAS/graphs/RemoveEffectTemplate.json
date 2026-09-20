@@ -1,0 +1,33 @@
+[
+  {
+    "id": "showcase.graph_op.RemoveEffectTemplate",
+    "kind": "Effect",
+    "entry": "explicit",
+    "nodes": [
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "remove",
+        "op": "RemoveEffectTemplate",
+        "effectTemplate": "Effect.GraphOpsAttr.Mark"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "remove"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "remove",
+        "toPort": "target"
+      }
+    ]
+  }
+]

@@ -14,6 +14,7 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Systems
 {
@@ -33,7 +34,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly IReadOnlyDictionary<string, object> _globals;
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private static readonly QueryDescription _query = new QueryDescription()
-            .WithAll<WorldPositionCm, VisualTransform, VisualHeightmapSampleState>()
+            .WithAll<WorldPositionCm, VisualTransform, ContinuousHeightmapSampleState>()
             .WithNone<PresentationStaticTransform>();
         private static readonly QueryDescription _staticPendingQuery = new QueryDescription()
             .WithAll<WorldPositionCm, VisualTransform, PresentationStaticTransform, PresentationStaticHeightPending>();
@@ -46,9 +47,6 @@ namespace Ludots.Core.Presentation.Systems
         private readonly CommandBuffer _commandBuffer = new();
         private bool _warnedMissingHeightmap;
         private int _sampledThisFrame;
-
-        /// <summary>地形高度缩放（米/高度单位），需与地形渲染器一致，默认 2.0。</summary>
-        public float HeightScale { get; set; } = 2.0f;
 
         public TerrainHeightSyncSystem(
             World world,
@@ -66,17 +64,17 @@ namespace Ludots.Core.Presentation.Systems
         {
             long start = _timingDiagnostics != null ? System.Diagnostics.Stopwatch.GetTimestamp() : 0L;
             _sampledThisFrame = 0;
-            bool declaresVisualHeightmap = FocusedMapDeclaresVisualHeightmap();
-            IVisualHeightmap? heightmap =
-                _globals.TryGetValue(CoreServiceKeys.VisualHeightmap.Name, out var heightmapObj)
-                    ? heightmapObj as IVisualHeightmap
+            bool declaresContinuousHeightmap = FocusedMapDeclaresContinuousHeightmap();
+            IContinuousHeightmap? heightmap =
+                _globals.TryGetValue(CoreServiceKeys.ContinuousHeightmap.Name, out var heightmapObj)
+                    ? heightmapObj as IContinuousHeightmap
                     : null;
             if (heightmap is null)
             {
                 WarnMissingHeightmap();
                 // Undeclared maps may finalize static Once pending to flat y=0.
                 // Declared maps must keep pending until a sampleable heightmap is bound.
-                if (!declaresVisualHeightmap)
+                if (!declaresContinuousHeightmap)
                 {
                     SyncStaticPendingToZeroHeight();
                 }
@@ -126,7 +124,7 @@ namespace Ludots.Core.Presentation.Systems
             }
         }
 
-        private bool TrySyncFromHeightmap(IVisualHeightmap heightmap, float alpha, int frameId, in QueryDescription query)
+        private bool TrySyncFromHeightmap(IContinuousHeightmap heightmap, float alpha, int frameId, in QueryDescription query)
         {
             bool any = false;
             Fix64 fixedAlpha = Fix64.FromFloat(alpha);
@@ -140,9 +138,9 @@ namespace Ludots.Core.Presentation.Systems
                 Span<PreviousWorldPositionCm> previousPositions = chunk.Has<PreviousWorldPositionCm>()
                     ? chunk.GetSpan<PreviousWorldPositionCm>()
                     : Span<PreviousWorldPositionCm>.Empty;
-                Span<VisualHeightmapSampleState> heightSampleStates = chunk.Has<VisualHeightmapSampleState>()
-                    ? chunk.GetSpan<VisualHeightmapSampleState>()
-                    : Span<VisualHeightmapSampleState>.Empty;
+                Span<ContinuousHeightmapSampleState> heightSampleStates = chunk.Has<ContinuousHeightmapSampleState>()
+                    ? chunk.GetSpan<ContinuousHeightmapSampleState>()
+                    : Span<ContinuousHeightmapSampleState>.Empty;
 
                 if (previousPositions.Length == 0)
                 {
@@ -194,7 +192,7 @@ namespace Ludots.Core.Presentation.Systems
                         float heightCm = _projectedHeights[index];
                         if (!float.IsFinite(heightCm))
                         {
-                            heightSampleStates[index] = new VisualHeightmapSampleState
+                            heightSampleStates[index] = new ContinuousHeightmapSampleState
                             {
                                 FrameId = frameId,
                                 Sampled = 0,
@@ -203,7 +201,7 @@ namespace Ludots.Core.Presentation.Systems
                         }
 
                         visuals[index].Position.Y = WorldUnits.CmToM(heightCm);
-                        heightSampleStates[index] = new VisualHeightmapSampleState
+                        heightSampleStates[index] = new ContinuousHeightmapSampleState
                         {
                             FrameId = frameId,
                             Sampled = 1,
@@ -217,7 +215,7 @@ namespace Ludots.Core.Presentation.Systems
             return any;
         }
 
-        private void TrySyncStaticPendingFromHeightmap(IVisualHeightmap heightmap, float alpha, int frameId)
+        private void TrySyncStaticPendingFromHeightmap(IContinuousHeightmap heightmap, float alpha, int frameId)
         {
             int count = 0;
             if (TrySyncFromHeightmap(heightmap, alpha, frameId, in _staticPendingQuery, ref count))
@@ -246,7 +244,7 @@ namespace Ludots.Core.Presentation.Systems
         }
 
         private bool TrySyncFromHeightmap(
-            IVisualHeightmap heightmap,
+            IContinuousHeightmap heightmap,
             float alpha,
             int frameId,
             in QueryDescription query,
@@ -264,9 +262,9 @@ namespace Ludots.Core.Presentation.Systems
                 Span<PreviousWorldPositionCm> previousPositions = chunk.Has<PreviousWorldPositionCm>()
                     ? chunk.GetSpan<PreviousWorldPositionCm>()
                     : Span<PreviousWorldPositionCm>.Empty;
-                Span<VisualHeightmapSampleState> heightSampleStates = chunk.Has<VisualHeightmapSampleState>()
-                    ? chunk.GetSpan<VisualHeightmapSampleState>()
-                    : Span<VisualHeightmapSampleState>.Empty;
+                Span<ContinuousHeightmapSampleState> heightSampleStates = chunk.Has<ContinuousHeightmapSampleState>()
+                    ? chunk.GetSpan<ContinuousHeightmapSampleState>()
+                    : Span<ContinuousHeightmapSampleState>.Empty;
 
                 if (previousPositions.Length == 0)
                 {
@@ -320,7 +318,7 @@ namespace Ludots.Core.Presentation.Systems
                         float heightCm = _projectedHeights[index];
                         if (!float.IsFinite(heightCm))
                         {
-                            heightSampleStates[index] = new VisualHeightmapSampleState
+                            heightSampleStates[index] = new ContinuousHeightmapSampleState
                             {
                                 FrameId = frameId,
                                 Sampled = 0,
@@ -329,7 +327,7 @@ namespace Ludots.Core.Presentation.Systems
                         }
 
                         visuals[index].Position.Y = WorldUnits.CmToM(heightCm);
-                        heightSampleStates[index] = new VisualHeightmapSampleState
+                        heightSampleStates[index] = new ContinuousHeightmapSampleState
                         {
                             FrameId = frameId,
                             Sampled = 1,
@@ -344,7 +342,7 @@ namespace Ludots.Core.Presentation.Systems
             return any;
         }
 
-        private static void MarkHeightSamplesUnresolved(Span<VisualHeightmapSampleState> heightSampleStates, int frameId, int count)
+        private static void MarkHeightSamplesUnresolved(Span<ContinuousHeightmapSampleState> heightSampleStates, int frameId, int count)
         {
             if (heightSampleStates.IsEmpty)
             {
@@ -353,7 +351,7 @@ namespace Ludots.Core.Presentation.Systems
 
             for (int index = 0; index < count; index++)
             {
-                heightSampleStates[index] = new VisualHeightmapSampleState
+                heightSampleStates[index] = new ContinuousHeightmapSampleState
                 {
                     FrameId = frameId,
                     Sampled = 0,
@@ -384,7 +382,7 @@ namespace Ludots.Core.Presentation.Systems
             _staticPendingEntities[count++] = entity;
         }
 
-        private bool FocusedMapDeclaresVisualHeightmap()
+        private bool FocusedMapDeclaresContinuousHeightmap()
         {
             if (!_globals.TryGetValue(CoreServiceKeys.MapSession.Name, out object? sessionObj) ||
                 sessionObj is not MapSession session ||
@@ -394,7 +392,7 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             return !string.IsNullOrWhiteSpace(
-                MapVisualHeightmapLoader.ResolveDeclaredAssetPath(session.MapConfig));
+                MapContinuousHeightmapLoader.ResolveDeclaredAssetPath(session.MapConfig));
         }
 
         private void WarnMissingHeightmap()
@@ -404,7 +402,7 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            Log.Warn(in LogChannels.Presentation, "Terrain height sync requested VisualHeightmap, but none is registered; undeclared static pending may resolve flat while declared heightmap pending stays unresolved.");
+            Log.Warn(in LogChannels.Presentation, "Terrain height sync requested ContinuousHeightmap, but none is registered; undeclared static pending may resolve flat while declared heightmap pending stays unresolved.");
             _warnedMissingHeightmap = true;
         }
 

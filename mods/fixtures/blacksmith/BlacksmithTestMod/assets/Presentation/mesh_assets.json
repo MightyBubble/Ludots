@@ -1,0 +1,45 @@
+[
+  {
+    "id": "blacksmith.fixture.workshop.intact",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "blacksmith.fixture.workshop.damaged",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "blacksmith.fixture.workshop.ruined",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "blacksmith.fixture.furnace",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "blacksmith.fixture.smoke",
+    "type": "Primitive",
+    "primitiveKind": "Sphere",
+    "vfx": {
+      "particleVfxId": "blacksmith.fixture.smoke"
+    }
+  },
+  {
+    "id": "blacksmith.fixture.worker",
+    "type": "Primitive",
+    "primitiveKind": "Sphere"
+  },
+  {
+    "id": "blacksmith.fixture.anvil_hammering",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "blacksmith.fixture.patrol",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  }
+]

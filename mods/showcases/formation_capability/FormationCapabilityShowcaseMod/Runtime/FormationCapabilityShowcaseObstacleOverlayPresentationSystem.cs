@@ -9,9 +9,10 @@ using Ludots.Core.Engine;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
+using Ludots.Platform.Abstractions;
 
 namespace FormationCapabilityShowcaseMod.Runtime;
 
@@ -26,7 +27,7 @@ internal sealed class FormationCapabilityShowcaseObstacleOverlayPresentationSyst
     private readonly GameEngine _engine;
     private readonly FormationCapabilityShowcaseRuntime _runtime;
     private readonly PresentationWorldFactPublisher _facts;
-    private readonly IVisualHeightmap _heightmap;
+    private readonly IContinuousHeightmap _heightmap;
     private readonly int _overlayCapacity;
     private readonly List<int> _currentStableIds;
     private readonly List<int> _previousStableIds;
@@ -52,8 +53,8 @@ internal sealed class FormationCapabilityShowcaseObstacleOverlayPresentationSyst
             throw new InvalidOperationException("Formation Capability obstacle overlay presentation requires PresentationEventStream.");
         }
 
-        _heightmap = engine.GetService(CoreServiceKeys.VisualHeightmap)
-            ?? throw new InvalidOperationException("Formation Capability obstacle overlay requires VisualHeightmap.");
+        _heightmap = engine.GetService(CoreServiceKeys.ContinuousHeightmap)
+            ?? throw new InvalidOperationException("Formation Capability obstacle overlay requires ContinuousHeightmap.");
     }
 
     public void Initialize() { }
@@ -109,7 +110,7 @@ internal sealed class FormationCapabilityShowcaseObstacleOverlayPresentationSyst
             throw new InvalidOperationException($"Formation Capability obstacle overlay entity {entity.Id} requires BorderWidthCm > 0.");
         }
 
-        int stableId = PerformerBehaviorRuntimeUtility.ComposeVisualStableId(
+        int stableId = PresenterBehaviorRuntimeUtility.ComposeVisualStableId(
             ownerStableId,
             FormationCapabilityShowcaseObstacleOverlayVisualSlots.ObstacleRing,
             AssetKind.GroundOverlay,

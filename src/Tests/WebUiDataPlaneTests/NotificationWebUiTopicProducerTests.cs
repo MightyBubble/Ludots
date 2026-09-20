@@ -72,7 +72,7 @@ public sealed class NotificationWebUiTopicProducerTests
 		string json = Encoding.UTF8.GetString(packet.Payload.Span);
 		Assert.That(json, Does.Contain(TechCompleteToken));
 		Assert.That(json, Does.Not.Contain("NarrativeFrontend"));
-		Assert.That(json, Does.Not.Contain("QuestRuntime"));
+		Assert.That(json, Does.Not.Contain("TaskRuntime"));
 		Assert.That(json, Does.Not.Contain("Unknown"));
 	}
 
@@ -253,7 +253,7 @@ public sealed class NotificationWebUiTopicProducerTests
 	}
 
 	[Test]
-	public void Runtime_DoesNotDependOnNarrativeOrQuestAssemblies()
+	public void Runtime_DoesNotDependOnNarrativeOrShowcaseAssemblies()
 	{
 		System.Reflection.Assembly assembly = typeof(NotificationRuntime).Assembly;
 		Assert.That(assembly.GetName().Name, Is.EqualTo("Ludots.WebUI.DataPlane"));

@@ -1,9 +1,12 @@
+using System;
 using System.Runtime.CompilerServices;
 
 namespace Ludots.Core.Gameplay.GAS.Components
 {
     public unsafe struct BlackboardIntBuffer
     {
+        public const string CapacityExceededError = "GAS.BLACKBOARD.ERR.CapacityExceeded";
+
         public int Count;
         public fixed int Keys[GasConstants.MAX_BLACKBOARD_ENTRIES];
         public fixed int Values[GasConstants.MAX_BLACKBOARD_ENTRIES];
@@ -38,7 +41,11 @@ namespace Ludots.Core.Gameplay.GAS.Components
                     return;
                 }
 
-                if (Count >= GasConstants.MAX_BLACKBOARD_ENTRIES) return;
+                if (Count >= GasConstants.MAX_BLACKBOARD_ENTRIES)
+                {
+                    throw new InvalidOperationException(
+                        $"{CapacityExceededError}: buffer={nameof(BlackboardIntBuffer)}, key={key}, capacity={GasConstants.MAX_BLACKBOARD_ENTRIES}.");
+                }
                 keys[Count] = key;
                 values[Count] = value;
                 Count++;

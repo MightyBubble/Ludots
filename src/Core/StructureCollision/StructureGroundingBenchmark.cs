@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using Ludots.Core.Presentation.Terrain;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.StructureCollision
 {
@@ -98,12 +99,12 @@ namespace Ludots.Core.StructureCollision
             var z = new float[samplesPerFrame];
             FillNonIdealSamples(x, z, chunkColumns, chunkRows, chunkSizeCm);
 
-            return RunBenchmark(asset, new FlatVisualHeightmap(), x, z, in policy, frames, warmupFrames);
+            return RunBenchmark(asset, new FlatContinuousHeightmap(), x, z, in policy, frames, warmupFrames);
         }
 
         private static StructureGroundingBenchmarkResult RunBenchmark(
             StructureCollisionAsset asset,
-            IVisualHeightmap? terrain,
+            IContinuousHeightmap? terrain,
             float[] x,
             float[] z,
             in GroundSurfaceQueryPolicy policy,

@@ -1,14 +1,16 @@
 using System;
 using Arch.Core;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
 {
     /// <summary>
     /// Event payload slots exposed to graph programs via LoadEventPayloadInt/Float
     /// (RFC-0065 PROV-4b). Filled by presentation-event driven executors
-    /// (e.g. PerformerRuleSystem); defaults to zero elsewhere.
+    /// (e.g. PresenterRuleSystem); defaults to zero elsewhere.
     /// </summary>
     public struct GraphEventPayload
     {
@@ -30,26 +32,56 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public Entity Caster;
         public Entity ExplicitTarget;
         /// <summary>
+        /// Map binding declared by map-bound hosts at bind time. Map variable ops
+        /// resolve against it authoritatively; event casters may be destroyed
+        /// entities (EntityDied) and must never be the map scope source.
+        /// </summary>
+        public MapId? MapScope;
+        /// <summary>
         /// Additional context entity (e.g. AOE center, original target for chained effects).
         /// Set from EffectContext.TargetContext when executing phase graphs.
         /// </summary>
         public Entity TargetContext;
         /// <summary>
         /// Viewer anchor entity for viewer-relative condition graphs (RFC-0065 DEC-12 #1).
-        /// Set from PresentationEvent.Viewer by PerformerRuleSystem; Entity.Null elsewhere.
+        /// Set from PresentationEvent.Viewer by PresenterRuleSystem; Entity.Null elsewhere.
         /// </summary>
         public Entity Viewer;
         /// <summary>Event payload slots read by LoadEventPayloadInt/Float ops.</summary>
         public GraphEventPayload EventPayload;
+        /// <summary>Named payload values captured at TriggerGraph entry start; read by LoadEntryPayload* ops.</summary>
+        public GraphEntryPayloadTable? EntryPayload;
+        /// <summary>
+        /// Per-run StoreArg* staging written ahead of InvokeGraph/DispatchMapEvent and consumed
+        /// (cleared) by them. InvokeGraph passes this table to the child frame as its
+        /// EntryPayload so subgraphs read arguments with the existing LoadEntryPayload* ops.
+        /// </summary>
+        public GraphEntryPayloadTable? InvokeArgs;
         /// <summary>Target position in world centimeters.</summary>
         public IntVector2 TargetPosCm;
         public uint RandomSeed;
         public IGraphRuntimeApi Api;
+        public GraphProgramRegistry? Programs;
         public Span<float> F;
         public Span<int> I;
         public Span<byte> B;
         public Span<Entity> E;
         public Span<Entity> Targets;
         public GraphTargetList TargetList;
+        public Span<int> IntIds;
+        public GraphIntIdList IntIdList;
+        public int SubjectIntId;
+        public Span<int> CallStack;
+        public GraphTextHeap Text;
+        public int CallStackCount;
+        public int ReturnInt;
+        public GraphExecutionStatus Status;
+        /// <summary>Set by the executor for the active program; used by Call absolute-target checks.</summary>
+        public int ProgramLength;
+        public int InvokeDepth;
+        public int TreeSteps;
+        public int CurrentInstructionPc;
+        public int CurrentGraphId;
+        public GraphDebugTrace? DebugTrace;
     }
 }

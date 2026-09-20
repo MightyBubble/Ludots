@@ -116,7 +116,7 @@ Effect 模板示例：
 | SpatialBlackboardKey | `src/Core/Input/Orders/OrderArgs.cs` | ✅ 已有 |
 | EffectTemplateRegistry | `src/Core/Gameplay/GAS/EffectTemplateRegistry.cs` | ✅ 已有 |
 | InputOrderMapping | `src/Core/Input/Orders/InputOrderMapping.cs` | ✅ 已有 |
-| GroundOverlay Performer | `src/Core/Presentation/Performers/GroundOverlayPerformer.cs` | ✅ 已有 |
+| GroundOverlay Presenter | `src/Core/Presentation/Presenters/GroundOverlayPresenter.cs` | ✅ 已有 |
 
 ---
 
@@ -131,7 +131,7 @@ Effect 模板示例：
 - **DO**: 伤害公式在 `OnCalculate` Graph 中算出 `DamageAmount` 写入 Blackboard，护甲减伤在 `OnApply Listener` 中读取并覆写 `FinalDamage`，`OnApply Main` 只做最终写 HP，三层分离。
 - **DO**: AoE 范围（QueryRadiusCm）放进 `configParams`，避免硬编码在 Graph 里，方便策划热改数值。
 - **DO**: `QueryFilterRelationship(Hostile)` 必须在 `QueryRadius` 之后紧跟执行，减少后续 FanOut 的对象数。
-- **DO**: GroundOverlay Performer 的 `radius` 与 Effect 模板的 `QueryRadiusCm` 保持同源（从同一配置读取），避免视觉与实际范围不一致。
+- **DO**: GroundOverlay Presenter 的 `radius` 与 Effect 模板的 `QueryRadiusCm` 保持同源（从同一配置读取），避免视觉与实际范围不一致。
 - **DON'T**: 不在 Graph 内直接操作实体结构（创建/销毁），AoE 只负责查询和分发 Effect。
 - **DON'T**: 不在 `OnApply Main` 中重复计算护甲减伤，减伤逻辑必须在 Listener 中处理，便于全局护甲 Mod 拦截。
 - **DON'T**: 不允许 `targetType: None` 用于圆形 AoE，必须是 `Position`，否则位置信息无法传入 Graph。

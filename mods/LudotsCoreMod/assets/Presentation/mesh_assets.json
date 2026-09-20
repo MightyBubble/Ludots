@@ -8,5 +8,10 @@
     "id": "sphere",
     "type": "Primitive",
     "primitiveKind": "Sphere"
+  },
+  {
+    "id": "cue_marker",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
   }
 ]

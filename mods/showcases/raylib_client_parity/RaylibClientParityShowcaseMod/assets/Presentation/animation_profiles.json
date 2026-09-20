@@ -1,0 +1,10 @@
+[
+  {
+    "id": "raylib_client_parity.profile",
+    "animatorControllerId": "raylib_client_parity.locomotion",
+    "stateClips": [
+      { "packedStateIndex": 0, "clipAssetId": "raylib_client_parity.clip.idle" },
+      { "packedStateIndex": 1, "clipAssetId": "raylib_client_parity.clip.walk" }
+    ]
+  }
+]

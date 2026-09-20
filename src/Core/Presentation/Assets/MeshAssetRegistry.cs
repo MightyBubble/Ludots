@@ -1,9 +1,10 @@
 using System;
 using Ludots.Core.Registry;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Assets
 {
-    public sealed class MeshAssetRegistry
+    public sealed class MeshAssetRegistry : IRenderMeshAssets
     {
         private readonly StringIntRegistry _ids;
         private MeshAssetDescriptor[] _data;
@@ -40,6 +41,8 @@ namespace Ludots.Core.Presentation.Assets
         }
 
         public int GetId(string key) => _ids.GetId(key);
+
+        public int GetOrRegisterId(string key) => _ids.Register(key);
 
         public string GetName(int id) => _ids.GetName(id);
 

@@ -1,0 +1,66 @@
+[
+  {
+    "id": "showcase.graph_op.StoreArgFloat",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "ratio"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "ratio",
+        "op": "ConstFloat",
+        "floatValue": 6.5
+      },
+      {
+        "id": "store",
+        "op": "StoreArgFloat",
+        "argKey": "GraphOps.Ratio"
+      },
+      {
+        "id": "call",
+        "op": "InvokeGraph",
+        "functionName": "showcase.graph_op._invokeArgCallee",
+        "entryLabel": "ratio"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "ratio",
+        "fromPort": "next",
+        "to": "store"
+      },
+      {
+        "from": "store",
+        "fromPort": "next",
+        "to": "call"
+      },
+      {
+        "from": "call",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "ratio",
+        "fromPort": "value",
+        "to": "store",
+        "toPort": "value"
+      },
+      {
+        "from": "call",
+        "fromPort": "value",
+        "to": "done",
+        "toPort": "value"
+      }
+    ]
+  }
+]

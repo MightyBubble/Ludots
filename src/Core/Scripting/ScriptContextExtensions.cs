@@ -7,6 +7,7 @@ namespace Ludots.Core.Scripting
 {
     public static class ScriptContextExtensions
     {
+        [Obsolete("Do not take the concrete GameEngine from ScriptContext. Use IModContext and existing ScriptContext ports (GetWorld, CoreServiceKeys). Do not add new call sites.")]
         public static GameEngine GetEngine(this ScriptContext ctx) => ctx.Get(CoreServiceKeys.Engine);
         public static World GetWorld(this ScriptContext ctx) => ctx.Get(CoreServiceKeys.World);
         public static MapSession GetMapSession(this ScriptContext ctx) => ctx.Get(CoreServiceKeys.MapSession);

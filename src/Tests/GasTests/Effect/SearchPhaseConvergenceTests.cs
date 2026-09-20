@@ -15,6 +15,7 @@ using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Spatial;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {
@@ -30,7 +31,7 @@ namespace Ludots.Tests.GAS
             var builtinHandlers = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(builtinHandlers);
             var templates = new EffectTemplateRegistry();
-            var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, templates);
+            var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, new GasGraphOpHandlerTable(), templates);
             var api = new GasGraphRuntimeApi(world, null, null, null);
 
             var source = world.Create(WorldPositionCm.FromCm(0, 0));
@@ -86,9 +87,9 @@ namespace Ludots.Tests.GAS
 
             var behavior = new EffectPhaseGraphBindings();
             executor.ExecutePhase(world, api, source, center, default, default,
-                EffectPhaseId.OnResolve, in behavior, EffectPresetType.Search, effectTagId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
+                EffectPhaseId.OnResolve, in behavior, EffectPresetType.Search, effectCategoryId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
             executor.ExecutePhase(world, api, source, center, default, default,
-                EffectPhaseId.OnApply, in behavior, EffectPresetType.Search, effectTagId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
+                EffectPhaseId.OnApply, in behavior, EffectPresetType.Search, effectCategoryId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
 
             That(runtime.FanOutCommands, Has.Count.EqualTo(1));
             var cmd = runtime.FanOutCommands![0];
@@ -107,7 +108,7 @@ namespace Ludots.Tests.GAS
             var builtinHandlers = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(builtinHandlers);
             var templates = new EffectTemplateRegistry();
-            var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, templates);
+            var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, new GasGraphOpHandlerTable(), templates);
             var api = new GasGraphRuntimeApi(world, null, null, null);
 
             var source = world.Create(WorldPositionCm.FromCm(0, 0));
@@ -162,7 +163,7 @@ namespace Ludots.Tests.GAS
 
             var behavior = new EffectPhaseGraphBindings();
             executor.ExecutePhase(world, api, source, center, default, default,
-                EffectPhaseId.OnPeriod, in behavior, EffectPresetType.PeriodicSearch, effectTagId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
+                EffectPhaseId.OnPeriod, in behavior, EffectPresetType.PeriodicSearch, effectCategoryId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
 
             That(runtime.FanOutCommands, Has.Count.EqualTo(1));
             var cmd = runtime.FanOutCommands![0];
@@ -264,7 +265,7 @@ namespace Ludots.Tests.GAS
                 var builtinHandlers = new BuiltinHandlerRegistry();
                 BuiltinHandlers.RegisterAll(builtinHandlers);
                 var templates = new EffectTemplateRegistry();
-                var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, templates);
+                var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, new GasGraphOpHandlerTable(), templates);
                 var api = new GasGraphRuntimeApi(world, null, null, null);
 
                 var source = world.Create(WorldPositionCm.FromCm(0, 0), new Team { Id = 1 });
@@ -320,9 +321,9 @@ namespace Ludots.Tests.GAS
 
                 var behavior = new EffectPhaseGraphBindings();
                 executor.ExecutePhase(world, api, source, center, default, default,
-                    EffectPhaseId.OnResolve, in behavior, EffectPresetType.Search, effectTagId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
+                    EffectPhaseId.OnResolve, in behavior, EffectPresetType.Search, effectCategoryId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
                 executor.ExecutePhase(world, api, source, center, default, default,
-                    EffectPhaseId.OnApply, in behavior, EffectPresetType.Search, effectTagId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
+                    EffectPhaseId.OnApply, in behavior, EffectPresetType.Search, effectCategoryId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
 
                 That(runtime.FanOutCommands, Has.Count.EqualTo(1));
                 That(runtime.FanOutCommands![0].ResolvedEntity, Is.EqualTo(hostile));
@@ -347,7 +348,7 @@ namespace Ludots.Tests.GAS
                 var builtinHandlers = new BuiltinHandlerRegistry();
                 BuiltinHandlers.RegisterAll(builtinHandlers);
                 var templates = new EffectTemplateRegistry();
-                var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, templates);
+                var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, new GasGraphOpHandlerTable(), templates);
                 var api = new GasGraphRuntimeApi(world, null, null, null);
 
                 var sourceWithoutTeam = world.Create(WorldPositionCm.FromCm(0, 0));
@@ -402,9 +403,9 @@ namespace Ludots.Tests.GAS
 
                 var behavior = new EffectPhaseGraphBindings();
                 executor.ExecutePhase(world, api, sourceWithoutTeam, center, default, default,
-                    EffectPhaseId.OnResolve, in behavior, EffectPresetType.Search, effectTagId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
+                    EffectPhaseId.OnResolve, in behavior, EffectPresetType.Search, effectCategoryId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
                 executor.ExecutePhase(world, api, sourceWithoutTeam, center, default, default,
-                    EffectPhaseId.OnApply, in behavior, EffectPresetType.Search, effectTagId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
+                    EffectPhaseId.OnApply, in behavior, EffectPresetType.Search, effectCategoryId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
 
                 That(runtime.FanOutCommands, Is.Empty);
             }

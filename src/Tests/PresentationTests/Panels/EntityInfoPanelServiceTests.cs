@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using Arch.Core;
+using Ludots.Tests.TestCommon;
 using EntityInfoPanelsMod;
 using EntityInfoPanelsMod.Insight;
 using Ludots.Core.Components;
@@ -268,10 +269,10 @@ public sealed class EntityInfoPanelServiceTests
 
         var globals = new Dictionary<string, object>
         {
-            [CoreServiceKeys.LocalPlayerEntity.Name] = viewer,
             [CoreServiceKeys.EntityCollectionStore.Name] = collections,
             [CoreServiceKeys.EntityCollectionKeyRegistry.Name] = collectionRegistry,
         };
+        ClientLocalSeatTestBindings.BindSoleSeat(globals, viewer, 1, "seat.0");
 
         var service = new EntityInfoPanelService();
         EntityInfoPanelHandle handle = service.Open(new EntityInfoPanelRequest(
@@ -335,10 +336,10 @@ public sealed class EntityInfoPanelServiceTests
 
         var globals = new Dictionary<string, object>
         {
-            [CoreServiceKeys.LocalPlayerEntity.Name] = viewer,
             [CoreServiceKeys.EntityCollectionStore.Name] = collections,
             [CoreServiceKeys.EntityCollectionKeyRegistry.Name] = collectionRegistry,
         };
+        ClientLocalSeatTestBindings.BindSoleSeat(globals, viewer, 1, "seat.0");
 
         var service = new EntityInfoPanelService();
         EntityInfoPanelHandle handle = service.Open(new EntityInfoPanelRequest(

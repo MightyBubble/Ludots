@@ -1,0 +1,7 @@
+flowchart TD
+    A[Seed stalled road-follow order] --> B[Run binding, selection, execution, lifecycle systems without movement progress]
+    B --> C{Timeout reached?}
+    C -->|yes + refresh succeeds| D[Replan from preserved final target]
+    D --> E[Status = refreshed after timeout]
+    C -->|yes + refresh fails| F[Abandon active order]
+    F --> G[Status = abandoned after timeout recovery]

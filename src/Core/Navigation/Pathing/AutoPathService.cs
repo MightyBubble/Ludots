@@ -8,6 +8,7 @@ using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.Pathing.Config;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Navigation.Pathing
 {

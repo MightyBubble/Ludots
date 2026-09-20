@@ -1,0 +1,11 @@
+{
+  "name": "VfxForgeRaylibShowcaseMod",
+  "version": "1.0.0",
+  "description": "Player-facing raylib showcase for Quarks particle assets rendered through the production VFX backend.",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "raylib", "vfx", "quarks", "particles"]
+}

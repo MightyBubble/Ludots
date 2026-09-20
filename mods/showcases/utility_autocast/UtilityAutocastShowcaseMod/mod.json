@@ -2,7 +2,7 @@
   "name": "UtilityAutocastShowcaseMod",
   "version": "1.0.0",
   "description": "Focused Utility AI autocast arbitration showcase with shared GCD and inspector trace.",
-  "main": "bin/net8.0/UtilityAutocastShowcaseMod.dll",
+  "main": "bin/net9.0/UtilityAutocastShowcaseMod.dll",
   "priority": 132,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

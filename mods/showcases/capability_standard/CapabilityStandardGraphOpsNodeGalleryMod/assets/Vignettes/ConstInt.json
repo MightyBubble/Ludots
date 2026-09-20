@@ -1,0 +1,35 @@
+{
+  "op": "ConstInt",
+  "driver": "attr",
+  "title": "写死的整数：一刀三层",
+  "beat": "铭牌铸死数字 3，带锁印；取数后木桩头顶亮三层空圈。",
+  "detailTemplate": "这一刀的层数写死是 {layers}。",
+  "assertDetailContains": [
+    "层数",
+    "3"
+  ],
+  "featuredNodeId": "const3",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

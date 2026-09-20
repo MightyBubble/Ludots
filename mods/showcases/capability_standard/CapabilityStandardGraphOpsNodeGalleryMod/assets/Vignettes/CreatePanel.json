@@ -1,0 +1,38 @@
+{
+  "op": "CreatePanel",
+  "driver": "linear",
+  "title": "面板落地",
+  "beat": "关卡蓝图一句话，属性卡从模板里长了出来。",
+  "detailTemplate": "面板实例化了——{healthBefore}→{healthAfter}。",
+  "assertDetailContains": [
+    "面板实例化了"
+  ],
+  "featuredNodeId": "toggle",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ],
+  "linear": {
+    "resultKind": "float",
+    "applyTo": "graphSettled"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "Id": "capability_standard_static_presenter_30k_scatter_benchmark",
+  "Tuning": {
+    "LoadedChunkCapacity": 16
+  },
+  "Tags": [
+    "showcase",
+    "presenter",
+    "benchmark",
+    "scatter",
+    "capability_static_presenter"
+  ],
+  "ContinuousHeightmapAsset": "assets/terrain/capability_standard_static_presenter_30k_showcase_flat.height",
+  "Metadata": {
+    "capabilityStandardStaticPresenter30k": {
+      "scatterInitialTarget": 30000,
+      "scatterSeed": 314159,
+      "scatterMinRadiusCm": 750.0,
+      "scatterMaxRadiusCm": 2400.0,
+      "scatterJitterCm": 140.0
+    }
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthCells": 256,
+      "HeightCells": 256,
+      "GridCellSizeCm": 100
+    }
+  ],
+  "DefaultCamera": {
+    "TargetXCm": 0,
+    "TargetYCm": 0
+  },
+  "Entities": []
+}

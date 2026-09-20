@@ -1,0 +1,10 @@
+{
+  "name": "NarrativeThemeFantasyMod",
+  "version": "1.0.0",
+  "description": "Narrative story theme shell (0 C#): 奇幻羊皮",
+  "priority": 0,
+  "dependencies": {
+    "NarrativeShowcaseMod": "^1.0.0",
+    "NarrativeFrontendMod": "^1.0.0"
+  }
+}

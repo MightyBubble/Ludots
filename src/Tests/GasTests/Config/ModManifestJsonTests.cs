@@ -15,7 +15,7 @@ namespace GasTests
               "name": "ExampleMod",
               "version": "1.0.0",
               "description": "Demo",
-              "main": "bin/Release/net8.0/ExampleMod.dll",
+              "main": "bin/Release/net9.0/ExampleMod.dll",
               "priority": 10,
               "dependencies": {
                 "Core": "1.0.0"
@@ -27,7 +27,7 @@ namespace GasTests
 
             Assert.That(manifest.Name, Is.EqualTo("ExampleMod"));
             Assert.That(manifest.Version, Is.EqualTo("1.0.0"));
-            Assert.That(manifest.Main, Is.EqualTo("bin/Release/net8.0/ExampleMod.dll"));
+            Assert.That(manifest.Main, Is.EqualTo("bin/Release/net9.0/ExampleMod.dll"));
             Assert.That(manifest.Priority, Is.EqualTo(10));
             Assert.That(manifest.Dependencies["Core"], Is.EqualTo("1.0.0"));
         }
@@ -56,6 +56,26 @@ namespace GasTests
         }
 
         [Test]
+        public void ParseStrict_WithTriggerGraphs_PreservesOrder()
+        {
+            var manifest = ModManifestJson.ParseStrict(
+                """{ "name": "GraphMod", "version": "1.0.0", "triggerGraphs": ["Graph.Mod.Start", "Graph.Mod.End"] }""",
+                "mem://graph.mod.json");
+
+            Assert.That(manifest.TriggerGraphs, Is.EqualTo(new[] { "Graph.Mod.Start", "Graph.Mod.End" }));
+        }
+
+        [Test]
+        public void ParseStrict_WithDuplicateTriggerGraph_Throws()
+        {
+            var ex = Assert.Throws<Exception>(() => ModManifestJson.ParseStrict(
+                """{ "name": "GraphMod", "version": "1.0.0", "triggerGraphs": ["Graph.Mod.Start", "Graph.Mod.Start"] }""",
+                "mem://graph.mod.json"));
+
+            Assert.That(ex!.Message, Does.Contain("repeats graph"));
+        }
+
+        [Test]
         public void ParseStrict_WithLegacyUppercaseFields_Throws()
         {
             string json = """
@@ -78,7 +98,7 @@ namespace GasTests
                 Name = "CanonMod",
                 Version = "1.2.3",
                 Description = "Canon",
-                Main = "bin/Release/net8.0/CanonMod.dll",
+                Main = "bin/Release/net9.0/CanonMod.dll",
                 Priority = 0
             };
 

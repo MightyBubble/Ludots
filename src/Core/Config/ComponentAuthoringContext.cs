@@ -51,6 +51,10 @@ namespace Ludots.Core.Config
     {
         public const string AbilityDefinitionRegistry = "AbilityDefinitionRegistry";
         public const string AbilityFormSetRegistry = "AbilityFormSetRegistry";
+        public const string ItemDefinitionRegistry = "ItemDefinitionRegistry";
+        public const string ScopeKeyRegistry = "ScopeKeyRegistry";
+        public const string VisionFogLayerRegistry = "Vision.FogLayerRegistry";
+        public const string FieldLayerRegistry = "Fields.FieldLayerRegistry";
         public const string Physics2DShapeStorage = "Physics2D.ShapeStorage";
     }
 }

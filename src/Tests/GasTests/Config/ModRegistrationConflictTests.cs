@@ -79,7 +79,7 @@ namespace GasTests
             var etr = new EffectTemplateRegistry();
             etr.SetConflictReport(_report);
 
-            var data = new EffectTemplateData { TagId = 1 };
+            var data = new EffectTemplateData { CategoryId = 1 };
             etr.Register(10, in data, "ModA");
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
                 () => etr.Register(10, in data, "ModB"))!;

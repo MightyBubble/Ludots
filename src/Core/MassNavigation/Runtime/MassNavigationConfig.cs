@@ -90,15 +90,10 @@ public sealed class MassNavigationConfig
         RequireProperties(
             RequireProperty(scenarioRuntime, "runtimeCapacity"),
             "navigationGroupCapacity",
-            "groupMembershipAgentCapacity",
-            "groupMemberCapacity",
             "movePlanExecutionGroupCapacity",
-            "movePlanExecutionMemberCapacity",
             "routeStateCapacity",
             "routeMaxExpandedPerRequest",
             "routeWaypointCapacityPerAgent",
-            "loadedChunkCapacity",
-            "relationshipDomainCapacity",
             "displacedAgentCapacity");
 
         JsonElement world = RequireProperty(root, "world");
@@ -110,9 +105,15 @@ public sealed class MassNavigationConfig
             "commandFocusHoldTicks",
             "workAreaPaddingCm",
             "workAreaMaxWidthCm",
-            "workAreaMaxHeightCm",
-            "activeHotZoneId",
-            "hotZones");
+            "workAreaMaxHeightCm");
+        bool hasHotZones =
+            world.TryGetProperty("hotZones", out JsonElement hotZonesElement) &&
+            hotZonesElement.ValueKind == JsonValueKind.Array &&
+            hotZonesElement.GetArrayLength() > 0;
+        if (hasHotZones)
+        {
+            RequireProperty(world, "activeHotZoneId");
+        }
         RequireProperties(
             RequireProperty(root, "solver"),
             "fieldWidthCm",
@@ -131,16 +132,21 @@ public sealed class MassNavigationConfig
         JsonElement presentation = RequireProperty(root, "presentation");
         RequireProperties(
             presentation,
-            "requiredMeshAssetIds",
             "blockerTemplateId",
             "teams");
         if (autoSpawnConfiguredScenario)
         {
             RequireProperties(
                 presentation,
-                "blockerPerformerId",
-                "hotspotPerformerId",
-                "hotspotTemplateId");
+                "blockerPresenterId",
+                "requiredMeshAssetIds");
+            if (hasHotZones)
+            {
+                RequireProperties(
+                    presentation,
+                    "hotspotPresenterId",
+                    "hotspotTemplateId");
+            }
         }
 
         JsonElement scenario = RequireProperty(root, "scenario");
@@ -207,31 +213,18 @@ public sealed class MassNavigationConfig
         RequireProperties(
             RequireProperty(root, "flow"),
             "enabled",
-            "iterationsPerStep",
-            "maxIterationsPerStep",
-            "forceRefreshFlow",
-            "forceRefreshCrowd",
-            "forceRefreshObstacles");
+            "iterationsPerStep");
         RequireProperties(
             RequireProperty(root, "arrival"),
             "enabled",
             "timeoutMs",
-            "timeoutMinMs",
-            "timeoutMaxMs",
             "progressDistanceCm",
-            "progressDistanceMinCm",
-            "progressDistanceMaxCm",
             "wakePushDistanceCm",
-            "wakePushDistanceMinCm",
-            "wakePushDistanceMaxCm",
-            "maxRetryCountMin",
-            "maxRetryCountMax",
             "maxRetryCount");
+        JsonElement avoidance = RequireProperty(root, "avoidance");
+        string avoidanceMode = RequireStringProperty(avoidance, "mode");
         RequireProperties(
-            RequireProperty(root, "avoidance"),
-            "mode",
-            "orca",
-            "sonar",
+            avoidance,
             "dominantMassRatio",
             "friendlyResponseScale",
             "friendlyResponseMin",
@@ -250,20 +243,26 @@ public sealed class MassNavigationConfig
             "nonFriendlyCorrectionOtherMassWeight",
             "nonFriendlyCorrectionShareMin",
             "nonFriendlyCorrectionShareMax");
-        RequireProperties(
-            RequireProperty(RequireProperty(root, "avoidance"), "orca"),
-            "timeHorizonSeconds",
-            "maxNeighbors");
-        RequireProperties(
-            RequireProperty(RequireProperty(root, "avoidance"), "sonar"),
-            "maxSteerAngleDeg",
-            "backwardPenaltyAngleDeg",
-            "predictionTimeScale",
-            "ignoreBehindMovingAgents",
-            "blockedStop",
-            "usePreferredVelocityWhenBlocked",
-            "timeHorizonSeconds",
-            "maxNeighbors");
+        if (avoidanceMode == "Orca")
+        {
+            RequireProperties(
+                RequireProperty(avoidance, "orca"),
+                "timeHorizonSeconds",
+                "maxNeighbors");
+        }
+        else if (avoidanceMode == "Sonar")
+        {
+            RequireProperties(
+                RequireProperty(avoidance, "sonar"),
+                "maxSteerAngleDeg",
+                "backwardPenaltyAngleDeg",
+                "predictionTimeScale",
+                "ignoreBehindMovingAgents",
+                "blockedStop",
+                "usePreferredVelocityWhenBlocked",
+                "timeHorizonSeconds",
+                "maxNeighbors");
+        }
         JsonElement semantics = RequireProperty(root, "semantics");
         RequireProperties(
             RequireProperty(semantics, "obstacle"),
@@ -350,6 +349,14 @@ public sealed class MassNavigationConfig
         };
     }
 
+    private static string RequireStringProperty(JsonElement root, string propertyName)
+    {
+        JsonElement value = RequireProperty(root, propertyName);
+        return value.ValueKind == JsonValueKind.String
+            ? value.GetString()!
+            : throw new InvalidOperationException($"MassNavigation config requires explicit string '{propertyName}' property.");
+    }
+
     private static void RequireProperties(JsonElement root, params string[] propertyNames)
     {
         for (int i = 0; i < propertyNames.Length; i++)
@@ -365,6 +372,7 @@ public sealed class MassNavigationConfig
             throw new InvalidOperationException("MassNavigation config requires a non-empty map id.");
         }
 
+        ScenarioRuntime.RuntimeCapacity.ApplyScenarioScaleDefaults(Scenario, World, Streaming);
         Solver.Validate();
         ScenarioRuntime.Validate();
         Scenario.Validate(ScenarioRuntime);
@@ -528,6 +536,57 @@ public sealed class MassNavigationRuntimeCapacityConfig
         }
     }
 
+    /// <summary>
+    /// 缺省推导：未显式 override 的规模容量按 ValidateForScenario/ValidateForStreaming
+    /// 的下限从 scenario 规模与 streaming 窗口推导（agent 计数、team 计数、窗口 chunk 数）。
+    /// agentsPerTeam=0 的外部 authoring 路径没有可推导规模，agent 档容量必须显式 override。
+    /// </summary>
+    public void ApplyScenarioScaleDefaults(
+        MassNavigationScenarioConfig scenario,
+        MassNavigationWorldConfig? world,
+        MassNavigationStreamingConfig streaming)
+    {
+        ArgumentNullException.ThrowIfNull(scenario);
+        ArgumentNullException.ThrowIfNull(streaming);
+
+        long authoredAgentCount = (long)scenario.Teams.Length * scenario.AgentsPerTeam;
+        if (GroupMembershipAgentCapacity <= 0)
+        {
+            GroupMembershipAgentCapacity = RequireDerivableAuthoredAgentCount(authoredAgentCount, "groupMembershipAgentCapacity");
+        }
+
+        if (GroupMemberCapacity <= 0)
+        {
+            GroupMemberCapacity = RequireDerivableAuthoredAgentCount(authoredAgentCount, "groupMemberCapacity");
+        }
+
+        if (MovePlanExecutionMemberCapacity <= 0)
+        {
+            MovePlanExecutionMemberCapacity = RequireDerivableAuthoredAgentCount(authoredAgentCount, "movePlanExecutionMemberCapacity");
+        }
+
+        if (RelationshipDomainCapacity <= 0)
+        {
+            RelationshipDomainCapacity = scenario.Teams.Length;
+        }
+
+        if (LoadedChunkCapacity <= 0 && world != null)
+        {
+            LoadedChunkCapacity = CountSquareChunksForRadius(streaming.RadiusCm, world.StreamingChunkSizeCm);
+        }
+    }
+
+    private static int RequireDerivableAuthoredAgentCount(long authoredAgentCount, string fieldName)
+    {
+        if (authoredAgentCount <= 0)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation scenarioRuntime.runtimeCapacity.{fieldName} must be explicitly configured when the scenario does not auto-spawn agents.");
+        }
+
+        return checked((int)authoredAgentCount);
+    }
+
     public void ValidateForStreaming(MassNavigationWorldConfig world, MassNavigationStreamingConfig streaming)
     {
         if (world == null)
@@ -655,8 +714,8 @@ public sealed class MassNavigationStreamingConfig
 public sealed class MassNavigationPresentationConfig
 {
     public string[] RequiredMeshAssetIds { get; set; } = Array.Empty<string>();
-    public string BlockerPerformerId { get; set; } = string.Empty;
-    public string HotspotPerformerId { get; set; } = string.Empty;
+    public string BlockerPresenterId { get; set; } = string.Empty;
+    public string HotspotPresenterId { get; set; } = string.Empty;
     public string BlockerTemplateId { get; set; } = string.Empty;
     public string HotspotTemplateId { get; set; } = string.Empty;
     public MassNavigationTeamPresentationConfig[] Teams { get; set; } = Array.Empty<MassNavigationTeamPresentationConfig>();
@@ -671,7 +730,7 @@ public sealed class MassNavigationPresentationConfig
             throw new InvalidOperationException("MassNavigation presentation requires an explicit scenarioRuntime section.");
         }
 
-        if (RequiredMeshAssetIds.Length <= 0)
+        if (scenarioRuntime.AutoSpawnConfiguredScenario && RequiredMeshAssetIds.Length <= 0)
         {
             throw new InvalidOperationException("MassNavigation presentation requires at least one RequiredMeshAssetIds entry.");
         }
@@ -698,9 +757,12 @@ public sealed class MassNavigationPresentationConfig
             return;
         }
 
-        RequireNonEmpty(BlockerPerformerId, nameof(BlockerPerformerId));
-        RequireNonEmpty(HotspotPerformerId, nameof(HotspotPerformerId));
-        RequireNonEmpty(HotspotTemplateId, nameof(HotspotTemplateId));
+        RequireNonEmpty(BlockerPresenterId, nameof(BlockerPresenterId));
+        if (world != null && world.HotZones.Length > 0)
+        {
+            RequireNonEmpty(HotspotPresenterId, nameof(HotspotPresenterId));
+            RequireNonEmpty(HotspotTemplateId, nameof(HotspotTemplateId));
+        }
 
         if (Teams.Length != scenario.Teams.Length)
         {
@@ -749,10 +811,10 @@ public sealed class MassNavigationPresentationConfig
         return heavy ? team.HeavyTemplateId : team.LightTemplateId;
     }
 
-    public string ResolveAgentPerformerId(int teamId, bool heavy)
+    public string ResolveAgentPresenterId(int teamId, bool heavy)
     {
         MassNavigationTeamPresentationConfig team = GetTeam(teamId);
-        return heavy ? team.HeavyPerformerId : team.LightPerformerId;
+        return heavy ? team.HeavyPresenterId : team.LightPresenterId;
     }
 
     private static void RequireNonEmpty(string value, string fieldName)
@@ -867,22 +929,16 @@ public sealed class MassNavigationFlowSolverConfig
 public sealed class MassNavigationTeamPresentationConfig
 {
     public int TeamId { get; set; }
-    public string StyleId { get; set; } = string.Empty;
     public string LightTemplateId { get; set; } = string.Empty;
     public string HeavyTemplateId { get; set; } = string.Empty;
-    public string LightPerformerId { get; set; } = string.Empty;
-    public string HeavyPerformerId { get; set; } = string.Empty;
+    public string LightPresenterId { get; set; } = string.Empty;
+    public string HeavyPresenterId { get; set; } = string.Empty;
 
     public void Validate()
     {
         if (TeamId <= 0)
         {
             throw new InvalidOperationException("MassNavigation presentation team style requires TeamId > 0.");
-        }
-
-        if (string.IsNullOrWhiteSpace(StyleId))
-        {
-            throw new InvalidOperationException($"MassNavigation presentation team {TeamId} requires StyleId.");
         }
 
         if (string.IsNullOrWhiteSpace(LightTemplateId))
@@ -895,14 +951,14 @@ public sealed class MassNavigationTeamPresentationConfig
             throw new InvalidOperationException($"MassNavigation presentation team {TeamId} requires HeavyTemplateId.");
         }
 
-        if (string.IsNullOrWhiteSpace(LightPerformerId))
+        if (string.IsNullOrWhiteSpace(LightPresenterId))
         {
-            throw new InvalidOperationException($"MassNavigation presentation team {TeamId} requires LightPerformerId.");
+            throw new InvalidOperationException($"MassNavigation presentation team {TeamId} requires LightPresenterId.");
         }
 
-        if (string.IsNullOrWhiteSpace(HeavyPerformerId))
+        if (string.IsNullOrWhiteSpace(HeavyPresenterId))
         {
-            throw new InvalidOperationException($"MassNavigation presentation team {TeamId} requires HeavyPerformerId.");
+            throw new InvalidOperationException($"MassNavigation presentation team {TeamId} requires HeavyPresenterId.");
         }
     }
 }
@@ -949,11 +1005,6 @@ public sealed class MassNavigationWorldConfig
             throw new InvalidOperationException("MassNavigation world validation requires an explicit solver section.");
         }
 
-        if (HotZones.Length <= 0)
-        {
-            throw new InvalidOperationException("MassNavigation world requires at least one configured hotspot debug landmark.");
-        }
-
         if (SolverWindowWidthCm != solver.FieldWidthCm ||
             SolverWindowHeightCm != solver.FieldHeightCm)
         {
@@ -971,6 +1022,20 @@ public sealed class MassNavigationWorldConfig
                 throw new InvalidOperationException($"MassNavigation world contains duplicate hot zone id '{zone.Id}'.");
             }
 
+        }
+
+        if (HotZones.Length > 0)
+        {
+            if (string.IsNullOrWhiteSpace(ActiveHotZoneId))
+            {
+                throw new InvalidOperationException("MassNavigation world requires ActiveHotZoneId when hotspot debug landmarks are configured.");
+            }
+
+            GetRequiredHotZone(ActiveHotZoneId);
+        }
+        else if (!string.IsNullOrWhiteSpace(ActiveHotZoneId))
+        {
+            throw new InvalidOperationException("MassNavigation world ActiveHotZoneId must not be set without configured hot zones.");
         }
 
         if (StreamingChunkSizeCm <= 0)
@@ -997,13 +1062,6 @@ public sealed class MassNavigationWorldConfig
         {
             throw new InvalidOperationException("MassNavigation world work area max must be at least the solver cache size.");
         }
-
-        if (string.IsNullOrWhiteSpace(ActiveHotZoneId))
-        {
-            throw new InvalidOperationException("MassNavigation world requires ActiveHotZoneId as the initial hotspot debug landmark.");
-        }
-
-        GetRequiredHotZone(ActiveHotZoneId);
     }
 
     private int FindHotZoneIndex(string hotZoneId)
@@ -1103,6 +1161,7 @@ public sealed class MassNavigationScenarioConfig
 public enum MassNavigationScenarioSpawnLayoutKind : byte
 {
     OrbitOpposedTargets = 1,
+    QuadrantSpread = 2,
 }
 
 public sealed class MassNavigationScenarioSpawnLayoutConfig
@@ -1121,14 +1180,15 @@ public sealed class MassNavigationScenarioSpawnLayoutConfig
         _parsedKind = Kind switch
         {
             "OrbitOpposedTargets" => MassNavigationScenarioSpawnLayoutKind.OrbitOpposedTargets,
+            "QuadrantSpread" => MassNavigationScenarioSpawnLayoutKind.QuadrantSpread,
             "" => throw new InvalidOperationException("MassNavigation scenario.spawnLayout.kind must be a non-empty semantic string."),
             _ => throw new InvalidOperationException(
                 $"MassNavigation scenario.spawnLayout.kind '{Kind}' is not configured.")
         };
 
-        if (OrbitRadiusCm <= 0f)
+        if (_parsedKind == MassNavigationScenarioSpawnLayoutKind.OrbitOpposedTargets && OrbitRadiusCm <= 0f)
         {
-            throw new InvalidOperationException("MassNavigation scenario.spawnLayout.orbitRadiusCm must be > 0.");
+            throw new InvalidOperationException("MassNavigation scenario.spawnLayout.orbitRadiusCm must be > 0 for OrbitOpposedTargets.");
         }
     }
 }

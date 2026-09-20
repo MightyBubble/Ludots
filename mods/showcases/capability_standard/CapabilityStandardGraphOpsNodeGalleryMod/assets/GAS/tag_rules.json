@@ -1,0 +1,7 @@
+[
+  { "id": "Event.DamageDealt" },
+  { "id": "Enemy" },
+  { "id": "Dead" },
+  { "id": "State.Sandbox.Burning" },
+  { "id": "State.Sandbox.Marked" }
+]

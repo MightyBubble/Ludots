@@ -11,8 +11,14 @@ namespace Ludots.Core.Gameplay.GAS
     /// </summary>
     public struct PresetTypeDefinition
     {
-        /// <summary>The preset type this definition describes.</summary>
+        /// <summary>The builtin preset enum this definition describes. Custom presets keep this as None.</summary>
         public EffectPresetType Type;
+
+        /// <summary>Runtime preset id. Builtins use their enum numeric value; custom presets use mod-assigned ids.</summary>
+        public int TypeId;
+
+        /// <summary>Semantic preset key from config or mod code.</summary>
+        public string TypeKey;
 
         /// <summary>Required parameter + capability components for this type.</summary>
         public ComponentFlags Components;

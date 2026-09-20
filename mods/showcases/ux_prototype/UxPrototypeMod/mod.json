@@ -2,7 +2,7 @@
   "name": "UxPrototypeMod",
   "version": "1.0.0",
   "description": "Prototype fidelity RTS operations showcase with Ludots-native HUD, production, construction, editors, and 3D battlefield orchestration.",
-  "main": "bin/net8.0/UxPrototypeMod.dll",
+  "main": "bin/net9.0/UxPrototypeMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

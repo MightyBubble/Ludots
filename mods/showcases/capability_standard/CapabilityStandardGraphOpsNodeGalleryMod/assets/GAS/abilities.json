@@ -1,0 +1,14 @@
+[
+  {
+    "id": "火球",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    }
+  }
+]

@@ -4,9 +4,7 @@
 
 ## 1 SDK 要求
 
-- .NET 8.0
-- .NET 9.0
-- .NET 10.0 preview
+- .NET 9.0（`global.json` 固定 SDK 9.0.x，全仓 target `net9.0`）
 - Node.js + npm
 
 ## 2 常用构建命令
@@ -23,6 +21,13 @@ dotnet build src/Tools/Ludots.Editor.Bridge/Ludots.Editor.Bridge.csproj -c Relea
 .\scripts\run-mod-launcher.cmd cli resolve camera_acceptance --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter web
+.\scripts\run-authoring-studio.cmd
+```
+
+Linux / macOS 作者工作室：
+
+```bash
+./scripts/run-authoring-studio.sh
 ```
 
 规则：

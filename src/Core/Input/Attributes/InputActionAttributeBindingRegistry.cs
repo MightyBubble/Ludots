@@ -13,7 +13,7 @@ namespace Ludots.Core.Input.Attributes
 
     public enum InputActionAttributeTargetKind : byte
     {
-        LocalPlayerEntity = 0,
+        SolePossessedRep = 0,
         CameraBehaviorInput = 1
     }
 

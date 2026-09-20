@@ -1,0 +1,15 @@
+{
+  "actions": [
+    { "id": "UiPlayerAggregateGraphMvp.ShutDownBuilding", "name": "UiPlayerAggregateGraphMvp_ShutDownBuilding", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "UiPlayerAggregateGraphMvp.Controls",
+      "name": "Player Aggregate Graph MVP Controls",
+      "priority": 86,
+      "bindings": [
+        { "actionId": "UiPlayerAggregateGraphMvp.ShutDownBuilding", "path": "<Keyboard>/space" }
+      ]
+    }
+  ]
+}

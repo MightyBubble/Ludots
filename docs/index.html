@@ -190,9 +190,9 @@
     <div class="section-head">
       <div class="kicker">PORTAL</div>
       <h2>从这里进入</h2>
-      <p>门户的四个主区域：正式文档、Showcase 画廊、测试与验收证据、架构图库。</p>
+      <p>门户的五个主区域：正式文档、Showcase 画廊、测试与验收证据、架构图库、面板矩阵。</p>
     </div>
-    <div class="grid cols-4">
+    <div class="grid cols-5">
       <a class="card nav-card" href="#docs">
         <div class="icon" style="background: var(--accent-light); color: var(--accent);">📖</div>
         <h3>文档</h3>
@@ -211,6 +211,20 @@
         <p>可玩演示与能力验收场景的画廊：按分层与类别筛选，一键复制启动命令。</p>
         <span class="go">进入画廊 →</span>
       </a>
+      <a class="card nav-card" href="navmesh.html">
+        <div class="icon">N</div>
+        <h3>NavMesh 功能</h3>
+        <p>每板寻址、多层寻路、Agent Profile、脏烘、可行性贴图、Link 和作者工具链。</p>
+        <span class="go">查看功能目录 →</span>
+      </a>
+      <a class="card nav-card" href="gitbook/architecture/four-layer-architecture/README.md">
+        <span class="icon">🏗️</span>
+        <div>
+          <h3>四层架构 Wiki</h3>
+          <p>Machine · App · Seat · Device 分层模型、全链路输入旅程、术语禁则——底层架构一站读懂。</p>
+        </div>
+        <span class="go">打开 Wiki →</span>
+      </a>
       <a class="card nav-card" href="tests.html">
         <div class="icon" style="background: var(--steel-light); color: var(--steel);">✅</div>
         <h3>测试与验收</h3>
@@ -222,6 +236,12 @@
         <h3>架构图库</h3>
         <p>覆盖全部子系统的架构图、流程图与依赖图，支持全屏查看。</p>
         <span class="go">打开图库 →</span>
+      </a>
+      <a class="card nav-card" href="panels.html">
+        <div class="icon" style="background: var(--accent-light); color: var(--accent);">🧩</div>
+        <h3>面板矩阵</h3>
+        <p>35 类面板设计一站式：高保真 web 预期（三主题切换）、文档直达、showcase 预留位。</p>
+        <span class="go">查看矩阵 →</span>
       </a>
     </div>
   </section>
@@ -403,11 +423,23 @@
     container.querySelectorAll("img[src]").forEach(function (img) {
       var src = img.getAttribute("src");
       if (!src || /^(https?:|data:|\/)/i.test(src)) return;
+      // 仓库根证据（画廊录像海报）不要被改写到 gitbook/ 下
+      if (src.indexOf("artifacts/") === 0) return;
       img.setAttribute("src", "gitbook/" + resolvePath(docPath, src));
+    });
+    container.querySelectorAll("video[src], video[poster]").forEach(function (video) {
+      ["src", "poster"].forEach(function (attr) {
+        var val = video.getAttribute(attr);
+        if (!val || /^(https?:|data:|\/)/i.test(val)) return;
+        if (val.indexOf("artifacts/") === 0) return;
+        video.setAttribute(attr, "gitbook/" + resolvePath(docPath, val));
+      });
     });
   }
 
   function loadDoc(path, scroll) {
+    // 画廊门户的重写链接会剥 .md（graph-op-wiki / raylib-engine 同一约定），此处统一补回
+    if (!/\.md$/i.test(path)) path = path + ".md";
     currentDoc = path;
     var body = document.getElementById("doc-body");
     var pathEl = document.getElementById("doc-path");

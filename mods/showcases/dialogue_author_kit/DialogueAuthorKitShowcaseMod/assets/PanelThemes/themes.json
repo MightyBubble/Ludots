@@ -1,0 +1,10 @@
+[
+  {
+    "id": "kit-amber",
+    "root": "DialogueAuthorKitShowcaseMod:assets/PanelThemes/kit-amber/theme.css"
+  },
+  {
+    "id": "kit-ink",
+    "root": "DialogueAuthorKitShowcaseMod:assets/PanelThemes/kit-ink/theme.css"
+  }
+]

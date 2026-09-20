@@ -1,0 +1,33 @@
+[
+  {
+    "id": "showcase.graph_op.AggSumAttribute",
+    "kind": "Query",
+    "entry": "all",
+    "nodes": [
+      {
+        "id": "all",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "sum",
+        "op": "AggSumAttribute",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "all",
+        "fromPort": "next",
+        "to": "sum"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "all",
+        "fromPort": "list",
+        "to": "sum",
+        "toPort": "list"
+      }
+    ]
+  }
+]

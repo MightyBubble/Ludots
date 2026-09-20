@@ -5,7 +5,7 @@ namespace Ludots.Core.Registry
 {
     /// <summary>
     /// Unified string-to-int mapping infrastructure.
-    /// All domain registries (MeshAsset, Prefab, Performer, etc.) compose this
+    /// All domain registries (MeshAsset, Presenter, etc.) compose this
     /// class for their key mapping instead of implementing their own Dictionary logic.
     /// <para>
     /// Int IDs are auto-incremented and never externally specified.

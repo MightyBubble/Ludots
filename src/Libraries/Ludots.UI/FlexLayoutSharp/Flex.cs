@@ -2726,15 +2726,40 @@ public class Flex
 	{
 		assertWithNode(node, node.Children.Count == 0, "Cannot reset a node which still has children attached");
 		assertWithNode(node, node.Parent == null, "Cannot reset a node still attached to a parent");
-		node.Children.Clear();
 		Config config = node.config;
-		node = CreateDefaultNode();
+		ResetInPlace(node);
 		if (config.UseWebDefaults)
 		{
 			node.nodeStyle.FlexDirection = FlexDirection.Row;
 			node.nodeStyle.AlignContent = Align.Stretch;
 		}
 		node.config = config;
+	}
+
+	public static void ResetInPlace(Node node)
+	{
+		assertWithNode(node, node != null, "Cannot reset a null node");
+		for (int i = node.Children.Count - 1; i >= 0; i--)
+		{
+			Node child = node.Children[i];
+			child.Parent = null;
+			child.NextChild = null;
+		}
+		node.Children.Clear();
+		node.Parent = null;
+		node.NextChild = null;
+		node.lineIndex = 0;
+		node.measureFunc = null;
+		node.baselineFunc = null;
+		node.printFunc = null;
+		node.hasNewLayout = true;
+		node.NodeType = NodeType.Default;
+		node.IsDirty = false;
+		node.Context = null;
+		node.nodeStyle.ResetInPlace();
+		node.nodeLayout.ResetToDefault();
+		node.resolvedDimensions[0].SetUndefined();
+		node.resolvedDimensions[1].SetUndefined();
 	}
 
 	public static Node CreateDefaultNode()

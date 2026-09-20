@@ -1,0 +1,15 @@
+flowchart TD
+    A[Load camera_acceptance_hotpath] --> B[Spawn deterministic crowd through RuntimeEntitySpawnQueue]
+    B --> C[Panel prints visible entities for the current camera view]
+    C --> D[Capture baseline panel + diagnostics + HUD lanes]
+    D --> E{Toggle diagnostics HUD / selection / bars / HUD text}
+    E -->|lane disabled| F[Expected lane count drops to zero]
+    E -->|lane left on| G[Other lane counts stay stable]
+    F --> H{Toggle terrain / guides render gates}
+    H -->|enabled| I[Terrain and reference guides reappear explicitly]
+    I --> J{Toggle primitives render gate}
+    J -->|off| K[RenderDebugState primitive gate flips immediately]
+    K --> L{Toggle crowd off}
+    L -->|crowd=0| M[Visible crowd and label counts collapse]
+    M --> N{Toggle panel off then restore hotpath defaults}
+    N -->|restored| O[Write battle-report + trace + path]

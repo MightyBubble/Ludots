@@ -20,6 +20,7 @@ using Ludots.Core.Vision;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
 {
@@ -71,18 +72,33 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly RootBudgetTable _fanOutBudget;
         // An injected budget is advanced by the effect-loop owner once per processing transaction.
         private readonly bool _ownsFanOutBudget;
-        private int _fanOutDropped;
         private readonly Entity[] _resolverBuffer = new Entity[256];
         private readonly BuiltinHandlerExecutionContext _builtinRuntime = new BuiltinHandlerExecutionContext();
         private readonly EffectPhaseSideEffectTransaction _persistentPhaseTransaction;
+        private EffectDueWheel? _dueWheel;
         private int _activeEffectAttachDropped;
         private int _listenerRegistrationDropped;
+
+        /// <summary>
+        /// 共享到期时间轮（由 EffectProcessingLoopSystem 注入）：效果提交成功后入轮；
+        /// 未注入时提交钩子不注册，效果由 EffectLifetimeSystem 首个 slice 的 Rebuild 兜底入轮。
+        /// </summary>
+        internal EffectDueWheel? DueWheel
+        {
+            get => _dueWheel;
+            set
+            {
+                _dueWheel = value;
+                _persistentPhaseTransaction.DueWheel = value;
+            }
+        }
 
         public int MaxWorkUnitsPerSlice { get; set; } = int.MaxValue;
         public int LastSliceProcessed { get; private set; }
 
         /// <summary>
-        /// Time-sliced application stages for EffectApplicationSystem.
+        /// Time-sliced application stages. ProcessPending through AttachEffects
+        /// commit a visible attachment; ActivateEffects is the settlement transaction.
         /// </summary>
         private enum ApplicationStage : byte
         {
@@ -107,6 +123,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly EffectTemplateRegistry _templates;
         private readonly ISpatialQueryService _spatialQueries;
         private readonly TagOps _tagOps;
+        private readonly AttributeAggregateDirtyRegistry? _aggregateDirty;
 
         // ── Phase Graph execution (optional) ──
         private readonly EffectPhaseExecutor _phaseExecutor;
@@ -117,7 +134,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly IClock _clock;
         private readonly int _stepRateHz;
 
-        public EffectApplicationSystem(World world, int fanOutCommandCapacity, IClock clock, EffectRequestQueue effectRequests = null, GasBudget budget = null, GasPresentationEventBuffer presentationEvents = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null, OrderQueue orderIntake = null, RootBudgetTable fanOutBudget = null) : base(world)
+        public EffectApplicationSystem(World world, int fanOutCommandCapacity, IClock clock, EffectRequestQueue effectRequests = null, GasBudget budget = null, GasPresentationEventBuffer presentationEvents = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null, OrderQueue orderIntake = null, RootBudgetTable fanOutBudget = null, Ludots.Core.Movement.PoseAuthorityArbiter poseAuthorityArbiter = null, AttributeAggregateDirtyRegistry aggregateDirty = null) : base(world)
         {
             _fanOutCommands = new FanOutCommandBuffer(fanOutCommandCapacity);
             _fanOutBudget = fanOutBudget ?? new RootBudgetTable(fanOutCommandCapacity);
@@ -139,6 +156,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _phaseExecutor = phaseExecutor;
             _graphApiHost = graphApi;
             _graphApi = graphApi;
+            _aggregateDirty = aggregateDirty;
             _builtinRuntime.SpatialQueries = spatialQueries;
             _builtinRuntime.FanOutBudget = _fanOutBudget;
             _builtinRuntime.FanOutCommands = _fanOutCommands;
@@ -152,6 +170,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _builtinRuntime.KnowledgeAreaReveal = knowledgeAreaRevealRuntime;
             _builtinRuntime.TagOps = _tagOps;
             _builtinRuntime.OrderIntake = orderIntake;
+            _builtinRuntime.PoseAuthorityArbiter = poseAuthorityArbiter;
             _orderTypeRegistry = orderTypeRegistry;
             _orderRuleRegistry = orderRuleRegistry;
             _stepRateHz = GasStepRate.RequirePositive(stepRateHz, nameof(EffectApplicationSystem));
@@ -162,7 +181,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 spawnRequests,
                 presentationEvents,
                 _resolverBuffer.Length,
-                _fanOutBudget);
+                _fanOutBudget,
+                poseAuthorityArbiter,
+                aggregateDirty);
         }
 
         private void RefreshBuiltinOrderContext()
@@ -206,7 +227,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     _fanOutBudget.NextFrame();
                 }
-                _fanOutDropped = 0;
                 _activeEffectAttachDropped = 0;
                 _listenerRegistrationDropped = 0;
 
@@ -390,21 +410,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             EffectContext context = World.Get<EffectContext>(e);
                             if (!IsEffectAttached(context.Target, e))
                             {
-                                RollbackPersistentAttachment(context.Target, e);
-                                ConsumeWork(ref workUnits);
-                                continue;
+                                throw new InvalidOperationException(
+                                    $"GAS.ACTIVE_EFFECT_CONTAINER.ERR.MissingAttachment: target={context.Target.Id}, effect={e.Id}.");
                             }
 
                             int templateId = World.Has<EffectTemplateRef>(e)
                                 ? World.Get<EffectTemplateRef>(e).TemplateId
                                 : 0;
 
-                            bool hasGrantedTagSnapshot = false;
-                            GameplayTagContainer tagsBefore = default;
-                            TagCountContainer tagCountsBefore = default;
-                            DirtyFlags dirtyFlagsBefore = default;
                             int fanOutCommandCountBefore = _fanOutCommands.Count;
-                            int fanOutDroppedBefore = _fanOutDropped;
                             int listenerRegistrationCountBefore = _pendingListenerRegistrations.Count;
                             bool graphTransactionBound = false;
                             _persistentPhaseTransaction.Begin();
@@ -421,16 +435,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 {
                                     EffectGrantedTags grantedTags = World.Get<EffectGrantedTags>(e);
                                     int stackCount = World.Has<EffectStack>(e) ? World.Get<EffectStack>(e).Count : 1;
-                                    TagOps.RequireTagState(World, context.Target);
-                                    tagsBefore = World.Get<GameplayTagContainer>(context.Target);
-                                    tagCountsBefore = World.Get<TagCountContainer>(context.Target);
-                                    dirtyFlagsBefore = World.Get<DirtyFlags>(context.Target);
-                                    hasGrantedTagSnapshot = true;
-                                    EffectTagContributionHelper.PrepareGrantToEntity(World, context.Target, in grantedTags, stackCount, _tagOps, _budget);
-                                    if (World.Get<DirtyFlags>(context.Target).IsAnyTagDirty())
-                                    {
-                                        _persistentPhaseTransaction.StageDirtyEntity(context.Target);
-                                    }
+                                    _persistentPhaseTransaction.StageGrantedTagGrant(context.Target, in grantedTags, stackCount);
                                 }
 
                                 ExecutePersistentPhases(e, in context, templateId);
@@ -461,15 +466,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             {
                                 _persistentPhaseTransaction.Rollback();
                                 _fanOutCommands.Truncate(fanOutCommandCountBefore);
-                                _fanOutDropped = fanOutDroppedBefore;
                                 TrimTail(_pendingListenerRegistrations, listenerRegistrationCountBefore);
-                                if (hasGrantedTagSnapshot && World.IsAlive(context.Target))
-                                {
-                                    World.Get<GameplayTagContainer>(context.Target) = tagsBefore;
-                                    World.Get<TagCountContainer>(context.Target) = tagCountsBefore;
-                                    World.Get<DirtyFlags>(context.Target) = dirtyFlagsBefore;
-                                }
-                                RollbackPersistentAttachment(context.Target, e);
                                 throw;
                             }
                             finally
@@ -485,6 +482,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             {
                                 ref GameplayEffect effectForActivate = ref World.Get<GameplayEffect>(e);
                                 effectForActivate.State = EffectState.Committed;
+                                _dueWheel?.RegisterCommitted(e, World);
                             }
 
                         }
@@ -540,10 +538,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 if (_budget != null)
                 {
-                    if (_fanOutDropped > 0)
-                    {
-                        _budget.EffectApplicationFanOutDropped += _fanOutDropped;
-                    }
                     if (_activeEffectAttachDropped > 0)
                     {
                         _budget.ActiveEffectContainerAttachDropped += _activeEffectAttachDropped;
@@ -575,9 +569,18 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             {
                 _persistentPhaseTransaction.StageAggregateDirty(target);
             }
-            else if (!World.Has<AttributeAggregateDirty>(target))
+            else
             {
-                World.Add(target, new AttributeAggregateDirty());
+                RequireAggregateDirtyRegistry();
+                _aggregateDirty!.MarkDirty(target);
+            }
+        }
+
+        private void RequireAggregateDirtyRegistry()
+        {
+            if (_aggregateDirty == null)
+            {
+                throw new InvalidOperationException(AttributeAggregateDirtyRegistry.MissingRegistryError);
             }
         }
 
@@ -729,7 +732,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             ExecutePhaseForEffect(effectEntity, in context, in tplData, EffectPhaseId.OnHit, _builtinRuntime);
             ExecutePhaseForEffect(effectEntity, in context, in tplData, EffectPhaseId.OnApply, _builtinRuntime);
 
-            _fanOutDropped += _builtinRuntime.DroppedCount;
             PublishBuiltinAttributeDelta(in context, templateId, _builtinRuntime);
         }
 
@@ -751,41 +753,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return false;
         }
 
-        private void RollbackPersistentAttachment(Entity target, Entity effect)
-        {
-            bool removeCreatedContainer = false;
-            if (World.IsAlive(target) && World.Has<ActiveEffectContainer>(target))
-            {
-                ref ActiveEffectContainer container = ref World.Get<ActiveEffectContainer>(target);
-                container.Remove(effect);
-                removeCreatedContainer = container.Count == 0 && WasContainerCreatedThisPass(target);
-            }
-
-            if (removeCreatedContainer && World.IsAlive(target) && World.Has<ActiveEffectContainer>(target))
-            {
-                World.Remove<ActiveEffectContainer>(target);
-            }
-            if (World.IsAlive(effect))
-            {
-                World.Destroy(effect);
-            }
-        }
-
-        private bool WasContainerCreatedThisPass(Entity target)
-        {
-            for (int i = 0; i < _createdContainers.Count; i++)
-            {
-                if (_createdContainers[i] == target)
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-
         /// <summary>
         /// Execute a phase graph for an effect entity, reading its template for behavior and config.
-        /// Passes effectTagId and effectTemplateId for Phase Listener matching.
+        /// Passes effectCategoryId and effectTemplateId for Phase Listener matching.
         /// </summary>
         private void ExecutePhaseForEffect(Entity effectEntity, in EffectContext context, in EffectTemplateData tpl, EffectPhaseId phase, BuiltinHandlerExecutionContext? builtinRuntime = null)
         {
@@ -806,8 +776,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 targetPos,
                 phase,
                 in tpl.PhaseGraphBindings,
-                tpl.PresetType,
-                tpl.TagId,
+                tpl.PresetTypeId,
+                tpl.CategoryId,
                 templateId,
                 in mergedConfig,
                 builtinRuntime,
@@ -901,7 +871,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 ref var buf = ref World.Get<EffectPhaseListenerBuffer>(entity);
                 if (!buf.TryAdd(
-                    setup.ListenTagIds[i],
+                    setup.ListenCategoryIds[i],
                     setup.ListenEffectIds[i],
                     (EffectPhaseId)setup.Phases[i],
                     scope,

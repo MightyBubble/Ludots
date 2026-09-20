@@ -16,7 +16,7 @@ using Ludots.Core.Layers;
 using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Spatial;
-
+using Ludots.Platform.Abstractions;
 namespace Ludots.Core.Gameplay.AI.Utility
 {
     public sealed class UtilityAiRuntimeEvaluator
@@ -256,6 +256,12 @@ namespace Ludots.Core.Gameplay.AI.Utility
                 return false;
             }
 
+            if (task.PlayerId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Utility AI task attempted to submit order type id {task.OrderTypeId} without a positive player id.");
+            }
+
             Order order;
             OrderSubmitMode submitMode = (OrderSubmitMode)(byte)task.SubmitMode;
             switch (task.PayloadKind)
@@ -350,8 +356,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
                 }
 
                 throw;
-            }
-        }
+            }        }
 
         private int AcquireTargets(
             in UtilityAiCompiledRuntime runtime,
@@ -669,8 +674,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
                     return TryExecuteScoreGraph(actor, target, input.GraphId, ref scoreBudget, out value);
                 case UtilityAiInputKind.InfluenceSample01:
                     value = SampleInfluenceAtTarget(target, input.Arg0);
-                    return true;
-                default:
+                    return true;                default:
                     return true;
             }
         }
@@ -704,7 +708,6 @@ namespace Ludots.Core.Gameplay.AI.Utility
 
             return field.Sample(pos.ToWorldCmInt2());
         }
-
         private bool CanSwitchToDecision(
             in UtilityAiCompiledRuntime runtime,
             in UtilityAiDecisionDefinition decision,

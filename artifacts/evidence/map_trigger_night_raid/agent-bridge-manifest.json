@@ -1,0 +1,52 @@
+{
+  "mapId": "night_raid",
+  "mods": [
+    "LudotsCoreMod",
+    "CoreInputMod",
+    "MapTriggerNightRaidMod",
+    "NightRaidShowcaseMod",
+    "AgentBridgeMod"
+  ],
+  "health": {
+    "port": 47921,
+    "pumpCountBefore": 407,
+    "pumpCountAfter": 462
+  },
+  "steps": [
+    {
+      "id": "initial",
+      "result": "no raider entities",
+      "entities": ["NightRaidHero", "NightRaidGate", "NightRaidWave1Anchor", "NightRaidWave2Anchor", "NightRaidBossCamp"],
+      "screenshot": "artifacts/agent-bridge/shots/before-raid-no-raider.png"
+    },
+    {
+      "id": "wave1",
+      "result": "three raiders spawned after RegionEntered",
+      "positionsCm": [[420, -140], [420, 0], [420, 140]],
+      "screenshot": "artifacts/agent-bridge/shots/wave1-real.png"
+    },
+    {
+      "id": "wave2",
+      "result": "two elite raiders spawned after team 2 crossed below zero",
+      "team": 3,
+      "positionsCm": [[760, -110], [760, 110]],
+      "screenshot": "artifacts/agent-bridge/shots/wave2-real.png"
+    },
+    {
+      "id": "boss",
+      "result": "boss spawned at boss camp anchor",
+      "team": 4,
+      "positionCm": [1000, 0],
+      "screenshot": "artifacts/agent-bridge/shots/boss-real.png"
+    },
+    {
+      "id": "victory",
+      "result": "boss defeated; victory panel visible",
+      "stage": 5,
+      "killCount": 5,
+      "heroHealth": 100,
+      "screenshot": "artifacts/agent-bridge/shots/victory-real.png",
+      "uiTree": "artifacts/evidence/map_trigger_night_raid/ui-tree-victory.json"
+    }
+  ]
+}

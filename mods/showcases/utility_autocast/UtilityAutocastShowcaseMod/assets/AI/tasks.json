@@ -1,0 +1,29 @@
+[
+  {
+    "id": "Task.UtilityAutocast.Attack",
+    "Kind": "SubmitOrder",
+    "OrderPayloadKind": "CastAbility",
+    "OrderTypeKey": "castAbility",
+    "AbilitySlotIndex": 0,
+    "SubmitMode": 0,
+    "PlayerId": 1
+  },
+  {
+    "id": "Task.UtilityAutocast.HealBurst",
+    "Kind": "SubmitOrder",
+    "OrderPayloadKind": "CastAbility",
+    "OrderTypeKey": "castAbility",
+    "AbilitySlotIndex": 1,
+    "SubmitMode": 0,
+    "PlayerId": 1
+  },
+  {
+    "id": "Task.UtilityAutocast.Curse",
+    "Kind": "SubmitOrder",
+    "OrderPayloadKind": "CastAbility",
+    "OrderTypeKey": "castAbility",
+    "AbilitySlotIndex": 2,
+    "SubmitMode": 0,
+    "PlayerId": 1
+  }
+]

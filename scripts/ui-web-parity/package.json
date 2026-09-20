@@ -1,0 +1,16 @@
+{
+  "name": "ui-web-parity",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dump": "node dump-chrome-layout.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "puppeteer-core": "^24.43.1"
+  },
+  "type": "module"
+}

@@ -1,0 +1,18 @@
+[
+  {
+    "id": "Effect.CapabilityStandard.ConfigShards.EmberBoltDamage",
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -10
+      }
+    ],
+    "categories": [
+      "Effect.CapabilityStandard.ConfigShards"
+    ]
+  }
+]

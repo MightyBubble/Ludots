@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Threading;
 using Ludots.Core.Config;
 using Ludots.Core.Modding;
 using Ludots.Core.Navigation.AgentProfiles;
@@ -10,8 +11,8 @@ using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Spatial;
-using Ludots.NavBake.Recast;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Architecture
 {
@@ -29,7 +30,7 @@ namespace Ludots.Tests.Architecture
             var context = new NavBakeContext
             {
                 MapId = "nav_bake_contract",
-                SourceUri = "Core:Maps/nav_bake_contract.vtxm",
+                SourceUri = "Core:Maps/nav_bake_contract.hex",
                 Terrain = terrain,
                 Obstacles = new NavObstacleSet(),
                 Config = config,
@@ -83,13 +84,13 @@ namespace Ludots.Tests.Architecture
         [Test]
         public void RecastBake_OpenGridCrossTileQuery_ReturnsStraightCorePath()
         {
-            const int chunkSizeCells = 4;
+            const int chunkSizeCells = 32;
             const int tileSizeCm = chunkSizeCells * SpatialScaleDefaults.CellCm;
             var context = new NavBakeContext
             {
                 MapId = "nav_recast_open_grid_query_contract",
                 SourceUri = "Core:Maps/nav_recast_open_grid_query_contract.bin",
-                Terrain = new FlatGridLogicTerrainField(12, 4, chunkSizeCells: chunkSizeCells),
+                Terrain = new FlatGridLogicTerrainField(96, 32, chunkSizeCells: chunkSizeCells),
                 Obstacles = new NavObstacleSet(),
                 Config = CreateBakeConfig(NavBakeNames.ModeOffline, NavBakeNames.AlgorithmRecast),
                 AgentProfiles = CreateAgentProfiles(),
@@ -113,16 +114,16 @@ namespace Ludots.Tests.Architecture
                 CollectDetourTileBytes(bake),
                 layer: 0,
                 areaCosts: NavAreaCostTable.CreateDefault(),
-                startXcm: 50,
-                startZcm: 150,
-                goalXcm: 1050,
-                goalZcm: 150,
+                startXcm: 400,
+                startZcm: 1200,
+                goalXcm: 6800,
+                goalZcm: 1200,
                 maxPortals: 256);
 
             Assert.That(path.Status, Is.EqualTo(NavPathStatus.Ok));
             TestContext.WriteLine("Default baseline path: " + string.Join(" -> ", FormatPathPoints(path)));
-            Assert.That(path.PathXcm, Is.EqualTo(new[] { 50, 1050 }));
-            Assert.That(path.PathZcm, Is.EqualTo(new[] { 150, 150 }));
+            Assert.That(path.PathXcm, Is.EqualTo(new[] { 400, 6800 }));
+            Assert.That(path.PathZcm, Is.EqualTo(new[] { 1200, 1200 }));
         }
 
         [Test]
@@ -209,18 +210,18 @@ namespace Ludots.Tests.Architecture
         [Test]
         public void RecastBake_QueryPathDoesNotCutThroughBlockedGridHole()
         {
-            const int chunkSizeCells = 9;
+            const int chunkSizeCells = 64;
             const int tileSizeCm = chunkSizeCells * SpatialScaleDefaults.CellCm;
-            const int obstacleMinXcm = 300;
-            const int obstacleMinZcm = 300;
-            const int obstacleMaxXcm = 600;
-            const int obstacleMaxZcm = 600;
+            const int obstacleMinXcm = 2400;
+            const int obstacleMinZcm = 2400;
+            const int obstacleMaxXcm = 3600;
+            const int obstacleMaxZcm = 3600;
 
             var context = new NavBakeContext
             {
                 MapId = "nav_recast_blocked_hole_query_contract",
                 SourceUri = "Core:Maps/nav_recast_blocked_hole_query_contract.bin",
-                Terrain = new FlatGridLogicTerrainField(9, 9, chunkSizeCells: chunkSizeCells),
+                Terrain = new FlatGridLogicTerrainField(64, 64, chunkSizeCells: chunkSizeCells),
                 Obstacles = new NavObstacleSet
                 {
                     Obstacles =
@@ -258,10 +259,10 @@ namespace Ludots.Tests.Architecture
                 CollectDetourTileBytes(bake),
                 layer: 0,
                 areaCosts: NavAreaCostTable.CreateDefault(),
-                startXcm: 50,
-                startZcm: 50,
-                goalXcm: 750,
-                goalZcm: 750,
+                startXcm: 400,
+                startZcm: 400,
+                goalXcm: 6000,
+                goalZcm: 6000,
                 maxPortals: 256);
 
             Assert.That(path.Status, Is.EqualTo(NavPathStatus.Ok));
@@ -275,17 +276,20 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void NavBakeService_RuntimeIncremental_RequiresCdtAlgorithm()
+        public void NavBakeService_RuntimeIncremental_AcceptsCdtAndRecastOnly()
         {
-            var context = CreateRuntimeIncrementalContext(
-                new FlatGridLogicTerrainField(4, 4, chunkSizeCells: 4),
-                algorithm: NavBakeAlgorithmKind.Recast);
+            var terrain = new FlatGridLogicTerrainField(4, 4, chunkSizeCells: 4);
+            var service = new NavBakeService(new RecastNavBakeAlgorithm(), new CdtNavBakeAlgorithm());
 
-            var service = new NavBakeService(new CdtNavBakeAlgorithm());
+            Assert.DoesNotThrow(() => _ = service.Bake(CreateRuntimeIncrementalContext(terrain, algorithm: NavBakeAlgorithmKind.Recast)),
+                "runtime-incremental + recast 是受纳组合（.height 起伏地形的运行时重烤口径）");
+            Assert.DoesNotThrow(() => _ = service.Bake(CreateRuntimeIncrementalContext(terrain, algorithm: NavBakeAlgorithmKind.Cdt)),
+                "runtime-incremental + cdt 是受纳组合");
 
+            var context = CreateRuntimeIncrementalContext(terrain, algorithm: (NavBakeAlgorithmKind)99);
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => service.Bake(context))!;
             Assert.That(ex.Message, Does.Contain("runtime-incremental"));
-            Assert.That(ex.Message, Does.Contain("cdt"));
+            Assert.That(ex.Message, Does.Contain("cdt' or 'recast'"));
         }
 
         [Test]
@@ -298,19 +302,19 @@ namespace Ludots.Tests.Architecture
             var queryServices = new NavQueryServiceRegistry(new Dictionary<NavQueryServiceKey, NavTileStore>
             {
                 [new NavQueryServiceKey(layer: 0, profile: 0)] = store
-            });
+            }, tileWidthCm: 400, tileHeightCm: 400);
             var queue = new RuntimeIncrementalNavMeshRebuildQueue(
                 new NavBakeService(new CdtNavBakeAlgorithm()),
                 context,
                 queryServices,
                 navProfiles);
 
-            Assert.That(queue.EnqueueDirtyAabb(new Ludots.Core.Mathematics.WorldAabbCm(50, 50, 20, 20), includeNeighbors: false), Is.EqualTo(1));
-            Assert.That(queue.EnqueueDirtyAabb(new Ludots.Core.Mathematics.WorldAabbCm(450, 50, 20, 20), includeNeighbors: false), Is.EqualTo(1));
-            Assert.That(queue.EnqueueDirtyAabb(new Ludots.Core.Mathematics.WorldAabbCm(450, 50, 20, 20), includeNeighbors: false), Is.EqualTo(0));
+            Assert.That(queue.EnqueueDirtyAabb(new Ludots.Platform.Abstractions.WorldAabbCm(50, 50, 20, 20), includeNeighbors: false), Is.EqualTo(1));
+            Assert.That(queue.EnqueueDirtyAabb(new Ludots.Platform.Abstractions.WorldAabbCm(450, 50, 20, 20), includeNeighbors: false), Is.EqualTo(1));
+            Assert.That(queue.EnqueueDirtyAabb(new Ludots.Platform.Abstractions.WorldAabbCm(450, 50, 20, 20), includeNeighbors: false), Is.EqualTo(0));
             Assert.That(queue.PendingTileCount, Is.EqualTo(2));
 
-            RuntimeNavMeshRebuildBatch first = queue.ProcessBudget(1);
+            RuntimeNavMeshRebuildBatch first = PumpUntilNPublished(queue, submitBudget: 1, expectedPublished: 1);
             Assert.That(first.RebuiltTileCount, Is.EqualTo(1));
             Assert.That(first.FailedEntryCount, Is.EqualTo(0));
             Assert.That(first.PendingTileCount, Is.EqualTo(1));
@@ -320,7 +324,7 @@ namespace Ludots.Tests.Architecture
             Assert.That(store.TryGet(new NavTileId(0, 0, 0), out NavTile firstTile), Is.True);
             Assert.That(firstTile.TileVersion, Is.EqualTo(context.TileVersion + 1u));
 
-            RuntimeNavMeshRebuildBatch second = queue.ProcessBudget(1);
+            RuntimeNavMeshRebuildBatch second = PumpUntilNPublished(queue, submitBudget: 1, expectedPublished: 1);
             Assert.That(second.RebuiltTileCount, Is.EqualTo(1));
             Assert.That(second.FailedEntryCount, Is.EqualTo(0));
             Assert.That(second.PendingTileCount, Is.EqualTo(0));
@@ -328,6 +332,33 @@ namespace Ludots.Tests.Architecture
             Assert.That(second.PublishedTiles[0].Target, Is.EqualTo(new NavBakeTileCoord(1, 0)));
             Assert.That(store.Revision, Is.EqualTo(2u));
             Assert.That(store.TryGet(new NavTileId(1, 0, 0), out _), Is.True);
+        }
+
+        /// <summary>
+        /// 泵到累计发布 expectedPublished 个瓦片为止：首轮提交 submitBudget 个，后续轮次只发布不提交。
+        /// 返回累计发布清单构成的批次视图（PublishedTiles 为累计，其余字段取最后一次泵）。
+        /// </summary>
+        private static RuntimeNavMeshRebuildBatch PumpUntilNPublished(
+            RuntimeIncrementalNavMeshRebuildQueue queue,
+            int submitBudget,
+            int expectedPublished)
+        {
+            var published = new List<RuntimeNavMeshRebuildPublishedTile>();
+            var failures = new List<NavBakeResultEntry>();
+            RuntimeNavMeshRebuildBatch last = queue.ProcessBudget(submitBudget);
+            published.AddRange(last.PublishedTiles);
+            failures.AddRange(last.FailedEntries);
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            while (published.Count + failures.Count < expectedPublished && stopwatch.ElapsedMilliseconds < 10000)
+            {
+                Thread.Sleep(1);
+                last = queue.ProcessBudget(0);
+                published.AddRange(last.PublishedTiles);
+                failures.AddRange(last.FailedEntries);
+            }
+
+            Assert.That(published.Count + failures.Count, Is.EqualTo(expectedPublished), "Runtime rebake did not publish expected tiles in time.");
+            return new RuntimeNavMeshRebuildBatch(last.RequestedTileBudget, last.RebuiltTileCount, failures.Count, last.PendingTileCount, published, failures);
         }
 
         [Test]
@@ -340,17 +371,17 @@ namespace Ludots.Tests.Architecture
             var queryServices = new NavQueryServiceRegistry(new Dictionary<NavQueryServiceKey, NavTileStore>
             {
                 [new NavQueryServiceKey(layer: 0, profile: 0)] = store
-            });
+            }, tileWidthCm: 400, tileHeightCm: 400);
             var queue = new RuntimeIncrementalNavMeshRebuildQueue(
                 new NavBakeService(new CdtNavBakeAlgorithm()),
                 context,
                 queryServices,
                 navProfiles);
 
-            Assert.That(queue.EnqueueDirtyAabb(new Ludots.Core.Mathematics.WorldAabbCm(-500, -500, 20, 20), includeNeighbors: true), Is.EqualTo(0));
-            Assert.That(queue.EnqueueDirtyAabb(new Ludots.Core.Mathematics.WorldAabbCm(405, 405, 10, 10), includeNeighbors: true), Is.EqualTo(4));
+            Assert.That(queue.EnqueueDirtyAabb(new Ludots.Platform.Abstractions.WorldAabbCm(-500, -500, 20, 20), includeNeighbors: true), Is.EqualTo(0));
+            Assert.That(queue.EnqueueDirtyAabb(new Ludots.Platform.Abstractions.WorldAabbCm(405, 405, 10, 10), includeNeighbors: true), Is.EqualTo(4));
 
-            RuntimeNavMeshRebuildBatch batch = queue.ProcessBudget(4);
+            RuntimeNavMeshRebuildBatch batch = PumpUntilNPublished(queue, submitBudget: 4, expectedPublished: 4);
             Assert.That(batch.FailedEntryCount, Is.EqualTo(0));
             Assert.That(batch.PendingTileCount, Is.EqualTo(0));
             Assert.That(batch.PublishedTiles.Count, Is.EqualTo(4));
@@ -378,7 +409,7 @@ namespace Ludots.Tests.Architecture
             var queryServices = new NavQueryServiceRegistry(new Dictionary<NavQueryServiceKey, NavTileStore>
             {
                 [new NavQueryServiceKey(layer: 0, profile: 0)] = store
-            });
+            }, tileWidthCm: 400, tileHeightCm: 400);
             var queue = new RuntimeIncrementalNavMeshRebuildQueue(
                 new NavBakeService(new CdtNavBakeAlgorithm()),
                 context,
@@ -386,7 +417,7 @@ namespace Ludots.Tests.Architecture
                 navProfiles);
 
             Assert.That(queue.EnqueueDirtyTile(new NavBakeTileCoord(0, 0)), Is.True);
-            RuntimeNavMeshRebuildBatch failed = queue.ProcessBudget(1);
+            RuntimeNavMeshRebuildBatch failed = PumpUntilNPublished(queue, submitBudget: 1, expectedPublished: 1);
 
             Assert.That(failed.RebuiltTileCount, Is.EqualTo(1));
             Assert.That(failed.FailedEntryCount, Is.EqualTo(1));
@@ -483,7 +514,7 @@ namespace Ludots.Tests.Architecture
             var context = new NavBakeContext
             {
                 MapId = "nav_estimate_contract",
-                SourceUri = "Core:Maps/nav_estimate_contract.vtxm",
+                SourceUri = "Core:Maps/nav_estimate_contract.hex",
                 Terrain = new FlatGridLogicTerrainField(8, 4, chunkSizeCells: 4),
                 Obstacles = new NavObstacleSet
                 {
@@ -533,8 +564,8 @@ namespace Ludots.Tests.Architecture
             Assert.That(estimate.TileWorldWidthCm, Is.EqualTo(400));
             Assert.That(estimate.TileWorldHeightCm, Is.EqualTo(400));
             Assert.That(estimate.TerrainCellSampleCount, Is.EqualTo(32));
-            Assert.That(estimate.RecastColumnBudgetTotal, Is.EqualTo(7184));
-            Assert.That(estimate.BudgetWorkUnitCount, Is.EqualTo(7184));
+            Assert.That(estimate.RecastColumnBudgetTotal, Is.EqualTo(1152));
+            Assert.That(estimate.BudgetWorkUnitCount, Is.EqualTo(1152));
             Assert.That(estimate.EstimatedTileBytesLow, Is.EqualTo(8L * NavBakeEstimator.EstimatedBytesPerOperationLow));
             Assert.That(estimate.EstimatedTileBytesHigh, Is.EqualTo(8L * NavBakeEstimator.EstimatedBytesPerOperationHigh));
             Assert.That(estimate.EstimatedSerialSecondsLow, Is.EqualTo(0.64d).Within(0.0001d));
@@ -545,11 +576,11 @@ namespace Ludots.Tests.Architecture
 
             NavBakeProfileEstimate small = estimate.Profiles[0];
             Assert.That(small.ProfileId, Is.EqualTo("Small"));
-            Assert.That(small.RecastCellSizeCm, Is.EqualTo(10f).Within(0.0001f));
-            Assert.That(small.RecastCellHeightCm, Is.EqualTo(5f).Within(0.0001f));
-            Assert.That(small.RecastColumnsPerAxis, Is.EqualTo(40));
-            Assert.That(small.WalkableHeightVoxels, Is.EqualTo(36));
-            Assert.That(small.WalkableClimbVoxels, Is.EqualTo(8));
+            Assert.That(small.RecastCellSizeCm, Is.EqualTo(100f).Within(0.0001f));
+            Assert.That(small.RecastCellHeightCm, Is.EqualTo(50f).Within(0.0001f));
+            Assert.That(small.RecastColumnsPerAxis, Is.EqualTo(4));
+            Assert.That(small.WalkableHeightVoxels, Is.EqualTo(4));
+            Assert.That(small.WalkableClimbVoxels, Is.EqualTo(0));
             Assert.That(small.MinWalkableUpDot, Is.EqualTo(MathF.Cos(45f * MathF.PI / 180f)).Within(0.0001f));
         }
 
@@ -561,7 +592,7 @@ namespace Ludots.Tests.Architecture
             var context = new NavBakeContext
             {
                 MapId = "nav_estimate_invalid_slope",
-                SourceUri = "Core:Maps/nav_estimate_invalid_slope.vtxm",
+                SourceUri = "Core:Maps/nav_estimate_invalid_slope.hex",
                 Terrain = new FlatGridLogicTerrainField(4, 4, chunkSizeCells: 4),
                 Obstacles = new NavObstacleSet(),
                 Config = config,
@@ -597,12 +628,12 @@ namespace Ludots.Tests.Architecture
         [Test]
         public void NavBakeEstimator_LargeBakeRequiresExplicitApprovalAndMatchingHash()
         {
-            NavBakeContext context = CreateEstimateBudgetContext(widthCells: 128, heightCells: 128, chunkSizeCells: 4, layerCount: 2);
+            NavBakeContext context = CreateEstimateBudgetContext(widthCells: 1280, heightCells: 1280, chunkSizeCells: 4, layerCount: 2);
 
             NavBakeEstimateReport estimate = NavBakeEstimator.Estimate(context);
 
-            Assert.That(estimate.BakeOperationCount, Is.EqualTo(2048));
-            Assert.That(estimate.BudgetWorkUnitCount, Is.EqualTo(3_276_800));
+            Assert.That(estimate.BakeOperationCount, Is.EqualTo(204_800));
+            Assert.That(estimate.BudgetWorkUnitCount, Is.EqualTo(29_491_200));
             Assert.That(estimate.BudgetStatus, Is.EqualTo(NavBakeBudgetStatus.Large));
             Assert.That(estimate.RequiresExplicitLargeBakeApproval, Is.True);
             Assert.Throws<InvalidOperationException>(
@@ -616,12 +647,12 @@ namespace Ludots.Tests.Architecture
         [Test]
         public void NavBakeEstimator_RejectsOversizedBakeEvenWithApproval()
         {
-            NavBakeContext context = CreateEstimateBudgetContext(widthCells: 128, heightCells: 128, chunkSizeCells: 4, layerCount: 123);
+            NavBakeContext context = CreateEstimateBudgetContext(widthCells: 1280, heightCells: 1280, chunkSizeCells: 4, layerCount: 123);
 
             NavBakeEstimateReport estimate = NavBakeEstimator.Estimate(context);
 
-            Assert.That(estimate.BakeOperationCount, Is.EqualTo(125952));
-            Assert.That(estimate.BudgetWorkUnitCount, Is.EqualTo(201_523_200));
+            Assert.That(estimate.BakeOperationCount, Is.EqualTo(12_595_200));
+            Assert.That(estimate.BudgetWorkUnitCount, Is.EqualTo(1_813_708_800));
             Assert.That(estimate.BudgetStatus, Is.EqualTo(NavBakeBudgetStatus.Reject));
             Assert.That(estimate.RequiresExplicitLargeBakeApproval, Is.False);
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
@@ -815,7 +846,7 @@ namespace Ludots.Tests.Architecture
             string repoRoot = CreateTempRepoNavigationConfig();
             try
             {
-                string navigationDir = Path.Combine(repoRoot, "assets", "Configs", "Navigation");
+                string navigationDir = Path.Combine(repoRoot, "assets", "Navigation");
                 File.WriteAllText(Path.Combine(navigationDir, "alt_navmesh.json"),
                     """
                     {
@@ -837,7 +868,7 @@ namespace Ludots.Tests.Architecture
                       }
                     }
                     """);
-                string catalogPath = Path.Combine(repoRoot, "assets", "Configs", "config_catalog.json");
+                string catalogPath = Path.Combine(repoRoot, "assets", "config_catalog.json");
                 string catalog = File.ReadAllText(catalogPath).TrimEnd();
                 catalog = catalog.Substring(0, catalog.Length - 1) +
                     "," + Environment.NewLine +
@@ -1006,7 +1037,7 @@ namespace Ludots.Tests.Architecture
             }
 
             double localX = worldXcm - tile.OriginXcm;
-            double localZ = worldZcm - tile.OriginZcm;
+            double localZ = worldZcm - tile.OriginYcm;
             for (int i = 0; i < tile.TriangleCount; i++)
             {
                 int a = tile.TriA[i];
@@ -1114,7 +1145,7 @@ namespace Ludots.Tests.Architecture
             return new NavBakeContext
             {
                 MapId = "nav_runtime_incremental_contract",
-                SourceUri = "Core:Maps/nav_runtime_incremental_contract.vtxm",
+                SourceUri = "Core:Maps/nav_runtime_incremental_contract.hex",
                 Terrain = terrain,
                 Obstacles = obstacles ?? new NavObstacleSet(),
                 Config = CreateBakeConfig(NavBakeNames.ModeRuntimeIncremental, NavBakeNames.FormatAlgorithm(algorithm)),
@@ -1154,7 +1185,7 @@ namespace Ludots.Tests.Architecture
             return new NavBakeContext
             {
                 MapId = "nav_estimate_budget_contract",
-                SourceUri = "Core:Maps/nav_estimate_budget_contract.vtxm",
+                SourceUri = "Core:Maps/nav_estimate_budget_contract.hex",
                 Terrain = terrain,
                 Obstacles = new NavObstacleSet(),
                 Config = config,
@@ -1175,7 +1206,7 @@ namespace Ludots.Tests.Architecture
             return new NavBakeContext
             {
                 MapId = "nav_estimate_hash_contract",
-                SourceUri = "Core:Maps/nav_estimate_hash_contract.vtxm",
+                SourceUri = "Core:Maps/nav_estimate_hash_contract.hex",
                 Terrain = terrain,
                 Obstacles = new NavObstacleSet(),
                 Config = CreateBakeConfig(NavBakeNames.ModeOffline, NavBakeNames.AlgorithmRecast),
@@ -1190,13 +1221,7 @@ namespace Ludots.Tests.Architecture
         }
 
         private static NavMeshBakeConfig LoadTempConfig(string root, AgentProfileRegistry profiles)
-        {
-            var vfs = new VirtualFileSystem();
-            vfs.Mount("Core", root);
-            var pipeline = new ConfigPipeline(vfs, modLoader: null!);
-            var catalog = ConfigCatalogLoader.Load(pipeline);
-            return new NavMeshBakeConfigLoader(pipeline, profiles).Load(catalog);
-        }
+            => NavBakeConfigLoaderTestHelpers.Load(root, profiles);
 
         private static IReadOnlyList<byte[]> CollectDetourTileBytes(NavBakeResult bake)
         {
@@ -1223,27 +1248,15 @@ namespace Ludots.Tests.Architecture
         }
 
         private static string CreateTempNavConfig(string navmeshJson)
-        {
-            string tempRoot = Path.Combine(Path.GetTempPath(), "ludots-nav-bake-service-" + Guid.NewGuid().ToString("N"));
-            string configs = Path.Combine(tempRoot, "Configs");
-            Directory.CreateDirectory(Path.Combine(configs, "Navigation"));
-            File.WriteAllText(Path.Combine(configs, "config_catalog.json"),
-                """
-                [
-                  { "Path": "Navigation/navmesh.json", "Policy": "DeepObject" }
-                ]
-                """);
-            File.WriteAllText(Path.Combine(configs, "Navigation", "navmesh.json"), navmeshJson);
-            return tempRoot;
-        }
+            => NavBakeConfigLoaderTestHelpers.CreateTempNavConfig(navmeshJson);
 
         private static string CreateTempRepoNavigationConfig()
         {
             string repoRoot = Path.Combine(Path.GetTempPath(), "ludots-nav-config-repo-" + Guid.NewGuid().ToString("N"));
-            string navigationDir = Path.Combine(repoRoot, "assets", "Configs", "Navigation");
+            string navigationDir = Path.Combine(repoRoot, "assets", "Navigation");
             Directory.CreateDirectory(navigationDir);
             Directory.CreateDirectory(Path.Combine(repoRoot, "mods"));
-            File.WriteAllText(Path.Combine(repoRoot, "assets", "Configs", "config_catalog.json"),
+            File.WriteAllText(Path.Combine(repoRoot, "assets", "config_catalog.json"),
                 """
                 [
                   { "Path": "Navigation/agent_profiles.json", "Policy": "ArrayById", "IdField": "id" },
@@ -1295,14 +1308,14 @@ namespace Ludots.Tests.Architecture
 
         private static void WriteNavigationAgentProfiles(string modRoot, string json)
         {
-            string dir = Path.Combine(modRoot, "assets", "Configs", "Navigation");
+            string dir = Path.Combine(modRoot, "assets", "Navigation");
             Directory.CreateDirectory(dir);
             File.WriteAllText(Path.Combine(dir, "agent_profiles.json"), json);
         }
 
         private static void WriteNavigationNavmesh(string modRoot, string json)
         {
-            string dir = Path.Combine(modRoot, "assets", "Configs", "Navigation");
+            string dir = Path.Combine(modRoot, "assets", "Navigation");
             Directory.CreateDirectory(dir);
             File.WriteAllText(Path.Combine(dir, "navmesh.json"), json);
         }

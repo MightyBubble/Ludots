@@ -137,6 +137,17 @@ button { padding:12px 18px; border-radius:10px; }
 .phase-five-card { display:flex; align-items:center; justify-content:center; min-height:104px; height:104px; padding:12px; gap:8px; border-radius:14px; border-width:2px; border-color:rgba(255,255,255,0.18); background-color:rgba(15,23,42,0.26); color:var(--text, #ffffff); text-align:center; font-size:18px; font-weight:700; flex-grow:1; flex-basis:0px; }
 .phase-five-pulse { border-width:1px; animation:phase-five-pulse 560ms ease-in-out 0s 1 normal both; }
 .phase-five-breathe { outline-width:2px; animation:phase-five-breathe 240ms ease-in-out 80ms 2 alternate both; }
+.phase-six-panel { display:flex; flex-direction:column; gap:10px; padding:12px; background-color:rgba(15, 23, 42, 0.12); border-radius:12px; border-width:1px; border-color:var(--border, #4c5976); }
+.phase-six-grid { display:grid; grid-template-columns:auto 1fr auto; column-gap:10px; row-gap:8px; width:100%; }
+.phase-six-cell { padding:10px 12px; border-radius:10px; border-width:1px; border-color:rgba(255,255,255,0.18); background-color:rgba(15,23,42,0.34); color:var(--text, #ffffff); font-size:14px; }
+.phase-six-short { background-color:rgba(60,130,255,0.28); }
+.phase-six-long { background-color:rgba(245,158,11,0.22); }
+.phase-six-icon { position:relative; min-width:44px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:4px; }
+.phase-six-icon::before { content:url('{{badge_svg_data_uri}}'); width:18px; height:18px; }
+.phase-six-icon-img { width:18px; height:18px; object-fit:contain; }
+.phase-six-scroll { display:flex; flex-direction:column; gap:8px; height:120px; overflow:scroll; padding:8px; border-radius:10px; border-width:1px; border-color:rgba(255,255,255,0.18); background-color:rgba(15,23,42,0.28); }
+.phase-six-sticky { position:sticky; top:0px; z-index:2; padding:8px 10px; border-radius:8px; background-color:rgba(60,130,255,0.92); color:#ffffff; font-weight:700; }
+.phase-six-scroll-line { padding:8px 10px; border-radius:8px; background-color:rgba(255,255,255,0.06); color:var(--muted, #a7b1c4); font-size:13px; }
 @keyframes phase-five-panel-glow {
   0% { background-color:rgba(15,23,42,0.12); border-color:rgba(148,163,184,0.24); }
   50% { background-color:rgba(30,64,175,0.18); border-color:rgba(96,165,250,0.82); }

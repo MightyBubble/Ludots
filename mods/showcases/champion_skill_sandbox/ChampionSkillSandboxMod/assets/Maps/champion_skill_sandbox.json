@@ -1,7 +1,15 @@
 {
   "Id": "champion_skill_sandbox",
-  "VisualHeightmapAsset": "assets/terrain/champion_skill_sandbox_flat.vhtm",
-  "Tags": ["champion.skill.sandbox", "showcase.3c"],
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  },
+  "ContinuousHeightmapAsset": "assets/terrain/champion_skill_sandbox_flat.height",
+  "Tags": [
+    "champion.skill.sandbox",
+    "showcase.3c"
+  ],
   "DefaultCamera": {
     "VirtualCameraId": "ChampionSkillSandbox.Camera.Tactical",
     "TargetXCm": 1850,
@@ -15,162 +23,329 @@
       "Template": "champion_skill_sandbox_participant_anchor",
       "InstanceId": "champion-sandbox-team-blue-anchor",
       "Overrides": {
-        "Name": { "Value": "Blue Team Anchor" }
+        "Name": {
+          "Value": "Blue Team Anchor"
+        }
       }
     },
     {
       "Template": "champion_skill_sandbox_participant_anchor",
       "InstanceId": "champion-sandbox-player-blue-anchor",
       "Overrides": {
-        "Name": { "Value": "Blue Player Anchor" }
+        "Name": {
+          "Value": "Blue Player Anchor"
+        }
       }
     },
     {
       "Template": "champion_skill_sandbox_participant_anchor",
       "InstanceId": "champion-sandbox-team-red-anchor",
       "Overrides": {
-        "Name": { "Value": "Red Team Anchor" }
+        "Name": {
+          "Value": "Red Team Anchor"
+        }
       }
     },
     {
       "Template": "champion_skill_sandbox_ezreal",
       "InstanceId": "champion-sandbox-ezreal-alpha",
       "Overrides": {
-        "Name": { "Value": "Ezreal Alpha" },
-        "PlayerOwner": { "PlayerId": 1 },
-        "WorldPositionCm": { "Value": { "X": 1180, "Y": 720 } }
+        "Name": {
+          "Value": "Ezreal Alpha"
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1180,
+            "Y": 720
+          }
+        }
       }
     },
     {
       "Template": "champion_skill_sandbox_ezreal",
       "Overrides": {
-        "Name": { "Value": "Ezreal Cooldown" },
-        "PlayerOwner": { "PlayerId": 1 },
-        "WorldPositionCm": { "Value": { "X": 1180, "Y": 1160 } }
+        "Name": {
+          "Value": "Ezreal Cooldown"
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1180,
+            "Y": 1160
+          }
+        }
       }
     },
     {
       "Template": "champion_skill_sandbox_garen",
       "Overrides": {
-        "Name": { "Value": "Garen Alpha" },
-        "PlayerOwner": { "PlayerId": 1 },
-        "WorldPositionCm": { "Value": { "X": 1500, "Y": 720 } }
+        "Name": {
+          "Value": "Garen Alpha"
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1500,
+            "Y": 720
+          }
+        }
       }
     },
     {
       "Template": "champion_skill_sandbox_garen",
       "Overrides": {
-        "Name": { "Value": "Garen Courage" },
-        "PlayerOwner": { "PlayerId": 1 },
-        "WorldPositionCm": { "Value": { "X": 1500, "Y": 1160 } }
+        "Name": {
+          "Value": "Garen Courage"
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1500,
+            "Y": 1160
+          }
+        }
       }
     },
     {
       "Template": "champion_skill_sandbox_jayce",
       "Overrides": {
-        "Name": { "Value": "Jayce Cannon" },
-        "PlayerOwner": { "PlayerId": 1 },
-        "WorldPositionCm": { "Value": { "X": 1820, "Y": 720 } }
+        "Name": {
+          "Value": "Jayce Cannon"
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1820,
+            "Y": 720
+          }
+        }
       }
     },
     {
       "Template": "champion_skill_sandbox_jayce",
       "Overrides": {
-        "Name": { "Value": "Jayce Hammer" },
-        "PlayerOwner": { "PlayerId": 1 },
-        "WorldPositionCm": { "Value": { "X": 1820, "Y": 1160 } }
+        "Name": {
+          "Value": "Jayce Hammer"
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1820,
+            "Y": 1160
+          }
+        }
       }
     },
     {
       "Template": "champion_skill_sandbox_geomancer",
       "Overrides": {
-        "Name": { "Value": "Geomancer Alpha" },
-        "PlayerOwner": { "PlayerId": 1 },
-        "WorldPositionCm": { "Value": { "X": 1500, "Y": 1600 } }
+        "Name": {
+          "Value": "Geomancer Alpha"
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1500,
+            "Y": 1600
+          }
+        }
       }
     },
     {
       "Template": "champion_skill_sandbox_spell_engineer",
       "Overrides": {
-        "Name": { "Value": "Spell Engineer Alpha" },
-        "PlayerOwner": { "PlayerId": 1 },
-        "WorldPositionCm": { "Value": { "X": 2140, "Y": 1600 } }
+        "Name": {
+          "Value": "Spell Engineer Alpha"
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2140,
+            "Y": 1600
+          }
+        }
       }
     },
     {
       "Template": "champion_skill_sandbox_enemy_dummy",
       "InstanceId": "champion-sandbox-target-dummy-a",
       "Overrides": {
-        "Name": { "Value": "Target Dummy A" },
-        "WorldPositionCm": { "Value": { "X": 1960, "Y": 680 } }
+        "Name": {
+          "Value": "Target Dummy A"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1960,
+            "Y": 680
+          }
+        }
       }
     },
     {
       "Template": "champion_skill_sandbox_enemy_dummy",
       "Overrides": {
-        "Name": { "Value": "Target Dummy B" },
-        "WorldPositionCm": { "Value": { "X": 2020, "Y": 860 } }
+        "Name": {
+          "Value": "Target Dummy B"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2020,
+            "Y": 860
+          }
+        }
       }
     },
     {
       "Template": "champion_skill_sandbox_enemy_dummy",
       "Overrides": {
-        "Name": { "Value": "Target Dummy C" },
-        "WorldPositionCm": { "Value": { "X": 1960, "Y": 1040 } }
+        "Name": {
+          "Value": "Target Dummy C"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1960,
+            "Y": 1040
+          }
+        }
       }
     },
     {
       "Template": "champion_skill_sandbox_enemy_brute",
       "Overrides": {
-        "Name": { "Value": "Target Brute A" },
-        "WorldPositionCm": { "Value": { "X": 2280, "Y": 760 } }
+        "Name": {
+          "Value": "Target Brute A"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2280,
+            "Y": 760
+          }
+        }
       }
     },
     {
       "Template": "champion_skill_sandbox_enemy_brute",
       "Overrides": {
-        "Name": { "Value": "Target Brute B" },
-        "WorldPositionCm": { "Value": { "X": 2280, "Y": 1120 } }
+        "Name": {
+          "Value": "Target Brute B"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2280,
+            "Y": 1120
+          }
+        }
       }
     },
     {
       "Template": "champion_skill_sandbox_enemy_dummy",
       "Overrides": {
-        "Name": { "Value": "Target Dummy D" },
-        "WorldPositionCm": { "Value": { "X": 2580, "Y": 1600 } }
+        "Name": {
+          "Value": "Target Dummy D"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2580,
+            "Y": 1600
+          }
+        }
       }
     },
     {
       "Template": "champion_skill_sandbox_enemy_dummy",
       "Overrides": {
-        "Name": { "Value": "Target Dummy E" },
-        "WorldPositionCm": { "Value": { "X": 2460, "Y": 1780 } }
+        "Name": {
+          "Value": "Target Dummy E"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2460,
+            "Y": 1780
+          }
+        }
       }
     },
     {
       "Template": "champion_skill_sandbox_enemy_dummy",
       "Overrides": {
-        "Name": { "Value": "Target Dummy F" },
-        "WorldPositionCm": { "Value": { "X": 2460, "Y": 1420 } }
+        "Name": {
+          "Value": "Target Dummy F"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2460,
+            "Y": 1420
+          }
+        }
       }
     }
   ],
   "Teams": [
-    { "TeamId": 1, "RepresentativeInstanceId": "champion-sandbox-team-blue-anchor" },
-    { "TeamId": 2, "RepresentativeInstanceId": "champion-sandbox-team-red-anchor" }
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "champion-sandbox-team-blue-anchor"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "champion-sandbox-team-red-anchor"
+    }
   ],
   "Players": [
-    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "champion-sandbox-player-blue-anchor" }
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "champion-sandbox-player-blue-anchor"
+    }
   ],
   "ParticipantRelationships": {
     "Teams": [
-      { "TeamA": 1, "TeamB": 1, "TypeId": "ChampionSkillSandbox.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 2, "TeamB": 2, "TypeId": "ChampionSkillSandbox.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 1, "TeamB": 2, "TypeId": "ChampionSkillSandbox.Participant", "Attitude": "Hostile", "Symmetric": true }
+      {
+        "TeamA": 1,
+        "TeamB": 1,
+        "TypeId": "ChampionSkillSandbox.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 2,
+        "TeamB": 2,
+        "TypeId": "ChampionSkillSandbox.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 1,
+        "TeamB": 2,
+        "TypeId": "ChampionSkillSandbox.Participant",
+        "Attitude": "Hostile",
+        "Symmetric": true
+      }
     ],
     "Players": [],
     "PlayerTeams": [
-      { "PlayerId": 1, "TeamId": 1, "TypeId": "ChampionSkillSandbox.Participant", "Symmetric": false }
+      {
+        "PlayerId": 1,
+        "TeamId": 1,
+        "TypeId": "ChampionSkillSandbox.Participant",
+        "Symmetric": false
+      }
     ]
   }
 }

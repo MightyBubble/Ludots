@@ -1,0 +1,111 @@
+[
+  {
+    "id": "showcase.graph_op.ClampFloat",
+    "kind": "Effect",
+    "entry": "raw",
+    "nodes": [
+      {
+        "id": "raw",
+        "op": "ConstFloat",
+        "floatValue": 90
+      },
+      {
+        "id": "lo",
+        "op": "ConstFloat",
+        "floatValue": 10
+      },
+      {
+        "id": "hi",
+        "op": "ConstFloat",
+        "floatValue": 40
+      },
+      {
+        "id": "clamped",
+        "op": "ClampFloat"
+      },
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "flip",
+        "op": "NegFloat"
+      },
+      {
+        "id": "hit",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "raw",
+        "fromPort": "next",
+        "to": "lo"
+      },
+      {
+        "from": "lo",
+        "fromPort": "next",
+        "to": "hi"
+      },
+      {
+        "from": "hi",
+        "fromPort": "next",
+        "to": "clamped"
+      },
+      {
+        "from": "clamped",
+        "fromPort": "next",
+        "to": "explicit"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "flip"
+      },
+      {
+        "from": "flip",
+        "fromPort": "next",
+        "to": "hit"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "raw",
+        "fromPort": "value",
+        "to": "clamped",
+        "toPort": "value"
+      },
+      {
+        "from": "lo",
+        "fromPort": "value",
+        "to": "clamped",
+        "toPort": "min"
+      },
+      {
+        "from": "hi",
+        "fromPort": "value",
+        "to": "clamped",
+        "toPort": "max"
+      },
+      {
+        "from": "clamped",
+        "fromPort": "value",
+        "to": "flip",
+        "toPort": "value"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "target"
+      },
+      {
+        "from": "flip",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "value"
+      }
+    ]
+  }
+]

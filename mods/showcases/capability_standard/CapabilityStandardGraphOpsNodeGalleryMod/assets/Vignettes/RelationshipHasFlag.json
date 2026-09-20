@@ -1,0 +1,34 @@
+{
+  "op": "RelationshipHasFlag",
+  "driver": "sandbox",
+  "title": "这条关系上插没插信任旗",
+  "beat": "青色链上插着绿旗，旗子闪两下；没链的那位啥也没有。",
+  "detailTemplate": "信任旗插着，检查结果：{result}。",
+  "assertDetailContains": [
+    "信任旗"
+  ],
+  "featuredNodeId": "hasFlag",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "ally",
+      "role": "target",
+      "template": "GraphOps.Ally",
+      "name": "盟友",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

@@ -109,6 +109,7 @@ public sealed class InstantEffectTransactionTests
             new GraphInstruction { Op = (ushort)GraphNodeOp.ApplyEffectDynamic, A = 0, B = 0 },
             new GraphInstruction { Op = (ushort)GraphNodeOp.SendEvent, A = 0, B = 0, Imm = eventTagId },
             new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, B = 0, Imm = 1 },
+            new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
         ], GraphKind.Effect);
 
         EffectPhaseGraphBindings bindings = default;
@@ -395,6 +396,295 @@ public sealed class InstantEffectTransactionTests
                 world.Get<PreviousWorldPositionCm>(child).Value,
                 Is.EqualTo(originalPreviousPosition.Value));
         });
+    }
+
+    [Test]
+    public unsafe void RollbackWorldWrites_WhenBlackboardHolderIsDestroyed_CompletesRemainingRestores()
+    {
+        using World world = World.Create();
+        int healthId = AttributeRegistry.Register("Test.S4.Rollback.Health");
+        var tagOps = new TagOps(new DirtyEntityQueue(8), new TagRuleRegistry());
+        Entity victim = world.Create(new BlackboardFloatBuffer());
+        Entity survivor = world.Create(new AttributeBuffer(), new DirtyFlags());
+        world.Get<AttributeBuffer>(survivor).SetBase(healthId, 100f);
+        Entity source = world.Create();
+        using var transaction = new EffectPhaseSideEffectTransaction(
+            world,
+            tagOps,
+            effectRequests: null,
+            spawnRequests: null,
+            presentationEvents: null,
+            attributeEntityCapacity: 8);
+        transaction.Begin();
+        transaction.StageBlackboardFloat(victim, keyId: 7, value: 3.5f);
+        transaction.StageAttributeAdd(survivor, healthId, -25f);
+        EffectPhaseListenerBuffer setup = default;
+        setup.Count = 1;
+        setup.Phases[0] = (byte)EffectPhaseId.OnApply;
+        setup.Scopes[0] = (byte)PhaseListenerScope.Target;
+        setup.ActionFlags[0] = (byte)PhaseListenerActionFlags.ExecuteGraph;
+        setup.GraphProgramIds[0] = 1;
+        var context = new EffectContext { Source = source, Target = survivor };
+        transaction.StageListenerRegistration(in context, in setup, ownerEffectId: 11);
+
+        Type transactionType = typeof(EffectPhaseSideEffectTransaction);
+        MethodInfo prepareCommitState = transactionType.GetMethod(
+            "PrepareCommitState",
+            BindingFlags.Instance | BindingFlags.NonPublic)!;
+        FieldInfo structuralCommandsField = transactionType.GetField(
+            "_structuralCommands",
+            BindingFlags.Instance | BindingFlags.NonPublic)!;
+        FieldInfo worldCommitStartedField = transactionType.GetField(
+            "_worldCommitStarted",
+            BindingFlags.Instance | BindingFlags.NonPublic)!;
+        FieldInfo attributeValuesField = transactionType.GetField(
+            "_attributeValues",
+            BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+        prepareCommitState.Invoke(transaction, null);
+        worldCommitStartedField.SetValue(transaction, true);
+        ((CommandBuffer)structuralCommandsField.GetValue(transaction)!).Playback(world);
+        world.Get<AttributeBuffer>(survivor) = ((AttributeBuffer[])attributeValuesField.GetValue(transaction)!)[0];
+        world.Destroy(victim);
+
+        Assert.DoesNotThrow(() => transaction.Rollback());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(world.IsAlive(victim), Is.False);
+            Assert.That(world.Get<AttributeBuffer>(survivor).GetCurrent(healthId), Is.EqualTo(100f));
+            Assert.That(world.Has<EffectPhaseListenerBuffer>(survivor), Is.False);
+        });
+    }
+
+    [Test]
+    public void StagePresentationEvent_WhenBufferIsMissing_ThrowsNamedError()
+    {
+        using World world = World.Create();
+        using var transaction = new EffectPhaseSideEffectTransaction(
+            world,
+            tagOps: null,
+            effectRequests: null,
+            spawnRequests: null,
+            presentationEvents: null,
+            attributeEntityCapacity: 2);
+        transaction.Begin();
+
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+            transaction.StagePresentationEvent(new GasPresentationEvent
+            {
+                Kind = GasPresentationEventKind.EffectActivated,
+            }))!;
+
+        Assert.That(error.Message, Does.StartWith(EffectPhaseSideEffectTransaction.MissingPresentationEventBufferError));
+        transaction.Rollback();
+    }
+
+    [Test]
+    public void StageGrantedTagGrant_CommitsThroughTransactionAndRollsBackOnAbort()
+    {
+        using World world = World.Create();
+        const int tagId = 91;
+        var dirtyQueue = new DirtyEntityQueue(8);
+        var tagOps = new TagOps(dirtyQueue, new TagRuleRegistry());
+        Entity target = world.Create(new GameplayTagContainer(), new TagCountContainer(), new DirtyFlags());
+        var grantedTags = new EffectGrantedTags();
+        Assert.That(grantedTags.Add(new TagContribution
+        {
+            TagId = tagId,
+            Formula = TagContributionFormula.Fixed,
+            Amount = 1,
+        }), Is.True);
+        using var transaction = new EffectPhaseSideEffectTransaction(
+            world,
+            tagOps,
+            effectRequests: null,
+            spawnRequests: null,
+            presentationEvents: null,
+            attributeEntityCapacity: 4);
+
+        transaction.Begin();
+        transaction.StageGrantedTagGrant(target, in grantedTags, stackCount: 1);
+        Assert.That(world.Get<GameplayTagContainer>(target).HasTag(tagId), Is.False);
+        transaction.Rollback();
+        Assert.That(world.Get<GameplayTagContainer>(target).HasTag(tagId), Is.False);
+        Assert.That(dirtyQueue.Count, Is.Zero);
+
+        transaction.Begin();
+        transaction.StageGrantedTagGrant(target, in grantedTags, stackCount: 1);
+        transaction.Commit();
+
+        Assert.That(world.Get<GameplayTagContainer>(target).HasTag(tagId), Is.True);
+        Assert.That(world.Get<TagCountContainer>(target).GetCount(tagId), Is.EqualTo(1));
+        Assert.That(dirtyQueue.Count, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void FanOutBuiltins_WhenRequiredServicesAreMissing_ThrowNamedErrors()
+    {
+        using World world = World.Create();
+        Entity source = world.Create();
+        Entity target = world.Create();
+        var context = new EffectContext { Source = source, Target = target };
+        EffectConfigParams mergedParams = default;
+        EffectTemplateData template = default;
+
+        using (BuiltinHandlerRuntimeScope.Push(new BuiltinHandlerExecutionContext()))
+        {
+            InvalidOperationException spatial = Assert.Throws<InvalidOperationException>(() =>
+                BuiltinHandlers.HandleSpatialQuery(world, default, ref context, in mergedParams, in template))!;
+            Assert.That(spatial.Message, Does.StartWith(BuiltinHandlers.MissingSpatialQueriesError));
+
+            InvalidOperationException dispatch = Assert.Throws<InvalidOperationException>(() =>
+                BuiltinHandlers.HandleDispatchPayload(world, default, ref context, in mergedParams, in template))!;
+            Assert.That(dispatch.Message, Does.StartWith(BuiltinHandlers.MissingFanOutBudgetError));
+
+            InvalidOperationException reresolve = Assert.Throws<InvalidOperationException>(() =>
+                BuiltinHandlers.HandleReResolveAndDispatch(world, default, ref context, in mergedParams, in template))!;
+            Assert.That(reresolve.Message, Does.StartWith(BuiltinHandlers.MissingSpatialQueriesError));
+        }
+
+        InvalidOperationException missingRuntime = Assert.Throws<InvalidOperationException>(() =>
+            BuiltinHandlers.HandleSpatialQuery(world, default, ref context, in mergedParams, in template))!;
+        Assert.That(missingRuntime.Message, Does.StartWith(BuiltinHandlers.MissingHandlerRuntimeError));
+    }
+
+    [Test]
+    public void EffectApplication_AttachIsVisibleIntermediateState_BeforeActivateSettlement()
+    {
+        using World world = World.Create();
+        Entity source = world.Create();
+        Entity target = world.Create(new ActiveEffectContainer());
+        Entity effect = GameplayEffectFactory.CreateEffect(
+            world,
+            rootId: 1,
+            source,
+            target,
+            durationTicks: 30,
+            lifetimeKind: EffectLifetimeKind.After);
+        var system = new EffectApplicationSystem(
+            world,
+            GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+            new DiscreteClock())
+        {
+            MaxWorkUnitsPerSlice = 1,
+        };
+
+        Assert.That(system.UpdateSlice(0f, int.MaxValue), Is.False);
+        Assert.That(world.IsAlive(effect), Is.True);
+        Assert.That(world.Get<ActiveEffectContainer>(target).Count, Is.EqualTo(1));
+        Assert.That(world.Get<GameplayEffect>(effect).State, Is.EqualTo(EffectState.Apply));
+
+        system.MaxWorkUnitsPerSlice = int.MaxValue;
+        int slices = 0;
+        while (!system.UpdateSlice(0f, int.MaxValue))
+        {
+            slices++;
+            Assert.That(slices, Is.LessThan(16));
+        }
+
+        Assert.That(world.Get<GameplayEffect>(effect).State, Is.EqualTo(EffectState.Committed));
+        Assert.That(world.Get<ActiveEffectContainer>(target).Count, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void EffectApplication_ActivateFailure_LeavesVisibleAttachment_AndResetSliceReclaimsIt()
+    {
+        using World world = World.Create();
+        const int templateId = 1942;
+        const int graphId = 1943;
+        var programs = new GraphProgramRegistry();
+        programs.Register(graphId,
+        [
+            new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, B = 0, Imm = 1 },
+            new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+        ], GraphKind.Effect);
+        EffectPhaseGraphBindings bindings = default;
+        Assert.That(bindings.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Main, graphId), Is.True);
+        var templates = new EffectTemplateRegistry();
+        templates.Register(templateId, new EffectTemplateData
+        {
+            LifetimeKind = EffectLifetimeKind.After,
+            DurationTicks = 30,
+            PhaseGraphBindings = bindings,
+        });
+        var presets = new PresetTypeRegistry();
+        var builtins = new BuiltinHandlerRegistry();
+        BuiltinHandlers.RegisterAll(builtins);
+        EffectExecutionPlanCompiler.FinalizeAll(
+            templates,
+            presets,
+            builtins,
+            programs,
+            GasGraphOpHandlerTable.Instance,
+            "Test/s4-attach-intermediate-effects.json");
+        var phaseExecutor = new EffectPhaseExecutor(
+            programs,
+            presets,
+            builtins,
+            GasGraphOpHandlerTable.Instance,
+            templates);
+        var graphApi = new GasGraphRuntimeApi(world);
+        Entity source = world.Create();
+        Entity target = world.Create(new ActiveEffectContainer());
+        Entity effect = GameplayEffectFactory.CreateEffect(
+            world,
+            rootId: 2,
+            source,
+            target,
+            durationTicks: 30,
+            lifetimeKind: EffectLifetimeKind.After);
+        world.Add(effect, new EffectTemplateRef { TemplateId = templateId });
+        var system = new EffectApplicationSystem(
+            world,
+            GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+            new DiscreteClock(),
+            templates: templates,
+            phaseExecutor: phaseExecutor,
+            graphApi: graphApi)
+        {
+            MaxWorkUnitsPerSlice = 1,
+        };
+
+        Assert.That(system.UpdateSlice(0f, int.MaxValue), Is.False);
+        Assert.That(world.Get<ActiveEffectContainer>(target).Count, Is.EqualTo(1));
+
+        system.MaxWorkUnitsPerSlice = int.MaxValue;
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+        {
+            while (!system.UpdateSlice(0f, int.MaxValue))
+            {
+            }
+        })!;
+
+        Assert.That(error.Message, Does.StartWith("GAS.EFFECT_TRANSACTION.ERR.MissingBlackboard"));
+        Assert.That(world.IsAlive(effect), Is.True);
+        Assert.That(world.Get<ActiveEffectContainer>(target).Count, Is.EqualTo(1));
+        Assert.That(world.Get<GameplayEffect>(effect).State, Is.EqualTo(EffectState.Apply));
+
+        system.ResetSlice();
+
+        Assert.That(world.IsAlive(effect), Is.False);
+        Assert.That(world.Get<ActiveEffectContainer>(target).Count, Is.Zero);
+    }
+
+    [Test]
+    public void StageEffectDestroy_LandsOnlyAfterSuccessfulCommit()
+    {
+        using World world = World.Create();
+        Entity effect = world.Create(new GameplayEffect());
+        using var transaction = new EffectPhaseSideEffectTransaction(
+            world,
+            tagOps: null,
+            effectRequests: null,
+            spawnRequests: null,
+            presentationEvents: null,
+            attributeEntityCapacity: 2);
+        transaction.Begin();
+        transaction.StageEffectDestroy(effect);
+        Assert.That(world.IsAlive(effect), Is.True);
+        transaction.Commit();
+        Assert.That(world.IsAlive(effect), Is.False);
     }
 
     private static EffectProposalProcessingSystem CreateSetParentRuntime(

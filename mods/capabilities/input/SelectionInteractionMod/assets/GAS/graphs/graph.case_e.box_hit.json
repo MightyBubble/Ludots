@@ -1,0 +1,17 @@
+[
+  {
+    "id": "graph.case_e.box_hit",
+    "kind": "TriggerGraph",
+    "entries": [{ "label": "invoke", "start": "hits", "refire": "restart", "action": "PointerMoved" }],
+    "nodes": [
+      { "id": "hits", "op": "InvokeGraph", "functionName": "graph.selection.rectangle_hits" },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "hits", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "hits", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  }
+]

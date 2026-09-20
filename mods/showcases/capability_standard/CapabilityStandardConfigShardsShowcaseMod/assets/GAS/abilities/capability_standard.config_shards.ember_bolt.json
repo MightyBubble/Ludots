@@ -1,0 +1,25 @@
+[
+  {
+    "id": "Ability.CapabilityStandard.ConfigShards.EmberBolt",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.CapabilityStandard.ConfigShards.EmberBoltDamage"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Ember Bolt",
+      "iconGlyph": "E",
+      "accentColorHex": "#62D58A",
+      "hintText": "Loaded from an ability shard."
+    }
+  }
+]

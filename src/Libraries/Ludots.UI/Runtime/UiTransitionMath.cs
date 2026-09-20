@@ -7,21 +7,14 @@ internal static class UiTransitionMath
 	public static float Evaluate(UiTransitionEasing easing, float progress)
 	{
 		progress = Math.Clamp(progress, 0f, 1f);
-		if (1 == 0)
+		return easing switch
 		{
-		}
-		float result = easing switch
-		{
-			UiTransitionEasing.Linear => progress, 
-			UiTransitionEasing.EaseIn => progress * progress, 
-			UiTransitionEasing.EaseOut => 1f - (1f - progress) * (1f - progress), 
-			UiTransitionEasing.EaseInOut => (progress < 0.5f) ? (2f * progress * progress) : (1f - MathF.Pow(-2f * progress + 2f, 2f) / 2f), 
-			_ => CubicBezierApproximate(progress, 0.25f, 0.1f, 0.25f, 1f), 
+			UiTransitionEasing.Linear => progress,
+			UiTransitionEasing.EaseIn => progress * progress,
+			UiTransitionEasing.EaseOut => 1f - (1f - progress) * (1f - progress),
+			UiTransitionEasing.EaseInOut => (progress < 0.5f) ? (2f * progress * progress) : (1f - MathF.Pow(-2f * progress + 2f, 2f) / 2f),
+			_ => CubicBezierApproximate(progress, 0.25f, 0.1f, 0.25f, 1f),
 		};
-		if (1 == 0)
-		{
-		}
-		return result;
 	}
 
 	public static float Lerp(float start, float end, float progress)
@@ -38,75 +31,124 @@ internal static class UiTransitionMath
 		return new UiColor(red, green, blue, alpha);
 	}
 
+	public static bool AreCompatible(UiTransform start, UiTransform end)
+	{
+		if (start.Operations.Count != end.Operations.Count)
+		{
+			return false;
+		}
+		for (int i = 0; i < start.Operations.Count; i++)
+		{
+			UiTransformOperation a = start.Operations[i];
+			UiTransformOperation b = end.Operations[i];
+			if (a.Kind != b.Kind)
+			{
+				return false;
+			}
+			if (a.Kind == UiTransformOperationKind.Translate
+				&& (a.XLength.Unit != b.XLength.Unit || a.YLength.Unit != b.YLength.Unit))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	public static bool TryLerp(UiTransform start, UiTransform end, float progress, out UiTransform result)
+	{
+		if (!AreCompatible(start, end))
+		{
+			result = UiTransform.Identity;
+			return false;
+		}
+		if (start.Operations.Count == 0)
+		{
+			result = UiTransform.Identity;
+			return true;
+		}
+		UiTransformOperation[] operations = new UiTransformOperation[start.Operations.Count];
+		for (int i = 0; i < operations.Length; i++)
+		{
+			UiTransformOperation a = start.Operations[i];
+			UiTransformOperation b = end.Operations[i];
+			operations[i] = a.Kind switch
+			{
+				UiTransformOperationKind.Translate => UiTransformOperation.Translate(
+					new UiLength(Lerp(a.XLength.Value, b.XLength.Value, progress), a.XLength.Unit),
+					new UiLength(Lerp(a.YLength.Value, b.YLength.Value, progress), a.YLength.Unit)),
+				UiTransformOperationKind.Scale => UiTransformOperation.Scale(
+					Lerp(a.ScaleX, b.ScaleX, progress),
+					Lerp(a.ScaleY, b.ScaleY, progress)),
+				UiTransformOperationKind.Rotate => UiTransformOperation.Rotate(
+					Lerp(a.AngleDegrees, b.AngleDegrees, progress)),
+				_ => a,
+			};
+		}
+		result = new UiTransform(operations);
+		return true;
+	}
+
 	public static UiStyle Apply(UiStyle style, UiTransitionChannelState channel)
 	{
-		UiTransitionValueKind valueKind = channel.ValueKind;
-		if (1 == 0)
+		return channel.ValueKind switch
 		{
-		}
-		UiStyle result = ((valueKind != UiTransitionValueKind.Float) ? ApplyColor(style, channel.PropertyName, channel.CurrentColor) : ApplyFloat(style, channel.PropertyName, channel.CurrentFloat));
-		if (1 == 0)
-		{
-		}
-		return result;
+			UiTransitionValueKind.Float => ApplyFloat(style, channel.PropertyName, channel.CurrentFloat),
+			UiTransitionValueKind.Color => ApplyColor(style, channel.PropertyName, channel.CurrentColor),
+			UiTransitionValueKind.Transform => ApplyTransform(style, channel.CurrentTransform),
+			_ => style,
+		};
 	}
 
 	public static UiStyle ApplyFloat(UiStyle style, string propertyName, float value)
 	{
-		if (1 == 0)
-		{
-		}
-		UiStyle result = propertyName switch
+		return propertyName switch
 		{
 			"opacity" => style with
 			{
 				Opacity = Math.Clamp(value, 0f, 1f)
-			}, 
+			},
 			"filter" => style with
 			{
 				FilterBlurRadius = Math.Max(0f, value)
-			}, 
+			},
 			"backdrop-filter" => style with
 			{
 				BackdropBlurRadius = Math.Max(0f, value)
-			}, 
-			_ => style, 
+			},
+			_ => style,
 		};
-		if (1 == 0)
-		{
-		}
-		return result;
 	}
 
 	public static UiStyle ApplyColor(UiStyle style, string propertyName, UiColor value)
 	{
-		if (1 == 0)
-		{
-		}
-		UiStyle result = propertyName switch
+		return propertyName switch
 		{
 			"background-color" => style with
 			{
 				BackgroundColor = value
-			}, 
+			},
 			"border-color" => style with
 			{
 				BorderColor = value
-			}, 
+			},
 			"outline-color" => style with
 			{
 				OutlineColor = value
-			}, 
+			},
 			"color" => style with
 			{
 				Color = value
-			}, 
-			_ => style, 
+			},
+			_ => style,
 		};
-		if (1 == 0)
+	}
+
+	public static UiStyle ApplyTransform(UiStyle style, UiTransform value)
+	{
+		return style with
 		{
-		}
-		return result;
+			Transform = value ?? UiTransform.Identity
+		};
 	}
 
 	private static float CubicBezierApproximate(float progress, float x1, float y1, float x2, float y2)

@@ -1,0 +1,12 @@
+{
+  "startupMapId": "capability_standard_sound_showcase",
+  "startupInputContexts": [
+    "Default_Gameplay",
+    "SoundShowcase.Controls"
+  ],
+  "windowTitle": "Ludots Engine - Capability Standard Sound Showcase",
+  "targetFps": 0,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true
+}

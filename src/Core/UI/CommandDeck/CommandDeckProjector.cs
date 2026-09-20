@@ -163,7 +163,7 @@ namespace Ludots.Core.UI.CommandDeck
                         binding.InstanceKey);
                 }
 
-                case CommandDeckSourceKind.LocalPlayerRep:
+                case CommandDeckSourceKind.SolePossessedRep:
                 case CommandDeckSourceKind.EntityCollection:
                 {
                     Entity owner = ResolveCollectionOwner(profile, in binding);
@@ -193,13 +193,13 @@ namespace Ludots.Core.UI.CommandDeck
                 return binding.CollectionOwner;
             }
 
-            if (binding.LocalPlayerRep != Entity.Null)
+            if (binding.SolePossessedRep != Entity.Null)
             {
-                return binding.LocalPlayerRep;
+                return binding.SolePossessedRep;
             }
 
             throw new InvalidOperationException(
-                $"CommandDeck profile '{profile.Id}' requires a local player rep or collection owner in the binding context.");
+                $"CommandDeck profile '{profile.Id}' requires a sole possessed rep or collection owner in the binding context.");
         }
 
         /// <summary>
@@ -298,8 +298,8 @@ namespace Ludots.Core.UI.CommandDeck
             }
 
             int rawCount = _collections.CopyEntities(handle, 0, _filterRawScratch);
-            Entity anchor = binding.LocalPlayerRep != Entity.Null
-                ? binding.LocalPlayerRep
+            Entity anchor = binding.SolePossessedRep != Entity.Null
+                ? binding.SolePossessedRep
                 : owner;
             int filteredCount = _filterProfiles.Evaluate(
                 filterId,

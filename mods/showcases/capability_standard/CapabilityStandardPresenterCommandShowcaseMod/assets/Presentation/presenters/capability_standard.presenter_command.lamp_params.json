@@ -1,0 +1,96 @@
+[
+  {
+    "id": "pcmd.lamp_post",
+    "paramDefaults": [
+      {
+        "paramKey": "pcmd.lamp.color",
+        "lane": "Vector",
+        "vectorValue": [1.0, 0.76, 0.28, 1.0]
+      },
+      {
+        "paramKey": "pcmd.lamp.scale",
+        "lane": "Float",
+        "floatValue": 1.0
+      }
+    ],
+    "rules": [
+      {
+        "event": { "kind": "GameplayEvent", "keyId": "pcmd.lamp.color.0" },
+        "command": {
+          "kind": "SetParam",
+          "paramKey": "pcmd.lamp.color",
+          "paramLane": "Vector",
+          "valueSource": "Fixed",
+          "vectorValue": [1.0, 0.76, 0.28, 1.0]
+        }
+      },
+      {
+        "event": { "kind": "GameplayEvent", "keyId": "pcmd.lamp.color.1" },
+        "command": {
+          "kind": "SetParam",
+          "paramKey": "pcmd.lamp.color",
+          "paramLane": "Vector",
+          "valueSource": "Fixed",
+          "vectorValue": [0.35, 0.9, 1.0, 1.0]
+        }
+      },
+      {
+        "event": { "kind": "GameplayEvent", "keyId": "pcmd.lamp.color.2" },
+        "command": {
+          "kind": "SetParam",
+          "paramKey": "pcmd.lamp.color",
+          "paramLane": "Vector",
+          "valueSource": "Fixed",
+          "vectorValue": [0.85, 0.4, 1.0, 1.0]
+        }
+      },
+      {
+        "event": { "kind": "GameplayEvent", "keyId": "pcmd.lamp.scale.0" },
+        "command": {
+          "kind": "SetParam",
+          "paramKey": "pcmd.lamp.scale",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.8
+        }
+      },
+      {
+        "event": { "kind": "GameplayEvent", "keyId": "pcmd.lamp.scale.1" },
+        "command": {
+          "kind": "SetParam",
+          "paramKey": "pcmd.lamp.scale",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 1.2
+        }
+      },
+      {
+        "event": { "kind": "GameplayEvent", "keyId": "pcmd.lamp.scale.2" },
+        "command": {
+          "kind": "SetParam",
+          "paramKey": "pcmd.lamp.scale",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 1.6
+        }
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [0.3, 2.2, 0.3],
+          "colorParamKey": "pcmd.lamp.color",
+          "scaleParamKey": "pcmd.lamp.scale"
+        }
+      }
+    ]
+  }
+]

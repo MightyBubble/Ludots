@@ -32,6 +32,12 @@ namespace Ludots.Core.Gameplay.AI.Planning
                     $"AI plan attempted to submit unregistered order type id {spec.OrderTypeId}.");
             }
 
+            if (spec.PlayerId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"AI plan attempted to submit order type id {spec.OrderTypeId} without a positive player id.");
+            }
+
             int abilitySlotIndex = -1;
             Entity target = Entity.Null;
             Entity targetContext = Entity.Null;

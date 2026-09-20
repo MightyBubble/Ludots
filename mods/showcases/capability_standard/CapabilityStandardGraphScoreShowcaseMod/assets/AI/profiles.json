@@ -1,0 +1,8 @@
+[
+  {
+    "id": "Profile.GraphScore.Caster",
+    "DecisionIntervalSteps": 1,
+    "MaxCandidates": 8,
+    "DecisionMakers": ["DM.GraphScore.Caster"]
+  }
+]

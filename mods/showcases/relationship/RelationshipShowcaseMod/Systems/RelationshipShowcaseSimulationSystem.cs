@@ -34,10 +34,6 @@ namespace RelationshipShowcaseMod.Systems
         private int _hostilityTypeId;
         private int _oathTagId;
         private int _synergyTagId;
-        private int _setupReasonId;
-        private int _doctrineReasonId;
-        private int _drillReasonId;
-        private int _tauntReasonId;
 
         private RelationshipShowcaseConfig Config => _state.Config;
         private RelationshipShowcaseScenarioContext? ScenarioContext => _state.ScenarioContext;
@@ -137,8 +133,6 @@ namespace RelationshipShowcaseMod.Systems
                 ?? throw new InvalidOperationException("RelationshipMetricRegistry is missing.");
             RelationshipFlagRegistry flags = _engine.GetService(CoreServiceKeys.RelationshipFlagRegistry)
                 ?? throw new InvalidOperationException("RelationshipFlagRegistry is missing.");
-            RelationshipReasonRegistry reasons = _engine.GetService(CoreServiceKeys.RelationshipReasonRegistry)
-                ?? throw new InvalidOperationException("RelationshipReasonRegistry is missing.");
 
             _loyaltyId = metrics.GetId(Config.Metrics.Loyalty);
             _supportId = metrics.GetId(Config.Metrics.Support);
@@ -148,10 +142,6 @@ namespace RelationshipShowcaseMod.Systems
             _hostilityTypeId = types.GetId(Config.Behaviors.EnemyPressure.RelationshipType);
             _oathTagId = TagRegistry.GetId(Config.Status.OathBondTag);
             _synergyTagId = TagRegistry.GetId(Config.Status.SynergyTag);
-            _setupReasonId = reasons.Register(Config.Reasons.Setup);
-            _doctrineReasonId = reasons.Register(Config.Reasons.Doctrine);
-            _drillReasonId = reasons.Register(Config.Reasons.Drill);
-            _tauntReasonId = reasons.Register(Config.Reasons.Taunt);
         }
 
         private void SeedInitialMetrics()
@@ -178,8 +168,7 @@ namespace RelationshipShowcaseMod.Systems
                     target,
                     ResolveTypeId(seed.Type),
                     ResolveMetricId(seed.Metric),
-                    seed.Value,
-                    ResolveReasonId(seed.Reason));
+                    seed.Value);
             }
 
             SeedThreats(runtime);
@@ -221,7 +210,7 @@ namespace RelationshipShowcaseMod.Systems
                         continue;
                     }
 
-                    runtime.SetMetric(enemy, target, _hostilityTypeId, _threatId, threat.Value, _setupReasonId);
+                    runtime.SetMetric(enemy, target, _hostilityTypeId, _threatId, threat.Value);
                 }
             }
         }
@@ -351,8 +340,8 @@ namespace RelationshipShowcaseMod.Systems
                     continue;
                 }
 
-                runtime.AddMetric(leader, ally, relationshipTypeId, _loyaltyId, Config.Behaviors.Doctrine.LoyaltyDelta, _doctrineReasonId);
-                runtime.AddMetric(ally, leader, relationshipTypeId, _supportId, Config.Behaviors.Doctrine.ReciprocalSupportDelta, _doctrineReasonId);
+                runtime.AddMetric(leader, ally, relationshipTypeId, _loyaltyId, Config.Behaviors.Doctrine.LoyaltyDelta);
+                runtime.AddMetric(ally, leader, relationshipTypeId, _supportId, Config.Behaviors.Doctrine.ReciprocalSupportDelta);
                 queue.Publish(new EffectRequest
                 {
                     Source = leader,
@@ -383,8 +372,8 @@ namespace RelationshipShowcaseMod.Systems
             RelationshipRuntime runtime = _engine.GetService(CoreServiceKeys.RelationshipRuntime)
                 ?? throw new InvalidOperationException("RelationshipRuntime is missing.");
             int relationshipTypeId = ResolveTypeId(Config.Behaviors.Drill.RelationshipType);
-            runtime.AddMetric(source, target, relationshipTypeId, _supportId, Config.Behaviors.Drill.SupportDelta, _drillReasonId);
-            runtime.AddMetric(target, source, relationshipTypeId, _supportId, Config.Behaviors.Drill.SupportDelta, _drillReasonId);
+            runtime.AddMetric(source, target, relationshipTypeId, _supportId, Config.Behaviors.Drill.SupportDelta);
+            runtime.AddMetric(target, source, relationshipTypeId, _supportId, Config.Behaviors.Drill.SupportDelta);
             _state.AddLog(string.Format(Config.Logs.Drill, ReadName(source), ReadName(target)));
         }
 
@@ -405,7 +394,7 @@ namespace RelationshipShowcaseMod.Systems
 
             foreach (Entity enemy in ScenarioContext.EnemyEntities)
             {
-                runtime.AddMetric(enemy, hero, relationshipTypeId, _threatId, Config.Behaviors.Taunt.ThreatDelta, _tauntReasonId);
+                runtime.AddMetric(enemy, hero, relationshipTypeId, _threatId, Config.Behaviors.Taunt.ThreatDelta);
             }
 
             queue.Publish(new EffectRequest
@@ -640,33 +629,6 @@ namespace RelationshipShowcaseMod.Systems
             RelationshipMetricRegistry metrics = _engine.GetService(CoreServiceKeys.RelationshipMetricRegistry)
                 ?? throw new InvalidOperationException("RelationshipMetricRegistry is missing.");
             return metrics.GetId(metricName);
-        }
-
-        private int ResolveReasonId(string reasonName)
-        {
-            if (string.Equals(reasonName, Config.Reasons.Setup, StringComparison.Ordinal))
-            {
-                return _setupReasonId;
-            }
-
-            if (string.Equals(reasonName, Config.Reasons.Doctrine, StringComparison.Ordinal))
-            {
-                return _doctrineReasonId;
-            }
-
-            if (string.Equals(reasonName, Config.Reasons.Drill, StringComparison.Ordinal))
-            {
-                return _drillReasonId;
-            }
-
-            if (string.Equals(reasonName, Config.Reasons.Taunt, StringComparison.Ordinal))
-            {
-                return _tauntReasonId;
-            }
-
-            RelationshipReasonRegistry reasons = _engine.GetService(CoreServiceKeys.RelationshipReasonRegistry)
-                ?? throw new InvalidOperationException("RelationshipReasonRegistry is missing.");
-            return reasons.Register(reasonName);
         }
 
         private int ResolveTypeId(string typeName)

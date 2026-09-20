@@ -13,8 +13,9 @@ using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Commands;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
+using Ludots.Platform.Abstractions;
 
 namespace InteractionShowcaseMod.Triggers
 {
@@ -55,14 +56,6 @@ namespace InteractionShowcaseMod.Triggers
             engine.GlobalContext[InteractionShowcaseStressTelemetry.GlobalKey] = _stressTelemetry;
             TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
 
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.OrderQueue.Name, out var ordersObj) &&
-                ordersObj is OrderQueue orders)
-            {
-                engine.RegisterSystem(
-                    new InteractionShowcaseLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx),
-                    SystemGroup.InputCollection);
-            }
-
             if (engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue) is not RuntimeEntitySpawnQueue spawnQueue)
             {
                 throw new InvalidOperationException("InteractionShowcaseMod requires RuntimeEntitySpawnQueue for stress validation.");
@@ -82,7 +75,7 @@ namespace InteractionShowcaseMod.Triggers
             engine.RegisterPresentationSystem(new InteractionShowcasePanelPresentationSystem(engine, _runtime));
 
             WireCommandSourceAcquisitionFeedback(context, engine);
-            _ctx.Log("[InteractionShowcaseMod] Local order source, stress runtime, and command-source acquisition feedback registered.");
+            _ctx.Log("[InteractionShowcaseMod] Stress runtime and command-source acquisition feedback registered.");
             return Task.CompletedTask;
         }
 
@@ -93,12 +86,12 @@ namespace InteractionShowcaseMod.Triggers
                 return;
             }
 
-            if (context.Get(CoreServiceKeys.PerformerCommandBuffer) is not PerformerCommandBuffer commands)
+            if (context.Get(CoreServiceKeys.PresenterCommandBuffer) is not PresenterCommandBuffer commands)
             {
                 return;
             }
 
-            if (context.Get(CoreServiceKeys.PerformerDefinitionRegistry) is not PerformerDefinitionRegistry definitions)
+            if (context.Get(CoreServiceKeys.PresenterDefinitionRegistry) is not PresenterDefinitionRegistry definitions)
             {
                 return;
             }
@@ -111,9 +104,9 @@ namespace InteractionShowcaseMod.Triggers
 
             commandSourceAcquiredCallbacks.Add((_, entity) =>
             {
-                commands.TryAdd(new PerformerCommand
+                commands.TryAdd(new PresenterCommand
                 {
-                    CommandKind = PerformerCommandKind.DestroyPerformerScope,
+                    CommandKind = PresenterCommandKind.DestroyPresenterScope,
                     ScopeTag = InteractionShowcaseIds.SelectionScopeId
                 });
 
@@ -122,10 +115,10 @@ namespace InteractionShowcaseMod.Triggers
                     return;
                 }
 
-                commands.TryAdd(new PerformerCommand
+                commands.TryAdd(new PresenterCommand
                 {
-                    CommandKind = PerformerCommandKind.CreatePerformer,
-                    PerformerDefinitionId = selectionDefId,
+                    CommandKind = PresenterCommandKind.CreatePresenter,
+                    PresenterDefinitionId = selectionDefId,
                     ScopeTag = InteractionShowcaseIds.SelectionScopeId,
                     Source = entity
                 });

@@ -437,7 +437,6 @@ public sealed class TagStateInstallationContractTests
         var relationshipMetrics = new RelationshipMetricRegistry();
         var relationshipFlags = new RelationshipFlagRegistry();
         var relationshipBands = new RelationshipBandRegistry();
-        var relationshipReasons = new RelationshipReasonRegistry();
         var relationships = new RelationshipRuntime(
             world,
             relationshipTypes,
@@ -454,8 +453,7 @@ public sealed class TagStateInstallationContractTests
             relationshipTypes,
             relationshipMetrics,
             relationshipFlags,
-            relationshipBands,
-            relationshipReasons);
+            relationshipBands);
         var ownership = new OwnershipResolver(relationships, relationshipTypes.GetId("Owns"));
 
         var shapes = new ItemShapeRegistry();

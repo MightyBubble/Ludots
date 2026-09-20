@@ -18,6 +18,8 @@ Ludots 采用“一切皆 Mod”的设计。Core 能力、业务功能、调试�
 `IModContext` 是 Mod 的正式扩展 API。典型接入点包括：
 
 - `OnEvent`
+- `IModContext.Extensions`：OnLoad 窗口注册 GAS handler / graph op / presenter command / behavior 扩展 key（详见 [Mod Extensible Runtime](mod-extensible-runtime.md)）
+- `ComponentRegistry`：OnLoad 里登记组件名，使其可用于模板表/地图 authoring（详见 [Mod 自定义组件](mod-custom-components.md)）
 - `SystemFactoryRegistry`
 - `TriggerDecorators`
 - `FunctionRegistry`
@@ -42,3 +44,23 @@ Mod 不应绕过这些入口直接侵入 Core 内部状态。
 
 - 仓库深度版：`docs/architecture/mod_architecture.md`
 - 运行时单一事实：`docs/architecture/mod_runtime_single_source_of_truth.md`
+
+## 6 Runtime extension contract
+
+Code Mods may register runtime extension keys only through `IModContext.Extensions` during `IMod.OnLoad`.
+The engine freezes these registrations before `ConfigPipeline`, `ConfigCatalogLoader`, GAS graph compilation,
+and Presenter definition compilation run. A Mod must not retain or receive `ModExtensionHub` or mutable runtime
+registries.
+
+Extension keys are owned by the loading Mod id. For example, `WeatherMod.StormTick` may only be registered while
+`WeatherMod` is loading. Other Mods may reference that key in config, but they cannot register under the
+`WeatherMod.` prefix.
+
+Authoring surfaces:
+
+- GAS C# phase handlers: `context.Extensions.Gas.RegisterBuiltinHandler`
+- GAS graph ops: `context.Extensions.Gas.RegisterGraphOp`
+- Presenter commands: `context.Extensions.Presentation.RegisterPresenterCommand`
+- Presenter behaviors: `context.Extensions.Presentation.RegisterPresenterBehavior`
+
+The full contract is [Mod Extensible Runtime](mod-extensible-runtime.md).

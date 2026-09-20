@@ -1,8 +1,13 @@
-using System.Text.Json.Serialization;
+using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
+using Ludots.Core.Client;
 using Ludots.Core.Diagnostics;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Input.CommandSources;
+using Ludots.Core.Map;
 using Ludots.Core.Presentation;
+using Ludots.Core.Networking.Configuration;
 
 namespace Ludots.Core.Config
 {
@@ -28,11 +33,42 @@ namespace Ludots.Core.Config
         public string StartupMapId { get; set; }
 
         /// <summary>
-        /// Initial local player for startup map load. Provided by CoreMod via game.json merge.
+        /// Cold-start local seat recipe. Injected into <see cref="MapLaunchContext.LocalSeats"/> on
+        /// <c>LoadStartupMap</c>. Not map identity; not runtime seat truth after load.
         /// </summary>
-        public int StartupLocalPlayerId { get; set; }
+        public List<StartupLocalSeatConfig> StartupLocalSeats { get; set; } = new();
 
         public List<string> StartupInputContexts { get; set; } = new List<string>();
+
+        public bool HasStartupLocalSeats => StartupLocalSeats != null && StartupLocalSeats.Count > 0;
+
+        /// <summary>
+        /// Data-declared PresentBinding layout for the startup seat table:
+        /// "fullscreen" (default) | "horizontal-equal-split" | "vertical-equal-split".
+        /// Resolved by <c>ParticipantBindingResolver.PublishLocalSeats</c>; unknown ids fail map load
+        /// with the id named. Switching split orientation is a data change, not a code branch.
+        /// </summary>
+        public string? StartupPresentLayout { get; set; }
+
+        /// <summary>Build launch context from <see cref="StartupLocalSeats"/> (Epic #896 SSOT).</summary>
+        public MapLaunchContext? CreateStartupLaunchContext(
+            IReadOnlyDictionary<string, object>? metadata = null)
+        {
+            if (!HasStartupLocalSeats)
+            {
+                return MapLaunchContext.Create(Array.Empty<LocalSeatLaunchBinding>(), metadata);
+            }
+
+            var bindings = new LocalSeatLaunchBinding[StartupLocalSeats.Count];
+            for (int i = 0; i < StartupLocalSeats.Count; i++)
+            {
+                StartupLocalSeatConfig seat = StartupLocalSeats[i]
+                    ?? throw new InvalidOperationException($"GameConfig.startupLocalSeats[{i}] is null.");
+                bindings[i] = seat.ToLaunchBinding();
+            }
+
+            return MapLaunchContext.Create(bindings, metadata);
+        }
 
         // Engine-level defaults (these stay in Core's game.json)
         public int WindowWidth { get; set; } = 1280;
@@ -45,12 +81,11 @@ namespace Ludots.Core.Config
         public int SimulationBudgetMsPerFrame { get; set; } = 4;
         public int SimulationMaxSlicesPerLogicFrame { get; set; } = 120;
 
+        public int TriggerGraphExecutionCapacity { get; set; }
+
         public GasRuntimeCapacityConfig GasRuntimeCapacity { get; set; } = null!;
 
-        public int GridCellSizeCm { get; set; } = 100;
-
-        public int WorldWidthInMacroTiles { get; set; } = 64;
-        public int WorldHeightInMacroTiles { get; set; } = 64;
+        /// <summary>Host map binding (#1567): the startup map roots the boot world via its root board.</summary>
 
         public Physics2DConfig Physics2D { get; set; } = new Physics2DConfig();
 
@@ -62,11 +97,40 @@ namespace Ludots.Core.Config
 
         public BrowserRuntimeConfig BrowserRuntime { get; set; } = new BrowserRuntimeConfig();
 
+        public NetworkRuntimeConfig? Networking { get; set; }
+
+        /// <summary>
+        /// Skin id for engine-side panel presentation (e.g. "default", "markup", "compose",
+        /// "reactive", "web"). Null means the built-in default skin. Authors never write C#
+        /// to change skins — this is the whole selection surface.
+        /// </summary>
+        public string? PanelSkin { get; set; }
+
+        /// <summary>
+        /// Visual theme pack id for engine-side panel presentation (orthogonal to
+        /// PanelSkin: skin = which backend renders, theme = what it looks like).
+        /// Resolved through the merged PanelThemes/themes.json catalog; the entry's
+        /// mod-scoped root points at theme.css + images/ + fonts/.
+        /// </summary>
+        public string? PanelTheme { get; set; }
+
+        /// <summary>
+        /// For the "web" panel skin: mod-VFS path of the overlay app index.html
+        /// (e.g. "PanelSkinWebMod:Assets/overlay-app/index.html").
+        /// </summary>
+        public string? PanelWebApp { get; set; }
+
         /// <summary>
         /// Game constants table - merged from all Mods via ConfigPipeline.
         /// Contains order type ids, response-chain order type ids, attributes, etc.
         /// </summary>
         public GameConstants Constants { get; set; } = new GameConstants();
+
+        /// <summary>
+        /// Graph execution backend load mode: interpret | codegen | codegen-prefer.
+        /// Default interpret. codegen fails closed if any registered graph cannot bind generated execute.
+        /// </summary>
+        public string? GraphExecutionBackend { get; set; }
     }
 
     public sealed class Physics2DConfig
@@ -79,12 +143,14 @@ namespace Ludots.Core.Config
         public int AbilityExecSnapshotCapacity { get; set; }
         public int EffectLifetimeSnapshotCapacity { get; set; }
         public int EffectFanOutCommandCapacity { get; set; }
+        public int EffectRequestQueueCapacity { get; set; }
         public int OrderQueueCapacity { get; set; }
         public int ResponseChainOrderQueueCapacity { get; set; }
         public int OrderAdmissionResultCapacity { get; set; }
         public int OrderAdmissionRejectionCapacity { get; set; }
         public int OrderTerminalResultCapacity { get; set; }
         public int DeferredTriggerActiveEntityCapacity { get; set; }
+        public int DeferredTriggerPerFrameCapacity { get; set; }
         public int ProjectileCollisionCandidateCapacity { get; set; }
         public int ProjectileRuntimeEntityCapacity { get; set; }
         public int EffectPhaseGraphProgramScratchCapacity { get; set; }
@@ -92,6 +158,7 @@ namespace Ludots.Core.Config
         public int AbilityExecMaxWorkUnitsPerSlice { get; set; }
         public int EffectProcessingMaxWorkUnitsPerSlice { get; set; }
         public int CommandIntentScratchCapacity { get; set; }
+        public int AttachmentPositionSyncScratchCapacity { get; set; } = 8192;
 
         public void Validate()
         {
@@ -111,6 +178,14 @@ namespace Ludots.Core.Config
             {
                 throw new System.InvalidOperationException(
                     "GameConfig.gasRuntimeCapacity.effectFanOutCommandCapacity must be positive.");
+            }
+
+            if (EffectRequestQueueCapacity < GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.effectRequestQueueCapacity must be at least " +
+                    "GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME so a single frame can publish the full " +
+                    "effect request batch without silent expansion.");
             }
 
             if (OrderQueueCapacity <= 0)
@@ -164,6 +239,12 @@ namespace Ludots.Core.Config
                     "GameConfig.gasRuntimeCapacity.deferredTriggerActiveEntityCapacity must be positive.");
             }
 
+            if (DeferredTriggerPerFrameCapacity <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.deferredTriggerPerFrameCapacity must be positive.");
+            }
+
             if (ProjectileCollisionCandidateCapacity <= 0)
             {
                 throw new System.InvalidOperationException(
@@ -199,6 +280,12 @@ namespace Ludots.Core.Config
             {
                 throw new System.InvalidOperationException(
                     "GameConfig.gasRuntimeCapacity.commandIntentScratchCapacity must be positive.");
+            }
+
+            if (AttachmentPositionSyncScratchCapacity <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.attachmentPositionSyncScratchCapacity must be positive.");
             }
         }
 

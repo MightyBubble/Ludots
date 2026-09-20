@@ -14,6 +14,7 @@ namespace Ludots.Core.Gameplay.AI.Config
         public readonly HtnDomainCompiled256 HtnDomain;
         public readonly HtnRootTable HtnRoots;
         public readonly UtilityAiCompiledRuntime UtilityRuntime;
+        public readonly GraphBehaviorCatalog Behavior;
 
         public AiCompiledRuntime(
             AtomRegistry atoms,
@@ -23,7 +24,8 @@ namespace Ludots.Core.Gameplay.AI.Config
             GoapGoalTable256 goapGoals,
             HtnDomainCompiled256 htnDomain,
             HtnRootTable htnRoots,
-            UtilityAiCompiledRuntime utilityRuntime)
+            UtilityAiCompiledRuntime utilityRuntime,
+            GraphBehaviorCatalog? behavior = null)
         {
             Atoms = atoms;
             ProjectionTable = projectionTable;
@@ -33,6 +35,7 @@ namespace Ludots.Core.Gameplay.AI.Config
             HtnDomain = htnDomain;
             HtnRoots = htnRoots;
             UtilityRuntime = utilityRuntime;
+            Behavior = behavior ?? new GraphBehaviorCatalog();
         }
     }
 }

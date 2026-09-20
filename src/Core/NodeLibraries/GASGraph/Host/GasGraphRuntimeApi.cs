@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.EntityCollections;
@@ -12,16 +13,25 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Lifecycle;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Map;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Scripting;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Spatial;
+using Ludots.Core.Gameplay.Items;
+using Ludots.Core.Gameplay.Progression.Components;
+using Ludots.Core.Gameplay.Tasks;
+using Ludots.Core.Gameplay.Activities;
+using Ludots.Core.Registry;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Placement;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation.GraphQuery;
 using Ludots.Core.Navigation.GraphWorld;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.NodeLibraries.GASGraph.Host
 {
@@ -38,13 +48,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             RelationshipTypeRegistry typeRegistry,
             RelationshipMetricRegistry metricRegistry,
             RelationshipFlagRegistry flagRegistry,
-            RelationshipReasonRegistry reasonRegistry,
             TargetDispatchPresetRegistry targetDispatchPresets,
             EntityCollectionStore entityCollections,
             EntitySetQueryRuntime entityQueries,
             ControlDomainQuery controlDomains,
             KnowledgeProjectionResolver knowledgeProjections,
-            IClock clock)
+            IClock clock,
+            InventoryRuntimeService inventoryRuntime,
+            ItemDefinitionRegistry itemDefinitions,
+            GraphLookupTableRegistry? lookupTables = null)
         {
             World = world ?? throw new ArgumentNullException(nameof(world));
             SpatialQueries = spatialQueries ?? throw new ArgumentNullException(nameof(spatialQueries));
@@ -56,13 +68,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             TypeRegistry = typeRegistry ?? throw new ArgumentNullException(nameof(typeRegistry));
             MetricRegistry = metricRegistry ?? throw new ArgumentNullException(nameof(metricRegistry));
             FlagRegistry = flagRegistry ?? throw new ArgumentNullException(nameof(flagRegistry));
-            ReasonRegistry = reasonRegistry ?? throw new ArgumentNullException(nameof(reasonRegistry));
             TargetDispatchPresets = targetDispatchPresets ?? throw new ArgumentNullException(nameof(targetDispatchPresets));
             EntityCollections = entityCollections ?? throw new ArgumentNullException(nameof(entityCollections));
             EntityQueries = entityQueries ?? throw new ArgumentNullException(nameof(entityQueries));
             ControlDomains = controlDomains ?? throw new ArgumentNullException(nameof(controlDomains));
             KnowledgeProjections = knowledgeProjections ?? throw new ArgumentNullException(nameof(knowledgeProjections));
             Clock = clock ?? throw new ArgumentNullException(nameof(clock));
+            InventoryRuntime = inventoryRuntime ?? throw new ArgumentNullException(nameof(inventoryRuntime));
+            ItemDefinitions = itemDefinitions ?? throw new ArgumentNullException(nameof(itemDefinitions));
+            LookupTables = lookupTables;
         }
 
         public World World { get; }
@@ -75,36 +89,69 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public RelationshipTypeRegistry TypeRegistry { get; }
         public RelationshipMetricRegistry MetricRegistry { get; }
         public RelationshipFlagRegistry FlagRegistry { get; }
-        public RelationshipReasonRegistry ReasonRegistry { get; }
         public TargetDispatchPresetRegistry TargetDispatchPresets { get; }
         public EntityCollectionStore EntityCollections { get; }
+        public GraphLookupTableRegistry? LookupTables { get; }
+
         public EntitySetQueryRuntime EntityQueries { get; }
         public ControlDomainQuery ControlDomains { get; }
         public KnowledgeProjectionResolver KnowledgeProjections { get; }
         public IClock Clock { get; }
+        public InventoryRuntimeService InventoryRuntime { get; }
+        public ItemDefinitionRegistry ItemDefinitions { get; }
     }
 
     public sealed class GasGraphRuntimeApi : IDerivedAttributeGraphRuntimeApi
     {
         public const string MissingBlackboardError = "GAS.GRAPH.ERR.MissingBlackboard";
+        private static readonly QueryDescription TaskInstanceQuery = new QueryDescription().WithAll<TaskInstanceCm>();
+        private static readonly QueryDescription ActivityInstanceQuery = new QueryDescription().WithAll<ActivityInstanceCm>();
 
         private readonly World _world;
         private readonly ISpatialQueryService? _spatialQueries;
         private readonly ISpatialCoordinateConverter? _coords;
         private readonly GameplayEventBus? _eventBus;
         private readonly EffectRequestQueue? _effectRequests;
+        private Ludots.Core.Gameplay.GAS.Orders.OrderQueue? _orderQueue;
+        private Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry? _orderTypes;
         private readonly TagOps? _tagOps;
         private readonly RelationshipRuntime? _relationshipRuntime;
         private readonly TargetDispatchPresetRegistry? _targetDispatchPresets;
         private readonly EntityCollectionStore? _entityCollections;
         private readonly EntitySetQueryRuntime? _entityQueries;
+        private readonly GraphLookupTableRegistry? _lookupTables;
+        private readonly InventoryRuntimeService? _inventory;
+        private readonly ItemDefinitionRegistry? _itemDefinitions;
+        private Gameplay.Rng.RngPickService? _rngPickService;
+        private Ludots.Core.UI.PanelActivation.PanelActivationApi? _panelActivationApi;
+        private Ludots.Core.UI.PanelHosting.PanelHost? _panelHost;
+        private GraphPresentationTextSink? _presentationTextSink;
+        private PresentationTextCatalog? _presentationTextCatalog;
+        private Action<string>? _startDialogue;
+        private Func<Span<int>, int>? _collectActiveDialogueChoices;
+        private Func<int, string?>? _resolveDialogueChoiceDisplayText;
+        private IGraphAimSourceRuntime? _aimSource;
         private LoadedGraphRuntime? _loadedGraphRuntime;
+        private Func<MapId, Gameplay.MapTriggers.MapVariableStore?>? _mapVariableStoreResolver;
+        private Func<MapId, Ludots.Core.Systems.MapLoadEntityIndex?>? _placedInstanceIndexResolver;
+        private Func<MapId, IReadOnlySet<string>?>? _regionCatalogResolver;
+        private Ludots.Core.Scripting.TriggerManager? _triggerManager;
+        private Ludots.Core.GraphRuntime.GraphCallbackService? _graphCallbacks;
+        private Gameplay.Spawning.RuntimeEntitySpawnQueue? _runtimeEntitySpawnQueue;
+        private Gameplay.Spawning.EntityTemplateKeyRegistry? _entityTemplateKeys;
+        private Gameplay.Activities.ActivityRuntimeService? _activityRuntime;
+        private Gameplay.Tasks.TaskRuntimeService? _taskRuntime;
+        private Ludots.Core.Input.Interaction.InteractionModeMap? _interactionModeMap;
+        private Ludots.Core.Input.Interaction.InteractionContextInstanceRuntime? _contextInstances;
+        private Gameplay.MapTriggers.CustomEventNameRegistry? _customEvents;
+        private Func<GameEngine?>? _engineResolver;
 
         // ── Topology predicate services (RFC-0065 PROV-4b), bound post-construction ──
         private ControlDomainQuery? _controlDomains;
         private KnowledgeProjectionResolver? _knowledgeProjections;
         private IClock? _clock;
         private int[] _graphProjectionCandidateScratch = Array.Empty<int>();
+        private Entity[] _collectionEventEntityScratch = Array.Empty<Entity>();
 
         // ── Config context: set before each graph execution, cleared after ──
         private EffectConfigParams _currentConfigParams;
@@ -114,6 +161,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private BuiltinHandlerRegistry? _builtinHandlers;
         private EffectTemplateRegistry? _effectTemplates;
         private BuiltinHandlerExecutionContext? _builtinRuntime;
+        private Entity _currentEffectEntity;
         private int _currentEffectTemplateId;
         private EffectContext _currentEffectContext;
         private bool _hasEffectContext;
@@ -146,13 +194,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 RequireService(services, CoreServiceKeys.RelationshipTypeRegistry),
                 RequireService(services, CoreServiceKeys.RelationshipMetricRegistry),
                 RequireService(services, CoreServiceKeys.RelationshipFlagRegistry),
-                RequireService(services, CoreServiceKeys.RelationshipReasonRegistry),
                 RequireService(services, CoreServiceKeys.TargetDispatchPresetRegistry),
                 RequireService(services, CoreServiceKeys.EntityCollectionStore),
                 RequireService(services, CoreServiceKeys.EntitySetQueryRuntime),
                 RequireService(services, CoreServiceKeys.ControlDomainQuery),
                 RequireService(services, CoreServiceKeys.KnowledgeProjectionResolver),
-                RequireService(services, CoreServiceKeys.Clock)));
+                RequireService(services, CoreServiceKeys.Clock),
+                RequireService(services, CoreServiceKeys.InventoryRuntimeService),
+                RequireService(services, CoreServiceKeys.ItemDefinitionRegistry)));
         }
 
         public static GasGraphRuntimeApi CreateProduction(GasGraphRuntimeProductionServices services)
@@ -173,10 +222,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 services.TypeRegistry,
                 services.MetricRegistry,
                 services.FlagRegistry,
-                services.ReasonRegistry,
                 services.TargetDispatchPresets,
                 services.EntityCollections,
-                services.EntityQueries);
+                services.EntityQueries,
+                lookupTables: services.LookupTables,
+                inventory: services.InventoryRuntime,
+                itemDefinitions: services.ItemDefinitions);
             api.BindTopologyServices(
                 services.ControlDomains,
                 services.KnowledgeProjections,
@@ -194,6 +245,113 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return typed;
         }
 
+        public Ludots.Core.UI.PanelActivation.PanelActivationApi? PanelActivationApi => _panelActivationApi;
+
+        public void BindPanelActivation(Ludots.Core.UI.PanelActivation.PanelActivationApi api)
+        {
+            _panelActivationApi = api ?? throw new ArgumentNullException(nameof(api));
+        }
+
+        public Ludots.Core.UI.PanelHosting.PanelHost? PanelHost => _panelHost;
+
+        public void BindPanelHost(Ludots.Core.UI.PanelHosting.PanelHost host)
+        {
+            _panelHost = host ?? throw new ArgumentNullException(nameof(host));
+        }
+
+        /// <summary>
+        /// Resolves a map id to its live <see cref="Gameplay.MapTriggers.MapVariableStore"/>.
+        /// The engine binds this lazily because map sessions are created after the graph API.
+        /// </summary>
+        public void BindMapVariableStoreResolver(Func<MapId, Gameplay.MapTriggers.MapVariableStore?> resolver)
+        {
+            _mapVariableStoreResolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
+        }
+
+        /// <summary>
+        /// Resolves a map id to its live placed-instance index. Bound by the engine
+        /// next to the variable-store resolver: LoadPlacedEntity reads the same session.
+        /// </summary>
+        public void BindPlacedInstanceIndexResolver(Func<MapId, Ludots.Core.Systems.MapLoadEntityIndex?> resolver)
+        {
+            _placedInstanceIndexResolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
+        }
+
+        /// <summary>
+        /// Resolves a map id to its authored Regions id set (LoadPlacedRegion).
+        /// Bound next to the placed-instance index; never writes into EntityIndex.
+        /// </summary>
+        public void BindRegionCatalogResolver(Func<MapId, System.Collections.Generic.IReadOnlySet<string>?> resolver)
+        {
+            _regionCatalogResolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
+        }
+
+        /// <summary>
+        /// Binds the engine TriggerManager so graph programs can fire map-scoped trigger
+        /// events via <see cref="FireEventKey"/>.
+        /// </summary>
+        public void BindTriggerManager(Ludots.Core.Scripting.TriggerManager triggerManager)
+        {
+            _triggerManager = triggerManager ?? throw new ArgumentNullException(nameof(triggerManager));
+        }
+
+        /// <summary>
+        /// Binds the AwaitCallback registration/completion service.
+        /// </summary>
+        public void BindGraphCallbackService(Ludots.Core.GraphRuntime.GraphCallbackService callbacks)
+        {
+            _graphCallbacks = callbacks ?? throw new ArgumentNullException(nameof(callbacks));
+        }
+
+        /// <summary>
+        /// Binds the runtime entity spawn queue and template key registry so graph
+        /// programs can enqueue template spawns via <see cref="SpawnTemplate"/>.
+        /// </summary>
+        public void BindRuntimeEntitySpawn(
+            Gameplay.Spawning.RuntimeEntitySpawnQueue queue,
+            Gameplay.Spawning.EntityTemplateKeyRegistry templateKeys)
+        {
+            _runtimeEntitySpawnQueue = queue ?? throw new ArgumentNullException(nameof(queue));
+            _entityTemplateKeys = templateKeys ?? throw new ArgumentNullException(nameof(templateKeys));
+        }
+
+        /// <summary>
+        /// Binds the compiled interaction mode map so graph programs can switch entity modes via
+        /// <see cref="SetInteractionMode"/>; unbound maps fail closed per call.
+        /// </summary>
+        public void BindInteractionModeMap(Ludots.Core.Input.Interaction.InteractionModeMap modeMap)
+        {
+            _interactionModeMap = modeMap ?? throw new ArgumentNullException(nameof(modeMap));
+        }
+
+        /// <summary>
+        /// Binds the derived interaction context kernel so graph programs can activate and
+        /// deactivate derived contexts via <see cref="ActivateContext"/> /
+        /// <see cref="DeactivateContext"/>; unbound kernels fail closed per call.
+        /// </summary>
+        public void BindContextInstances(Ludots.Core.Input.Interaction.InteractionContextInstanceRuntime contextInstances)
+        {
+            _contextInstances = contextInstances ?? throw new ArgumentNullException(nameof(contextInstances));
+        }
+
+        /// <summary>
+        /// Binds the custom event name registry so collection pass-through dispatches can
+        
+        /// </summary>
+        public void BindCustomEvents(Gameplay.MapTriggers.CustomEventNameRegistry customEvents)
+        {
+            _customEvents = customEvents ?? throw new ArgumentNullException(nameof(customEvents));
+        }
+
+        public void BindEngineResolver(Func<GameEngine?> engineResolver)
+        {
+            _engineResolver = engineResolver ?? throw new ArgumentNullException(nameof(engineResolver));
+        }
+
+        /// <summary>共享到期时间轮；直接取消路径写标记后强制快道效果下一 slice 出桶。</summary>
+        internal Ludots.Core.Gameplay.GAS.Systems.EffectDueWheel? DueWheel { get; set; }
+        internal Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry? AggregateDirty { get; set; }
+
         public GasGraphRuntimeApi(
             World world,
             ISpatialQueryService? spatialQueries = null,
@@ -205,10 +363,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             RelationshipTypeRegistry? typeRegistry = null,
             RelationshipMetricRegistry? metricRegistry = null,
             RelationshipFlagRegistry? flagRegistry = null,
-            RelationshipReasonRegistry? reasonRegistry = null,
             TargetDispatchPresetRegistry? targetDispatchPresets = null,
             EntityCollectionStore? entityCollections = null,
-            EntitySetQueryRuntime? entityQueries = null)
+            EntitySetQueryRuntime? entityQueries = null,
+            GraphLookupTableRegistry? lookupTables = null,
+            InventoryRuntimeService? inventory = null,
+            ItemDefinitionRegistry? itemDefinitions = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _spatialQueries = spatialQueries;
@@ -220,15 +380,692 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _relationshipRuntime = relationshipRuntime;
             _entityCollections = entityCollections;
             _entityQueries = entityQueries;
+            _lookupTables = lookupTables;
+            _inventory = inventory;
+            _itemDefinitions = itemDefinitions;
             _ = typeRegistry;
             _ = metricRegistry;
             _ = flagRegistry;
-            _ = reasonRegistry;
         }
 
         private TagOps RequireTagOps()
         {
             return _tagOps ?? throw new InvalidOperationException("GAS.GRAPH.ERR.MissingTagOps");
+        }
+
+        private Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry RequireAggregateDirty()
+        {
+            return AggregateDirty ?? throw new InvalidOperationException(Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry.MissingRegistryError);
+        }
+
+
+        public void BindRngPickService(Gameplay.Rng.RngPickService rngPickService)
+        {
+            _rngPickService = rngPickService ?? throw new ArgumentNullException(nameof(rngPickService));
+        }
+
+        public void BindActivityRuntimeService(Gameplay.Activities.ActivityRuntimeService activityRuntime)
+        {
+            _activityRuntime = activityRuntime ?? throw new ArgumentNullException(nameof(activityRuntime));
+        }
+
+        public void OfferActivity(string activityId, Entity scopeHost)
+        {
+            var activities = _activityRuntime
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.ActivityRuntimeUnavailable");
+            activities.OfferOrActivate(activityId, scopeHost);
+        }
+
+        public void BindTaskRuntimeService(Gameplay.Tasks.TaskRuntimeService taskRuntime)
+        {
+            _taskRuntime = taskRuntime ?? throw new ArgumentNullException(nameof(taskRuntime));
+        }
+
+        public void OfferTask(string taskId, Entity scopeHost)
+        {
+            if (scopeHost == Entity.Null || scopeHost == default || !_world.IsAlive(scopeHost))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.OfferTaskScopeInvalid: scope entity {scopeHost} is null or not alive.");
+            }
+
+            var tasks = _taskRuntime
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.TaskRuntimeUnavailable");
+            tasks.OfferOrStart(taskId, scopeHost);
+        }
+
+        public int WeightedPick(int distributionKeyId, int modulationPermille)
+        {
+            var picks = _rngPickService
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.RngPickUnavailable");
+            return picks.PickByKeyId(distributionKeyId, Math.Clamp(modulationPermille, -1000, 1000) / 1000f);
+        }
+        public int ResolveTableRow(int tableId, int key)
+        {
+            var tables = _lookupTables
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
+            return tables.ResolveRow(tableId, key);
+        }
+
+        public int TableReadInt(int fieldId, int rowHandle)
+        {
+            var tables = _lookupTables
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
+            return tables.ReadInt(rowHandle, fieldId);
+        }
+
+        public float TableReadFloat(int fieldId, int rowHandle)
+        {
+            var tables = _lookupTables
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
+            return tables.ReadFloat(rowHandle, fieldId);
+        }
+
+        public void ShowPanel(int panelTypeId)
+        {
+            RequirePanelActivationApi().ShowPanel(ResolvePanelTypeName(panelTypeId));
+        }
+
+        public void HidePanel(int panelTypeId)
+        {
+            RequirePanelActivationApi().HidePanel(ResolvePanelTypeName(panelTypeId));
+        }
+
+        public void SetPanelAudience(int panelTypeId, int seatKeyId)
+        {
+            Ludots.Core.UI.PanelActivation.PanelActivationApi api = RequirePanelActivationApi();
+            string panelType = ResolvePanelTypeName(panelTypeId);
+            if (seatKeyId == 0)
+            {
+                api.ClearPanelAudience(panelType);
+                return;
+            }
+
+            string? seatId = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(seatKeyId);
+            if (string.IsNullOrWhiteSpace(seatId))
+            {
+                throw new InvalidOperationException(
+                    $"SetPanelAudience references unregistered seat key id {seatKeyId} for panel '{panelType}'.");
+            }
+
+            api.SetPanelAudience(panelType, Ludots.Core.UI.PanelProjection.PanelAudience.Seats(new[] { seatId }));
+        }
+
+        public void CreatePanel(int templateKeyId, int anchorKeyId, Entity scope)
+        {
+            CreatePanel(templateKeyId, anchorKeyId, scope, UI.PanelHosting.PanelSkinIds.Unspecified, 100f);
+        }
+
+        public void CreatePanel(int templateKeyId, int anchorKeyId, Entity scope, byte skinId, float zOrder)
+        {
+            RequirePanelHost().Instantiate(
+                ResolvePanelTypeName(templateKeyId),
+                ResolvePanelTypeName(anchorKeyId),
+                scope,
+                UI.PanelHosting.PanelSkinIds.ToName(skinId),
+                (int)zOrder);
+        }
+
+        public void DestroyPanel(int templateKeyId, Entity scope)
+        {
+            RequirePanelHost().DisposeMatching(ResolvePanelTypeName(templateKeyId), scope);
+        }
+
+        public void PushPresentationText(GraphPresentationTextSurface surface, ReadOnlySpan<char> text)
+        {
+            GraphPresentationTextSink sink = _presentationTextSink
+                ?? throw new InvalidOperationException(GraphPresentationTextSink.UnavailableError);
+            sink.Push(surface, text);
+        }
+
+        public GraphPresentationTextSink? PresentationTextSink => _presentationTextSink;
+
+        public void BindPresentationTextSink(GraphPresentationTextSink sink)
+        {
+            _presentationTextSink = sink ?? throw new ArgumentNullException(nameof(sink));
+        }
+
+        public void BindPresentationTextCatalog(PresentationTextCatalog catalog)
+        {
+            _presentationTextCatalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
+        }
+
+        public void BindStartDialogue(Action<string> startDialogue)
+        {
+            _startDialogue = startDialogue ?? throw new ArgumentNullException(nameof(startDialogue));
+        }
+
+        public void BindCollectActiveDialogueChoices(Func<Span<int>, int> collectActiveDialogueChoices)
+        {
+            _collectActiveDialogueChoices = collectActiveDialogueChoices
+                ?? throw new ArgumentNullException(nameof(collectActiveDialogueChoices));
+        }
+
+        public void BindAimSource(IGraphAimSourceRuntime aimSource)
+        {
+            _aimSource = aimSource ?? throw new ArgumentNullException(nameof(aimSource));
+        }
+
+        private IGraphAimSourceRuntime RequireAimSource()
+        {
+            return _aimSource ?? throw new InvalidOperationException("GAS.GRAPH.ERR.AimSourceUnavailable");
+        }
+
+        public bool TryScreenPointToGround(float screenX, float screenY, string? seatId, out IntVector2 groundCm)
+        {
+            return RequireAimSource().TryScreenPointToGround(screenX, screenY, seatId, out groundCm);
+        }
+
+        public Entity PickScreenPointEntity(ReadOnlySpan<Entity> candidates, int count, Entity owner, string? seatId, float screenX, float screenY, float radiusPixels)
+        {
+            return RequireAimSource().PickScreenPointEntity(candidates, count, owner, seatId, screenX, screenY, radiusPixels);
+        }
+
+        public int FilterScreenRegionEntities(Span<Entity> entities, int count, in ScreenRect rect, string? seatId)
+        {
+            return RequireAimSource().FilterScreenRegionEntities(entities, count, in rect, seatId);
+        }
+
+        public bool TryReadLivePointerScreen(out float screenX, out float screenY)
+        {
+            return RequireAimSource().TryReadLivePointerScreen(out screenX, out screenY);
+        }
+
+        public void BindResolveDialogueChoiceDisplayText(Func<int, string?> resolveDialogueChoiceDisplayText)
+        {
+            _resolveDialogueChoiceDisplayText = resolveDialogueChoiceDisplayText
+                ?? throw new ArgumentNullException(nameof(resolveDialogueChoiceDisplayText));
+        }
+
+        public int CollectActiveDialogueChoices(Span<int> buffer)
+        {
+            Func<Span<int>, int> collect = _collectActiveDialogueChoices
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.DialogueChoiceCollectorUnavailable");
+            return collect(buffer);
+        }
+
+        public string? ResolveDialogueChoiceDisplayText(int choiceIntId)
+        {
+            Func<int, string?>? resolve = _resolveDialogueChoiceDisplayText;
+            return resolve?.Invoke(choiceIntId);
+        }
+
+        public void StartDialogue(int dialogueKeyId)
+        {
+            Action<string> start = _startDialogue
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.DialogueRuntimeUnavailable");
+            string? dialogueId = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(dialogueKeyId);
+            if (string.IsNullOrWhiteSpace(dialogueId))
+            {
+                throw new InvalidOperationException(
+                    $"StartDialogue references unregistered dialogue key id {dialogueKeyId}.");
+            }
+
+            start(dialogueId);
+        }
+
+        public ReadOnlySpan<char> ResolvePresentationTextKey(int tokenId)
+        {
+            PresentationTextCatalog catalog = _presentationTextCatalog
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.PresentationTextCatalogUnavailable");
+
+            if (!catalog.TryGetTokenDefinition(tokenId, out PresentationTextTokenDefinition definition))
+            {
+                throw new InvalidOperationException(
+                    $"LoadTextKey token id {tokenId} is not registered in PresentationTextCatalog.");
+            }
+
+            if (definition.ArgCount != 0)
+            {
+                throw new InvalidOperationException(
+                    $"LoadTextKey '{definition.Key}' declares argCount={definition.ArgCount}; " +
+                    "this slice only loads zero-argument tokens (FormatTextKey is a later op).");
+            }
+
+            int localeId = catalog.DefaultLocaleId;
+            if (localeId <= 0 ||
+                !catalog.TryGetTemplate(localeId, tokenId, out PresentationTextTemplate template))
+            {
+                throw new InvalidOperationException(
+                    $"LoadTextKey '{definition.Key}' has no template for DefaultLocaleId={localeId}.");
+            }
+
+            return template.Source.AsSpan();
+        }
+
+        private string ResolvePanelTypeName(int panelTypeId)
+        {
+            string? name = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(panelTypeId);
+            return name ?? throw new InvalidOperationException(
+                $"Panel op references unregistered config key id {panelTypeId}.");
+        }
+
+        public int ReadMapVarInt(int varKeyId, MapId mapId)
+            => ResolveMapVariableStore(mapId).ReadInt(ResolveMapVariableName(varKeyId));
+
+        public float ReadMapVarFloat(int varKeyId, MapId mapId)
+            => ResolveMapVariableStore(mapId).ReadFloat(ResolveMapVariableName(varKeyId));
+
+        public void WriteMapVarInt(int varKeyId, MapId mapId, int value)
+            => ResolveMapVariableStore(mapId).WriteInt(ResolveMapVariableName(varKeyId), value);
+
+        public void WriteMapVarFloat(int varKeyId, MapId mapId, float value)
+            => ResolveMapVariableStore(mapId).WriteFloat(ResolveMapVariableName(varKeyId), value);
+
+        public bool TryGetPlacedEntity(int instanceKeyId, MapId mapId, out Entity entity)
+        {
+            var resolver = _placedInstanceIndexResolver
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.PlacedIndexUnavailable");
+            Ludots.Core.Systems.MapLoadEntityIndex index = resolver(mapId)
+                ?? throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.PlacedIndexUnavailable: map '{mapId.Value}' has no live placed-instance index.");
+            string instanceId = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(instanceKeyId)
+                ?? throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.PlacedInstanceNameUnknown: placed-instance op references unregistered config key id {instanceKeyId}.");
+            return index.TryGet(instanceId, out entity);
+        }
+
+        public bool TryHasPlacedRegion(int regionKeyId, MapId mapId)
+        {
+            var resolver = _regionCatalogResolver
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.RegionCatalogUnavailable");
+            IReadOnlySet<string> catalog = resolver(mapId)
+                ?? throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.RegionCatalogUnavailable: map '{mapId.Value}' has no live region catalog.");
+            string regionId = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(regionKeyId)
+                ?? throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.PlacedRegionNameUnknown: LoadPlacedRegion references unregistered config key id {regionKeyId}.");
+            return catalog.Contains(regionId);
+        }
+
+        /// <summary>
+        /// Fires a config-key-named trigger event from a graph program in the scope entity's map.
+        /// </summary>
+        public void FireEventKey(Entity scope, int eventKeyId)
+        {
+            RejectDerivedAttributeSideEffect(nameof(FireEventKey));
+            RejectNonTransactionalEffectSideEffect(nameof(FireEventKey));
+            var triggerManager = _triggerManager
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.TriggerBridgeUnavailable");
+
+            string? name = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(eventKeyId);
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.EventKeyNameUnknown: FireEventKey references unregistered config key id {eventKeyId}.");
+            }
+
+            MapId mapId = ResolveRequiredMapId(scope);
+            var context = new ScriptContext();
+            context.Set(ContextKeys.MapId, mapId);
+            context.Set(MapTriggerEventPayloadKeys.SourceEntity, scope);
+            triggerManager.FireMapEvent(mapId, new EventKey(name), context);
+        }
+
+        /// <summary>
+        /// Structured map-event dispatch: assembles a ScriptContext from the StoreArg*
+        /// staging table per the event schema and fires it map-scoped. Fire-time
+        /// ValidateFirePayload backstops missing required params, type mismatches, and
+        /// undeclared MapTrigger.* keys.
+        /// </summary>
+        public void FireMapEventPayload(int eventKeyId, MapId mapId, Entity selfSource, GraphEntryPayloadTable? stagedArgs)
+        {
+            RejectDerivedAttributeSideEffect(nameof(FireMapEventPayload));
+            var triggerManager = _triggerManager
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.TriggerBridgeUnavailable");
+
+            EventSchema schema = RequireDispatchEventSchema(triggerManager, eventKeyId, out string name);
+
+            if (string.IsNullOrEmpty(mapId.Value))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.DispatchMapEventNoMapScope: DispatchMapEvent '{name}' requires a map scope.");
+            }
+
+            ScriptContext context = BuildDispatchContext(schema, mapId, stagedArgs);
+
+            if (selfSource != Entity.Null && selfSource != default &&
+                schema.DeclaresPayloadKey(MapTriggerEventPayloadKeys.SourceEntity))
+            {
+                context.Set(MapTriggerEventPayloadKeys.SourceEntity, selfSource);
+            }
+
+            triggerManager.FireMapEvent(mapId, new EventKey(name), context);
+        }
+
+        /// <summary>
+        /// Global-scope dispatch: same schema-driven context assembly, then
+        /// TriggerManager.FireGlobalEvent — only the global subscription table sees it,
+        /// regardless of how many maps or map triggers are live. The origin map (mount
+        /// scope or caster anchor) rides MapTrigger.SourceMapId as transport metadata.
+        /// </summary>
+        public void FireGlobalEventPayload(int eventKeyId, MapId originMapId, GraphEntryPayloadTable? stagedArgs)
+        {
+            RejectDerivedAttributeSideEffect(nameof(FireGlobalEventPayload));
+            var triggerManager = _triggerManager
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.TriggerBridgeUnavailable");
+
+            EventSchema schema = RequireDispatchEventSchema(triggerManager, eventKeyId, out string name);
+
+            if (schema.Scope != EventScope.Global)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.DispatchEventScopeMismatch: DispatchMapEvent '{name}' global dispatch requires a " +
+                    $"Global-scope schema (declared '{schema.Scope}'); the compiler should have rejected this graph.");
+            }
+
+            ScriptContext context = BuildDispatchContext(schema, originMapId, stagedArgs);
+
+            triggerManager.FireGlobalEvent(new EventKey(name), context);
+        }
+
+        public void BeginAwaitCallback(string callbackType, MapId mapId, Entity scope, int resultBoolRegister)
+        {
+            RejectDerivedAttributeSideEffect(nameof(BeginAwaitCallback));
+            GraphCallbackService callbacks = _graphCallbacks
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.GraphCallbackUnavailable");
+            callbacks.BeginAwait(callbackType, mapId, scope, resultBoolRegister);
+        }
+
+        private static EventSchema RequireDispatchEventSchema(TriggerManager triggerManager, int eventKeyId, out string name)
+        {
+            name = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(eventKeyId)
+                ?? throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.EventKeyNameUnknown: DispatchMapEvent references unregistered config key id {eventKeyId}.");
+
+            EventSchemaRegistry? schemas = triggerManager.EventSchemas
+                ?? throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.EventSchemaUnavailable: DispatchMapEvent '{name}' requires the engine EventSchemaRegistry.");
+
+            if (!schemas.TryGet(name, out EventSchema schema))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.EventSchemaUnknown: DispatchMapEvent event '{name}' has no registered schema.");
+            }
+
+            return schema;
+        }
+
+        private static ScriptContext BuildDispatchContext(EventSchema schema, MapId mapId, GraphEntryPayloadTable? stagedArgs)
+        {
+            var context = new ScriptContext();
+            if (!string.IsNullOrEmpty(mapId.Value))
+            {
+                context.Set(ContextKeys.MapId, mapId);
+                context.Set(MapTriggerEventPayloadKeys.SourceMapId, mapId);
+            }
+
+            for (int i = 0; i < schema.Params.Count; i++)
+            {
+                EventParamSchema param = schema.Params[i];
+                if (stagedArgs == null)
+                {
+                    continue;
+                }
+
+                switch (param.Type)
+                {
+                    case EventParamType.Entity:
+                        if (stagedArgs.TryGetEntity(param.PayloadKey, out Entity entityValue))
+                        {
+                            context.Set(param.PayloadKey, entityValue);
+                        }
+
+                        break;
+                    case EventParamType.Int:
+                        if (stagedArgs.TryGetInt(param.PayloadKey, out int intValue))
+                        {
+                            context.Set(param.PayloadKey, intValue);
+                        }
+
+                        break;
+                    case EventParamType.Float:
+                        if (stagedArgs.TryGetFloat(param.PayloadKey, out float floatValue))
+                        {
+                            context.Set(param.PayloadKey, floatValue);
+                        }
+
+                        break;
+                }
+            }
+
+            return context;
+        }
+
+        /// <summary>
+        /// Sets an entity's world position. Fail-closed on dead or unmapped targets.
+        /// </summary>
+        public void SetWorldPosition(Entity target, int xCm, int yCm)
+        {
+            RejectDerivedAttributeSideEffect(nameof(SetWorldPosition));
+            if (_world == null || !_world.IsAlive(target))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.SetWorldPositionTargetDead: target entity {target} is not alive.");
+            }
+
+            var position = new Ludots.Core.Components.WorldPositionCm
+            {
+                Value = Mathematics.FixedPoint.Fix64Vec2.FromInt(xCm, yCm),
+            };
+
+            if (_world.TryGet(target, out Ludots.Core.Components.WorldPositionCm existing))
+            {
+                _world.Set(target, position);
+            }
+            else
+            {
+                _world.Add(target, position);
+            }
+        }
+
+        /// <summary>
+        /// Sets an entity's interaction mode. Fail-closed on dead or unmapped targets, unbound
+        /// mode maps, and mode key ids that resolve to no installed interaction mode.
+        /// </summary>
+        public void SetInteractionMode(Entity target, int modeKeyId)
+        {
+            RejectDerivedAttributeSideEffect(nameof(SetInteractionMode));
+            if (_world == null || !_world.IsAlive(target))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.SetInteractionModeTargetDead: target entity {target} is not alive.");
+            }
+
+            Ludots.Core.Input.Interaction.InteractionModeMap? modeMap = _interactionModeMap;
+            if (modeMap == null)
+            {
+                throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.SetInteractionModeMapUnavailable: no interaction mode map is bound to the graph runtime.");
+            }
+
+            string modeId = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(modeKeyId);
+            if (string.IsNullOrWhiteSpace(modeId))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.SetInteractionModeUnknown: mode key id {modeKeyId} resolves to no interaction mode.");
+            }
+
+            if (!modeMap.ModeIdRegistry.TryGetId(modeId, out int registeredModeId))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.SetInteractionModeUnknown: interaction mode '{modeId}' is not installed.");
+            }
+
+            if (modeMap.IsNormalMode(registeredModeId))
+            {
+                if (_world.Has<Ludots.Core.Input.Interaction.InteractionMode>(target))
+                {
+                    _world.Remove<Ludots.Core.Input.Interaction.InteractionMode>(target);
+                }
+
+                return;
+            }
+
+            var component = new Ludots.Core.Input.Interaction.InteractionMode { ModeId = registeredModeId };
+            if (_world.TryGet(target, out Ludots.Core.Input.Interaction.InteractionMode existing))
+            {
+                _world.Set(target, component);
+            }
+            else
+            {
+                _world.Add(target, component);
+            }
+        }
+
+        /// <summary>
+        /// Activates a derived interaction context on the subject. The kernel owns
+        /// parent validation, scope creation, and the ContextActivated presentation event;
+        /// fail-closed on every mis-declared input by name.
+        /// </summary>
+        public void ActivateContext(Entity subject, int contextKeyId, int parentContextKeyId)
+        {
+            RejectDerivedAttributeSideEffect(nameof(ActivateContext));
+            var contextInstances = _contextInstances
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.ContextInstanceRuntimeUnavailable");
+            contextInstances.Activate(subject, contextKeyId, parentContextKeyId);
+        }
+
+        /// <summary>
+        /// Deactivates a derived interaction context (and its descendants) on the subject; the
+        /// instance's presenter scope is destroyed through the presenter command pipeline and a
+        /// ContextDeactivated presentation event is published.
+        /// </summary>
+        public void DeactivateContext(Entity subject, int contextKeyId)
+        {
+            RejectDerivedAttributeSideEffect(nameof(DeactivateContext));
+            var contextInstances = _contextInstances
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.ContextInstanceRuntimeUnavailable");
+            contextInstances.Deactivate(subject, contextKeyId);
+        }
+
+        /// <summary>
+        /// Fires the collection pass-through event: schema-less map dispatch
+        /// so the Entity[] payload rides the reserved MapTrigger.Collection* keys; the event
+        /// key must be a declared custom event (fail closed) and a map scope is required.
+        /// </summary>
+        /// <summary>
+        /// Direct owned-collection write (graph-side primitive): the caller computed owner, op,
+        /// and the entity set in-graph; set semantics execute in CollectionWrite and membership
+        /// change events fire from the store's presentation diff like any other writer.
+        /// </summary>
+        public void WriteCollection(int collectionKeyId, int opKind, Entity owner, Span<Entity> entities, int count)
+        {
+            var store = _entityCollections
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.EntityCollectionsUnavailable");
+            if (count < 0 || count > entities.Length)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.CollectionWriteCountInvalid: count {count} is outside entity list length {entities.Length}.");
+            }
+
+            CollectionWrite.Apply(store, owner, collectionKeyId, (CollectionWriteOp)opKind, entities.Slice(0, count));
+        }
+
+        /// <summary>
+        /// Enqueues a template entity spawn on the runtime spawn queue. Fail-closed on
+        /// unknown template symbols, unmapped spawn anchors, and queue capacity.
+        /// </summary>
+        public void SpawnTemplate(int templateKeyId, Entity source, float xCm, float yCm, bool hasPosition)
+        {
+            RejectDerivedAttributeSideEffect(nameof(SpawnTemplate));
+            var queue = _runtimeEntitySpawnQueue
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.SpawnQueueUnavailable");
+            if (_entityTemplateKeys == null)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.TemplateKeysUnavailable");
+            }
+
+            string templateName = _entityTemplateKeys.GetName(templateKeyId);
+            if (string.IsNullOrWhiteSpace(templateName))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.TemplateUnknown: SpawnTemplate references unregistered template key id {templateKeyId}.");
+            }
+
+            MapId mapId = ResolveMapId(source);
+            if (string.IsNullOrEmpty(mapId.Value))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.SpawnSourceUnmapped: SpawnTemplate source must anchor a map (template '{templateName}').");
+            }
+
+            var request = new Gameplay.Spawning.RuntimeEntitySpawnRequest
+            {
+                Kind = Gameplay.Spawning.RuntimeEntitySpawnKind.Template,
+                Source = source,
+                TemplateId = templateName,
+                MapId = mapId,
+                WorldPositionCm = Mathematics.FixedPoint.Fix64Vec2.FromInt((int)xCm, (int)yCm),
+                HasWorldPosition = hasPosition ? (byte)1 : (byte)0,
+            };
+
+            if (!queue.TryEnqueue(in request))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.SpawnQueueFull: SpawnTemplate '{templateName}' dropped because the runtime spawn queue is at capacity.");
+            }
+        }
+
+        private MapId ResolveMapId(Entity entity)
+        {
+            if (_world != null &&
+                _world.IsAlive(entity) &&
+                _world.TryGet<Ludots.Core.Components.MapEntity>(entity, out var mapEntity))
+            {
+                return mapEntity.MapId;
+            }
+
+            return new MapId(string.Empty);
+        }
+
+        private MapId ResolveRequiredMapId(Entity entity)
+        {
+            if (entity == Entity.Null || entity == default || !_world.IsAlive(entity))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.FireEventKeyScopeInvalid: scope entity {entity} is null or not alive.");
+            }
+
+            if (!_world.TryGet<Ludots.Core.Components.MapEntity>(entity, out var mapEntity))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.FireEventKeyScopeInvalid: scope entity {entity} has no MapEntity.");
+            }
+
+            if (string.IsNullOrWhiteSpace(mapEntity.MapId.Value))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.FireEventKeyScopeInvalid: scope entity {entity} has an empty map id.");
+            }
+
+            return mapEntity.MapId;
+        }
+
+        private Gameplay.MapTriggers.MapVariableStore ResolveMapVariableStore(MapId mapId)
+        {
+            var resolver = _mapVariableStoreResolver
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.MapVariableStoreUnavailable");
+            return resolver(mapId)
+                ?? throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.MapVariableStoreUnavailable: map '{mapId.Value}' has no live variable store.");
+        }
+
+        private string ResolveMapVariableName(int varKeyId)
+        {
+            string? name = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(varKeyId);
+            return name ?? throw new InvalidOperationException(
+                $"GAS.GRAPH.ERR.MapVariableNameUnknown: map variable op references unregistered config key id {varKeyId}.");
+        }
+
+        private Ludots.Core.UI.PanelActivation.PanelActivationApi RequirePanelActivationApi()
+        {
+            return _panelActivationApi ?? throw new InvalidOperationException("GAS.GRAPH.ERR.PanelActivationUnavailable");
+        }
+
+        private Ludots.Core.UI.PanelHosting.PanelHost RequirePanelHost()
+        {
+            return _panelHost ?? throw new InvalidOperationException("GAS.GRAPH.ERR.PanelHostUnavailable");
         }
 
         public void BeginDerivedAttributeWrites(Entity entity, in AttributeBuffer attributes)
@@ -399,6 +1236,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             BuiltinHandlerRegistry builtinHandlers,
             EffectTemplateRegistry effectTemplates,
             BuiltinHandlerExecutionContext? builtinRuntime,
+            Entity effectEntity,
             int effectTemplateId,
             in EffectContext effectContext,
             in EffectConfigParams mergedParams)
@@ -406,6 +1244,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _builtinHandlers = builtinHandlers ?? throw new ArgumentNullException(nameof(builtinHandlers));
             _effectTemplates = effectTemplates ?? throw new ArgumentNullException(nameof(effectTemplates));
             _builtinRuntime = builtinRuntime;
+            _currentEffectEntity = effectEntity;
             _currentEffectTemplateId = effectTemplateId;
             _currentEffectContext = effectContext;
             _hasEffectContext = true;
@@ -422,6 +1261,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _builtinHandlers = null;
             _effectTemplates = null;
             _builtinRuntime = null;
+            _currentEffectEntity = Entity.Null;
             _currentEffectTemplateId = 0;
             _currentEffectContext = default;
             _hasEffectContext = false;
@@ -520,9 +1360,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             try
             {
                 registry.Invoke(
-                    (BuiltinHandlerId)builtinHandlerId,
+                    builtinHandlerId,
                     _world,
-                    default,
+                    _currentEffectEntity,
                     ref context,
                     in mergedParams,
                     in tplData,
@@ -652,6 +1492,43 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return RequireEntityQueries().CollectMapEntities(buffer);
         }
 
+        public Span<Entity> QueryMapEntities(GraphEntityQueryPlan? plan, MapId? map, scoped ReadOnlySpan<int> ints, scoped ReadOnlySpan<float> floats, int depth)
+        {
+            return RequireEntityQueries().QueryMap(plan, map, ints, floats, depth);
+        }
+
+        public Span<Entity> GetEntityQueryBuffer(int depth, int capacity) => RequireEntityQueries().GetQueryBuffer(depth, capacity);
+
+        public void BeginEntityQueryExecution() => _entityQueries?.BeginExecution();
+        public void EndEntityQueryExecution() => _entityQueries?.EndExecution();
+
+        public void BindQueryCollection(Entity owner, int collectionKeyId, int graphId, GraphProgramRegistry programs)
+        {
+            if (_entityCollections == null) throw new InvalidOperationException("GAS.GRAPH.ERR.MissingEntityCollectionStore");
+            if (!programs.TryGetRegistration(graphId, out var registration)) throw new InvalidOperationException("ENTITY_QUERY.ERR.QueryGraphUnknown");
+            RequireEntityQueries().BindCollection(_entityCollections, owner, collectionKeyId, registration,
+                () => programs.TryGetRegistration(graphId, out var current) && ReferenceEquals(current.Program, registration.Program));
+        }
+
+        public Span<Entity> QueryCollection(Entity owner, int collectionKeyId, int depth)
+        {
+            if (_entityCollections == null) throw new InvalidOperationException("GAS.GRAPH.ERR.MissingEntityCollectionStore");
+            if (!_entityCollections.TryGet(owner, collectionKeyId, out var handle)) return Span<Entity>.Empty;
+            if (!_entityCollections.TryGetView(handle, out var view)) throw new InvalidOperationException("GAS.GRAPH.ERR.CollectionInvalid");
+            Span<Entity> result = GetEntityQueryBuffer(depth, view.Count);
+            int count = _entityCollections.CopyEntities(handle, 0, result);
+            return result.Slice(0, count);
+        }
+
+        public Span<Entity> QueryScreenRegionCollection(Entity owner, int collectionKeyId, scoped in ScreenRect rect, string? seatId, int depth)
+        {
+            if (_entityCollections == null) throw new InvalidOperationException("GAS.GRAPH.ERR.MissingEntityCollectionStore");
+            ReadOnlySpan<Entity> hits = RequireAimSource().QueryScreenRegion(_entityCollections.RequireSource(owner, collectionKeyId), rect, seatId);
+            Span<Entity> result = GetEntityQueryBuffer(depth, hits.Length);
+            hits.CopyTo(result);
+            return result[..hits.Length];
+        }
+
         public int CopyEntityCollection(Entity owner, int collectionKeyId, Span<Entity> buffer)
         {
             if (_entityCollections == null)
@@ -665,6 +1542,228 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             return RequireEntityQueries().CopyCollection(_entityCollections, owner, collectionKeyId, buffer);
+        }
+
+        public int CollectActiveEffects(Entity owner, Span<Entity> buffer)
+        {
+            if (!_world.IsAlive(owner) || !_world.Has<ActiveEffectContainer>(owner))
+            {
+                return 0;
+            }
+
+            ref ActiveEffectContainer container = ref _world.Get<ActiveEffectContainer>(owner);
+            int written = 0;
+            for (int i = 0; i < container.Count && written < buffer.Length; i++)
+            {
+                Entity effectEntity = container.GetEntity(i);
+                if (!_world.IsAlive(effectEntity))
+                {
+                    continue;
+                }
+
+                buffer[written++] = effectEntity;
+            }
+
+            return written;
+        }
+
+        public int CollectEffectTemplateIds(Span<int> buffer)
+        {
+            RegistryMapping[] mappings = EffectTemplateIdRegistry.SnapshotMappings();
+            if (mappings.Length == 0 || buffer.IsEmpty)
+            {
+                return 0;
+            }
+
+            Array.Sort(mappings, static (a, b) => a.Id.CompareTo(b.Id));
+            int written = 0;
+            for (int i = 0; i < mappings.Length && written < buffer.Length; i++)
+            {
+                if (mappings[i].Id <= 0)
+                {
+                    continue;
+                }
+
+                buffer[written++] = mappings[i].Id;
+            }
+
+            return written;
+        }
+
+        public int CollectAbilitySlots(Entity owner, Span<int> buffer)
+        {
+            if (!_world.IsAlive(owner) || buffer.IsEmpty)
+            {
+                return 0;
+            }
+
+            int written = 0;
+            for (int slot = 0; slot < AbilityStateBuffer.CAPACITY && written < buffer.Length; slot++)
+            {
+                if (AbilitySlotResolver.TryResolve(_world, owner, slot, out _))
+                {
+                    buffer[written++] = slot;
+                }
+            }
+
+            return written;
+        }
+
+        public int CollectInventoryItems(Entity owner, Span<Entity> buffer)
+        {
+            if (!_world.IsAlive(owner) || buffer.IsEmpty)
+            {
+                return 0;
+            }
+
+            if (_inventory == null)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.MissingInventoryRuntime");
+            }
+
+            return _inventory.CollectOwnedItemInstances(owner, buffer);
+        }
+
+        public int CollectItemDefinitionIds(Span<int> buffer)
+        {
+            if (_itemDefinitions == null)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.MissingItemDefinitionRegistry");
+            }
+
+            return _itemDefinitions.CopyRegisteredIds(buffer);
+        }
+
+        public int CollectPresentTags(Entity owner, Span<int> buffer)
+        {
+            if (!_world.IsAlive(owner) || buffer.IsEmpty)
+            {
+                return 0;
+            }
+
+            if (_world.Has<TagCountContainer>(owner))
+            {
+                ref TagCountContainer counts = ref _world.Get<TagCountContainer>(owner);
+                return counts.CopyTagIds(buffer);
+            }
+
+            if (!_world.Has<GameplayTagContainer>(owner))
+            {
+                return 0;
+            }
+
+            ref GameplayTagContainer tags = ref _world.Get<GameplayTagContainer>(owner);
+            RegistryMapping[] mappings = TagRegistry.SnapshotMappings();
+            Array.Sort(mappings, static (left, right) => left.Id.CompareTo(right.Id));
+            int written = 0;
+            for (int i = 0; i < mappings.Length && written < buffer.Length; i++)
+            {
+                int tagId = mappings[i].Id;
+                if (tagId > 0 && RequireTagOps().HasTag(ref tags, tagId, TagSense.Present))
+                {
+                    buffer[written++] = tagId;
+                }
+            }
+
+            return written;
+        }
+
+        public int CollectActiveTasks(Entity owner, Span<Entity> buffer)
+        {
+            if (!_world.IsAlive(owner) || buffer.IsEmpty)
+            {
+                return 0;
+            }
+
+            int written = 0;
+            foreach (ref var chunk in _world.Query(in TaskInstanceQuery))
+            {
+                ref Entity first = ref chunk.Entity(0);
+                Span<TaskInstanceCm> tasks = chunk.GetSpan<TaskInstanceCm>();
+                foreach (int index in chunk)
+                {
+                    if (written >= buffer.Length)
+                    {
+                        return written;
+                    }
+
+                    if (tasks[index].ScopeHost == owner &&
+                        tasks[index].State == TaskInstanceState.Active)
+                    {
+                        buffer[written++] = Unsafe.Add(ref first, index);
+                    }
+                }
+            }
+
+            return written;
+        }
+
+        public int CollectActiveActivities(Entity owner, Span<Entity> buffer)
+        {
+            if (!_world.IsAlive(owner) || buffer.IsEmpty)
+            {
+                return 0;
+            }
+
+            int written = 0;
+            foreach (ref var chunk in _world.Query(in ActivityInstanceQuery))
+            {
+                ref Entity first = ref chunk.Entity(0);
+                Span<ActivityInstanceCm> activities = chunk.GetSpan<ActivityInstanceCm>();
+                foreach (int index in chunk)
+                {
+                    if (written >= buffer.Length)
+                    {
+                        return written;
+                    }
+
+                    if (activities[index].ScopeHost == owner &&
+                        activities[index].State == ActivityInstanceState.Active)
+                    {
+                        buffer[written++] = Unsafe.Add(ref first, index);
+                    }
+                }
+            }
+
+            return written;
+        }
+
+        public int CollectProgressionNodes(Entity owner, Span<int> buffer)
+        {
+            if (!_world.IsAlive(owner) ||
+                !_world.Has<ProgressionStateBuffer>(owner) ||
+                buffer.IsEmpty)
+            {
+                return 0;
+            }
+
+            ref ProgressionStateBuffer state = ref _world.Get<ProgressionStateBuffer>(owner);
+            return state.CopyProgressionIds(buffer);
+        }
+
+        public int CollectAbilityHolders(int abilityId, ReadOnlySpan<Entity> candidates, Span<Entity> buffer)
+        {
+            if (abilityId <= 0 || buffer.IsEmpty)
+            {
+                return 0;
+            }
+
+            int written = 0;
+            for (int i = 0; i < candidates.Length && written < buffer.Length; i++)
+            {
+                Entity candidate = candidates[i];
+                if (candidate == Entity.Null || !_world.IsAlive(candidate))
+                {
+                    continue;
+                }
+
+                if (AbilitySlotResolver.TryFindAbility(_world, candidate, abilityId, out _))
+                {
+                    buffer[written++] = candidate;
+                }
+            }
+
+            return written;
         }
 
         public int FilterTeam(Span<Entity> entities, int count, int teamId)
@@ -728,6 +1827,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public int FilterLayer(Span<Entity> entities, int count, uint requiredMask)
         {
             return RequireEntityQueries().FilterLayer(entities, count, requiredMask);
+        }
+
+        public int FilterControllable(Span<Entity> entities, int count, Entity controller)
+        {
+            if ((uint)count > (uint)entities.Length) throw new ArgumentOutOfRangeException(nameof(count));
+            ControlDomainQuery domains = RequireControlDomains();
+            int written = 0;
+            for (int i = 0; i < count; i++)
+            {
+                Entity candidate = entities[i];
+                if (domains.IsControllableBy(controller, candidate))
+                    entities[written++] = candidate;
+            }
+            return written;
         }
 
         public int FilterNotEntity(Span<Entity> entities, int count, Entity exclude)
@@ -815,36 +1928,48 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             RejectNonTransactionalEffectSideEffect(nameof(RemoveRelationshipLink));
             RequireRelationshipRuntime().RemoveLink(source, target, typeId);
         }
-        public short SetRelationshipMetric(Entity source, Entity target, int metricId, int value, int reasonId, int typeId)
+        public short SetRelationshipMetric(Entity source, Entity target, int metricId, int value, int typeId)
         {
             RejectDerivedAttributeSideEffect(nameof(SetRelationshipMetric));
             RejectNonTransactionalEffectSideEffect(nameof(SetRelationshipMetric));
-            return RequireRelationshipRuntime().SetMetric(source, target, typeId, metricId, value, reasonId);
+            return RequireRelationshipRuntime().SetMetric(source, target, typeId, metricId, value);
         }
-        public short AddRelationshipMetric(Entity source, Entity target, int metricId, int delta, int reasonId, int typeId)
+        public short AddRelationshipMetric(Entity source, Entity target, int metricId, int delta, int typeId)
         {
             RejectDerivedAttributeSideEffect(nameof(AddRelationshipMetric));
             RejectNonTransactionalEffectSideEffect(nameof(AddRelationshipMetric));
-            return RequireRelationshipRuntime().AddMetric(source, target, typeId, metricId, delta, reasonId);
+            return RequireRelationshipRuntime().AddMetric(source, target, typeId, metricId, delta);
         }
         public short GetRelationshipMetric(Entity source, Entity target, int metricId, int typeId)
             => RequireRelationshipRuntime().GetMetric(source, target, typeId, metricId);
         public bool HasRelationshipFlag(Entity source, Entity target, int flagId, int typeId)
             => RequireRelationshipRuntime().HasFlag(source, target, typeId, flagId);
-        public void SetRelationshipFlag(Entity source, Entity target, int flagId, bool enabled, int reasonId, int typeId)
+        public void SetRelationshipFlag(Entity source, Entity target, int flagId, bool enabled, int typeId)
         {
             RejectDerivedAttributeSideEffect(nameof(SetRelationshipFlag));
             RejectNonTransactionalEffectSideEffect(nameof(SetRelationshipFlag));
-            RequireRelationshipRuntime().SetFlag(source, target, typeId, flagId, enabled, reasonId);
+            RequireRelationshipRuntime().SetFlag(source, target, typeId, flagId, enabled);
         }
-        public int CollectOutgoing(Entity source, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
-            => RequireRelationshipRuntime().CollectOutgoing(source, typeId, buffer);
-        public int CollectIncoming(Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
-            => RequireRelationshipRuntime().CollectIncoming(target, typeId, buffer);
-        public int CollectMutual(Entity first, Entity second, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
-            => RequireRelationshipRuntime().CollectMutual(first, second, typeId, buffer);
-        public int CollectBetweenPair(Entity source, Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
-            => RequireRelationshipRuntime().CollectBetweenPair(source, target, typeId, buffer);
+        public RelationshipQueryResult CollectOutgoing(Entity source, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        {
+            int count = RequireRelationshipRuntime().CollectOutgoing(source, typeId, buffer, out int dropped);
+            return new RelationshipQueryResult(count, dropped);
+        }
+        public RelationshipQueryResult CollectIncoming(Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        {
+            int count = RequireRelationshipRuntime().CollectIncoming(target, typeId, buffer, out int dropped);
+            return new RelationshipQueryResult(count, dropped);
+        }
+        public RelationshipQueryResult CollectMutual(Entity first, Entity second, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        {
+            int count = RequireRelationshipRuntime().CollectMutual(first, second, typeId, buffer, out int dropped);
+            return new RelationshipQueryResult(count, dropped);
+        }
+        public RelationshipQueryResult CollectBetweenPair(Entity source, Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        {
+            int count = RequireRelationshipRuntime().CollectBetweenPair(source, target, typeId, buffer, out int dropped);
+            return new RelationshipQueryResult(count, dropped);
+        }
         public int FilterRelationshipMetricRange(Span<Entity> entities, int count, Entity source, int typeId, int metricId, short minInclusive, short maxInclusive)
             => RequireEntityQueries().FilterRelationshipMetricRange(entities, count, source, typeId, metricId, minInclusive, maxInclusive);
         public int FilterRelationshipFlag(Span<Entity> entities, int count, Entity source, int typeId, int flagId, bool expected)
@@ -891,6 +2016,68 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private int CurrentStepTick()
         {
             return _clock?.Now(ClockDomainId.Step) ?? 0;
+        }
+
+        /// <summary>
+        /// Binds the order pipeline for behavior-side order ops (SubmitAssignedOrder /
+        /// CompleteActiveOrder). Order submission stays fail-closed until this is bound.
+        /// </summary>
+        public void BindOrderPipeline(
+            Ludots.Core.Gameplay.GAS.Orders.OrderQueue orders,
+            Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry orderTypes)
+        {
+            _orderQueue = orders ?? throw new ArgumentNullException(nameof(orders));
+            _orderTypes = orderTypes ?? throw new ArgumentNullException(nameof(orderTypes));
+        }
+
+        public void SubmitAssignedOrder(Entity actor, Entity target, int orderTypeId, int xCm, int yCm)
+        {
+            if (_orderQueue == null || _orderTypes == null)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.MissingOrderPipeline");
+            }
+
+            if (!_orderTypes.IsRegistered(orderTypeId))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.UnknownOrderType: SubmitAssignedOrder references unregistered order type {orderTypeId}.");
+            }
+
+            if (!_world.Has<PlayerOwner>(actor))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.SubmitAssignedOrderActorMissingOwner: acting entity {actor} has no PlayerOwner.");
+            }
+
+            var order = new Ludots.Core.Gameplay.GAS.Orders.Order
+            {
+                OrderTypeId = orderTypeId,
+                PlayerId = _world.Get<PlayerOwner>(actor).PlayerId,
+                Actor = actor,
+                Target = target,
+                Args = Ludots.Core.Gameplay.GAS.Orders.OrderArgs.CreateSingleWorldCm(
+                    new System.Numerics.Vector3(xCm, 0f, yCm)),
+                SubmitMode = Ludots.Core.Gameplay.GAS.Orders.OrderSubmitMode.Immediate,
+            };
+            if (!_orderQueue.TryEnqueueAssigned(ref order))
+            {
+                throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.OrderQueueFull: SubmitAssignedOrder could not enqueue the pursuit order.");
+            }
+        }
+
+        public void CompleteActiveOrder(Entity actor)
+        {
+            if (_orderTypes == null)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.MissingOrderPipeline");
+            }
+
+            if (!Ludots.Core.Gameplay.GAS.Orders.OrderSubmitter.NotifyOrderComplete(_world, actor, _orderTypes))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.NoActiveOrderToComplete: acting entity {actor} has no active order to complete.");
+            }
         }
 
         public void ApplyEffectTemplate(Entity caster, Entity target, int templateId)
@@ -1030,10 +2217,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
                 ref var gameplayEffect = ref _world.Get<GameplayEffect>(effectEntity);
                 gameplayEffect.CancelRequested = true;
-                if (gameplayEffect.AggregatesModifiers && !_world.Has<AttributeAggregateDirty>(target))
+                if (gameplayEffect.AggregatesModifiers)
                 {
-                    _world.Add(target, new AttributeAggregateDirty());
+                    RequireAggregateDirty().MarkDirty(target);
                 }
+
+                DueWheel?.ForceVisit(effectEntity);
             }
         }
 

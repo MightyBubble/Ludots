@@ -2,14 +2,20 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Ludots.Core.Client;
 using Ludots.Core.Engine;
+using Ludots.Core.Engine.Randomization;
 using Ludots.Core.Engine.TimeFlow;
+using Ludots.Core.Fields;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.GAS;
-using Ludots.Core.Gameplay.Narrative;
-using Ludots.Core.Gameplay.Quests;
+using Ludots.Core.Gameplay.MapTriggers;
+using Ludots.Core.Gameplay.Dialogue;
+using Ludots.Core.Gameplay.Sequencer;
+using Ludots.Core.Gameplay.Activities;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Tasks;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Map;
 using Ludots.Core.Scripting;
@@ -27,9 +33,13 @@ namespace Ludots.Core.Persistence
             registry.Register(CreateGameSessionParticipant(engine.GameSession));
             registry.Register(new EmptySaveParticipant("inventory"));
             registry.Register(CreateMapSessionsParticipant(engine.MapSessions));
-            registry.Register(CreateQuestParticipant(engine.GetService(CoreServiceKeys.QuestRuntimeService)));
-            registry.Register(CreateNarrativeParticipant(engine.GetService(CoreServiceKeys.NarrativeDirector)));
+            registry.Register(CreateFieldLayersParticipant(engine.MapSessions));
+            registry.Register(CreateActivityParticipant(engine.GetService(CoreServiceKeys.ActivityRuntimeService)));
+            registry.Register(CreateTaskParticipant(engine.GetService(CoreServiceKeys.TaskRuntimeService)));
+            registry.Register(CreateDialogueParticipant(engine.GetService(CoreServiceKeys.DialogueRuntime)));
+            registry.Register(CreateSequencerParticipant(engine.GetService(CoreServiceKeys.SequencerRuntime)));
             registry.Register(CreateRelationshipParticipant(engine.GetService(CoreServiceKeys.RelationshipRuntime)));
+            registry.Register(CreateRngParticipant(engine.GetService(CoreServiceKeys.RngStreamService)));
             registry.Register(CreateTeamParticipant());
             registry.Register(CreateTimeFlowParticipant(engine.GetService(CoreServiceKeys.TimeFlow)));
         }
@@ -59,19 +69,39 @@ namespace Ludots.Core.Persistence
             return new MapSessionsSaveParticipant(manager);
         }
 
-        public static ISaveParticipant CreateNarrativeParticipant(NarrativeDirector director)
+        public static ISaveParticipant CreateDialogueParticipant(DialogueRuntime runtime)
         {
-            return new NarrativeSaveParticipant(director);
+            return new DialogueSaveParticipant(runtime);
         }
 
-        public static ISaveParticipant CreateQuestParticipant(QuestRuntimeService runtime)
+        public static ISaveParticipant CreateFieldLayersParticipant(MapSessionManager manager)
         {
-            return new QuestSaveParticipant(runtime);
+            return new FieldLayersSaveParticipant(manager);
+        }
+
+        public static ISaveParticipant CreateSequencerParticipant(SequencerRuntime runtime)
+        {
+            return new SequencerSaveParticipant(runtime);
+        }
+
+        public static ISaveParticipant CreateActivityParticipant(ActivityRuntimeService runtime)
+        {
+            return new ActivitySaveParticipant(runtime);
+        }
+
+        public static ISaveParticipant CreateTaskParticipant(TaskRuntimeService runtime)
+        {
+            return new TaskSaveParticipant(runtime);
         }
 
         public static ISaveParticipant CreateRelationshipParticipant(RelationshipRuntime runtime)
         {
             return new RelationshipSaveParticipant(runtime);
+        }
+
+        public static ISaveParticipant CreateRngParticipant(IRngStreamService streams)
+        {
+            return new RngSaveParticipant(streams);
         }
 
         private sealed class GameSessionSaveParticipant : ISaveParticipant
@@ -109,10 +139,8 @@ namespace Ludots.Core.Persistence
                 return new JsonObject
                 {
                     ["currentTick"] = snapshot.CurrentTick,
-                    ["localPlayerId"] = snapshot.LocalPlayerId,
                     ["players"] = players,
-                    ["globals"] = globals,
-                    ["camera"] = WriteCamera(snapshot.Camera)
+                    ["globals"] = globals
                 };
             }
 
@@ -121,6 +149,18 @@ namespace Ludots.Core.Persistence
                 if (state == null) throw new ArgumentNullException(nameof(state));
 
                 JsonObject root = state.AsObject();
+                if (root.ContainsKey("localPlayerId"))
+                {
+                    throw new SaveContextException(
+                        "GameSession save domain no longer accepts 'localPlayerId'. Local possession is ClientLocalSeatRegistry / launchContext.localSeats[].");
+                }
+
+                if (root.ContainsKey("camera"))
+                {
+                    throw new SaveContextException(
+                        "GameSession save domain no longer accepts root 'camera'. Camera authority is LogicViewRegistry / PresentBinding.");
+                }
+
                 var players = new List<PlayerSnapshot>();
                 JsonArray playerArray = RequireArray(root, "players");
                 for (int i = 0; i < playerArray.Count; i++)
@@ -141,10 +181,8 @@ namespace Ludots.Core.Persistence
 
                 var snapshot = new GameSessionSnapshot(
                     RequireInt(root, "currentTick"),
-                    RequireInt(root, "localPlayerId"),
                     players,
-                    globals,
-                    ReadCamera(RequireObject(root["camera"], "camera")));
+                    globals);
                 _session.RestoreSnapshot(snapshot);
             }
         }
@@ -380,7 +418,8 @@ namespace Ludots.Core.Persistence
                     var sessionObject = new JsonObject
                     {
                         ["mapId"] = session.MapId,
-                        ["state"] = session.State.ToString()
+                        ["state"] = session.State.ToString(),
+                        ["variables"] = WriteMapVariables(session.Variables)
                     };
                     JsonObject? launchContext = WriteLaunchContext(session.LaunchContext);
                     if (launchContext != null)
@@ -425,7 +464,8 @@ namespace Ludots.Core.Persistence
                     sessions.Add(new MapSessionEntrySnapshot(
                         RequireString(session, "mapId"),
                         sessionState,
-                        ReadLaunchContext(session["launchContext"])));
+                        ReadLaunchContext(session["launchContext"]),
+                        ReadMapVariables(RequireObject(session["variables"], $"sessions[{i}].variables"), $"sessions[{i}].variables")));
                 }
 
                 JsonArray focusStackArray = RequireArray(root, "focusStack");
@@ -435,34 +475,35 @@ namespace Ludots.Core.Persistence
                     focusStack[i] = RequireStringValue(focusStackArray[i], $"focusStack[{i}]");
                 }
 
-                _manager.RestoreSnapshot(new MapSessionManagerSnapshot(sessions, focusStack));
+                try
+                {
+                    _manager.RestoreSnapshot(new MapSessionManagerSnapshot(sessions, focusStack));
+                }
+                catch (InvalidOperationException ex)
+                {
+                    throw new SaveContextException($"Map sessions save state is invalid: {ex.Message}");
+                }
             }
         }
 
-        private sealed class NarrativeSaveParticipant : ISaveParticipant
+        private sealed class DialogueSaveParticipant : ISaveParticipant
         {
-            private readonly NarrativeDirector _director;
+            private readonly DialogueRuntime _runtime;
 
-            public NarrativeSaveParticipant(NarrativeDirector director)
+            public DialogueSaveParticipant(DialogueRuntime runtime)
             {
-                _director = director ?? throw new ArgumentNullException(nameof(director));
+                _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             }
 
-            public string DomainKey => "narrative";
+            public string DomainKey => "dialogue";
 
             public JsonNode CaptureState()
             {
-                NarrativeDirectorSnapshot snapshot = _director.CaptureSnapshot();
-                var variables = new JsonObject();
-                foreach (KeyValuePair<string, NarrativeValue> pair in snapshot.Variables)
-                {
-                    variables[pair.Key] = WriteNarrativeValue(pair.Value);
-                }
-
+                DialogueRuntimeSnapshot snapshot = _runtime.CaptureSnapshot();
                 var bindings = new JsonArray();
                 for (int i = 0; i < snapshot.Bindings.Count; i++)
                 {
-                    NarrativeEntityBindingSnapshot binding = snapshot.Bindings[i];
+                    DialogueBindingSnapshot binding = snapshot.Bindings[i];
                     bindings.Add(new JsonObject
                     {
                         ["alias"] = binding.Alias,
@@ -472,10 +513,122 @@ namespace Ludots.Core.Persistence
 
                 return new JsonObject
                 {
-                    ["variables"] = variables,
                     ["bindings"] = bindings,
-                    ["activeDialogue"] = WriteNarrativeDialogue(snapshot.ActiveDialogue),
-                    ["activeCinematic"] = WriteNarrativeCinematic(snapshot.ActiveCinematic)
+                    ["activeDialogue"] = WriteDialogueSession(snapshot.ActiveDialogue)
+                };
+            }
+
+            public void RestoreState(JsonNode state)
+            {
+                if (state == null) throw new ArgumentNullException(nameof(state));
+                JsonObject root = state.AsObject();
+                JsonArray bindingArray = RequireArray(root, "bindings");
+                var bindings = new List<DialogueBindingSnapshot>(bindingArray.Count);
+                for (int i = 0; i < bindingArray.Count; i++)
+                {
+                    JsonObject binding = RequireObject(bindingArray[i], $"bindings[{i}]");
+                    bindings.Add(new DialogueBindingSnapshot(
+                        RequireString(binding, "alias"),
+                        ReadEntity(RequireObject(binding["entity"], $"bindings[{i}].entity"))));
+                }
+
+                _runtime.RestoreSnapshot(new DialogueRuntimeSnapshot(
+                    bindings,
+                    ReadDialogueSession(root["activeDialogue"])));
+            }
+        }
+
+        private sealed class SequencerSaveParticipant : ISaveParticipant
+        {
+            private readonly SequencerRuntime _runtime;
+
+            public SequencerSaveParticipant(SequencerRuntime runtime)
+            {
+                _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+            }
+
+            public string DomainKey => "sequencer";
+
+            public JsonNode CaptureState()
+            {
+                SequencerSessionSnapshot? snapshot = _runtime.CaptureSnapshot();
+                if (snapshot == null)
+                {
+                    return new JsonObject { ["active"] = null };
+                }
+
+                var fired = new JsonArray();
+                for (int i = 0; i < snapshot.FiredSignalTrackIndices.Count; i++)
+                {
+                    fired.Add(snapshot.FiredSignalTrackIndices[i]);
+                }
+
+                return new JsonObject
+                {
+                    ["active"] = new JsonObject
+                    {
+                        ["sequenceId"] = snapshot.SequenceId,
+                        ["time"] = snapshot.Time,
+                        ["rate"] = snapshot.Rate,
+                        ["paused"] = snapshot.Paused,
+                        ["firedSignals"] = fired
+                    }
+                };
+            }
+
+            public void RestoreState(JsonNode state)
+            {
+                if (state == null) throw new ArgumentNullException(nameof(state));
+                JsonObject root = state.AsObject();
+                if (root["active"] is not JsonObject active)
+                {
+                    _runtime.RestoreSnapshot(null);
+                    return;
+                }
+
+                JsonArray firedArray = RequireArray(active, "firedSignals");
+                var fired = new List<int>(firedArray.Count);
+                for (int i = 0; i < firedArray.Count; i++)
+                {
+                    fired.Add(RequireIntValue(firedArray[i], $"firedSignals[{i}]"));
+                }
+
+                _runtime.RestoreSnapshot(new SequencerSessionSnapshot(
+                    RequireString(active, "sequenceId"),
+                    RequireSingle(active, "time"),
+                    RequireSingle(active, "rate"),
+                    RequireBool(active, "paused"),
+                    fired));
+            }
+        }
+
+        private sealed class ActivitySaveParticipant : ISaveParticipant
+        {
+            private readonly ActivityRuntimeService _runtime;
+
+            public ActivitySaveParticipant(ActivityRuntimeService runtime)
+            {
+                _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+            }
+
+            public string DomainKey => "activities";
+
+            public JsonNode CaptureState()
+            {
+                ActivityRuntimeSnapshot snapshot = _runtime.CaptureSnapshot();
+                var processedSignalIds = new JsonArray();
+                if (snapshot.ProcessedSignalIds != null)
+                {
+                    for (int i = 0; i < snapshot.ProcessedSignalIds.Count; i++)
+                    {
+                        processedSignalIds.Add(snapshot.ProcessedSignalIds[i]);
+                    }
+                }
+
+                return new JsonObject
+                {
+                    ["nextInstanceId"] = snapshot.NextInstanceId,
+                    ["processedSignalIds"] = processedSignalIds,
                 };
             }
 
@@ -484,54 +637,60 @@ namespace Ludots.Core.Persistence
                 if (state == null) throw new ArgumentNullException(nameof(state));
 
                 JsonObject root = state.AsObject();
-                var variables = new Dictionary<string, NarrativeValue>(StringComparer.OrdinalIgnoreCase);
-                JsonObject variableObject = RequireObject(root["variables"], "variables");
-                foreach (KeyValuePair<string, JsonNode?> pair in variableObject)
+                int nextInstanceId = RequireInt(root, "nextInstanceId");
+                List<string>? processedSignalIds = null;
+                if (root.TryGetPropertyValue("processedSignalIds", out JsonNode? idsNode) && idsNode != null)
                 {
-                    variables[pair.Key] = ReadNarrativeValue(RequireObject(pair.Value, $"variables.{pair.Key}"));
+                    JsonArray idsArray = idsNode.AsArray();
+                    processedSignalIds = new List<string>(idsArray.Count);
+                    for (int i = 0; i < idsArray.Count; i++)
+                    {
+                        processedSignalIds.Add(RequireStringValue(idsArray[i], $"processedSignalIds[{i}]"));
+                    }
                 }
 
-                JsonArray bindingArray = RequireArray(root, "bindings");
-                var bindings = new List<NarrativeEntityBindingSnapshot>(bindingArray.Count);
-                for (int i = 0; i < bindingArray.Count; i++)
+                try
                 {
-                    JsonObject binding = RequireObject(bindingArray[i], $"bindings[{i}]");
-                    bindings.Add(new NarrativeEntityBindingSnapshot(
-                        RequireString(binding, "alias"),
-                        ReadEntity(RequireObject(binding["entity"], $"bindings[{i}].entity"))));
+                    _runtime.RestoreSnapshot(new ActivityRuntimeSnapshot(nextInstanceId, processedSignalIds));
                 }
-
-                _director.RestoreSnapshot(new NarrativeDirectorSnapshot(
-                    variables,
-                    bindings,
-                    ReadNarrativeDialogue(root["activeDialogue"]),
-                    ReadNarrativeCinematic(root["activeCinematic"])));
+                catch (InvalidOperationException ex)
+                {
+                    throw new SaveContextException($"Activity save state is invalid: {ex.Message}");
+                }
             }
         }
 
-        private sealed class QuestSaveParticipant : ISaveParticipant
+        private sealed class TaskSaveParticipant : ISaveParticipant
         {
-            private readonly QuestRuntimeService _runtime;
+            private readonly TaskRuntimeService _runtime;
 
-            public QuestSaveParticipant(QuestRuntimeService runtime)
+            public TaskSaveParticipant(TaskRuntimeService runtime)
             {
                 _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             }
 
-            public string DomainKey => "quests";
+            public string DomainKey => "tasks";
 
             public JsonNode CaptureState()
             {
-                QuestRuntimeSnapshot snapshot = _runtime.CaptureSnapshot();
+                TaskRuntimeSnapshot snapshot = _runtime.CaptureSnapshot();
                 var signals = new JsonObject();
                 foreach (KeyValuePair<string, int> pair in snapshot.Signals)
                 {
                     signals[pair.Key] = pair.Value;
                 }
 
+                var accumulators = new JsonObject();
+                foreach (KeyValuePair<string, int> pair in snapshot.Accumulators)
+                {
+                    accumulators[pair.Key] = pair.Value;
+                }
+
                 return new JsonObject
                 {
-                    ["signals"] = signals
+                    ["signals"] = signals,
+                    ["accumulators"] = accumulators,
+                    ["nextInstanceId"] = snapshot.NextInstanceId
                 };
             }
 
@@ -547,13 +706,21 @@ namespace Ludots.Core.Persistence
                     signals[pair.Key] = RequireIntValue(pair.Value, $"signals.{pair.Key}");
                 }
 
+                var accumulators = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                JsonObject accumulatorObject = RequireObject(root["accumulators"], "accumulators");
+                foreach (KeyValuePair<string, JsonNode?> pair in accumulatorObject)
+                {
+                    accumulators[pair.Key] = RequireIntValue(pair.Value, $"accumulators.{pair.Key}");
+                }
+
+                int nextInstanceId = RequireInt(root, "nextInstanceId");
                 try
                 {
-                    _runtime.RestoreSnapshot(new QuestRuntimeSnapshot(signals));
+                    _runtime.RestoreSnapshot(new TaskRuntimeSnapshot(signals, accumulators, nextInstanceId));
                 }
                 catch (InvalidOperationException ex)
                 {
-                    throw new SaveContextException($"Quest save state is invalid: {ex.Message}");
+                    throw new SaveContextException($"Task save state is invalid: {ex.Message}");
                 }
             }
         }
@@ -607,6 +774,100 @@ namespace Ludots.Core.Persistence
             public void RestoreState(JsonNode state)
             {
                 if (state == null) throw new ArgumentNullException(nameof(state));
+            }
+        }
+
+        private sealed class RngSaveParticipant : ISaveParticipant
+        {
+            private readonly IRngStreamService _streams;
+
+            public RngSaveParticipant(IRngStreamService streams)
+            {
+                _streams = streams ?? throw new ArgumentNullException(nameof(streams));
+            }
+
+            public string DomainKey => "rng";
+
+            public JsonNode CaptureState()
+            {
+                var ids = new List<string>(_streams.DeclaredStreamIds);
+                ids.Sort(StringComparer.Ordinal);
+
+                var streams = new JsonArray();
+                for (int i = 0; i < ids.Count; i++)
+                {
+                    RngStream stream = _streams.GetStream(ids[i]);
+                    RngStreamSnapshot snapshot = stream.CaptureSnapshot();
+                    streams.Add(new JsonObject
+                    {
+                        ["stream"] = snapshot.StreamId,
+                        ["seed"] = stream.DeclaredSeed,
+                        ["state"] = snapshot.State,
+                        ["position"] = snapshot.Position
+                    });
+                }
+
+                return new JsonObject
+                {
+                    ["streams"] = streams
+                };
+            }
+
+            public void RestoreState(JsonNode state)
+            {
+                if (state == null) throw new ArgumentNullException(nameof(state));
+
+                JsonObject root = state.AsObject();
+                JsonArray streamArray = RequireArray(root, "streams");
+                var snapshots = new Dictionary<string, RngStreamSnapshot>(streamArray.Count, StringComparer.Ordinal);
+                var seeds = new Dictionary<string, uint>(streamArray.Count, StringComparer.Ordinal);
+                for (int i = 0; i < streamArray.Count; i++)
+                {
+                    JsonObject entry = RequireObject(streamArray[i], $"streams[{i}]");
+                    string streamId = RequireString(entry, "stream");
+                    if (!snapshots.TryAdd(streamId, new RngStreamSnapshot(
+                            RequireUInt(entry, "state", $"streams[{i}]"),
+                            RequireLong(entry, "position", $"streams[{i}]"),
+                            streamId)))
+                    {
+                        throw new SaveContextException($"Rng save stream '{streamId}' is duplicated.");
+                    }
+
+                    seeds.Add(streamId, RequireUInt(entry, "seed", $"streams[{i}]"));
+                }
+
+                foreach (string streamId in snapshots.Keys)
+                {
+                    if (!_streams.DeclaredStreamIds.Contains(streamId))
+                    {
+                        throw new SaveContextException(
+                            $"Rng save stream '{streamId}' is not declared in this session.");
+                    }
+                }
+
+                foreach (string streamId in _streams.DeclaredStreamIds)
+                {
+                    if (!snapshots.ContainsKey(streamId))
+                    {
+                        throw new SaveContextException(
+                            $"Rng save is missing declared stream '{streamId}'.");
+                    }
+                }
+
+                foreach (KeyValuePair<string, RngStreamSnapshot> pair in snapshots)
+                {
+                    RngStream stream = _streams.GetStream(pair.Key);
+                    if (stream.DeclaredSeed != seeds[pair.Key])
+                    {
+                        throw new SaveContextException(
+                            $"Rng stream '{pair.Key}' declared seed does not match the save.");
+                    }
+                }
+
+                foreach (KeyValuePair<string, RngStreamSnapshot> pair in snapshots)
+                {
+                    _streams.GetStream(pair.Key).RestoreSnapshot(pair.Value);
+                }
             }
         }
 
@@ -692,33 +953,33 @@ namespace Ludots.Core.Persistence
             throw new SaveContextException("GameSession global number has unsupported numeric storage.");
         }
 
-        private static JsonObject WriteNarrativeValue(NarrativeValue value)
+        private static JsonNode? WriteDialogueSession(DialogueSessionSnapshot? dialogue)
         {
+            if (dialogue == null)
+            {
+                return null;
+            }
+
             return new JsonObject
             {
-                ["kind"] = value.Kind.ToString(),
-                ["intValue"] = value.IntValue,
-                ["floatValue"] = value.FloatValue,
-                ["boolValue"] = value.BoolValue,
-                ["stringValue"] = value.StringValue
+                ["dialogueId"] = dialogue.DialogueId,
+                ["nodeId"] = dialogue.NodeId,
+                ["elapsedSeconds"] = dialogue.ElapsedSeconds
             };
         }
 
-        private static NarrativeValue ReadNarrativeValue(JsonObject value)
+        private static DialogueSessionSnapshot? ReadDialogueSession(JsonNode? node)
         {
-            string kindText = RequireString(value, "kind");
-            if (!Enum.TryParse(kindText, ignoreCase: false, out NarrativeValueKind kind) ||
-                !string.Equals(kind.ToString(), kindText, StringComparison.Ordinal))
+            if (node == null || node.GetValueKind() == System.Text.Json.JsonValueKind.Null)
             {
-                throw new SaveContextException($"Narrative value kind '{kindText}' is invalid.");
+                return null;
             }
 
-            return new NarrativeValue(
-                kind,
-                RequireInt(value, "intValue"),
-                RequireSingle(value, "floatValue"),
-                RequireBool(value, "boolValue"),
-                RequireString(value, "stringValue"));
+            JsonObject obj = RequireObject(node, "activeDialogue");
+            return new DialogueSessionSnapshot(
+                RequireString(obj, "dialogueId"),
+                RequireString(obj, "nodeId"),
+                RequireSingle(obj, "elapsedSeconds"));
         }
 
         private static JsonObject WriteEntity(Arch.Core.Entity entity)
@@ -737,66 +998,6 @@ namespace Ludots.Core.Persistence
                 RequireInt(entity, "id"),
                 RequireInt(entity, "worldId"),
                 RequireInt(entity, "version"));
-        }
-
-        private static JsonNode? WriteNarrativeDialogue(NarrativeDialogueSnapshot dialogue)
-        {
-            if (dialogue == null)
-            {
-                return null;
-            }
-
-            return new JsonObject
-            {
-                ["dialogueId"] = dialogue.DialogueId,
-                ["nodeId"] = dialogue.NodeId,
-                ["elapsedSeconds"] = dialogue.ElapsedSeconds
-            };
-        }
-
-        private static NarrativeDialogueSnapshot ReadNarrativeDialogue(JsonNode? node)
-        {
-            if (node == null || node.GetValueKind() == JsonValueKind.Null)
-            {
-                return null;
-            }
-
-            JsonObject dialogue = RequireObject(node, "activeDialogue");
-            return new NarrativeDialogueSnapshot(
-                RequireString(dialogue, "dialogueId"),
-                RequireString(dialogue, "nodeId"),
-                RequireSingle(dialogue, "elapsedSeconds"));
-        }
-
-        private static JsonNode? WriteNarrativeCinematic(NarrativeCinematicSnapshot cinematic)
-        {
-            if (cinematic == null)
-            {
-                return null;
-            }
-
-            return new JsonObject
-            {
-                ["cinematicId"] = cinematic.CinematicId,
-                ["stepIndex"] = cinematic.StepIndex,
-                ["elapsedSeconds"] = cinematic.ElapsedSeconds,
-                ["advanceRequested"] = cinematic.AdvanceRequested
-            };
-        }
-
-        private static NarrativeCinematicSnapshot ReadNarrativeCinematic(JsonNode? node)
-        {
-            if (node == null || node.GetValueKind() == JsonValueKind.Null)
-            {
-                return null;
-            }
-
-            JsonObject cinematic = RequireObject(node, "activeCinematic");
-            return new NarrativeCinematicSnapshot(
-                RequireString(cinematic, "cinematicId"),
-                RequireInt(cinematic, "stepIndex"),
-                RequireSingle(cinematic, "elapsedSeconds"),
-                RequireBool(cinematic, "advanceRequested"));
         }
 
         private static JsonObject RequireObject(JsonNode? node, string field)
@@ -818,6 +1019,28 @@ namespace Ludots.Core.Persistence
             }
 
             return node.GetValue<int>();
+        }
+
+        private static uint RequireUInt(JsonObject root, string field, string path)
+        {
+            JsonNode? node = root[field];
+            if (node == null)
+            {
+                throw new SaveContextException($"Save domain field '{path}.{field}' is missing.");
+            }
+
+            return node.GetValue<uint>();
+        }
+
+        private static long RequireLong(JsonObject root, string field, string path)
+        {
+            JsonNode? node = root[field];
+            if (node == null)
+            {
+                throw new SaveContextException($"Save domain field '{path}.{field}' is missing.");
+            }
+
+            return node.GetValue<long>();
         }
 
         private static float RequireSingle(JsonObject root, string field)
@@ -873,6 +1096,85 @@ namespace Ludots.Core.Persistence
             return node.GetValue<string>();
         }
 
+        private static JsonObject WriteMapVariables(MapVariableStoreSnapshot? snapshot)
+        {
+            if (snapshot == null)
+            {
+                throw new SaveContextException("Map session snapshot carries no variable store state.");
+            }
+
+            var variables = new JsonObject();
+            for (int i = 0; i < snapshot.Variables.Count; i++)
+            {
+                MapVariableValueSnapshot entry = snapshot.Variables[i];
+                var slotValue = new JsonObject
+                {
+                    ["type"] = entry.Type.ToString()
+                };
+                slotValue["value"] = entry.Type == MapVariableType.Int
+                    ? JsonValue.Create(entry.IntValue)!
+                    : JsonValue.Create(entry.FloatValue)!;
+                variables[entry.Name] = slotValue;
+            }
+
+            return variables;
+        }
+
+        private static MapVariableStoreSnapshot ReadMapVariables(JsonObject variables, string field)
+        {
+            var entries = new List<MapVariableValueSnapshot>(variables.Count);
+            foreach (KeyValuePair<string, JsonNode?> pair in variables)
+            {
+                JsonObject entry = RequireObject(pair.Value, $"{field}.{pair.Key}");
+                string typeText = RequireString(entry, "type");
+                if (!Enum.TryParse(typeText, ignoreCase: false, out MapVariableType type) ||
+                    !string.Equals(type.ToString(), typeText, StringComparison.Ordinal))
+                {
+                    throw new SaveContextException($"Map variable '{pair.Key}' type '{typeText}' at {field} is invalid.");
+                }
+
+                double raw = RequireDouble(entry, "value", $"{field}.{pair.Key}.value");
+                int intValue = 0;
+                float floatValue = 0f;
+                if (type == MapVariableType.Int)
+                {
+                    if (Math.Floor(raw) != raw || raw > int.MaxValue || raw < int.MinValue)
+                    {
+                        throw new SaveContextException($"Map variable '{pair.Key}' int value {raw} at {field} is invalid.");
+                    }
+
+                    intValue = (int)raw;
+                }
+                else
+                {
+                    floatValue = (float)raw;
+                }
+
+                entries.Add(new MapVariableValueSnapshot(pair.Key, type, intValue, floatValue));
+            }
+
+            return new MapVariableStoreSnapshot(entries);
+        }
+
+        private static double RequireDouble(JsonObject root, string field, string label)
+        {
+            JsonNode? node = root[field];
+            if (node == null)
+            {
+                throw new SaveContextException($"Save domain field '{label}' is missing.");
+            }
+
+            if (node is JsonValue value)
+            {
+                if (value.TryGetValue<int>(out int integer)) return integer;
+                if (value.TryGetValue<long>(out long longInteger)) return longInteger;
+                if (value.TryGetValue<float>(out float single)) return single;
+                if (value.TryGetValue<double>(out double number)) return number;
+            }
+
+            throw new SaveContextException($"Save domain field '{label}' must be a number.");
+        }
+
         private static JsonObject? WriteLaunchContext(MapLaunchContext? launchContext)
         {
             if (launchContext == null || launchContext.IsEmpty)
@@ -881,9 +1183,26 @@ namespace Ludots.Core.Persistence
             }
 
             var root = new JsonObject();
-            if (launchContext.HasLocalPlayer)
+            if (launchContext.HasLocalSeats)
             {
-                root["localPlayerId"] = launchContext.LocalPlayerId;
+                var seats = new JsonArray();
+                for (int i = 0; i < launchContext.LocalSeats.Count; i++)
+                {
+                    LocalSeatLaunchBinding seat = launchContext.LocalSeats[i];
+                    var seatObj = new JsonObject
+                    {
+                        ["seatId"] = seat.SeatId,
+                        ["playerId"] = seat.PlayerId,
+                    };
+                    if (!string.IsNullOrWhiteSpace(seat.ControlSchemeId))
+                    {
+                        seatObj["controlSchemeId"] = seat.ControlSchemeId;
+                    }
+
+                    seats.Add(seatObj);
+                }
+
+                root["localSeats"] = seats;
             }
 
             if (launchContext.Metadata != null && launchContext.Metadata.Count > 0)
@@ -910,7 +1229,29 @@ namespace Ludots.Core.Persistence
             JsonObject root = node as JsonObject ??
                 throw new SaveContextException("Map session launchContext must be an object.");
 
-            int localPlayerId = root["localPlayerId"]?.GetValue<int>() ?? 0;
+            if (root.ContainsKey("localPlayerId"))
+            {
+                throw new SaveContextException(
+                    "Map session launchContext.localPlayerId is removed; use launchContext.localSeats[].");
+            }
+
+            LocalSeatLaunchBinding[] seats = Array.Empty<LocalSeatLaunchBinding>();
+            if (root["localSeats"] is JsonArray seatArray)
+            {
+                seats = new LocalSeatLaunchBinding[seatArray.Count];
+                for (int i = 0; i < seatArray.Count; i++)
+                {
+                    JsonObject seatObj = seatArray[i] as JsonObject ??
+                        throw new SaveContextException($"launchContext.localSeats[{i}] must be an object.");
+                    string seatId = seatObj["seatId"]?.GetValue<string>()
+                        ?? throw new SaveContextException($"launchContext.localSeats[{i}].seatId is required.");
+                    int playerId = seatObj["playerId"]?.GetValue<int>()
+                        ?? throw new SaveContextException($"launchContext.localSeats[{i}].playerId is required.");
+                    string? controlSchemeId = seatObj["controlSchemeId"]?.GetValue<string>();
+                    seats[i] = new LocalSeatLaunchBinding(seatId, playerId, controlSchemeId);
+                }
+            }
+
             IReadOnlyDictionary<string, object>? metadata = null;
             if (root["metadata"] is JsonObject metadataObject)
             {
@@ -923,7 +1264,346 @@ namespace Ludots.Core.Persistence
                 metadata = values;
             }
 
-            return MapLaunchContext.Create(localPlayerId, metadata);
+            return MapLaunchContext.Create(seats, metadata);
+        }
+
+        /// <summary>
+        /// Saves and restores the field layers of every loaded map session. All values are
+        /// stored as region keys / plain numbers (never runtime ids). Restoring requires the
+        /// session and layer to be loaded already: an unknown map or layer fails the restore.
+        /// </summary>
+        private sealed class FieldLayersSaveParticipant : ISaveParticipant
+    {
+        private readonly MapSessionManager _manager;
+
+        public FieldLayersSaveParticipant(MapSessionManager manager)
+        {
+            _manager = manager ?? throw new ArgumentNullException(nameof(manager));
+        }
+
+        public string DomainKey => "fields";
+
+        public JsonNode CaptureState()
+        {
+            var sessions = new JsonArray();
+            foreach (KeyValuePair<Ludots.Core.Map.MapId, MapSession> pair in _manager.All)
+            {
+                FieldSessionStore? store = pair.Value.Fields;
+                if (store == null)
+                {
+                    continue;
+                }
+
+                var layers = new JsonArray();
+                foreach (FieldLayerData layer in store.Layers)
+                {
+                    if (!layer.Persistent)
+                    {
+                        continue;
+                    }
+
+                    layers.Add(CaptureLayer(layer));
+                }
+
+                if (layers.Count > 0)
+                {
+                    sessions.Add(new JsonObject
+                    {
+                        ["mapId"] = pair.Key.Value,
+                        ["layers"] = layers,
+                    });
+                }
+            }
+
+            return new JsonObject { ["sessions"] = sessions };
+        }
+
+        public void RestoreState(JsonNode state)
+        {
+            if (state is not JsonObject root || root["sessions"] is not JsonArray sessions)
+            {
+                throw new InvalidOperationException("Save domain 'fields' is malformed: 'sessions' array is missing.");
+            }
+
+            foreach (JsonNode? sessionNode in sessions)
+            {
+                JsonObject sessionObject = sessionNode as JsonObject
+                    ?? throw new InvalidOperationException("Save domain 'fields': each session entry must be an object.");
+                string mapId = sessionObject["mapId"]?.GetValue<string>()
+                    ?? throw new InvalidOperationException("Save domain 'fields': session entry is missing 'mapId'.");
+                MapSession session = _manager.GetSession(new Ludots.Core.Map.MapId(mapId))
+                    ?? throw new InvalidOperationException($"Save domain 'fields' references map '{mapId}' which is not loaded.");
+                FieldSessionStore store = session.Fields
+                    ?? throw new InvalidOperationException($"Save domain 'fields': map '{mapId}' hosts no field layers.");
+
+                if (sessionObject["layers"] is not JsonArray layers)
+                {
+                    throw new InvalidOperationException($"Save domain 'fields': map '{mapId}' is missing its 'layers' array.");
+                }
+
+                foreach (JsonNode? layerNode in layers)
+                {
+                    RestoreLayer(layerNode as JsonObject, mapId, store);
+                }
+            }
+        }
+
+        private static JsonNode CaptureLayer(FieldLayerData layer)
+        {
+            var entry = new JsonObject { ["layer"] = layer.LayerKey };
+            switch (layer)
+            {
+                case DiscreteIdFieldLayerData discrete:
+                    var regions = new JsonArray();
+                    for (int id = 1; id <= discrete.Regions.Count; id++)
+                    {
+                        regions.Add(discrete.Regions.GetName(id));
+                    }
+
+                    entry["regions"] = regions;
+                    var rects = new JsonArray();
+                    foreach (FieldCellRectStroke stroke in FieldRectCodec.CoalesceFromField(discrete.Field))
+                    {
+                        rects.Add(new JsonArray { stroke.X0, stroke.Y0, stroke.X1, stroke.Y1, stroke.RegionId });
+                    }
+
+                    entry["rects"] = rects;
+                    break;
+
+                case Scalar32FieldLayerData scalar:
+                    entry["values"] = CaptureFloatCells(SnapshotCells(scalar.Field));
+                    break;
+
+                case Vector2FieldLayerData vector2:
+                    entry["values"] = CaptureVector2Cells(SnapshotCells(vector2.Field));
+                    break;
+
+                case Vector3FieldLayerData vector3:
+                    entry["values"] = CaptureVector3Cells(SnapshotCells(vector3.Field));
+                    break;
+            }
+
+            return entry;
+        }
+
+        private static FieldCellValue2D<T>[] SnapshotCells<T>(Ludots.Core.Fields.ChunkedField2D<T> field)
+            where T : struct
+        {
+            var buffer = new FieldCellValue2D<T>[field.NonDefaultCount];
+            field.CopyNonDefaultCells(buffer);
+            return buffer;
+        }
+
+        private static JsonArray CaptureFloatCells(FieldCellValue2D<float>[] cells)
+        {
+            var values = new JsonArray();
+            foreach (FieldCellValue2D<float> cell in cells)
+            {
+                values.Add(new JsonArray { cell.Cell.X, cell.Cell.Y, cell.Value });
+            }
+
+            return values;
+        }
+
+        private static JsonArray CaptureVector2Cells(FieldCellValue2D<System.Numerics.Vector2>[] cells)
+        {
+            var values = new JsonArray();
+            foreach (FieldCellValue2D<System.Numerics.Vector2> cell in cells)
+            {
+                values.Add(new JsonArray { cell.Cell.X, cell.Cell.Y, new JsonArray { cell.Value.X, cell.Value.Y } });
+            }
+
+            return values;
+        }
+
+        private static JsonArray CaptureVector3Cells(FieldCellValue2D<System.Numerics.Vector3>[] cells)
+        {
+            var values = new JsonArray();
+            foreach (FieldCellValue2D<System.Numerics.Vector3> cell in cells)
+            {
+                values.Add(new JsonArray { cell.Cell.X, cell.Cell.Y, new JsonArray { cell.Value.X, cell.Value.Y, cell.Value.Z } });
+            }
+
+            return values;
+        }
+
+        private static void RestoreLayer(JsonObject? entry, string mapId, FieldSessionStore store)
+        {
+            if (entry == null)
+            {
+                throw new InvalidOperationException($"Save domain 'fields': map '{mapId}' has a malformed layer entry.");
+            }
+
+            string layerKey = entry["layer"]?.GetValue<string>()
+                ?? throw new InvalidOperationException($"Save domain 'fields': map '{mapId}' has a layer entry without 'layer'.");
+            if (!store.TryGetByKey(layerKey, out FieldLayerData layer))
+            {
+                throw new InvalidOperationException(
+                    $"Save domain 'fields' references layer '{layerKey}' which is not enabled on map '{mapId}'.");
+            }
+
+            switch (layer)
+            {
+                case DiscreteIdFieldLayerData discrete:
+                    RestoreDiscrete(discrete, entry, layerKey, mapId);
+                    break;
+                case Scalar32FieldLayerData scalar:
+                    RestoreFloat(scalar.Field, entry["values"], layerKey, mapId);
+                    break;
+                case Vector2FieldLayerData vector2:
+                    RestoreVector2(vector2.Field, entry["values"], layerKey, mapId);
+                    break;
+                case Vector3FieldLayerData vector3:
+                    RestoreVector3(vector3.Field, entry["values"], layerKey, mapId);
+                    break;
+            }
+        }
+
+        private static void RestoreDiscrete(DiscreteIdFieldLayerData discrete, JsonObject entry, string layerKey, string mapId)
+        {
+            if (entry["regions"] is not JsonArray regions)
+            {
+                throw new InvalidOperationException($"Save domain 'fields': layer '{layerKey}' on map '{mapId}' is missing 'regions'.");
+            }
+
+            var keys = new string[regions.Count];
+            for (int i = 0; i < regions.Count; i++)
+            {
+                keys[i] = regions[i]?.GetValue<string>()
+                    ?? throw new InvalidOperationException($"Save domain 'fields': layer '{layerKey}' on map '{mapId}' has a blank region key at index {i}.");
+                discrete.Regions.Register(keys[i]);
+            }
+
+            if (entry["cells"] != null)
+            {
+                throw new InvalidOperationException(
+                    $"Save domain 'fields': layer '{layerKey}' on map '{mapId}' uses legacy 'cells'; re-save with 'rects'.");
+            }
+
+            if (entry["rects"] is not JsonArray rects)
+            {
+                throw new InvalidOperationException($"Save domain 'fields': layer '{layerKey}' on map '{mapId}' is missing 'rects'.");
+            }
+
+            discrete.Field.Clear();
+            foreach (JsonNode? rectNode in rects)
+            {
+                if (rectNode is not JsonArray quintuple || quintuple.Count != 5)
+                {
+                    throw new InvalidOperationException(
+                        $"Save domain 'fields': layer '{layerKey}' on map '{mapId}' has a malformed rect entry.");
+                }
+
+                int x0 = quintuple[0]!.GetValue<int>();
+                int y0 = quintuple[1]!.GetValue<int>();
+                int x1 = quintuple[2]!.GetValue<int>();
+                int y1 = quintuple[3]!.GetValue<int>();
+                int regionIndex = quintuple[4]!.GetValue<int>();
+                if (regionIndex < 1 || regionIndex > keys.Length)
+                {
+                    throw new InvalidOperationException(
+                        $"Save domain 'fields': layer '{layerKey}' on map '{mapId}' rect references region index {regionIndex} outside 'regions'.");
+                }
+
+                if (x1 < x0 || y1 < y0)
+                {
+                    throw new InvalidOperationException(
+                        $"Save domain 'fields': layer '{layerKey}' on map '{mapId}' rect ends precede starts.");
+                }
+
+                int regionId = discrete.Regions.GetId(keys[regionIndex - 1]);
+                discrete.Field.FillRect(x0, y0, x1, y1, regionId);
+            }
+        }
+
+        private static void RestoreFloat(Ludots.Core.Fields.ChunkedField2D<float> field, JsonNode? valuesNode, string layerKey, string mapId)
+        {
+            if (valuesNode is not JsonArray values)
+            {
+                throw new InvalidOperationException($"Save domain 'fields': layer '{layerKey}' on map '{mapId}' is missing 'values'.");
+            }
+
+            field.Clear();
+            foreach (JsonNode? valueNode in values)
+            {
+                if (valueNode is not JsonArray triple || triple.Count != 3)
+                {
+                    throw new InvalidOperationException(
+                        $"Save domain 'fields': layer '{layerKey}' on map '{mapId}' has a malformed value entry.");
+                }
+
+                field.Set(new FieldCell2D(triple[0]!.GetValue<int>(), triple[1]!.GetValue<int>()), triple[2]!.GetValue<float>());
+            }
+        }
+
+        private static void RestoreVector2(Ludots.Core.Fields.ChunkedField2D<System.Numerics.Vector2> field, JsonNode? valuesNode, string layerKey, string mapId)
+        {
+            if (valuesNode is not JsonArray values)
+            {
+                throw new InvalidOperationException($"Save domain 'fields': layer '{layerKey}' on map '{mapId}' is missing 'values'.");
+            }
+
+            field.Clear();
+            foreach (JsonNode? valueNode in values)
+            {
+                System.Numerics.Vector2 value = ReadVector2(valueNode, layerKey, mapId);
+                field.Set(new FieldCell2D(ReadVectorX(valueNode, layerKey, mapId), ReadVectorY(valueNode, layerKey, mapId)), value);
+            }
+        }
+
+        private static void RestoreVector3(Ludots.Core.Fields.ChunkedField2D<System.Numerics.Vector3> field, JsonNode? valuesNode, string layerKey, string mapId)
+        {
+            if (valuesNode is not JsonArray values)
+            {
+                throw new InvalidOperationException($"Save domain 'fields': layer '{layerKey}' on map '{mapId}' is missing 'values'.");
+            }
+
+            field.Clear();
+            foreach (JsonNode? valueNode in values)
+            {
+                System.Numerics.Vector3 value = ReadVector3(valueNode, layerKey, mapId);
+                field.Set(new FieldCell2D(ReadVectorX(valueNode, layerKey, mapId), ReadVectorY(valueNode, layerKey, mapId)), value);
+            }
+        }
+
+        private static int ReadVectorX(JsonNode? node, string layerKey, string mapId)
+        {
+            return (node as JsonArray)?[0]?.GetValue<int>()
+                ?? throw MalformedVector(layerKey, mapId);
+        }
+
+        private static int ReadVectorY(JsonNode? node, string layerKey, string mapId)
+        {
+            return (node as JsonArray)?[1]?.GetValue<int>()
+                ?? throw MalformedVector(layerKey, mapId);
+        }
+
+        private static System.Numerics.Vector2 ReadVector2(JsonNode? node, string layerKey, string mapId)
+        {
+            if (node is JsonArray triple && triple[2] is JsonArray components && components.Count == 2)
+            {
+                return new System.Numerics.Vector2(components[0]!.GetValue<float>(), components[1]!.GetValue<float>());
+            }
+
+            throw MalformedVector(layerKey, mapId);
+        }
+
+        private static System.Numerics.Vector3 ReadVector3(JsonNode? node, string layerKey, string mapId)
+        {
+            if (node is JsonArray triple && triple[2] is JsonArray components && components.Count == 3)
+            {
+                return new System.Numerics.Vector3(
+                    components[0]!.GetValue<float>(), components[1]!.GetValue<float>(), components[2]!.GetValue<float>());
+            }
+
+            throw MalformedVector(layerKey, mapId);
+        }
+
+        private static InvalidOperationException MalformedVector(string layerKey, string mapId)
+        {
+            return new InvalidOperationException(
+                $"Save domain 'fields': layer '{layerKey}' on map '{mapId}' has a malformed vector value entry.");
+        }
         }
     }
 }

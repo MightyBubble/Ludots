@@ -19,6 +19,14 @@ internal static class UiShowcaseAssets
 
 	private static readonly Lazy<string> ShowcaseBadgeSvg = new Lazy<string>(() => ReadRequiredText("showcase_badge.svg"));
 
+	private static readonly Lazy<string> InkSealSvg = new Lazy<string>(() => ReadRequiredText("ink_seal.svg"));
+
+	private static readonly Lazy<string> InkBrushSvg = new Lazy<string>(() => ReadRequiredText("ink_brush.svg"));
+
+	private static readonly Lazy<string> NineSlicePanelHtml = new Lazy<string>(() => ReadRequiredText("nineslice_panel.html"));
+
+	private static readonly Lazy<string> NineSlicePanelCss = new Lazy<string>(() => ReadRequiredText("nineslice_panel.css"));
+
 	internal static string GetAuthoringCss()
 	{
 		return AuthoringCss.Value;
@@ -37,6 +45,39 @@ internal static class UiShowcaseAssets
 	internal static string GetShowcaseBadgeSvg()
 	{
 		return ShowcaseBadgeSvg.Value;
+	}
+
+	internal static string GetInkSealSvg()
+	{
+		return InkSealSvg.Value;
+	}
+
+	internal static string GetInkBrushSvg()
+	{
+		return InkBrushSvg.Value;
+	}
+
+	internal static string GetNineSlicePanelHtmlTemplate()
+	{
+		return NineSlicePanelHtml.Value;
+	}
+
+	internal static string GetNineSlicePanelCss()
+	{
+		return NineSlicePanelCss.Value;
+	}
+
+	internal static byte[] ReadRequiredBytes(string fileName)
+	{
+		string text = ResourceRoot + fileName;
+		using Stream stream = ResourceAssembly.GetManifestResourceStream(text);
+		if (stream == null)
+		{
+			throw new InvalidOperationException("Embedded showcase asset '" + text + "' was not found.");
+		}
+		using MemoryStream memory = new MemoryStream();
+		stream.CopyTo(memory);
+		return memory.ToArray();
 	}
 
 	internal static string RenderTemplate(string template, IReadOnlyDictionary<string, string> values)

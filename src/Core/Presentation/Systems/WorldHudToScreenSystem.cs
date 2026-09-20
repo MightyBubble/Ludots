@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Numerics;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Presentation.Camera;
@@ -24,17 +25,30 @@ namespace Ludots.Core.Presentation.Systems
         private readonly ScreenHudBatchBuffer _screenHud;
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private readonly CameraCullingDebugState? _cullingDebug;
+        private readonly Func<IContinuousHeightmap?>? _heightmapProvider;
+        private readonly TerrainHudOcclusionHorizon _horizon = new();
+        private int _frameStamp;
+        private int _horizonFrameStamp = -1;
         private int _lastWorldHudRevision = -1;
         private int _lastWorldHudProjectionRevision = -1;
+        private int _lastWorldHudPositionRevision = -1;
+        private int _lastWorldHudStructuralRevision = -1;
         private int _lastProjectionRevision = -1;
         private int _lastCullVisibilityRevision = -1;
 
+        private static readonly bool HudGateTraceEnabled =
+            Environment.GetEnvironmentVariable("LUDOTS_HUD_GATE_TRACE") is "1" or "true" or "yes" or "on";
+
+        private static int _gateTraceFrame;
+
         public const int ProjectionMarginPixels = 200;
         public const float ProjectionCoarseMarginCm = 600f;
-        private OwnerVisibilityCacheEntry[] _ownerVisibilityCache = Array.Empty<OwnerVisibilityCacheEntry>();
+        private readonly HudOwnerFrameSnapshot _ownerSnapshot = new();
         private OwnerProjectionCacheEntry[] _ownerProjectionCache = Array.Empty<OwnerProjectionCacheEntry>();
         private int _frameCacheStamp;
         private bool _retainedProjectedBuild;
+        private int _lastHeightmapRevision = -1;
+        private IContinuousHeightmap? _lastHeightmap;
 
         public WorldHudToScreenSystem(
             World world,
@@ -44,7 +58,8 @@ namespace Ludots.Core.Presentation.Systems
             IViewController view,
             ScreenHudBatchBuffer screenHud,
             PresentationTimingDiagnostics? timingDiagnostics = null,
-            CameraCullingDebugState? cullingDebug = null)
+            CameraCullingDebugState? cullingDebug = null,
+            Func<IContinuousHeightmap?>? heightmapProvider = null)
             : base(world)
         {
             _worldHud = worldHud ?? throw new System.ArgumentNullException(nameof(worldHud));
@@ -54,44 +69,106 @@ namespace Ludots.Core.Presentation.Systems
             _screenHud = screenHud ?? throw new System.ArgumentNullException(nameof(screenHud));
             _timingDiagnostics = timingDiagnostics;
             _cullingDebug = cullingDebug;
+            _heightmapProvider = heightmapProvider;
         }
 
         public override void Update(in float dt)
         {
             long start = Stopwatch.GetTimestamp();
+            _frameStamp++;
             int worldHudRevision = _worldHud.ContentRevision;
             int worldHudProjectionRevision = _worldHud.ProjectionRevision;
+            int positionRevision = _worldHud.PositionRevision;
+            int structuralRevision = _worldHud.StructuralRevision;
             int projectionRevision = _projector is IProjectionRevisionProvider revisionProvider
                 ? revisionProvider.ProjectionRevision
                 : -1;
+            IContinuousHeightmap? heightmap = _heightmapProvider?.Invoke();
+            int heightmapRevision = heightmap is IContinuousHeightmapRenderSource renderSource
+                ? renderSource.Revision
+                : heightmap == null ? -1 : 0;
+            bool terrainUnchanged = ReferenceEquals(heightmap, _lastHeightmap) &&
+                heightmapRevision == _lastHeightmapRevision &&
+                (heightmap == null || heightmap is IContinuousHeightmapRenderSource);
             int cullVisibilityRevision = _cullingDebug?.VisibilityRevision ?? -1;
-            bool projectionUnchanged = projectionRevision >= 0 &&
-                                       worldHudProjectionRevision == _lastWorldHudProjectionRevision &&
-                                       projectionRevision == _lastProjectionRevision &&
-                                       cullVisibilityRevision == _lastCullVisibilityRevision;
-            if (projectionUnchanged && worldHudRevision != _lastWorldHudRevision)
+
+            ProjectionSnapshot projectionSnapshot = default;
+            bool hasProjectionSnapshot = _projector is IProjectionSnapshotProvider snapshotProvider &&
+                                         snapshotProvider.TryGetProjectionSnapshot(out projectionSnapshot);
+            System.Numerics.Matrix4x4 inverseProjection = default;
+            if (heightmap != null && (!hasProjectionSnapshot ||
+                !System.Numerics.Matrix4x4.Invert(projectionSnapshot.ViewProjection, out inverseProjection)))
             {
-                ReadOnlySpan<WorldHudItem> dirtyContent = _worldHud.GetDirtyContentSpan();
-                ReadOnlySpan<int> removedStableIds = _worldHud.GetRemovedStableIdSpan();
-                if (dirtyContent.Length > 0 || removedStableIds.Length > 0)
+                throw new InvalidOperationException("Terrain HUD occlusion requires an invertible presentation projection snapshot.");
+            }
+
+            bool cameraStill = projectionRevision >= 0 && projectionRevision == _lastProjectionRevision;
+            bool positionsChanged = positionRevision != _lastWorldHudPositionRevision;
+            bool structuralChanged = structuralRevision != _lastWorldHudStructuralRevision;
+            bool projectionChanged = worldHudProjectionRevision != _lastWorldHudProjectionRevision;
+            bool contentChanged = worldHudRevision != _lastWorldHudRevision;
+
+            if (HudGateTraceEnabled && (_gateTraceFrame++ % 30) == 0)
+            {
+                Ludots.Core.Diagnostics.Log.Info(
+                    in Ludots.Core.Diagnostics.LogChannels.Presentation,
+                    $"[hudgate] f={_gateTraceFrame} rev proj={projectionRevision}/{_lastProjectionRevision} cameraStill={cameraStill} terrainUnchanged={terrainUnchanged} projChanged={projectionChanged} contentChanged={contentChanged} posChanged={positionsChanged} structChanged={structuralChanged} span={_worldHud.Count}");
+            }
+
+            // 属主快照按存储序单趟拉取；仅在有值绑定文本要刷新或本帧确有投影工作时付费，
+            // 纯静帧早退保持零成本。值刷新先于一切早退判定，静帧也保持数值鲜活。
+            bool needsValueRefresh = _screenHud.HasAttributeBoundTexts;
+            bool earlyExitEligible = cameraStill && terrainUnchanged &&
+                !projectionChanged && !contentChanged;
+            if (needsValueRefresh || !earlyExitEligible)
+            {
+                _ownerSnapshot.Rebuild(World);
+            }
+
+            if (needsValueRefresh)
+            {
+                _screenHud.RefreshAttributeBoundTexts(_ownerSnapshot, World);
+            }
+
+            // 相机/地形未变时的三档轻路径。属主剔除/LOD 翻转不再作废轻路径：条目增删由
+            // 发射侧保留 lane 处理（Remove/TryAdd 经 removed/dirty 增量流入 tier 2/3），
+            // 投影层的 IsOwnerVisible 全量核对只是相机几何变化时的兜底——10K 移动单位每帧
+            // 都有 LOD 跨界者，把 cull 版本腿留在门控里会让全量重建（2 万条×4.6ms）永不休眠。
+            if (cameraStill && terrainUnchanged)
+            {
+                // 1) 什么都没变 → 0 成本早退。
+                if (!projectionChanged && !contentChanged)
                 {
-                    if (ApplyContentOnlyDeltas(dirtyContent, removedStableIds, ref start))
+                    _timingDiagnostics?.ObserveWorldHudProjection(
+                        (Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
+                    return;
+                }
+
+                // 2) 仅内容（值/文本）变化、未涉及任何新的世界位置 → 内容增量透传。
+                if (!projectionChanged)
+                {
+                    ReadOnlySpan<WorldHudItem> dirtyContent = _worldHud.GetDirtyContentSpan();
+                    ReadOnlySpan<int> removedStableIds = _worldHud.GetRemovedStableIdSpan();
+                    if (dirtyContent.Length > 0 || removedStableIds.Length > 0)
+                    {
+                        if (ApplyContentOnlyDeltas(dirtyContent, removedStableIds, ref start))
+                        {
+                            return;
+                        }
+                    }
+                }
+
+                // 3) 保留位图位置/内容增量（无结构变化）→ 只重投脏项，不重做遮挡。
+                if (positionsChanged && !structuralChanged)
+                {
+                    if (ApplyRetainedPropertyDeltas(heightmap, ref start))
                     {
                         return;
                     }
                 }
             }
 
-            if (projectionRevision >= 0 &&
-                worldHudRevision == _lastWorldHudRevision &&
-                projectionRevision == _lastProjectionRevision &&
-                cullVisibilityRevision == _lastCullVisibilityRevision)
-            {
-                _timingDiagnostics?.ObserveWorldHudProjection(
-                    (Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
-                return;
-            }
-
+            // 4) 几何变化或结构变化：全量重建（遮挡结果经跨帧缓存，密集人群命中率极高）。
             _retainedProjectedBuild = true;
             _screenHud.BeginProjectedBuild(retained: _retainedProjectedBuild);
             AdvanceFrameCacheStamp();
@@ -101,9 +178,6 @@ namespace Ludots.Core.Presentation.Systems
             float screenHeight = res.Y;
             var span = _worldHud.GetSpan();
 
-            ProjectionSnapshot projectionSnapshot = default;
-            bool hasProjectionSnapshot = _projector is IProjectionSnapshotProvider snapshotProvider &&
-                                         snapshotProvider.TryGetProjectionSnapshot(out projectionSnapshot);
             System.Numerics.Matrix4x4 viewProjection = hasProjectionSnapshot
                 ? projectionSnapshot.ViewProjection
                 : default;
@@ -152,6 +226,15 @@ namespace Ludots.Core.Presentation.Systems
                         !float.IsInfinity(screen.X) &&
                         !float.IsInfinity(screen.Y))
                     {
+                        if (!ResolveTerrainOcclusion(
+                                first.WorldPosition,
+                                heightmap,
+                                screen,
+                                in projectionSnapshot,
+                                in inverseProjection))
+                        {
+                            screen = new System.Numerics.Vector2(float.NaN);
+                        }
                         CacheOwnerFrameProjection(first.Owner, first.WorldPosition, screen);
                     }
                 }
@@ -185,7 +268,12 @@ namespace Ludots.Core.Presentation.Systems
             _lastWorldHudProjectionRevision = worldHudProjectionRevision;
             _lastProjectionRevision = projectionRevision;
             _lastCullVisibilityRevision = cullVisibilityRevision;
+            _lastHeightmapRevision = heightmapRevision;
+            _lastHeightmap = heightmap;
+            _lastWorldHudPositionRevision = positionRevision;
+            _lastWorldHudStructuralRevision = structuralRevision;
             _worldHud.ClearContentDeltas();
+            _worldHud.ClearPositionDeltas();
         }
 
         private bool ApplyContentOnlyDeltas(
@@ -232,6 +320,13 @@ namespace Ludots.Core.Presentation.Systems
         {
             float x = MathF.Round(screen.X - item.Width * 0.5f);
             float y = MathF.Round(screen.Y);
+
+            // ProjectWorldToScreenFast 以 NaN 表示屏幕外/相机后；不得放行到保留 upsert——
+            // (int)NaN 强转得 0 会被边界剔除误判为屏幕内，NaN 位置随后毒化保留槽。
+            if (!float.IsFinite(x) || !float.IsFinite(y))
+            {
+                return;
+            }
 
             int ix = (int)x;
             int iy = (int)y;
@@ -326,6 +421,9 @@ namespace Ludots.Core.Presentation.Systems
                 Id0 = item.Id0,
                 Id1 = item.Id1,
                 FontSize = item.FontSize,
+                ValueBound = item.ValueBound,
+                BoundAttributeId = item.BoundAttributeId,
+                Owner = item.Owner,
                 Text = item.Text,
             };
             bool textAccepted = _retainedProjectedBuild
@@ -389,36 +487,205 @@ namespace Ludots.Core.Presentation.Systems
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool IsOwnerVisible(Entity owner)
         {
-            int ownerKey = ResolveOwnerCacheKey(owner);
-            if ((uint)ownerKey < (uint)_ownerVisibilityCache.Length)
-            {
-                ref OwnerVisibilityCacheEntry cached = ref _ownerVisibilityCache[ownerKey];
-                if (cached.Stamp == _frameCacheStamp && cached.Version == owner.Version)
-                {
-                    return cached.IsVisible;
-                }
-            }
-
-            bool visible = World.IsAlive(owner) &&
-                (!World.Has<CullState>(owner) || World.Get<CullState>(owner).IsVisible);
-            SetOwnerVisible(ownerKey, owner.Version, visible);
-            return visible;
+            return _ownerSnapshot.TryGetRow(owner, out int row)
+                ? _ownerSnapshot.IsVisible(row)
+                : World.IsAlive(owner);
         }
 
-        private void SetOwnerVisible(int ownerKey, int ownerVersion, bool visible)
+        private static bool IsTerrainVisible(
+            System.Numerics.Vector3 worldPosition,
+            IContinuousHeightmap? heightmap,
+            System.Numerics.Vector2 screen,
+            in ProjectionSnapshot projectionSnapshot,
+            in System.Numerics.Matrix4x4 inverseProjection)
         {
-            if (ownerKey >= _ownerVisibilityCache.Length)
+            if (heightmap == null)
             {
-                int next = _ownerVisibilityCache.Length == 0 ? 1024 : _ownerVisibilityCache.Length;
-                while (next <= ownerKey)
-                {
-                    next *= 2;
-                }
-
-                Array.Resize(ref _ownerVisibilityCache, next);
+                return true;
             }
 
-            _ownerVisibilityCache[ownerKey] = new OwnerVisibilityCacheEntry(_frameCacheStamp, ownerVersion, visible);
+            var nearClip = new System.Numerics.Vector4(
+                screen.X * 2f / projectionSnapshot.Resolution.X - 1f,
+                1f - screen.Y * 2f / projectionSnapshot.Resolution.Y, 0f, 1f);
+            var nearWorld = System.Numerics.Vector4.Transform(nearClip, inverseProjection);
+            var origin = new System.Numerics.Vector3(nearWorld.X, nearWorld.Y, nearWorld.Z) / nearWorld.W;
+            System.Numerics.Vector3 delta = worldPosition - origin;
+            float targetDistance = delta.Length();
+            if (!float.IsFinite(targetDistance))
+            {
+                throw new InvalidOperationException("Terrain HUD occlusion produced a non-finite projection ray.");
+            }
+            if (targetDistance <= TerrainOcclusionEpsilonMeters)
+            {
+                return true;
+            }
+
+            ScreenRay ray = new ScreenRay(origin, delta / targetDistance);
+            if (!heightmap.TryRaycastGround(in ray, out VisualGroundHit hit))
+            {
+                return true;
+            }
+            if (!float.IsFinite(hit.DistanceMeters) || hit.DistanceMeters < 0f)
+            {
+                throw new InvalidOperationException("Terrain HUD occlusion received an invalid ground hit distance.");
+            }
+            return hit.DistanceMeters + TerrainOcclusionEpsilonMeters >= targetDistance;
+        }
+
+        private const float TerrainOcclusionEpsilonMeters = 0.005f;
+
+        private bool ResolveTerrainOcclusion(
+            Vector3 worldPosition,
+            IContinuousHeightmap? heightmap,
+            Vector2 screen,
+            in ProjectionSnapshot projectionSnapshot,
+            in Matrix4x4 inverseProjection)
+        {
+            if (heightmap == null)
+            {
+                return true;
+            }
+
+            // 帧内首查构建地平线包络；构建不可用（相机位缺失/不在图内/高度图不可采样）
+            // 时逐项回退精确 raycast。
+            if (_horizonFrameStamp != _frameStamp)
+            {
+                _horizonFrameStamp = _frameStamp;
+                _horizon.TryRebuild(heightmap, projectionSnapshot.CameraPosition);
+            }
+
+            if (_horizon.IsValid)
+            {
+                return _horizon.IsVisible(worldPosition);
+            }
+
+            return IsTerrainVisible(worldPosition, heightmap, screen, in projectionSnapshot, in inverseProjection);
+        }
+
+        private bool ApplyRetainedPropertyDeltas(IContinuousHeightmap? heightmap, ref long start)
+        {
+            ProjectionSnapshot projectionSnapshot = default;
+            bool hasProjectionSnapshot = _projector is IProjectionSnapshotProvider snapshotProvider &&
+                                         snapshotProvider.TryGetProjectionSnapshot(out projectionSnapshot);
+            Matrix4x4 inverseProjection = default;
+            if (heightmap != null && (!hasProjectionSnapshot ||
+                !Matrix4x4.Invert(projectionSnapshot.ViewProjection, out inverseProjection)))
+            {
+                throw new InvalidOperationException("Terrain HUD occlusion requires an invertible presentation projection snapshot.");
+            }
+
+            int heightmapRevision = heightmap is IContinuousHeightmapRenderSource renderSource
+                ? renderSource.Revision
+                : heightmap == null ? -1 : 0;
+            Matrix4x4 viewProjection = hasProjectionSnapshot ? projectionSnapshot.ViewProjection : default;
+            float projectionWidth = hasProjectionSnapshot ? projectionSnapshot.Resolution.X : 0f;
+            float projectionHeight = hasProjectionSnapshot ? projectionSnapshot.Resolution.Y : 0f;
+            float screenWidth = _view.Resolution.X;
+            float screenHeight = _view.Resolution.Y;
+
+            // 移除（结构未变时为空，防御性处理）
+            ReadOnlySpan<int> removedStableIds = _worldHud.GetRemovedStableIdSpan();
+            for (int i = 0; i < removedStableIds.Length; i++)
+            {
+                _screenHud.Remove(removedStableIds[i]);
+            }
+
+            // 内容值变化
+            ReadOnlySpan<WorldHudItem> dirtyContent = _worldHud.GetDirtyContentSpan();
+            for (int i = 0; i < dirtyContent.Length; i++)
+            {
+                if (!_screenHud.TryApplyWorldContentDelta(in dirtyContent[i]))
+                {
+                    return false; // 丢失 → 回退全量重建，不静默丢弃
+                }
+            }
+
+            // 位置变化
+            ReadOnlySpan<int> positionDirtyStableIds = _worldHud.GetPositionDirtyStableIdSpan();
+            for (int i = 0; i < positionDirtyStableIds.Length; i++)
+            {
+                if (!_worldHud.TryGetByStableId(positionDirtyStableIds[i], out WorldHudItem item))
+                {
+                    continue; // 已被移除的 id 由 removed 路径处理
+                }
+
+                Vector2 screen = hasProjectionSnapshot
+                    ? ProjectWorldToScreenFast(item.WorldPosition, in viewProjection, projectionWidth, projectionHeight)
+                    : _projector.WorldToScreen(item.WorldPosition);
+                if (float.IsNaN(screen.X) || float.IsNaN(screen.Y) ||
+                    float.IsInfinity(screen.X) || float.IsInfinity(screen.Y))
+                {
+                    _screenHud.Remove(item.StableId);
+                    continue;
+                }
+
+                if (!ResolveTerrainOcclusion(
+                        item.WorldPosition,
+                        heightmap,
+                        screen,
+                        in projectionSnapshot,
+                        in inverseProjection))
+                {
+                    _screenHud.Remove(item.StableId);
+                    continue;
+                }
+
+                // 宽度兜底只适用于 Bar：文本 Width 恒为 0，全量路径按锚点（screen.X）投影，
+                // 这里若按 16px 居中会左移 8px，与全量路径交替写入时表现为左右抖动。
+                if (item.Kind == WorldHudItemKind.Bar && (item.Width <= 0f || float.IsNaN(item.Width)))
+                {
+                    item.Width = 16f;
+                }
+
+                float x = MathF.Round(screen.X - item.Width * 0.5f);
+                float y = MathF.Round(screen.Y);
+                bool offscreen = item.Kind == WorldHudItemKind.Bar
+                    ? (x + item.Width < -ProjectionMarginPixels || x > screenWidth + ProjectionMarginPixels ||
+                       y + item.Height < -ProjectionMarginPixels || y > screenHeight + ProjectionMarginPixels)
+                    : (x + item.FontSize < -ProjectionMarginPixels || x > screenWidth + ProjectionMarginPixels ||
+                       y > screenHeight + ProjectionMarginPixels);
+                if (offscreen)
+                {
+                    _screenHud.Remove(item.StableId);
+                    continue;
+                }
+
+                bool applied;
+                if (item.Kind == WorldHudItemKind.Bar)
+                {
+                    applied = _screenHud.TryUpsertProjectedBarPosition(-1, item.StableId, item.DirtySerial, x, y);
+                }
+                else if (item.Kind == WorldHudItemKind.Text)
+                {
+                    applied = _screenHud.TryUpsertProjectedTextPosition(-1, item.StableId, item.DirtySerial, x, y);
+                }
+                else
+                {
+                    continue;
+                }
+
+                if (!applied)
+                {
+                    return false; // 目标未在屏幕缓冲 → 回退全量重建
+                }
+            }
+
+            _lastWorldHudRevision = _worldHud.ContentRevision;
+            _lastWorldHudProjectionRevision = _worldHud.ProjectionRevision;
+            _lastProjectionRevision = _projector is IProjectionRevisionProvider provider ? provider.ProjectionRevision : -1;
+            _lastCullVisibilityRevision = _cullingDebug?.VisibilityRevision ?? -1;
+            _lastHeightmapRevision = heightmapRevision;
+            _lastHeightmap = heightmap;
+            _lastWorldHudPositionRevision = _worldHud.PositionRevision;
+            _lastWorldHudStructuralRevision = _worldHud.StructuralRevision;
+            _worldHud.ClearContentDeltas();
+            _worldHud.ClearPositionDeltas();
+            _timingDiagnostics?.ObserveWorldHudProjection(
+                (System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000.0 / System.Diagnostics.Stopwatch.Frequency,
+                _worldHud.Count,
+                _screenHud.Count,
+                0);
+            return true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -527,12 +794,9 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            Array.Clear(_ownerVisibilityCache, 0, _ownerVisibilityCache.Length);
             Array.Clear(_ownerProjectionCache, 0, _ownerProjectionCache.Length);
             _frameCacheStamp = 1;
         }
-
-        private readonly record struct OwnerVisibilityCacheEntry(int Stamp, int Version, bool IsVisible);
 
         private readonly record struct OwnerProjectionCacheEntry(
             int Stamp,

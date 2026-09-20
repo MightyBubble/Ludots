@@ -12,8 +12,8 @@ namespace SuperweaponContextShowcaseMod
         public const string ConfirmInputContextId = "imc.ability.confirm";
         public const string ConfirmActionId = "SuperweaponConfirm";
         public const string CancelActionId = "SuperweaponCancel";
-        public const string CasterMarkerPerformerId = "performer.ability.superweapon.caster_marker";
-        public const string TargetMarkerPerformerId = "performer.ability.superweapon.target_marker";
+        public const string CasterMarkerPresenterId = "presenter.ability.superweapon.caster_marker";
+        public const string TargetMarkerPresenterId = "presenter.ability.superweapon.target_marker";
         public const string CompletedEventTag = "Event.Showcase.Superweapon.Confirmed";
         public const string RuntimeStateServiceKey = "SuperweaponContextShowcase.RuntimeState";
     }

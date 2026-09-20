@@ -1,0 +1,36 @@
+[
+  {
+    "id": "ui_player_aggregate_faction_owner",
+    "components": {
+      "Name": { "Value": "Player Faction" },
+      "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 80, "localCenterZCm": 0 },
+      "SpatialBox3D": { "halfSizeXCm": 50, "halfSizeYCm": 80, "halfSizeZCm": 50 }
+    }
+  },
+  {
+    "id": "ui_player_aggregate_producer",
+    "components": {
+      "Name": { "Value": "Producer" },
+      "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": {
+        "base": {
+          "Showcase.Resource.Ore": 0,
+          "Showcase.Resource.Crystal": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 90, "localCenterZCm": 0 },
+      "SpatialBox3D": { "halfSizeXCm": 70, "halfSizeYCm": 100, "halfSizeZCm": 70 }
+    }
+  }
+]

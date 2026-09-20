@@ -7,7 +7,7 @@
 | UAT | Showcase | 地图 | 玩家 feature | 核心证据 |
 | --- | --- | --- | --- | --- |
 | UAT-1 | 未分配，等待 #643 | 无 | 精确物理车道尚未承诺 | 不虚构入口 |
-| UAT-2A | `CapabilityStandardMassNavigationLargeWorld10kMod` | `mass_navigation` | 万级单位选择、移动、避障、到达 | MassNavigationFlow、performer、10K evidence |
+| UAT-2A | `CapabilityStandardMassNavigationLargeWorld10kMod` | `mass_navigation` | 万级单位选择、移动、避障、到达 | MassNavigationFlow、presenter、10K evidence |
 | UAT-2B | `FormationCapabilityShowcaseMod` | `formation_capability_showcase` | 选择方阵 anchor，右键后成员整体移动/重聚 | Command Router cluster fan-out、GAS/MovePlan/Mass typed chain |
 | UAT-2C | `RoadNetworkShowcaseMod` | `road_network_showcase` | 道路规划与逐实体 MovePlan 执行 | `MovePlanExecutionMode.Individual` |
 | UAT-3 | `RelationshipShowcaseMod` | `relationship_showcase` | 场景卡、状态变化、artifact | battle report、trace、path evidence |
@@ -49,7 +49,7 @@ Formation/GAS 使用 `MovePlanExecutionMode.CommandGroup`；Road 使用 `MovePla
 2. Formation lifecycle playable test。
 3. MassNavigation typed command-group execution。
 4. Road individual MovePlan regression。
-5. 10K production path 与 performer build。
+5. 10K production path 与 presenter build。
 
 ## 禁止事项
 

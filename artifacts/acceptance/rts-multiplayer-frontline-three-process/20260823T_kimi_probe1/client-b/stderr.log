@@ -1,0 +1,14 @@
+System.TypeInitializationException: The type initializer for 'SkiaSharp.SKObject' threw an exception.
+ ---> System.InvalidOperationException: The version of the native libSkiaSharp library (88.1) is incompatible with this version of SkiaSharp. Supported versions of the native libSkiaSharp library are in the range [119.0, 120.0).
+   at SkiaSharp.SkiaSharpVersion.CheckNativeLibraryCompatible(Version minSupported, Version current, Boolean throwIfIncompatible) in C:\001_AI\LudotsProd_issue709\src\Libraries\SkiaSharp\SkiaSharp\SkiaSharpVersion.cs:line 62
+   at SkiaSharp.SkiaSharpVersion.CheckNativeLibraryCompatible(Boolean throwIfIncompatible) in C:\001_AI\LudotsProd_issue709\src\Libraries\SkiaSharp\SkiaSharp\SkiaSharpVersion.cs:line 36
+   at SkiaSharp.SKObject..cctor() in C:\001_AI\LudotsProd_issue709\src\Libraries\SkiaSharp\SkiaSharp\SKObject.cs:line 41
+   --- End of inner exception stack trace ---
+   at SkiaSharp.SKObject..ctor(IntPtr handle, Boolean owns) in C:\001_AI\LudotsProd_issue709\src\Libraries\SkiaSharp\SkiaSharp\SKObject.cs:line 12
+   at SkiaSharp.SKPaint..ctor(IntPtr handle, Boolean owns) in C:\001_AI\LudotsProd_issue709\src\Libraries\SkiaSharp\SkiaSharp\SKPaint.cs:line 44
+   at SkiaSharp.SKPaint..ctor() in C:\001_AI\LudotsProd_issue709\src\Libraries\SkiaSharp\SkiaSharp\SKPaint.cs:line 49
+   at Ludots.Presentation.Skia.SkiaOverlayRenderer..ctor() in C:\001_AI\LudotsProd_issue709\src\Libraries\Ludots.Presentation.Skia\SkiaOverlayRenderer.cs:line 40
+   at Ludots.Adapter.Raylib.RaylibOverlayCompositor..ctor(Int32 width, Int32 height) in C:\001_AI\LudotsProd_issue709\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibOverlayCompositor.cs:line 20
+   at Ludots.Adapter.Raylib.RaylibHostLoop.Run(RaylibHostSetup setup) in C:\001_AI\LudotsProd_issue709\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibHostLoop.cs:line 220
+   at Ludots.Adapter.Raylib.RaylibGameHost.Run() in C:\001_AI\LudotsProd_issue709\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibGameHost.cs:line 30
+   at Program.<Main>$(String[] args) in C:\001_AI\LudotsProd_issue709\src\Apps\Raylib\Ludots.App.Raylib\Program.cs:line 23

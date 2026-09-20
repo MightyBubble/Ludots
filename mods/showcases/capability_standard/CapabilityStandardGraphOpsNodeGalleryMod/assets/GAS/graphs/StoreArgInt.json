@@ -1,0 +1,65 @@
+[
+  {
+    "id": "showcase.graph_op.StoreArgInt",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "stage"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "stage",
+        "op": "ConstInt",
+        "intValue": 6
+      },
+      {
+        "id": "store",
+        "op": "StoreArgInt",
+        "argKey": "GraphOps.Stage"
+      },
+      {
+        "id": "call",
+        "op": "InvokeGraph",
+        "functionName": "showcase.graph_op._invokeArgCallee"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "stage",
+        "fromPort": "next",
+        "to": "store"
+      },
+      {
+        "from": "store",
+        "fromPort": "next",
+        "to": "call"
+      },
+      {
+        "from": "call",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "stage",
+        "fromPort": "value",
+        "to": "store",
+        "toPort": "value"
+      },
+      {
+        "from": "call",
+        "fromPort": "value",
+        "to": "done",
+        "toPort": "value"
+      }
+    ]
+  }
+]

@@ -12,6 +12,7 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.ThreeC
 {
@@ -95,7 +96,7 @@ namespace Ludots.Tests.ThreeC
 
             Entity entity = world.Create(
                 WorldPositionCm.FromCm(50000, 50000),
-                new CullState { IsVisible = false, LOD = LODLevel.Culled },
+                new CullState { IsVisible = false, LOD = LODLevel.Low },
                 new VisualTransform
                 {
                     Position = new Vector3(500f, 0f, 500f),

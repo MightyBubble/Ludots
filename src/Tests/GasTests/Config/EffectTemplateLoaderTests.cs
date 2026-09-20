@@ -28,13 +28,13 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
                         "id": "Effect_A",
-                        "tags": ["Event.TestA"],
+                        "categories": ["Event.TestA"],
                         "presetType": "None",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -44,7 +44,7 @@ namespace Ludots.Tests.GAS
                       },
                       {
                         "id": "Effect_B",
-                        "tags": ["Event.TestB"],
+                        "categories": ["Event.TestB"],
                         "presetType": "None",
                         "lifetime": "After",
                         "duration": { "durationTicks": 10, "periodTicks": 0, "clockId": "FixedFrame" },
@@ -68,7 +68,7 @@ namespace Ludots.Tests.GAS
                 That(registry.TryGet(1, out var a), Is.True);
                 That(registry.TryGet(2, out var b), Is.True);
 
-                That(a.TagId, Is.Not.EqualTo(0));
+                That(a.CategoryId, Is.Not.EqualTo(0));
                 That(a.Modifiers.Count, Is.EqualTo(1));
 
                 // TODO: b.OnApplyEffectId assertion removed — callback fields migrated to Phase Graph architecture
@@ -88,13 +88,13 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
                         "id": "Effect_A",
-                        "tags": ["Event.TestA"],
+                        "categories": ["Event.TestA"],
                         "duration": 1.0
                       }
                     ]
@@ -122,13 +122,13 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
                         "id": "Effect.MultipleTags",
-                        "tags": ["Effect.First", "Effect.Second"],
+                        "categories": ["Effect.First", "Effect.Second"],
                         "presetType": "None",
                         "lifetime": "Instant",
                         "participatesInResponse": false
@@ -140,8 +140,43 @@ namespace Ludots.Tests.GAS
                 var ex = Throws<InvalidOperationException>(() =>
                     loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"));
 
-                That(ex!.Message, Does.Contain("tags"));
+                That(ex!.Message, Does.Contain("categories"));
                 That(ex.Message, Does.Contain("at most one"));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
+        public void Load_LegacyTagsField_IsRejectedWithRenameGuidance()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect.LegacyTags",
+                        "tags": ["Effect.Legacy"],
+                        "presetType": "None",
+                        "lifetime": "Instant",
+                        "participatesInResponse": false
+                      }
+                    ]
+                    """);
+
+                var loader = CreateLoader(root, out _);
+                var ex = Throws<InvalidOperationException>(() =>
+                    loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"));
+
+                That(ex!.Message, Does.Contain("'tags'"));
+                That(ex.Message, Does.Contain("categories"));
+                That(EffectCategoryRegistry.GetId("Effect.Legacy"), Is.EqualTo(EffectCategoryRegistry.InvalidId));
+                That(TagRegistry.GetId("Effect.Legacy"), Is.EqualTo(TagRegistry.InvalidId));
             }
             finally
             {
@@ -155,13 +190,13 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
                         "id": "Effect_Search",
-                        "tags": ["Event.Search"],
+                        "categories": ["Event.Search"],
                         "presetType": "Search",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -198,13 +233,13 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
                         "id": "Effect_Search",
-                        "tags": ["Event.Search"],
+                        "categories": ["Event.Search"],
                         "presetType": "Search",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -255,13 +290,13 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
                         "id": "Effect_Search_LayerMasked",
-                        "tags": ["Event.Search"],
+                        "categories": ["Event.Search"],
                         "presetType": "Search",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -301,13 +336,13 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
                         "id": "Effect_Search_BadLayer",
-                        "tags": ["Event.Search"],
+                        "categories": ["Event.Search"],
                         "presetType": "Search",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -346,13 +381,13 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
                         "id": "Effect_Projectile",
-                        "tags": ["Event.Projectile"],
+                        "categories": ["Event.Projectile"],
                         "presetType": "LaunchProjectile",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -372,7 +407,7 @@ namespace Ludots.Tests.GAS
                       },
                       {
                         "id": "Effect_Hit",
-                        "tags": ["Event.Hit"],
+                        "categories": ["Event.Hit"],
                         "presetType": "InstantDamage",
                         "lifetime": "Instant",
                         "participatesInResponse": true
@@ -397,13 +432,13 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     $$"""
                     [
                       {
                         "id": "Effect_Projectile",
-                        "tags": ["Event.Projectile"],
+                        "categories": ["Event.Projectile"],
                         "presetType": "LaunchProjectile",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -442,13 +477,13 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
                         "id": "Effect_Projectile",
-                        "tags": ["Event.Projectile"],
+                        "categories": ["Event.Projectile"],
                         "presetType": "LaunchProjectile",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -483,13 +518,13 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
                         "id": "Effect_Projectile",
-                        "tags": ["Event.Projectile"],
+                        "categories": ["Event.Projectile"],
                         "presetType": "LaunchProjectile",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -527,13 +562,13 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
                         "id": "Effect_Projectile",
-                        "tags": ["Event.Projectile"],
+                        "categories": ["Event.Projectile"],
                         "presetType": "LaunchProjectile",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -569,13 +604,13 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
                         "id": "Effect_Aura",
-                        "tags": ["Event.Aura"],
+                        "categories": ["Event.Aura"],
                         "presetType": "None",
                         "lifetime": "Infinite",
                         "participatesInResponse": true
@@ -604,13 +639,13 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
                         "id": "Effect_Aura",
-                        "tags": ["Event.Aura"],
+                        "categories": ["Event.Aura"],
                         "presetType": "None",
                         "lifetime": "Infinite",
                         "duration": { "durationTicks": 0, "periodTicks": 0, "clockId": "FixedFrame" },
@@ -638,13 +673,13 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
                         "id": "Effect_Search",
-                        "tags": ["Event.Search"],
+                        "categories": ["Event.Search"],
                         "presetType": "Search",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -658,7 +693,7 @@ namespace Ludots.Tests.GAS
                       },
                       {
                         "id": "Effect_Hit",
-                        "tags": ["Event.Hit"],
+                        "categories": ["Event.Hit"],
                         "presetType": "InstantDamage",
                         "lifetime": "Instant",
                         "participatesInResponse": true
@@ -689,13 +724,13 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
                         "id": "Effect_Dispatch",
-                        "tags": ["Event.Dispatch"],
+                        "categories": ["Event.Dispatch"],
                         "presetType": "None",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -710,7 +745,7 @@ namespace Ludots.Tests.GAS
                       },
                       {
                         "id": "Effect_Payload",
-                        "tags": ["Event.Payload"],
+                        "categories": ["Event.Payload"],
                         "presetType": "None",
                         "lifetime": "Instant",
                         "participatesInResponse": true
@@ -739,13 +774,13 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
                         "id": "Effect_Dispatch",
-                        "tags": ["Event.Dispatch"],
+                        "categories": ["Event.Dispatch"],
                         "presetType": "None",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -779,13 +814,13 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
                         "id": "Effect_Dispatch",
-                        "tags": ["Event.Dispatch"],
+                        "categories": ["Event.Dispatch"],
                         "presetType": "None",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -820,13 +855,13 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
                         "id": "Effect_Reactive",
-                        "tags": ["Event.Reactive"],
+                        "categories": ["Event.Reactive"],
                         "presetType": "None",
                         "lifetime": "Infinite",
                         "participatesInResponse": true,
@@ -868,13 +903,13 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
                         "id": "Effect.Invalid.InstantListener",
-                        "tags": ["Event.Invalid"],
+                        "categories": ["Event.Invalid"],
                         "presetType": "None",
                         "lifetime": "Instant",
                         "participatesInResponse": false,
@@ -909,13 +944,13 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
                         "id": "Effect_CreateUnit",
-                        "tags": ["Event.CreateUnit"],
+                        "categories": ["Event.CreateUnit"],
                         "presetType": "CreateUnit",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -948,13 +983,13 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
                         "id": "Effect_CreateUnit",
-                        "tags": ["Event.CreateUnit"],
+                        "categories": ["Event.CreateUnit"],
                         "presetType": "CreateUnit",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -987,13 +1022,13 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
                         "id": "Effect_CreateUnit",
-                        "tags": ["Event.CreateUnit"],
+                        "categories": ["Event.CreateUnit"],
                         "presetType": "CreateUnit",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -1028,13 +1063,13 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
                         "id": "Effect_GraphTag",
-                        "tags": ["Event.GraphTag"],
+                        "categories": ["Event.GraphTag"],
                         "presetType": "None",
                         "lifetime": "Infinite",
                         "participatesInResponse": true,
@@ -1068,13 +1103,13 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
                         "id": "Effect_Preset_Force",
-                        "tags": ["Effect.ApplyForce"],
+                        "categories": ["Effect.ApplyForce"],
                         "presetType": "ApplyForce2D",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -1109,18 +1144,70 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void Load_CustomPresetType_StoresExtensionPresetId()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect_Custom_Status",
+                        "categories": ["Effect.Custom.Status"],
+                        "presetType": "ExampleMod.CustomStatus",
+                        "lifetime": "Instant",
+                        "participatesInResponse": false
+                      }
+                    ]
+                    """);
+
+                var vfs = new VirtualFileSystem();
+                vfs.Mount("Core", root);
+                var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+                var pipeline = new ConfigPipeline(vfs, modLoader);
+
+                var presetTypes = new PresetTypeRegistry();
+                int customPresetId = presetTypes.RegisterKey("ExampleMod.CustomStatus");
+                var customPreset = new PresetTypeDefinition
+                {
+                    TypeId = customPresetId,
+                    TypeKey = "ExampleMod.CustomStatus",
+                    ActivePhases = PhaseFlags.InstantCore,
+                    AllowedLifetimes = LifetimeFlags.InstantOnly,
+                };
+                presetTypes.Register(in customPreset);
+
+                var registry = new EffectTemplateRegistry();
+                var loader = new EffectTemplateLoader(pipeline, registry, presetTypes: presetTypes);
+                loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json");
+
+                int tplId = EffectTemplateIdRegistry.GetId("Effect_Custom_Status");
+                That(tplId, Is.GreaterThan(0));
+                That(registry.TryGet(tplId, out var tpl), Is.True);
+                That(tpl.PresetType, Is.EqualTo(EffectPresetType.None));
+                That(tpl.PresetTypeId, Is.EqualTo(customPresetId));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
         public void Load_GraphProgramTargetQuery_RequiresGraphProgramId()
         {
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
                         "id": "Effect_Graph_Query",
-                        "tags": ["Event.Search"],
+                        "categories": ["Event.Search"],
                         "presetType": "Search",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -1159,13 +1246,13 @@ namespace Ludots.Tests.GAS
                 OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.HexQ");
                 OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.HexR");
 
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
                         "id": "Effect.Test.SubmitOrderMissingIntArg0",
-                        "tags": ["Effect.Test.SubmitOrder"],
+                        "categories": ["Effect.Test.SubmitOrder"],
                         "presetType": "SubmitOrderFromBlackboard",
                         "lifetime": "Instant",
                         "participatesInResponse": false,
@@ -1212,13 +1299,13 @@ namespace Ludots.Tests.GAS
                 OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.HexQ");
                 OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.HexR");
 
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
                         "id": "Effect.Test.SubmitOrderUnknownType",
-                        "tags": ["Effect.Test.SubmitOrder"],
+                        "categories": ["Effect.Test.SubmitOrder"],
                         "presetType": "SubmitOrderFromBlackboard",
                         "lifetime": "Instant",
                         "participatesInResponse": false,
@@ -1262,20 +1349,20 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
                         "id": "Effect_Infinite_NoDuration",
-                        "tags": ["Event.Infinite.NoDuration"],
+                        "categories": ["Event.Infinite.NoDuration"],
                         "presetType": "Buff",
                         "lifetime": "Infinite",
                         "participatesInResponse": false
                       },
                       {
                         "id": "Effect_Infinite_PeriodOnly",
-                        "tags": ["Event.Infinite.PeriodOnly"],
+                        "categories": ["Event.Infinite.PeriodOnly"],
                         "presetType": "Buff",
                         "lifetime": "Infinite",
                         "duration": { "periodTicks": 20 },
@@ -1283,7 +1370,7 @@ namespace Ludots.Tests.GAS
                       },
                       {
                         "id": "Effect_Infinite_FullDuration",
-                        "tags": ["Event.Infinite.FullDuration"],
+                        "categories": ["Event.Infinite.FullDuration"],
                         "presetType": "Buff",
                         "lifetime": "Infinite",
                         "duration": { "durationTicks": 0, "periodTicks": 60, "clockId": "FixedFrame" },
@@ -1327,6 +1414,52 @@ namespace Ludots.Tests.GAS
                 That(fullDuration.DurationTicks, Is.EqualTo(0));
                 That(fullDuration.PeriodTicks, Is.EqualTo(60));
                 That(fullDuration.ClockId, Is.EqualTo(GasClockId.FixedFrame));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
+        public void Load_AttachLocalPose_InheritFacingWithOwnFacing_IsRejected()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect.Attach.InvalidFacingCombo",
+                        "categories": ["Effect.Attachment"],
+                        "presetType": "Relation",
+                        "lifetime": "Instant",
+                        "participatesInResponse": false,
+                        "relation": {
+                          "operation": "Attach",
+                          "subject": "Target",
+                          "parent": "Source",
+                          "localPose": {
+                            "offsetXCm": 0,
+                            "offsetYCm": 100,
+                            "facingDeg": 0,
+                            "inheritParentFacing": true,
+                            "offsetRotation": "OwnFacing"
+                          }
+                        }
+                      }
+                    ]
+                    """);
+
+                var loader = CreateLoader(root, out _);
+                InvalidOperationException? error = Throws<InvalidOperationException>(
+                    () => loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"));
+
+                That(error, Is.Not.Null);
+                That(error!.Message, Does.Contain("inheritParentFacing=true"));
+                That(error.Message, Does.Contain("OwnFacing"));
             }
             finally
             {

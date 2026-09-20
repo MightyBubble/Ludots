@@ -1024,13 +1024,13 @@ z
     <text style="font-size: 10px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #3a4149" x="582.12" y="1369.285" transform="rotate(-0 582.12 1369.285)">EntityVisualEmit</text>
    </g>
    <g id="text_68">
-    <text style="font-size: 10px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #3a4149" x="723.96" y="1369.313906" transform="rotate(-0 723.96 1369.313906)">PerformerRule</text>
+    <text style="font-size: 10px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #3a4149" x="723.96" y="1369.313906" transform="rotate(-0 723.96 1369.313906)">PresenterRule</text>
    </g>
    <g id="text_69">
-    <text style="font-size: 10px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #3a4149" x="865.8" y="1369.313906" transform="rotate(-0 865.8 1369.313906)">PerformerRuntime</text>
+    <text style="font-size: 10px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #3a4149" x="865.8" y="1369.313906" transform="rotate(-0 865.8 1369.313906)">PresenterRuntime</text>
    </g>
    <g id="text_70">
-    <text style="font-size: 10px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #3a4149" x="156.6" y="1400.993906" transform="rotate(-0 156.6 1400.993906)">PerformerEmit</text>
+    <text style="font-size: 10px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #3a4149" x="156.6" y="1400.993906" transform="rotate(-0 156.6 1400.993906)">PresenterEmit</text>
    </g>
    <g id="text_71">
     <text style="font-size: 10px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #3a4149" x="298.44" y="1400.993906" transform="rotate(-0 298.44 1400.993906)">ResponseChainDirector</text>

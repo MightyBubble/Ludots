@@ -1,4 +1,4 @@
-﻿# 版本收束处置矩阵（分支 / PR / Issue）
+# 版本收束处置矩阵（分支 / PR / Issue）
 
 本文给出本轮收束后的处置建议清单，用于主干合并与远端清理。核心原则：不整包引入脏分支，不保留与主线冲突的双真相路径，不通过忽略测试掩盖问题。
 
@@ -10,7 +10,7 @@
 |---|---|---|---|
 | #13 | 生产最优方案 | **按提交择优吸收后关闭 PR** | 主方向正确（去 fallback/去旧链路），但不建议整包，避免引入非必要噪声与历史冲突。 |
 | #11 | 实体外观显示系统 | **关闭 PR，保留可复用片段到独立任务** | Draft 且侵入较大，已与当前主线展示方案（FeatureHub/DiagnosticsOverlay）重叠。 |
-| #10 | Performer skill demo mod | **按文件粒度继续摘取后关闭 PR** | 含高价值展示改进，但需避免与现有接口/类型演进冲突。 |
+| #10 | Presenter skill demo mod | **按文件粒度继续摘取后关闭 PR** | 含高价值展示改进，但需避免与现有接口/类型演进冲突。 |
 | #9 | 效果预设验收 | **关闭 PR（核心价值已吸收）** | `SpawnedUnitRuntimeSystem` 命名增强等关键点已并入当前收束分支。 |
 | #7 | Gas input order 效果预设 | **关闭 PR** | 分叉深、冲突面大，已被当前链路重构覆盖。 |
 
@@ -28,7 +28,7 @@
   - `origin/cursor/development-environment-setup-2eea`
   - `origin/cursor/gas-input-order-933a`
   - `origin/cursor/gas-mod-dcf5`
-  - `origin/cursor/performer-skill-demo-mod-5a21`
+  - `origin/cursor/presenter-skill-demo-mod-5a21`
   - `origin/cursor/prs-dbf7`
   - `origin/feat/config-id-audit`
   - `origin/feat/feature-showcase-demos`

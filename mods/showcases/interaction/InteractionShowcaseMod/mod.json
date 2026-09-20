@@ -2,7 +2,7 @@
   "name": "InteractionShowcaseMod",
   "version": "1.0.0",
   "description": "Unified interaction showcase for target-first, smart-cast, RTS aim-cast, context-scored action combat, and stress validation.",
-  "main": "bin/net8.0/InteractionShowcaseMod.dll",
+  "main": "bin/net9.0/InteractionShowcaseMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

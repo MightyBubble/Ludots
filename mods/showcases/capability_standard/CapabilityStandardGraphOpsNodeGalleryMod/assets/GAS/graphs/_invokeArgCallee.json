@@ -1,0 +1,197 @@
+[
+  {
+    "id": "showcase.graph_op._invokeArgCallee",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "main",
+        "event": "MapLoaded",
+        "start": "readStage"
+      },
+      {
+        "label": "boost",
+        "event": "MapLoaded",
+        "start": "boostConst"
+      },
+      {
+        "label": "ratio",
+        "event": "MapLoaded",
+        "start": "readRatio"
+      },
+      {
+        "label": "who",
+        "event": "MapLoaded",
+        "start": "readWho"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "readStage",
+        "op": "LoadEntryPayloadInt",
+        "payloadKey": "GraphOps.Stage"
+      },
+      {
+        "id": "stageHalt",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "boostConst",
+        "op": "ConstInt",
+        "intValue": 9
+      },
+      {
+        "id": "boostHalt",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "readRatio",
+        "op": "LoadEntryPayloadFloat",
+        "payloadKey": "GraphOps.Ratio"
+      },
+      {
+        "id": "echo",
+        "op": "WriteMapVarFloat",
+        "var": "gallery.echo"
+      },
+      {
+        "id": "ratioDone",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "ratioHalt",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "readWho",
+        "op": "LoadEntryPayloadEntity",
+        "payloadKey": "GraphOps.Who"
+      },
+      {
+        "id": "moveToX",
+        "op": "ConstInt",
+        "intValue": 300
+      },
+      {
+        "id": "moveToY",
+        "op": "ConstInt",
+        "intValue": -200
+      },
+      {
+        "id": "moveTo",
+        "op": "SetWorldPosition"
+      },
+      {
+        "id": "whoDone",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "whoHalt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "readStage",
+        "fromPort": "next",
+        "to": "stageHalt"
+      },
+      {
+        "from": "boostConst",
+        "fromPort": "next",
+        "to": "boostHalt"
+      },
+      {
+        "from": "readRatio",
+        "fromPort": "next",
+        "to": "echo"
+      },
+      {
+        "from": "echo",
+        "fromPort": "next",
+        "to": "ratioDone"
+      },
+      {
+        "from": "ratioDone",
+        "fromPort": "next",
+        "to": "ratioHalt"
+      },
+      {
+        "from": "readWho",
+        "fromPort": "next",
+        "to": "moveToX"
+      },
+      {
+        "from": "moveToX",
+        "fromPort": "next",
+        "to": "moveToY"
+      },
+      {
+        "from": "moveToY",
+        "fromPort": "next",
+        "to": "moveTo"
+      },
+      {
+        "from": "moveTo",
+        "fromPort": "next",
+        "to": "whoDone"
+      },
+      {
+        "from": "whoDone",
+        "fromPort": "next",
+        "to": "whoHalt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "readStage",
+        "fromPort": "value",
+        "to": "stageHalt",
+        "toPort": "value"
+      },
+      {
+        "from": "boostConst",
+        "fromPort": "value",
+        "to": "boostHalt",
+        "toPort": "value"
+      },
+      {
+        "from": "readRatio",
+        "fromPort": "value",
+        "to": "echo",
+        "toPort": "value"
+      },
+      {
+        "from": "ratioDone",
+        "fromPort": "value",
+        "to": "ratioHalt",
+        "toPort": "value"
+      },
+      {
+        "from": "readWho",
+        "fromPort": "value",
+        "to": "moveTo",
+        "toPort": "source"
+      },
+      {
+        "from": "moveToX",
+        "fromPort": "value",
+        "to": "moveTo",
+        "toPort": "a"
+      },
+      {
+        "from": "moveToY",
+        "fromPort": "value",
+        "to": "moveTo",
+        "toPort": "b"
+      },
+      {
+        "from": "whoDone",
+        "fromPort": "value",
+        "to": "whoHalt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

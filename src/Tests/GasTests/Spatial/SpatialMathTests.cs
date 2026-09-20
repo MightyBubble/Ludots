@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using Ludots.Core.Mathematics;
+using Ludots.Platform.Abstractions;
 
 namespace GasTests
 {

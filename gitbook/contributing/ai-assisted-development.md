@@ -23,6 +23,7 @@
 - 不得未经搜索就新建 Registry、事件系统、配置加载器或平行组件体系。
 - 先看架构入口，再设计挂靠点。
 - 开工前必须能列出复用清单；列不出来说明发现阶段没做完。
+- **资产方不声明调用方**：可复用资产（图、效果、函数、ActionLib/FuncLib 条目）的登记面不得携带"谁会用我"的信息（如 host/消费者枚举）。消费资格由**消费侧在绑定时刻**校验（含 Yield 纯度等策略），资产只声明自身契约（纯/可副作用、入参出参）。违反此条的登记面会让资产跟着消费方漂移——每加一个消费方就要改一次资产，真相必然失步。
 
 ## 4 任务执行决策规范
 
@@ -62,13 +63,23 @@
 3. 填写 `references/self-review-checklist.md` 模板，写入 `artifacts/gas-composition-gate.md`。
 4. 实现 PR 须链接该自审产物或等效填写内容。
 
+### 4.6 面向人的中文（与 skill 绑定）
+
+适用：写或改 `gitbook/` 正式文档、showcase 设计说明、门户说明、PR/Issue 里给人看的段落。
+
+1. 加载共享 skill `shuorenhua`（`skills/governance/shuorenhua/`）。
+2. 按该 skill 的固定顺序处理：判场景 → 划 protected spans → Tier → 档位 → 改写 → 回读。
+3. 默认场景是 `docs`；README / release note / issue 回复等走对应 Scene Pack。
+4. 保事实、术语、路径、命令与责任主体；禁止为了「顺口」改掉合同含义。
+5. 给用户的最终说明也按同一标准：能用业务话讲清的，不要堆实现腔。
+
 ## 5 现有能力速查
 
 优先复用这些正式基础设施：
 
 - Registry：`SystemFactoryRegistry`、`AttributeRegistry`、`TagRegistry`、`AttributeSinkRegistry`、`AbilityDefinitionRegistry` 等
 - 核心管线：ConfigPipeline、GAS Effect Pipeline、Presentation Pipeline、Trigger Pipeline、Mod Loading、Startup、UI Runtime
-- SystemGroup：`SchemaUpdate → InputCollection → PostMovement → AbilityActivation → EffectProcessing → AttributeCalculation → DeferredTriggerCollection → Cleanup → EventDispatch → ClearPresentationFlags`
+- SystemGroup：`SchemaUpdate → LocalInput → InputCollection → PostMovement → AbilityActivation → EffectProcessing → RuntimeEntityBinding → AttributeCalculation → DeferredTriggerCollection → Continuation → Cleanup → EventDispatch → ClearPresentationFlags`
 
 ## 6 深度材料
 

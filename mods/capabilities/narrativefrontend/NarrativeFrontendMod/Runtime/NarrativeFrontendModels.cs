@@ -22,17 +22,18 @@ public enum NarrativeFrontendSurfaceKind
     DialogueBubble = 1,
     OverlayDialogue = 2,
     SubtitleBubble = 3,
-    ChoiceList = 4,
-    NotificationStack = 5,
-    HistoryJournal = 6,
-    EventCard = 7,
-    StatusPanel = 8,
-    PromptRibbon = 9,
-    ThreatBanner = 10,
-    RelationshipNotebook = 11,
-    InspectPanel = 12,
-    FlowReview = 13,
-    TransmissionOverlay = 14,
+    NotificationStack = 4,
+    HistoryJournal = 5,
+    EventCard = 6,
+    StatusPanel = 7,
+    PromptRibbon = 8,
+    ThreatBanner = 9,
+    RelationshipNotebook = 10,
+    InspectPanel = 11,
+    FlowReview = 12,
+    TransmissionOverlay = 13,
+    StandingPortrait = 14,
+    WorldNameplate = 15,
 }
 
 public sealed record NarrativeFrontendSurfaceItem(
@@ -68,7 +69,16 @@ public sealed record NarrativeFrontendSurfaceModel(
     string BackgroundHex = "",
     string BorderHex = "",
     string ForegroundHex = "",
-    string MutedHex = "");
+    string MutedHex = "",
+    /// <summary>Presentation imageId (portrait/standing/icon). Prefer this over resolved paths.</summary>
+    string ImageId = "",
+    /// <summary>Resolved absolute/data URI filled at frontend ingest — composers may use either.</summary>
+    string PortraitSrc = "",
+    float PortraitSize = 96f,
+    string FrameImageSrc = "",
+    IReadOnlyList<Ludots.Core.Presentation.Hud.PresentationTextRun>? BodyRuns = null,
+    string LayoutId = "",
+    string StyleClass = "");
 
 public sealed record NarrativeFrontendPageState(
     string OwnerId,

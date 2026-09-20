@@ -1,0 +1,20 @@
+[
+  {
+    "id": "showcase.graph_op.ScreenPointToGround",
+    "kind": "Query",
+    "entry": "sx",
+    "nodes": [
+      { "id": "sx", "op": "ConstFloat", "floatValue": 400 },
+      { "id": "sy", "op": "ConstFloat", "floatValue": 150 },
+      { "id": "ground", "op": "ScreenPointToGround" }
+    ],
+    "controlEdges": [
+      { "from": "sx", "fromPort": "next", "to": "sy" },
+      { "from": "sy", "fromPort": "next", "to": "ground" }
+    ],
+    "valueEdges": [
+      { "from": "sx", "fromPort": "value", "to": "ground", "toPort": "a" },
+      { "from": "sy", "fromPort": "value", "to": "ground", "toPort": "b" }
+    ]
+  }
+]

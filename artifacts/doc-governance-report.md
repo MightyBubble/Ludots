@@ -1,62 +1,30 @@
-# Documentation Governance Report
+# Doc Governance Report — #1567 切 0 文档合同
 
-Date: 2026-07-19
-Scope: PR #658 MassNavigation/Formation SSOT pages and capability README
-Ruleset: `gitbook/contributing/documentation-governance.md`, `ludots-doc-governance`
+- 范围：`gitbook/architecture/spatial-scale-and-resolution-ssot.md`、`gitbook/reference/map-scale-authoring-guide.md`、`gitbook/reference/spatial-scale-configuration.md`
+- 规则集：`skills` 共享 doc-governance（仓库相对路径、单一 SSOT、证据落路径、术语稳定）
+- 目的：落地 [#1567 空间配置四域归位](https://github.com/MightyBubble/Ludots/issues/1567) 切 0——只改文档合同，不改代码与资产
 
-## Summary
+## 变更摘要
 
-- Total open findings: 0
-- P0: 0
-- P1: 0
-- P2: 0
-- P3: 0
+| 文件 | 变更 |
+|---|---|
+| `gitbook/architecture/spatial-scale-and-resolution-ssot.md` | 头部回链 #1567；目标节增四域模型表；层级表更新 PartitionChunk/NavTile footprint/MacroTile/StreamingChunk/WorldExtent 行并新增 NavTileGranularity/BoardExtent/BoardOrigin 行；命名 Taxonomy 增 3 词；映射表追加 #1567 六行；配置指南表与配置到行为联动表补目标态行；DoD 回链 #1567 |
+| `gitbook/reference/map-scale-authoring-guide.md` | 全页重写为四域 authoring 视角（世界尺寸直写、板=业务区域+摆放、nav 颗粒度独立、执行层不变）；顶部加目标态状态横幅；文末新增「迁移对照（#1567）」；保留全部原有外链与 MassNavigation/pathing 片段 |
+| `gitbook/reference/spatial-scale-configuration.md` | 导语标注主表=现状；文末新增「四域归位目标键位（#1567）」查表 |
 
-## Resolved Findings
+## 发现与处置
 
-### P0-01 Stale ownership model
+| 级别 | 发现 | 处置 |
+|---|---|---|
+| P3 | 三份文档中的 `mods/.../MassNavigationConfig.json`、`Navigation/navmesh.json`、`Navigation/agent_profiles.json`、`Navigation/pathing.json` 为 mod 资产根相对简写，仓库根下不解析 | 沿用原文档既有简写约定，非本次新增断链；未改 |
+| — | 本次新增的全部 markdown 相对链接与锚点（SSOT 互链、board-addressing.md、迁移对照锚点）自检通过 | 无待办 |
 
-- Problem: formal docs described MassNavigation as an Order consumer and Formation as Optional Core.
-- Impact: the documentation certified the same architectural inversion fixed by issue #690.
-- Evidence:
-  - `gitbook/reference/mass-navigation-formal-chain.md`
-  - `gitbook/reference/mass-navigation-user-book.md`
-  - `gitbook/architecture/entity-simulation-layering.md`
-  - `gitbook/architecture/entity-simulation-uat.md`
-- Resolution: replaced with Command Router cluster forwarding, GAS-owned lifecycle, showcase-owned Formation and typed MassNavigation execution.
+## 链接自检
 
-### P1-01 Removed feature still promised to players
+脚本：解析三份文档的 markdown 链接与反引号路径，对仓库根解析（排除 http 与通配 `...`）。结果：新增链接全部解析；上报项均属上表 P3 既有简写。
 
-- Problem: user/UAT docs promised Q/E rotation and dedicated Formation orders.
-- Impact: tests and documentation preserved a presentation-only action as a gameplay feature.
-- Evidence:
-  - `gitbook/reference/mass-navigation-user-book.md`
-  - `gitbook/architecture/uat-playable-showcase-matrix.md`
-- Resolution: removed rotation from player and Mod contracts.
+## SSOT 一致性
 
-### P1-02 Numeric boundary assigned Order completion to MassNavigation
-
-- Problem: numeric SSOT allowed solver arrival to mutate `OrderBuffer` directly.
-- Impact: ownership and failure semantics crossed module boundaries.
-- Evidence:
-  - `gitbook/architecture/mass-navigation-numeric-domain.md`
-- Resolution: arrival/failure now cross the boundary only as `MovePlanExecutionResult`; GAS completes or cancels.
-
-## Path Integrity
-
-- Canonical pages remain under `gitbook/`.
-- No parallel ADR was added.
-- `gitbook/SUMMARY.md` now includes the UAT showcase matrix.
-- All 10 changed Markdown files passed Markdown-link and repository-path validation.
-- Guide and capability README paths use explicit repository-relative targets.
-- Evidence paths point to current source/test files.
-
-## Fix Order
-
-1. Completed: formal chain and responsibility boundary.
-2. Completed: Mod/player guide and UAT contract.
-3. Completed: numeric boundary and capability README.
-
-## Residual Risks
-
-- Historical issue comments and closed issues remain historical evidence; issue #690 is the only current SSOT.
+- 未新建平行 SSOT：四域词汇、owner、键位全部落在既有 `spatial-scale-and-resolution-ssot.md` 层级表/映射表；速查页与 authoring guide 明确声明以架构页为准。
+- 术语稳定：`MacroTile`/`WorldExtent`/`PartitionChunk`/`TerrainChunk` 语义未改，只追加 #1567 目标态归属；新增 `BoardExtent`/`BoardOrigin`/`NavTileGranularity` 已进 Taxonomy。
+- 现状/目标分离：三页均显式标注「#1567 切 N 落地前仍是现状键」，不存在宣称未实现行为的段落。

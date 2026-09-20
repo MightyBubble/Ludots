@@ -16,6 +16,7 @@ using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Physics2D.Systems;
 using Ludots.Tests.Presentation;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Presentation.Movement
 {
@@ -344,7 +345,7 @@ namespace Ludots.Tests.Presentation.Movement
                 config.ScenarioRuntime.RuntimeCapacity.DisplacedAgentCapacity = 8;
                 Simulation = new MassNavigationSimulationRuntime(config);
                 Simulation.BindBoardWorld(
-                    new Ludots.Core.Spatial.WorldSizeSpec(new Ludots.Core.Mathematics.WorldAabbCm(0, 0, 10_000, 10_000), 100),
+                    new Ludots.Core.Spatial.WorldSizeSpec(new Ludots.Platform.Abstractions.WorldAabbCm(0, 0, 10_000, 10_000), 100),
                     MassNavigationOrderChainTests.CreateLoadedChunksForTests(Simulation));
 
                 int layerIndex = LayerRegistry.Register(MassNavigationLayerNames.Agent);

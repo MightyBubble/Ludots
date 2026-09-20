@@ -38,6 +38,7 @@ public sealed class GenreInfoShowcasePlayableAcceptanceTests
         "CoreInputMod",
         "CameraProfilesMod",
         "FourXDemoMod",
+        "EntityCommandPanelMod",
         "RtsDemoMod",
         "MobaDemoMod",
         "EntityInfoPanelsMod",
@@ -174,12 +175,7 @@ public sealed class GenreInfoShowcasePlayableAcceptanceTests
         engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
         InstallInput(engine);
 
-        var uiRoot = new UIRoot(new SkiaUiRenderer());
-        uiRoot.Resize(1920f, 1080f);
-        engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
-        engine.SetService(CoreServiceKeys.UiTextMeasurer, new SkiaTextMeasurer());
-        engine.SetService(CoreServiceKeys.UiImageSizeProvider, new SkiaImageSizeProvider());
-
+        PresentationAcceptanceUiHostInstaller.Install(engine, 1920f, 1080f);
         engine.Start();
         return engine;
     }
@@ -337,7 +333,7 @@ public sealed class GenreInfoShowcasePlayableAcceptanceTests
         builder.AppendLine("## Scenario Card");
         builder.AppendLine("- Goal: validate one localized cross-genre info-panel runtime for 4X, RTS, and MOBA selection surfaces.");
         builder.AppendLine("- Map: `genre_info_showcase`");
-        builder.AppendLine("- Mods: `LudotsCoreMod`, `CoreInputMod`, `CameraProfilesMod`, `FourXDemoMod`, `RtsDemoMod`, `MobaDemoMod`, `EntityInfoPanelsMod`, `GenreInfoShowcaseMod`");
+        builder.AppendLine("- Mods: `LudotsCoreMod`, `CoreInputMod`, `CameraProfilesMod`, `FourXDemoMod`, `EntityCommandPanelMod`, `RtsDemoMod`, `MobaDemoMod`, `EntityInfoPanelsMod`, `GenreInfoShowcaseMod`");
         builder.AppendLine("- Viewport: `1920x1080` headless Skia export.");
         builder.AppendLine("- Evidence: four screenshots plus trace, battle report, and path mermaid.");
         builder.AppendLine();

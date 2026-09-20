@@ -1,0 +1,40 @@
+[
+  {
+    "id": "showcase.graph_op.InvokeGraph",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "call"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "call",
+        "op": "InvokeGraph",
+        "functionName": "showcase.graph_op._invokeArgCallee",
+        "entryLabel": "boost"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "call",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "call",
+        "fromPort": "value",
+        "to": "done",
+        "toPort": "value"
+      }
+    ]
+  }
+]

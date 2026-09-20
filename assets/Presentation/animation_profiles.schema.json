@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ludots://presentation/animation_profiles.schema.json",
+  "title": "Ludots animation profiles",
+  "type": "array",
+  "description": "Mod-side Presentation/animation_profiles.json. Binds an animator controller's packed states to clip ids; duplicate packedStateIndex bindings within one profile are rejected at load time, and the removed field builtinClips fails loud. packedStateIndex defaults to 0. Field sets mirror AnimationProfileConfigLoader. Authoring guide: gitbook/reference/mod-editor-prd/config/pres-03-animation.md.",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["id", "animatorControllerId"],
+    "properties": {
+      "id": { "type": "string", "minLength": 1 },
+      "animatorControllerId": { "type": "string", "minLength": 1 },
+      "stateClips": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["clipAssetId"],
+          "properties": {
+            "packedStateIndex": { "type": "integer" },
+            "clipAssetId": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    }
+  }
+}

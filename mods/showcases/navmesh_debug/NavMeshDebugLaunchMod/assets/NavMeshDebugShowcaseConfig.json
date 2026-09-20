@@ -1,0 +1,25 @@
+{
+  "autoObstacleEnvironmentVariable": "LUDOTS_NAVMESH_DEBUG_AUTO_OBSTACLE",
+  "autoObstacleDelayFrames": 120,
+  "defaultObstacleRadiusCm": 3200,
+  "spawnPoints": [
+    {
+      "mapId": "navmesh_debug_openworld",
+      "xCm": 12800,
+      "yCm": 12800,
+      "obstacleRadiusCm": 3200
+    },
+    {
+      "mapId": "navmesh_debug_grid",
+      "xCm": 51200,
+      "yCm": 51200,
+      "obstacleRadiusCm": 4800
+    },
+    {
+      "mapId": "navmesh_debug_vhtm",
+      "xCm": 3200,
+      "yCm": 3200,
+      "obstacleRadiusCm": 1200
+    }
+  ]
+}

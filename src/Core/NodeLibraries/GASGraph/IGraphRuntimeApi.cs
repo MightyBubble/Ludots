@@ -1,11 +1,14 @@
 using System;
+using Ludots.Core.GraphRuntime;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.GraphQuery;
 using Ludots.Core.Spatial;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
 {
@@ -54,14 +57,257 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         SpatialQueryResult QueryCone(IntVector2 originCm, int directionDeg, int halfAngleDeg, float rangeCm, Span<Entity> buffer);
         SpatialQueryResult QueryRectangle(IntVector2 centerCm, int halfWidthCm, int halfHeightCm, int rotationDeg, Span<Entity> buffer);
         SpatialQueryResult QueryLine(IntVector2 originCm, int directionDeg, int lengthCm, int halfWidthCm, Span<Entity> buffer);
+
+        int ResolveTableRow(int tableId, int key)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
+        }
+
+        int WeightedPick(int distributionKeyId, int modulationPermille)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.RngPickUnavailable");
+        }
+
+        int TableReadInt(int fieldId, int rowHandle)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
+        }
+
+        float TableReadFloat(int fieldId, int rowHandle)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
+        }
+
+        void ShowPanel(int panelTypeId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PanelActivationUnavailable");
+        }
+
+        void HidePanel(int panelTypeId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PanelActivationUnavailable");
+        }
+
+        /// <summary>
+        /// Overrides a panel type's audience with one seat (hotseat turn handoff), or
+        /// clears the override when seatKeyId is 0 — the template's declared audience
+        /// rules again. Fail-closed on key ids that do not resolve to registered names.
+        /// </summary>
+        void SetPanelAudience(int panelTypeId, int seatKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PanelActivationUnavailable");
+        }
+
+        /// <summary>Sets an entity's world position in centimeters (int, matches LoadTargetPosX/Y).</summary>
+        void SetWorldPosition(Entity target, int xCm, int yCm);
+
+        /// <summary>
+        /// Sets an entity's interaction mode: writes the sparse InteractionMode component,
+        /// or removes it when the mode is the reserved normal default. Fail-closed on dead targets
+        /// and mode key ids that do not resolve to an installed interaction mode.
+        /// </summary>
+        void SetInteractionMode(Entity target, int modeKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.InteractionModeMapUnavailable");
+        }
+
+        /// <summary>
+        /// Activates an interaction context instance on the subject: context and
+        /// parent are ConfigKeyRegistry ids (parent 0 = no parent constraint). Idempotent-failure
+        /// on an already-active context; fail-closed on dead subjects, unknown key ids, and
+        /// declared parents that are not active. Default rejects — the engine binds a context
+        /// instance runtime to serve it.
+        /// </summary>
+        void ActivateContext(Entity subject, int contextKeyId, int parentContextKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.ContextInstanceRuntimeUnavailable");
+        }
+
+        /// <summary>
+        /// Deactivates an interaction context instance (and its descendants) on the subject;
+        /// the instance's presenter scope is destroyed through the presenter command pipeline.
+        /// Fail-closed when the context is not mounted as an instance.
+        /// </summary>
+        void DeactivateContext(Entity subject, int contextKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.ContextInstanceRuntimeUnavailable");
+        }
+
+        /// <summary>
+        /// Direct owned-collection write: owner = the writing rep, op = 0 replace / 1 add / 2 subtract
+        /// (computed in-graph), entity list = the graph's current query result set.
+        /// </summary>
+        void WriteCollection(int collectionKeyId, int opKind, Entity owner, Span<Entity> entities, int count)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.EntityCollectionsUnavailable");
+        }
+
+        /// <summary>Enqueues a template entity spawn (runtime spawn queue; explicit position optional).</summary>
+        void SpawnTemplate(int templateKeyId, Entity source, float xCm, float yCm, bool hasPosition);
+
+        void CreatePanel(int templateKeyId, int anchorKeyId, Entity scope)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PanelHostUnavailable");
+        }
+
+        void CreatePanel(int templateKeyId, int anchorKeyId, Entity scope, byte skinId, float zOrder)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PanelHostUnavailable");
+        }
+
+        void DestroyPanel(int templateKeyId, Entity scope)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PanelHostUnavailable");
+        }
+
+        void PushPresentationText(GraphPresentationTextSurface surface, ReadOnlySpan<char> text)
+        {
+            throw new InvalidOperationException(GraphPresentationTextSink.UnavailableError);
+        }
+
+        /// <summary>Start a DialogueRuntime session by dialogue definition id (config key).</summary>
+        void StartDialogue(int dialogueKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.DialogueRuntimeUnavailable");
+        }
+
+        /// <summary>
+        /// Resolves a patched PresentationTextCatalog token id to default-locale template characters.
+        /// Zero-arg tokens only; argCount&gt;0 fails closed until FormatTextKey lands.
+        /// </summary>
+        ReadOnlySpan<char> ResolvePresentationTextKey(int tokenId)
+        {
+            throw new InvalidOperationException(
+                "GAS.GRAPH.ERR.PresentationTextCatalogUnavailable");
+        }
+
+        // ── Map-scoped variables ──
+
+        int ReadMapVarInt(int varKeyId, MapId mapId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.MapVariableStoreUnavailable");
+        }
+
+        float ReadMapVarFloat(int varKeyId, MapId mapId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.MapVariableStoreUnavailable");
+        }
+
+        void WriteMapVarInt(int varKeyId, MapId mapId, int value)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.MapVariableStoreUnavailable");
+        }
+
+        void WriteMapVarFloat(int varKeyId, MapId mapId, float value)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.MapVariableStoreUnavailable");
+        }
+
+        /// <summary>
+        /// Resolves a placed entity registered under the instance key id on the mounting
+        /// map's MapLoadEntityIndex. False means unregistered (the LoadPlacedEntity op then
+        /// writes Entity.Null); liveness stays the caller's contract.
+        /// </summary>
+        bool TryGetPlacedEntity(int instanceKeyId, MapId mapId, out Entity entity)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PlacedIndexUnavailable");
+        }
+
+        /// <summary>
+        /// True when Imm region id is present in the mounting map's Regions catalog
+        /// (LoadPlacedRegion). Regions never enter MapLoadEntityIndex.
+        /// </summary>
+        bool TryHasPlacedRegion(int regionKeyId, MapId mapId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.RegionCatalogUnavailable");
+        }
         int CollectMapEntities(Span<Entity> buffer)
         {
             throw new InvalidOperationException("Graph entity query runtime is not available.");
         }
 
+        Span<Entity> QueryMapEntities(GraphEntityQueryPlan? plan, MapId? map, scoped ReadOnlySpan<int> ints, scoped ReadOnlySpan<float> floats, int depth)
+        {
+            throw new InvalidOperationException("Graph complete entity query runtime is not available.");
+        }
+
+        Span<Entity> QueryCollection(Entity owner, int collectionKeyId, int depth) =>
+            throw new InvalidOperationException("Graph complete collection query runtime is not available.");
+
+        Span<Entity> QueryScreenRegionCollection(Entity owner, int collectionKeyId, scoped in ScreenRect rect, string? seatId, int depth) =>
+            throw new InvalidOperationException("Graph indexed screen query runtime is not available.");
+
+        void BeginEntityQueryExecution() { }
+        void EndEntityQueryExecution() { }
+
+        Span<Entity> GetEntityQueryBuffer(int depth, int capacity) =>
+            throw new InvalidOperationException("Graph entity query buffer is not available.");
+
+        void BindQueryCollection(Entity owner, int collectionKeyId, int graphId, GraphProgramRegistry programs) =>
+            throw new InvalidOperationException("Graph derived collection runtime is not available.");
+
         int CopyEntityCollection(Entity owner, int collectionKeyId, Span<Entity> buffer)
         {
             throw new InvalidOperationException("Graph entity collection runtime is not available.");
+        }
+
+        /// <summary>
+        /// Enumerate alive effect-instance entities from the owner's <c>ActiveEffectContainer</c>
+        /// into <paramref name="buffer"/>. Truncates at buffer capacity (same contract as map collect).
+        /// </summary>
+        int CollectActiveEffects(Entity owner, Span<Entity> buffer)
+        {
+            throw new InvalidOperationException("Graph active-effect query runtime is not available.");
+        }
+
+        int CollectEffectTemplateIds(Span<int> buffer)
+        {
+            throw new InvalidOperationException("Graph effect-template query runtime is not available.");
+        }
+
+        int CollectAbilitySlots(Entity owner, Span<int> buffer)
+        {
+            throw new InvalidOperationException("Graph ability-slot query runtime is not available.");
+        }
+
+        int CollectInventoryItems(Entity owner, Span<Entity> buffer)
+        {
+            throw new InvalidOperationException("Graph inventory-item query runtime is not available.");
+        }
+
+        int CollectItemDefinitionIds(Span<int> buffer)
+        {
+            throw new InvalidOperationException("Graph item-definition query runtime is not available.");
+        }
+
+        int CollectPresentTags(Entity owner, Span<int> buffer)
+        {
+            throw new InvalidOperationException("Graph present-tag query runtime is not available.");
+        }
+
+        int CollectActiveTasks(Entity owner, Span<Entity> buffer)
+        {
+            throw new InvalidOperationException("Graph active-task query runtime is not available.");
+        }
+
+        int CollectActiveActivities(Entity owner, Span<Entity> buffer)
+        {
+            throw new InvalidOperationException("Graph active-activity query runtime is not available.");
+        }
+
+        int CollectProgressionNodes(Entity owner, Span<int> buffer)
+        {
+            throw new InvalidOperationException("Graph progression-node query runtime is not available.");
+        }
+
+        int CollectActiveDialogueChoices(Span<int> buffer)
+        {
+            throw new InvalidOperationException("Graph dialogue-choice query runtime is not available.");
+        }
+
+        int CollectAbilityHolders(int abilityId, ReadOnlySpan<Entity> candidates, Span<Entity> buffer)
+        {
+            throw new InvalidOperationException("Graph ability-holder query runtime is not available.");
         }
 
         int FilterTeam(Span<Entity> entities, int count, int teamId)
@@ -95,6 +341,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         int FilterLayer(Span<Entity> entities, int count, uint requiredMask)
+        {
+            throw new InvalidOperationException("Graph entity query runtime is not available.");
+        }
+
+        int FilterControllable(Span<Entity> entities, int count, Entity controller)
         {
             throw new InvalidOperationException("Graph entity query runtime is not available.");
         }
@@ -177,12 +428,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
-        short SetRelationshipMetric(Entity source, Entity target, int metricId, int value, int reasonId, int typeId)
+        short SetRelationshipMetric(Entity source, Entity target, int metricId, int value, int typeId)
         {
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
-        short AddRelationshipMetric(Entity source, Entity target, int metricId, int delta, int reasonId, int typeId)
+        short AddRelationshipMetric(Entity source, Entity target, int metricId, int delta, int typeId)
         {
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
@@ -197,27 +448,27 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
-        void SetRelationshipFlag(Entity source, Entity target, int flagId, bool enabled, int reasonId, int typeId)
+        void SetRelationshipFlag(Entity source, Entity target, int flagId, bool enabled, int typeId)
         {
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
-        int CollectOutgoing(Entity source, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        RelationshipQueryResult CollectOutgoing(Entity source, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
         {
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
-        int CollectIncoming(Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        RelationshipQueryResult CollectIncoming(Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
         {
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
-        int CollectMutual(Entity first, Entity second, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        RelationshipQueryResult CollectMutual(Entity first, Entity second, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
         {
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
-        int CollectBetweenPair(Entity source, Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        RelationshipQueryResult CollectBetweenPair(Entity source, Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
         {
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
@@ -292,6 +543,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             throw new InvalidOperationException("Graph knowledge runtime is not available.");
         }
+
+        /// <summary>
+        /// Behavior-side order submission (issue #1536): the acting unit enqueues an assigned
+        /// order. Separate contract from the input-side command-intent buffer.
+        /// </summary>
+        void SubmitAssignedOrder(Entity actor, Entity target, int orderTypeId, int xCm, int yCm)
+        {
+            throw new InvalidOperationException("Graph order pipeline is not available.");
+        }
+
+        /// <summary>Publishes the acting unit's terminal outcome for its active order.</summary>
+        void CompleteActiveOrder(Entity actor)
+        {
+            throw new InvalidOperationException("Graph order pipeline is not available.");
+        }
+
         void ApplyEffectTemplate(Entity caster, Entity target, int templateId);
         void ApplyEffectTemplate(Entity caster, Entity target, int templateId, in EffectArgs args);
         void FanOutDispatchEffect(Entity source, Entity target, Entity targetContext, ReadOnlySpan<Entity> targets, int templateId, int payloadPresetId)
@@ -301,6 +568,73 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         void ModifyAttributeAdd(Entity caster, Entity target, int attributeId, float delta);
         void ModifyAttributeSet(Entity caster, Entity target, int attributeId, float value);
         void SendEvent(Entity caster, Entity target, int eventTagId, float magnitude);
+
+        // ── TriggerManager bridge (map-scoped event firing) ──
+
+        /// <summary>
+        /// Fires a TriggerManager event resolved from a config-key id. Resolves the
+        /// scope entity's map and fires map-scoped when one is present; otherwise falls
+        /// back to the global event bus. Optional bridge — requires a bound TriggerManager.
+        /// </summary>
+        void FireEventKey(Entity scope, int eventKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.TriggerBridgeUnavailable");
+        }
+
+        /// <summary>
+        /// Fires a schema-checked map-scoped trigger event with a structured payload: values
+        /// come from the StoreArg* staging table keyed by the event schema's payload keys;
+        /// TriggerManager.ValidateFirePayload backstops missing/mistyped parameters.
+        /// selfSource stamps MapTrigger.SourceEntity when the schema declares it (Entity.Null
+        /// for map-domain dispatch). Optional bridge — requires a bound TriggerManager.
+        /// </summary>
+        void FireMapEventPayload(int eventKeyId, MapId mapId, Entity selfSource, GraphEntryPayloadTable? stagedArgs)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.TriggerBridgeUnavailable");
+        }
+
+        /// <summary>
+        /// Fires a schema-checked Global-scope trigger event: delivery goes
+        /// through the TriggerManager global subscription table only. The origin map
+        /// (empty when unmapped) rides MapTrigger.SourceMapId as transport metadata.
+        /// Optional bridge — requires a bound TriggerManager.
+        /// </summary>
+        void FireGlobalEventPayload(int eventKeyId, MapId originMapId, GraphEntryPayloadTable? stagedArgs)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.TriggerBridgeUnavailable");
+        }
+
+        /// <summary>
+        /// Offers an activity by definition id to the scope host through
+        /// ActivityRuntimeService. Repeat/admission policy decides the outcome;
+        /// policy rejection lands in the presentation buffer, while an unknown
+        /// activity id fails closed with the key in the message. Optional
+        /// bridge — requires a bound ActivityRuntimeService.
+        /// </summary>
+        void OfferActivity(string activityId, Entity scopeHost)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.ActivityRuntimeUnavailable");
+        }
+
+        /// <summary>
+        /// Offers a task by definition id to the scope host through
+        /// TaskRuntimeService. Existing live instances are reused; unknown task ids
+        /// and invalid scope hosts fail closed. Optional bridge — requires a bound
+        /// TaskRuntimeService.
+        /// </summary>
+        void OfferTask(string taskId, Entity scopeHost)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.TaskRuntimeUnavailable");
+        }
+
+        /// <summary>
+        /// Registers an AwaitCallback waiter (Imm callback type) and parks the slice.
+        /// Completions resume through GraphCallbackContinuationSystem in registration order.
+        /// </summary>
+        void BeginAwaitCallback(string callbackType, MapId mapId, Entity scope, int resultBoolRegister)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.GraphCallbackUnavailable");
+        }
 
         // ── Entity lifecycle graph composition ──
         void BeginLifecycleTransaction()
@@ -346,6 +680,47 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             projection = default;
             return false;
         }
+
+        // ── Aimsource pure helpers (input/command chain aim graphs) ──
+
+        /// <summary>
+        /// Resolves a screen point against the authoritative ground (camera ray +
+        /// heightmap, bounded by the world size). False means the ray left the world.
+        /// A null seatId answers under the sole present binding; a named seat answers
+        /// under that seat's binding-local screen space.
+        /// </summary>
+        bool TryScreenPointToGround(float screenX, float screenY, string? seatId, out IntVector2 groundCm)
+        {
+            groundCm = default;
+            throw new InvalidOperationException("GAS.GRAPH.ERR.AimSourceUnavailable");
+        }
+
+        /// <summary>
+        /// Knowledge-gated pick of the best candidate under the screen point; candidates
+        /// are the explicit TargetList working set (no world scan). An empty seatId means
+        /// the sole present binding; a named seat answers under that seat's binding-local
+        /// screen space.
+        /// </summary>
+        Entity PickScreenPointEntity(ReadOnlySpan<Entity> candidates, int count, Entity owner, string? seatId, float screenX, float screenY, float radiusPixels)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.AimSourceUnavailable");
+        }
+
+        /// <summary>
+        /// In-place filter of an entity span down to the members whose projected bounds
+        /// intersect the screen rect; preserves candidate order (deterministic result).
+        /// A null seatId answers under the sole present binding; a named seat answers
+        /// under that seat's binding-local screen space.
+        /// </summary>
+        int FilterScreenRegionEntities(Span<Entity> entities, int count, in ScreenRect rect, string? seatId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.AimSourceUnavailable");
+        }
+
+        bool TryReadLivePointerScreen(out float screenX, out float screenY)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.AimSourceUnavailable");
+        }
     }
 
     /// <summary>
@@ -357,11 +732,43 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         int ResolveTag(string name);
         int ResolveAttribute(string name);
         int ResolveEffectTemplate(string name);
+        int ResolveOrderType(string name)
+        {
+            throw new InvalidOperationException(
+                $"Graph references order type '{name}', but no OrderTypeRegistry resolver is available.");
+        }
+        int ResolveAbility(string name)
+        {
+            throw new InvalidOperationException(
+                $"Graph references ability '{name}', but no ability resolver is available.");
+        }
+        int ResolveRngDistribution(string name)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.RngDistributionUnavailable");
+        }
+
+        int ResolveGraphLookupTable(string name)
+        {
+            throw new InvalidOperationException(
+                $"Graph references lookup table '{name}', but no GraphLookupTableRegistry resolver is available.");
+        }
+
+        int ResolveGraphLookupField(string name)
+        {
+            throw new InvalidOperationException(
+                $"Graph references lookup field '{name}', but no GraphLookupTableRegistry resolver is available.");
+        }
+
         int ResolveRelationshipType(string name);
         int ResolveRelationshipMetric(string name);
         int ResolveRelationshipFlag(string name);
-        int ResolveRelationshipReason(string name);
         int ResolveTargetDispatchPreset(string name);
         int ResolveEntityTemplate(string name);
+
+        int ResolveTextToken(string name)
+        {
+            throw new InvalidOperationException(
+                $"Graph references text token '{name}', but no PresentationTextCatalog resolver is available.");
+        }
     }
 }

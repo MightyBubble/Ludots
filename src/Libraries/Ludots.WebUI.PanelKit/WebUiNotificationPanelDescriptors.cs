@@ -3,7 +3,7 @@ namespace Ludots.WebUI.PanelKit;
 /// <summary>
 /// Stable ids for the reusable Notification panel (WPK-7).
 /// Composition only — gameplay message truth stays in NotificationRuntime / DataPlane producer.
-/// Independent of NarrativeFrontend, Quest, and showcase toast private state.
+/// Independent of NarrativeFrontend, Task, and showcase toast private state.
 /// </summary>
 public static class WebUiNotificationPanelDescriptors
 {

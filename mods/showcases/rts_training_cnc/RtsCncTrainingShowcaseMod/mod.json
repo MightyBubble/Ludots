@@ -2,7 +2,7 @@
   "name": "RtsCncTrainingShowcaseMod",
   "version": "1.0.0",
   "description": "Focused Command & Conquer style training showcase with progressive billing.",
-  "main": "bin/net8.0/RtsCncTrainingShowcaseMod.dll",
+  "main": "bin/net9.0/RtsCncTrainingShowcaseMod.dll",
   "priority": 120,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

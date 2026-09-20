@@ -1,0 +1,18 @@
+[
+  {
+    "id": "CapabilityStandard.EffectPresetTypeCode.HeatMark",
+    "components": ["DurationParams"],
+    "activePhases": ["OnApply", "OnPeriod"],
+    "allowedLifetimes": ["After"],
+    "defaultPhaseHandlers": {
+      "OnApply": {
+        "type": "builtin",
+        "id": "CapabilityStandardEffectPresetTypeCodeShowcaseMod.ApplyHeatMark"
+      },
+      "OnPeriod": {
+        "type": "builtin",
+        "id": "CapabilityStandardEffectPresetTypeCodeShowcaseMod.ApplyHeatMark"
+      }
+    }
+  }
+]

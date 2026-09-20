@@ -54,17 +54,43 @@ namespace Ludots.Core.Gameplay.GAS.Config
         {
             var ruleSet = default(TagRuleSet);
 
-            FillTagList(obj["requiredAll"], ref ruleSet.RequiredCount, ruleSet.RequiredTags, TagRuleSet.MAX_REQUIRED_TAGS, "requiredAll", id, path);
-            FillTagList(obj["blockedAny"], ref ruleSet.BlockedCount, ruleSet.BlockedTags, TagRuleSet.MAX_BLOCKED_TAGS, "blockedAny", id, path);
-            FillTagList(obj["attached"], ref ruleSet.AttachedCount, ruleSet.AttachedTags, TagRuleSet.MAX_ATTACHED_TAGS, "attached", id, path);
-            FillTagList(obj["removed"], ref ruleSet.RemovedCount, ruleSet.RemovedTags, TagRuleSet.MAX_REMOVED_TAGS, "removed", id, path);
-            FillTagList(obj["disabledIfAny"], ref ruleSet.DisabledIfCount, ruleSet.DisabledIfTags, TagRuleSet.MAX_DISABLED_IF_TAGS, "disabledIfAny", id, path);
-            FillTagList(obj["removeIfAny"], ref ruleSet.RemoveIfCount, ruleSet.RemoveIfTags, TagRuleSet.MAX_REMOVE_IF_TAGS, "removeIfAny", id, path);
+            FillTagList(obj["requiredAll"], ref ruleSet.RequiredCount, ruleSet.RequiredTags, TagRuleSet.MAX_REQUIRED_TAGS, "requiredAll", id, path, allowRegister: true);
+            FillTagList(obj["blockedAny"], ref ruleSet.BlockedCount, ruleSet.BlockedTags, TagRuleSet.MAX_BLOCKED_TAGS, "blockedAny", id, path, allowRegister: true);
+            FillTagList(obj["attached"], ref ruleSet.AttachedCount, ruleSet.AttachedTags, TagRuleSet.MAX_ATTACHED_TAGS, "attached", id, path, allowRegister: true);
+            FillTagList(obj["removed"], ref ruleSet.RemovedCount, ruleSet.RemovedTags, TagRuleSet.MAX_REMOVED_TAGS, "removed", id, path, allowRegister: true);
+            FillTagList(obj["disabledIfAny"], ref ruleSet.DisabledIfCount, ruleSet.DisabledIfTags, TagRuleSet.MAX_DISABLED_IF_TAGS, "disabledIfAny", id, path, allowRegister: true);
+            FillTagList(obj["removeIfAny"], ref ruleSet.RemoveIfCount, ruleSet.RemoveIfTags, TagRuleSet.MAX_REMOVE_IF_TAGS, "removeIfAny", id, path, allowRegister: true);
 
             return ruleSet;
         }
 
-        private static unsafe void FillTagList(JsonNode node, ref int count, int* dst, int max, string field, string id, string path)
+        /// <summary>
+        /// Hot-apply compile: resolves referenced tags by GetId only (no Register / no new identities).
+        /// </summary>
+        public static unsafe TagRuleSet CompileRuleSetForHotApply(JsonObject obj, string id, string path)
+        {
+            if (obj == null) throw new ArgumentNullException(nameof(obj));
+            var ruleSet = default(TagRuleSet);
+
+            FillTagList(obj["requiredAll"], ref ruleSet.RequiredCount, ruleSet.RequiredTags, TagRuleSet.MAX_REQUIRED_TAGS, "requiredAll", id, path, allowRegister: false);
+            FillTagList(obj["blockedAny"], ref ruleSet.BlockedCount, ruleSet.BlockedTags, TagRuleSet.MAX_BLOCKED_TAGS, "blockedAny", id, path, allowRegister: false);
+            FillTagList(obj["attached"], ref ruleSet.AttachedCount, ruleSet.AttachedTags, TagRuleSet.MAX_ATTACHED_TAGS, "attached", id, path, allowRegister: false);
+            FillTagList(obj["removed"], ref ruleSet.RemovedCount, ruleSet.RemovedTags, TagRuleSet.MAX_REMOVED_TAGS, "removed", id, path, allowRegister: false);
+            FillTagList(obj["disabledIfAny"], ref ruleSet.DisabledIfCount, ruleSet.DisabledIfTags, TagRuleSet.MAX_DISABLED_IF_TAGS, "disabledIfAny", id, path, allowRegister: false);
+            FillTagList(obj["removeIfAny"], ref ruleSet.RemoveIfCount, ruleSet.RemoveIfTags, TagRuleSet.MAX_REMOVE_IF_TAGS, "removeIfAny", id, path, allowRegister: false);
+
+            return ruleSet;
+        }
+
+        private static unsafe void FillTagList(
+            JsonNode node,
+            ref int count,
+            int* dst,
+            int max,
+            string field,
+            string id,
+            string path,
+            bool allowRegister)
         {
             count = 0;
             if (node is null) return;
@@ -82,8 +108,15 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
                 string tag = arr[i]?.GetValue<string>();
                 if (string.IsNullOrWhiteSpace(tag)) continue;
-                int tagId = TagRegistry.Register(tag);
-                if (tagId <= 0) throw new InvalidOperationException($"TagRuleSet '{id}' field '{field}' contains invalid tag '{tag}' in '{path}'.");
+                int tagId = allowRegister ? TagRegistry.Register(tag) : TagRegistry.GetId(tag);
+                if (tagId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        allowRegister
+                            ? $"TagRuleSet '{id}' field '{field}' contains invalid tag '{tag}' in '{path}'."
+                            : $"TagRuleSet '{id}' field '{field}' references unknown tag '{tag}' in '{path}' (hot-apply cannot register new tag identities).");
+                }
+
                 dst[count++] = tagId;
             }
         }

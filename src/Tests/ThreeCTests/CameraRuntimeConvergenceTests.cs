@@ -17,6 +17,7 @@ using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
+using Ludots.Tests.TestCommon;
 
 namespace Ludots.Tests.ThreeC
 {
@@ -62,7 +63,7 @@ namespace Ludots.Tests.ThreeC
             }
         }
 
-        private sealed class TestHeightmap : IVisualHeightmap
+        private sealed class TestHeightmap : IContinuousHeightmap
         {
             private readonly float _heightCm;
             private readonly bool _hit;
@@ -128,7 +129,7 @@ namespace Ludots.Tests.ThreeC
             }
         }
 
-        private sealed class PlaneRaycastHeightmap : IVisualHeightmap
+        private sealed class PlaneRaycastHeightmap : IContinuousHeightmap
         {
             public int RaycastCount { get; private set; }
 
@@ -230,7 +231,7 @@ namespace Ludots.Tests.ThreeC
                 Pitch = 15f,
                 Yaw = 180f,
                 FollowMode = CameraFollowMode.AlwaysFollow,
-                FollowTargetKind = CameraFollowTargetKind.LocalPlayer
+                FollowTargetKind = CameraFollowTargetKind.SolePossessedRep
             });
             var target = new StaticFollowTarget();
 
@@ -256,7 +257,7 @@ namespace Ludots.Tests.ThreeC
             var collections = new EntityCollectionStore(new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
 
             Entity selector = world.Create();
-            globals[CoreServiceKeys.LocalPlayerEntity.Name] = selector;
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, selector, 1, "seat.0");
             globals[CoreServiceKeys.EntityCollectionStore.Name] = collections;
 
             Entity light = world.Create(new WorldPositionCm { Value = new Ludots.Core.Mathematics.FixedPoint.Fix64Vec2(1000, 2000) });
@@ -497,7 +498,7 @@ namespace Ludots.Tests.ThreeC
                     Yaw = 180f,
                     FovYDeg = 60f,
                     FollowMode = CameraFollowMode.AlwaysFollow,
-                    FollowTargetKind = CameraFollowTargetKind.LocalPlayer
+                    FollowTargetKind = CameraFollowTargetKind.SolePossessedRep
                 },
                 new VirtualCameraDefinition
                 {
@@ -597,7 +598,7 @@ namespace Ludots.Tests.ThreeC
         }
 
         [Test]
-        public void CameraManager_VirtualCameraTargetHeight_SamplesVisualHeightmapAndFeedsRenderTarget()
+        public void CameraManager_VirtualCameraTargetHeight_SamplesContinuousHeightmapAndFeedsRenderTarget()
         {
             var manager = CreateManagerWithRegistry(new VirtualCameraDefinition
             {
@@ -606,7 +607,7 @@ namespace Ludots.Tests.ThreeC
                 RigKind = CameraRigKind.Orbit,
                 TargetSource = VirtualCameraTargetSource.Fixed,
                 FixedTargetCm = new Vector2(2000f, 1000f),
-                TargetHeightMode = VirtualCameraTargetHeightMode.VisualHeightmap,
+                TargetHeightMode = VirtualCameraTargetHeightMode.ContinuousHeightmap,
                 TargetHeightOffsetCm = 125f,
                 DistanceCm = 5000f,
                 Pitch = 45f,
@@ -617,7 +618,7 @@ namespace Ludots.Tests.ThreeC
             manager.ConfigureRuntime(
                 new CameraBehaviorInputState(),
                 new StubViewController(),
-                visualHeightmapProvider: () => new TestHeightmap(300f));
+                continuousHeightmapProvider: () => new TestHeightmap(300f));
             manager.ActivateVirtualCamera("HeightmapCamera", blendDurationSeconds: 0f);
             manager.Update(0.016f);
 
@@ -639,7 +640,7 @@ namespace Ludots.Tests.ThreeC
                     RigKind = CameraRigKind.Orbit,
                     TargetSource = VirtualCameraTargetSource.Fixed,
                     FixedTargetCm = Vector2.Zero,
-                    TargetHeightMode = VirtualCameraTargetHeightMode.VisualHeightmap,
+                    TargetHeightMode = VirtualCameraTargetHeightMode.ContinuousHeightmap,
                     DistanceCm = 3000f,
                     Pitch = 40f,
                     Yaw = 180f,
@@ -652,7 +653,7 @@ namespace Ludots.Tests.ThreeC
                     RigKind = CameraRigKind.TopDown,
                     TargetSource = VirtualCameraTargetSource.Fixed,
                     FixedTargetCm = new Vector2(2000f, 1000f),
-                    TargetHeightMode = VirtualCameraTargetHeightMode.VisualHeightmap,
+                    TargetHeightMode = VirtualCameraTargetHeightMode.ContinuousHeightmap,
                     DistanceCm = 9000f,
                     Pitch = 70f,
                     Yaw = 270f,
@@ -665,7 +666,7 @@ namespace Ludots.Tests.ThreeC
             manager.ConfigureRuntime(
                 new CameraBehaviorInputState(),
                 new StubViewController(),
-                visualHeightmapProvider: () => new TestHeightmap(300f));
+                continuousHeightmapProvider: () => new TestHeightmap(300f));
             manager.ActivateVirtualCamera("BaseHeight", 0f);
             manager.Update(0.016f);
 
@@ -697,7 +698,7 @@ namespace Ludots.Tests.ThreeC
                 Id = "InputHeight",
                 Priority = 0,
                 RigKind = CameraRigKind.Orbit,
-                TargetHeightMode = VirtualCameraTargetHeightMode.VisualHeightmap,
+                TargetHeightMode = VirtualCameraTargetHeightMode.ContinuousHeightmap,
                 DistanceCm = 5000f,
                 Pitch = 45f,
                 Yaw = 180f,
@@ -707,7 +708,7 @@ namespace Ludots.Tests.ThreeC
             manager.ConfigureRuntime(
                 new CameraBehaviorInputState(),
                 new StubViewController(),
-                visualHeightmapProvider: () => new TestHeightmap(300f));
+                continuousHeightmapProvider: () => new TestHeightmap(300f));
             manager.ActivateVirtualCamera("InputHeight", blendDurationSeconds: 0f);
             manager.Update(0.016f);
 
@@ -723,7 +724,7 @@ namespace Ludots.Tests.ThreeC
         }
 
         [Test]
-        public void CameraManager_VisualHeightmapConfine_UsesLookFootprintAfterDragRotate()
+        public void CameraManager_ContinuousHeightmapConfine_UsesLookFootprintAfterDragRotate()
         {
             var behaviorInput = new CameraBehaviorInputState();
             var heightmap = new PlaneRaycastHeightmap();
@@ -734,7 +735,7 @@ namespace Ludots.Tests.ThreeC
                 RigKind = CameraRigKind.Orbit,
                 TargetSource = VirtualCameraTargetSource.Fixed,
                 FixedTargetCm = new Vector2(2500f, 1200f),
-                TargetHeightMode = VirtualCameraTargetHeightMode.VisualHeightmap,
+                TargetHeightMode = VirtualCameraTargetHeightMode.ContinuousHeightmap,
                 DistanceCm = 1000f,
                 Pitch = 60f,
                 Yaw = 180f,
@@ -753,7 +754,7 @@ namespace Ludots.Tests.ThreeC
                 behaviorInput,
                 new StubViewController(),
                 targetBoundsProvider: () => new WorldAabbCm(0, 0, 5000, 2000),
-                visualHeightmapProvider: () => heightmap);
+                continuousHeightmapProvider: () => heightmap);
             manager.ActivateVirtualCamera("VisualLookClamp", blendDurationSeconds: 0f);
             manager.Update(0.016f);
 
@@ -771,11 +772,11 @@ namespace Ludots.Tests.ThreeC
         }
 
         [Test]
-        public void CameraManager_VisualHeightmapConfine_ToleratesViewportCornersThatMissBoundedHeightmap()
+        public void CameraManager_ContinuousHeightmapConfine_ToleratesViewportCornersThatMissBoundedHeightmap()
         {
             var behaviorInput = new CameraBehaviorInputState();
-            var heightmap = new VisualHeightmapRuntime(
-                VisualHeightmapAsset.CreateSingleLayer(
+            var heightmap = new ContinuousHeightmapRuntime(
+                ContinuousHeightmapAsset.CreateSingleLayer(
                     new WorldAabbCm(0, 0, 10000, 10000),
                     sampleColumns: 33,
                     sampleRows: 33,
@@ -787,7 +788,7 @@ namespace Ludots.Tests.ThreeC
                 RigKind = CameraRigKind.Orbit,
                 TargetSource = VirtualCameraTargetSource.Fixed,
                 FixedTargetCm = new Vector2(5000f, 5000f),
-                TargetHeightMode = VirtualCameraTargetHeightMode.VisualHeightmap,
+                TargetHeightMode = VirtualCameraTargetHeightMode.ContinuousHeightmap,
                 TargetHeightLayerIndex = 0,
                 TargetHeightOffsetCm = 100f,
                 DistanceCm = 3000f,
@@ -809,7 +810,7 @@ namespace Ludots.Tests.ThreeC
                 behaviorInput,
                 new StubViewController(),
                 targetBoundsProvider: () => new WorldAabbCm(0, 0, 10000, 10000),
-                visualHeightmapProvider: () => heightmap);
+                continuousHeightmapProvider: () => heightmap);
             manager.ActivateVirtualCamera("BoundedHeightmapLookClamp", blendDurationSeconds: 0f);
             manager.Update(0.016f);
 
@@ -881,12 +882,12 @@ namespace Ludots.Tests.ThreeC
         }
 
         [Test]
-        public void CameraManager_VirtualCameraTargetHeight_ThrowsWhenVisualHeightmapMissingOrOutOfBounds()
+        public void CameraManager_VirtualCameraTargetHeight_ThrowsWhenContinuousHeightmapMissingOrOutOfBounds()
         {
             var missing = CreateManagerWithRegistry(new VirtualCameraDefinition
             {
                 Id = "MissingHeightmapCamera",
-                TargetHeightMode = VirtualCameraTargetHeightMode.VisualHeightmap,
+                TargetHeightMode = VirtualCameraTargetHeightMode.ContinuousHeightmap,
                 DistanceCm = 5000f
             });
             missing.ConfigureRuntime(
@@ -895,22 +896,22 @@ namespace Ludots.Tests.ThreeC
             missing.ActivateVirtualCamera("MissingHeightmapCamera", blendDurationSeconds: 0f);
             Assert.That(
                 () => missing.Update(0.016f),
-                Throws.InvalidOperationException.With.Message.Contains("requires CoreServiceKeys.VisualHeightmap"));
+                Throws.InvalidOperationException.With.Message.Contains("requires CoreServiceKeys.ContinuousHeightmap"));
 
             var miss = CreateManagerWithRegistry(new VirtualCameraDefinition
             {
                 Id = "MissHeightmapCamera",
-                TargetHeightMode = VirtualCameraTargetHeightMode.VisualHeightmap,
+                TargetHeightMode = VirtualCameraTargetHeightMode.ContinuousHeightmap,
                 DistanceCm = 5000f
             });
             miss.ConfigureRuntime(
                 new CameraBehaviorInputState(),
                 new StubViewController(),
-                visualHeightmapProvider: () => new TestHeightmap(0f, hit: false));
+                continuousHeightmapProvider: () => new TestHeightmap(0f, hit: false));
             miss.ActivateVirtualCamera("MissHeightmapCamera", blendDurationSeconds: 0f);
             Assert.That(
                 () => miss.Update(0.016f),
-                Throws.InvalidOperationException.With.Message.Contains("could not sample VisualHeightmap target height"));
+                Throws.InvalidOperationException.With.Message.Contains("could not sample ContinuousHeightmap target height"));
         }
 
         [Test]
@@ -1084,6 +1085,68 @@ namespace Ludots.Tests.ThreeC
             Assert.That(clipPlanes.NearMeters, Is.EqualTo(CameraViewportUtil.DefaultNearPlaneMeters).Within(0.0001f));
             Assert.That(clipPlanes.FarMeters, Is.GreaterThan(Vector3.Distance(renderState.Position, renderState.Target) * 4f));
             Assert.That(clipPlanes.FarMeters, Is.GreaterThan(CameraViewportUtil.DefaultFarPlaneMeters));
+        }
+
+        [Test]
+        public void CameraViewportUtil_ScreenToRay_LargeWorldCoordinates_PreservesOriginSpaceDirections()
+        {
+            var resolution = new Vector2(1526, 892);
+            float aspect = 1526f / 892f;
+            var nearCamera = new CameraRenderState3D(
+                new Vector3(0.42f, 197.33f, 536.42f),
+                new Vector3(0.42f, 141.04f, 568.92f),
+                Vector3.UnitY, 50f);
+            // Same rig translated deep into a 3456 km world: unprojection must not
+            // lose the direction to float cancellation in the world translation.
+            var largeCamera = new CameraRenderState3D(
+                nearCamera.Position + new Vector3(846f, 0f, 12000f),
+                nearCamera.Target + new Vector3(846f, 0f, 12000f),
+                Vector3.UnitY, 50f);
+
+            for (int y = 150; y < 750; y += 30)
+            {
+                for (int x = 250; x < 1250; x += 30)
+                {
+                    var pixel = new Vector2(x, y);
+                    Vector3 nearDirection = CameraViewportUtil.ScreenToRay(pixel, in nearCamera, resolution, aspect).Direction;
+                    Vector3 largeDirection = CameraViewportUtil.ScreenToRay(pixel, in largeCamera, resolution, aspect).Direction;
+                    Assert.That(Vector3.Distance(nearDirection, largeDirection), Is.LessThan(2e-4f),
+                        $"screen=({x},{y}) direction must be translation invariant");
+                }
+            }
+        }
+
+        [Test]
+        public void CameraViewportUtil_ScreenToRay_LargeWorldCoordinates_AdjacentPixelsStaySeparable()
+        {
+            var resolution = new Vector2(1526, 892);
+            float aspect = 1526f / 892f;
+            var nearCamera = new CameraRenderState3D(
+                new Vector3(0.42f, 197.33f, 536.42f),
+                new Vector3(0.42f, 141.04f, 568.92f),
+                Vector3.UnitY, 50f);
+            var largeCamera = new CameraRenderState3D(
+                nearCamera.Position + new Vector3(846f, 0f, 12000f),
+                nearCamera.Target + new Vector3(846f, 0f, 12000f),
+                Vector3.UnitY, 50f);
+
+            for (int y = 150; y < 750; y += 30)
+            {
+                for (int x = 250; x < 1250; x += 30)
+                {
+                    var pixel = new Vector2(x, y);
+                    // The 1px screen-edge wedge is what region broadphase planes are
+                    // built from; translation noise must not drown the wedge signal.
+                    Vector3 nearSide0 = CameraViewportUtil.ScreenToRay(pixel, in nearCamera, resolution, aspect).Direction;
+                    Vector3 nearSide1 = CameraViewportUtil.ScreenToRay(pixel + Vector2.UnitX, in nearCamera, resolution, aspect).Direction;
+                    Vector3 largeSide0 = CameraViewportUtil.ScreenToRay(pixel, in largeCamera, resolution, aspect).Direction;
+                    Vector3 largeSide1 = CameraViewportUtil.ScreenToRay(pixel + Vector2.UnitX, in largeCamera, resolution, aspect).Direction;
+                    float nearWedge = Vector3.Cross(nearSide0, nearSide1).Length();
+                    float largeWedge = Vector3.Cross(largeSide0, largeSide1).Length();
+                    Assert.That(largeWedge, Is.GreaterThan(nearWedge * 0.5f).And.LessThan(nearWedge * 2f),
+                        $"screen=({x},{y}) adjacent-pixel wedge must survive translation");
+                }
+            }
         }
 
         private static CameraManager CreateManagerWithRegistry(params VirtualCameraDefinition[] definitions)

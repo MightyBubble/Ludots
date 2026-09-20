@@ -1,0 +1,13 @@
+{
+  "op": "AggSumAttribute",
+  "driver": "query",
+  "title": "全场生命合计",
+  "beat": "十三根血条一根根收进台面，台面亮出总数。",
+  "detailTemplate": "{count}条血一起上台，合计{sum}。",
+  "assertDetailContains": [
+    "合计"
+  ],
+  "featuredNodeId": "sum",
+  "graphKind": "Query",
+  "field": "query"
+}

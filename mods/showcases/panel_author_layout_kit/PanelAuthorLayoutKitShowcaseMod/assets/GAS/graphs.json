@@ -1,0 +1,373 @@
+[
+  {
+    "id": "Graph.AuthorLayoutKit.Effects.Seed",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      { "id": "target", "op": "LoadExplicitTarget" },
+      { "id": "apply", "op": "ApplyEffectTemplate", "effectTemplate": "祝福" },
+      { "id": "next", "op": "ApplyEffectTemplate", "effectTemplate": "Effect.Showcase.AuthorLayoutKit.Seed.Step2" }
+    ],
+    "controlEdges": [
+      { "from": "target", "fromPort": "next", "to": "apply" },
+      { "from": "apply", "fromPort": "next", "to": "next" }
+    ],
+    "valueEdges": [
+      { "from": "target", "fromPort": "value", "to": "apply", "toPort": "target" },
+      { "from": "target", "fromPort": "value", "to": "next", "toPort": "target" }
+    ]
+  },
+  {
+    "id": "Graph.AuthorLayoutKit.Effects.Seed.Step2",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      { "id": "target", "op": "LoadExplicitTarget" },
+      { "id": "apply", "op": "ApplyEffectTemplate", "effectTemplate": "祝福" },
+      { "id": "next", "op": "ApplyEffectTemplate", "effectTemplate": "Effect.Showcase.AuthorLayoutKit.Seed.Step3" }
+    ],
+    "controlEdges": [
+      { "from": "target", "fromPort": "next", "to": "apply" },
+      { "from": "apply", "fromPort": "next", "to": "next" }
+    ],
+    "valueEdges": [
+      { "from": "target", "fromPort": "value", "to": "apply", "toPort": "target" },
+      { "from": "target", "fromPort": "value", "to": "next", "toPort": "target" }
+    ]
+  },
+  {
+    "id": "Graph.AuthorLayoutKit.Effects.Seed.Step3",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      { "id": "target", "op": "LoadExplicitTarget" },
+      { "id": "apply", "op": "ApplyEffectTemplate", "effectTemplate": "祝福" },
+      { "id": "next", "op": "ApplyEffectTemplate", "effectTemplate": "Effect.Showcase.AuthorLayoutKit.Seed.Step4" }
+    ],
+    "controlEdges": [
+      { "from": "target", "fromPort": "next", "to": "apply" },
+      { "from": "apply", "fromPort": "next", "to": "next" }
+    ],
+    "valueEdges": [
+      { "from": "target", "fromPort": "value", "to": "apply", "toPort": "target" },
+      { "from": "target", "fromPort": "value", "to": "next", "toPort": "target" }
+    ]
+  },
+  {
+    "id": "Graph.AuthorLayoutKit.Effects.Seed.Step4",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      { "id": "target", "op": "LoadExplicitTarget" },
+      { "id": "apply", "op": "ApplyEffectTemplate", "effectTemplate": "迅捷" },
+      { "id": "next", "op": "ApplyEffectTemplate", "effectTemplate": "Effect.Showcase.AuthorLayoutKit.Seed.Step5" }
+    ],
+    "controlEdges": [
+      { "from": "target", "fromPort": "next", "to": "apply" },
+      { "from": "apply", "fromPort": "next", "to": "next" }
+    ],
+    "valueEdges": [
+      { "from": "target", "fromPort": "value", "to": "apply", "toPort": "target" },
+      { "from": "target", "fromPort": "value", "to": "next", "toPort": "target" }
+    ]
+  },
+  {
+    "id": "Graph.AuthorLayoutKit.Effects.Seed.Step5",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      { "id": "target", "op": "LoadExplicitTarget" },
+      { "id": "apply", "op": "ApplyEffectTemplate", "effectTemplate": "护盾" },
+      { "id": "next", "op": "ApplyEffectTemplate", "effectTemplate": "Effect.Showcase.AuthorLayoutKit.Seed.Step6" }
+    ],
+    "controlEdges": [
+      { "from": "target", "fromPort": "next", "to": "apply" },
+      { "from": "apply", "fromPort": "next", "to": "next" }
+    ],
+    "valueEdges": [
+      { "from": "target", "fromPort": "value", "to": "apply", "toPort": "target" },
+      { "from": "target", "fromPort": "value", "to": "next", "toPort": "target" }
+    ]
+  },
+  {
+    "id": "Graph.AuthorLayoutKit.Effects.Seed.Step6",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      { "id": "target", "op": "LoadExplicitTarget" },
+      { "id": "apply", "op": "ApplyEffectTemplate", "effectTemplate": "护盾" },
+      { "id": "next", "op": "ApplyEffectTemplate", "effectTemplate": "Effect.Showcase.AuthorLayoutKit.Seed.Step7" }
+    ],
+    "controlEdges": [
+      { "from": "target", "fromPort": "next", "to": "apply" },
+      { "from": "apply", "fromPort": "next", "to": "next" }
+    ],
+    "valueEdges": [
+      { "from": "target", "fromPort": "value", "to": "apply", "toPort": "target" },
+      { "from": "target", "fromPort": "value", "to": "next", "toPort": "target" }
+    ]
+  },
+  {
+    "id": "Graph.AuthorLayoutKit.Effects.Seed.Step7",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      { "id": "target", "op": "LoadExplicitTarget" },
+      { "id": "apply", "op": "ApplyEffectTemplate", "effectTemplate": "洞察" }
+    ],
+    "controlEdges": [
+      { "from": "target", "fromPort": "next", "to": "apply" }
+    ],
+    "valueEdges": [
+      { "from": "target", "fromPort": "value", "to": "apply", "toPort": "target" }
+    ]
+  },
+  {
+    "id": "Graph.AuthorLayoutKit.Panels.Open",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "scope",
+        "once": true
+      }
+    ],
+    "nodes": [
+      {
+        "id": "scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "c1",
+        "op": "CreatePanel",
+        "panelType": "panel.kit.effect.list",
+        "panelAnchor": "screen.topLeft"
+      },
+      {
+        "id": "s1",
+        "op": "ShowPanel",
+        "panelType": "panel.kit.effect.list"
+      },
+      {
+        "id": "c2",
+        "op": "CreatePanel",
+        "panelType": "panel.kit.effect.grid",
+        "panelAnchor": "screen.topCenter"
+      },
+      {
+        "id": "s2",
+        "op": "ShowPanel",
+        "panelType": "panel.kit.effect.grid"
+      },
+      {
+        "id": "c3",
+        "op": "CreatePanel",
+        "panelType": "panel.kit.effect.column",
+        "panelAnchor": "screen.topRight"
+      },
+      {
+        "id": "s3",
+        "op": "ShowPanel",
+        "panelType": "panel.kit.effect.column"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "scope",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "s1"
+      },
+      {
+        "from": "s1",
+        "fromPort": "next",
+        "to": "c2"
+      },
+      {
+        "from": "c2",
+        "fromPort": "next",
+        "to": "s2"
+      },
+      {
+        "from": "s2",
+        "fromPort": "next",
+        "to": "c3"
+      },
+      {
+        "from": "c3",
+        "fromPort": "next",
+        "to": "s3"
+      },
+      {
+        "from": "s3",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "c1",
+        "toPort": "source"
+      },
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "c2",
+        "toPort": "source"
+      },
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "c3",
+        "toPort": "source"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.AuthorLayoutKit.Effect.List",
+    "kind": "Query",
+    "entry": "caster",
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "effects",
+        "op": "QueryCollectActiveEffects"
+      },
+      {
+        "id": "rowCount",
+        "op": "AggCount"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "effects"
+      },
+      {
+        "from": "effects",
+        "fromPort": "next",
+        "to": "rowCount"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "effects",
+        "toPort": "source"
+      },
+      {
+        "from": "effects",
+        "fromPort": "list",
+        "to": "rowCount",
+        "toPort": "list"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "effects",
+        "destination": "EntityCollection",
+        "type": "TargetList",
+        "collectionKey": "kit.effect.active",
+        "role": "Display",
+        "title": "Active Effects",
+        "summary": "Author kit effect bag for list/grid/column presents."
+      },
+      {
+        "id": "rowCount",
+        "destination": "Summary",
+        "type": "Int",
+        "source": "rowCount",
+        "key": "kit.effect.rowCount"
+      }
+    ]
+  },
+  {
+    "id": "Graph.AuthorLayoutKit.Effect.Chip",
+    "kind": "Query",
+    "entry": "remaining",
+    "nodes": [
+      {
+        "id": "remaining",
+        "op": "LoadEffectTiming",
+        "attribute": "RemainingTicks"
+      },
+      {
+        "id": "total",
+        "op": "LoadEffectTiming",
+        "attribute": "TotalTicks"
+      },
+      {
+        "id": "stacks",
+        "op": "LoadEffectStack"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "remaining",
+        "fromPort": "next",
+        "to": "total"
+      },
+      {
+        "from": "total",
+        "fromPort": "next",
+        "to": "stacks"
+      }
+    ],
+    "valueEdges": [],
+    "outputs": [
+      {
+        "id": "remaining",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "remaining",
+        "key": "kit.effect.remaining"
+      },
+      {
+        "id": "total",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "total",
+        "key": "kit.effect.total"
+      },
+      {
+        "id": "stacks",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "stacks",
+        "key": "kit.effect.stacks"
+      }
+    ]
+  }
+]

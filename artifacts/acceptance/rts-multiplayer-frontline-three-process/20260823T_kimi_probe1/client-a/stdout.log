@@ -1,0 +1,216 @@
+[INF][Engine] Initializing with ConfigPipeline...
+[INF][Engine] Applying launcher-resolved mod plan: fingerprint=a85c40b5f9368bb16069af6231e60161b987b89c77bee7e474f6a7659d064507, schema=1, mods=8
+[INF][ModLoader] Resolved Mod Load Order (launcher graph):
+[INF][ModLoader] - LudotsCoreMod (P:-1000)
+[INF][ModLoader] - CoreInputMod (P:0)
+[INF][ModLoader] - EntityCommandPanelMod (P:130)
+[INF][ModLoader] - RtsDemoMod (P:0)
+[INF][ModLoader] - RtsShowcaseMod (P:0)
+[INF][ModLoader] - RtsMultiplayerFrontlineMod (P:0)
+[INF][ModLoader] - RtsMultiplayerFrontlineNetworkedMod (P:10)
+[INF][ModLoader] - RtsMultiplayerFrontlineThreeProcessAcceptanceMod (P:20)
+[INF][ModLoader] Loading DLL for LudotsCoreMod at C:\001_AI\LudotsProd_issue709\mods\LudotsCoreMod\bin\net8.0\LudotsCoreMod.dll
+[INF][ModLoader] Scanning 2 types in assembly...
+[INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+[INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+[INF][ModLoader] LudotsCoreMod OnLoad completed.
+[INF][ModLoader] Loaded LudotsCoreMod
+[INF][ModLoader] Loading DLL for CoreInputMod at C:\001_AI\LudotsProd_issue709\mods\CoreInputMod\bin\net8.0\CoreInputMod.dll
+[INF][ModLoader] Scanning 33 types in assembly...
+[INF][ModLoader] Instantiated entry for CoreInputMod. Calling OnLoad...
+[INF][Mod.CoreInputMod] [CoreInputMod] Loaded - generic command-source and GAS input
+[INF][ModLoader] CoreInputMod OnLoad completed.
+[INF][ModLoader] Loaded CoreInputMod
+[INF][ModLoader] Loading DLL for EntityCommandPanelMod at C:\001_AI\LudotsProd_issue709\mods\EntityCommandPanelMod\bin\net8.0\EntityCommandPanelMod.dll
+[INF][ModLoader] Scanning 27 types in assembly...
+[INF][ModLoader] Instantiated entry for EntityCommandPanelMod. Calling OnLoad...
+[INF][Mod.EntityCommandPanelMod] [EntityCommandPanelMod] Loaded
+[INF][ModLoader] EntityCommandPanelMod OnLoad completed.
+[INF][ModLoader] Loaded EntityCommandPanelMod
+[INF][ModLoader] Loading DLL for RtsDemoMod at C:\001_AI\LudotsProd_issue709\mods\showcases\rts_demo\RtsDemoMod\bin\net8.0\RtsDemoMod.dll
+[INF][ModLoader] Scanning 29 types in assembly...
+[INF][ModLoader] Instantiated entry for RtsDemoMod. Calling OnLoad...
+[INF][Mod.RtsDemoMod] [RtsDemoMod] Loaded
+[INF][ModLoader] RtsDemoMod OnLoad completed.
+[INF][ModLoader] Loaded RtsDemoMod
+[INF][ModLoader] Loading DLL for RtsShowcaseMod at C:\001_AI\LudotsProd_issue709\mods\showcases\rts_showcase\RtsShowcaseMod\bin\net8.0\RtsShowcaseMod.dll
+[INF][ModLoader] Scanning 1 types in assembly...
+[INF][ModLoader] Instantiated entry for RtsShowcaseMod. Calling OnLoad...
+[INF][Mod.RtsShowcaseMod] [RtsShowcaseMod] Loaded ¡ª RTS Showcase with SC2/RA2/War3 maps
+[INF][ModLoader] RtsShowcaseMod OnLoad completed.
+[INF][ModLoader] Loaded RtsShowcaseMod
+[INF][ModLoader] Loading DLL for RtsMultiplayerFrontlineMod at C:\001_AI\LudotsProd_issue709\mods\showcases\rts_multiplayer_frontline\RtsMultiplayerFrontlineMod\bin\net8.0\RtsMultiplayerFrontlineMod.dll
+[INF][ModLoader] Scanning 64 types in assembly...
+[INF][ModLoader] Instantiated entry for RtsMultiplayerFrontlineMod. Calling OnLoad...
+[INF][Mod.RtsMultiplayerFrontlineMod] [RtsMultiplayerFrontlineMod] Loaded
+[INF][ModLoader] RtsMultiplayerFrontlineMod OnLoad completed.
+[INF][ModLoader] Loaded RtsMultiplayerFrontlineMod
+[INF][ModLoader] Loading DLL for RtsMultiplayerFrontlineNetworkedMod at C:\001_AI\LudotsProd_issue709\mods\showcases\rts_multiplayer_frontline\RtsMultiplayerFrontlineNetworkedMod\bin\net8.0\RtsMultiplayerFrontlineNetworkedMod.dll
+[INF][ModLoader] Scanning 1 types in assembly...
+[INF][ModLoader] Instantiated entry for RtsMultiplayerFrontlineNetworkedMod. Calling OnLoad...
+[INF][Mod.RtsMultiplayerFrontlineNetworkedMod] [RtsMultiplayerFrontlineNetworkedMod] Network profile loaded
+[INF][ModLoader] RtsMultiplayerFrontlineNetworkedMod OnLoad completed.
+[INF][ModLoader] Loaded RtsMultiplayerFrontlineNetworkedMod
+[INF][ModLoader] Loading DLL for RtsMultiplayerFrontlineThreeProcessAcceptanceMod at C:\001_AI\LudotsProd_issue709\mods\fixtures\rts_multiplayer_frontline_three_process\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\bin\net8.0\RtsMultiplayerFrontlineThreeProcessAcceptanceMod.dll
+[INF][ModLoader] Scanning 40 types in assembly...
+[INF][ModLoader] Instantiated entry for RtsMultiplayerFrontlineThreeProcessAcceptanceMod. Calling OnLoad...
+[INF][Mod.RtsMultiplayerFrontlineThreeProcessAcceptanceMod] [RtsMultiplayerFrontlineThreeProcessAcceptanceMod] Player-path acceptance driver loaded
+[INF][ModLoader] RtsMultiplayerFrontlineThreeProcessAcceptanceMod OnLoad completed.
+[INF][ModLoader] Loaded RtsMultiplayerFrontlineThreeProcessAcceptanceMod
+[INF][Config] Merged fragment from: Core:game.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json
+[INF][Config] Merged fragment from: RtsDemoMod:assets/game.json
+[INF][Config] Merged fragment from: RtsShowcaseMod:assets/game.json
+[INF][Config] Merged fragment from: RtsMultiplayerFrontlineMod:assets/game.json
+[INF][Config] Merged fragment from: RtsMultiplayerFrontlineNetworkedMod:assets/game.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: RtsMultiplayerFrontlineMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json
+[INF][Engine] Merged GameConfig: StartupMapId=rts_duel_v1, DefaultCoreMod=LudotsCoreMod
+[INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3
+[INF][Engine] Initializing JobScheduler...
+[INF][Config] Loading DataRegistry<EntityTemplate> from Entities/templates.json...
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json
+[INF][Config] Merged fragment from: RtsDemoMod:assets/Entities/templates.json
+[INF][Config] Merged fragment from: RtsShowcaseMod:assets/Entities/templates.json
+[INF][Config] Merged fragment from: RtsMultiplayerFrontlineMod:assets/Entities/templates.json
+[INF][Config] Loaded 28 DataRegistry<EntityTemplate> items.
+[INF][Engine] Initializing Core GAS Systems...
+[INF][Config] Merged fragment from: Core:Engine/clock.json
+[INF][Config] Merged fragment from: RtsMultiplayerFrontlineMod:assets/Engine/clock.json
+[INF][Config] Merged fragment from: Core:Relationships/catalog.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json
+[INF][Config] Merged fragment from: RtsDemoMod:assets/Relationships/catalog.json
+[INF][Config] Merged fragment from: RtsShowcaseMod:assets/Relationships/catalog.json
+[INF][Config] Merged fragment from: RtsMultiplayerFrontlineMod:assets/Relationships/catalog.json
+[INF][Config] Merged fragment from: Core:Relationships/control_profiles.json
+[INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json
+[INF][Config] Merged fragment from: Core:GAS/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/solver.json
+[INF][Config] Merged fragment from: Core:Physics2D/kinematic.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json
+[INF][Config] Merged fragment from: Core:Vision/fog_layers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json
+[INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json
+[INF][Config] Merged fragment from: Core:GAS/graphs.json
+[INF][Config] Merged fragment from: Core:GAS/preset_types.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Progression/scopes.json
+[INF][Config] Merged fragment from: RtsMultiplayerFrontlineMod:assets/Progression/scopes.json
+[INF][Config] Merged fragment from: Core:Progression/progressions.json
+[INF][Config] Merged fragment from: Core:Progression/requirements.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: RtsDemoMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: RtsMultiplayerFrontlineMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: Core:GAS/effects.json
+[INF][Config] Merged fragment from: RtsDemoMod:assets/GAS/effects.json
+[INF][Config] Merged fragment from: RtsMultiplayerFrontlineMod:assets/GAS/effects.json
+[INF][Config] Merged fragment from: RtsDemoMod:assets/GAS/abilities.json
+[INF][Config] Merged fragment from: RtsMultiplayerFrontlineMod:assets/GAS/abilities.json
+[INF][Config] Merged fragment from: RtsDemoMod:assets/GAS/ability_form_sets.json
+[INF][Config] Merged fragment from: RtsDemoMod:assets/GAS/tag_rules.json
+[INF][Config] Merged fragment from: Core:GAS/func_lib.json
+[INF][Config] Merged fragment from: Core:GAS/action_lib.json
+[INF][Config] Merged fragment from: Core:Items/shapes.json
+[INF][Config] Merged fragment from: Core:Items/layouts.json
+[INF][Config] Merged fragment from: Core:Items/definitions.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Panels/panel_templates.json
+[INF][Config] Merged fragment from: Core:Input/filter_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: CoreInputMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: RtsDemoMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: RtsShowcaseMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: RtsMultiplayerFrontlineMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: RtsMultiplayerFrontlineMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Input/default_input.json
+[INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json
+[INF][Config] Merged fragment from: RtsDemoMod:assets/Input/default_input.json
+[INF][Config] Merged fragment from: RtsMultiplayerFrontlineMod:assets/Input/default_input.json
+[INF][Config] Merged fragment from: RtsMultiplayerFrontlineThreeProcessAcceptanceMod:assets/Input/default_input.json
+[INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json
+[INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json
+[INF][Config] Merged fragment from: RtsMultiplayerFrontlineMod:assets/Input/command_intent_profiles.json
+[INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json
+[INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json
+[INF][Config] Merged fragment from: Core:Input/control_schemes.json
+[INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json
+[INF][Config] Merged fragment from: EntityCommandPanelMod:assets/UI/ability_aggregation_profiles.json
+[INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json
+[INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json
+[INF][Config] Merged fragment from: Core:AI/behavior_trees.json
+[INF][Config] Merged fragment from: Core:AI/hfsm.json
+[INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json
+[INF][Config] Merged fragment from: RtsMultiplayerFrontlineMod:assets/Camera/virtual_cameras.json
+[INF][Config] Merged fragment from: Core:Quests/quests.json
+[INF][Config] Merged fragment from: Core:Narrative/variables.json
+[INF][Config] Merged fragment from: Core:Narrative/dialogues.json
+[INF][Config] Merged fragment from: Core:Narrative/cinematics.json
+[INF][ModLoader] No registration conflicts detected.
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: RtsMultiplayerFrontlineMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Input/default_input.json
+[INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json
+[INF][Config] Merged fragment from: RtsDemoMod:assets/Input/default_input.json
+[INF][Config] Merged fragment from: RtsMultiplayerFrontlineMod:assets/Input/default_input.json
+[INF][Config] Merged fragment from: RtsMultiplayerFrontlineThreeProcessAcceptanceMod:assets/Input/default_input.json
+INFO: Initializing raylib 5.5
+INFO: Platform backend: DESKTOP (GLFW)
+INFO: Supported raylib modules:
+INFO:     > rcore:..... loaded (mandatory)
+INFO:     > rlgl:...... loaded (mandatory)
+INFO:     > rshapes:... loaded (optional)
+INFO:     > rtextures:. loaded (optional)
+INFO:     > rtext:..... loaded (optional)
+INFO:     > rmodels:... loaded (optional)
+INFO:     > raudio:.... loaded (optional)
+INFO: DISPLAY: Device initialized successfully
+INFO:     > Display size: 2560 x 1600
+INFO:     > Screen size:  1280 x 720
+INFO:     > Render size:  1280 x 720
+INFO:     > Viewport offsets: 0, 0
+INFO: GLAD: OpenGL extensions loaded successfully
+INFO: GL: Supported extensions count: 296
+INFO: GL: OpenGL device information:
+INFO:     > Vendor:   ATI Technologies Inc.
+INFO:     > Renderer: AMD Radeon(TM) 8060S Graphics
+INFO:     > Version:  3.3.0 Core Profile Context 25.30.33.05.260603
+INFO:     > GLSL:     4.60
+INFO: GL: VAO extension detected, VAO functions loaded successfully
+INFO: GL: NPOT textures extension detected, full NPOT textures supported
+INFO: GL: DXT compressed textures supported
+INFO: GL: ETC2/EAC compressed textures supported
+INFO: PLATFORM: DESKTOP (GLFW - Win32): Initialized successfully
+INFO: TEXTURE: [ID 1] Texture loaded successfully (1x1 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Default texture loaded successfully
+INFO: SHADER: [ID 1] Vertex shader compiled successfully
+INFO: SHADER: [ID 2] Fragment shader compiled successfully
+INFO: SHADER: [ID 3] Program shader loaded successfully
+INFO: SHADER: [ID 3] Default shader loaded successfully
+INFO: RLGL: Render batch vertex buffers loaded successfully in RAM (CPU)
+INFO: RLGL: Render batch vertex buffers loaded successfully in VRAM (GPU)
+INFO: RLGL: Default OpenGL state initialized successfully
+INFO: TEXTURE: [ID 2] Texture loaded successfully (128x128 | GRAY_ALPHA | 1 mipmaps)
+INFO: FONT: Default font loaded successfully (224 glyphs)
+INFO: SYSTEM: Working Directory: C:\001_AI\LudotsProd_issue709\artifacts\acceptance\rts-multiplayer-frontline-three-process\20260823T_kimi_probe1\client-a
+INFO: TIMER: Target time per frame: 0.000 milliseconds
+INFO: TEXTURE: [ID 2] Unloaded texture data from VRAM (GPU)
+INFO: SHADER: [ID 3] Default shader unloaded successfully
+INFO: TEXTURE: [ID 1] Default texture unloaded successfully
+INFO: Window closed successfully
+[INF][Engine] Unloading ModLoader contexts...
+[INF][Engine] Disposing JobScheduler...

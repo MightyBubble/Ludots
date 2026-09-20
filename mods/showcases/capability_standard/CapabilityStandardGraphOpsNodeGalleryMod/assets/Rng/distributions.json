@@ -1,0 +1,14 @@
+[
+  {
+    "id": "showcase.graph_op.loot_dice",
+    "stream": "gallery.rng",
+    "streamSeed": 4421,
+    "entries": [
+      { "id": "copper", "weight": 40, "enabled": true, "locked": false },
+      { "id": "silver", "weight": 30, "enabled": true, "locked": false },
+      { "id": "gold", "weight": 20, "enabled": true, "locked": false,
+        "modulation": { "minPermille": 500, "maxPermille": 1600 } },
+      { "id": "jade", "weight": 10, "enabled": true, "locked": false }
+    ]
+  }
+]

@@ -1,0 +1,131 @@
+**Verdict: `3b947d79fd` does not clear epic #709 final acceptance.** Three-process gameplay is largely wired, but there are release-blocking HUD and opening-view defects, plus formal delivery gaps against the stated priorities.
+
+*(Ask-mode note: shell `git` was blocked here; findings are from full path reads of the Frontline tip tree, acceptance profile/script, Core overlay/receipt/camera paths, and design docs. Re-run `git diff origin/main..3b947d79fd` locally if you need the merge-scope file list.)*
+
+---
+
+## Findings (severity order)
+
+### 1. Player HUD status text freezes after first draw
+**Severity: Critical** (priority 7)
+
+**Refs**
+- `FrontlineSystems.cs` `632-681` — dynamic readiness / connection / command / opponent lines all use non-zero `stableId` and constant `dirtySerial: 1`
+- `PresentationOverlayScene.cs` `1488-1497`, `1272-1317` — retained build treats `(StableId != 0 && DirtySerial != 0 && DirtySerial equal && position equal)` as **Equal without comparing text**, so the old string is kept
+- `RaylibHostLoop.cs` `261-275`, `672` — real clients build `PresentationOverlayScene` from `ScreenOverlayBuffer`, then clear the buffer
+- HUD unit tests only read `ScreenOverlayBuffer` after `Clear()` + `Update()` (e.g. `RtsMultiplayerFrontlineReplicationTests.cs` `824-828`), so they never exercise the retained scene path
+
+**Failure scenario**  
+Both clients ready → buffer writes `"Battle begins in 3"`, then `"2"`, then `"1"`. Screen keeps the first countdown line. Same freeze for Connecting → Connection smooth, Command sending → Command started, Opponent temporarily offline.
+
+**Why it fails**  
+Priority 7 requires live readiness, connection, commands, and opponent state. The buffer is correct; the drawn HUD is not.
+
+---
+
+### 2. Both clients share one map-center opening camera — not distinct home views
+**Severity: Critical** (priorities 1 and 6)
+
+**Refs**
+- `rts_duel_v1.json` `33-41` — single `DefaultCamera` at `(15000, 15000)`; north core `7000`, south core `23000` (`85`, `155`)
+- `GameEngine.cs` `2442-2489` — applies that pose to every non-server process; no `LocalPlayerId` / side offset
+- Design `rts-multiplayer-showcase.md` `206` — “镜头落在己方核心”
+- Fog contract: `AcceptanceDriver.cs` `330-336` and three-process UAT require **no** enemy infantry/cores at open; each client only frames its own side
+- Unit test **locks the wrong product choice**: `RtsMultiplayerFrontlinePlayableAcceptanceTests.cs` `922-923` asserts camera X is the midpoint of the two cores
+
+**Failure scenario**  
+North client opens looking at map center while fog hides the south. Own core/harvesters/infantry sit 38–80 m west of look-at; crystals sit nearer the center. Player does not get “my base + my 2 harvesters + my 2 infantry + nearby crystal.” Both clients get the same centered shot, so priority 6’s “distinct correct starting views” fails even if FOV accidentally keeps minima on-screen.
+
+**Why it fails**  
+Priorities 1 and 6 demand a first playable frame framed on each side’s opening force, not a shared spectator center.
+
+---
+
+### 3. Formal Showcase delivery gate still open
+**Severity: High**
+
+**Refs**
+- `showcase.registry.json` `1366-1380` — `status: "experimental"`, `screenshot: null`
+- Design `rts-multiplayer-showcase.md` `91-93` — `active` only after independent server + two clients, screenshots, and artifacts exist
+- This workspace has no `artifacts/acceptance/rts-multiplayer-frontline-three-process` evidence tree
+
+**Failure scenario**  
+Portal/gallery treat 《双人前线》 as unfinished despite three-process plumbing.
+
+---
+
+### 4. Designed player loop incomplete: invite join + return room / rematch
+**Severity: High** (new-player playability / design §5.1)
+
+**Refs**
+- Must-haves: `rts-multiplayer-showcase.md` `233`, `268-269`
+- Settlement HUD only paints winner/draw (`FrontlineSystems.cs` `685-716`); no rematch / return-room actions under `mods/showcases/rts_multiplayer_frontline/**`
+
+**Failure scenario**  
+Human match ends on a banner with nowhere to go. Joining depends on launcher/credential plumbing, not the designed invite-code room loop.
+
+---
+
+### 5. Snapshot ack / reconnect not proven by shipping three-process UAT
+**Severity: High** (priority 4)
+
+**Refs**
+- Explicit exclusion: `rts-multiplayer-three-process-acceptance.md` `73`
+- Config declares reconnect/ack (`game.json` reconnect / `snapshotAcknowledgementTimeoutTicks`)
+- Coverage is mostly unit/HUD stubs (`RtsMultiplayerFrontlineReplicationTests.cs` reconnect HUD cases), not the formal three-process script
+
+**Failure scenario**  
+Drop mid-train or mid-siege → seat hold, full snapshot, resume, and identity continuity are not evidenced by the gate that ships the Showcase.
+
+---
+
+### 6. Opening composition is not fail-closed to “exactly 2 + crystal present”
+**Severity: Medium** (priority 1)
+
+**Refs**
+- `FrontlineRuntime.cs` / `FrontlineOpeningAuthoring.Validate` `691-711` — requires `cores == 1`, `harvesters > 0`, `infantry > 0`, mirrored; **no crystal-node check**, **no exact count of 2**
+- Map authors exact 2s (`rts_duel_v1.json` `95-147`); receipts only assert **minima** (`rts-multiplayer-frontline-three-process.profile.json` `42-77`)
+
+**Failure scenario**  
+Author 1 or 3 harvesters per side (mirrored) or drop crystal nodes → opening validate still passes; crystals only fail later (if at all) via visibility/receipts.
+
+---
+
+### 7. Design contract text still says the runtime “does not exist”
+**Severity: Low**
+
+**Ref:** `rts-multiplayer-showcase.md` `24`
+
+Stale contract undercuts the live three-process implementation for reviewers.
+
+---
+
+## What holds up (not defects)
+
+| Priority | Evidence |
+|---|---|
+| **2** Three real processes, no browser, server has no local view | Profile launches dedicated server + 2 Raylib clients; script rejects `BrowserRuntime` (`run-…ps1` `1742`); server skips camera (`GameEngine.cs` `2425-2431`; test `RtsMultiplayerFrontlineReplicationTests.cs` `86-100`); missing client `ViewController` throws (`2493-2496`) |
+| **3** Command → gather → queued train → multi-move → attack → core destroy | `AcceptanceDriver` stages + admission history; training queue path validates queued→activated; death/match uses `CommandBuffer` |
+| **5** Receipts after real submit, by stable identity | `RaylibPrimitiveRenderer` records only after draw (`696-742`, `847-855`); buffer keys `(templateId, stableId)` (`PresentationFrameReceiptBuffer.cs` `48-104`); PS fixtures fail missing/tiny/wrong role |
+| **6** Terrain + server skips viewport | BoardTerrain + visual heightmap authoring/tests; server path above |
+| ECS hot paths in Frontline systems reviewed | Chunk spans + deferred destroy; no clear hot-path structural-mutation smoking gun in Showcase systems |
+
+---
+
+## Direct answers
+
+**Platform-independent?**  
+**Yes at Core/Mod contract level** (session, command admission, replication, HUD ports). Formal UAT forbids browser runtime and uses Raylib as one host. Presentation receipt emission is Raylib-adapter code — correct host boundary, not a Core browser tie.
+
+**Visibly playable for a new player?**  
+**Not as a finished first session.** Automated three-process can drive a match, but frozen HUD feedback, shared center camera (not “home base”), missing invite/rematch UX, and `experimental` registry status break the new-player story in the design doc.
+
+---
+
+## Residual risks / test gaps
+
+- No assert that client-A vs client-B opening camera poses differ, or that frame-600 role receipts are tied to **local-side** positions under fog.
+- HUD tests never build `PresentationOverlayScene` retention — they miss finding #1.
+- Unstable-network fault profile exists but is not the default three-process gate.
+- Opening validate does not encode “exactly two + ≥1 crystal” as SSOT.
+- Could not execute `origin/main..HEAD` in this session; treat tip-path audit as complete for Frontline surfaces, not as a substitute merge-file inventory.

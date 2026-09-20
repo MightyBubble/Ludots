@@ -1,6 +1,6 @@
 namespace FlexLayoutSharp;
 
-public class Size
+public struct Size
 {
 	public float Width;
 

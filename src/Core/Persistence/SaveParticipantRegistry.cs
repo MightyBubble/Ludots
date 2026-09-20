@@ -9,6 +9,11 @@ namespace Ludots.Core.Persistence
         private readonly Dictionary<string, ISaveParticipant> _participants =
             new(StringComparer.Ordinal);
 
+        private static readonly HashSet<string> RetiredDomains = new(StringComparer.Ordinal)
+        {
+            "quests",
+        };
+
         public IReadOnlyCollection<ISaveParticipant> Participants => _participants.Values;
 
         public void Register(ISaveParticipant participant)
@@ -47,6 +52,12 @@ namespace Ludots.Core.Persistence
             {
                 if (!_participants.TryGetValue(pair.Key, out ISaveParticipant? participant))
                 {
+                    if (RetiredDomains.Contains(pair.Key))
+                    {
+                        throw new SaveContextException(
+                            $"Save domain '{pair.Key}' belongs to a retired subsystem (Quest was removed after the one-time migration to Task; explicit save version break). This save cannot be loaded; start a new game.");
+                    }
+
                     throw new SaveContextException(
                         $"Save domains contain unknown domain '{pair.Key}'.");
                 }

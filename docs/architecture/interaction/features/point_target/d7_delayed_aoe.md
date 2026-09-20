@@ -33,7 +33,7 @@ AbilityExecSpec:
       2. FanOutApplyEffect(delayed_damage)
 ```
 
-- Performer: GroundOverlay(Circle, growing opacity) 在 1.5s 内渐显
+- Presenter: GroundOverlay(Circle, growing opacity) 在 1.5s 内渐显
 - 位置存储在 EffectTemplate 的 blackboard 或 component 中
 
 ## 依赖组件
@@ -44,7 +44,7 @@ AbilityExecSpec:
 | EffectClip | ✅ 已有 |
 | OnExpire Phase | ✅ 已有 |
 | QueryRadius Graph op | ✅ 已有 |
-| GroundOverlay Performer | ✅ 已有 |
+| GroundOverlay Presenter | ✅ 已有 |
 
 ## 新增需求
 

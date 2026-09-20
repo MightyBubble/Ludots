@@ -1,0 +1,34 @@
+[
+  {
+    "id": "showcase.graph_op.QuerySortByAttribute",
+    "kind": "Query",
+    "entry": "all",
+    "nodes": [
+      {
+        "id": "all",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "sortHp",
+        "op": "QuerySortByAttribute",
+        "attribute": "Health",
+        "descending": true
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "all",
+        "fromPort": "next",
+        "to": "sortHp"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "all",
+        "fromPort": "list",
+        "to": "sortHp",
+        "toPort": "list"
+      }
+    ]
+  }
+]

@@ -23,7 +23,9 @@ using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
+using Ludots.Core.TypedCollections;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {
@@ -33,10 +35,50 @@ namespace Ludots.Tests.GAS
     {
         private string? _tempRoot;
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public void QueryMap_At10kEntities_PreservesOrderAndAllocatesNothingAfterWarmup(bool restrictMap)
+        {
+            using var world = World.Create();
+            QueryRuntimeSetup setup = CreateQueryRuntime(world);
+            using EntitySetQueryRuntime queries = setup.EntityQueries;
+            var firstMap = new Ludots.Core.Map.MapId("first");
+            var otherMap = new Ludots.Core.Map.MapId("other");
+            for (int i = 0; i < 10000; i++)
+                world.Create(new MapEntity { MapId = i % 2 == 0 ? firstMap : otherMap });
+            var all = new Entity[10000];
+            Assert.That(queries.CollectMapEntities(all), Is.EqualTo(10000));
+            Ludots.Core.Map.MapId? map = restrictMap ? firstMap : null;
+            int expected = restrictMap ? 5000 : 10000;
+            for (int i = 0; i < 100; i++)
+                queries.QueryMap(null, map, default, default, 0);
+            long bytes = GC.GetAllocatedBytesForCurrentThread();
+            long start = Stopwatch.GetTimestamp();
+            int total = 0;
+            for (int i = 0; i < 2000; i++)
+                total += queries.QueryMap(null, map, default, default, 0).Length;
+            double elapsed = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
+            bytes = GC.GetAllocatedBytesForCurrentThread() - bytes;
+            Assert.That(total, Is.EqualTo(expected * 2000));
+            Assert.That(bytes, Is.Zero);
+            ReadOnlySpan<Entity> result = queries.QueryMap(null, map, default, default, 0);
+            int cursor = 0;
+            foreach (Entity entity in all)
+                if (!restrictMap || world.Get<MapEntity>(entity).MapId == firstMap)
+                    Assert.That(result[cursor++], Is.EqualTo(entity));
+            TestContext.Out.WriteLine($"restrict_map={restrictMap}, population=10000, runs=2000, elapsed_ms={elapsed:F4}, bytes={bytes}");
+        }
+
+        [SetUp]
+        public void SetUp()
+        {
+            ModRegistryAmbient.Reset();
+        }
+
         [TearDown]
         public void TearDown()
         {
-            GraphIdRegistry.Clear();
+            ModRegistryAmbient.Reset();
 
             if (!string.IsNullOrWhiteSpace(_tempRoot))
             {
@@ -273,7 +315,6 @@ namespace Ludots.Tests.GAS
                 typeRegistry: setup.RelationshipTypes,
                 metricRegistry: setup.RelationshipMetrics,
                 flagRegistry: setup.RelationshipFlags,
-                reasonRegistry: setup.RelationshipReasons,
                 targetDispatchPresets: setup.TargetDispatchPresets,
                 entityCollections: graph.Collections,
                 entityQueries: setup.EntityQueries);
@@ -281,8 +322,9 @@ namespace Ludots.Tests.GAS
                 world,
                 graph.Programs,
                 graph.OutputSchemas,
-                GasGraphOpHandlerTable.Instance,
+                new GasGraphOpHandlerTable(),
                 graph.Collections,
+                graph.IntIdCollections,
                 graph.OutputValues);
 
             int graphId = GraphIdRegistry.GetId(GraphId);
@@ -326,7 +368,6 @@ namespace Ludots.Tests.GAS
                 setup.RelationshipMetrics,
                 setup.RelationshipFlags,
                 setup.RelationshipBands,
-                setup.RelationshipReasons,
                 setup.Collections);
 
             GraphRuntimeSetup graph = CreateGraphRuntime(setup, File.ReadAllText(graphsPath));
@@ -353,10 +394,25 @@ namespace Ludots.Tests.GAS
             int collectionKeyId = graph.Collections.KeyRegistry.GetId(GraphCollectionKey);
             Assert.That(collectionKeyId, Is.GreaterThan(0));
             Assert.That(graph.Programs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program), Is.True);
-            Assert.That(program.Length, Is.EqualTo(2));
-            Assert.That((GraphNodeOp)program[0].Op, Is.EqualTo(GraphNodeOp.LoadCaster));
-            Assert.That((GraphNodeOp)program[1].Op, Is.EqualTo(GraphNodeOp.QueryFromCollection));
-            Assert.That(program[1].Imm, Is.EqualTo(collectionKeyId));
+            int loadCasterIndex = -1;
+            int fromCollectionIndex = -1;
+            for (int i = 0; i < program.Length; i++)
+            {
+                var op = (GraphNodeOp)program[i].Op;
+                if (op == GraphNodeOp.LoadCaster && loadCasterIndex < 0)
+                {
+                    loadCasterIndex = i;
+                }
+
+                if (op == GraphNodeOp.QueryFromCollection && fromCollectionIndex < 0)
+                {
+                    fromCollectionIndex = i;
+                }
+            }
+
+            Assert.That(loadCasterIndex, Is.GreaterThanOrEqualTo(0));
+            Assert.That(fromCollectionIndex, Is.GreaterThanOrEqualTo(0));
+            Assert.That(program[fromCollectionIndex].Imm, Is.EqualTo(collectionKeyId));
 
             var descriptor = EntityCollectionDescriptor.Create(
                 GraphCollectionKey,
@@ -371,7 +427,6 @@ namespace Ludots.Tests.GAS
                 typeRegistry: setup.RelationshipTypes,
                 metricRegistry: setup.RelationshipMetrics,
                 flagRegistry: setup.RelationshipFlags,
-                reasonRegistry: setup.RelationshipReasons,
                 targetDispatchPresets: setup.TargetDispatchPresets,
                 entityCollections: graph.Collections,
                 entityQueries: setup.EntityQueries);
@@ -393,9 +448,11 @@ namespace Ludots.Tests.GAS
                 E = entities,
                 Targets = targets,
                 TargetList = targetList,
-            };
+            CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, program, new GasGraphOpHandlerTable());
 
             Assert.That(state.TargetList.Count, Is.EqualTo(2));
             Assert.That(targets[0], Is.EqualTo(first));
@@ -414,8 +471,22 @@ namespace Ludots.Tests.GAS
                 new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
                 initialCapacity: 16);
             int graphId = GraphIdRegistry.Register("tests.graph.missing-schema");
-            programs.Register(graphId, new[] { new GraphInstruction { Op = (ushort)GraphNodeOp.QueryAllMapEntities } }, GraphKind.Query);
-            var writer = new GraphReturnWriter(world, programs, schemas, GasGraphOpHandlerTable.Instance, collections, outputValues);
+            programs.Register(
+                graphId,
+                new[]
+                {
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.QueryAllMapEntities },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+                },
+                GraphKind.Query);
+            var writer = new GraphReturnWriter(
+                world,
+                programs,
+                schemas,
+                GasGraphOpHandlerTable.Instance,
+                collections,
+                new IntIdCollectionStore(collections.KeyRegistry),
+                outputValues);
             var api = new GasGraphRuntimeApi(world, tagOps: setup.TagOps, relationshipRuntime: setup.Relationships, entityQueries: setup.EntityQueries);
             Entity owner = world.Create();
 
@@ -423,6 +494,106 @@ namespace Ludots.Tests.GAS
                 writer.ExecuteAndWrite(graphId, owner, owner, Entity.Null, Entity.Null, default, randomSeed: 0u, api))!;
 
             Assert.That(ex.Message, Does.Contain("no output schema"));
+        }
+
+        [Test]
+        public void GraphReturnWriter_MissingOwnerAndCaster_FailsClosedBeforeExecution()
+        {
+            using var world = World.Create();
+            QueryRuntimeSetup setup = CreateQueryRuntime(world);
+            GetOrRegisterAttribute("Health");
+            GetOrRegisterAttribute("Mana");
+            GetOrRegisterTag("Tests.GraphQuery.Blocked");
+            setup.TemplateKeys.Register("tests.graph.city");
+            setup.TemplateKeys.Register("tests.graph.site");
+            GraphRuntimeSetup graph = CreateGraphRuntime(setup, GraphConfigJson);
+            var api = new GasGraphRuntimeApi(
+                world,
+                tagOps: setup.TagOps,
+                relationshipRuntime: setup.Relationships,
+                typeRegistry: setup.RelationshipTypes,
+                metricRegistry: setup.RelationshipMetrics,
+                flagRegistry: setup.RelationshipFlags,
+                targetDispatchPresets: setup.TargetDispatchPresets,
+                entityCollections: graph.Collections,
+                entityQueries: setup.EntityQueries);
+            var writer = new GraphReturnWriter(
+                world,
+                graph.Programs,
+                graph.OutputSchemas,
+                GasGraphOpHandlerTable.Instance,
+                graph.Collections,
+                graph.IntIdCollections,
+                graph.OutputValues);
+
+            int graphId = GraphIdRegistry.GetId(GraphId);
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                writer.ExecuteAndWrite(graphId, Entity.Null, Entity.Null, Entity.Null, Entity.Null, default, randomSeed: 1u, api))!;
+
+            Assert.That(ex.Message, Does.Contain("requires an owner or caster entity"));
+        }
+
+        [Test]
+        public void GraphReturnWriter_RejectsRegisteredTriggerGraphKind_FailsClosed()
+        {
+            using var world = World.Create();
+            QueryRuntimeSetup setup = CreateQueryRuntime(world);
+            var programs = new GraphProgramRegistry();
+            var schemas = new GraphOutputSchemaRegistry();
+            var collections = new EntityCollectionStore(new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+            var outputValues = new GraphOutputValueStore(
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                initialCapacity: 16);
+            int graphId = GraphIdRegistry.Register("tests.graph.trigger-kind");
+            programs.Register(
+                graphId,
+                new[]
+                {
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 1f },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+                },
+                GraphKind.TriggerGraph,
+                GraphInstructionSourceMap.Empty,
+                symbols: null,
+                triggerGraphEntries: new[] { new TriggerGraphEntry("boot", "MapTriggerResume", 0, once: false) });
+            var writer = new GraphReturnWriter(
+                world,
+                programs,
+                schemas,
+                GasGraphOpHandlerTable.Instance,
+                collections,
+                new IntIdCollectionStore(collections.KeyRegistry),
+                outputValues);
+            var api = new GasGraphRuntimeApi(world, tagOps: setup.TagOps, relationshipRuntime: setup.Relationships, entityQueries: setup.EntityQueries);
+            Entity owner = world.Create();
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                writer.ExecuteAndWrite(graphId, owner, owner, Entity.Null, Entity.Null, default, randomSeed: 0u, api))!;
+
+            Assert.That(ex.Message, Does.Contain("kind is 'TriggerGraph'"));
+        }
+
+        [TestCase(GraphNodeOp.SendEvent)]
+        [TestCase(GraphNodeOp.WriteBlackboardFloat)]
+        [TestCase(GraphNodeOp.Yield)]
+        public void GraphKindOperationPolicy_QueryRejectsEventStoreAndContinuation(GraphNodeOp forbiddenOperation)
+        {
+            var program = new[]
+            {
+                new GraphInstruction { Op = (ushort)forbiddenOperation },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+            };
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+                GraphKindOperationPolicy.RequireAllowed(
+                    GraphKind.Query,
+                    program,
+                    GasGraphOpHandlerTable.Instance,
+                    graphId: 1099,
+                    entrypoint: nameof(EntitySetQueryRuntimeTests)))!;
+
+            Assert.That(error.Message, Does.StartWith(GraphKindOperationPolicy.OperationNotAllowedError));
+            Assert.That(error.Message, Does.Contain("kind='Query'"));
         }
 
         [Test]
@@ -499,7 +670,7 @@ namespace Ludots.Tests.GAS
         {
             _tempRoot = Path.Combine(Path.GetTempPath(), "Ludots_GraphQueryTests", Guid.NewGuid().ToString("N"));
             string coreRoot = Path.Combine(_tempRoot, "Core");
-            string graphDir = Path.Combine(coreRoot, "Configs", "GAS");
+            string graphDir = Path.Combine(coreRoot, "GAS");
             Directory.CreateDirectory(graphDir);
             File.WriteAllText(Path.Combine(graphDir, "graphs.json"), graphJson);
 
@@ -514,18 +685,103 @@ namespace Ludots.Tests.GAS
             var schemas = new GraphOutputSchemaRegistry();
             var outputKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var outputValues = new GraphOutputValueStore(outputKeys, initialCapacity: 16);
+            var intIdCollections = new IntIdCollectionStore(setup.Collections.KeyRegistry);
             var symbolResolver = new GasGraphSymbolResolver(
                 setup.RelationshipTypes,
                 setup.RelationshipMetrics,
                 setup.RelationshipFlags,
-                setup.RelationshipReasons,
                 setup.TargetDispatchPresets,
                 setup.TemplateKeys);
-            var loader = new GraphProgramConfigLoader(pipeline, programs, symbolResolver, schemas, outputKeys, setup.Collections);
+            GraphIdRegistry.Clear();
+            var loader = new GraphProgramConfigLoader(
+                pipeline,
+                programs,
+                symbolResolver,
+                schemas,
+                outputKeys,
+                setup.Collections,
+                intIdCollections: intIdCollections);
             var packages = loader.LoadIdsAndCompile(catalog, relativePath: "GAS/graphs.json");
             loader.PatchAndRegister(packages);
 
-            return new GraphRuntimeSetup(programs, schemas, setup.Collections, outputValues);
+            return new GraphRuntimeSetup(programs, schemas, setup.Collections, intIdCollections, outputValues);
+        }
+
+        [Test]
+        public void LargeQuery_SurvivesYieldAndAnotherExecution_AndFreshQuerySeesRefWrites()
+        {
+            using var world = World.Create();
+            QueryRuntimeSetup setup = CreateQueryRuntime(world);
+            var map = new Ludots.Core.Map.MapId("large-query");
+            for (int n = 0; n < 1024; n++) world.Create(new MapEntity { MapId = map }, new Team { Id = 1 });
+            var api = new GasGraphRuntimeApi(world, tagOps: setup.TagOps, relationshipRuntime: setup.Relationships,
+                entityQueries: setup.EntityQueries);
+            GraphInstruction[] program =
+            [
+                new() { Op = (ushort)GraphNodeOp.QueryAllMapEntities },
+                new() { Op = (ushort)GraphNodeOp.QueryFilterTeam, Imm = 1 },
+                new() { Op = (ushort)GraphNodeOp.Yield },
+                new() { Op = (ushort)GraphNodeOp.AggCount, Dst = 0 },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 }
+            ];
+            var cursor = new GraphExecutionCursor(0);
+            var floats = new float[GraphVmLimits.MaxFloatRegisters];
+            var ints = new int[GraphVmLimits.MaxIntRegisters];
+            var bools = new byte[GraphVmLimits.MaxBoolRegisters];
+            var entities = new Entity[GraphVmLimits.MaxEntityRegisters];
+            var targets = new Entity[GraphVmLimits.MaxTargets];
+            var calls = new int[GraphVmLimits.MaxCallStackDepth];
+            GraphSliceResult first = GraphExecutor.ExecuteScriptSlice(world, default, default, default, program, api,
+                null, floats, ints, bools, entities, targets, calls, ref cursor, 100);
+            Assert.That(first.Yielded, Is.True);
+            Entity changed = setup.EntityQueries.QueryMap(null, map, [], [], 0)[0];
+            world.Get<Team>(changed).Id = 2;
+            setup.EntityQueries.BeginExecution();
+            Span<Entity> replacement = setup.EntityQueries.GetQueryBuffer(0, 1024);
+            replacement.Clear();
+            setup.EntityQueries.EndExecution();
+            GraphSliceResult resumed = GraphExecutor.ExecuteScriptSlice(world, default, default, default, program, api,
+                null, floats, ints, bools, entities, targets, calls, ref cursor, 100);
+            Assert.That(resumed.Halted, Is.True);
+            Assert.That(resumed.ReturnInt, Is.EqualTo(1024));
+            Span<Entity> current = setup.EntityQueries.QueryMap(null, map, [], [], 0);
+            Assert.That(setup.EntityQueries.FilterTeam(current, current.Length, 1), Is.EqualTo(1023));
+            setup.EntityQueries.Dispose();
+        }
+
+        [Test]
+        public void BoundQuery_AttributeAndTagChangesAreVisibleBeforeDeferredQueueDrain()
+        {
+            using var world = World.Create();
+            QueryRuntimeSetup setup = CreateQueryRuntime(world);
+            int health = GetOrRegisterAttribute("Health");
+            int mana = GetOrRegisterAttribute("Mana");
+            int blocked = GetOrRegisterTag("Tests.Query.Blocked");
+            Entity entity = CreateMapEntity(world, 1, 7, health, 30, mana, 0);
+            world.Add(entity, new TagCountContainer(), new DirtyFlags());
+            int key = setup.Collections.KeyRegistry.Register("derived");
+            GraphInstruction[] program =
+            [
+                new() { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 0 },
+                new() { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 1, ImmF = 50 },
+                new() { Op = (ushort)GraphNodeOp.QueryAllMapEntities },
+                new() { Op = (ushort)GraphNodeOp.QueryFilterAttributeRange, Imm = health, B = 0, C = 1 },
+                new() { Op = (ushort)GraphNodeOp.QueryFilterTagNone, Imm = blocked },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt }
+            ];
+            setup.EntityQueries.BindCollection(setup.Collections, entity, key, new GraphProgramRegistration(program, GraphKind.Query));
+            var source = setup.Collections.RequireSource(entity, key);
+            Assert.That(source.Contains(entity), Is.True);
+            AttributeMutationOps.SetCurrent(world, entity, health, 70, setup.TagOps);
+            Assert.That(source.Contains(entity), Is.False);
+            AttributeMutationOps.SetCurrent(world, entity, health, 30, setup.TagOps);
+            Assert.That(source.Contains(entity), Is.True);
+            setup.TagOps.AddTag(world, entity, blocked);
+            Assert.That(source.Contains(entity), Is.False);
+            setup.TagOps.RemoveTag(world, entity, blocked);
+            Assert.That(source.Contains(entity), Is.True);
+            Assert.That(setup.TagOps.DirtyEntities.Count, Is.EqualTo(1));
+            setup.EntityQueries.Dispose();
         }
 
         private static QueryRuntimeSetup CreateQueryRuntime(World world)
@@ -535,7 +791,6 @@ namespace Ludots.Tests.GAS
             var metricRegistry = new RelationshipMetricRegistry();
             var flagRegistry = new RelationshipFlagRegistry();
             var bandRegistry = new RelationshipBandRegistry();
-            var reasonRegistry = new RelationshipReasonRegistry();
             var changeBuffer = new RelationshipChangeBuffer();
             var relationships = new RelationshipRuntime(world, typeRegistry, metricRegistry, flagRegistry, bandRegistry, changeBuffer, new RelationshipReverseIndex(world));
             var entityQueries = new EntitySetQueryRuntime(world, tagOps, relationships);
@@ -550,7 +805,6 @@ namespace Ludots.Tests.GAS
                 metricRegistry,
                 flagRegistry,
                 bandRegistry,
-                reasonRegistry,
                 entityQueries,
                 templateKeys,
                 targetDispatchPresets,
@@ -689,18 +943,199 @@ namespace Ludots.Tests.GAS
     "kind": "Query",
     "entry": "minProduction",
     "nodes": [
-      { "id": "minProduction", "op": "ConstFloat", "floatValue": 0, "next": "maxProduction" },
-      { "id": "maxProduction", "op": "ConstFloat", "floatValue": 100, "next": "allMapEntities" },
-      { "id": "allMapEntities", "op": "QueryAllMapEntities", "next": "team" },
-      { "id": "team", "op": "QueryFilterTeam", "teamId": 1, "next": "template" },
-      { "id": "template", "op": "QueryFilterTemplate", "template": "tests.graph.city", "next": "notBlocked" },
-      { "id": "notBlocked", "op": "QueryFilterTagNone", "tag": "Tests.GraphQuery.Blocked", "next": "productionRange" },
-      { "id": "productionRange", "op": "QueryFilterAttributeRange", "attribute": "Health", "inputs": [ "minProduction", "maxProduction" ], "next": "sortProduction" },
-      { "id": "sortProduction", "op": "QuerySortByAttribute", "attribute": "Health", "descending": true, "next": "countCities" },
-      { "id": "countCities", "op": "AggCount", "next": "sumProduction" },
-      { "id": "sumProduction", "op": "AggSumAttribute", "attribute": "Health", "next": "sumGold" },
-      { "id": "sumGold", "op": "AggSumAttribute", "attribute": "Mana", "next": "bestProductionCity" },
-      { "id": "bestProductionCity", "op": "AggMaxEntityByAttribute", "attribute": "Health" }
+      {
+        "id": "minProduction",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "maxProduction",
+        "op": "ConstFloat",
+        "floatValue": 100
+      },
+      {
+        "id": "allMapEntities",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "team",
+        "op": "QueryFilterTeam",
+        "teamId": 1
+      },
+      {
+        "id": "template",
+        "op": "QueryFilterTemplate",
+        "template": "tests.graph.city"
+      },
+      {
+        "id": "notBlocked",
+        "op": "QueryFilterTagNone",
+        "tag": "Tests.GraphQuery.Blocked"
+      },
+      {
+        "id": "productionRange",
+        "op": "QueryFilterAttributeRange",
+        "attribute": "Health"
+      },
+      {
+        "id": "sortProduction",
+        "op": "QuerySortByAttribute",
+        "attribute": "Health",
+        "descending": true
+      },
+      {
+        "id": "countCities",
+        "op": "AggCount"
+      },
+      {
+        "id": "sumProduction",
+        "op": "AggSumAttribute",
+        "attribute": "Health"
+      },
+      {
+        "id": "sumGold",
+        "op": "AggSumAttribute",
+        "attribute": "Mana"
+      },
+      {
+        "id": "bestProductionCity",
+        "op": "AggMaxEntityByAttribute",
+        "attribute": "Health"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "minProduction",
+        "fromPort": "next",
+        "to": "maxProduction"
+      },
+      {
+        "from": "maxProduction",
+        "fromPort": "next",
+        "to": "allMapEntities"
+      },
+      {
+        "from": "allMapEntities",
+        "fromPort": "next",
+        "to": "team"
+      },
+      {
+        "from": "team",
+        "fromPort": "next",
+        "to": "template"
+      },
+      {
+        "from": "template",
+        "fromPort": "next",
+        "to": "notBlocked"
+      },
+      {
+        "from": "notBlocked",
+        "fromPort": "next",
+        "to": "productionRange"
+      },
+      {
+        "from": "productionRange",
+        "fromPort": "next",
+        "to": "sortProduction"
+      },
+      {
+        "from": "sortProduction",
+        "fromPort": "next",
+        "to": "countCities"
+      },
+      {
+        "from": "countCities",
+        "fromPort": "next",
+        "to": "sumProduction"
+      },
+      {
+        "from": "sumProduction",
+        "fromPort": "next",
+        "to": "sumGold"
+      },
+      {
+        "from": "sumGold",
+        "fromPort": "next",
+        "to": "bestProductionCity"
+      },
+      {
+        "from": "bestProductionCity",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "allMapEntities",
+        "fromPort": "list",
+        "to": "team",
+        "toPort": "list"
+      },
+      {
+        "from": "team",
+        "fromPort": "list",
+        "to": "template",
+        "toPort": "list"
+      },
+      {
+        "from": "template",
+        "fromPort": "list",
+        "to": "notBlocked",
+        "toPort": "list"
+      },
+      {
+        "from": "notBlocked",
+        "fromPort": "list",
+        "to": "productionRange",
+        "toPort": "list"
+      },
+      {
+        "from": "minProduction",
+        "fromPort": "value",
+        "to": "productionRange",
+        "toPort": "min"
+      },
+      {
+        "from": "maxProduction",
+        "fromPort": "value",
+        "to": "productionRange",
+        "toPort": "max"
+      },
+      {
+        "from": "productionRange",
+        "fromPort": "list",
+        "to": "sortProduction",
+        "toPort": "list"
+      },
+      {
+        "from": "sortProduction",
+        "fromPort": "list",
+        "to": "countCities",
+        "toPort": "list"
+      },
+      {
+        "from": "sortProduction",
+        "fromPort": "list",
+        "to": "sumProduction",
+        "toPort": "list"
+      },
+      {
+        "from": "sortProduction",
+        "fromPort": "list",
+        "to": "sumGold",
+        "toPort": "list"
+      },
+      {
+        "from": "sortProduction",
+        "fromPort": "list",
+        "to": "bestProductionCity",
+        "toPort": "list"
+      }
     ],
     "outputs": [
       {
@@ -712,10 +1147,34 @@ namespace Ludots.Tests.GAS
         "title": "Cities",
         "summary": "Filtered 4X economy cities"
       },
-      { "id": "cityCount", "destination": "Summary", "type": "Int", "source": "countCities", "key": "tests.graph.cityCount" },
-      { "id": "totalProduction", "destination": "Summary", "type": "Float", "source": "sumProduction", "key": "tests.graph.totalProduction" },
-      { "id": "totalGold", "destination": "Summary", "type": "Float", "source": "sumGold", "key": "tests.graph.totalGold" },
-      { "id": "bestProductionCity", "destination": "Summary", "type": "Entity", "source": "bestProductionCity", "key": "tests.graph.bestProductionCity" }
+      {
+        "id": "cityCount",
+        "destination": "Summary",
+        "type": "Int",
+        "source": "countCities",
+        "key": "tests.graph.cityCount"
+      },
+      {
+        "id": "totalProduction",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "sumProduction",
+        "key": "tests.graph.totalProduction"
+      },
+      {
+        "id": "totalGold",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "sumGold",
+        "key": "tests.graph.totalGold"
+      },
+      {
+        "id": "bestProductionCity",
+        "destination": "Summary",
+        "type": "Entity",
+        "source": "bestProductionCity",
+        "key": "tests.graph.bestProductionCity"
+      }
     ]
   }
 ]
@@ -728,9 +1187,41 @@ namespace Ludots.Tests.GAS
     "kind": "Query",
     "entry": "owner",
     "nodes": [
-      { "id": "owner", "op": "LoadCaster", "next": "fromCollection" },
-      { "id": "fromCollection", "op": "QueryFromCollection", "collectionKey": "tests.graph.collection.cities", "inputs": [ "owner" ] }
-    ]
+      {
+        "id": "owner",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "fromCollection",
+        "op": "QueryFromCollection",
+        "collectionKey": "tests.graph.collection.cities"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "owner",
+        "fromPort": "next",
+        "to": "fromCollection"
+      },
+      {
+        "from": "fromCollection",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "owner",
+        "fromPort": "value",
+        "to": "fromCollection",
+        "toPort": "source"
+      }
+    ],
+    "outputs": []
   }
 ]
 """;
@@ -742,7 +1233,6 @@ namespace Ludots.Tests.GAS
             RelationshipMetricRegistry RelationshipMetrics,
             RelationshipFlagRegistry RelationshipFlags,
             RelationshipBandRegistry RelationshipBands,
-            RelationshipReasonRegistry RelationshipReasons,
             EntitySetQueryRuntime EntityQueries,
             EntityTemplateKeyRegistry TemplateKeys,
             TargetDispatchPresetRegistry TargetDispatchPresets,
@@ -752,6 +1242,7 @@ namespace Ludots.Tests.GAS
             GraphProgramRegistry Programs,
             GraphOutputSchemaRegistry OutputSchemas,
             EntityCollectionStore Collections,
+            IntIdCollectionStore IntIdCollections,
             GraphOutputValueStore OutputValues);
     }
 }

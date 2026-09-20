@@ -51,6 +51,11 @@ namespace Ludots.Adapter.Web
 
             engine.SetService(CoreServiceKeys.LogBackend, effectiveBackend);
 
+            engine.SetService(
+                CoreServiceKeys.SaveStorage,
+                (Ludots.Platform.Abstractions.ISaveStorage)new Ludots.Platform.Desktop.DesktopSaveStorage(
+                    System.IO.Path.Combine(baseDir, "Saves")));
+
             var renderer = new SkiaUiRenderer();
             IUiTextMeasurer textMeasurer = new SkiaTextMeasurer();
             IUiImageSizeProvider imageSizeProvider = new SkiaImageSizeProvider();
@@ -61,6 +66,7 @@ namespace Ludots.Adapter.Web
             engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)textMeasurer);
             engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)imageSizeProvider);
             engine.SetService(CoreServiceKeys.UISystem, (Core.UI.IUiSystem)new MarkupUiSystem(uiSurfaceHost));
+            Ludots.UI.Panels.PanelPresentationInstaller.Install(engine);
 
             var inputBackend = new WebInputBackend();
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();

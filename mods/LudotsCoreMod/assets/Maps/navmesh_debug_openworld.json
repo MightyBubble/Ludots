@@ -1,0 +1,35 @@
+{
+  "Id": "navmesh_debug_openworld",
+  "Tuning": {
+    "LoadedChunkCapacity": 16
+  },
+  "Tags": [
+    "showcase",
+    "navmesh",
+    "openworld",
+    "Feature.NavMesh:On",
+    "Raylib.DebugGuides:Off"
+  ],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "HexGrid",
+      "WidthCells": 1024,
+      "HeightCells": 1024,
+      "GridCellSizeCm": 100,
+      "DataFile": "navmesh_debug_openworld.hex",
+      "HexEdgeLengthCm": 100
+    }
+  ],
+  "Entities": [],
+  "TriggerTypes": [],
+  "DefaultCamera": {
+    "VirtualCameraId": "NavDebug.OpenWorld",
+    "TargetXCm": 12800,
+    "TargetYCm": 12800,
+    "Yaw": 180,
+    "Pitch": 50,
+    "DistanceCm": 40000,
+    "FovYDeg": 60
+  }
+}

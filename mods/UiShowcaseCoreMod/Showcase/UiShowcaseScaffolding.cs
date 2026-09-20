@@ -284,6 +284,37 @@ internal static class UiShowcaseScaffolding
                     .Class("phase-five-row"));
     }
 
+    internal static UiElementBuilder BuildPhaseSixPanel(string prefix)
+    {
+        return new UiElementBuilder(UiNodeKind.Container, "div")
+            .Id(prefix + "-phase6-panel")
+            .Class("phase-six-panel")
+            .Children(
+                Ui.Text("Phase 6 Layout Contract Lab").Class("page-card-title"),
+                Ui.Text("Grid auto 列按真实文字测量；滚动区吸顶；伪元素可挂矢量图标。").Class("muted"),
+                new UiElementBuilder(UiNodeKind.Container, "div")
+                    .Id(prefix + "-phase6-grid")
+                    .Class("phase-six-grid")
+                    .Children(
+                        new UiElementBuilder(UiNodeKind.Custom, "div").Id(prefix + "-phase6-short").Text("短签").Classes("phase-six-cell", "phase-six-short"),
+                        new UiElementBuilder(UiNodeKind.Custom, "div").Id(prefix + "-phase6-long").Text("很长很长的任务标题需要 auto 列吃内容宽").Classes("phase-six-cell", "phase-six-long"),
+                        new UiElementBuilder(UiNodeKind.Container, "div")
+                            .Id(prefix + "-phase6-icon")
+                            .Classes("phase-six-cell", "phase-six-icon")
+                            .Children(
+                                Ui.Image(UiShowcaseImageAssets.BadgeSvgDataUri).Id(prefix + "-phase6-icon-img").Class("phase-six-icon-img"),
+                                Ui.Text("印"))),
+                new UiElementBuilder(UiNodeKind.Container, "div")
+                    .Id(prefix + "-phase6-scroll")
+                    .Class("phase-six-scroll")
+                    .Children(
+                        new UiElementBuilder(UiNodeKind.Custom, "div").Id(prefix + "-phase6-sticky").Text("吸顶标题 · sticky top").Class("phase-six-sticky"),
+                        new UiElementBuilder(UiNodeKind.Custom, "div").Text("往下滚，看标题是否钉在上沿。").Class("phase-six-scroll-line"),
+                        new UiElementBuilder(UiNodeKind.Custom, "div").Text("第二行内容垫高滚动距离。").Class("phase-six-scroll-line"),
+                        new UiElementBuilder(UiNodeKind.Custom, "div").Text("第三行内容继续垫高。").Class("phase-six-scroll-line"),
+                        new UiElementBuilder(UiNodeKind.Custom, "div").Text("第四行内容继续垫高。").Class("phase-six-scroll-line")));
+    }
+
     internal static UiElementBuilder BuildPhaseFourPanel(string prefix)
     {
         return new UiElementBuilder(UiNodeKind.Container, "div")

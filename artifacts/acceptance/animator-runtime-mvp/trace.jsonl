@@ -1,0 +1,2 @@
+{"tick":1,"stable_id":7001,"controller_id":1,"primary_state":9,"secondary_state":0,"normalized_time":0,"transition_progress":0,"flags":"Active","runtime_state":1}
+{"tick":2,"stable_id":7001,"controller_id":1,"primary_state":5,"secondary_state":0,"normalized_time":0,"transition_progress":0,"flags":"Active, Looping","runtime_state":0}

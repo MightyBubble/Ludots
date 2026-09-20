@@ -6,5 +6,6 @@ public enum UiDisplay : byte
 	Block,
 	Flex,
 	Inline,
-	Text
+	Text,
+	Grid
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.CompilerServices;
 using Arch.Core;
+using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
@@ -30,7 +31,7 @@ namespace Ludots.Tests.GAS
                 mods.Add(attrId: 0, ModifierOp.Add, -1f);
                 templates.Register(1, new EffectTemplateData
                 {
-                    TagId = 0,
+                    CategoryId = 0,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.FixedFrame,
                     DurationTicks = 0,
@@ -70,7 +71,7 @@ namespace Ludots.Tests.GAS
                 ref var attr = ref world.Get<AttributeBuffer>(target);
                 attr.SetCurrent(0, 1000f);
 
-                var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+                var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry());
                 var abilitySystem = new AbilitySystem(world, requests, abilityDefs, tagOps);
                 var proposalSystem = new EffectProposalProcessingSystem(
                     world,
@@ -135,7 +136,7 @@ namespace Ludots.Tests.GAS
             var templates = new EffectTemplateRegistry();
             templates.Register(1, new EffectTemplateData
             {
-                TagId = 0,
+                CategoryId = 0,
                 PresetType = EffectPresetType.ApplyForce2D,
                 PresetAttribute0 = fxId,
                 PresetAttribute1 = fyId,
@@ -177,7 +178,7 @@ namespace Ludots.Tests.GAS
                 inputRequests: null,
                 chainOrders: chainOrders,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry()));
 
             var sinks = new Ludots.Core.Gameplay.GAS.Bindings.AttributeSinkRegistry();
             Ludots.Core.Gameplay.GAS.Bindings.GasAttributeSinks.RegisterBuiltins(sinks);
@@ -264,11 +265,12 @@ namespace Ludots.Tests.GAS
             programs.Register(graphId,
             [
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 1f },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             ], GraphKind.Effect);
 
             EffectPhaseListenerBuffer listeners = default;
             That(listeners.TryAdd(
-                listenTagId: 0,
+                listenCategoryId: 0,
                 listenEffectId: 0,
                 EffectPhaseId.OnApply,
                 PhaseListenerScope.Target,
@@ -286,6 +288,7 @@ namespace Ludots.Tests.GAS
                 GasGraphOpHandlerTable.Instance,
                 new EffectTemplateRegistry());
             var api = new GasGraphRuntimeApi(world);
+            api.AggregateDirty = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
             EffectPhaseGraphBindings behavior = default;
             using var transaction = new EffectPhaseSideEffectTransaction(
                 world,
@@ -314,6 +317,147 @@ namespace Ludots.Tests.GAS
             api.EndEffectSideEffectTransaction(transaction);
             transaction.Rollback();
             That(allocated, Is.Zero);
+        }
+
+        [Test]
+        public void DurationEffectTick_AllocatesZeroAfterWarmup()
+        {
+            using var world = World.Create();
+            const int attrId = 0;
+            var clock = new DiscreteClock();
+            var requests = new EffectRequestQueue();
+            var dirtyQueue = new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME);
+            var tagOps = new TagOps(dirtyQueue, new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry());
+            var triggerQueue = new DeferredTriggerQueue();
+            var conditions = new GasConditionRegistry();
+            var templates = new EffectTemplateRegistry();
+            var presetTypes = new PresetTypeRegistry();
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                new GraphProgramRegistry(),
+                "Test/AllocationTests.DurationEffectTick.json");
+
+            using var application = new EffectApplicationSystem(
+                world,
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                clock,
+                requests,
+                templates: templates,
+                tagOps: tagOps);
+            using var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps, aggregateDirty: tagOps.AggregateDirty);
+            using var lifetime = new EffectLifetimeSystem(
+                world,
+                clock,
+                conditions,
+                snapshotCapacity: 4096,
+                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                effectRequests: requests,
+                templates: templates,
+                tagOps: tagOps);
+            using var timedTags = new TimedTagExpirationSystem(world, clock, tagOps);
+            using var deferred = new DeferredTriggerCollectionSystem(world, triggerQueue, tagOps, dirtyQueue);
+
+            Entity source = world.Create();
+            Entity target = world.Create(
+                new AttributeBuffer(),
+                new DirtyFlags(),
+                new ActiveEffectContainer(),
+                new GameplayTagContainer(),
+                new TagCountContainer(),
+                new TimedTagBuffer());
+            ref var attributes = ref world.Get<AttributeBuffer>(target);
+            attributes.SetBase(attrId, 100f);
+            attributes.SetCurrent(attrId, 100f);
+
+            Entity effect = GameplayEffectFactory.CreateEffect(
+                world,
+                source,
+                target,
+                durationTicks: 100_000,
+                lifetimeKind: EffectLifetimeKind.After,
+                periodTicks: 0,
+                clockId: GasClockId.Step);
+            ref var gameplayEffect = ref world.Get<GameplayEffect>(effect);
+            gameplayEffect.State = EffectState.Committed;
+            gameplayEffect.AggregatesModifiers = true;
+            GameplayEffectFactory.AddModifier(world, effect, attrId, ModifierOp.Add, 7f);
+            That(world.Get<ActiveEffectContainer>(target).Add(effect), Is.True);
+
+            const int timedTagId = 7;
+            ref var tags = ref world.Get<GameplayTagContainer>(target);
+            ref var counts = ref world.Get<TagCountContainer>(target);
+            ref var timed = ref world.Get<TimedTagBuffer>(target);
+            tags.AddTag(timedTagId);
+            counts.AddCount(timedTagId, 1);
+            That(timed.TryAdd(timedTagId, expireAt: 1_000_000, GasClockId.Step), Is.True);
+
+            TickDurationSystems(clock, application, aggregator, lifetime, timedTags, deferred, triggerQueue, 64);
+            That(world.IsAlive(effect), Is.True);
+            That(world.Get<AttributeBuffer>(target).GetBase(attrId), Is.EqualTo(100f));
+            That(world.Get<AttributeBuffer>(target).GetCurrent(attrId), Is.EqualTo(100f));
+            That(world.Get<AttributeBuffer>(target).GetCap(attrId), Is.EqualTo(107f));
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+
+            long allocated = MeasureDurationTickAllocations(
+                clock,
+                application,
+                aggregator,
+                lifetime,
+                timedTags,
+                deferred,
+                triggerQueue,
+                10_000);
+
+            That(world.IsAlive(effect), Is.True);
+            That(allocated, Is.LessThanOrEqualTo(64),
+                $"Duration-effect tick loop allocated {allocated} bytes after warmup.");
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static long MeasureDurationTickAllocations(
+            DiscreteClock clock,
+            EffectApplicationSystem application,
+            AttributeAggregatorSystem aggregator,
+            EffectLifetimeSystem lifetime,
+            TimedTagExpirationSystem timedTags,
+            DeferredTriggerCollectionSystem deferred,
+            DeferredTriggerQueue triggerQueue,
+            int count)
+        {
+            GC.GetAllocatedBytesForCurrentThread();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            TickDurationSystems(clock, application, aggregator, lifetime, timedTags, deferred, triggerQueue, count);
+            return GC.GetAllocatedBytesForCurrentThread() - before;
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void TickDurationSystems(
+            DiscreteClock clock,
+            EffectApplicationSystem application,
+            AttributeAggregatorSystem aggregator,
+            EffectLifetimeSystem lifetime,
+            TimedTagExpirationSystem timedTags,
+            DeferredTriggerCollectionSystem deferred,
+            DeferredTriggerQueue triggerQueue,
+            int count)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                clock.Advance(ClockDomainId.Step, 1);
+                application.Update(0f);
+                aggregator.Update(0f);
+                lifetime.Update(0f);
+                timedTags.Update(0f);
+                deferred.Update(0f);
+                triggerQueue.Clear();
+            }
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -354,7 +498,7 @@ namespace Ludots.Tests.GAS
                     EffectPhaseId.OnApply,
                     in behavior,
                     EffectPresetType.None,
-                    effectTagId: 0,
+                    effectCategoryId: 0,
                     effectTemplateId: 1);
             }
         }

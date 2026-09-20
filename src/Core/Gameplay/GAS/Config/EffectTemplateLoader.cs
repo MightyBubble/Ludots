@@ -27,6 +27,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
         private readonly EffectTemplateRegistry _registry;
         private readonly GasConditionRegistry? _conditions;
         private readonly TargetDispatchPresetRegistry? _targetDispatchPresets;
+        private readonly PresetTypeRegistry? _presetTypes;
         private readonly Ludots.Core.Gameplay.Relationships.RelationshipTypeRegistry? _relationshipTypes;
         private readonly ExchangeOperationRegistry? _exchangeOperations;
         private readonly ScopeKeyRegistry? _progressionScopeKeys;
@@ -52,12 +53,14 @@ namespace Ludots.Core.Gameplay.GAS.Config
             EntityTemplateKeyRegistry? entityTemplateKeys = null,
             Ludots.Core.Gameplay.Relationships.RelationshipTypeRegistry? relationshipTypes = null,
             FogLayerRegistry? fogLayers = null,
-            OrderTypeRegistry? orderTypes = null)
+            OrderTypeRegistry? orderTypes = null,
+            PresetTypeRegistry? presetTypes = null)
         {
             _pipeline = pipeline;
             _registry = registry;
             _conditions = conditions;
             _targetDispatchPresets = targetDispatchPresets;
+            _presetTypes = presetTypes;
             _exchangeOperations = exchangeOperations;
             _progressionScopeKeys = progressionScopeKeys;
             _entityTemplateKeys = entityTemplateKeys;
@@ -143,6 +146,12 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 throw new InvalidOperationException(
                     $"Effect template '{id}' in {relativePath} uses deprecated 'lifecycleDeploy' block. Use configParams '_ep.targetEntityTemplate' with preset graph composition.");
             }
+
+            if (obj.ContainsKey("tags"))
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{id}' in {relativePath} field 'tags' was renamed to 'categories' (effect classification, not gameplay tags).");
+            }
         }
 
         private EffectTemplateData Compile(EffectTemplateConfig cfg, string relativePath)
@@ -203,18 +212,29 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 periodTicks = 0;
             }
 
-            if (cfg.Tags != null && cfg.Tags.Count > 1)
+            if (cfg.Categories != null && cfg.Categories.Count > 1)
             {
                 throw new InvalidOperationException(
-                    $"Effect template '{cfg.Id}' in {relativePath}: 'tags' supports at most one tag.");
+                    $"Effect template '{cfg.Id}' in {relativePath}: 'categories' supports at most one category.");
             }
-            int tagId = cfg.Tags != null && cfg.Tags.Count == 1
-                ? TagRegistry.Register(RequireString(cfg.Tags[0], cfg.Id, relativePath, "tags[0]"))
+            int categoryId = cfg.Categories != null && cfg.Categories.Count == 1
+                ? EffectCategoryRegistry.Register(RequireString(cfg.Categories[0], cfg.Id, relativePath, "categories[0]"))
                 : 0;
 
-            EffectPresetType presetType = ParsePresetType(cfg.PresetType, cfg.Id, relativePath);
-            int presetAttr0 = 0;
-            int presetAttr1 = 0;
+            int presetTypeId = ParsePresetTypeId(cfg.PresetType, cfg.Id, relativePath);
+            if (_presetTypes != null && _presetTypes.IsRegistered(presetTypeId))
+            {
+                ref readonly PresetTypeDefinition presetDefinition = ref _presetTypes.Get(presetTypeId);
+                if (!presetDefinition.AllowsLifetime(lifetimeKind))
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType '{presetDefinition.TypeKey}' does not allow lifetime '{lifetimeKind}'.");
+                }
+            }
+
+            EffectPresetType presetType = ResolveBuiltinPresetType(presetTypeId);
+            int presetAttr0 = AttributeRegistry.InvalidId;
+            int presetAttr1 = AttributeRegistry.InvalidId;
             int reserved = 0;
             if (presetType == EffectPresetType.ApplyForce2D)
             {
@@ -506,8 +526,9 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
             return new EffectTemplateData
             {
-                TagId = tagId,
+                CategoryId = categoryId,
                 PresetType = presetType,
+                PresetTypeId = presetTypeId,
                 PresetAttribute0 = presetAttr0,
                 PresetAttribute1 = presetAttr1,
                 LifetimeKind = lifetimeKind,
@@ -598,16 +619,22 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 ownerId,
                 "relation.subject",
                 relativePath);
-            RelationEntitySlot parent = ParseRelationEntitySlot(
-                cfg.Parent,
-                ownerId,
-                "relation.parent",
-                relativePath);
-            bool snapSubjectToParentPosition = RequireBool(
-                cfg.SnapSubjectToParentPosition,
-                ownerId,
-                relativePath,
-                "relation.snapSubjectToParentPosition");
+            // parent 槽对 Detach/RemoveParent 无意义（父由 ChildOf 给出）：缺省即 None，
+            // 需要父槽的操作（SetParent/EnsureLink/Attach）由下方显式校验兜底。
+            RelationEntitySlot parent = string.IsNullOrWhiteSpace(cfg.Parent)
+                ? RelationEntitySlot.None
+                : ParseRelationEntitySlot(
+                    cfg.Parent,
+                    ownerId,
+                    "relation.parent",
+                    relativePath);
+            bool snapSubjectToParentPosition = operation == RelationOperation.SetParent
+                ? RequireBool(
+                    cfg.SnapSubjectToParentPosition,
+                    ownerId,
+                    relativePath,
+                    "relation.snapSubjectToParentPosition")
+                : false;
 
             if (subject == RelationEntitySlot.None)
             {
@@ -627,10 +654,91 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     $"Effect template '{ownerId}' in {relativePath}: relation.parent cannot be None when operation=EnsureLink.");
             }
 
+            if (operation == RelationOperation.Attach && parent == RelationEntitySlot.None)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: relation.parent cannot be None when operation=Attach.");
+            }
+
             if (operation != RelationOperation.SetParent && snapSubjectToParentPosition)
             {
                 throw new InvalidOperationException(
                     $"Effect template '{ownerId}' in {relativePath}: relation.snapSubjectToParentPosition is only valid when operation=SetParent.");
+            }
+
+            if (operation != RelationOperation.Attach && cfg.LocalPose != null)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: relation.localPose is only valid when operation=Attach.");
+            }
+
+            if (operation != RelationOperation.Detach &&
+                (!string.IsNullOrWhiteSpace(cfg.DetachPlacement) || cfg.DetachPerimeterRadiusCm != null))
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: relation.detachPlacement/detachPerimeterRadiusCm are only valid when operation=Detach.");
+            }
+
+            Ludots.Core.Components.AttachedOffsetRotation attachOffsetRotation = Ludots.Core.Components.AttachedOffsetRotation.None;
+            int attachOffsetXCm = 0;
+            int attachOffsetYCm = 0;
+            int attachFacingDeg = 0;
+            bool attachInheritParentFacing = false;
+            if (operation == RelationOperation.Attach)
+            {
+                if (cfg.LocalPose == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{ownerId}' in {relativePath}: operation=Attach requires a 'relation.localPose' block.");
+                }
+
+                attachOffsetXCm = RequireInt(cfg.LocalPose.OffsetXCm, ownerId, relativePath, "relation.localPose.offsetXCm");
+                attachOffsetYCm = RequireInt(cfg.LocalPose.OffsetYCm, ownerId, relativePath, "relation.localPose.offsetYCm");
+                attachFacingDeg = RequireInt(cfg.LocalPose.FacingDeg, ownerId, relativePath, "relation.localPose.facingDeg");
+                attachInheritParentFacing = RequireBool(
+                    cfg.LocalPose.InheritParentFacing,
+                    ownerId,
+                    relativePath,
+                    "relation.localPose.inheritParentFacing");
+                attachOffsetRotation = ParseAttachedOffsetRotation(cfg.LocalPose.OffsetRotation, ownerId, relativePath);
+                if (attachInheritParentFacing &&
+                    attachOffsetRotation == Ludots.Core.Components.AttachedOffsetRotation.OwnFacing)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{ownerId}' in {relativePath}: relation.localPose.inheritParentFacing=true 与 offsetRotation=OwnFacing 互斥（朝向同时随父又随子无定义）。");
+                }
+            }
+
+            Ludots.Core.Gameplay.Attachment.DetachPlacement detachPlacement =
+                Ludots.Core.Gameplay.Attachment.DetachPlacement.KeepWorldPose;
+            int detachPerimeterRadiusCm = 0;
+            if (operation == RelationOperation.Detach)
+            {
+                if (string.IsNullOrWhiteSpace(cfg.DetachPlacement))
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{ownerId}' in {relativePath}: operation=Detach requires relation.detachPlacement.");
+                }
+
+                detachPlacement = ParseDetachPlacement(cfg.DetachPlacement, ownerId, relativePath);
+                if (detachPlacement == Ludots.Core.Gameplay.Attachment.DetachPlacement.ParentPerimeterRing)
+                {
+                    detachPerimeterRadiusCm = RequireInt(
+                        cfg.DetachPerimeterRadiusCm,
+                        ownerId,
+                        relativePath,
+                        "relation.detachPerimeterRadiusCm");
+                    if (detachPerimeterRadiusCm <= 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Effect template '{ownerId}' in {relativePath}: relation.detachPerimeterRadiusCm must be > 0.");
+                    }
+                }
+                else if (cfg.DetachPerimeterRadiusCm != null)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{ownerId}' in {relativePath}: relation.detachPerimeterRadiusCm is only valid when detachPlacement=ParentPerimeterRing.");
+                }
             }
 
             int relationshipTypeId = 0;
@@ -666,7 +774,49 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 Subject = subject,
                 Parent = parent,
                 SnapSubjectToParentPosition = snapSubjectToParentPosition,
-                RelationshipTypeId = relationshipTypeId
+                RelationshipTypeId = relationshipTypeId,
+                AttachOffsetXCm = attachOffsetXCm,
+                AttachOffsetYCm = attachOffsetYCm,
+                AttachFacingDeg = attachFacingDeg,
+                AttachInheritParentFacing = attachInheritParentFacing,
+                AttachOffsetRotation = attachOffsetRotation,
+                DetachPlacementKind = detachPlacement,
+                DetachPerimeterRadiusCm = detachPerimeterRadiusCm,
+            };
+        }
+
+        private static Ludots.Core.Components.AttachedOffsetRotation ParseAttachedOffsetRotation(
+            string? value,
+            string ownerId,
+            string relativePath)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: relation.localPose.offsetRotation is required (None, ParentFacing or OwnFacing).");
+            }
+
+            return value switch
+            {
+                "None" => Ludots.Core.Components.AttachedOffsetRotation.None,
+                "ParentFacing" => Ludots.Core.Components.AttachedOffsetRotation.ParentFacing,
+                "OwnFacing" => Ludots.Core.Components.AttachedOffsetRotation.OwnFacing,
+                _ => throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: unsupported relation.localPose.offsetRotation '{value}'. Supported: None, ParentFacing, OwnFacing."),
+            };
+        }
+
+        private static Ludots.Core.Gameplay.Attachment.DetachPlacement ParseDetachPlacement(
+            string? value,
+            string ownerId,
+            string relativePath)
+        {
+            return value switch
+            {
+                "KeepWorldPose" => Ludots.Core.Gameplay.Attachment.DetachPlacement.KeepWorldPose,
+                "ParentPerimeterRing" => Ludots.Core.Gameplay.Attachment.DetachPlacement.ParentPerimeterRing,
+                _ => throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: unsupported relation.detachPlacement '{value}'. Supported: KeepWorldPose, ParentPerimeterRing."),
             };
         }
 
@@ -1087,8 +1237,10 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 "SetParent" => RelationOperation.SetParent,
                 "RemoveParent" => RelationOperation.RemoveParent,
                 "EnsureLink" => RelationOperation.EnsureLink,
+                "Attach" => RelationOperation.Attach,
+                "Detach" => RelationOperation.Detach,
                 _ => throw new InvalidOperationException(
-                    $"Effect template '{ownerId}' in {relativePath}: unsupported relation.operation '{value}'. Supported: SetParent, RemoveParent, EnsureLink.")
+                    $"Effect template '{ownerId}' in {relativePath}: unsupported relation.operation '{value}'. Supported: SetParent, RemoveParent, EnsureLink, Attach, Detach.")
             };
         }
 
@@ -1135,9 +1287,40 @@ namespace Ludots.Core.Gameplay.GAS.Config
             throw new InvalidOperationException(
                 $"Effect template '{ownerId}' in {relativePath}: {fieldPath} uses unsupported entity slot '{slot}'. Supported: None, Source, Target, TargetContext.");
         }
-        private static EffectPresetType ParsePresetType(string? presetType, string ownerId, string relativePath)
+        private int ParsePresetTypeId(string? presetType, string ownerId, string relativePath)
         {
-            return GasEnumParser.ParsePresetTypeStrict(presetType, $"Effect template '{ownerId}' in {relativePath}");
+            string context = $"Effect template '{ownerId}' in {relativePath}";
+            if (string.IsNullOrWhiteSpace(presetType))
+            {
+                throw new InvalidOperationException($"{context}: presetType must be explicitly defined.");
+            }
+
+            if (_presetTypes != null && _presetTypes.TryGetId(presetType, out int typeId) && _presetTypes.IsRegistered(typeId))
+            {
+                return typeId;
+            }
+
+            GasOperatorWhitelist.ValidateEffectPresetType(presetType, ownerId);
+
+            if (Enum.TryParse<EffectPresetType>(presetType, out EffectPresetType builtin) &&
+                Enum.IsDefined(typeof(EffectPresetType), builtin))
+            {
+                return (int)builtin;
+            }
+
+            throw new InvalidOperationException(
+                $"{context}: presetType '{presetType}' is not registered in preset_types.json, a Core EffectPresetType, or a loaded mod extension.");
+        }
+
+        private static EffectPresetType ResolveBuiltinPresetType(int presetTypeId)
+        {
+            if ((uint)presetTypeId <= byte.MaxValue &&
+                Enum.IsDefined(typeof(EffectPresetType), (byte)presetTypeId))
+            {
+                return (EffectPresetType)(byte)presetTypeId;
+            }
+
+            return EffectPresetType.None;
         }
 
         // ── Phase Graph compilation ──
@@ -1451,10 +1634,10 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 else
                     throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: phaseListeners[{i}] has unknown action '{lc.Action}'. Supported: Graph, Event, Both.");
 
-                // Listen tag
-                int listenTagId = 0;
-                if (!string.IsNullOrWhiteSpace(lc.ListenTag))
-                    listenTagId = TagRegistry.Register(lc.ListenTag);
+                // Listen category (effect classification; not a gameplay tag)
+                int listenCategoryId = 0;
+                if (!string.IsNullOrWhiteSpace(lc.ListenCategory))
+                    listenCategoryId = EffectCategoryRegistry.Register(lc.ListenCategory);
 
                 // Listen effect template id
                 int listenEffectId = 0;
@@ -1470,14 +1653,14 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 if ((flags & PhaseListenerActionFlags.ExecuteGraph) != 0 && !string.IsNullOrWhiteSpace(lc.GraphProgram))
                     graphProgramId = ResolveGraphProgram(lc.GraphProgram, ownerId, $"phaseListeners[{i}].graphProgram", relativePath);
 
-                // Event tag
+                // Event tag (real gameplay / event tag)
                 int eventTagId = 0;
                 if ((flags & PhaseListenerActionFlags.PublishEvent) != 0 && !string.IsNullOrWhiteSpace(lc.EventTag))
                     eventTagId = TagRegistry.Register(lc.EventTag);
 
                 int priority = lc.Priority ?? 0;
                 if (!EffectPhaseListenerContract.TryValidateRegistration(
-                        listenTagId,
+                        listenCategoryId,
                         listenEffectId,
                         phaseId,
                         scope,
@@ -1489,7 +1672,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     throw new InvalidOperationException(
                         $"Effect template '{ownerId}' in {relativePath}: phaseListeners[{i}] is invalid. {listenerError}");
                 }
-                if (!result.TryAddTemplate(listenTagId, listenEffectId, phaseId, scope, flags, graphProgramId, eventTagId, priority))
+                if (!result.TryAddTemplate(listenCategoryId, listenEffectId, phaseId, scope, flags, graphProgramId, eventTagId, priority))
                 {
                     throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: phaseListeners exceeded capacity ({EffectPhaseListenerBuffer.CAPACITY}).");
                 }

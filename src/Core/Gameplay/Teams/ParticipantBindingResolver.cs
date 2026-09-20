@@ -2,37 +2,42 @@ using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Association;
+using Ludots.Core.Client;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Relationships.Config;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Map;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 
 namespace Ludots.Core.Gameplay.Teams
 {
+    public readonly record struct ResolvedLocalSeatPossession(
+        string SeatId,
+        int PlayerId,
+        Entity RepEntity,
+        string? ControlSchemeId);
+
     public sealed class ParticipantBindingResult
     {
         public ParticipantBindingResult(
             TeamEntityLookup teams,
             PlayerEntityLookup players,
-            int localPlayerId,
-            Entity localPlayerEntity,
+            IReadOnlyList<ResolvedLocalSeatPossession> localSeats,
             TeamRelationshipSnapshot? teamRelationships = null)
         {
             Teams = teams ?? throw new ArgumentNullException(nameof(teams));
             Players = players ?? throw new ArgumentNullException(nameof(players));
-            LocalPlayerId = localPlayerId;
-            LocalPlayerEntity = localPlayerEntity;
+            LocalSeats = localSeats ?? Array.Empty<ResolvedLocalSeatPossession>();
             TeamRelationships = teamRelationships;
         }
 
         public TeamEntityLookup Teams { get; }
         public PlayerEntityLookup Players { get; }
-        public int LocalPlayerId { get; }
-        public Entity LocalPlayerEntity { get; }
+        public IReadOnlyList<ResolvedLocalSeatPossession> LocalSeats { get; }
         public TeamRelationshipSnapshot? TeamRelationships { get; }
     }
 
@@ -99,8 +104,6 @@ namespace Ludots.Core.Gameplay.Teams
                 teamLookup.Register(binding.TeamId, entity);
             }
 
-            int localPlayerId = 0;
-            Entity localPlayerEntity = Entity.Null;
             for (int i = 0; i < mapConfig.Players.Count; i++)
             {
                 PlayerBindingData binding = mapConfig.Players[i] ?? throw new InvalidOperationException($"Map '{mapId}' Players[{i}] requires an object payload.");
@@ -142,19 +145,10 @@ namespace Ludots.Core.Gameplay.Teams
                 playerLookup.Register(binding.PlayerId, entity);
             }
 
-            MapLaunchContext? launchContext = session.LaunchContext;
-            if (launchContext?.HasLocalPlayer == true)
-            {
-                int localLaunchPlayerId = launchContext.LocalPlayerId;
-                if (!playerLookup.TryGet(localLaunchPlayerId, out Entity localLaunchPlayerEntity))
-                {
-                    throw new InvalidOperationException(
-                        $"Map '{mapId}' launch context LocalPlayerId {localLaunchPlayerId} references an unbound player.");
-                }
-
-                localPlayerId = localLaunchPlayerId;
-                localPlayerEntity = localLaunchPlayerEntity;
-            }
+            IReadOnlyList<ResolvedLocalSeatPossession> localSeats = ResolveLocalSeats(
+                mapId,
+                session.LaunchContext,
+                playerLookup);
 
             ResolveRelationships(mapId, mapConfig, teamLookup, playerLookup, relationships, relationshipTypes, stanceCatalog);
             BuildControlPlaneEdges(session, world, mapId, mapConfig, teamLookup, playerLookup, relationships, relationshipTypes, ownership);
@@ -163,8 +157,7 @@ namespace Ludots.Core.Gameplay.Teams
             return new ParticipantBindingResult(
                 teamLookup,
                 playerLookup,
-                localPlayerId,
-                localPlayerEntity,
+                localSeats,
                 hasParticipantBindings ? TeamManager.CaptureSnapshot() : null);
         }
 
@@ -182,21 +175,7 @@ namespace Ludots.Core.Gameplay.Teams
                 TeamManager.RestoreSnapshot(participants.TeamRelationships);
             }
 
-            if (participants.LocalPlayerId > 0 && participants.LocalPlayerEntity != Entity.Null)
-            {
-                globals[CoreServiceKeys.LocalPlayerId.Name] = participants.LocalPlayerId;
-                globals[CoreServiceKeys.LocalPlayerEntity.Name] = participants.LocalPlayerEntity;
-            }
-            else if (participants.LocalPlayerEntity != Entity.Null)
-            {
-                globals.Remove(CoreServiceKeys.LocalPlayerId.Name);
-                globals[CoreServiceKeys.LocalPlayerEntity.Name] = participants.LocalPlayerEntity;
-            }
-            else
-            {
-                globals.Remove(CoreServiceKeys.LocalPlayerId.Name);
-                globals.Remove(CoreServiceKeys.LocalPlayerEntity.Name);
-            }
+            PublishLocalSeats(globals, participants.LocalSeats);
         }
 
         public static void ClearFocused(IDictionary<string, object> globals)
@@ -222,8 +201,246 @@ namespace Ludots.Core.Gameplay.Teams
                 globals[CoreServiceKeys.PlayerEntityLookup.Name] = new PlayerEntityLookup();
             }
 
-            globals.Remove(CoreServiceKeys.LocalPlayerId.Name);
-            globals.Remove(CoreServiceKeys.LocalPlayerEntity.Name);
+            if (globals.TryGetValue(CoreServiceKeys.ClientLocalSeatRegistry.Name, out object? seatsObj) &&
+                seatsObj is ClientLocalSeatRegistry seats)
+            {
+                seats.Clear();
+            }
+
+            if (globals.TryGetValue(CoreServiceKeys.LogicViewRegistry.Name, out object? viewsObj) &&
+                viewsObj is LogicViewRegistry views)
+            {
+                views.Clear();
+            }
+        }
+
+        private static IReadOnlyList<ResolvedLocalSeatPossession> ResolveLocalSeats(
+            string mapId,
+            MapLaunchContext? launchContext,
+            PlayerEntityLookup playerLookup)
+        {
+            if (launchContext?.HasLocalSeats != true)
+            {
+                return Array.Empty<ResolvedLocalSeatPossession>();
+            }
+
+            var resolved = new ResolvedLocalSeatPossession[launchContext.LocalSeats.Count];
+            for (int i = 0; i < launchContext.LocalSeats.Count; i++)
+            {
+                LocalSeatLaunchBinding seat = launchContext.LocalSeats[i];
+                if (!playerLookup.TryGet(seat.PlayerId, out Entity rep))
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapId}' launch context LocalSeats[{i}] playerId {seat.PlayerId} references an unbound player.");
+                }
+
+                resolved[i] = new ResolvedLocalSeatPossession(seat.SeatId, seat.PlayerId, rep, seat.ControlSchemeId);
+            }
+
+            return resolved;
+        }
+
+        private static void PublishLocalSeats(
+            IDictionary<string, object> globals,
+            IReadOnlyList<ResolvedLocalSeatPossession> localSeats)
+        {
+            if (!globals.TryGetValue(CoreServiceKeys.ClientLocalSeatRegistry.Name, out object? seatsObj) ||
+                seatsObj is not ClientLocalSeatRegistry seats)
+            {
+                throw new InvalidOperationException(
+                    $"{CoreServiceKeys.ClientLocalSeatRegistry.Name} must be registered before publishing focused participants.");
+            }
+
+            if (!globals.TryGetValue(CoreServiceKeys.LogicViewRegistry.Name, out object? viewsObj) ||
+                viewsObj is not LogicViewRegistry views)
+            {
+                throw new InvalidOperationException(
+                    $"{CoreServiceKeys.LogicViewRegistry.Name} must be registered before publishing focused participants.");
+            }
+
+            seats.Clear();
+            views.Clear();
+            string? declaredPresentLayout = ClientLocalSeatAccess.ResolveDeclaredPresentLayout(globals);
+            PresentBinding.ValidateDeclaredLayout(declaredPresentLayout);
+            var built = new ClientLocalSeat[localSeats.Count];
+            for (int i = 0; i < localSeats.Count; i++)
+            {
+                ResolvedLocalSeatPossession possession = localSeats[i];
+                var seat = new ClientLocalSeat(possession.SeatId, possession.ControlSchemeId)
+                {
+                    PossessedPlayerId = possession.PlayerId,
+                    PossessedRep = possession.RepEntity,
+                };
+                string viewId = views.EnsureDefaultView(possession.RepEntity);
+                if (TryResolvePresentResolutionPx(globals, out System.Numerics.Vector2 presentResolutionPx))
+                {
+                    seat.PresentBinding = PresentBinding.FromDeclaredLayout(
+                        declaredPresentLayout,
+                        viewId,
+                        i,
+                        localSeats.Count,
+                        presentResolutionPx);
+                }
+
+                built[i] = seat;
+            }
+
+            seats.ReplaceAll(built);
+            ConfigureLogicViewCameras(globals, views);
+            ActivateSoleSeatControlScheme(globals, seats);
+            PublishSeatInputChannels(globals, seats);
+        }
+
+        /// <summary>
+        /// Multi-seat scheme routing: with more than one seat, every seat declaring a
+        /// controlSchemeId activates it on its own input channel (handler context stack +
+        /// authoritative input snapshot owned per seat). The sole seat keeps the engine-global
+        /// interpretation chain and never reaches this path's channel building. A declared
+        /// scheme that is uninstalled or refused by the mod allowed-set fails fast inside
+        /// <see cref="ClientLocalSeatInputRuntime.PublishSeats"/> with the same semantics as
+        /// the sole-seat activation chain.
+        /// </summary>
+        private static void PublishSeatInputChannels(
+            IDictionary<string, object> globals,
+            ClientLocalSeatRegistry seats)
+        {
+            if (globals.TryGetValue(CoreServiceKeys.ClientLocalSeatInputRuntime.Name, out object? runtimeObj) &&
+                runtimeObj is ClientLocalSeatInputRuntime seatInput)
+            {
+                seatInput.PublishSeats(seats);
+                return;
+            }
+
+            if (seats.Count > 1)
+            {
+                for (int i = 0; i < seats.SeatIds.Count; i++)
+                {
+                    ClientLocalSeat seat = seats.Require(seats.SeatIds[i]);
+                    if (string.IsNullOrWhiteSpace(seat.ControlSchemeId))
+                    {
+                        continue;
+                    }
+
+                    throw new InvalidOperationException(
+                        $"ClientLocalSeat '{seat.SeatId}' declares control scheme '{seat.ControlSchemeId}' " +
+                        $"but the ClientLocalSeatInputRuntime service is not registered.");
+                }
+            }
+        }
+
+        /// <summary>
+        /// The sole seat's declared ControlSchemeId is the per-entry launch truth and activates the
+        /// global ControlSchemeRuntime (sole consumption path) as a runtime-only switch: the
+        /// map-entry truth is transient and never rewrites the persisted preference store, so the
+        /// player's own choice survives for later maps without a declaration. Seats without a
+        /// declaration keep the runtime's initial/preference activation. Multi-seat tables never
+        /// touch this global runtime; their declared schemes activate per seat in
+        /// <see cref="PublishSeatInputChannels"/>. A declared scheme with the runtime
+        /// unregistered, uninstalled, or refused by the allowed-set is a configuration error and
+        /// fails fast instead of falling back to the initial scheme.
+        /// </summary>
+        private static void ActivateSoleSeatControlScheme(
+            IDictionary<string, object> globals,
+            ClientLocalSeatRegistry seats)
+        {
+            if (seats.Count != 1)
+            {
+                return;
+            }
+
+            ClientLocalSeat seat = seats.Require(seats.SeatIds[0]);
+            if (string.IsNullOrWhiteSpace(seat.ControlSchemeId))
+            {
+                return;
+            }
+
+            if (!globals.TryGetValue(CoreServiceKeys.ControlSchemeRuntime.Name, out object? schemeObj) ||
+                schemeObj is not ControlSchemeRuntime schemes)
+            {
+                throw new InvalidOperationException(
+                    $"ClientLocalSeat '{seat.SeatId}' declares control scheme '{seat.ControlSchemeId}' but the ControlSchemeRuntime service is not registered.");
+            }
+
+            string schemeId = seat.ControlSchemeId!.Trim();
+            if (!schemes.SchemeIdRegistry.TryGetId(schemeId, out int compiledSchemeId))
+            {
+                throw new InvalidOperationException(
+                    $"ClientLocalSeat '{seat.SeatId}' declares control scheme '{schemeId}' which is not installed.");
+            }
+
+            if (!schemes.TrySwitchRuntimeOnly(compiledSchemeId))
+            {
+                throw new InvalidOperationException(
+                    $"ClientLocalSeat '{seat.SeatId}' declares control scheme '{schemeId}' which the mod allowed-set refuses.");
+            }
+        }
+
+        private static bool TryResolvePresentResolutionPx(
+            IDictionary<string, object> globals,
+            out System.Numerics.Vector2 presentResolutionPx)
+        {
+            presentResolutionPx = default;
+            if (!globals.TryGetValue(CoreServiceKeys.ViewController.Name, out object? viewObj) ||
+                viewObj is not Presentation.Camera.IViewController view)
+            {
+                return false;
+            }
+
+            if (view.Resolution.X <= 0f || view.Resolution.Y <= 0f)
+            {
+                throw new InvalidOperationException(
+                    "ViewController.Resolution must be positive before publishing PresentBinding.");
+            }
+
+            presentResolutionPx = view.Resolution;
+            return true;
+        }
+
+        private static void ConfigureLogicViewCameras(IDictionary<string, object> globals, LogicViewRegistry views)
+        {
+            Gameplay.Camera.VirtualCameraRegistry? virtualCameras = null;
+            if (globals.TryGetValue(CoreServiceKeys.VirtualCameraRegistry.Name, out object? vcamObj) &&
+                vcamObj is Gameplay.Camera.VirtualCameraRegistry registry)
+            {
+                virtualCameras = registry;
+            }
+
+            Gameplay.Camera.CameraImpulseRuntime? impulseRuntime = null;
+            if (globals.TryGetValue(CoreServiceKeys.CameraImpulseRuntime.Name, out object? impulseObj) &&
+                impulseObj is Gameplay.Camera.CameraImpulseRuntime impulse)
+            {
+                impulseRuntime = impulse;
+            }
+
+            Gameplay.Camera.PlatformManagedCameraDriverRegistry? platformDrivers = null;
+            if (globals.TryGetValue(CoreServiceKeys.PlatformManagedCameraDriverRegistry.Name, out object? driversObj) &&
+                driversObj is Gameplay.Camera.PlatformManagedCameraDriverRegistry drivers)
+            {
+                platformDrivers = drivers;
+            }
+
+            var cameras = new System.Collections.Generic.List<Gameplay.Camera.CameraManager>(views.Count);
+            views.CopyCameras(cameras);
+            for (int i = 0; i < cameras.Count; i++)
+            {
+                Gameplay.Camera.CameraManager camera = cameras[i];
+                if (virtualCameras != null && camera.VirtualCameraBrain == null)
+                {
+                    camera.SetVirtualCameraRegistry(virtualCameras);
+                }
+
+                if (impulseRuntime != null)
+                {
+                    camera.SetImpulseRuntime(impulseRuntime);
+                }
+
+                if (platformDrivers != null)
+                {
+                    camera.SetPlatformManagedCameraDriverRegistry(platformDrivers);
+                }
+
+                // Runtime (bounds / heightmap / view) is completed by GameEngine.EnsureCameraRuntimeConfigured.
+            }
         }
 
         private static void PublishTeamLookup(IDictionary<string, object> globals, TeamEntityLookup source)

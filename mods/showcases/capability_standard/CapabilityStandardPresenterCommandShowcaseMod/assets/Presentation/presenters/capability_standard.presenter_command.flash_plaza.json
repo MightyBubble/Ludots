@@ -1,0 +1,77 @@
+[
+  {
+    "id": "pcmd.flash_unit",
+    "paramDefaults": [
+      {
+        "paramKey": "pcmd.unit.color",
+        "lane": "Vector",
+        "vectorValue": [0.3, 0.55, 1.0, 1.0]
+      }
+    ],
+    "rules": [
+      {
+        "event": { "kind": "GameplayEvent", "keyId": "pcmd.hit" },
+        "command": {
+          "kind": "SetParam",
+          "paramKey": "pcmd.unit.color",
+          "paramLane": "Vector",
+          "valueSource": "Fixed",
+          "vectorValue": [1.0, 0.85, 0.2, 1.0]
+        }
+      },
+      {
+        "event": { "kind": "GameplayEvent", "keyId": "pcmd.hit" },
+        "command": {
+          "kind": "TimerSet",
+          "timerName": "pcmd.flash",
+          "durationSeconds": 0.6
+        }
+      },
+      {
+        "event": { "kind": "TimerExpired", "keyId": "pcmd.flash" },
+        "command": {
+          "kind": "SetParam",
+          "paramKey": "pcmd.unit.color",
+          "paramLane": "Vector",
+          "valueSource": "Fixed",
+          "vectorValue": [0.3, 0.55, 1.0, 1.0]
+        }
+      },
+      {
+        "event": { "kind": "TagEffectiveChanged", "keyId": "pcmd.suppressed" },
+        "condition": { "inline": "TagGained" },
+        "command": {
+          "kind": "TimerKill",
+          "timerName": "*"
+        }
+      },
+      {
+        "event": { "kind": "TagEffectiveChanged", "keyId": "pcmd.suppressed" },
+        "condition": { "inline": "TagGained" },
+        "command": {
+          "kind": "SetParam",
+          "paramKey": "pcmd.unit.color",
+          "paramLane": "Vector",
+          "valueSource": "Fixed",
+          "vectorValue": [0.35, 0.9, 0.45, 1.0]
+        }
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [0.7, 1.4, 0.7],
+          "colorParamKey": "pcmd.unit.color"
+        }
+      }
+    ]
+  }
+]

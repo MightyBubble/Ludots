@@ -15,7 +15,7 @@
 | `fix/moba-test-coreinputmod-dependency` | 2 | MobaDemoMod 测试添加 CoreInputMod 依赖 | 基于 #8，+1 提交 |
 | `cursor/gas-input-order-933a` | 5+ | 全链路生产化、Ability→JSON、InjectAction API、HUD 迁移、删除 RtsShowcaseMod | 基于更早 main，分叉严重 |
 | `cursor/gas-mod-dcf5` | 5+ | Ability JSON 迁移、11 presets 测试、MOBA demo log | 与 #8 内容高度重叠 |
-| `cursor/performer-skill-demo-mod-5a21` | 5+ | MobaSkillDemo 演示、实体 body pipeline、HUD overlay、fireball 目标 | 基于 #8 或相近 |
+| `cursor/presenter-skill-demo-mod-5a21` | 5+ | MobaSkillDemo 演示、实体 body pipeline、HUD overlay、fireball 目标 | 基于 #8 或相近 |
 
 ---
 
@@ -37,7 +37,7 @@
 
 - **cursor/gas-mod-dcf5**：Ability JSON 迁移、ARPG/RTS/4X/TCG 注册、测试扩展等已并入 #8，该分支**大部分内容已覆盖**
 - **cursor/gas-input-order-933a**：基于 `f85936d`，与当前 main 分叉较深；且**删除了 RtsShowcaseMod**（含 vtxm、实体、地图等），需业务决策是否采纳
-- **cursor/performer-skill-demo-mod-5a21**：新增 `MobaSkillDemoPresentationSystem` 等，与 #8 的 Moba 改动有重叠，需逐文件比对
+- **cursor/presenter-skill-demo-mod-5a21**：新增 `MobaSkillDemoPresentationSystem` 等，与 #8 的 Moba 改动有重叠，需逐文件比对
 
 ---
 
@@ -57,7 +57,7 @@ git merge origin/fix/moba-test-coreinputmod-dependency -m "fix: add CoreInputMod
 
 ### 3.2 优先级 2：选择性采纳（需人工评审）
 
-**cursor/performer-skill-demo-mod-5a21**
+**cursor/presenter-skill-demo-mod-5a21**
 
 - 新增：`MobaSkillDemoPresentationSystem`、实体 body pipeline 修复、HUD overlay 堆叠、fireball 目标选择
 - 建议：以 **cherry-pick 或逐文件对比** 方式提取有用修复，避免整分支合并带来的冗余
@@ -86,7 +86,7 @@ cursor/prs-dbf7 (当前)
     │
     ├─ merge fix/moba-test-coreinputmod-dependency
     │
-    └─ (可选) cherry-pick performer-skill-demo-mod 中的修复提交
+    └─ (可选) cherry-pick presenter-skill-demo-mod 中的修复提交
 ```
 
 ---

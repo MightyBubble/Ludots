@@ -1,0 +1,35 @@
+{
+  "op": "ControlDomainControls",
+  "driver": "event",
+  "title": "同一个兵，不是谁都指挥得动",
+  "beat": "队长指挥队员是实线；反过来队员指挥队长，线断在半路。",
+  "detailTemplate": "队长对队员{result}；队员对队长{resultFoe}。",
+  "assertDetailContains": [
+    "管得着",
+    "管不动"
+  ],
+  "featuredNodeId": "controls",
+  "graphKind": "Validation",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "队长",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Ally",
+      "name": "队员",
+      "x": 2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

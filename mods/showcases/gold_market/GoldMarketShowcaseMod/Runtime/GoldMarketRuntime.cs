@@ -7,6 +7,7 @@ using GoldMarketShowcaseMod.UI;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Exchange;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Items;
@@ -107,8 +108,9 @@ public sealed class GoldMarketRuntime
     public void RefillGold(GameEngine engine)
     {
         EnsureScenario(engine);
-        ref AttributeBuffer attributes = ref engine.World.Get<AttributeBuffer>(_buyer);
-        attributes.SetCurrent(_goldAttributeId, _config!.RefillGold);
+        TagOps tagOps = engine.GetService(CoreServiceKeys.TagOps)
+            ?? throw new InvalidOperationException("GoldMarketShowcase requires TagOps.");
+        AttributeMutationOps.SetCurrent(engine.World, _buyer, _goldAttributeId, _config!.RefillGold, tagOps);
         _status = $"Gold refilled to {_config.RefillGold}.";
         PushLog(_status);
         RefreshPanelInternal(engine);
@@ -231,8 +233,9 @@ public sealed class GoldMarketRuntime
             new Name { Value = _config.MarketName },
             new MapEntity { MapId = new MapId(GoldMarketIds.ShowcaseMapId) });
 
-        ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(_buyer);
-        attributes.SetCurrent(_goldAttributeId, _config.StartingGold);
+        TagOps tagOps = engine.GetService(CoreServiceKeys.TagOps)
+            ?? throw new InvalidOperationException("GoldMarketShowcase requires TagOps.");
+        AttributeMutationOps.SetCurrent(world, _buyer, _goldAttributeId, _config.StartingGold, tagOps);
 
         InventoryRuntimeService inventory = engine.GetService(CoreServiceKeys.InventoryRuntimeService)
             ?? throw new InvalidOperationException("InventoryRuntimeService missing.");

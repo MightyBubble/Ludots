@@ -1,0 +1,13 @@
+{
+  "op": "AggMinEntityByAttribute",
+  "driver": "query",
+  "title": "点名最残的那个",
+  "beat": "全场退成灰影，空血条那个被点名徽钉住。",
+  "detailTemplate": "被点名的是{label}，血{hp}，点名线从指挥席拉到他头顶。",
+  "assertDetailContains": [
+    "点名线"
+  ],
+  "featuredNodeId": "minEnt",
+  "graphKind": "Query",
+  "field": "query"
+}

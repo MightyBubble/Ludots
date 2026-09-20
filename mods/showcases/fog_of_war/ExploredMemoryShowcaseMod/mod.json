@@ -2,7 +2,7 @@
   "name": "ExploredMemoryShowcaseMod",
   "version": "1.0.0",
   "description": "Explored memory and Knowledge aspect disclosure showcase root.",
-  "main": "bin/net8.0/ExploredMemoryShowcaseMod.dll",
+  "main": "bin/net9.0/ExploredMemoryShowcaseMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0"

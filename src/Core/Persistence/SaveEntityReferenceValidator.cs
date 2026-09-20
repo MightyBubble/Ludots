@@ -5,8 +5,10 @@ using Arch.Relationships;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
-using Ludots.Core.Gameplay.Quests;
+using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.Activities;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Tasks;
 
 namespace Ludots.Core.Persistence
 {
@@ -22,10 +24,66 @@ namespace Ludots.Core.Persistence
             ValidateActiveEffectContainer(world, policy);
             ValidateAbilityStateBuffer(world, policy);
             ValidateTeamEntityRef(world, policy);
-            ValidateQuestInstances(world, policy);
+            ValidateActivityInstances(world, policy);
+            ValidateTaskInstances(world, policy);
+            ValidateOrderBuffers(world, policy);
             ValidateRelationshipKeys<RelationshipEdgeSet>(world, policy);
             ValidateRelationshipKeys<InRelationship>(world, policy);
             ValidateRelationshipInstances(world, policy);
+        }
+
+        private static void ValidateOrderBuffers(World world, SaveEntityInclusionPolicy policy)
+        {
+            var orderQuery = new QueryDescription().WithAll<OrderBuffer>();
+            world.Query(in orderQuery, (Entity owner, ref OrderBuffer orders) =>
+            {
+                if (!policy.ShouldInclude(world, owner))
+                {
+                    return;
+                }
+
+                if (orders.HasActive)
+                {
+                    ValidateOrder(world, policy, owner, orders.ActiveOrder.Order, "active");
+                }
+
+                if (orders.HasPending)
+                {
+                    ValidateOrder(world, policy, owner, orders.PendingOrder.Order, "pending");
+                }
+
+                for (int i = 0; i < orders.QueuedCount; i++)
+                {
+                    ValidateOrder(world, policy, owner, orders.GetQueued(i).Order, $"queued={i}");
+                }
+            });
+
+            var continuationQuery = new QueryDescription().WithAll<OrderContinuationBuffer>();
+            world.Query(in continuationQuery, (Entity owner, ref OrderContinuationBuffer continuations) =>
+            {
+                if (!policy.ShouldInclude(world, owner))
+                {
+                    return;
+                }
+
+                for (int i = 0; i < continuations.Count; i++)
+                {
+                    ValidateOrder(world, policy, owner, continuations.GetEntry(i).Order, $"continuation={i}");
+                }
+            });
+        }
+
+        private static void ValidateOrder(
+            World world,
+            SaveEntityInclusionPolicy policy,
+            Entity owner,
+            Order order,
+            string lane)
+        {
+            ValidateTarget(world, policy, owner, order.Actor, nameof(OrderBuffer), $"{lane}.Actor");
+            ValidateTarget(world, policy, owner, order.Target, nameof(OrderBuffer), $"{lane}.Target");
+            ValidateTarget(world, policy, owner, order.TargetContext, nameof(OrderBuffer), $"{lane}.TargetContext");
+            ValidateTarget(world, policy, owner, order.CommandSource, nameof(OrderBuffer), $"{lane}.CommandSource");
         }
 
         private static void ValidateBlackboardEntityBuffer(World world, SaveEntityInclusionPolicy policy)
@@ -130,10 +188,10 @@ namespace Ludots.Core.Persistence
             });
         }
 
-        private static void ValidateQuestInstances(World world, SaveEntityInclusionPolicy policy)
+        private static void ValidateActivityInstances(World world, SaveEntityInclusionPolicy policy)
         {
-            var query = new QueryDescription().WithAll<QuestInstanceCm>();
-            world.Query(in query, (Entity owner, ref QuestInstanceCm quest) =>
+            var query = new QueryDescription().WithAll<ActivityInstanceCm>();
+            world.Query(in query, (Entity owner, ref ActivityInstanceCm activity) =>
             {
                 if (!policy.ShouldInclude(world, owner))
                 {
@@ -144,9 +202,29 @@ namespace Ludots.Core.Persistence
                     world,
                     policy,
                     owner,
-                    NormalizeOptionalEntity(quest.ScopeHost),
-                    nameof(QuestInstanceCm),
-                    nameof(QuestInstanceCm.ScopeHost));
+                    NormalizeOptionalEntity(activity.ScopeHost),
+                    nameof(ActivityInstanceCm),
+                    nameof(ActivityInstanceCm.ScopeHost));
+            });
+        }
+
+        private static void ValidateTaskInstances(World world, SaveEntityInclusionPolicy policy)
+        {
+            var query = new QueryDescription().WithAll<TaskInstanceCm>();
+            world.Query(in query, (Entity owner, ref TaskInstanceCm task) =>
+            {
+                if (!policy.ShouldInclude(world, owner))
+                {
+                    return;
+                }
+
+                ValidateTarget(
+                    world,
+                    policy,
+                    owner,
+                    NormalizeOptionalEntity(task.ScopeHost),
+                    nameof(TaskInstanceCm),
+                    nameof(TaskInstanceCm.ScopeHost));
             });
         }
 

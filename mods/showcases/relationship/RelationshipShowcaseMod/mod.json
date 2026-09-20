@@ -2,7 +2,7 @@
   "name": "RelationshipShowcaseMod",
   "version": "1.0.0",
   "description": "Playable relationship-system showcase covering loyalty, support, synergy, threat, trigger callbacks, and GAS integration.",
-  "main": "bin/net8.0/RelationshipShowcaseMod.dll",
+  "main": "bin/net9.0/RelationshipShowcaseMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

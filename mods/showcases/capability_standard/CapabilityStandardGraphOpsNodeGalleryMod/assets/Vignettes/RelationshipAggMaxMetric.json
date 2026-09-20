@@ -1,0 +1,13 @@
+{
+  "op": "RelationshipAggMaxMetric",
+  "driver": "rel",
+  "title": "最高好感是多少",
+  "beat": "四块数值牌里最高的浮出来。",
+  "detailTemplate": "最高好感 {max}，是{friend}。",
+  "assertDetailContains": [
+    "最高"
+  ],
+  "featuredNodeId": "max",
+  "graphKind": "Query",
+  "field": "rel"
+}

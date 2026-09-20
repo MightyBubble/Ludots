@@ -1,0 +1,22 @@
+{
+  "name": "@ludots/live-skill-workbench",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "test": "node --test src/dataplane/lswClient.test.mjs src/preview/fireballFixture.test.mjs src/hooks/descriptorForm.test.mjs src/displayLabels.test.mjs"
+  },
+  "dependencies": {
+    "@ludots/dataplane-client": "file:../../../../../web/dataplane-client",
+    "@xyflow/react": "12.11.0",
+    "lucide-react": "^0.511.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.1.0",
+    "vite": "^7.1.12"
+  }
+}

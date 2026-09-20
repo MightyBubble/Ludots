@@ -1,7 +1,8 @@
 using System;
 using System.Numerics;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Instancing
 {
@@ -37,6 +38,7 @@ namespace Ludots.Core.Presentation.Instancing
         public InstancedBatchAddress Address;
         public InstancedBatchTransform[] Transforms;
         public InstancedBatchInstanceSource Source;
+        public InstancedBatchFactorizedSource? FactorizedSource;
 
         public int InstanceCount => Source.IsValid
             ? Source.InstanceCount
@@ -57,20 +59,20 @@ namespace Ludots.Core.Presentation.Instancing
             string assetUri,
             string setId,
             int instanceCount,
-            bool groundToVisualHeightmap)
+            bool groundToContinuousHeightmap)
         {
             Format = format ?? string.Empty;
             AssetUri = assetUri ?? string.Empty;
             SetId = setId ?? string.Empty;
             InstanceCount = instanceCount;
-            GroundToVisualHeightmap = groundToVisualHeightmap;
+            GroundToContinuousHeightmap = groundToContinuousHeightmap;
         }
 
         public string Format { get; }
         public string AssetUri { get; }
         public string SetId { get; }
         public int InstanceCount { get; }
-        public bool GroundToVisualHeightmap { get; }
+        public bool GroundToContinuousHeightmap { get; }
         public bool IsValid => InstanceCount > 0 && Format.Length > 0 && AssetUri.Length > 0 && SetId.Length > 0;
     }
 

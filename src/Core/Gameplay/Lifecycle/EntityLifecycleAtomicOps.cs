@@ -1,6 +1,7 @@
 using System;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.Config;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -20,7 +21,7 @@ namespace Ludots.Core.Gameplay.Lifecycle
             string templateId,
             Fix64Vec2 positionCm)
         {
-            services.RequireTemplate(templateId);
+            EntityTemplate template = services.RequireTemplate(templateId);
             World world = services.World;
             Entity entity = services.Builder
                 .UseTemplate(templateId)
@@ -35,7 +36,8 @@ namespace Ludots.Core.Gameplay.Lifecycle
 
             ApplyWorldPosition(world, entity, positionCm);
             RuntimeEntityMapOwnershipSupport.TryCopyMapEntityFromSource(world, source, entity);
-            services.PerformerBootstrap.TryBootstrap(entity, templateId);
+            services.PresenterBootstrap.TryBootstrap(entity, templateId);
+            services.EntityTriggerGraphMounts?.MountRuntimeSpawned(entity, templateId, template.TriggerGraphs);
             return entity;
         }
 

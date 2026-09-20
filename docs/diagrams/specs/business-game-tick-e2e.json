@@ -43,7 +43,7 @@
     { "id": "s52", "title": "Movement", "tint": "slate", "x": 1370, "y": 730, "w": 220, "h": 90 },
     { "id": "s53", "title": "Spatial Query", "tint": "slate", "x": 1370, "y": 900, "w": 220, "h": 90 },
 
-    { "id": "s61", "title": "Performer Update", "tint": "stone", "x": 1690, "y": 560, "w": 220, "h": 90 },
+    { "id": "s61", "title": "Presenter Update", "tint": "stone", "x": 1690, "y": 560, "w": 220, "h": 90 },
     { "id": "s62", "title": "Command Buffer", "tint": "stone", "x": 1690, "y": 730, "w": 220, "h": 90 },
     { "id": "s63", "title": "GPU Dispatch", "tint": "stone", "x": 1690, "y": 900, "w": 220, "h": 90 },
 

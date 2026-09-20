@@ -1,0 +1,8 @@
+{
+  "scene": "skybox",
+  "frames": 30,
+  "avgFrameMs": 0.312,
+  "p95FrameMs": 0.13,
+  "maxFrameMs": 6.367,
+  "wallMs": 538.8
+}

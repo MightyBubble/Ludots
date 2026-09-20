@@ -1,0 +1,94 @@
+{
+  "source": "Natural Earth 110m admin_0 countries",
+  "projectionProfile": "mods/showcases/east_asia_playable_terrain/EastAsiaPlayableTerrainMod/assets/terrain/east_asia_terrain_profile.json",
+  "cellSizeCm": 7142,
+  "playableWorldWidthCm": 6399232,
+  "nonDefaultCells": 203193,
+  "countries": [
+    {
+      "admin": "China",
+      "region": "country.china",
+      "areaCm2": 4749234503244.259
+    },
+    {
+      "admin": "Russia",
+      "region": "country.russia",
+      "areaCm2": 1774654317446.7727
+    },
+    {
+      "admin": "India",
+      "region": "country.india",
+      "areaCm2": 1590306687664.1482
+    },
+    {
+      "admin": "Mongolia",
+      "region": "country.mongolia",
+      "areaCm2": 777549755695.4243
+    },
+    {
+      "admin": "Myanmar",
+      "region": "country.myanmar",
+      "areaCm2": 342261087600.19977
+    },
+    {
+      "admin": "Thailand",
+      "region": "country.thailand",
+      "areaCm2": 221120914618.6894
+    },
+    {
+      "admin": "Japan",
+      "region": "country.japan",
+      "areaCm2": 204151997291.70203
+    },
+    {
+      "admin": "Vietnam",
+      "region": "country.vietnam",
+      "areaCm2": 134433393545.88048
+    },
+    {
+      "admin": "Laos",
+      "region": "country.laos",
+      "areaCm2": 116017644092.3458
+    },
+    {
+      "admin": "Philippines",
+      "region": "country.philippines",
+      "areaCm2": 80734652547.97366
+    },
+    {
+      "admin": "Cambodia",
+      "region": "country.cambodia",
+      "areaCm2": 79332364020.56195
+    },
+    {
+      "admin": "Nepal",
+      "region": "country.nepal",
+      "areaCm2": 76189957529.66731
+    },
+    {
+      "admin": "Bangladesh",
+      "region": "country.bangladesh",
+      "areaCm2": 67695713291.9037
+    },
+    {
+      "admin": "North Korea",
+      "region": "country.north_korea",
+      "areaCm2": 63371093112.76732
+    },
+    {
+      "admin": "South Korea",
+      "region": "country.south_korea",
+      "areaCm2": 49986863733.22887
+    },
+    {
+      "admin": "Bhutan",
+      "region": "country.bhutan",
+      "areaCm2": 19911287255.11446
+    },
+    {
+      "admin": "Taiwan",
+      "region": "country.taiwan",
+      "areaCm2": 17372470684.253998
+    }
+  ]
+}

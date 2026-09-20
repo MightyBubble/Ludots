@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using Ludots.Core.Client;
 
 namespace Ludots.Core.Map
 {
@@ -8,25 +10,60 @@ namespace Ludots.Core.Map
     /// </summary>
     public sealed class MapLaunchContext
     {
-        public int LocalPlayerId { get; init; }
+        public IReadOnlyList<LocalSeatLaunchBinding> LocalSeats { get; init; } = Array.Empty<LocalSeatLaunchBinding>();
         public IReadOnlyDictionary<string, object>? Metadata { get; init; }
 
-        public bool HasLocalPlayer => LocalPlayerId > 0;
+        public bool HasLocalSeats => LocalSeats != null && LocalSeats.Count > 0;
 
         public bool IsEmpty =>
-            !HasLocalPlayer &&
+            !HasLocalSeats &&
             (Metadata == null || Metadata.Count == 0);
 
+        /// <summary>Build launch context from an explicit seat table (Epic #896).</summary>
         public static MapLaunchContext? Create(
-            int localPlayerId = 0,
+            IReadOnlyList<LocalSeatLaunchBinding> localSeats,
             IReadOnlyDictionary<string, object>? metadata = null)
         {
             var context = new MapLaunchContext
             {
-                LocalPlayerId = localPlayerId,
+                LocalSeats = NormalizeSeats(localSeats),
                 Metadata = metadata,
             };
             return context.IsEmpty ? null : context;
+        }
+
+        private static IReadOnlyList<LocalSeatLaunchBinding> NormalizeSeats(IReadOnlyList<LocalSeatLaunchBinding>? seats)
+        {
+            if (seats == null || seats.Count == 0)
+            {
+                return Array.Empty<LocalSeatLaunchBinding>();
+            }
+
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            var normalized = new LocalSeatLaunchBinding[seats.Count];
+            for (int i = 0; i < seats.Count; i++)
+            {
+                LocalSeatLaunchBinding seat = seats[i];
+                if (string.IsNullOrWhiteSpace(seat.SeatId))
+                {
+                    throw new InvalidOperationException($"MapLaunchContext.LocalSeats[{i}].SeatId must be non-empty.");
+                }
+
+                string seatId = seat.SeatId.Trim();
+                if (!ids.Add(seatId))
+                {
+                    throw new InvalidOperationException($"MapLaunchContext.LocalSeats duplicates seat id '{seatId}'.");
+                }
+
+                if (seat.PlayerId <= 0)
+                {
+                    throw new InvalidOperationException($"MapLaunchContext.LocalSeats[{i}].PlayerId must be positive.");
+                }
+
+                normalized[i] = new LocalSeatLaunchBinding(seatId, seat.PlayerId, seat.ControlSchemeId);
+            }
+
+            return normalized;
         }
     }
 

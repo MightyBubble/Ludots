@@ -1,6 +1,7 @@
 using System;
 using Arch.Core;
 using Ludots.Core.Presentation.Components;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Instancing
 {
@@ -15,9 +16,9 @@ namespace Ludots.Core.Presentation.Instancing
         public InstancedBatchRequest(
             InstancedBatchRequestKind kind,
             int batchAssetId,
-            int performerStableId,
+            int presenterStableId,
             Entity owner,
-            Entity performer,
+            Entity presenter,
             InstancedBatchAddress address,
             VisualRenderPath renderPath,
             int meshAssetId,
@@ -28,9 +29,9 @@ namespace Ludots.Core.Presentation.Instancing
         {
             Kind = kind;
             BatchAssetId = batchAssetId;
-            PerformerStableId = performerStableId;
+            PresenterStableId = presenterStableId;
             Owner = owner;
-            Performer = performer;
+            Presenter = presenter;
             Address = address;
             RenderPath = renderPath;
             MeshAssetId = meshAssetId;
@@ -42,9 +43,9 @@ namespace Ludots.Core.Presentation.Instancing
 
         public InstancedBatchRequestKind Kind { get; }
         public int BatchAssetId { get; }
-        public int PerformerStableId { get; }
+        public int PresenterStableId { get; }
         public Entity Owner { get; }
-        public Entity Performer { get; }
+        public Entity Presenter { get; }
         public InstancedBatchAddress Address { get; }
         public VisualRenderPath RenderPath { get; }
         public int MeshAssetId { get; }

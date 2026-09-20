@@ -1,6 +1,7 @@
 using System;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.GraphCore;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Navigation.GraphQuery
 {

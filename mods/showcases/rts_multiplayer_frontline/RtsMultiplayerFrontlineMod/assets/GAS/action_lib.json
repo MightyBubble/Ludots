@@ -1,0 +1,52 @@
+[
+  {
+    "name": "rts.attack.engage.cooldown",
+    "graph": "rts.attack.engage.cooldown",
+    "kind": "Script"
+  },
+  {
+    "name": "rts.attack.pursuit.enter",
+    "graph": "rts.attack.pursuit.enter",
+    "kind": "Script"
+  },
+  {
+    "name": "rts.attack.pursuit.route",
+    "graph": "rts.attack.pursuit.route",
+    "kind": "Script"
+  },
+  {
+    "name": "rts.transport.dock.credit",
+    "graph": "rts.transport.dock.credit",
+    "kind": "Script"
+  },
+  {
+    "name": "rts.transport.loading.enter",
+    "graph": "rts.transport.loading.enter",
+    "kind": "Script"
+  },
+  {
+    "name": "rts.transport.loading.tick",
+    "graph": "rts.transport.loading.tick",
+    "kind": "Script"
+  },
+  {
+    "name": "rts.transport.toSink.enter",
+    "graph": "rts.transport.toSink.enter",
+    "kind": "Script"
+  },
+  {
+    "name": "rts.transport.toSink.tick",
+    "graph": "rts.transport.toSink.tick",
+    "kind": "Script"
+  },
+  {
+    "name": "rts.transport.toSource.enter",
+    "graph": "rts.transport.toSource.enter",
+    "kind": "Script"
+  },
+  {
+    "name": "rts.transport.toSource.tick",
+    "graph": "rts.transport.toSource.tick",
+    "kind": "Script"
+  }
+]

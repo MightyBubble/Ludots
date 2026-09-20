@@ -1,0 +1,11 @@
+{
+  "types": [
+    {
+      "id": "GraphScore.Participant",
+      "isSymmetric": false
+    }
+  ],
+  "metrics": [],
+  "flags": [],
+  "reasons": []
+}

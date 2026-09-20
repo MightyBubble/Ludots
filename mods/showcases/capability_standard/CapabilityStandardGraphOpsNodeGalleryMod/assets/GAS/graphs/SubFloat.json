@@ -1,0 +1,95 @@
+[
+  {
+    "id": "showcase.graph_op.SubFloat",
+    "kind": "Effect",
+    "entry": "base",
+    "nodes": [
+      {
+        "id": "base",
+        "op": "ConstFloat",
+        "floatValue": 50
+      },
+      {
+        "id": "cut",
+        "op": "ConstFloat",
+        "floatValue": 12
+      },
+      {
+        "id": "decay",
+        "op": "SubFloat"
+      },
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "flip",
+        "op": "NegFloat"
+      },
+      {
+        "id": "hit",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "base",
+        "fromPort": "next",
+        "to": "cut"
+      },
+      {
+        "from": "cut",
+        "fromPort": "next",
+        "to": "decay"
+      },
+      {
+        "from": "decay",
+        "fromPort": "next",
+        "to": "explicit"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "flip"
+      },
+      {
+        "from": "flip",
+        "fromPort": "next",
+        "to": "hit"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "base",
+        "fromPort": "value",
+        "to": "decay",
+        "toPort": "a"
+      },
+      {
+        "from": "cut",
+        "fromPort": "value",
+        "to": "decay",
+        "toPort": "b"
+      },
+      {
+        "from": "decay",
+        "fromPort": "value",
+        "to": "flip",
+        "toPort": "value"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "target"
+      },
+      {
+        "from": "flip",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "value"
+      }
+    ]
+  }
+]

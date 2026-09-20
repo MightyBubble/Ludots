@@ -52,7 +52,7 @@ AbilityExecSpec:
 
 **视觉指示器**:
 ```
-Performer: ConeOverlay(angle=30°, range=1200cm, color=red)
+Presenter: ConeOverlay(angle=30°, range=1200cm, color=red)
   rotation: 每帧读取 cursor_direction
   lifetime: 与 channeling tag 同步
 ```
@@ -66,12 +66,12 @@ Performer: ConeOverlay(angle=30°, range=1200cm, color=red)
 | Cursor direction write | ⚠️ 需扩展 |
 | ReadBlackboard(direction) | ✅ 已有 |
 | CreateProjectile | ✅ 已有 |
-| ConeOverlay Performer | ⚠️ 需扩展 |
+| ConeOverlay Presenter | ⚠️ 需扩展 |
 
 ## 新增需求
 
 | 需求 | 优先级 | 说明 |
 |------|--------|------|
 | Cursor direction 持续写入 Blackboard | P1 | 每帧更新方向 |
-| ConeOverlay Performer | P2 | 锥形瞄准指示器 (表现层) |
+| ConeOverlay Presenter | P2 | 锥形瞄准指示器 (表现层) |
 | Multi-shot InputGate | P1 | 多次等待玩家输入 |

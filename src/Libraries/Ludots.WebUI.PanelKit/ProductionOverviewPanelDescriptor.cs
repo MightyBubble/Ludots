@@ -45,7 +45,7 @@ public sealed class ProductionOverviewPanelDescriptor
 	public IReadOnlyList<ProductionOverviewWorkerBucketRef> WorkerBuckets { get; }
 
 	public const string PanelType = "production-overview";
-	public const string SourceKindLocalPlayerRep = "localPlayerRep";
+	public const string SourceKindSolePossessedRep = "solePossessedRep";
 	public const string SourceKindExplicitEntity = "explicitEntity";
 	public const string SourceKindEntityCollection = "entityCollection";
 	public const string SourceKindControlPlaneView = "controlPlaneView";
@@ -56,7 +56,7 @@ public sealed class ProductionOverviewPanelDescriptor
 	{
 		switch (SourceKind)
 		{
-			case SourceKindLocalPlayerRep:
+			case SourceKindSolePossessedRep:
 			case SourceKindEntityCollection:
 			case SourceKindControlPlaneView:
 				if (string.IsNullOrWhiteSpace(SourceRef))

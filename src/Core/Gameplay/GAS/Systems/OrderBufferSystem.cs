@@ -9,6 +9,7 @@ using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
 using GasGraphExecutor = Ludots.Core.NodeLibraries.GASGraph.GraphExecutor;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
 {
@@ -534,7 +535,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 targetPos,
                 validationProgram,
                 _graphApi,
-                kind);
+                kind,
+                programs: _graphProgramRegistry);
             return passed ? OrderSubmitResult.Activated : OrderSubmitResult.RejectedValidation;
         }
 
@@ -543,7 +545,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             in Order order,
             OrderSubmitResult result)
         {
-            var outcome = new OrderAdmissionOutcome(order.OrderId, order.OrderTypeId, OrderAdmissionStage.EntityIntake, result);
+            var outcome = new OrderAdmissionOutcome(in order, OrderAdmissionStage.EntityIntake, result);
             _admissionResults.Commit(in reservation, in outcome);
         }
 
@@ -555,6 +557,17 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 orderTypeId);
             var outcome = new OrderAdmissionOutcome(orderId, orderTypeId, OrderAdmissionStage.EntityIntake, result);
             _admissionResults.Commit(in reservation, in outcome);
+        }
+
+        public bool TryCancelAll(Entity entity)
+        {
+            if (!World.IsAlive(entity) || !World.Has<OrderBuffer>(entity))
+            {
+                return false;
+            }
+
+            OrderSubmitter.CancelAll(World, entity, _orderTypeRegistry);
+            return true;
         }
 
         public OrderSubmitResult SubmitOrder(Entity entity, in Order order)

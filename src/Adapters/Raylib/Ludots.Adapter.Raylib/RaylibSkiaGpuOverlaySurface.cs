@@ -1,11 +1,11 @@
 using System;
-using System.Runtime.InteropServices;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Presentation.Skia;
 using Raylib_cs;
 using SkiaSharp;
 using Rl = Raylib_cs.Raylib;
+using Ludots.Raylib.Render;
 
 namespace Ludots.Adapter.Raylib
 {
@@ -15,7 +15,6 @@ namespace Ludots.Adapter.Raylib
 
         private readonly GRGlInterface _glInterface;
         private readonly GRContext _context;
-        private readonly GRGlGetProcedureAddressDelegate _getProcAddress;
 
         private RenderTexture2D _target;
         private GRBackendRenderTarget? _renderTarget;
@@ -26,11 +25,7 @@ namespace Ludots.Adapter.Raylib
 
         public RaylibSkiaGpuOverlaySurface()
         {
-            _getProcAddress = ResolveGlProcAddress;
-            _glInterface = GRGlInterface.CreateOpenGl(_getProcAddress)
-                ?? throw new InvalidOperationException("Skia GPU overlay could not create an OpenGL function interface.");
-            _context = GRContext.CreateGl(_glInterface)
-                ?? throw new InvalidOperationException("Skia GPU overlay could not create a GRContext for the current Raylib OpenGL context.");
+            (_glInterface, _context) = RaylibSkiaGlContext.Create("GPU overlay");
             Log.Info(in LogChannels.Presentation, "GPU Accelerated: True (Raylib Skia render-texture overlay)");
         }
 
@@ -124,7 +119,7 @@ namespace Ludots.Adapter.Raylib
             _renderTarget = null;
             if (_target.id != 0)
             {
-                Rl.UnloadRenderTexture(_target);
+                RaylibNativeResources.UnloadRenderTexture(_target);
                 _target = default;
             }
 
@@ -147,13 +142,13 @@ namespace Ludots.Adapter.Raylib
             _renderTarget = null;
             if (_target.id != 0)
             {
-                Rl.UnloadRenderTexture(_target);
+                RaylibNativeResources.UnloadRenderTexture(_target);
                 _target = default;
             }
 
             try
             {
-                _target = Rl.LoadRenderTexture(width, height);
+                _target = RaylibNativeResources.LoadRenderTexture(width, height);
                 if (_target.id == 0 || _target.texture.id == 0)
                 {
                     throw new InvalidOperationException("Raylib LoadRenderTexture returned an empty render target.");
@@ -194,29 +189,12 @@ namespace Ludots.Adapter.Raylib
                 _renderTarget = null;
                 if (_target.id != 0)
                 {
-                    Rl.UnloadRenderTexture(_target);
+                    RaylibNativeResources.UnloadRenderTexture(_target);
                     _target = default;
                 }
 
                 return false;
             }
         }
-
-        private static IntPtr ResolveGlProcAddress(string name)
-        {
-            IntPtr proc = WglGetProcAddress(name);
-            if (proc != IntPtr.Zero && proc.ToInt64() is not 1 and not 2 and not 3 and not -1)
-            {
-                return proc;
-            }
-
-            return NativeLibrary.TryLoad("opengl32.dll", out IntPtr module) &&
-                NativeLibrary.TryGetExport(module, name, out proc)
-                    ? proc
-                    : IntPtr.Zero;
-        }
-
-        [DllImport("opengl32.dll", EntryPoint = "wglGetProcAddress", CharSet = CharSet.Ansi, ExactSpelling = true)]
-        private static extern IntPtr WglGetProcAddress(string procName);
     }
 }

@@ -1,0 +1,13 @@
+stateDiagram-v2
+    [*] --> BuildManifest
+    BuildManifest --> Pending: sealed manifest has cold assets
+    BuildManifest --> Ready: sealed manifest is empty or already resident
+    Pending --> Pending: Preparing / CpuReady / UploadQueued
+    Pending --> Ready: every required asset is Resident
+    Pending --> Failed: any required asset fails
+    Pending --> Canceled: map session loses focus or unloads
+    Failed --> ReleaseLeases: release resident and in-flight map requests
+    Canceled --> ReleaseLeases: release exact session leases
+    Ready --> Playable: fire MapLoaded / MapResumed
+    ReleaseLeases --> [*]
+    Playable --> [*]

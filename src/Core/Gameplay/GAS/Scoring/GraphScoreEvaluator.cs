@@ -3,6 +3,7 @@ using Arch.Core;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Gameplay.GAS.Scoring
 {
@@ -92,7 +93,7 @@ namespace Ludots.Core.Gameplay.GAS.Scoring
 
             ReadOnlySpan<GraphInstruction> program = RequireScoreProgram(graphPrograms, graphId, "GraphScoreEvaluator");
             GraphKind kind = graphPrograms.RequireKind(graphId, GraphKind.Score);
-            score = GraphExecutor.ExecuteScore(world, caster, explicitTarget, targetPosCm, program, graphApi, kind);
+            score = GraphExecutor.ExecuteScore(world, caster, explicitTarget, targetPosCm, program, graphApi, kind, programs: graphPrograms);
             return true;
         }
 

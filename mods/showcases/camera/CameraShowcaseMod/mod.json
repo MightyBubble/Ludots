@@ -2,7 +2,7 @@
   "name": "CameraShowcaseMod",
   "version": "1.0.0",
   "description": "Production-grade camera showcase that demonstrates shared virtual camera profiles, local showcase profiles, stack shots, selection follow, and bootstrap framing.",
-  "main": "bin/net8.0/CameraShowcaseMod.dll",
+  "main": "bin/net9.0/CameraShowcaseMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

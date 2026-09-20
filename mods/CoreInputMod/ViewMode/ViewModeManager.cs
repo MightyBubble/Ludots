@@ -7,6 +7,7 @@ using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 
 namespace CoreInputMod.ViewMode
@@ -205,8 +206,7 @@ namespace CoreInputMod.ViewMode
         private bool TryResolveLocalCommandSourceOwner(out Entity owner)
         {
             owner = Entity.Null;
-            return _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) &&
-                   localObj is Entity local &&
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity local) &&
                    local != Entity.Null &&
                    _world.IsAlive(local) &&
                    (owner = local) != Entity.Null;
@@ -214,7 +214,7 @@ namespace CoreInputMod.ViewMode
 
         private void ApplyInteractionMode(ViewModeConfig mode)
         {
-            InteractionModeType interactionMode = RequireInteractionMode(mode);
+            CastModeType interactionMode = RequireInteractionMode(mode);
 
             if (_globals.TryGetValue(CoreServiceKeys.ActiveInputOrderMapping.Name, out var mappingObj) && mappingObj is InputOrderMappingSystem mapping)
             {
@@ -222,7 +222,7 @@ namespace CoreInputMod.ViewMode
             }
         }
 
-        private static InteractionModeType RequireInteractionMode(ViewModeConfig mode)
+        private static CastModeType RequireInteractionMode(ViewModeConfig mode)
         {
             if (string.IsNullOrWhiteSpace(mode.InteractionMode))
             {
@@ -230,7 +230,7 @@ namespace CoreInputMod.ViewMode
                     $"ViewMode '{mode.Id}' must declare InteractionMode explicitly.");
             }
 
-            if (!Enum.TryParse<InteractionModeType>(mode.InteractionMode, true, out var interactionMode))
+            if (!Enum.TryParse<CastModeType>(mode.InteractionMode, true, out var interactionMode))
             {
                 throw new InvalidOperationException(
                     $"ViewMode '{mode.Id}' declared unsupported InteractionMode '{mode.InteractionMode}'.");

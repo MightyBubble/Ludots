@@ -1,0 +1,9 @@
+{
+  "schemes": [
+    {
+      "id": "scheme.default",
+      "inputContexts": []
+    }
+  ],
+  "allowedSchemes": []
+}

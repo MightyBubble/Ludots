@@ -248,13 +248,13 @@ namespace Ludots.Tests.GAS
             var caster = world.Create();
             var target = world.Create();
 
-            // Case 1: Empty program — fail closed
-            sb.AppendLine("[MUD][VALID] Case 1: 空校验图 → 默认拒绝 (B[0]=0)。");
-            bool result1 = GasGraphExecutor.ExecuteValidation(
-                world, caster, target, default,
-                ReadOnlySpan<GraphInstruction>.Empty, null!);
-            sb.AppendLine($"  Result={result1}");
-            That(result1, Is.False);
+            // Case 1: Empty program — invalid under the explicit-halt graph contract
+            sb.AppendLine("[MUD][VALID] Case 1: 空校验图 → 非法，必须显式 HaltReturnInt。");
+            var emptyError = Throws<InvalidOperationException>(() =>
+                GasGraphExecutor.ExecuteValidation(
+                    world, caster, target, default,
+                    ReadOnlySpan<GraphInstruction>.Empty, null!))!;
+            sb.AppendLine($"  Error={emptyError.Message}");
 
             // Case 2: Reject program — SetBool B[0] = 0
             sb.AppendLine("───────────────────────────────────────────────────────────────");
@@ -262,7 +262,11 @@ namespace Ludots.Tests.GAS
             var reject = new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 0 };
             bool result2 = GasGraphExecutor.ExecuteValidation(
                 world, caster, target, default,
-                new[] { reject }, null!);
+                new[]
+                {
+                    reject,
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+                }, null!);
             sb.AppendLine($"  Result={result2}");
             That(result2, Is.False);
 
@@ -272,7 +276,11 @@ namespace Ludots.Tests.GAS
             var passInstr = new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 1 };
             bool result3 = GasGraphExecutor.ExecuteValidation(
                 world, caster, target, default,
-                new[] { passInstr }, null!);
+                new[]
+                {
+                    passInstr,
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+                }, null!);
             sb.AppendLine($"  Result={result3}");
             That(result3, Is.True);
 
@@ -483,7 +491,11 @@ namespace Ludots.Tests.GAS
 
             // Small validation program: SetBool B[0] = 1 (pass)
             var passInstruction = new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 1 };
-            var program = new[] { passInstruction };
+            var program = new[]
+            {
+                passInstruction,
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+            };
 
             const int iterations = 100_000;
             int passed = 0;

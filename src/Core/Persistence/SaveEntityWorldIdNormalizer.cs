@@ -3,9 +3,11 @@ using Arch.Core;
 using Arch.Relationships;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Components;
-using Ludots.Core.Gameplay.Quests;
+using Ludots.Core.Gameplay.Activities;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Tasks;
 
 namespace Ludots.Core.Persistence
 {
@@ -13,22 +15,79 @@ namespace Ludots.Core.Persistence
     {
         public static void Normalize(World world)
         {
-            if (world == null) throw new ArgumentNullException(nameof(world));
-
-            NormalizeBlackboardEntityBuffer(world);
-            NormalizeChildrenBuffer(world);
-            NormalizeActiveEffectContainer(world);
-            NormalizeAbilityStateBuffer(world);
-            NormalizeTeamEntityRef(world);
-            NormalizeQuestInstances(world);
-            NormalizeRelationshipInstances(world);
-            NormalizeRelationshipKeys<RelationshipEdgeSet>(world);
-            NormalizeRelationshipKeys<InRelationship>(world);
+            Normalize(world, world.Id);
         }
 
-        private static void NormalizeBlackboardEntityBuffer(World world)
+        public static void Normalize(World world, int canonicalWorldId)
         {
-            int worldId = world.Id;
+            if (world == null) throw new ArgumentNullException(nameof(world));
+
+            NormalizeBlackboardEntityBuffer(world, canonicalWorldId);
+            NormalizeChildrenBuffer(world, canonicalWorldId);
+            NormalizeActiveEffectContainer(world, canonicalWorldId);
+            NormalizeAbilityStateBuffer(world, canonicalWorldId);
+            NormalizeTeamEntityRef(world, canonicalWorldId);
+            NormalizeActivityInstances(world, canonicalWorldId);
+            NormalizeTaskInstances(world, canonicalWorldId);
+            NormalizeOrderBuffers(world, canonicalWorldId);
+            NormalizeRelationshipInstances(world, canonicalWorldId);
+            NormalizeRelationshipKeys<RelationshipEdgeSet>(world, canonicalWorldId);
+            NormalizeRelationshipKeys<InRelationship>(world, canonicalWorldId);
+        }
+
+        private static void NormalizeOrderBuffers(World world, int worldId)
+        {
+            var orderQuery = new QueryDescription().WithAll<OrderBuffer>();
+            world.Query(in orderQuery, (ref OrderBuffer orders) =>
+            {
+                if (orders.HasActive)
+                {
+                    orders.ActiveOrder.Order = NormalizeOrderReferences(orders.ActiveOrder.Order, worldId);
+                }
+
+                if (orders.HasPending)
+                {
+                    orders.PendingOrder.Order = NormalizeOrderReferences(orders.PendingOrder.Order, worldId);
+                }
+
+                for (int i = 0; i < orders.QueuedCount; i++)
+                {
+                    QueuedOrder queued = orders.GetQueued(i);
+                    queued.Order = NormalizeOrderReferences(queued.Order, worldId);
+                    orders.SetQueued(i, queued);
+                }
+            });
+
+            var continuationQuery = new QueryDescription().WithAll<OrderContinuationBuffer>();
+            world.Query(in continuationQuery, (ref OrderContinuationBuffer continuations) =>
+            {
+                for (int i = 0; i < continuations.Count; i++)
+                {
+                    OrderContinuationEntry entry = continuations.GetEntry(i);
+                    entry.Order = NormalizeOrderReferences(entry.Order, worldId);
+                    continuations.SetEntry(i, entry);
+                }
+            });
+        }
+
+        private static Order NormalizeOrderReferences(Order order, int worldId)
+        {
+            order.Actor = NormalizeReference(order.Actor, worldId);
+            order.Target = NormalizeReference(order.Target, worldId);
+            order.TargetContext = NormalizeReference(order.TargetContext, worldId);
+            order.CommandSource = NormalizeReference(order.CommandSource, worldId);
+            return order;
+        }
+
+        private static Entity NormalizeReference(Entity entity, int worldId)
+        {
+            return entity == Entity.Null
+                ? entity
+                : EntityUtil.Reconstruct(entity.Id, worldId, entity.Version);
+        }
+
+        private static void NormalizeBlackboardEntityBuffer(World world, int worldId)
+        {
             var query = new QueryDescription().WithAll<BlackboardEntityBuffer>();
             world.Query(in query, (ref BlackboardEntityBuffer refs) =>
             {
@@ -42,9 +101,8 @@ namespace Ludots.Core.Persistence
             });
         }
 
-        private static void NormalizeChildrenBuffer(World world)
+        private static void NormalizeChildrenBuffer(World world, int worldId)
         {
-            int worldId = world.Id;
             var query = new QueryDescription().WithAll<ChildrenBuffer>();
             world.Query(in query, (ref ChildrenBuffer children) =>
             {
@@ -58,9 +116,8 @@ namespace Ludots.Core.Persistence
             });
         }
 
-        private static void NormalizeActiveEffectContainer(World world)
+        private static void NormalizeActiveEffectContainer(World world, int worldId)
         {
-            int worldId = world.Id;
             var query = new QueryDescription().WithAll<ActiveEffectContainer>();
             world.Query(in query, (ref ActiveEffectContainer activeEffects) =>
             {
@@ -74,9 +131,8 @@ namespace Ludots.Core.Persistence
             });
         }
 
-        private static void NormalizeAbilityStateBuffer(World world)
+        private static void NormalizeAbilityStateBuffer(World world, int worldId)
         {
-            int worldId = world.Id;
             var query = new QueryDescription().WithAll<AbilityStateBuffer>();
             world.Query(in query, (ref AbilityStateBuffer abilities) =>
             {
@@ -93,9 +149,8 @@ namespace Ludots.Core.Persistence
             });
         }
 
-        private static void NormalizeTeamEntityRef(World world)
+        private static void NormalizeTeamEntityRef(World world, int worldId)
         {
-            int worldId = world.Id;
             var query = new QueryDescription().WithAll<TeamEntityRef>();
             world.Query(in query, (ref TeamEntityRef teamRef) =>
             {
@@ -107,29 +162,46 @@ namespace Ludots.Core.Persistence
             });
         }
 
-        private static void NormalizeQuestInstances(World world)
+        private static void NormalizeActivityInstances(World world, int worldId)
         {
-            int worldId = world.Id;
-            var query = new QueryDescription().WithAll<QuestInstanceCm>();
-            world.Query(in query, (ref QuestInstanceCm quest) =>
+            var query = new QueryDescription().WithAll<ActivityInstanceCm>();
+            world.Query(in query, (ref ActivityInstanceCm activity) =>
             {
-                Entity scopeHost = NormalizeOptionalEntity(quest.ScopeHost);
+                Entity scopeHost = NormalizeOptionalEntity(activity.ScopeHost);
                 if (scopeHost != Entity.Null)
                 {
-                    quest.ScopeHost = EntityUtil.Reconstruct(
+                    activity.ScopeHost = EntityUtil.Reconstruct(
                         scopeHost.Id,
                         worldId,
                         scopeHost.Version);
                     return;
                 }
 
-                quest.ScopeHost = Entity.Null;
+                activity.ScopeHost = Entity.Null;
             });
         }
 
-        private static void NormalizeRelationshipInstances(World world)
+        private static void NormalizeTaskInstances(World world, int worldId)
         {
-            int worldId = world.Id;
+            var query = new QueryDescription().WithAll<TaskInstanceCm>();
+            world.Query(in query, (ref TaskInstanceCm task) =>
+            {
+                Entity scopeHost = NormalizeOptionalEntity(task.ScopeHost);
+                if (scopeHost != Entity.Null)
+                {
+                    task.ScopeHost = EntityUtil.Reconstruct(
+                        scopeHost.Id,
+                        worldId,
+                        scopeHost.Version);
+                    return;
+                }
+
+                task.ScopeHost = Entity.Null;
+            });
+        }
+
+        private static void NormalizeRelationshipInstances(World world, int worldId)
+        {
             var query = new QueryDescription().WithAll<RelationshipInstanceCm>();
             world.Query(in query, (ref RelationshipInstanceCm relationship) =>
             {
@@ -151,9 +223,8 @@ namespace Ludots.Core.Persistence
             });
         }
 
-        private static void NormalizeRelationshipKeys<T>(World world)
+        private static void NormalizeRelationshipKeys<T>(World world, int worldId)
         {
-            int worldId = world.Id;
             var query = new QueryDescription().WithAll<Relationship<T>>();
             world.Query(in query, (ref Relationship<T> relationships) =>
             {

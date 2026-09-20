@@ -89,7 +89,7 @@ PresentationStableId -> (LaneKey, Slot, Generation, ProjectionGeneration, LastSn
    - 释放的 slot 可被后续对象复用，但 generation 必须递增
 7. projection generation：
    - `PrimitiveDrawBuffer.ProjectionGeneration` 与上次同步值不同，且 item 内容未变时，发出 `Resync`
-   - `Resync` 不重新分配 lane slot，不表示 gameplay / performer content 变化
+   - `Resync` 不重新分配 lane slot，不表示 gameplay / presenter content 变化
    - adapter 应把 `Resync` 当作 resident target state 的 full resync 指令
 
 证据：

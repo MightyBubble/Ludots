@@ -1,0 +1,97 @@
+[
+  {
+    "id": "showcase.graph_op.SpawnTemplate",
+    "kind": "Effect",
+    "entry": "drain",
+    "nodes": [
+      {
+        "id": "drain",
+        "op": "ConstFloat",
+        "floatValue": -2.0
+      },
+      {
+        "id": "spawn_x",
+        "op": "ConstFloat",
+        "floatValue": 400.0
+      },
+      {
+        "id": "spawn_y",
+        "op": "ConstFloat",
+        "floatValue": 0.0
+      },
+      {
+        "id": "spawn",
+        "op": "SpawnTemplate",
+        "template": "GraphOps.Target"
+      },
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "hit",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "drain",
+        "fromPort": "next",
+        "to": "spawn_x"
+      },
+      {
+        "from": "spawn_x",
+        "fromPort": "next",
+        "to": "spawn_y"
+      },
+      {
+        "from": "spawn_y",
+        "fromPort": "next",
+        "to": "spawn"
+      },
+      {
+        "from": "spawn",
+        "fromPort": "next",
+        "to": "explicit"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "hit"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "drain",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "value"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "target"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "spawn",
+        "toPort": "source"
+      },
+      {
+        "from": "spawn_x",
+        "fromPort": "value",
+        "to": "spawn",
+        "toPort": "a"
+      },
+      {
+        "from": "spawn_y",
+        "fromPort": "value",
+        "to": "spawn",
+        "toPort": "b"
+      }
+    ]
+  }
+]

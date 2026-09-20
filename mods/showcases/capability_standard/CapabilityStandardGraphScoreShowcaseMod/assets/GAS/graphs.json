@@ -1,0 +1,64 @@
+[
+  {
+    "id": "Graph.GraphScore.MissingHealth",
+    "kind": "Score",
+    "entry": "target",
+    "nodes": [
+      {
+        "id": "missing",
+        "op": "SubFloat"
+      },
+      {
+        "id": "target",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "health",
+        "op": "LoadAttribute",
+        "attribute": "Health"
+      },
+      {
+        "id": "full",
+        "op": "ConstFloat",
+        "floatValue": 100
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "target",
+        "fromPort": "next",
+        "to": "health"
+      },
+      {
+        "from": "health",
+        "fromPort": "next",
+        "to": "full"
+      },
+      {
+        "from": "full",
+        "fromPort": "next",
+        "to": "missing"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "target",
+        "fromPort": "value",
+        "to": "health",
+        "toPort": "source"
+      },
+      {
+        "from": "full",
+        "fromPort": "value",
+        "to": "missing",
+        "toPort": "a"
+      },
+      {
+        "from": "health",
+        "fromPort": "value",
+        "to": "missing",
+        "toPort": "b"
+      }
+    ]
+  }
+]

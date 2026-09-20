@@ -1,0 +1,61 @@
+[
+  {
+    "id": "Task.Narrative.AshenOath.Briefing",
+    "tags": [
+      "task.narrative"
+    ],
+    "start_policy": "automatic",
+    "completion_rule": "all",
+    "objectives": [
+      {
+        "id": "briefing",
+        "kind": "signal",
+        "signal_key": "showcase.briefing_accepted",
+        "text_token": "story.task.briefing.obj0.title",
+        "hint_token": "story.task.briefing.obj0.hint"
+      }
+    ],
+    "next_task_id": "Task.Narrative.AshenOath.Trial",
+    "display_token": "story.task.briefing.display",
+    "summary_token": "story.task.briefing.summary"
+  },
+  {
+    "id": "Task.Narrative.AshenOath.Trial",
+    "tags": [
+      "task.narrative"
+    ],
+    "start_policy": "automatic",
+    "completion_rule": "all",
+    "objectives": [
+      {
+        "id": "trial",
+        "kind": "signal",
+        "signal_key": "showcase.beast_defeated",
+        "text_token": "story.task.trial.obj0.title",
+        "hint_token": "story.task.trial.obj0.hint"
+      }
+    ],
+    "next_task_id": "Task.Narrative.AshenOath.Return",
+    "display_token": "story.task.trial.display",
+    "summary_token": "story.task.trial.summary"
+  },
+  {
+    "id": "Task.Narrative.AshenOath.Return",
+    "tags": [
+      "task.narrative"
+    ],
+    "start_policy": "automatic",
+    "completion_rule": "all",
+    "objectives": [
+      {
+        "id": "return",
+        "kind": "signal",
+        "signal_key": "showcase.verdict_delivered",
+        "text_token": "story.task.return.obj0.title",
+        "hint_token": "story.task.return.obj0.hint"
+      }
+    ],
+    "display_token": "story.task.return.display",
+    "summary_token": "story.task.return.summary"
+  }
+]

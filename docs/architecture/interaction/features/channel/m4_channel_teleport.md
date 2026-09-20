@@ -50,7 +50,7 @@ AbilityExecSpec:
 
 **视觉表现**:
 ```
-Performer: TeleportChannel(duration=180 ticks)
+Presenter: TeleportChannel(duration=180 ticks)
   → 螺旋光柱 / 读条特效
   → 完成时: 闪光传送
 ```

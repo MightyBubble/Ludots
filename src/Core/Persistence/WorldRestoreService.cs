@@ -24,7 +24,6 @@ namespace Ludots.Core.Persistence
             if (snapshot == null) throw new ArgumentNullException(nameof(snapshot));
 
             SaveContextValidator.Validate(snapshot.Header, engine);
-
             World restoredWorld;
             try
             {

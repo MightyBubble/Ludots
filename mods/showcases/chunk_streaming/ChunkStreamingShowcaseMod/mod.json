@@ -2,7 +2,7 @@
   "name": "ChunkStreamingShowcaseMod",
   "version": "1.0.0",
   "description": "Interactive chunk streaming showcase for loaded graph windows and spline batches.",
-  "main": "bin/net8.0/ChunkStreamingShowcaseMod.dll",
+  "main": "bin/net9.0/ChunkStreamingShowcaseMod.dll",
   "priority": 200,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

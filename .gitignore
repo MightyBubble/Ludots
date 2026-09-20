@@ -53,6 +53,8 @@ yarn-error.log*
 target/
 
 # ----- 临时文件与缓存 -----
+**/__pycache__/
+*.py[cod]
 .tmp/
 .trae/
 raylib_temp/
@@ -69,9 +71,50 @@ debug_error*.txt
 debug_output*.txt
 
 # ----- User Requested Ignores -----
-external/
+# external/ 下的第三方内容默认忽略，但离线依赖层必须入库（0 网络契约）：
+#   external/nuget/ —— 离线 NuGet 源（规范闭包 nupkg）
+#   external/ref/  —— net9.0 框架引用程序集（无 SDK mod 编译器消费）
+external/*
+!external/nuget/
+!external/nuget/**
+!external/ref/
+!external/ref/**
 # docs/  <-- Un-ignore docs to keep archived documentation
-artifacts/
+# Ignore build/runtime evidence by default, but keep gallery player
+# videos (Git LFS) and gallery posters for GitHub Pages:
+# GraphNodeOp node galleries and Raylib engine gallery scenes.
+artifacts/*
+!artifacts/gas-composition-gate.md
+!artifacts/gas-composition-gate-*.md
+!artifacts/showcases/
+artifacts/showcases/*
+!artifacts/showcases/graph-fsm-bt-refactor-design.md
+!artifacts/showcases/enum-driven-fsm-showcase-design.md
+!artifacts/showcases/capability-standard-*/
+!artifacts/evidence/
+artifacts/evidence/*
+!artifacts/evidence/capability_standard_graph_op_*/
+artifacts/evidence/capability_standard_graph_op_*/*
+!artifacts/evidence/capability_standard_graph_op_*/play.mp4
+!artifacts/evidence/capability_standard_graph_op_*/poster.png
+!artifacts/evidence/engine_raylib_*/
+artifacts/evidence/engine_raylib_*/*
+!artifacts/evidence/engine_raylib_*/play.mp4
+!artifacts/evidence/engine_raylib_*/poster.png
+# Raylib asset acceptance tool recordings (tutorial media on the Agent Bridge tab).
+!artifacts/evidence/raylib_asset_acceptance_*/
+artifacts/evidence/raylib_asset_acceptance_*/*
+!artifacts/evidence/raylib_asset_acceptance_*/play.mp4
+!artifacts/evidence/raylib_asset_acceptance_*/poster.png
+!artifacts/evidence/raylib_asset_acceptance_*/blocker_rock.png
+!artifacts/evidence/raylib_asset_acceptance_*/error-panel.png
+!artifacts/evidence/raylib_asset_acceptance_*/textured-cube.png
+!artifacts/evidence/raylib_asset_acceptance_*/manifest.json
+# acceptance evidence already force-tracked historically; keep pattern open
+!artifacts/acceptance/
+!artifacts/acceptance/**
+!artifacts/benchmarks/
+!artifacts/benchmarks/**
 BrowserRuntime/
 _temp_export/
 .codex_out/
@@ -87,6 +130,8 @@ out.host.*.log
 !src/Platforms/Desktop/raylib.dll
 !src/Platforms/Desktop/libraylib.so
 !src/Libraries/SkiaSharp/runtimes/**/native/*
+# external/ref/ 的框架引用程序集（无 SDK mod 编译器消费，0 网络契约）
+!external/ref/**/*.dll
 
 Thumbs.db
 ehthumbs.db
@@ -96,3 +141,21 @@ $RECYCLE.BIN/
 
 # 站点组装产物
 _site/
+
+# 本地工作环境产物——不得入库（PR 审计 #1037 教训）
+.npmcache/
+.tmp-logs/
+.dsh-*
+.worktrees/
+dist/
+
+# FieldEditor local session sidecars (must not enter repo)
+*.field-editor-history.json
+*.field-editor-meta.json
+
+.pi-worktrees/
+.epic-briefs/
+.tmp-dotnet*/
+tmp/wt-*
+tmp/wt-issue*
+tmp/
