@@ -36,7 +36,7 @@ boardOrigin   = (OriginXCm, OriginYCm)         # 板摆在根板坐标系哪里�
 | `assets/Maps/<map>.json` | `RootBoard` | host world 根板指定，缺省第一块板 |
 | `assets/Maps/<map>.json` | `Boards[].SpatialType` | `Grid` / `HexGrid` / `NodeGraph`，决定板拓扑 |
 | `assets/Maps/<map>.json` | `Boards[].WidthCells` / `HeightCells` + `GridCellSizeCm` | Grid 板范围与格边 |
-| `assets/Maps/<map>.json` | `Boards[].WidthCells` / `HeightCells` + `HexEdgeLengthCm`（hex 计量单位在切 2b 落地，现仍为格子数） | Hex 板范围与 hex 边长 |
+| `assets/Maps/<map>.json` | `Boards[].WidthCells` / `HeightCells` + `HexEdgeLengthCm`；或 `Boards[].WidthHexes` / `HeightHexes`（hex 板首选，两轴同声明、优先于格子数，世界 AABB 为保守 hex 足迹） | Hex 板范围与 hex 边长 |
 | `assets/Maps/<map>.json` | `Boards[].OriginXCm` / `OriginYCm` | 板摆在世界坐标哪里，缺省居中（#1567 切 2 引入） |
 | `assets/Maps/<map>.json` | `Tuning.PartitionChunkCells` / `LoadedChunkCapacity` | map 级分区与 streaming 预算；声明后为唯一预算，容量回填未声明的板（#1567 切 4 已落地，缺省自动推导随切 4b） |
 | `assets/Navigation/navmesh.json` | `boards.<name>.source` / `tileWorldWidthCm` / `tileWorldHeightCm` | nav 烘焙源与瓦片颗粒度（#1567 切 3 引入） |
@@ -223,6 +223,7 @@ Runtime incremental 起点：
 
 - host world 由根板锚定（`RootBoard`，缺省第一块板）；无板图沿用 game.json `world`。
 - 板范围 = 格子数 × 拓扑度量；卫星板越出根板范围在加载期 fail-fast；声明 origin 的卫星板把板内格子系原点钉在该 min-corner（居中板保持 legacy 格子系锚世界 0）。
+- 一图一张 nav 网格：同图多板在 `Navigation/navmesh.json` 声明的瓦片尺寸必须一致（两轴分别比较），混合粒度加载期 fail-fast——按板粒度寻址是 #1567 切 2 后续。瓦片与板尺寸两轴独立，非正方形（板、世界、瓦片）均为一等公民。
 - nav 瓦片颗粒度在 `Navigation/navmesh.json` 显式声明；不要从板的 cell/chunk 推导，也不要把 `PartitionChunk` 当 navmesh tile。
 - `PartitionChunk` 只用于世界层空间分区/AOI；`TerrainChunk` 是逻辑地形块，两者都不是 nav 瓦片尺度。
 - `FlowCell` / `AvoidanceHashCell` / `PhysicsBroadphaseCell` 默认可等于 `CellCm`，但 owner 独立。

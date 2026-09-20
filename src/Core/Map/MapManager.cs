@@ -854,6 +854,9 @@ namespace Ludots.Core.Map
             }
         }
 
+        private static string spatialTypeOf(BoardConfig board) =>
+            (board.SpatialType ?? "Grid").Trim();
+
         private static void ValidateBoardPlacement(BoardConfig board, BoardConfig root, MapId mapId)
         {
             bool hasX = board.OriginXCm.HasValue;
@@ -876,15 +879,31 @@ namespace Ludots.Core.Map
                     $"Map '{mapId}' board '{board.Name}' requires positive WidthCells/HeightCells/GridCellSizeCm.");
             }
 
+            bool hasHexes = board.WidthHexes.HasValue || board.HeightHexes.HasValue;
+            if (hasHexes)
+            {
+                bool isHex = spatialTypeOf(board) is "HexGrid" or "Hex";
+                if (!isHex)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapId}' board '{board.Name}' declares WidthHexes/HeightHexes but SpatialType is '{board.SpatialType}'; hex metrics are HexGrid-only (#1567 slice 2).");
+                }
+                if (board.WidthHexes is not > 0 || board.HeightHexes is not > 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapId}' board '{board.Name}' must author positive WidthHexes/HeightHexes together; hexes take precedence over WidthCells when authored (#1567 slice 2).");
+                }
+            }
+
             if (ReferenceEquals(board, root))
             {
                 return;
             }
 
-            long boardWidthCm = (long)board.WidthCells * board.GridCellSizeCm;
-            long boardHeightCm = (long)board.HeightCells * board.GridCellSizeCm;
-            long rootWidthCm = (long)root.WidthCells * root.GridCellSizeCm;
-            long rootHeightCm = (long)root.HeightCells * root.GridCellSizeCm;
+            long boardWidthCm = board.ResolveExtent().WidthCm;
+            long boardHeightCm = board.ResolveExtent().HeightCm;
+            long rootWidthCm = root.ResolveExtent().WidthCm;
+            long rootHeightCm = root.ResolveExtent().HeightCm;
             if (boardWidthCm > rootWidthCm || boardHeightCm > rootHeightCm)
             {
                 throw new InvalidOperationException(

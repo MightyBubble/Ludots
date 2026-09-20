@@ -34,12 +34,7 @@ namespace Ludots.Core.Map.Board
             Id = id;
             Name = name;
 
-            BoardExtent = new BoardExtentSpec(
-                config.WidthCells,
-                config.HeightCells,
-                config.GridCellSizeCm,
-                config.OriginXCm,
-                config.OriginYcm);
+            BoardExtent = config.ResolveExtent();
             WorldSize = BoardExtent.ToWorldSizeSpec();
             CoordinateConverter = new SpatialCoordinateConverter(
                 config.GridCellSizeCm,

@@ -763,9 +763,10 @@ namespace Ludots.Core.Engine
             if (hostMap?.Boards is { Count: > 0 })
             {
                 var rootConfig = Ludots.Core.Map.MapManager.ResolveRootBoardFor(hostMap, MergedConfig.StartupMapId);
+                Ludots.Core.Spatial.BoardExtentSpec rootExtent = rootConfig.ResolveExtent();
                 return new WorldExtentSpec(
-                    checked(rootConfig.WidthCells * rootConfig.GridCellSizeCm),
-                    checked(rootConfig.HeightCells * rootConfig.GridCellSizeCm),
+                    rootExtent.WidthCm,
+                    rootExtent.HeightCm,
                     rootConfig.GridCellSizeCm);
             }
 
@@ -4222,11 +4223,11 @@ namespace Ludots.Core.Engine
                 .Where(b => TryGetBoardNavTileGrid(bakeConfig, mapId, b.Name, out var g) && g != null)
                 .ToList();
             int widthChunks = participatingBoards
-                .Select(b => CeilDiv(checked(b.WidthCells * b.GridCellSizeCm), TryGetBoardNavTileGrid(bakeConfig, mapId, b.Name, out var tg) ? tg!.TileWorldWidthCm : 1))
+                .Select(b => CeilDiv(b.ResolveExtent().WidthCm, TryGetBoardNavTileGrid(bakeConfig, mapId, b.Name, out var tg) ? tg!.TileWorldWidthCm : 1))
                 .DefaultIfEmpty(0)
                 .Max();
             int heightChunks = participatingBoards
-                .Select(b => CeilDiv(checked(b.HeightCells * b.GridCellSizeCm), TryGetBoardNavTileGrid(bakeConfig, mapId, b.Name, out var tg2) ? tg2!.TileWorldHeightCm : 1))
+                .Select(b => CeilDiv(b.ResolveExtent().HeightCm, TryGetBoardNavTileGrid(bakeConfig, mapId, b.Name, out var tg2) ? tg2!.TileWorldHeightCm : 1))
                 .DefaultIfEmpty(0)
                 .Max();
             var tileWidthCm = tileGrids.Max(g => g!.TileWorldWidthCm);

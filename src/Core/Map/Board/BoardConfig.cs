@@ -33,6 +33,14 @@ namespace Ludots.Core.Map.Board
         /// <summary>Hex edge length in centimeters. Applies to HexGrid boards.</summary>
         public int HexEdgeLengthCm { get; set; } = SpatialScaleDefaults.DefaultHexEdgeLengthCm;
 
+        /// <summary>Board width in hexes; HexGrid-only authoring, takes precedence over
+        /// WidthCells when authored on both axes (#1567 slice 2 hex metric). Non-square with
+        /// HeightHexes is fine; the world AABB is the conservative hex footprint.</summary>
+        public int? WidthHexes { get; set; }
+
+        /// <summary>Board height in hexes; must be authored together with WidthHexes.</summary>
+        public int? HeightHexes { get; set; }
+
         /// <summary>Spatial partition chunk size in cells per side. Runtime only: populated from
         /// the map's Tuning (#1567); JSON authoring lives on map Tuning.PartitionChunkCells.</summary>
         [System.Text.Json.Serialization.JsonIgnore]
@@ -66,6 +74,25 @@ namespace Ludots.Core.Map.Board
 
 
         /// <summary>
+        /// The board's effective world extent — hex footprint when WidthHexes/HeightHexes
+        /// are authored (HexGrid-only, take precedence), cell grid otherwise. Single
+        /// source for placement validation, board construction, and world/nav derivation.
+        /// </summary>
+        public Ludots.Core.Spatial.BoardExtentSpec ResolveExtent()
+        {
+            if (WidthHexes is int widthHexes && HeightHexes is int heightHexes)
+            {
+                var metrics = new Ludots.Core.Map.Hex.HexMetrics(HexEdgeLengthCm);
+                (int widthCm, int heightCm) = metrics.FootprintWorldCm(widthHexes, heightHexes);
+                return Ludots.Core.Spatial.BoardExtentSpec.FromConservativeCm(
+                    widthCm, heightCm, GridCellSizeCm, OriginXCm, OriginYcm);
+            }
+
+            return new Ludots.Core.Spatial.BoardExtentSpec(
+                WidthCells, HeightCells, GridCellSizeCm, OriginXCm, OriginYcm);
+        }
+
+        /// <summary>
         /// Clone this config to prevent aliasing during merge operations.
         /// </summary>
         public BoardConfig Clone()
@@ -80,6 +107,8 @@ namespace Ludots.Core.Map.Board
                 OriginYcm = OriginYcm,
                 GridCellSizeCm = GridCellSizeCm,
                 HexEdgeLengthCm = HexEdgeLengthCm,
+                WidthHexes = WidthHexes,
+                HeightHexes = HeightHexes,
                 ChunkSizeCells = ChunkSizeCells,
                 LoadedChunkCapacity = LoadedChunkCapacity,
                 DataFile = DataFile,

@@ -50,6 +50,44 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void NavTileGranularity_MixedSizesAcrossBoardsAreRejected()
+        {
+            var config = new NavMeshBakeConfig();
+            var boards = new NavMapNavBoardsConfig();
+            boards.Boards["arena"] = new NavTileGridConfig { TileWorldWidthCm = 6400, TileWorldHeightCm = 6400 };
+            boards.Boards["harbor"] = new NavTileGridConfig { TileWorldWidthCm = 12800, TileWorldHeightCm = 6400 };
+            config.Maps["dual"] = boards;
+
+            var ex = Assert.Throws<InvalidOperationException>(
+                () => NavMeshBakeConfigLoader.ValidatePerMapTileGranularity(config));
+            Assert.That(ex!.Message, Does.Contain("mixed tile granularities"));
+        }
+
+        [Test]
+        public void NavTileGranularity_UniformNonSquareTilesAreAccepted()
+        {
+            var config = new NavMeshBakeConfig();
+            var boards = new NavMapNavBoardsConfig();
+            boards.Boards["arena"] = new NavTileGridConfig { TileWorldWidthCm = 12800, TileWorldHeightCm = 6400 };
+            boards.Boards["harbor"] = new NavTileGridConfig { TileWorldWidthCm = 12800, TileWorldHeightCm = 6400 };
+            config.Maps["dual"] = boards;
+
+            Assert.DoesNotThrow(() => NavMeshBakeConfigLoader.ValidatePerMapTileGranularity(config));
+        }
+
+        [Test]
+        public void NavTileGranularity_SingleBoardOrEmptyEntriesAreSkipped()
+        {
+            var config = new NavMeshBakeConfig();
+            var single = new NavMapNavBoardsConfig();
+            single.Boards["only"] = new NavTileGridConfig { TileWorldWidthCm = 6400, TileWorldHeightCm = 6400 };
+            config.Maps["solo"] = single;
+            config.Maps["empty"] = new NavMapNavBoardsConfig();
+
+            Assert.DoesNotThrow(() => NavMeshBakeConfigLoader.ValidatePerMapTileGranularity(config));
+        }
+
+        [Test]
         public void AgentProfileRegistry_LoadsAsNavigationArrayByIdContract()
         {
             string repoRoot = FindRepoRoot();

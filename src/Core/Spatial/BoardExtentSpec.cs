@@ -36,6 +36,22 @@ namespace Ludots.Core.Spatial
         public int WidthCm => checked(WidthCells * CellSizeCm);
         public int HeightCm => checked(HeightCells * CellSizeCm);
 
+        /// <summary>
+        /// Conservative world-cm footprint (e.g. a hex grid's bounds) padded up to whole
+        /// cells; authored cm need not be cell multiples.
+        /// </summary>
+        public static BoardExtentSpec FromConservativeCm(int widthCm, int heightCm, int cellSizeCm, int? originXCm = null, int? originYCm = null)
+        {
+            if (widthCm <= 0) throw new ArgumentOutOfRangeException(nameof(widthCm));
+            if (heightCm <= 0) throw new ArgumentOutOfRangeException(nameof(heightCm));
+            return new BoardExtentSpec(
+                (widthCm + cellSizeCm - 1) / cellSizeCm,
+                (heightCm + cellSizeCm - 1) / cellSizeCm,
+                cellSizeCm,
+                originXCm,
+                originYCm);
+        }
+
         public bool IsAnchored => OriginXCm is not null;
 
         public WorldAabbCm ToWorldAabb()

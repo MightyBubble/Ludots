@@ -47,6 +47,8 @@ namespace Ludots.Core.Navigation.NavMesh.Config
             _ = config.ParsedMode;
             _ = config.ParsedAlgorithm;
 
+            ValidatePerMapTileGranularity(config);
+
             if (config.ParsedMode == NavBakeMode.RuntimeIncremental &&
                 config.ParsedAlgorithm != NavBakeAlgorithmKind.Cdt &&
                 config.ParsedAlgorithm != NavBakeAlgorithmKind.Recast)
@@ -180,6 +182,47 @@ namespace Ludots.Core.Navigation.NavMesh.Config
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// One map carries one nav tile grid (#1346): runtime tile addressing and
+        /// artifact paths share a single (width, height) granularity per map, so
+        /// boards declaring different sizes would be silently misaddressed by the
+        /// max-size grid.
+        /// </summary>
+        internal static void ValidatePerMapTileGranularity(NavMeshBakeConfig config)
+        {
+            foreach ((string mapId, NavMapNavBoardsConfig? mapBoards) in config.Maps)
+            {
+                if (mapBoards?.Boards is not { Count: > 1 })
+                {
+                    continue;
+                }
+
+                string? firstName = null;
+                int firstW = 0, firstH = 0;
+                foreach ((string boardName, NavTileGridConfig? grid) in mapBoards.Boards)
+                {
+                    if (grid == null || grid.TileWorldWidthCm <= 0 || grid.TileWorldHeightCm <= 0)
+                    {
+                        continue;
+                    }
+
+                    if (firstName == null)
+                    {
+                        firstName = boardName;
+                        firstW = grid.TileWorldWidthCm;
+                        firstH = grid.TileWorldHeightCm;
+                        continue;
+                    }
+
+                    if (grid.TileWorldWidthCm != firstW || grid.TileWorldHeightCm != firstH)
+                    {
+                        throw new InvalidOperationException(
+                            $"NavMeshBakeConfig.maps.{mapId}.boards declare mixed tile granularities: '{boardName}' {grid.TileWorldWidthCm}x{grid.TileWorldHeightCm}cm vs '{firstName}' {firstW}x{firstH}cm; one map carries one nav grid until per-board tile addressing lands (#1567 slice 2 follow-up).");
+                    }
+                }
+            }
         }
 
         private void ValidateRaw(JsonObject root, string relativePath)

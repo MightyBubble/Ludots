@@ -160,6 +160,54 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void HexBoardAuthoredInHexesDerivesNonSquareFootprint()
+        {
+            var config = Board("harbor", "HexGrid", 999, 999, cellSizeCm: 100);
+            config.WidthHexes = 24;
+            config.HeightHexes = 10;
+            config.HexEdgeLengthCm = 400;
+            var board = new HexGridBoard(new BoardId("harbor"), "harbor", config);
+
+            // √3·400·(24 + 9/2) ≈ 19746cm → 198 cells；1.5·400·10 + 200 = 6200cm。
+            That(board.WorldSize.Bounds.Width, Is.EqualTo(19_800));
+            That(board.WorldSize.Bounds.Height, Is.EqualTo(6_200));
+            That(board.BoardExtent.WidthCm, Is.GreaterThan(19_700));
+            That(board.BoardExtent.HeightCm, Is.EqualTo(6_200));
+        }
+
+        [Test]
+        public void HexBoardLegacyCellAuthoringStaysZeroDrift()
+        {
+            var config = Board("harbor", "HexGrid", 24, 10, cellSizeCm: 100);
+            var board = new HexGridBoard(new BoardId("harbor"), "harbor", config);
+            That(board.WorldSize.Bounds.Width, Is.EqualTo(2_400));
+            That(board.WorldSize.Bounds.Height, Is.EqualTo(1_000));
+        }
+
+        [Test]
+        public void HexMetricsOnNonHexBoardAreRejected()
+        {
+            var config = ConfigWithBoards(
+                Board("default", "Grid", 100, 100),
+                Board("arena", "Grid", 40, 40));
+            config.Boards[1].WidthHexes = 10;
+            config.Boards[1].HeightHexes = 10;
+            var ex = Throws<InvalidOperationException>(() => MapManager.ValidateSpatialDeclaration(config, new MapId("dual-board-test")));
+            That(ex!.Message, Does.Contain("HexGrid-only"));
+        }
+
+        [Test]
+        public void SingleAxisHexAuthoringIsRejected()
+        {
+            var config = ConfigWithBoards(
+                Board("default", "Grid", 100, 100),
+                Board("harbor", "HexGrid", 40, 40));
+            config.Boards[1].WidthHexes = 24;
+            var ex = Throws<InvalidOperationException>(() => MapManager.ValidateSpatialDeclaration(config, new MapId("dual-board-test")));
+            That(ex!.Message, Does.Contain("together"));
+        }
+
+        [Test]
         public void CenteredBoardsKeepLegacyFrameZeroDrift()
         {
             var config = Board("default", "Grid", 64, 32, cellSizeCm: 100);
