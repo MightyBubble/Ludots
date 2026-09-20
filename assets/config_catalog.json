@@ -48,7 +48,9 @@
     "Path": "Enums/enums.json",
     "Policy": "ArrayById",
     "IdField": "id",
-    "ArrayAppendFields": [ "members" ],
+    "ArrayAppendFields": [
+      "members"
+    ],
     "AllowEmpty": true
   },
   {
@@ -405,6 +407,11 @@
   {
     "Path": "Relationships/catalog.json",
     "Policy": "DeepObject"
+  },
+  {
+    "Path": "Relationships/projection.json",
+    "Policy": "DeepObject",
+    "AllowEmpty": true
   },
   {
     "Path": "Input/default_input.json",

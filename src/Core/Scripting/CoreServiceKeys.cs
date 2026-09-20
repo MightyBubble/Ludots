@@ -274,7 +274,6 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<RelationshipMetricRegistry> RelationshipMetricRegistry = new("RelationshipMetricRegistry");
         public static readonly ServiceKey<RelationshipFlagRegistry> RelationshipFlagRegistry = new("RelationshipFlagRegistry");
         public static readonly ServiceKey<RelationshipBandRegistry> RelationshipBandRegistry = new("RelationshipBandRegistry");
-        public static readonly ServiceKey<RelationshipReasonRegistry> RelationshipReasonRegistry = new("RelationshipReasonRegistry");
         public static readonly ServiceKey<RelationshipChangeBuffer> RelationshipChangeBuffer = new("RelationshipChangeBuffer");
         public static readonly ServiceKey<RelationshipRuntime> RelationshipRuntime = new("RelationshipRuntime");
         public static readonly ServiceKey<RelationshipCatalogConfig> RelationshipCatalogConfig = new("RelationshipCatalogConfig");
@@ -302,7 +301,6 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<int> RelationshipEventMetricId = new("RelationshipEvent.MetricId");
         public static readonly ServiceKey<int> RelationshipEventMetricValue = new("RelationshipEvent.MetricValue");
         public static readonly ServiceKey<int> RelationshipEventTypeId = new("RelationshipEvent.TypeId");
-        public static readonly ServiceKey<int> RelationshipEventReasonId = new("RelationshipEvent.ReasonId");
         public static readonly ServiceKey<int> RelationshipEventCount = new("RelationshipEvent.Count");
 
         // --- GAS Input / Command Sources / Orders ---

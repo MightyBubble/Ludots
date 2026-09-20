@@ -188,7 +188,6 @@ namespace Ludots.Tests.Gas.AI
             public int ResolveRelationshipType(string name) => throw new InvalidOperationException(name);
             public int ResolveRelationshipMetric(string name) => throw new InvalidOperationException(name);
             public int ResolveRelationshipFlag(string name) => throw new InvalidOperationException(name);
-            public int ResolveRelationshipReason(string name) => throw new InvalidOperationException(name);
             public int ResolveTargetDispatchPreset(string name) => throw new InvalidOperationException(name);
             public int ResolveEntityTemplate(string name) => throw new InvalidOperationException(name);
         }

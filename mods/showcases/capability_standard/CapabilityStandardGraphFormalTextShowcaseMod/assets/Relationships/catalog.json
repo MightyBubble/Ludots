@@ -1,11 +1,11 @@
 {
   "types": [
-    { "id": "GraphFormalText.Participant", "isSymmetric": false }
+    {
+      "id": "GraphFormalText.Participant",
+      "isSymmetric": false
+    }
   ],
   "metrics": [],
   "flags": [],
-  "bands": [],
-  "reasons": [],
-  "callbacks": [],
-  "synergies": []
+  "reasons": []
 }

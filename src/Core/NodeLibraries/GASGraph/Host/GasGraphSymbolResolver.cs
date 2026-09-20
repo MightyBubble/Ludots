@@ -16,7 +16,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly RelationshipTypeRegistry _types;
         private readonly RelationshipMetricRegistry _metrics;
         private readonly RelationshipFlagRegistry _flags;
-        private readonly RelationshipReasonRegistry _reasons;
         private readonly TargetDispatchPresetRegistry _targetDispatchPresets;
         private readonly EntityTemplateKeyRegistry? _entityTemplateKeys;
         private readonly GraphLookupTableRegistry? _lookupTables;
@@ -28,7 +27,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             RelationshipTypeRegistry types,
             RelationshipMetricRegistry metrics,
             RelationshipFlagRegistry flags,
-            RelationshipReasonRegistry reasons,
             TargetDispatchPresetRegistry targetDispatchPresets,
             EntityTemplateKeyRegistry? entityTemplateKeys = null,
             GraphLookupTableRegistry? lookupTables = null,
@@ -39,7 +37,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _types = types ?? throw new ArgumentNullException(nameof(types));
             _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
             _flags = flags ?? throw new ArgumentNullException(nameof(flags));
-            _reasons = reasons ?? throw new ArgumentNullException(nameof(reasons));
             _targetDispatchPresets = targetDispatchPresets ?? throw new ArgumentNullException(nameof(targetDispatchPresets));
             _entityTemplateKeys = entityTemplateKeys;
             _lookupTables = lookupTables;
@@ -175,10 +172,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return _flags.GetId(name);
         }
 
-        public int ResolveRelationshipReason(string name)
-        {
-            return _reasons.Register(name);
-        }
 
         public int ResolveTargetDispatchPreset(string name)
         {

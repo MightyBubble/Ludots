@@ -232,7 +232,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         if ((op == GraphNodeOp.RelationshipSetMetric || op == GraphNodeOp.RelationshipAddMetric) &&
                             ins.Dst != byte.MaxValue)
                         {
-                            ins.Dst = checked((byte)symbolResolver.ResolveRelationshipReason(ResolveSymbol(symbols, ins.Dst)));
                         }
 
                         if (ins.Flags != byte.MaxValue)
@@ -262,7 +261,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
                         if (op == GraphNodeOp.RelationshipSetFlag && ins.Dst != byte.MaxValue)
                         {
-                            ins.Dst = checked((byte)symbolResolver.ResolveRelationshipReason(ResolveSymbol(symbols, ins.Dst)));
                         }
 
                         if (op == GraphNodeOp.RelationshipSetFlag || op == GraphNodeOp.RelationshipHasFlag)

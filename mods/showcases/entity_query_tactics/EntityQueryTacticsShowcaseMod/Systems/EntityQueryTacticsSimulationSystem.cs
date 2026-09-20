@@ -47,8 +47,6 @@ namespace EntityQueryTacticsShowcaseMod.Systems
         private int _threatMetricId;
         private int _focusMetricId;
         private int _priorityTargetFlagId;
-        private int _setupReasonId;
-        private int _pressurePulseReasonId;
         private int _commandableTagId;
         private int _routedTagId;
         private int _objectiveTagId;
@@ -267,15 +265,11 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 ?? throw new InvalidOperationException("RelationshipMetricRegistry is missing.");
             RelationshipFlagRegistry flags = _engine.GetService(CoreServiceKeys.RelationshipFlagRegistry)
                 ?? throw new InvalidOperationException("RelationshipFlagRegistry is missing.");
-            RelationshipReasonRegistry reasons = _engine.GetService(CoreServiceKeys.RelationshipReasonRegistry)
-                ?? throw new InvalidOperationException("RelationshipReasonRegistry is missing.");
 
             _tacticalIntelTypeId = types.GetId(Config.Relationships.TacticalIntel);
             _threatMetricId = metrics.GetId(Config.Metrics.Threat);
             _focusMetricId = metrics.GetId(Config.Metrics.Focus);
             _priorityTargetFlagId = flags.GetId(Config.Flags.PriorityTarget);
-            _setupReasonId = reasons.Register("Scenario.Setup");
-            _pressurePulseReasonId = reasons.Register("Player.PressurePulse");
             _commandableTagId = TagRegistry.GetId(Config.Tags.Commandable);
             _routedTagId = TagRegistry.GetId(Config.Tags.Routed);
             _objectiveTagId = TagRegistry.GetId(Config.Tags.Objective);
@@ -593,11 +587,11 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 }
 
                 int metricId = ResolveMetric(seed.Metric);
-                runtime.SetMetric(source, target, _tacticalIntelTypeId, metricId, seed.Value, _setupReasonId);
+                runtime.SetMetric(source, target, _tacticalIntelTypeId, metricId, seed.Value);
                 for (int f = 0; f < seed.Flags.Length; f++)
                 {
                     int flagId = ResolveFlag(seed.Flags[f]);
-                    runtime.SetFlag(source, target, _tacticalIntelTypeId, flagId, true, _setupReasonId);
+                    runtime.SetFlag(source, target, _tacticalIntelTypeId, flagId, true);
                 }
             }
         }
@@ -860,11 +854,11 @@ namespace EntityQueryTacticsShowcaseMod.Systems
             }
 
             int metricId = ResolveMetric(Config.Scenario.PressurePulse.Metric);
-            runtime.AddMetric(ScenarioContext.Owner, target, _tacticalIntelTypeId, metricId, Config.Scenario.PressurePulse.Delta, _pressurePulseReasonId);
+            runtime.AddMetric(ScenarioContext.Owner, target, _tacticalIntelTypeId, metricId, Config.Scenario.PressurePulse.Delta);
             for (int i = 0; i < Config.Scenario.PressurePulse.Flags.Length; i++)
             {
                 int flagId = ResolveFlag(Config.Scenario.PressurePulse.Flags[i]);
-                runtime.SetFlag(ScenarioContext.Owner, target, _tacticalIntelTypeId, flagId, true, _pressurePulseReasonId);
+                runtime.SetFlag(ScenarioContext.Owner, target, _tacticalIntelTypeId, flagId, true);
             }
 
             _state.PressurePulseCount++;

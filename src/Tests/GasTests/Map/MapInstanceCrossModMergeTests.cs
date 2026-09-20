@@ -286,6 +286,7 @@ namespace Ludots.Tests.GAS
                 var bands = new RelationshipBandRegistry();
                 var changes = new RelationshipChangeBuffer();
                 var runtime = new RelationshipRuntime(world, types, metrics, flags, bands, changes, new RelationshipReverseIndex(world));
+                runtime.InstallTagOps(new Ludots.Core.Gameplay.GAS.TagOps(new Ludots.Core.Gameplay.GAS.DirtyEntityQueue(1024), new Ludots.Core.Gameplay.GAS.TagRuleRegistry(), new Ludots.Core.Gameplay.GAS.GasBudget(), new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry()));
                 return new RelationHarness { World = world, Runtime = runtime, Types = types, Metrics = metrics, Flags = flags, Changes = changes };
             }
 
@@ -904,6 +905,36 @@ namespace Ludots.Tests.GAS
                 Directory.Delete(root, recursive: true);
             }
         }
+        [Test]
+        public void Materialize_TruthLivesOnEdgeEntityAttributeBuffer()
+        {
+            using RelationHarness harness = RelationHarness.Create();
+            (MapLoadEntityIndex index, World world) = SpawnIndexedEntities(harness.World, "harbor.a", "harbor.b");
+            var mapConfig = new MapConfig { Id = "harbor" };
+            mapConfig.Entities.Add(new EntitySpawnData
+            {
+                InstanceId = "harbor.a",
+                Relations = [new() { To = "harbor.b", Type = "WorksFor", Metric = new Dictionary<string, int> { ["Loyalty"] = 80 } }],
+            });
+
+            InstanceRelationMaterializer.Materialize(CreateSession("harbor"), mapConfig, index, harness.Runtime, harness.Types, harness.Metrics);
+
+            Entity a = index.GetRequired("harbor", "harbor.a", "t");
+            Entity b = index.GetRequired("harbor", "harbor.b", "t");
+            int typeId = harness.Types.GetId("WorksFor");
+            Assert.That(harness.Runtime.HasLink(a, b, typeId), Is.True);
+
+            // #1570 单轨化：SetMetric 写穿边实体 AttributeBuffer（唯一真相），SoA 是缓存
+            harness.Runtime.SetMetric(a, b, typeId, harness.Metrics.GetId("Loyalty"), 42);
+            Entity edgeEntity = harness.Runtime.MaterializeRelationshipEntity(a, b, typeId);
+            Assert.That(world.Has<Ludots.Core.Gameplay.GAS.Components.AttributeBuffer>(edgeEntity), Is.True, "边实体携带 AttributeBuffer");
+            if (harness.Metrics.TryGetAttributeId(harness.Metrics.GetId("Loyalty"), out int attrId))
+            {
+                float truth = world.Get<Ludots.Core.Gameplay.GAS.Components.AttributeBuffer>(edgeEntity).GetCurrent(attrId);
+                Assert.That(truth, Is.EqualTo(42f), "真相在边实体 AttributeBuffer 上");
+            }
+        }
+
         [Test]
         public void RelationEvents_RegisteredAsMapScopedPresetEvents()
         {

@@ -64,6 +64,7 @@ namespace Ludots.Core.Gameplay.Spawning
         private readonly TeamEntityLookup? _teamLookup;
         private readonly RelationshipRuntime? _relationships;
         private readonly int _memberOfTypeId;
+        private readonly int _ownsTypeId;
         private readonly EntityTriggerGraphMounts? _entityTriggerGraphMounts;
         private readonly Ludots.Core.Input.Interaction.InteractionContextProfileRegistry? _initialInteractionContexts;
 
@@ -107,6 +108,7 @@ namespace Ludots.Core.Gameplay.Spawning
             TeamEntityLookup? teamLookup = null,
             RelationshipRuntime? relationships = null,
             int memberOfTypeId = -1,
+            int ownsTypeId = -1,
             EntityTriggerGraphMounts? entityTriggerGraphMounts = null,
             Ludots.Core.Input.Interaction.InteractionContextProfileRegistry? initialInteractionContexts = null)
             : base(world)
@@ -138,6 +140,7 @@ namespace Ludots.Core.Gameplay.Spawning
             _teamLookup = teamLookup;
             _relationships = relationships;
             _memberOfTypeId = memberOfTypeId;
+            _ownsTypeId = ownsTypeId;
             _entityTriggerGraphMounts = entityTriggerGraphMounts;
             _initialInteractionContexts = initialInteractionContexts;
         }
@@ -1110,6 +1113,15 @@ namespace Ludots.Core.Gameplay.Spawning
                 team = World.Get<Team>(request.Source);
             }
 
+            // #1570 真相源反转：可解析时先建 MemberOf(unit→teamEntity) 边再写组件（投影）。
+            // 不 fail-fast：出生期 teamRep 可能尚未进 lookup（参与者绑定在实体装载后完成），
+            // 拓扑由 ParticipantBindingResolver 在绑定时补齐——出生侧 best-effort，装载站收口。
+            if (_relationships != null && _memberOfTypeId >= 0 && _teamLookup != null &&
+                _teamLookup.TryGet(team.Id, out Entity teamEntity) && World.IsAlive(teamEntity))
+            {
+                _relationships.EnsureLink(entity, teamEntity, _memberOfTypeId);
+            }
+
             if (World.Has<Team>(entity))
             {
                 World.Set(entity, team);
@@ -1118,6 +1130,7 @@ namespace Ludots.Core.Gameplay.Spawning
             {
                 World.Add(entity, team);
             }
+
         }
 
         private void TryApplyPlayerOwner(in RuntimeEntitySpawnRequest request, Entity entity)
@@ -1146,6 +1159,13 @@ namespace Ludots.Core.Gameplay.Spawning
             else
             {
                 World.Add(entity, owner);
+            }
+
+            // #1570 真相源反转：Owns(playerRep→unit) 边是唯一真相，PlayerOwner 组件是投影。
+            if (_relationships != null && _ownsTypeId >= 0 && _playerLookup != null &&
+                _playerLookup.TryGet(owner.PlayerId, out Entity playerRep) && World.IsAlive(playerRep))
+            {
+                _relationships.EnsureLink(playerRep, entity, _ownsTypeId);
             }
         }
 

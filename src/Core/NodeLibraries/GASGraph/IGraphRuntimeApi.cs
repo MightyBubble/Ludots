@@ -428,12 +428,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
-        short SetRelationshipMetric(Entity source, Entity target, int metricId, int value, int reasonId, int typeId)
+        short SetRelationshipMetric(Entity source, Entity target, int metricId, int value, int typeId)
         {
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
-        short AddRelationshipMetric(Entity source, Entity target, int metricId, int delta, int reasonId, int typeId)
+        short AddRelationshipMetric(Entity source, Entity target, int metricId, int delta, int typeId)
         {
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
@@ -448,7 +448,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
-        void SetRelationshipFlag(Entity source, Entity target, int flagId, bool enabled, int reasonId, int typeId)
+        void SetRelationshipFlag(Entity source, Entity target, int flagId, bool enabled, int typeId)
         {
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
@@ -762,7 +762,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         int ResolveRelationshipType(string name);
         int ResolveRelationshipMetric(string name);
         int ResolveRelationshipFlag(string name);
-        int ResolveRelationshipReason(string name);
         int ResolveTargetDispatchPreset(string name);
         int ResolveEntityTemplate(string name);
 

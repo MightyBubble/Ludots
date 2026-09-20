@@ -2016,16 +2016,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleRelationshipSetMetric(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            int reasonId = ins.Dst == byte.MaxValue ? 0 : ins.Dst;
             int typeId = RequireExplicitRelationshipTypeId(ins.Flags);
-            s.Api.SetRelationshipMetric(s.E[ins.A], s.E[ins.B], ins.Imm, s.I[ins.C], reasonId, typeId);
+            s.Api.SetRelationshipMetric(s.E[ins.A], s.E[ins.B], ins.Imm, s.I[ins.C], typeId);
         }
 
         private static void HandleRelationshipAddMetric(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            int reasonId = ins.Dst == byte.MaxValue ? 0 : ins.Dst;
             int typeId = RequireExplicitRelationshipTypeId(ins.Flags);
-            s.Api.AddRelationshipMetric(s.E[ins.A], s.E[ins.B], ins.Imm, s.I[ins.C], reasonId, typeId);
+            s.Api.AddRelationshipMetric(s.E[ins.A], s.E[ins.B], ins.Imm, s.I[ins.C], typeId);
         }
 
         private static void HandleRelationshipGetMetric(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -2040,9 +2038,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleRelationshipSetFlag(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            int reasonId = ins.Dst == byte.MaxValue ? 0 : ins.Dst;
             int typeId = RequireExplicitRelationshipTypeId(ins.Flags);
-            s.Api.SetRelationshipFlag(s.E[ins.A], s.E[ins.B], ins.Imm, s.B[ins.C] != 0, reasonId, typeId);
+            s.Api.SetRelationshipFlag(s.E[ins.A], s.E[ins.B], ins.Imm, s.B[ins.C] != 0, typeId);
         }
 
         private static void HandleRelationshipQueryOutgoing(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
