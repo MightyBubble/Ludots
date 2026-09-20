@@ -19,7 +19,6 @@ namespace Ludots.Tests.GAS
     /// The whole chain is data: TriggerGraph + lookup table + abilities + Q4 formula effect.
     /// </summary>
     [TestFixture]
-    [Explicit("切片③运行时阻塞：手动挂 InteractionContextInstance 被挂载系统检测到，但 Ballista.Command 动作边沿→图执行的桥未通（drained=0）。编译/装载/表全绿——图从数据编译成功、意图链在 Case E 同链路上已验证。阻塞点=切片①挂载声明物质化的输入动作边沿桥。解除 Explicit 后三场景应直接出数。")]
     public sealed class BallistaRouteByTargetAcceptanceTests
     {
         private const string ModId = "BallistaRouteByTargetMod";
@@ -214,36 +213,14 @@ namespace Ludots.Tests.GAS
 
             public void ClickAt(Vector2 screen)
             {
+                // Real input pipeline (same contract as Case E acceptance): press the bound
+                // right-button edge and let the tick capture a fresh pointer snapshot. Manual
+                // DispatchMountedTrigger would run the graph against the stale snapshot of the
+                // previous tick, silently re-routing every click to the last-seen pointer.
                 Backend.SetMousePosition(screen);
-                var bindings = Engine.GetService(CoreServiceKeys.TriggerGraphActionBindings)
-                    as Ludots.Core.Gameplay.MapTriggers.TriggerGraphActionBindingIndex
-                    ?? throw new InvalidOperationException("action binding index missing");
-                if (!bindings.TryGetMounts("Ballista.Command", out var mounts) || mounts.Count == 0)
-                {
-                    foreach (var actionId in bindings.ActionIds)
-                    {
-                        TestContext.Out.WriteLine($"[diag] registered action: {actionId}");
-                    }
-                    Assert.Fail("Ballista.Command not in binding index");
-                }
-                var session = Engine.CurrentMapSession ?? throw new InvalidOperationException("no map session");
-                for (int i = 0; i < mounts.Count; i++)
-                {
-                    if (mounts[i] is not Ludots.Core.Gameplay.MapTriggers.TriggerGraphMountTrigger graphMount) continue;
-                    var context = new Ludots.Core.Scripting.ScriptContext();
-                    context.Set(CoreServiceKeys.Engine, Engine);
-                    context.Set(CoreServiceKeys.MapId, session.MapId);
-                    context.Set(CoreServiceKeys.MapSession, session);
-                    context.Set(Ludots.Core.Scripting.MapTriggerEventPayloadKeys.Rep, graphMount.Scope);
-                    context.Set(Ludots.Core.Scripting.MapTriggerEventPayloadKeys.Action, "Ballista.Command");
-                    context.Set(Ludots.Core.Scripting.MapTriggerEventPayloadKeys.PointerScreenX, screen.X);
-                    context.Set(Ludots.Core.Scripting.MapTriggerEventPayloadKeys.PointerScreenY, screen.Y);
-                    context.Set(Ludots.Core.Scripting.MapTriggerEventPayloadKeys.Modifiers, 0);
-                    Engine.TriggerManager.DispatchMountedTrigger(graphMount, context);
-                }
+                Backend.SetButton("<Mouse>/rightButton", true);
                 Engine.Tick(1f / 60f);
-                Assert.That(Engine.TriggerManager.Errors.Count, Is.EqualTo(0),
-                    "trigger errors: " + string.Join(" | ", Engine.TriggerManager.Errors));
+                Backend.SetButton("<Mouse>/rightButton", false);
             }
 
             public void Tick(int frames)
@@ -259,6 +236,8 @@ namespace Ludots.Tests.GAS
                 TickUntil(30, () => drain.LastDrainedCount > 0);
                 Tick(4);
                 TestContext.Out.WriteLine($"[drain] drained={drain.LastDrainedCount} accepted={drain.LastAcceptedCount} rejected={drain.LastRejectionReason}");
+                Assert.That(Engine.TriggerManager.Errors.Count, Is.EqualTo(0),
+                    "trigger errors: " + string.Join(" | ", Engine.TriggerManager.Errors));
             }
 
             public void TickUntil(int maxFrames, Func<bool> predicate)
@@ -347,7 +326,11 @@ namespace Ludots.Tests.GAS
             throw new DirectoryNotFoundException("Could not locate repository root.");
         }
 
-        /// <summary>Window pixels ↔ world cm 1:1 (headless contract, same as Case E acceptance).</summary>
+        /// <summary>
+        /// Window pixels ↔ world cm 1:1 (headless contract, same as Case E acceptance).
+        /// The screen-ray contract is visual METERS, so GetRay divides by 100 — a raw pixel
+        /// origin would inflate the ground hit ×100 and land outside the fixture heightmap.
+        /// </summary>
         private sealed class WindowPointRayProvider : Ludots.Platform.Abstractions.IScreenRayProvider, Ludots.Platform.Abstractions.IScreenProjector
         {
             public Vector2 WorldToScreen(Vector3 position) => new(position.X, position.Z);
@@ -355,7 +338,7 @@ namespace Ludots.Tests.GAS
             public Ludots.Platform.Abstractions.ScreenRay GetRay(Vector2 screenPosition)
             {
                 return new Ludots.Platform.Abstractions.ScreenRay(
-                    new Vector3(screenPosition.X, 1000f, screenPosition.Y),
+                    new Vector3(screenPosition.X / 100f, 1000f, screenPosition.Y / 100f),
                     -Vector3.UnitY);
             }
         }

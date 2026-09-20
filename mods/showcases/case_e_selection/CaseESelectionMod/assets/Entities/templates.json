@@ -70,7 +70,10 @@
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
-      "BlackboardIntBuffer": {}
+      "BlackboardIntBuffer": {},
+      "PlayerOwner": {
+        "PlayerId": 1
+      }
     }
   },
   {

@@ -5,8 +5,6 @@
       "activeCollectionKey": "selected",
       "commandIntentId": "intent.command.default",
       "inputContextId": "CaseE.Controls",
-      "activeCollectionKey": "selected",
-      "commandIntentId": "intent.command.default",
       "bindings": [
         "CaseE.BoxSelectBegin",
         "CaseE.BoxSelectEnd",
