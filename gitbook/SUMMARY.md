@@ -127,6 +127,7 @@
   - [接触发射合同](architecture/contact-emission.md)
   - [Field Editor CLI](architecture/field-editor.md)
   - [Global Field Rendering](architecture/global-field-rendering.md)
+  - [EQS + Influence 配置与 Showcase](architecture/eqs-influence-config-and-showcase.md)
   - [Presenter-as-Actor 架构设计](architecture/presenter-as-actor-architecture.md)
   - [Presenter 快速上手：10 分钟加一个可视物](architecture/presenter-quickstart.md)
   - [Presenter 编译式执行分层](architecture/presenter-compiled-lanes.md)
@@ -145,6 +146,7 @@
   - [Raylib 引擎画廊开发指南](architecture/raylib-engine-gallery-dev-guide.md)
   - [Raylib Render 产品化合同](architecture/raylib-render-productization.md)
   - [Raylib 引擎工程分层与关卡容器格式](architecture/raylib-engine-project-scene-format.md)
+>>>>>>> origin/main
   - [MassNavigation 数值域与确定性边界](architecture/mass-navigation-numeric-domain.md)
   - [Prefab Grounding 与 Visual Height](architecture/prefab-grounding-and-visual-height.md)
   - [Structure Collision Surfaces](architecture/structure-collision-surfaces.md)

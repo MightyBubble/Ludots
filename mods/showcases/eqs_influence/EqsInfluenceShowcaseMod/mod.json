@@ -1,0 +1,12 @@
+{
+  "name": "EqsInfluenceShowcaseMod",
+  "version": "1.0.0",
+  "description": "EQS + Influence Map spatial reasoning showcase with Presentation heat and candidate overlays.",
+  "main": "bin/net8.0/EqsInfluenceShowcaseMod.dll",
+  "priority": 140,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "Ludots",
+  "tags": ["showcase", "ai", "eqs", "influence", "spatial"]
+}

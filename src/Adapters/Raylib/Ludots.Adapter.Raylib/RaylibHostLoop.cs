@@ -31,6 +31,8 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Minimap;
+using Ludots.Core.Fields.Influence;
+using Ludots.Core.Presentation.Fields;
 using Ludots.Platform.Abstractions;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Presenters;
@@ -339,7 +341,7 @@ namespace Ludots.Adapter.Raylib
                 Ludots.Core.Presentation.Navigation.NavMeshPresentationBuffer navMeshPresentationBuffer =
                     engine.GetService(CoreServiceKeys.NavMeshPresentationBuffer)
                         ?? throw new InvalidOperationException("Raylib host requires the Core NavMeshPresentationBuffer service.");
-                using var navMeshPresentationRenderer = new RaylibNavMeshPresentationRenderer(navMeshPresentationBuffer.TileCapacity);
+                using var navMeshPresentationRenderer = new RaylibNavMeshPresentationRenderer(navMeshPresentationBuffer.TileCapacity);                var influenceFieldProjector = new InfluenceGlobalFieldVisualProjector();
                 PresentationMaterialRegistry? materials = engine.GetService(CoreServiceKeys.PresentationMaterialRegistry);
                 RaylibPrimitiveRenderMode primitiveMode = ResolvePrimitiveRenderMode();
                 PresentationRuntimeConfig presentationConfig = engine.MergedConfig.Presentation;
@@ -732,7 +734,11 @@ namespace Ludots.Adapter.Raylib
                                     fieldSession.RegionGroups,
                                     in mapMode,
                                     globalFieldVisualBuffer);
-                            }
+                        if (engine.TryGetService(CoreServiceKeys.InfluenceFieldRegistry, out InfluenceFieldRegistry influenceFieldsForProjection))
+                        {
+                            influenceFieldProjector.NormalizePeak = influenceFieldsForProjection.PresentationNormalizePeak;
+                            influenceFieldProjector.Project(influenceFieldsForProjection, globalFieldVisualBuffer);
+                        }                            }
                         }
 
                         if (overlaySceneBuilder != null && overlayScene != null)

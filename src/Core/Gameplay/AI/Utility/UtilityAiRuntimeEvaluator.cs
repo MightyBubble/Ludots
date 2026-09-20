@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.Fields.Influence;
 using Ludots.Core.Gameplay.AI.Components;
 using Ludots.Core.Gameplay.AI.Planning;
 using Ludots.Core.Gameplay.Components;
@@ -15,7 +17,6 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
-
 namespace Ludots.Core.Gameplay.AI.Utility
 {
     public sealed class UtilityAiRuntimeEvaluator
@@ -24,6 +25,8 @@ namespace Ludots.Core.Gameplay.AI.Utility
         private readonly ISpatialQueryService _spatialQueries;
         private readonly GraphProgramRegistry? _graphs;
         private readonly IGraphRuntimeApi? _graphApi;
+        private readonly InfluenceFieldRegistry? _influenceFields;
+        private readonly IReadOnlyList<string>? _influenceFieldKeys;
         private readonly Entity[] _targets;
 
         public UtilityAiRuntimeEvaluator(
@@ -31,12 +34,16 @@ namespace Ludots.Core.Gameplay.AI.Utility
             ISpatialQueryService spatialQueries,
             GraphProgramRegistry? graphs,
             IGraphRuntimeApi? graphApi,
+            InfluenceFieldRegistry? influenceFields = null,
+            IReadOnlyList<string>? influenceFieldKeys = null,
             int targetCapacity = 256)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _spatialQueries = spatialQueries ?? throw new ArgumentNullException(nameof(spatialQueries));
             _graphs = graphs;
             _graphApi = graphApi;
+            _influenceFields = influenceFields;
+            _influenceFieldKeys = influenceFieldKeys;
             _targets = new Entity[targetCapacity < 16 ? 16 : targetCapacity];
         }
 
@@ -349,8 +356,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
                 }
 
                 throw;
-            }
-        }
+            }        }
 
         private int AcquireTargets(
             in UtilityAiCompiledRuntime runtime,
@@ -666,11 +672,42 @@ namespace Ludots.Core.Gameplay.AI.Utility
                     return true;
                 case UtilityAiInputKind.GraphScore:
                     return TryExecuteScoreGraph(actor, target, input.GraphId, ref scoreBudget, out value);
-                default:
+                case UtilityAiInputKind.InfluenceSample01:
+                    value = SampleInfluenceAtTarget(target, input.Arg0);
+                    return true;                default:
                     return true;
             }
         }
 
+        private float SampleInfluenceAtTarget(Entity target, int fieldKeyIndex)
+        {
+            if (_influenceFields == null || _influenceFieldKeys == null)
+            {
+                throw new InvalidOperationException(
+                    "UtilityAiInputKind.InfluenceSample01 requires InfluenceFieldRegistry and field key table injection; influence is not wired.");
+            }
+
+            if ((uint)fieldKeyIndex >= (uint)_influenceFieldKeys.Count)
+            {
+                throw new InvalidOperationException(
+                    $"UtilityAiInputKind.InfluenceSample01 field key index {fieldKeyIndex} is out of range (count={_influenceFieldKeys.Count}).");
+            }
+
+            string fieldKey = _influenceFieldKeys[fieldKeyIndex];
+            if (!_influenceFields.TryGet(fieldKey, out var field))
+            {
+                throw new InvalidOperationException(
+                    $"UtilityAiInputKind.InfluenceSample01 field '{fieldKey}' is not registered in InfluenceFieldRegistry.");
+            }
+
+            if (!_world.TryGet(target, out WorldPositionCm pos))
+            {
+                throw new InvalidOperationException(
+                    $"UtilityAiInputKind.InfluenceSample01 target {target} has no WorldPositionCm.");
+            }
+
+            return field.Sample(pos.ToWorldCmInt2());
+        }
         private bool CanSwitchToDecision(
             in UtilityAiCompiledRuntime runtime,
             in UtilityAiDecisionDefinition decision,

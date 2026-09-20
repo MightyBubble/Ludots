@@ -107,6 +107,7 @@ namespace Ludots.Client.Raylib.Rendering
                 GlobalFieldVisualDescriptor descriptor = record.Descriptor;
                 if (descriptor.Id.Kind is not (
                     GlobalFieldVisualKind.Fog or
+                    GlobalFieldVisualKind.Influence or
                     GlobalFieldVisualKind.DiscreteOwnership))
                 {
                     LastUnsupportedFieldCount++;
@@ -533,6 +534,15 @@ namespace Ludots.Client.Raylib.Rendering
                 return;
             }
 
+            if (kind == GlobalFieldVisualKind.Influence)
+            {
+                r = 0;
+                g = 0;
+                b = 0;
+                a = 0;
+                return;
+            }
+
             r = 0;
             g = 0;
             b = 0;
@@ -552,6 +562,12 @@ namespace Ludots.Client.Raylib.Rendering
             if (kind == GlobalFieldVisualKind.Fog)
             {
                 ResolveFogColorBytes(cell.ByteValue, out r, out g, out b, out a);
+                return;
+            }
+
+            if (kind == GlobalFieldVisualKind.Influence)
+            {
+                ResolveInfluenceColorBytes(cell.ByteValue, out r, out g, out b, out a);
                 return;
             }
 
@@ -600,6 +616,16 @@ namespace Ludots.Client.Raylib.Rendering
         {
             float clamped = Math.Clamp(value, 0f, 1f);
             return (byte)MathF.Round(clamped * byte.MaxValue);
+        }
+
+        private static void ResolveInfluenceColorBytes(byte intensity, out byte r, out byte g, out byte b, out byte a)
+        {
+            // Warm threat heat: amber → crimson; keep mid values readable on dark terrain.
+            float t = intensity / 255f;
+            r = (byte)Math.Clamp((int)Math.Round(190 + (55 * t)), 0, 255);
+            g = (byte)Math.Clamp((int)Math.Round(110 * (1f - (0.75f * t))), 0, 255);
+            b = (byte)Math.Clamp((int)Math.Round(48 * (1f - (0.55f * t))), 0, 255);
+            a = (byte)Math.Clamp((int)Math.Round(70 + (160 * t)), 0, 255);
         }
 
         private static void ResolveFogColorBytes(byte visibility, out byte r, out byte g, out byte b, out byte a)
