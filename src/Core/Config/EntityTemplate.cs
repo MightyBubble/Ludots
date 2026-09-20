@@ -44,7 +44,8 @@ namespace Ludots.Core.Config
         [JsonPropertyName("children")]
         public List<EntityTemplateChild>? Children { get; set; }
 
-        // 切D 预留：资产级 relations 段（路径对 + 关系类型），本切只留形状不物化。
+        // 资产轴 relations（模板内默认边）未实现，属切D：当前模板 JSON 里写 relations 会被
+        // 反序列化静默丢弃——不要写，实例边用地图实体条目的 relations 段（#1554 已落）。
 
         /// <summary>
         /// 子树里是否存在带 localId 的可寻址节点（含被引用模板自身的 children 与内联 children）。

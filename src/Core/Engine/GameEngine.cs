@@ -2867,6 +2867,7 @@ namespace Ludots.Core.Engine
                 var entityIndex = MapLoader.LoadEntitiesAndIndex(mapConfig);
                 session.EntityIndex = entityIndex;
                 BakeRegionVolumesForSession(session);
+                MaterializeInstanceRelations(session, mapConfig, entityIndex);
                 SetSessionParticipants(
                     session,
                     ParticipantBindingResolver.Resolve(
@@ -3040,6 +3041,7 @@ namespace Ludots.Core.Engine
             var entityIndex = MapLoader.LoadEntitiesAndIndex(mapConfig);
             session.EntityIndex = entityIndex;
             BakeRegionVolumesForSession(session);
+            MaterializeInstanceRelations(session, mapConfig, entityIndex);
             SetSessionParticipants(
                 session,
                 ParticipantBindingResolver.Resolve(
@@ -3411,6 +3413,17 @@ namespace Ludots.Core.Engine
             var rosters = new Ludots.Core.Fields.Config.FieldHierarchyConfigLoader(ConfigPipeline)
                 .Load(ConfigCatalog, ConfigConflictReport);
             session.RegionGroups = Ludots.Core.Gameplay.FieldRegions.RegionHierarchyBuilder.Build(World, session, rosters);
+        }
+
+        private void MaterializeInstanceRelations(MapSession session, MapConfig mapConfig, Ludots.Core.Systems.MapLoadEntityIndex entityIndex)
+        {
+            Ludots.Core.Gameplay.Relationships.InstanceRelationMaterializer.Materialize(
+                session,
+                mapConfig,
+                entityIndex,
+                GetService(CoreServiceKeys.RelationshipRuntime),
+                GetService(CoreServiceKeys.RelationshipTypeRegistry),
+                GetService(CoreServiceKeys.RelationshipMetricRegistry));
         }
 
         private void BakeRegionVolumesForSession(MapSession session)

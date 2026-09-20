@@ -1,61 +1,50 @@
 ## GAS Composition Gate — Self Review
 
-- **Task / Issue**: MightyBubble/Ludots#1540 切1（实体组模板 schema + 装载校验 + 地图摆放展开）
-- **Date**: 2026-09-16
-- **Agent / Author**: ZCode（分支 poi-entity-group-design，基准 origin/main f36773a2f5）
+- **Task / Issue**: MightyBubble/Ludots#1540 切A + #1554（EntityTemplate 递归 children 统一模型 → 跨 mod 地图实例合并 + 实例 relations + Relation* 事件）
+- **Date**: 2026-09-20（终态重写；本文件为滚动"最新一次自检"）
+- **Agent / Author**: 主代理开发，双轮 subagent 对抗性审查 + 三域逐行终审
 
 ### 1. Core judgment
 
-新变体主要交付物是（A/B/C/D）: **A**（组合既有 EntityTemplate 的作者面容器资产；物化路径完全复用 map 装载 lane）
+新变体主要交付物是（A/B/C/D）: A——把既有 `EntityTemplate` 升格为唯一模板本位（递归 children / localId / attach），实体组即普通模板；实例差异走地图 `Maps/<id>.json` 同路径片段 by-instanceId 深合并 + `__delete` 墓碑；实例 relations 装载站物化复用 `RelationshipRuntime`；关系变更以四个 `Relation*` 预设事件暴露给 trigger 图。
 
-结论: **PASS**
+结论: PASS
 
-一句话理由: 组模板之于实体模板，等同 graph 之于 op——是组合层声明，不新增行为 enum/preset 开关，不新建第二条物化管线；展开产物是合成 EntitySpawnData，走既有实体循环（EntityBuilder/ComponentRegistry/TemplateBatchSpawner）。
+一句话理由: 零新模板类型、零第二物化路径、零新图节点；合并复用 `ConfigMerger.MergeObject`，事件复用 TriggerManager/schema fail-closed 管线，规则面不动（relation 自有规则引擎的退役归 #1570）。
 
 ### 2. Layer assignment
 
-| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
-|-----------|-----------------|----------|
-| 组模板 schema + 装载（Entities/groups.json，ArrayById） | 2（作者面数据） | `DataRegistry<EntityGroupTemplate>`（泛型装载器实例化，非平行 loader） |
-| 装载期校验（localId 唯一 / template XOR group / 嵌套环） | 2 | 纯函数校验，先例 `ValidateTemplateChildrenGraph` |
-| 组摆放展开 → 合成 EntitySpawnData | 2 | 纯配置层变换 `EntityGroupPlacement`，产出进既有实体循环 |
-| 槽位 override 递归合并 | 0（既有） | `ConfigPipeline.DeepMerge`（JSON 组装层合并；组件层整组件替换合同不动） |
-| 实体物化 | 0（既有） | MapLoader 单实体/batch lane 原样消费 |
+| 步骤/能力 | Layer | 实现载体 |
+|-----------|-------|----------|
+| 递归 children 装载/出生（双 lane 对齐） | 0 | MapLoader.SpawnTemplateChildNodes / RuntimeEntitySpawnSystem.EnqueueChildNodes |
+| by-instanceId 合并 + 墓碑 + 报告 | 0 | MapManager.MergeEntityFragments / ResolvePendingTombstones / MapMergeReport |
+| 实例 relations 物化 | 0 | InstanceRelationMaterializer（装载站，EnsureLink/SetMetric） |
+| Relation* 四事件 | 0 | RelationshipProcessingSystem.PublishChangeEvents + EventSchemaRegistry 内置 schema |
+| 变量合并对齐（墓碑/改型 fail-fast） | 0 | MapManager 变量分支 + MapVariableDeclarations 严格解析 |
 
 ### 3. Reuse list
 
-- Handlers: 无新增（无 GAS handler 变更）
-- Queues / Systems: `MapLoader.LoadEntitiesAndIndex` 既有循环消费展开结果；`TemplateBatchSpawner` 不改
-- Resolvers / Registries: `DataRegistry<T>`、`ConfigPipeline.RequireEntry/MergeArrayByIdFromCatalog/DeepMerge`、`MapLoadEntityIndex`（前缀化 InstanceId 复用唯一性 fail-fast）
-- Existing presets / graphs: `EntityTemplate`/`EntityTemplateLocalPose`（localPose 类型直接复用）
+模板/展开序/Overrides/可寻址路径/RelationshipRuntime/既有 Relationship* 图 op 20+/TriggerManager/EventSchemaRegistry/ConfigMerger.MergeObject——全部复用，零平行实现。
 
-### 4. New Layer 0 ops (if any)
+### 4. New Layer 0 ops
 
-N/A——无新 op、无新 handler、无新 enum。
+N/A（图节点零新增）
 
 ### 5. Transaction boundary
 
-切1 无新事务边界：map 装载本就是同步 fail-fast lane（任一实体失败整图装载失败），组展开不改变该语义。组级原子性（组级 preflight + 整组回滚）属切3（RuntimeEntitySpawnQueue 侧），届时复用 `WriteCheckpoint/RollbackWrites` 既有事务设施。
+无新事务壳；装载站物化与参与者绑定同批、MapLoaded 前；变更走既有关系缓冲前缀分批。
 
 ### 6. Config SSOT
 
-行为配置落在: `Entities/groups.json`（config_catalog.json 声明 ArrayById/id，Core+Mods 分片合并，与 Entities/templates.json 同合同）。
-
-是否新增 JSON schema: **YES** — 组模板是多实体摆放的组合容器，组合对象（EntityTemplate、地图摆放）都在 graph/effect 之前的作者层，无法用 effect template（单实体语义）或 graph（运行时行为）表达；且它不携带行为开关，只有槽位声明与组件 JSON 合并。装载复用 `DataRegistry<T>` 泛型管线，不新建平行加载器。
+`Entities/templates.json`（递归 children）/ `Maps/*.json`（片段合并 + relations + variables + __delete）/ `Relationships/catalog.json`（词汇表）。无新 JSON schema 键族超出上述。
 
 ### 7. Red flag scan
 
-- [x] 未新增 profile inherit/placement enum
-- [x] 未新建与 spawn 平行的物化管线（展开产物走既有实体循环）
-- [x] 未把 placement 校验塞进 lifecycle op（校验在装载期作者面）
-- [x] 未添加「说不清的」默认 fallback（组摆放缺 InstanceId / 同时声明 template / 带 Overrides 一律 fail-fast）
+- [x] 未新增第二种模板类型/prefab/槽位表（老槽位表已删净）
+- [x] 未新建平行物化/合并/规则管线（relation 自有规则引擎退役另立 #1570）
+- [x] 无静默 fallback（缺 instanceId/未 trim/未知 type·metric·to/同片段重复/活变量改型/边墓碑泄漏全 fail-fast；非首片段匿名实体可观测）
+- [x] InstanceExposure/WatchedInstances 过期假实现已拆除，作者面单一形状
 
 ### 8. Next variant test
 
-「下一个 Mod 变体」（新 POI 组、改槽位组件、嵌套更深）将修改: **Entities/groups.json 数据**；无需触碰 Core enum。
-
-### 附：护栏对照
-
-- RFC-0065：组槽位的 Team/PlayerOwner 约束沿用 spawn 管线既有级联（多来源 Team 冲突即抛），切1 不放宽不收紧。
-- MovementParticipation：组槽位是逻辑成员，允许移动单位（与 template child 的结构件禁令分线）。
-- 确定性：展开序 = 地图声明序 × 槽位声明序 × 深度优先，无字典序依赖。
+教科书 showcase 实机化（设计已落盘）：按键改关系 → Relation* 事件 → HUD；authoring 词汇随 #1570 切4（attribute 化）迁移。
