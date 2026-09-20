@@ -1,0 +1,56 @@
+[
+  {
+    "id": "Graph.Q4.BoltByArmor",
+    "kind": "Effect",
+    "entry": "t",
+    "nodes": [
+      { "id": "t",        "op": "LoadContextTarget" },
+      { "id": "base",     "op": "LoadConfigFloat", "configKey": "baseDamage" },
+      { "id": "armor",    "op": "LoadAttribute", "attribute": "Q4.Armor" },
+      { "id": "thresh",   "op": "ConstFloat", "floatValue": 50 },
+      { "id": "isHeavy",  "op": "CompareGtFloat" },
+      { "id": "br",       "op": "BranchBool" },
+      { "id": "hun",      "op": "ConstFloat", "floatValue": 100 },
+      { "id": "hunPlus",  "op": "AddFloat" },
+      { "id": "ratio",    "op": "DivFloat" },
+      { "id": "heavyDmg", "op": "MulFloat" },
+      { "id": "negLight", "op": "NegFloat" },
+      { "id": "negHeavy", "op": "NegFloat" },
+      { "id": "hitLight", "op": "ModifyAttributeAdd", "attribute": "Q4.Health" },
+      { "id": "hitHeavy", "op": "ModifyAttributeAdd", "attribute": "Q4.Health" }
+    ],
+    "controlEdges": [
+      { "from": "t",        "fromPort": "next",  "to": "base" },
+      { "from": "base",     "fromPort": "next",  "to": "armor" },
+      { "from": "armor",    "fromPort": "next",  "to": "thresh" },
+      { "from": "thresh",   "fromPort": "next",  "to": "isHeavy" },
+      { "from": "isHeavy",  "fromPort": "next",  "to": "br" },
+      { "from": "br",       "fromPort": "true",  "to": "hun" },
+      { "from": "hun",      "fromPort": "next",  "to": "hunPlus" },
+      { "from": "hunPlus",  "fromPort": "next",  "to": "ratio" },
+      { "from": "ratio",    "fromPort": "next",  "to": "heavyDmg" },
+      { "from": "heavyDmg", "fromPort": "next",  "to": "negHeavy" },
+      { "from": "negHeavy", "fromPort": "next",  "to": "hitHeavy" },
+      { "from": "br",       "fromPort": "false", "to": "negLight" },
+      { "from": "negLight", "fromPort": "next",  "to": "hitLight" }
+    ],
+    "valueEdges": [
+      { "from": "t",        "fromPort": "value", "to": "armor",    "toPort": "source" },
+      { "from": "armor",    "fromPort": "value", "to": "isHeavy",  "toPort": "a" },
+      { "from": "thresh",   "fromPort": "value", "to": "isHeavy",  "toPort": "b" },
+      { "from": "isHeavy",  "fromPort": "value", "to": "br",       "toPort": "condition" },
+      { "from": "hun",      "fromPort": "value", "to": "hunPlus",  "toPort": "a" },
+      { "from": "armor",    "fromPort": "value", "to": "hunPlus",  "toPort": "b" },
+      { "from": "hun",      "fromPort": "value", "to": "ratio",    "toPort": "a" },
+      { "from": "hunPlus",  "fromPort": "value", "to": "ratio",    "toPort": "b" },
+      { "from": "base",     "fromPort": "value", "to": "heavyDmg", "toPort": "a" },
+      { "from": "ratio",    "fromPort": "value", "to": "heavyDmg", "toPort": "b" },
+      { "from": "heavyDmg", "fromPort": "value", "to": "negHeavy", "toPort": "value" },
+      { "from": "base",     "fromPort": "value", "to": "negLight", "toPort": "value" },
+      { "from": "negHeavy", "fromPort": "value", "to": "hitHeavy", "toPort": "value" },
+      { "from": "t",        "fromPort": "value", "to": "hitHeavy", "toPort": "target" },
+      { "from": "negLight", "fromPort": "value", "to": "hitLight", "toPort": "value" },
+      { "from": "t",        "fromPort": "value", "to": "hitLight", "toPort": "target" }
+    ]
+  }
+]

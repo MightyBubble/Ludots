@@ -1,0 +1,17 @@
+[
+  {
+    "id": "Effect.Q4.Bolt",
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "configParams": {
+      "baseDamage": { "type": "Float", "value": 50 }
+    },
+    "phaseGraphs": {
+      "OnApply": { "main": "Graph.Q4.BoltByArmor" }
+    },
+    "categories": [
+      "Effect.Q4.Damage"
+    ]
+  }
+]
