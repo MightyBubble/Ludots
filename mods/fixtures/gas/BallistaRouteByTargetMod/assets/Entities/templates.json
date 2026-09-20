@@ -23,14 +23,9 @@
       "BlackboardIntBuffer": {},
       "BlackboardEntityBuffer": {},
       "BlackboardSpatialBuffer": {},
-      "AbilityExecBuffer": {},
-      "ActiveEffectContainer": {},
       "DirtyFlags": {},
       "PlayerOwner": {
         "PlayerId": 1
-      },
-      "MoveSpeed": {
-        "base": 600
       }
     },
     "initialInteractionContext": "interaction.context.ballista.battle"
@@ -49,7 +44,6 @@
           "Unit.Biological"
         ]
       },
-      "ActiveEffectContainer": {},
       "DirtyFlags": {}
     }
   },
@@ -87,7 +81,6 @@
           }
         ]
       },
-      "ActiveEffectContainer": {},
       "DirtyFlags": {}
     }
   }

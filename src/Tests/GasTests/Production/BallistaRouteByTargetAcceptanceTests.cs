@@ -28,8 +28,8 @@ namespace Ludots.Tests.GAS
         public void RightClickWolf_RoutesWeaponCast_AndFormulaSettlesByArmor()
         {
             using var ctx = Boot(out var backend);
-            Entity ballista = ctx.Spawn("ballista_crew", 0, 0);
-            Entity wolf = ctx.Spawn("ballista_wolf", 400, 0);
+            Entity ballista = ctx.Resolve("ballista_1");
+            Entity wolf = ctx.Resolve("wolf_1");
             ctx.Tick(2);
 
             ctx.ClickAt(ctx.Project(wolf));
@@ -48,8 +48,8 @@ namespace Ludots.Tests.GAS
         public void RightClickTower_RoutesSiegeCast_AndFormulaMitigates()
         {
             using var ctx = Boot(out var backend);
-            Entity ballista = ctx.Spawn("ballista_crew", 0, 0);
-            Entity tower = ctx.Spawn("ballista_tower", 400, 0);
+            Entity ballista = ctx.Resolve("ballista_1");
+            Entity tower = ctx.Resolve("tower_1");
             ctx.Tick(2);
 
             ctx.ClickAt(ctx.Project(tower));
@@ -68,7 +68,7 @@ namespace Ludots.Tests.GAS
         public void RightClickGround_RoutesMoveTo()
         {
             using var ctx = Boot(out var backend);
-            Entity ballista = ctx.Spawn("ballista_crew", 0, 0);
+            Entity ballista = ctx.Resolve("ballista_1");
             ctx.Tick(2);
 
             var screen = ctx.ProjectWorld(800, 0);
@@ -88,6 +88,13 @@ namespace Ludots.Tests.GAS
             public TestInputBackend Backend = null!;
             public int HealthAttr;
             public int CastAbilityTypeId;
+
+            public Entity Resolve(string instanceId)
+            {
+                var session = Engine.CurrentMapSession ?? throw new InvalidOperationException("map not loaded");
+                return session.EntityIndex.GetRequired(
+                    session.MapId.Value, instanceId, "BallistaRoute");
+            }
 
             public Entity Spawn(string kind, int xCm, int yCm)
             {
@@ -131,26 +138,20 @@ namespace Ludots.Tests.GAS
                 return e;
             }
 
-            /// <summary>Manual template-spawn bypass: mount the battle context + seed the active collection.</summary>
+            /// <summary>Template-spawn bypass: mount the battle context via the runtime (proper activation path) + seed the active collection.</summary>
             private void MountBattleContext(Entity ballista)
             {
-                var profiles = Engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry)
-                    as Ludots.Core.Input.Interaction.InteractionContextProfileRegistry
-                    ?? throw new InvalidOperationException("context profiles missing");
+                var runtime = Engine.GetService(CoreServiceKeys.InteractionContextInstances)
+                    as Ludots.Core.Input.Interaction.InteractionContextInstanceRuntime
+                    ?? throw new InvalidOperationException("context instance runtime missing");
                 var store = Engine.GetService(CoreServiceKeys.EntityCollectionStore)
                     as Ludots.Core.EntityCollections.EntityCollectionStore
                     ?? throw new InvalidOperationException("collection store missing");
 
-                int contextId = profiles.ProfileIdRegistry.GetId("interaction.context.ballista.battle");
-                Assert.That(contextId, Is.GreaterThan(0), "battle context profile installed from fixture data");
-                int collectionKeyId = store.KeyRegistry.Register("collection.command.source");
+                int contextKeyId = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register("interaction.context.ballista.battle");
+                runtime.Activate(ballista, contextKeyId, 0);
 
-                Engine.World.Add(ballista, new Ludots.Core.Input.Interaction.InteractionContextInstance
-                {
-                    ContextId = contextId,
-                    ContextEntity = ballista,
-                    ActiveCollectionKeyId = collectionKeyId,
-                });
+                int collectionKeyId = store.KeyRegistry.Register("collection.command.source");
 
                 var descriptor = Ludots.Core.EntityCollections.EntityCollectionDescriptor.Create(
                     "collection.command.source",
@@ -200,6 +201,9 @@ namespace Ludots.Tests.GAS
                 Engine.Tick(1f / 60f);
                 Backend.SetButton("<Mouse>/rightButton", false);
                 Engine.Tick(1f / 60f);
+                Assert.That(Engine.TriggerManager.Errors.Count, Is.EqualTo(0),
+                    "trigger errors: " + string.Join(" | ", Engine.TriggerManager.Errors));
+
             }
 
             public void Tick(int frames)
@@ -228,9 +232,7 @@ namespace Ludots.Tests.GAS
                 int typeId = orderTypes.GetId(orderTypeKey);
                 Assert.That(typeId, Is.GreaterThan(0), $"{orderTypeKey} registered");
                 ref var buffer = ref Engine.World.Get<OrderBuffer>(actor);
-                var drainDiag = Engine.GetService(CoreServiceKeys.CommandIntentBufferDrain)
-                    as Ludots.Core.Input.Orders.CommandIntentBufferDrainSystem;
-                TestContext.Out.WriteLine($"[diag] drained={drainDiag?.LastDrainedCount} accepted={drainDiag?.LastAcceptedCount} rejected={drainDiag?.LastRejectionReason} bufferEmpty={buffer.IsEmpty} hasActive={buffer.HasActive}");
+
                 Assert.That(buffer.IsEmpty, Is.False, $"{orderTypeKey} order should be active on actor");
                 Order order = buffer.ActiveOrder.Order;
                 Assert.That(order.OrderTypeId, Is.EqualTo(typeId), $"active order is {orderTypeKey}");
@@ -279,6 +281,11 @@ namespace Ludots.Tests.GAS
                 HealthAttr = AttributeRegistry.GetId("Ballista.Health"),
             };
             Assert.That(ctx.HealthAttr, Is.GreaterThan(0), "Ballista.Health registered by fixture");
+            // 诊断：startup contexts + trigger mounts
+            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
+            {
+                TestContext.Out.WriteLine($"[boot] input context[{i}]: {engine.MergedConfig.StartupInputContexts[i]}");
+            }
             return ctx;
         }
 
