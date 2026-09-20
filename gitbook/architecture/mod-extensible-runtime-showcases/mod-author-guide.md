@@ -58,7 +58,7 @@ context.Extensions.Gas.RegisterBuiltinHandler(
     new EffectOperationMetadata(EffectOperationKind.Pure, EffectAtomicDomain.None, "ApplyHeatMark"));
 ```
 
-**② 声明 preset type**（`assets/GAS/preset_types/my.heat_mark.json`，字段全必填）：
+**② 声明 preset type**（`GAS/preset_types/my.heat_mark.json`，字段全必填）：
 
 ```json
 [{
@@ -75,7 +75,7 @@ context.Extensions.Gas.RegisterBuiltinHandler(
 
 每相位的 handler 二选一：`type: "builtin"` 指向已注册的 handler key，或 `type: "graph"` 指向已登记的图 id——C# 代码与图在这里统一挂接。
 
-**③ 引用它的效果**（`assets/GAS/effects/my.heat_mark.json`）：
+**③ 引用它的效果**（`GAS/effects/my.heat_mark.json`）：
 
 ```json
 [{
@@ -117,7 +117,7 @@ context.Extensions.Presentation.RegisterPresenterCommand(
         EmitSignalPing));
 ```
 
-路由五选一：`ExistingInstances` / `ScopedInstance` / `SingleRuntime` / `CreatePresenter` / `DestroyScope`。配置（`assets/Presentation/presenters/my.signal_rules.json`）：
+路由五选一：`ExistingInstances` / `ScopedInstance` / `SingleRuntime` / `CreatePresenter` / `DestroyScope`。配置（`Presentation/presenters/my.signal_rules.json`）：
 
 ```json
 [{
