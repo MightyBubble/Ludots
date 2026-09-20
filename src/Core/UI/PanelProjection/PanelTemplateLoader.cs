@@ -142,6 +142,7 @@ namespace Ludots.Core.UI.PanelProjection
             List<PanelInputBinding> inputs = ParseInputs(id, rootObject);
             List<PanelCollectionBinding> collections = ParseCollections(id, rootObject, inputs);
             PanelLayout? layout = ParseLayout(id, rootObject, pins, collections, subject);
+            ValidateButtonEventWiring(id, layout, events);
 
             PanelOwnerKind ownerKind = rootObject["ownerKind"] is null
                 ? PanelOwnerKind.Seat
@@ -171,8 +172,93 @@ namespace Ludots.Core.UI.PanelProjection
                 width);
         }
 
-        private static PanelAudience ParseAudience(string templateId, JsonObject rootObject)
+        /// <summary>
+        /// Button ↔ event wiring is checked in both directions at load time: every declared
+        /// event that names a control must resolve to a Button, and every Button must be
+        /// referenced by at least one event — a dead interactive affordance is an authoring
+        /// bug, not a runtime concern. Button payload sources must cover exactly the event's
+        /// declared payload fields.
+        /// </summary>
+        private static void ValidateButtonEventWiring(
+            string templateId,
+            PanelLayout? layout,
+            IReadOnlyList<PanelTemplateEvent> events)
         {
+            Dictionary<string, PanelLayoutControl> buttonsByName = new(StringComparer.Ordinal);
+            if (layout != null)
+            {
+                CollectButtons(layout.Controls, buttonsByName);
+            }
+
+            var referencedButtons = new HashSet<string>(StringComparer.Ordinal);
+            foreach (PanelTemplateEvent declaration in events)
+            {
+                if (declaration.Control == null)
+                {
+                    continue;
+                }
+
+                if (!buttonsByName.TryGetValue(declaration.Control, out PanelLayoutControl? button))
+                {
+                    throw new InvalidOperationException(
+                        $"Panel template '{templateId}' event '{declaration.EventId}' references control " +
+                        $"'{declaration.Control}' but no button with that control name exists in the layout.");
+                }
+
+                if (!string.Equals(declaration.Gesture, "tap", StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Panel template '{templateId}' event '{declaration.EventId}' binds control " +
+                        $"'{declaration.Control}' with gesture '{declaration.Gesture}' — button controls produce tap gestures only.");
+                }
+
+                foreach (string field in button.EventPayload.Keys)
+                {
+                    if (!declaration.Payload.ContainsKey(field))
+                    {
+                        throw new InvalidOperationException(
+                            $"Panel template '{templateId}' button '{declaration.Control}' payload field '{field}' " +
+                            $"is not declared by event '{declaration.EventId}'.");
+                    }
+                }
+
+                referencedButtons.Add(declaration.Control);
+            }
+
+            foreach (KeyValuePair<string, PanelLayoutControl> button in buttonsByName)
+            {
+                if (!referencedButtons.Contains(button.Key))
+                {
+                    throw new InvalidOperationException(
+                        $"Panel template '{templateId}' button '{button.Key}' is not referenced by any declared " +
+                        "event — interactive controls must declare their event wiring.");
+                }
+            }
+        }
+
+        private static void CollectButtons(
+            IReadOnlyList<PanelLayoutControl> controls,
+            Dictionary<string, PanelLayoutControl> buttonsByName)
+        {
+            foreach (PanelLayoutControl control in controls)
+            {
+                if (control.Type == PanelLayoutControlType.Button)
+                {
+                    string name = control.ControlName
+                        ?? throw new InvalidOperationException(
+                            $"Button control is missing its control name (loader invariant).");
+                    if (!buttonsByName.TryAdd(name, control))
+                    {
+                        throw new InvalidOperationException(
+                            $"Button control name '{name}' is declared twice in the same layout.");
+                    }
+                }
+
+                CollectButtons(control.Children, buttonsByName);
+            }
+        }
+
+        private static PanelAudience ParseAudience(string templateId, JsonObject rootObject)        {
             JsonNode? node = rootObject["audienceSeats"];
             if (node is null)
             {

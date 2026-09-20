@@ -7,6 +7,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Collections.Generic;
 using System.Linq;
+using System.Collections.Frozen;
 using Ludots.Core.Association;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
@@ -1615,6 +1616,11 @@ namespace Ludots.Core.Engine
             var authoritativePointerButtonsAccumulator = new AuthoritativePointerButtonAccumulator();
             var authoritativeGroundPointerOverride = new AuthoritativeGroundPointerOverride();
             var inputConfigRoot = new InputConfigPipelineLoader(ConfigPipeline).Load();
+            SetService(
+                CoreServiceKeys.InputActionIds,
+                inputConfigRoot.Actions
+                    .Select(action => action?.Id is { Length: > 0 } id ? id.Trim() : throw new InvalidOperationException("Input config contains an action with an empty id."))
+                    .ToFrozenSet(StringComparer.Ordinal));
             var inputActionAttributeBindings = new InputActionAttributeBindingRegistry();
             new InputActionAttributeBindingLoader(ConfigPipeline, inputActionAttributeBindings).Load(ConfigCatalog, ConfigConflictReport);
             // Populated after TriggerGraph programs load: every action-bound entry's

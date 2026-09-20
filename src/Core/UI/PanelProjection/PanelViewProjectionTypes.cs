@@ -42,6 +42,7 @@ namespace Ludots.Core.UI.PanelProjection
         Column = 6,
         RichText = 7,
         Repeater = 8,
+        Button = 9,
     }
 
     public enum PanelPresentMode : byte
@@ -159,7 +160,9 @@ namespace Ludots.Core.UI.PanelProjection
             string? visibleWhenNotEmpty = null,
             string? classBind = null,
             string? colorBind = null,
-            string? backgroundBind = null)
+            string? backgroundBind = null,
+            string? controlName = null,
+            IReadOnlyDictionary<string, string>? eventPayload = null)
         {
             Type = type;
             ClassName = className;
@@ -193,6 +196,8 @@ namespace Ludots.Core.UI.PanelProjection
             ClassBind = classBind;
             ColorBind = colorBind;
             BackgroundBind = backgroundBind;
+            ControlName = controlName;
+            EventPayload = eventPayload ?? new Dictionary<string, string>(StringComparer.Ordinal);
         }
 
         public PanelLayoutControlType Type { get; }
@@ -246,6 +251,18 @@ namespace Ludots.Core.UI.PanelProjection
         public string? ClassBind { get; }
         public string? ColorBind { get; }
         public string? BackgroundBind { get; }
+
+        /// <summary>
+        /// Author-facing control identity for <see cref="PanelLayoutControlType.Button"/>: the name a
+        /// declared template event's <c>control</c> references. Required on Buttons, meaningless elsewhere.
+        /// </summary>
+        public string? ControlName { get; }
+
+        /// <summary>
+        /// Button event payload sources: payload field name → bind expression (panel variable, item
+        /// field in repeater scope, or literal). Values bake at compose time and refresh on re-compose.
+        /// </summary>
+        public IReadOnlyDictionary<string, string> EventPayload { get; }
     }
 
     public sealed class PanelLayout

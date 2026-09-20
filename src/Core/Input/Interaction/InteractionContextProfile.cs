@@ -43,6 +43,15 @@ namespace Ludots.Core.Input.Interaction
         public string CommandIntentId { get; set; }
 
         /// <summary>
+        /// Pointer routing declaration ("ui" = while this context is active on the seat's rep,
+        /// the host routes device pointer input to UI surfaces). Input semantics belong to the
+        /// state definition, never to a view — hosts ask the read-only projection
+        /// (<see cref="UiPointerRoutingQuery"/>) instead of consulting any capture flag.
+        /// Empty = world routing. Only "ui" is defined.
+        /// </summary>
+        public string PointerRouting { get; set; }
+
+        /// <summary>
         /// Foreground declaration: while this context is active, every active
         /// ancestor's interactive (input-action bound) trigger mounts are parked — removed
         /// from listening — while map/passive (event-bound) mounts stay. Scope and the

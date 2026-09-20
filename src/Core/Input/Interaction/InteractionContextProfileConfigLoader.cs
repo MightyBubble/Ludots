@@ -117,6 +117,7 @@ namespace Ludots.Core.Input.Interaction
                 // activeEntityViewKey has no runtime consumer (input-03 stack retirement).
                 RequireTrimmedWhenPresent(profile.ActiveCollectionKey, $"{path}.activeCollectionKey");
                 RequireTrimmedWhenPresent(profile.FilterProfileId, $"{path}.filterProfileId");
+                RequirePointerRouting(profile.PointerRouting, $"{path}.pointerRouting");
                 RequireTrimmedWhenPresent(profile.InputContextId, $"{path}.inputContextId");
                 RequireTrimmedWhenPresent(profile.CommandIntentId, $"{path}.commandIntentId");
                 ValidateBindings(profile.Bindings, path);
@@ -179,6 +180,21 @@ namespace Ludots.Core.Input.Interaction
                 string graph = graphs[i]
                     ?? throw new InvalidOperationException($"{path}[{i}] must be a string.");
                 RequireTrimmedNonEmpty(graph, $"{path}[{i}]");
+            }
+        }
+
+        private static void RequirePointerRouting(string? value, string path)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return;
+            }
+
+            string trimmed = value.Trim();
+            if (!string.Equals(trimmed, "ui", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"{path} declares '{trimmed}' — only 'ui' pointer routing is defined; empty means world routing.");
             }
         }
 
