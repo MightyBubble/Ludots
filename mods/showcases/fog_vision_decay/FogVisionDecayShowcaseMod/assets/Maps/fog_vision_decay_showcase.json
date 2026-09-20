@@ -1,6 +1,15 @@
 {
   "Id": "fog_vision_decay_showcase",
-  "Tags": ["showcase", "knowledge", "fog_vision_decay"],
+  "World": {
+    "WidthCm": 9216000,
+    "HeightCm": 4608000,
+    "CellSizeCm": 100
+  },
+  "Tags": [
+    "showcase",
+    "knowledge",
+    "fog_vision_decay"
+  ],
   "DefaultCamera": {
     "VirtualCameraId": "Tactical",
     "TargetXCm": 0,

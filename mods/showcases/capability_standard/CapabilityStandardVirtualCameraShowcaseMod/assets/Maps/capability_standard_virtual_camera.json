@@ -1,5 +1,10 @@
 {
   "Id": "capability_standard_virtual_camera",
+  "World": {
+    "WidthCm": 51200,
+    "HeightCm": 51200,
+    "CellSizeCm": 100
+  },
   "ContinuousHeightmapAsset": "assets/terrain/capability_standard_virtual_camera_relief.height",
   "Tags": [
     "capability_standard",
@@ -15,9 +20,18 @@
       "InstanceId": "camera_player_1",
       "Template": "moba_hero",
       "Overrides": {
-        "Name": { "Value": "CapabilityStandardCameraAnchor" },
-        "WorldPositionCm": { "Value": { "X": 1200, "Y": 800 } },
-        "FacingDirection": { "AngleRad": 0.0 },
+        "Name": {
+          "Value": "CapabilityStandardCameraAnchor"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1200,
+            "Y": 800
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.0
+        },
         "ContinuousHeightmapSampleState": {}
       }
     },
@@ -25,17 +39,33 @@
       "InstanceId": "camera_team_1",
       "Template": "moba_dummy",
       "Overrides": {
-        "Name": { "Value": "CapabilityStandardCameraNorthWest" },
-        "Team": { "Id": 1 },
-        "WorldPositionCm": { "Value": { "X": 800, "Y": 600 } }
+        "Name": {
+          "Value": "CapabilityStandardCameraNorthWest"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 800,
+            "Y": 600
+          }
+        }
       }
     },
     {
       "InstanceId": "camera_team_2",
       "Template": "moba_dummy",
       "Overrides": {
-        "Name": { "Value": "CapabilityStandardCameraSouthEast" },
-        "WorldPositionCm": { "Value": { "X": 7600, "Y": 4600 } }
+        "Name": {
+          "Value": "CapabilityStandardCameraSouthEast"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7600,
+            "Y": 4600
+          }
+        }
       }
     }
   ],

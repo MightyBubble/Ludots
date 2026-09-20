@@ -175,8 +175,8 @@ namespace GasTests
 
                     RejectLegacyKey(repoRoot, file, i, board, "WidthInTiles", "WidthCells", violations);
                     RejectLegacyKey(repoRoot, file, i, board, "HeightInTiles", "HeightCells", violations);
-                    RejectLegacyKey(repoRoot, file, i, board, "WidthInPages", "WidthCells", violations);
-                    RejectLegacyKey(repoRoot, file, i, board, "HeightInPages", "HeightCells", violations);
+                    RejectLegacyKey(repoRoot, file, i, board, "WidthInMacroTiles", "WidthCells", violations);
+                    RejectLegacyKey(repoRoot, file, i, board, "HeightInMacroTiles", "HeightCells", violations);
                     RejectLegacyKey(repoRoot, file, i, board, "ChunkSizeCells", "Tuning.PartitionChunkCells", violations);
                     RejectLegacyKey(repoRoot, file, i, board, "LoadedChunkCapacity", "Tuning.LoadedChunkCapacity", violations);
                     RejectLegacyKey(repoRoot, file, i, board, "NavTileGrid", "Navigation/navmesh.json maps.<mapId>.boards", violations);

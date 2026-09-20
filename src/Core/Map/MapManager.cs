@@ -427,6 +427,16 @@ namespace Ludots.Core.Map
             {
                 // Boardless maps are first-class; they may declare the host world directly
                 // (nothing else anchors it) but are not required to (non-spatial maps).
+                var boardless = config.World;
+                if (boardless is { } bw && (bw.WidthCm > 0 || bw.HeightCm > 0 || bw.CellSizeCm != Ludots.Core.Spatial.SpatialScaleDefaults.CellCm))
+                {
+                    if (bw.WidthCm <= 0 || bw.HeightCm <= 0 || bw.CellSizeCm <= 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Map '{mapId}' declares a partial World; WidthCm/HeightCm/CellSizeCm must all be positive or all omitted (#1567).");
+                    }
+                }
+
                 return;
             }
 
@@ -596,8 +606,8 @@ namespace Ludots.Core.Map
 
             RejectLegacyKey(root, "WidthInTiles", "Boards[].WidthCells", jsonPath);
             RejectLegacyKey(root, "HeightInTiles", "Boards[].HeightCells", jsonPath);
-            RejectLegacyKey(root, "WidthInPages", "Boards[].WidthCells", jsonPath);
-            RejectLegacyKey(root, "HeightInPages", "Boards[].HeightCells", jsonPath);
+            RejectLegacyKey(root, "WidthInMacroTiles", "Boards[].WidthCells", jsonPath);
+            RejectLegacyKey(root, "HeightInMacroTiles", "Boards[].HeightCells", jsonPath);
 
             if (!TryGetPropertyCaseInsensitive(root, "boards", out JsonNode boardsNode) ||
                 boardsNode is not JsonArray boards)
@@ -614,8 +624,8 @@ namespace Ludots.Core.Map
 
                 RejectLegacyKey(board, "WidthInTiles", "Boards[].WidthCells", $"{jsonPath}.boards[{i}]");
                 RejectLegacyKey(board, "HeightInTiles", "Boards[].HeightCells", $"{jsonPath}.boards[{i}]");
-                RejectLegacyKey(board, "WidthInPages", "Boards[].WidthCells", $"{jsonPath}.boards[{i}]");
-                RejectLegacyKey(board, "HeightInPages", "Boards[].HeightCells", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "WidthInMacroTiles", "Boards[].WidthCells", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "HeightInMacroTiles", "Boards[].HeightCells", $"{jsonPath}.boards[{i}]");
                 RejectLegacyKey(board, "ChunkSizeCells", "Tuning.PartitionChunkCells", $"{jsonPath}.boards[{i}]");
                 RejectLegacyKey(board, "LoadedChunkCapacity", "Tuning.LoadedChunkCapacity", $"{jsonPath}.boards[{i}]");
                 RejectLegacyKey(board, "NavTileGrid", "Navigation/navmesh.json maps.<mapId>.boards.<name>", $"{jsonPath}.boards[{i}]");

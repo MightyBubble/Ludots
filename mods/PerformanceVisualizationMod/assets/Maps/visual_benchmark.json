@@ -1,5 +1,10 @@
 {
   "Id": "visual_benchmark",
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  },
   "Tags": [
     "Benchmark",
     "Visual",

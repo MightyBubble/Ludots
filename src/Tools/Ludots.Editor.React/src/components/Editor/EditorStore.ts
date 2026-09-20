@@ -1061,7 +1061,6 @@ function normalizeBoardInfo(raw: JsonRecord | null | undefined): BoardInfo {
         cellSizeCm: numberOr(raw?.cellSizeCm ?? raw?.CellSizeCm, DEFAULT_BOARD_METRICS.cellSizeCm),
         hexEdgeLengthCm: numberOr(raw?.hexEdgeLengthCm ?? raw?.HexEdgeLengthCm, DEFAULT_BOARD_METRICS.hexEdgeLengthCm),
         chunkSizeCells: numberOr(raw?.chunkSizeCells ?? raw?.ChunkSizeCells, DEFAULT_BOARD_METRICS.chunkSizeCells),
-        navigationEnabled: Boolean(raw?.navigationEnabled ?? raw?.NavigationEnabled ?? false),
         hasDataFile: Boolean(raw?.hasDataFile ?? raw?.HasDataFile ?? false),
         dataFileExists: Boolean(raw?.dataFileExists ?? raw?.DataFileExists ?? false),
         dataFile: stringOrNull(raw?.dataFile ?? raw?.DataFile),
@@ -1081,7 +1080,6 @@ function normalizeMapInfo(raw: JsonRecord | null | undefined): MapInfo {
         CellSizeCm: raw?.cellSizeCm ?? raw?.CellSizeCm,
         HexEdgeLengthCm: raw?.hexEdgeLengthCm ?? raw?.HexEdgeLengthCm,
         ChunkSizeCells: raw?.chunkSizeCells ?? raw?.ChunkSizeCells,
-        NavigationEnabled: raw?.navigationEnabled ?? raw?.NavigationEnabled,
         HasDataFile: raw?.hasDataFile ?? raw?.HasDataFile,
         DataFileExists: raw?.dataFileExists ?? raw?.DataFileExists,
         DataFile: raw?.dataFile ?? raw?.DataFile,
@@ -1167,18 +1165,14 @@ function replaceMapInfo(mapInfos: MapInfo[], next: MapInfo): MapInfo[] {
 
 function pickPrimaryBoard(boards: JsonRecord[]): JsonRecord | null {
     const navigationDefault = boards.find((b) =>
-        isNavigationEnabled(b) && String(b?.Name ?? b?.name ?? '').toLowerCase() === 'default');
     if (navigationDefault) return navigationDefault;
 
-    const navigationBoard = boards.find(isNavigationEnabled);
     if (navigationBoard) return navigationBoard;
 
     const defaultBoard = boards.find((b) => String(b?.Name ?? b?.name ?? '').toLowerCase() === 'default');
     return defaultBoard ?? boards[0] ?? null;
 }
 
-function isNavigationEnabled(board: JsonRecord): boolean {
-    return Boolean(board?.NavigationEnabled ?? board?.navigationEnabled ?? false);
 }
 
 function addObstacleFootprintDirtyChunks(
