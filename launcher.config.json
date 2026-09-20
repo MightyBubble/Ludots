@@ -2491,38 +2491,6 @@
       }
     },
     {
-      "name": "performer_blacksmith_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod",
-        "projectPath": "PerformerBlacksmithShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "performer_blacksmith_large_world",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/performer_blacksmith_large_world_entry/PerformerBlacksmithLargeWorldEntryMod",
-        "projectPath": "PerformerBlacksmithLargeWorldEntryMod.csproj"
-      }
-    },
-    {
-      "name": "performer_blacksmith_large_world_nohud",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/performer_blacksmith_large_world_nohud_entry/PerformerBlacksmithLargeWorldNoHudEntryMod",
-        "projectPath": "PerformerBlacksmithLargeWorldNoHudEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_static_performer_30k",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardStaticPerformer30kMod",
-        "projectPath": "CapabilityStandardStaticPerformer30kMod.csproj"
-      }
-    },
-    {
       "name": "eqs_influence",
       "target": {
         "type": "path",
