@@ -1164,15 +1164,8 @@ function replaceMapInfo(mapInfos: MapInfo[], next: MapInfo): MapInfo[] {
 }
 
 function pickPrimaryBoard(boards: JsonRecord[]): JsonRecord | null {
-    const navigationDefault = boards.find((b) =>
-    if (navigationDefault) return navigationDefault;
-
-    if (navigationBoard) return navigationBoard;
-
     const defaultBoard = boards.find((b) => String(b?.Name ?? b?.name ?? '').toLowerCase() === 'default');
     return defaultBoard ?? boards[0] ?? null;
-}
-
 }
 
 function addObstacleFootprintDirtyChunks(

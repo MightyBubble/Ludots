@@ -444,7 +444,7 @@ export const Toolbar: React.FC = () => {
     const boardScalePreviewChunkCm = boardPropertyChunkSizeCells * boardScalePreviewCellSizeCm;
     const boardScaleCellChanged = boardScalePreviewCellSizeCm !== boardPropertyCellSizeCm;
     const boardScaleHexChanged = boardPropertyTopology === 'HexGrid' && boardScalePreviewHexEdgeLengthCm !== boardPropertyHexEdgeLengthCm;
-    const boardScaleHasChanges = boardScaleCellChanged || boardScaleHexChanged || boardScaleNavChanged;
+    const boardScaleHasChanges = boardScaleCellChanged || boardScaleHexChanged;
     const newMapWidthMetersValue = parseDraftNumber(newMapWidthMeters);
     const newMapHeightMetersValue = parseDraftNumber(newMapHeightMeters);
     const newMapCellSizeCmValue = parseDraftNumber(newMapCellSizeCm);
@@ -626,8 +626,6 @@ export const Toolbar: React.FC = () => {
         }
         if (boardScaleHexChanged) {
             request.hexEdgeLengthCm = boardScalePreviewHexEdgeLengthCm;
-        }
-        if (boardScaleNavChanged) {
         }
         try {
             await updateSelectedBoard(request);
