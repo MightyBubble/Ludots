@@ -17,7 +17,7 @@ namespace Ludots.Tests.Gas.Graph
 {
     /// <summary>
     /// Entity-domain TriggerGraph mounts end to end on a real engine: an entity
-    /// template declares "TriggerGraphs", the mounted graph reacts to its own
+    /// template declares "triggerGraphs", the mounted graph reacts to its own
     /// lifecycle (EntitySpawned same tick, EntityDied on the destroy tick,
     /// MapHeartbeat with self scope), reads its own attributes, writes its
     /// map's variables, goes inert after death, and is swept and cleaned up.
@@ -443,7 +443,7 @@ namespace Ludots.Tests.Gas.Graph
                           "AttributeBuffer": { "base": { "Health": 77 } },
                           "EntityTriggerGraphAggregateRoot": {}
                         },
-                        "TriggerGraphs": [ {{graphList}} ]
+                        "triggerGraphs": [ {{graphList}} ]
                       },
                       {
                         "id": "{{WatcherTemplateId}}",

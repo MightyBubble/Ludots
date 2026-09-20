@@ -22,7 +22,7 @@ namespace Ludots.Core.Config
         /// Strict parsing (non-null array of trimmed non-empty strings) happens at
         /// template load; unknown graph names fail closed at mount time.
         /// </summary>
-        [JsonPropertyName("TriggerGraphs")]
+        [JsonPropertyName("triggerGraphs")]
         public List<string>? TriggerGraphs { get; set; }
 
         /// <summary>

@@ -1,11 +1,3 @@
 {
-  "id": "raylib_ism_benchmark_showcase",
-  "name": "Raylib ISM Benchmark Showcase",
-  "width": 64,
-  "height": 64,
-  "tileWidth": 1,
-  "tileHeight": 1,
-  "terrain": {
-    "type": "flat"
-  }
+  "Id": "raylib_ism_benchmark_showcase"
 }
