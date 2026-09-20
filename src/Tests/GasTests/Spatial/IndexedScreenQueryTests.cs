@@ -24,6 +24,9 @@ public sealed class IndexedScreenQueryTests
     public void DenseRegion_IsCompleteAndDistantCandidatesDoNotIncreaseWarmWork(int distant)
     {
         using var world = World.Create();
+        world.Create(
+            Ludots.Core.Presentation.Components.PresentationFrameState.Default,
+            new Ludots.Core.Presentation.Components.PresentationFrameStateTag());
         var partition = new ChunkedGridSpatialPartitionWorld();
         var spec = new WorldSizeSpec(new WorldAabbCm(-200000, -200000, 400000, 400000), 100);
         var spatial = new SpatialQueryService(new ChunkedGridSpatialPartitionBackend(partition, spec));

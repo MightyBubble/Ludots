@@ -39,6 +39,9 @@ public sealed class SelectionKnowledgeProjectionTests
     public void PointerHitResolver_ScalesWithoutAllocatingKnowledgeChecksForOffPointerEntities(int entityCount)
     {
         using var world = World.Create();
+        world.Create(
+            Ludots.Core.Presentation.Components.PresentationFrameState.Default,
+            new Ludots.Core.Presentation.Components.PresentationFrameStateTag());
         Entity viewer = world.Create();
         var store = new KnowledgeProjectionStore(entityCount);
         Entity expected = Entity.Null;

@@ -365,6 +365,10 @@ namespace Ludots.Tests.GasTests.Graph
             IntVector2 targetPosCm = default,
             Entity[]? candidates = null)
         {
+            // Screen-space grounding requires exactly one PresentationFrameState singleton.
+            world.Create(
+                Ludots.Core.Presentation.Components.PresentationFrameState.Default,
+                new Ludots.Core.Presentation.Components.PresentationFrameStateTag());
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
@@ -466,6 +470,9 @@ namespace Ludots.Tests.GasTests.Graph
             // different seats resolves different ground, and the region filter keeps only
             // the entities that seat's camera actually sees — never a merged camera.
             using var world = World.Create();
+            world.Create(
+                Ludots.Core.Presentation.Components.PresentationFrameState.Default,
+                new Ludots.Core.Presentation.Components.PresentationFrameStateTag());
             Entity ownerZero = world.Create();
             Entity ownerOne = world.Create();
 
