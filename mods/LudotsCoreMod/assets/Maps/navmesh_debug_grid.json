@@ -1,5 +1,8 @@
 {
   "Id": "navmesh_debug_grid",
+  "Tuning": {
+    "LoadedChunkCapacity": 256
+  },
   "Tags": [
     "showcase",
     "navmesh",
@@ -11,21 +14,10 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 4,
-      "HeightInMacroTiles": 4,
+      "WidthCells": 1024,
+      "HeightCells": 1024,
       "GridCellSizeCm": 100,
-      "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 256,
-      "DataFile": "navmesh_debug_openworld.grid",
-      "NavigationEnabled": true,
-      "NavTileGrid": {
-        "widthChunks": 16,
-        "heightChunks": 16,
-        "chunkSizeCells": 64,
-        "cellSizeCm": 100,
-        "originXcm": 0,
-        "originZcm": 0
-      }
+      "DataFile": "navmesh_debug_openworld.grid"
     }
   ],
   "Entities": [],

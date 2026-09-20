@@ -1,6 +1,15 @@
 {
   "Id": "capability_standard_presenter_command_showcase",
-  "Tags": ["showcase", "capability-standard", "presenter-command"],
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  },
+  "Tags": [
+    "showcase",
+    "capability-standard",
+    "presenter-command"
+  ],
   "DefaultCamera": {
     "VirtualCameraId": "Camera.Profile.Tactical",
     "TargetXCm": 0,

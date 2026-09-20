@@ -1,18 +1,56 @@
 {
   "Id": "narrative_showcase_hub",
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  },
   "ContinuousHeightmapAsset": "assets/terrain/interaction_showcase_flat.height",
-  "Tags": ["narrative.showcase", "task.dialogue.sequencer"],
+  "Tags": [
+    "narrative.showcase",
+    "task.dialogue.sequencer"
+  ],
   "Variables": [
-    { "name": "trust", "type": "int", "initial": 0 },
-    { "name": "lore", "type": "int", "initial": 0 },
-    { "name": "ending", "type": "int", "initial": 0 },
-    { "name": "trial_phase", "type": "int", "initial": 0 },
-    { "name": "dialog_await_ack", "type": "int", "initial": 0 },
-    { "name": "signal_ack", "type": "int", "initial": 0 }
+    {
+      "name": "trust",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "lore",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "ending",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "trial_phase",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "dialog_await_ack",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "signal_ack",
+      "type": "int",
+      "initial": 0
+    }
   ],
   "TriggerGraphs": [
-    { "graph": "Graph.Narrative.Wire.AwaitDialogConfirm", "scopeInstanceId": "narrative_arcweaver" },
-    { "graph": "Graph.Narrative.Open.Choices", "scopeInstanceId": "narrative_arcweaver" }
+    {
+      "graph": "Graph.Narrative.Wire.AwaitDialogConfirm",
+      "scopeInstanceId": "narrative_arcweaver"
+    },
+    {
+      "graph": "Graph.Narrative.Open.Choices",
+      "scopeInstanceId": "narrative_arcweaver"
+    }
   ],
   "DefaultCamera": {
     "VirtualCameraId": "Camera.Profile.Tactical",
@@ -27,62 +65,164 @@
       "Template": "interaction_arcweaver",
       "InstanceId": "narrative_arcweaver",
       "Overrides": {
-        "Name": { "Value": "Arcweaver" },
-        "PlayerOwner": { "PlayerId": 1 },
-        "WorldPositionCm": { "Value": { "X": 1180, "Y": 960 } }
+        "Name": {
+          "Value": "Arcweaver"
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1180,
+            "Y": 960
+          }
+        }
       }
     },
     {
       "Template": "narrative_warden",
       "InstanceId": "narrative_warden_mirelle",
       "Overrides": {
-        "Name": { "Value": "WardenMirelle" },
-        "Team": { "Id": 3 },
-        "WorldPositionCm": { "Value": { "X": 1370, "Y": 960 } }
+        "Name": {
+          "Value": "WardenMirelle"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1370,
+            "Y": 960
+          }
+        }
       }
     },
     {
       "Template": "narrative_shrine",
       "InstanceId": "narrative_ember_shrine",
       "Overrides": {
-        "Name": { "Value": "EmberShrine" },
-        "Team": { "Id": 3 },
-        "WorldPositionCm": { "Value": { "X": 1740, "Y": 960 } }
+        "Name": {
+          "Value": "EmberShrine"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1740,
+            "Y": 960
+          }
+        }
       }
     },
     {
       "Template": "interaction_stress_anchor_blue",
       "InstanceId": "narrative_beast_clan_anchor",
       "Overrides": {
-        "Name": { "Value": "BeastClanAnchor" },
-        "WorldPositionCm": { "Value": { "X": 4200, "Y": 960 } }
+        "Name": {
+          "Value": "BeastClanAnchor"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4200,
+            "Y": 960
+          }
+        }
       }
     }
   ],
   "Teams": [
-    { "TeamId": 1, "RepresentativeInstanceId": "narrative_arcweaver" },
-    { "TeamId": 2, "RepresentativeInstanceId": "narrative_beast_clan_anchor" },
-    { "TeamId": 3, "RepresentativeInstanceId": "narrative_warden_mirelle" }
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "narrative_arcweaver"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "narrative_beast_clan_anchor"
+    },
+    {
+      "TeamId": 3,
+      "RepresentativeInstanceId": "narrative_warden_mirelle"
+    }
   ],
   "Players": [
-    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "narrative_arcweaver" },
-    { "PlayerId": 3, "TeamId": 3, "RepresentativeInstanceId": "narrative_warden_mirelle" }
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "narrative_arcweaver"
+    },
+    {
+      "PlayerId": 3,
+      "TeamId": 3,
+      "RepresentativeInstanceId": "narrative_warden_mirelle"
+    }
   ],
   "ParticipantRelationships": {
     "Teams": [
-      { "TeamA": 1, "TeamB": 1, "TypeId": "NarrativeShowcase.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 2, "TeamB": 2, "TypeId": "NarrativeShowcase.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 3, "TeamB": 3, "TypeId": "NarrativeShowcase.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 1, "TeamB": 2, "TypeId": "NarrativeShowcase.Participant", "Attitude": "Hostile", "Symmetric": true },
-      { "TeamA": 1, "TeamB": 3, "TypeId": "NarrativeShowcase.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 2, "TeamB": 3, "TypeId": "NarrativeShowcase.Participant", "Attitude": "Hostile", "Symmetric": true }
+      {
+        "TeamA": 1,
+        "TeamB": 1,
+        "TypeId": "NarrativeShowcase.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 2,
+        "TeamB": 2,
+        "TypeId": "NarrativeShowcase.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 3,
+        "TeamB": 3,
+        "TypeId": "NarrativeShowcase.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 1,
+        "TeamB": 2,
+        "TypeId": "NarrativeShowcase.Participant",
+        "Attitude": "Hostile",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 1,
+        "TeamB": 3,
+        "TypeId": "NarrativeShowcase.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 2,
+        "TeamB": 3,
+        "TypeId": "NarrativeShowcase.Participant",
+        "Attitude": "Hostile",
+        "Symmetric": true
+      }
     ],
     "Players": [
-      { "PlayerA": 1, "PlayerB": 3, "TypeId": "NarrativeShowcase.Participant", "Symmetric": true }
+      {
+        "PlayerA": 1,
+        "PlayerB": 3,
+        "TypeId": "NarrativeShowcase.Participant",
+        "Symmetric": true
+      }
     ],
     "PlayerTeams": [
-      { "PlayerId": 1, "TeamId": 1, "TypeId": "NarrativeShowcase.Participant", "Symmetric": false },
-      { "PlayerId": 3, "TeamId": 3, "TypeId": "NarrativeShowcase.Participant", "Symmetric": false }
+      {
+        "PlayerId": 1,
+        "TeamId": 1,
+        "TypeId": "NarrativeShowcase.Participant",
+        "Symmetric": false
+      },
+      {
+        "PlayerId": 3,
+        "TeamId": 3,
+        "TypeId": "NarrativeShowcase.Participant",
+        "Symmetric": false
+      }
     ]
   }
 }

@@ -1,6 +1,13 @@
 {
   "Id": "capability_standard_graph_formal_text",
-  "Tags": ["capability_standard_graph_formal_text", "graph_formal_text", "formal-text"],
+  "Tuning": {
+    "PartitionChunkCells": 32
+  },
+  "Tags": [
+    "capability_standard_graph_formal_text",
+    "graph_formal_text",
+    "formal-text"
+  ],
   "DefaultCamera": {
     "TargetXCm": 5000,
     "TargetYCm": 5000,
@@ -13,11 +20,9 @@
     {
       "Name": "default",
       "SpatialType": "HexGrid",
-      "WidthInMacroTiles": 32,
-      "HeightInMacroTiles": 32,
-      "HexEdgeLengthCm": 400,
-      "ChunkSizeCells": 32,
-      "NavigationEnabled": false
+      "WidthCells": 8192,
+      "HeightCells": 8192,
+      "HexEdgeLengthCm": 400
     }
   ],
   "TriggerGraphs": [
@@ -27,21 +32,42 @@
     }
   ],
   "Entities": [
-    { "InstanceId": "graph-formal-text-guard", "Template": "graph_formal_text_guard" }
+    {
+      "InstanceId": "graph-formal-text-guard",
+      "Template": "graph_formal_text_guard"
+    }
   ],
   "Teams": [
-    { "TeamId": 1, "RepresentativeInstanceId": "graph-formal-text-guard" }
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "graph-formal-text-guard"
+    }
   ],
   "Players": [
-    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "graph-formal-text-guard" }
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "graph-formal-text-guard"
+    }
   ],
   "ParticipantRelationships": {
     "Teams": [
-      { "TeamA": 1, "TeamB": 1, "TypeId": "GraphFormalText.Participant", "Attitude": "Friendly", "Symmetric": true }
+      {
+        "TeamA": 1,
+        "TeamB": 1,
+        "TypeId": "GraphFormalText.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      }
     ],
     "Players": [],
     "PlayerTeams": [
-      { "PlayerId": 1, "TeamId": 1, "TypeId": "GraphFormalText.Participant", "Symmetric": false }
+      {
+        "PlayerId": 1,
+        "TeamId": 1,
+        "TypeId": "GraphFormalText.Participant",
+        "Symmetric": false
+      }
     ]
   }
 }

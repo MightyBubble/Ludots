@@ -130,7 +130,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         public const float RecastMsPerOperationHigh = 250f;
         private const int BytesPerKiB = 1024;
         public const int EstimatedBytesPerOperationLow = 48 * BytesPerKiB;
-        public const int EstimatedBytesPerOperationHigh = SpatialScaleDefaults.MacroTileCells * BytesPerKiB;
+        public const int EstimatedBytesPerOperationHigh = SpatialScaleDefaults.TerrainPageCells * BytesPerKiB;
         public const long CdtReferenceWorkUnitsPerOperation =
             (long)SpatialScaleDefaults.TerrainChunkCells * SpatialScaleDefaults.TerrainChunkCells;
         public const long RecastReferenceWorkUnitsPerOperation = 160_000L;

@@ -76,7 +76,7 @@ public sealed class MassNavigationOrderChainTests
         float workAreaX = simulation.FlowWorkAreaCenterXCm;
         float workAreaY = simulation.FlowWorkAreaCenterYCm;
         float originX = simulation.MassNavigationFlow.WorldOriginXCm;
-        float originY = simulation.MassNavigationFlow.WorldOriginYCm;
+        float originY = simulation.MassNavigationFlow.WorldOriginYcm;
         Vector2 localPosition = simulation.GetAgentLocalPositionCm(0);
         Vector2 worldPosition = simulation.GetAgentWorldPositionCm(0);
         long[] loadedBefore = simulation.LoadedChunks.ActiveChunkKeys.OrderBy(key => key).ToArray();
@@ -90,7 +90,7 @@ public sealed class MassNavigationOrderChainTests
         Assert.That(simulation.FlowWorkAreaCenterXCm, Is.EqualTo(workAreaX));
         Assert.That(simulation.FlowWorkAreaCenterYCm, Is.EqualTo(workAreaY));
         Assert.That(simulation.MassNavigationFlow.WorldOriginXCm, Is.EqualTo(originX));
-        Assert.That(simulation.MassNavigationFlow.WorldOriginYCm, Is.EqualTo(originY));
+        Assert.That(simulation.MassNavigationFlow.WorldOriginYcm, Is.EqualTo(originY));
         Assert.That(simulation.GetAgentLocalPositionCm(0), Is.EqualTo(localPosition));
         Assert.That(simulation.GetAgentWorldPositionCm(0), Is.EqualTo(worldPosition));
         Assert.That(simulation.LoadedChunks.ActiveChunkKeys.OrderBy(key => key).ToArray(), Is.EqualTo(loadedBefore));

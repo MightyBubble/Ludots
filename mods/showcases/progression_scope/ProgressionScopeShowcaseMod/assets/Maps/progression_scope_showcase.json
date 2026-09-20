@@ -1,6 +1,11 @@
 {
   "Id": "progression_scope_showcase",
-  "Tags": ["progression_scope_showcase"],
+  "Tuning": {
+    "PartitionChunkCells": 32
+  },
+  "Tags": [
+    "progression_scope_showcase"
+  ],
   "DefaultCamera": {
     "VirtualCameraId": "ProgressionScope.Camera.Tactical",
     "TargetXCm": 5800,
@@ -14,25 +19,43 @@
     {
       "Name": "default",
       "SpatialType": "HexGrid",
-      "WidthInMacroTiles": 32,
-      "HeightInMacroTiles": 32,
-      "HexEdgeLengthCm": 400,
-      "ChunkSizeCells": 32,
-      "NavigationEnabled": false
+      "WidthCells": 8192,
+      "HeightCells": 8192,
+      "HexEdgeLengthCm": 400
     }
   ],
   "Entities": [
-    { "Template": "progression_scope_city_host", "InstanceId": "progression-scope-city-host" },
-    { "Template": "progression_scope_faction_host" },
-    { "Template": "progression_scope_region_host" },
-    { "Template": "progression_scope_province_host" },
-    { "Template": "progression_scope_barracks" },
-    { "Template": "progression_scope_hero" }
+    {
+      "Template": "progression_scope_city_host",
+      "InstanceId": "progression-scope-city-host"
+    },
+    {
+      "Template": "progression_scope_faction_host"
+    },
+    {
+      "Template": "progression_scope_region_host"
+    },
+    {
+      "Template": "progression_scope_province_host"
+    },
+    {
+      "Template": "progression_scope_barracks"
+    },
+    {
+      "Template": "progression_scope_hero"
+    }
   ],
   "Teams": [
-    { "TeamId": 1, "RepresentativeInstanceId": "progression-scope-city-host" }
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "progression-scope-city-host"
+    }
   ],
   "Players": [
-    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "progression-scope-city-host" }
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "progression-scope-city-host"
+    }
   ]
 }

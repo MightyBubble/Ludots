@@ -1,6 +1,16 @@
 {
   "Id": "presenter_blacksmith_scatter_hudbar_benchmark",
-  "Tags": ["showcase", "presenter", "benchmark", "scatter", "blacksmith", "hudbar"],
+  "Tuning": {
+    "LoadedChunkCapacity": 16
+  },
+  "Tags": [
+    "showcase",
+    "presenter",
+    "benchmark",
+    "scatter",
+    "blacksmith",
+    "hudbar"
+  ],
   "ContinuousHeightmapAsset": "assets/terrain/presenter_blacksmith_showcase_flat.height",
   "Metadata": {
     "presenterBlacksmith": {
@@ -15,10 +25,9 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 1,
-      "HeightInMacroTiles": 1,
-      "GridCellSizeCm": 100,
-      "LoadedChunkCapacity": 16
+      "WidthCells": 256,
+      "HeightCells": 256,
+      "GridCellSizeCm": 100
     }
   ],
   "DefaultCamera": {

@@ -4,9 +4,9 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 24,
-      "HeightInMacroTiles": 16,
-      "GridCellSizeCm": 200
+      "GridCellSizeCm": 200,
+      "WidthCells": 6144,
+      "HeightCells": 4096
     }
   ],
   "Entities": [
@@ -27,5 +27,8 @@
       "PositionXCm": 500,
       "PositionYCm": 2400
     }
-  ]
+  ],
+  "Tuning": {
+    "LoadedChunkCapacity": 256
+  }
 }

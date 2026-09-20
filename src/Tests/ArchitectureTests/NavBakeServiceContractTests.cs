@@ -1037,7 +1037,7 @@ namespace Ludots.Tests.Architecture
             }
 
             double localX = worldXcm - tile.OriginXcm;
-            double localZ = worldZcm - tile.OriginZcm;
+            double localZ = worldZcm - tile.OriginYcm;
             for (int i = 0; i < tile.TriangleCount; i++)
             {
                 int a = tile.TriA[i];

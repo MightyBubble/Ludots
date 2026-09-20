@@ -1,7 +1,13 @@
 {
   "Id": "mass_navigation",
+  "Tuning": {
+    "LoadedChunkCapacity": 256
+  },
   "TriggerGraphs": [
-    { "graph": "graph.mass_navigation.selection_roster", "scopeInstanceId": "local_player" }
+    {
+      "graph": "graph.mass_navigation.selection_roster",
+      "scopeInstanceId": "local_player"
+    }
   ],
   "ContinuousHeightmap": {
     "Asset": "assets/terrain/mass_navigation_large_world_relief.height",
@@ -31,11 +37,9 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 250,
-      "HeightInMacroTiles": 250,
-      "GridCellSizeCm": 100,
-      "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 256
+      "WidthCells": 64000,
+      "HeightCells": 64000,
+      "GridCellSizeCm": 100
     }
   ],
   "Entities": [

@@ -35,9 +35,6 @@ namespace Ludots.Tests.Gas
             JsonObject gameConfig = JsonNode.Parse(File.ReadAllText(gameConfigPath))?.AsObject()
                 ?? throw new InvalidOperationException("Copied core game.json must contain a JSON object.");
             gameConfig["startupMapId"] = "outer_map";
-            gameConfig["worldWidthInMacroTiles"] = 16;
-            gameConfig["worldHeightInMacroTiles"] = 16;
-            gameConfig["gridCellSizeCm"] = 100;
             File.WriteAllText(gameConfigPath, gameConfig.ToJsonString());
 
             File.WriteAllText(Path.Combine(_coreRoot, "Navigation", "agent_profiles.json"), """
@@ -110,6 +107,26 @@ namespace Ludots.Tests.Gas
             catch
             {
             }
+        }
+
+        [Test]
+        public void LoadMap_WhenMapHasNoBoards_KeepsBootWorldAsHostWorld()
+        {
+            WriteMap("boardless", """
+            {
+              "id": "boardless",
+              "tags": ["menu"],
+              "world": { "widthCm": 409600, "heightCm": 409600, "cellSizeCm": 100 }
+            }
+            """);
+
+            using var engine = CreateEngine();
+            engine.LoadMap("boardless");
+
+            Ludots.Core.Spatial.WorldSizeSpec spec = engine.GetService(CoreServiceKeys.WorldSizeSpec);
+            Assert.That(spec.Bounds.Width, Is.EqualTo(1638400),
+                "boot world comes from the host map (entry: boardless, World-declared); a loaded boardless map keeps it");
+            Assert.That(spec.Bounds.Height, Is.EqualTo(1638400));
         }
 
         [Test]
@@ -332,9 +349,13 @@ namespace Ludots.Tests.Gas
             {
               "id": "outer_map",
               "continuousHeightmapAsset": "assets/terrain/map.height",
+              "tuning": { "loadedChunkCapacity": 16 },
               "boards": [
                 {
                   "name": "default",
+                  "widthCells": 256,
+                  "heightCells": 256,
+                  "gridCellSizeCm": 100,
                   "continuousHeightmapAsset": "assets/terrain/board.height"
                 }
               ]

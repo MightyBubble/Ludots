@@ -229,8 +229,8 @@ namespace Ludots.Tests.Presentation
             JsonObject map = ReadObject(Path.Combine(modRoot, "assets", "Maps", "mass_navigation.json"));
             JsonObject board = map["Boards"]?.AsArray()?.FirstOrDefault()?.AsObject()
                 ?? throw new InvalidOperationException("MassNavigation map must author a primary board.");
-            Assert.That(board["WidthInMacroTiles"]?.GetValue<int>(), Is.EqualTo(250));
-            Assert.That(board["HeightInMacroTiles"]?.GetValue<int>(), Is.EqualTo(250));
+            Assert.That(board["WidthCells"]?.GetValue<int>(), Is.EqualTo(250 * 256));
+            Assert.That(board["HeightCells"]?.GetValue<int>(), Is.EqualTo(250 * 256));
             Assert.That(board["GridCellSizeCm"]?.GetValue<int>(), Is.EqualTo(100));
         }
 
