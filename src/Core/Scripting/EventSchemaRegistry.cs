@@ -112,6 +112,35 @@ namespace Ludots.Core.Scripting
                 new("oldValueInt", EventParamType.Int, MapTriggerEventPayloadKeys.OldValueInt, Optional: true),
                 new("oldValueFloat", EventParamType.Float, MapTriggerEventPayloadKeys.OldValueFloat, Optional: true),
             }),
+            new(GameEvents.RelationLinkAdded.Value, EventScope.Map, new EventParamSchema[]
+            {
+                new("sourceEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.SourceEntity),
+                new("targetEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.TargetEntity),
+                new("relationTypeId", EventParamType.Int, MapTriggerEventPayloadKeys.RelationTypeId),
+            }),
+            new(GameEvents.RelationLinkRemoved.Value, EventScope.Map, new EventParamSchema[]
+            {
+                new("sourceEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.SourceEntity),
+                new("targetEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.TargetEntity),
+                new("relationTypeId", EventParamType.Int, MapTriggerEventPayloadKeys.RelationTypeId),
+            }),
+            new(GameEvents.RelationMetricChanged.Value, EventScope.Map, new EventParamSchema[]
+            {
+                new("sourceEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.SourceEntity),
+                new("targetEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.TargetEntity),
+                new("relationTypeId", EventParamType.Int, MapTriggerEventPayloadKeys.RelationTypeId),
+                new("metricId", EventParamType.Int, MapTriggerEventPayloadKeys.RelationMetricId),
+                new("newValueInt", EventParamType.Int, MapTriggerEventPayloadKeys.VarValueInt),
+                new("oldValueInt", EventParamType.Int, MapTriggerEventPayloadKeys.OldValueInt),
+            }),
+            new(GameEvents.RelationFlagChanged.Value, EventScope.Map, new EventParamSchema[]
+            {
+                new("sourceEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.SourceEntity),
+                new("targetEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.TargetEntity),
+                new("relationTypeId", EventParamType.Int, MapTriggerEventPayloadKeys.RelationTypeId),
+                new("oldFlags", EventParamType.Int, MapTriggerEventPayloadKeys.OldValueInt),
+                new("newFlags", EventParamType.Int, MapTriggerEventPayloadKeys.VarValueInt),
+            }),
             // Mod-domain mount pulse (main domain expansion): not MapTrigger.* namespaced —
             // FireEvent path stamps ModId for filter matching on RegisterModTriggers mounts.
             new(GameEvents.ModLoaded.Value, EventScope.Global, new EventParamSchema[]

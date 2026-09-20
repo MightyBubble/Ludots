@@ -163,7 +163,12 @@ namespace Ludots.Core.Config
 
         private static EntityTemplateChild CloneChild(EntityTemplateChild source)
         {
-            var clone = new EntityTemplateChild { Template = source.Template };
+            var clone = new EntityTemplateChild
+            {
+                LocalId = source.LocalId,
+                Template = source.Template,
+                Attach = source.Attach,
+            };
             if (source.LocalPose != null)
             {
                 clone.LocalPose = new EntityTemplateLocalPose
@@ -174,6 +179,15 @@ namespace Ludots.Core.Config
                     InheritParentFacing = source.LocalPose.InheritParentFacing,
                     OffsetRotation = source.LocalPose.OffsetRotation,
                 };
+            }
+
+            if (source.Children is { Count: > 0 })
+            {
+                clone.Children = new List<EntityTemplateChild>(source.Children.Count);
+                for (int i = 0; i < source.Children.Count; i++)
+                {
+                    clone.Children.Add(CloneChild(source.Children[i]));
+                }
             }
 
             if (source.Overrides != null)
