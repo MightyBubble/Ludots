@@ -1,0 +1,4 @@
+[
+  { "id": "Ballista.TargetKind", "members": [ "None", "Biological", "Building" ] },
+  { "id": "Ballista.Route",     "members": [ "Move", "Weapon", "Siege" ] }
+]

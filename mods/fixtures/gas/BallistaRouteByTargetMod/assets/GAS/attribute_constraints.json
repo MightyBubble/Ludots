@@ -1,0 +1,4 @@
+{
+  "Ballista.Health": { "clampToBase": true, "min": 0 },
+  "Ballista.Armor": { "min": 0 }
+}

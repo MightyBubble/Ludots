@@ -1,0 +1,598 @@
+[
+  {
+    "id": "graph.ballista.route",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_command",
+        "action": "Ballista.Command",
+        "start": "pointer_x",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "pointer_x",
+        "op": "LoadPointerScreenX"
+      },
+      {
+        "id": "pointer_y",
+        "op": "LoadPointerScreenY"
+      },
+      {
+        "id": "to_ground",
+        "op": "ScreenPointToGround"
+      },
+      {
+        "id": "ground_ok",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "q_bld",
+        "op": "QueryRadius",
+        "queryCapacityPolicy": "RequireComplete",
+        "radiusCm": 300
+      },
+      {
+        "id": "f_bld",
+        "op": "QueryFilterTagAny",
+        "tag": "Structure.Building"
+      },
+      {
+        "id": "c_bld",
+        "op": "AggCount"
+      },
+      {
+        "id": "i2f_bld",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "z_bld",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "gt_bld",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "br_bld",
+        "op": "BranchBool"
+      },
+      {
+        "id": "k_bld",
+        "op": "ConstInt",
+        "intValue": 2
+      },
+      {
+        "id": "w_bld",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "route.kind"
+      },
+      {
+        "id": "q_bio",
+        "op": "QueryRadius",
+        "queryCapacityPolicy": "RequireComplete",
+        "radiusCm": 300
+      },
+      {
+        "id": "f_bio",
+        "op": "QueryFilterTagAny",
+        "tag": "Unit.Biological"
+      },
+      {
+        "id": "c_bio",
+        "op": "AggCount"
+      },
+      {
+        "id": "i2f_bio",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "z_bio",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "gt_bio",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "br_bio",
+        "op": "BranchBool"
+      },
+      {
+        "id": "k_bio",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "w_bio",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "route.kind"
+      },
+      {
+        "id": "k_none",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "w_none",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "route.kind"
+      },
+      {
+        "id": "rd_kind",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "route.kind"
+      },
+      {
+        "id": "row",
+        "op": "ResolveTableRow",
+        "lookupTable": "intent.route.ballista"
+      },
+      {
+        "id": "route",
+        "op": "TableReadInt",
+        "lookupTable": "intent.route.ballista",
+        "lookupField": "route"
+      },
+      {
+        "id": "sw",
+        "op": "SwitchInt"
+      },
+      {
+        "id": "idx0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "slot0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "slot1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "hit_bio",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "hit_bld",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "cast_weapon",
+        "op": "SubmitCast",
+        "orderTypeKey": "castAbility"
+      },
+      {
+        "id": "cast_siege",
+        "op": "SubmitCast",
+        "orderTypeKey": "castAbility"
+      },
+      {
+        "id": "submit_move",
+        "op": "SubmitCommandIntent"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "halt_fail",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "pointer_x",
+        "fromPort": "next",
+        "to": "pointer_y"
+      },
+      {
+        "from": "pointer_y",
+        "fromPort": "next",
+        "to": "to_ground"
+      },
+      {
+        "from": "to_ground",
+        "fromPort": "next",
+        "to": "ground_ok"
+      },
+      {
+        "from": "ground_ok",
+        "fromPort": "true",
+        "to": "idx0"
+      },
+      {
+        "from": "ground_ok",
+        "fromPort": "false",
+        "to": "halt_fail"
+      },
+      {
+        "from": "idx0",
+        "fromPort": "next",
+        "to": "slot0"
+      },
+      {
+        "from": "slot0",
+        "fromPort": "next",
+        "to": "slot1"
+      },
+      {
+        "from": "slot1",
+        "fromPort": "next",
+        "to": "z_bld"
+      },
+      {
+        "from": "q_bld",
+        "fromPort": "next",
+        "to": "f_bld"
+      },
+      {
+        "from": "f_bld",
+        "fromPort": "next",
+        "to": "c_bld"
+      },
+      {
+        "from": "c_bld",
+        "fromPort": "next",
+        "to": "i2f_bld"
+      },
+      {
+        "from": "i2f_bld",
+        "fromPort": "next",
+        "to": "gt_bld"
+      },
+      {
+        "from": "gt_bld",
+        "fromPort": "next",
+        "to": "br_bld"
+      },
+      {
+        "from": "br_bld",
+        "fromPort": "true",
+        "to": "k_bld"
+      },
+      {
+        "from": "k_bld",
+        "fromPort": "next",
+        "to": "w_bld"
+      },
+      {
+        "from": "w_bld",
+        "fromPort": "next",
+        "to": "rd_kind"
+      },
+      {
+        "from": "br_bld",
+        "fromPort": "false",
+        "to": "q_bio"
+      },
+      {
+        "from": "q_bio",
+        "fromPort": "next",
+        "to": "f_bio"
+      },
+      {
+        "from": "f_bio",
+        "fromPort": "next",
+        "to": "c_bio"
+      },
+      {
+        "from": "c_bio",
+        "fromPort": "next",
+        "to": "i2f_bio"
+      },
+      {
+        "from": "i2f_bio",
+        "fromPort": "next",
+        "to": "gt_bio"
+      },
+      {
+        "from": "gt_bio",
+        "fromPort": "next",
+        "to": "br_bio"
+      },
+      {
+        "from": "br_bio",
+        "fromPort": "true",
+        "to": "k_bio"
+      },
+      {
+        "from": "k_bio",
+        "fromPort": "next",
+        "to": "w_bio"
+      },
+      {
+        "from": "w_bio",
+        "fromPort": "next",
+        "to": "rd_kind"
+      },
+      {
+        "from": "br_bio",
+        "fromPort": "false",
+        "to": "k_none"
+      },
+      {
+        "from": "k_none",
+        "fromPort": "next",
+        "to": "w_none"
+      },
+      {
+        "from": "w_none",
+        "fromPort": "next",
+        "to": "rd_kind"
+      },
+      {
+        "from": "rd_kind",
+        "fromPort": "next",
+        "to": "row"
+      },
+      {
+        "from": "row",
+        "fromPort": "next",
+        "to": "route"
+      },
+      {
+        "from": "route",
+        "fromPort": "next",
+        "to": "sw"
+      },
+      {
+        "from": "sw",
+        "fromPort": "case:0",
+        "to": "submit_move"
+      },
+      {
+        "from": "submit_move",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "sw",
+        "fromPort": "case:1",
+        "to": "hit_bio"
+      },
+      {
+        "from": "hit_bio",
+        "fromPort": "next",
+        "to": "cast_weapon"
+      },
+      {
+        "from": "cast_weapon",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "sw",
+        "fromPort": "case:2",
+        "to": "hit_bld"
+      },
+      {
+        "from": "hit_bld",
+        "fromPort": "next",
+        "to": "cast_siege"
+      },
+      {
+        "from": "cast_siege",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "sw",
+        "fromPort": "default",
+        "to": "halt_fail"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      },
+      {
+        "from": "z_bld",
+        "fromPort": "next",
+        "to": "z_bio"
+      },
+      {
+        "from": "z_bio",
+        "fromPort": "next",
+        "to": "caster"
+      },
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "q_bld"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "pointer_x",
+        "fromPort": "value",
+        "to": "to_ground",
+        "toPort": "a"
+      },
+      {
+        "from": "pointer_y",
+        "fromPort": "value",
+        "to": "to_ground",
+        "toPort": "b"
+      },
+      {
+        "from": "to_ground",
+        "fromPort": "value",
+        "to": "ground_ok",
+        "toPort": "condition"
+      },
+      {
+        "from": "to_ground",
+        "fromPort": "value",
+        "to": "submit_move",
+        "toPort": "condition"
+      },
+      {
+        "from": "c_bld",
+        "fromPort": "value",
+        "to": "i2f_bld",
+        "toPort": "a"
+      },
+      {
+        "from": "i2f_bld",
+        "fromPort": "value",
+        "to": "gt_bld",
+        "toPort": "a"
+      },
+      {
+        "from": "z_bld",
+        "fromPort": "value",
+        "to": "gt_bld",
+        "toPort": "b"
+      },
+      {
+        "from": "gt_bld",
+        "fromPort": "value",
+        "to": "br_bld",
+        "toPort": "condition"
+      },
+      {
+        "from": "k_bld",
+        "fromPort": "value",
+        "to": "w_bld",
+        "toPort": "value"
+      },
+      {
+        "from": "c_bio",
+        "fromPort": "value",
+        "to": "i2f_bio",
+        "toPort": "a"
+      },
+      {
+        "from": "i2f_bio",
+        "fromPort": "value",
+        "to": "gt_bio",
+        "toPort": "a"
+      },
+      {
+        "from": "z_bio",
+        "fromPort": "value",
+        "to": "gt_bio",
+        "toPort": "b"
+      },
+      {
+        "from": "gt_bio",
+        "fromPort": "value",
+        "to": "br_bio",
+        "toPort": "condition"
+      },
+      {
+        "from": "k_bio",
+        "fromPort": "value",
+        "to": "w_bio",
+        "toPort": "value"
+      },
+      {
+        "from": "k_none",
+        "fromPort": "value",
+        "to": "w_none",
+        "toPort": "value"
+      },
+      {
+        "from": "rd_kind",
+        "fromPort": "value",
+        "to": "row",
+        "toPort": "a"
+      },
+      {
+        "from": "row",
+        "fromPort": "value",
+        "to": "route",
+        "toPort": "a"
+      },
+      {
+        "from": "route",
+        "fromPort": "value",
+        "to": "sw",
+        "toPort": "selector"
+      },
+      {
+        "from": "idx0",
+        "fromPort": "value",
+        "to": "hit_bio",
+        "toPort": "value"
+      },
+      {
+        "from": "idx0",
+        "fromPort": "value",
+        "to": "hit_bld",
+        "toPort": "value"
+      },
+      {
+        "from": "slot0",
+        "fromPort": "value",
+        "to": "cast_weapon",
+        "toPort": "value"
+      },
+      {
+        "from": "hit_bio",
+        "fromPort": "value",
+        "to": "cast_weapon",
+        "toPort": "target"
+      },
+      {
+        "from": "slot1",
+        "fromPort": "value",
+        "to": "cast_siege",
+        "toPort": "value"
+      },
+      {
+        "from": "hit_bld",
+        "fromPort": "value",
+        "to": "cast_siege",
+        "toPort": "target"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      },
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "w_bld",
+        "toPort": "source"
+      },
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "w_bio",
+        "toPort": "source"
+      },
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "w_none",
+        "toPort": "source"
+      },
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "rd_kind",
+        "toPort": "source"
+      }
+    ]
+  }
+]

@@ -1,0 +1,10 @@
+{
+  "Id": "ballista_route_field",
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  },
+  "Tags": [ "showcase", "input", "route" ],
+  "HeartbeatIntervalTicks": 6
+}
