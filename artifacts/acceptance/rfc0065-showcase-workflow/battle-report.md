@@ -4,12 +4,12 @@
 - build: GasTests / Show5Show6Workflow_PointerCommandRoutesThroughIntentDispatchAndOrderBuffer
 - seed: interaction_showcase_hub deterministic headless run
 - clock: engine fixed step sampled through 1/60s test ticks
-- execution timestamp UTC: 2026-09-14T10:25:50.7616857+00:00
+- execution timestamp UTC: 2026-09-15T17:35:02.1892283+00:00
 
 ## Scenario Card
 - Player goal: issue a ground pointer command with three command-source actors active.
 - Gameplay domain: RFC-0065 SHOW-5 / SHOW-6 production pointer command workflow.
-- Runtime path: `PlayerInputHandler` -> `InputRuntimeSystem` -> `AuthoritativeInputSnapshotSystem` -> `InteractionShowcaseLocalOrderSourceSystem` -> `InputOrderMappingSystem` -> `CommandIntentArbiter` -> `CommandIntentProfileRegistry.RouteGroup` -> `CastDispatchProfileRegistry.SelectDispatchTargets` -> `OrderQueue` -> `OrderBufferSystem`.
+- Runtime path: `PlayerInputHandler` -> `InputRuntimeSystem` -> `AuthoritativeInputSnapshotSystem` -> `LocalOrderSourceSystem` -> `InputOrderMappingSystem` -> `CommandIntentArbiter` -> `CommandIntentProfileRegistry.RouteGroup` -> `CastDispatchProfileRegistry.SelectDispatchTargets` -> `OrderQueue` -> `OrderBufferSystem`.
 - Launcher binding: `interaction_showcase` (`.\scripts\run-mod-launcher.cmd cli launch interaction_showcase --adapter raylib`).
 - Primary success condition: Arcweaver, Vanguard, and Commander all receive unique moveTo order receipts in one atomic admission batch at the target point, even when the hover collection contains an entity.
 - Failure branch condition: no active scheme intent, no command-source collection, hidden legacy fallback, split admission batch, duplicate order receipts, or missing OrderBuffer promotion.
@@ -29,12 +29,12 @@
 ## Runtime Values
 | Field | Value |
 |---|---|
-| local player | Entity = { Id = 8, WorldId = 33, Version = 1 } |
+| local player | Entity = { Id = 8, WorldId = 56, Version = 1 } |
 | scheme.default registry id | 1 |
 | intent.command.default registry id | 1 |
 | dispatch.all_together registry id | 1 |
-| command source rows | Entity = { Id = 6, WorldId = 33, Version = 1 }, Entity = { Id = 7, WorldId = 33, Version = 1 }, Entity = { Id = 8, WorldId = 33, Version = 1 } |
-| hover entity ignored by ground command | Entity = { Id = 7, WorldId = 33, Version = 1 } |
+| command source rows | Entity = { Id = 6, WorldId = 56, Version = 1 }, Entity = { Id = 7, WorldId = 56, Version = 1 }, Entity = { Id = 8, WorldId = 56, Version = 1 } |
+| hover entity ignored by ground command | Entity = { Id = 7, WorldId = 56, Version = 1 } |
 | admission batch id | 1 |
 | order receipts | 1, 2, 3 |
 | target world cm | (2080, 1080) |
@@ -49,6 +49,6 @@
 ## Orders
 | Actor | Order id | Type id | Player | Target X | Target Z |
 |---|---:|---:|---:|---:|---:|
-| Entity = { Id = 6, WorldId = 33, Version = 1 } | 1 | 101 | 1 | 2080 | 1080 |
-| Entity = { Id = 7, WorldId = 33, Version = 1 } | 2 | 101 | 1 | 2080 | 1080 |
-| Entity = { Id = 8, WorldId = 33, Version = 1 } | 3 | 101 | 1 | 2080 | 1080 |
+| Entity = { Id = 6, WorldId = 56, Version = 1 } | 1 | 101 | 1 | 2080 | 1080 |
+| Entity = { Id = 7, WorldId = 56, Version = 1 } | 2 | 101 | 1 | 2080 | 1080 |
+| Entity = { Id = 8, WorldId = 56, Version = 1 } | 3 | 101 | 1 | 2080 | 1080 |

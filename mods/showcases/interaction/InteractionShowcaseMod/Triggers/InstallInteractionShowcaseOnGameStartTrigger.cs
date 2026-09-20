@@ -75,7 +75,7 @@ namespace InteractionShowcaseMod.Triggers
             engine.RegisterPresentationSystem(new InteractionShowcasePanelPresentationSystem(engine, _runtime));
 
             WireCommandSourceAcquisitionFeedback(context, engine);
-            _ctx.Log("[InteractionShowcaseMod] Local order source, stress runtime, and command-source acquisition feedback registered.");
+            _ctx.Log("[InteractionShowcaseMod] Stress runtime and command-source acquisition feedback registered.");
             return Task.CompletedTask;
         }
 

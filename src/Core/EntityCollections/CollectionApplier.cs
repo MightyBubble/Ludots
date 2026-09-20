@@ -7,14 +7,6 @@ using Ludots.Core.Input.Interaction;
 
 namespace Ludots.Core.EntityCollections
 {
-    /// <summary>How a collection write combines the incoming entity set with the current members.</summary>
-    public enum CollectionWriteOp : byte
-    {
-        Replace = 0,
-        Add = 1,
-        Subtract = 2,
-    }
-
     /// <summary>
     /// Caller-selected semantics for routed batch entries whose control domain cannot be resolved
     /// (RFC-0065 DEC-4). There is no default value on purpose: the writing side must state its
@@ -49,8 +41,6 @@ namespace Ludots.Core.EntityCollections
         private readonly EntityKeyedSoaTable<RouteRecord> _routes;
         private readonly Dictionary<Entity, int> _domainIndexMap = new(capacity: 8);
 
-        private readonly List<Entity> _mergeScratch = new(capacity: 64);
-        private Entity[] _currentScratch = new Entity[64];
         private Entity[] _filteredScratch = new Entity[256];
         private int[] _rowDomainIndices = new int[64];
         private Entity[] _memberScratch = new Entity[64];
@@ -93,57 +83,7 @@ namespace Ludots.Core.EntityCollections
         /// </summary>
         public void Apply(Entity owner, int collectionKeyId, CollectionWriteOp op, ReadOnlySpan<Entity> entities)
         {
-            if (owner == Entity.Null || owner == default)
-            {
-                throw new InvalidOperationException(
-                    "COLLECTION.APPLY.OwnerMissing: collection writes require a live owner entity (the holding rep).");
-            }
-
-            string keyName = _store.KeyRegistry.GetName(collectionKeyId);
-            if (string.IsNullOrEmpty(keyName))
-            {
-                throw new InvalidOperationException(
-                    $"COLLECTION.APPLY.KeyUnknown: collection key id {collectionKeyId} is not registered in the EntityCollectionStore key space.");
-            }
-
-            switch (op)
-            {
-                case CollectionWriteOp.Replace:
-                    Write(owner, collectionKeyId, keyName, entities);
-                    return;
-                case CollectionWriteOp.Add:
-                case CollectionWriteOp.Subtract:
-                    _mergeScratch.Clear();
-                    if (_store.TryGet(owner, collectionKeyId, out EntityCollectionHandle handle) && handle.IsValid &&
-                        _store.TryGetView(handle, out EntityCollectionView view))
-                    {
-                        if (view.Count > _currentScratch.Length)
-                        {
-                            _currentScratch = new Entity[view.Count * 2];
-                        }
-
-                        int currentCount = _store.CopyEntities(owner, collectionKeyId, _currentScratch);
-                        if (op == CollectionWriteOp.Add)
-                        {
-                            AppendDistinct(_mergeScratch, _currentScratch, currentCount);
-                            AppendDistinct(_mergeScratch, entities);
-                        }
-                        else
-                        {
-                            KeepNotInIncoming(_mergeScratch, _currentScratch, currentCount, entities);
-                        }
-                    }
-                    else if (op == CollectionWriteOp.Add)
-                    {
-                        AppendDistinct(_mergeScratch, entities);
-                    }
-
-                    Write(owner, collectionKeyId, keyName, _mergeScratch.ToArray());
-                    return;
-                default:
-                    throw new InvalidOperationException(
-                        $"COLLECTION.APPLY.OpInvalid: op {(int)op}; expected replace(0)/add(1)/subtract(2).");
-            }
+            CollectionWrite.Apply(_store, owner, collectionKeyId, op, entities);
         }
 
         /// <summary>
@@ -425,52 +365,9 @@ namespace Ludots.Core.EntityCollections
             StoreRouteRecord(routeKey, hadRecord, in record, currentDomainCount);
         }
 
-        private void Write(Entity owner, int collectionKeyId, string keyName, ReadOnlySpan<Entity> entities)
-        {
-            var descriptor = EntityCollectionDescriptor.Create(
-                keyName,
-                EntityCollectionSourceKind.GasGraphResult,
-                EntityCollectionRoleKind.CommandSource);
-            _store.Replace(owner, collectionKeyId, in descriptor, entities, owner);
-        }
 
-        private void AppendDistinct(List<Entity> target, ReadOnlySpan<Entity> source)
-        {
-            for (int i = 0; i < source.Length; i++)
-            {
-                if (!target.Contains(source[i]))
-                {
-                    target.Add(source[i]);
-                }
-            }
-        }
 
-        private void AppendDistinct(List<Entity> target, Entity[] source, int count)
-        {
-            AppendDistinct(target, source.AsSpan(0, count));
-        }
 
-        private void KeepNotInIncoming(List<Entity> target, Entity[] current, int count, ReadOnlySpan<Entity> incoming)
-        {
-            for (int i = 0; i < count; i++)
-            {
-                Entity entity = current[i];
-                bool removed = false;
-                for (int r = 0; r < incoming.Length; r++)
-                {
-                    if (incoming[r] == entity)
-                    {
-                        removed = true;
-                        break;
-                    }
-                }
-
-                if (!removed)
-                {
-                    target.Add(entity);
-                }
-            }
-        }
 
         private void EnsureFilteredScratch(int required)
         {

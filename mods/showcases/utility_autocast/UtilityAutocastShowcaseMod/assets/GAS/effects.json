@@ -90,5 +90,26 @@
     "categories": [
       "Effect.UtilityAutocast.Lockout"
     ]
+  },
+  {
+    "id": "Effect.UtilityAutocast.Lockout.GCD",
+    "tags": [
+      "Effect.UtilityAutocast.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 30,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.UtilityAutocast.GCD",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
   }
 ]

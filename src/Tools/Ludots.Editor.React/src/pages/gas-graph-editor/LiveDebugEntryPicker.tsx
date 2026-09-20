@@ -29,7 +29,7 @@ export function LiveDebugEntryPicker({
     <select
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      className={className ?? 'min-w-0 flex-1 rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-[11px]'}
+      className={className ?? 'min-w-0 flex-1 rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono text-[11px]'}
     >
       <option value="">Select mounted entry</option>
       {mounts.map((mount) => {

@@ -107,9 +107,8 @@ namespace CoreInputMod.Systems
         public void Update(in float dt)
         {
             Entity collectionOwner = ResolveCommandSourceOwner();
-            const string collectionKey = CoreInputCollectionKeys.CommandSource;
-            Entity collectionContext = Entity.Null;
-            Entity primaryViewed = TryResolveCommandSourceView(collectionOwner, out EntityCollectionView commandSourceView)
+            string collectionKey = InputInteractionContextAccessor.RequireActiveActorCollectionKey(_world, _globals, collectionOwner);            Entity collectionContext = Entity.Null;
+            Entity primaryViewed = TryResolveCommandSourceView(collectionOwner, collectionKey, out EntityCollectionView commandSourceView)
                 ? ResolveCollectionViewSummary(in commandSourceView, out collectionContext)
                 : Entity.Null;
 
@@ -130,9 +129,9 @@ namespace CoreInputMod.Systems
             }
 
             int frameId = _session?.CurrentTick ?? Environment.TickCount;
-            int viewedCount = GetCommandSourceCount(collectionOwner);
+            int viewedCount = GetCommandSourceCount(collectionOwner, collectionKey);
             EnsureCommandActorCapacity(viewedCount);
-            int count = CopyCommandSourceActors(collectionOwner, _commandActors);
+            int count = CopyCommandSourceActors(collectionOwner, collectionKey, _commandActors);
             if (count > 0)
             {
                 int emittedEntities = 0;
@@ -172,7 +171,7 @@ namespace CoreInputMod.Systems
                 : Entity.Null;
         }
 
-        private bool TryResolveCommandSourceView(Entity owner, out EntityCollectionView view)
+        private bool TryResolveCommandSourceView(Entity owner, string collectionKey, out EntityCollectionView view)
         {
             view = default;
             return owner != Entity.Null &&
@@ -181,26 +180,23 @@ namespace CoreInputMod.Systems
                    EntityCollectionContextRuntime.TryDescribeView(
                        collections,
                        owner,
-                       CoreInputCollectionKeys.CommandSource,
-                       out view);
+                       collectionKey,                       out view);
         }
 
-        private int GetCommandSourceCount(Entity owner)
+        private int GetCommandSourceCount(Entity owner, string collectionKey)
         {
             return owner != Entity.Null &&
                    _globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var collectionsObj) &&
                    collectionsObj is EntityCollectionStore collections
-                ? EntityCollectionContextRuntime.GetCount(collections, owner, CoreInputCollectionKeys.CommandSource)
-                : 0;
+                ? EntityCollectionContextRuntime.GetCount(collections, owner, collectionKey)                : 0;
         }
 
-        private int CopyCommandSourceActors(Entity owner, Span<Entity> destination)
+        private int CopyCommandSourceActors(Entity owner, string collectionKey, Span<Entity> destination)
         {
             return owner != Entity.Null &&
                    _globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var collectionsObj) &&
                    collectionsObj is EntityCollectionStore collections
-                ? EntityCollectionContextRuntime.Copy(collections, owner, CoreInputCollectionKeys.CommandSource, destination)
-                : 0;
+                ? EntityCollectionContextRuntime.Copy(collections, owner, collectionKey, destination)                : 0;
         }
 
         private static Entity ResolveCollectionViewSummary(

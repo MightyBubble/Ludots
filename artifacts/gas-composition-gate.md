@@ -1,177 +1,54 @@
-## GAS Composition Gate — Self Review
+# GAS Composition Gate — Self Review
 
-- **Task / Issue**: #1398 Case E 纠偏——退役档案空壳键；起角落操作者 rep；ScreenRect 按 audience；删四张 Score 适配器
-- **Date**: 2026-09-03
-- **Agent / Author**: cloud agent
+- **Task / Issue**: Epic #1196 / RFC-0067 **收口**：P2 标签世界位列（256→4096）+ P3 跨域守卫与 presenter 高槽读 + P4-lite 拆 T16 + P5 全量对照
+- **Date**: 2026-09-20
+- **Agent / Author**: ZCode（分支 feat/gas-tag-capacity-closeout）
 
-### 1. Core judgment
+## 1. Core judgment
 
-新变体主要交付物是（A/B/C/D）: A（放宽既有 op 图种白名单 + 既有 ParamBinding/档案字段可选 + 组合既有黑板/指针/audience 读面）
+新变体主要交付物是（A/B/C/D）: 均不是——标签位列进既有 `WorldAttributeStore`（行共享、容量计划唯一真相）；TagOps 高车道（位 [256,Plan) 列存唯一真相）；presenter/exchange/query 读路由；`ExtensionAttributeRegistry` 删除（T16 唯一出口：死代码拆除）。无新 enum/preset/管线。
 
 结论: PASS
 
-一句话理由: 不新增 profile enum/平行管线；Write/ReadBlackboardFloat 扩到 TriggerGraph/Query；ParamBinding 补 ownerBlackboardFloat + pointerScreen；档案空壳键改为可选。
+一句话理由: 标签写入口径唯一（TagOps 世界级入口）；高 id 规则在注册期即被既有 256 守卫拒绝（失败关闭不降级）；跨域未对齐面全部显式失败关闭并指明 P3 边界；活差分门两轮全过零新增分配。
 
-### 2. Layer assignment
+## 2. Layer assignment
 
 | 步骤/能力 | Layer | 实现载体 |
 |-----------|-------|----------|
-| 档案 collection/view 键可选 | 0 小补丁 | InteractionContextProfileConfigLoader / Registry |
-| 起角写/读 rep 黑板 | 0 白名单 + 2 图连线 | Write/ReadBlackboardFloat + box_begin/box_hit |
-| ScreenRect 角点绑定 | 0 ParamBinding 源 | ownerBlackboardFloat / pointerScreen* |
-| 框可见性 | 0 小补丁 | PresenterScreenRectSystem × PresenterRelationContext.Viewer × sole local viewer |
-| 删 Score 适配器图 | 2 | Case E 资产 |
+| 标签位列（镜像 + 高位真相） | 0 | `WorldAttributeStore`（tagBits/tagLastSnapshot/tagDirtyRows 列） |
+| TagOps 高车道（含稀疏计数） | 0 | `TagOps.AddTagHigh/RemoveTagHigh/HasTagRouted/MirrorTagLow` |
+| 高标签延迟触发 | 2 | `AttributeHighLane.CollectHighTagChanges` |
+| 标签 authoring 种子 | 3 | ComponentRegistry.SetGameplayTagContainer 高 id 建行 |
+| presenter/exchange/query 高槽读 | 2 | PresenterBehaviorSystem 路由；内联初始/定义条件高 id 显式失败关闭 |
+| T16 拆除 | — | ExtensionAttributeRegistry/AttributeSchemaUpdateSystem/接线/测试 删除 |
+| 活差分对比门 | 测试设施 | LUDOTS_COMPARE_LIVE=1（同进程背靠背双测，抗外部负载） |
 
-### 3. Reuse list
+## 3. Reuse list
 
-- Handlers: WriteBlackboardFloat / ReadBlackboardFloat / LoadPointerScreen*
-- Systems: PresenterScreenRectSystem、InputContextProjectionSystem
-- Resolvers: KnowledgeProjectionConsumer.TryResolveSoleLocalSeatViewer（仅作本机 audience 身份，不当迷雾）
-- Registries: InteractionContextProfileRegistry、ConfigKeyRegistry（blackboardKey）
-- Graphs: box_begin / box_hit / box_commit / selection_handle
+P1 全套基建（store/ambient/reads/highlane）；TagCountContainer 稀疏表（任意 id 天然支持）；TagRuleRegistry 既有 256 注册守卫（高 id 规则失败关闭由此免费获得）；DirtyEntityQueue 既有脏通道。
 
-### 4. New Layer 0 ops
+## 4. New Layer 0 ops
 
-N/A（不新增 opcode；只扩既有 op 的 authorableKinds）
+N/A
 
-### 5. Transaction boundary
+## 5. Transaction boundary
 
-无新事务壳；ActivateContext / DeactivateContext 既有生命周期不变
+标签事务沿用 TagRuleTransaction 既有合同；高 id 规则不存在故事务不触高车道。
 
-### 6. Config SSOT
+## 6. Config SSOT
 
-- `interaction_context_profiles.json`（去掉空壳键）
-- `Entities/templates.json`（BlackboardFloatBuffer）
-- `GAS/graphs/graph.case_e.*`、`Presentation/presenters.json`
-- 地图 Variables 去掉 press 角
+容量真相唯一：`GasLoadTimeCapacityPlan`（GameEngine 传参升级为绝对天花板 4096）。基准入库 `benchmark-baseline.json` + `benchmark-final.json`。
 
-是否新增 JSON schema: NO（档案字段改为可省略；ParamBinding 新增合法 source 字符串，非新 profile DSL）
+是否新增 JSON schema: NO。
 
-### 7. Red flag scan
+## 7. Red flag scan
 
-- [x] 未新增 profile inherit/placement enum
-- [x] 未新建与 spawn 平行的物化管线
-- [x] 未把 placement 校验塞进 lifecycle op
-- [x] 未添加静默 fallback（缺黑板/缺指针 fail-fast；缺 Viewer 匹配则不画框）
-- [x] 不用 Knowledge/Fog 管交互 UI 框
+- [x] 未新增 profile enum/开关
+- [x] 未新建平行管线（标签写仍 TagOps 单口）
+- [x] 高 id 规则/未对齐跨域全部显式失败关闭（TagRuleNotAligned / RequiredAttributeHighSlot / InlineInitialHighAttribute / HighLaneUnavailable）
+- [x] 计数叠层语义与内嵌对齐（重复 Add 叠层不丢）
 
-### 8. Next variant test
+## 8. Next variant test
 
-「下一个 Mod 变体」将修改: graph 连线 / ParamBinding sourceId（黑板键名），不动 Core enum
-
-
-## GAS Composition Gate — Self Review (#1404)
-
-- **Task / Issue**: Mass Navigation 万人场景的出生效果请求超过固定队列容量
-- **Date**: 2026-08-30
-- **Agent / Author**: Codex
-
-### 1. Core judgment
-
-新变体主要交付物是（A/B/C/D）: A（本任务不新增 effect 变体，只为既有出生 effect 组合补充场景容量声明）
-
-结论: PASS
-
-一句话理由: 复用现有 `onSpawnEffect`、`EffectRequestQueue` 和固定容量检查，只调整场景数据并补配置合同测试。
-
-### 2. Layer assignment
-
-| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
-|-----------|-----------------|----------|
-| 单位出生时施加 `HealthDrift` | 2 | `Entities/templates.json` 的既有 `onSpawnEffect` 组合 |
-| 出生效果请求固定容量 | 2 | `MassNavigationMod/assets/game.json` 的 `gasRuntimeCapacity` 场景声明 |
-| 容量不足时显式失败 | 0/1 | 复用 `EffectRequestQueue.RequireAvailable` 与 `RuntimeEntitySpawnSystem` |
-
-### 3. Reuse list
-
-- Handlers: 既有 `RuntimeEntitySpawnSystem` 出生效果发布逻辑
-- Queues / Systems: 既有 `EffectRequestQueue`、`ConfigPipeline`
-- Resolvers / Registries: 既有配置合并和 `Entities/templates.json` 模板解析
-- Existing presets / graphs: 既有 `Effect.MassNavigation.Agent.HealthDrift` 与 `Graph.MassNavigation.Agent.HealthDrift`
-
-### 4. New Layer 0 ops (if any)
-
-| Op 名 | 单一职责 | 为何不能组合现有 op |
-|-------|----------|---------------------|
-| N/A | N/A | 本任务不新增原子操作 |
-
-### 5. Transaction boundary
-
-必须原子 rollback 的步骤: N/A；只修改启动配置声明，不改变实体物化或 effect 事务。
-
-### 6. Config SSOT
-
-行为配置落在: `game.json`（`mods/capabilities/navigation/MassNavigationMod/assets/game.json`）的 `gasRuntimeCapacity.effectRequestQueueCapacity`；出生 effect 仍由 `Entities/templates.json` 声明。
-
-是否新增 JSON schema: NO — 使用现有 `GasRuntimeCapacityConfig` 字段，不增加字段或加载器。
-
-### 7. Red flag scan
-
-- [x] 未新增 profile inherit/placement enum
-- [x] 未新建与 spawn 平行的物化管线
-- [x] 未把 placement 校验塞进 lifecycle op
-- [x] 未添加「说不清的」默认 fallback
-
-### 8. Next variant test
-
-「下一个 Mod 变体」将修改: effect 步骤（保持 `EffectRequestQueue` 固定容量合同不变）
-
----
-
-## GAS Composition Gate — Self Review
-
-- **Task / Issue**: 输入→下令全链图化 切1——`SubmitCommandIntent` op + 意图提交缓冲 + drain 内核 + Case E 全链下单（分支 `graph-input-order-chain`）
-- **Date**: 2026-09-14
-- **Agent / Author**: ZCode
-
-### 1. Core judgment
-
-新变体主要交付物是（A/B/C/D）: **A——新增 graph 节点（op）+ 通用内核系统，零 profile enum / preset 开关**
-
-结论: PASS
-
-一句话理由: 下令桥是单一职责原子 op（把一次意图写进缓冲），路由仍是既有 CommandIntentProfileRegistry 数据内核；没有任何集合键、profile、枚举被特化，drain 无兜底键。
-
-### 2. Layer assignment
-
-| 步骤/能力 | Layer | 实现载体 |
-|-----------|-------|----------|
-| SubmitCommandIntent op | 0 | GraphNodeOp 483 + handler + API 薄写缓冲 |
-| 意图提交缓冲 | 0（基建） | CommandIntentSubmissionBuffer（预分配、超限 fail-loud） |
-| §12 路由 drain | 0（内核） | CommandIntentBufferDrainSystem（LIFO 声明解析、具名拒绝） |
-| Case E 下单触发 | 2（图） | graph.case_e.command_commit.json |
-| battle 声明 | 配置 | interaction_context_profiles.json（activeCollectionKey/commandIntentId） |
-
-### 3. Reuse list
-
-- Handlers: GasGraphOpHandlerTable Register 模式、GraphControlFlowCompiler.Linear 校验+编码
-- Queues / Systems: OrderQueue（SubmitAssigned/TryEnqueueSharedBatch）、GameEngine LocalInput 相位
-- Resolvers / Registries: CommandIntentProfileRegistry.RouteGroup、CastDispatchProfileRegistry.SelectDispatchTargets、InputOrderActorAuthorization、InteractionContextInstance/Instances、InteractionPref
-- Existing presets / graphs: aimsource 纯函数（ScreenPointToGround）、Case E 既有 box 链
-
-### 4. New Layer 0 ops (if any)
-
-| Op 名 | 单一职责 | 为何不能组合现有 op |
-|-------|----------|---------------------|
-| SubmitCommandIntent | 把一次命令意图（rep、可选命中实体、地物点、地面已解析条件）写入意图缓冲 | 词表 482 个 op 无任何下单 op（已枚举验证）；图与 OrderQueue 之间此前只有 C# 桥 |
-
-### 5. Transaction boundary
-
-必须原子 rollback 的步骤: N/A——op 只写缓冲；drain 内单条意图全有/全无由授权门 + 共享批语义保证（任一 actor 授权失败整条拒绝），与既有内核一致。
-
-### 6. Config SSOT
-
-行为配置落在: `mods/showcases/case_e_selection/CaseESelectionMod/assets/Input/interaction_context_profiles.json`（activeCollectionKey/commandIntentId）+ 既有 `assets/Input/command_intent_profiles.json` + 新图 `assets/GAS/graphs/graph.case_e.command_commit.json`
-
-是否新增 JSON schema: NO——既有 profile/graph schema 原样复用。
-
-### 7. Red flag scan
-
-- [x] 未新增 profile inherit/placement enum
-- [x] 未新建与 spawn 平行的物化管线
-- [x] 未把 placement 校验塞进 lifecycle op
-- [x] 未添加「说不清的」默认 fallback——drain 显式无兜底：活跃链无声明 activeCollectionKey 的 context ⇒ 具名拒绝；PlayerOwner/InteractionPref/派发 profile 缺失 ⇒ 具名抛错
-
-### 8. Next variant test
-
-「下一个 Mod 变体」（Case F 点地下单、arpg self-roster 下单、moba 意图路由换 profile）将修改: **graph 连线 + profile 声明**（不触 Core enum）。
+下一个变体（第 300 个标签名/第 200 个属性名）零代码改动：注册窗口直接登记，UAT `GasTagCapacityTests`/`GasWorldAttributeStoreTests` 钉死全链。

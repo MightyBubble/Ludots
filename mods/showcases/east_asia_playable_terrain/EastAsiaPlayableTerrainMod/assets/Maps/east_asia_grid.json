@@ -33,17 +33,15 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 28,
-      "HeightInMacroTiles": 16,
+      "WidthCells": 7168,
+      "HeightCells": 4096,
       "GridCellSizeCm": 125649,
       "HexEdgeLengthCm": 400,
-      "ChunkSizeCells": 64,
       "DataFile": "samples/LudotsSample/east_asia/east_asia_grid_map_data.bin",
       "ContinuousHeightmapAsset": null,
       "StructureCollisionAsset": "",
       "StructureAwareGrounding": false,
-      "StructureAwareNavigation": false,
-      "NavigationEnabled": false
+      "StructureAwareNavigation": false
     }
   ],
   "ContinuousHeightmap": null,
@@ -56,5 +54,8 @@
     "Pitch": 50,
     "DistanceCm": 985000000,
     "FovYDeg": 55
+  },
+  "Tuning": {
+    "LoadedChunkCapacity": 512
   }
 }

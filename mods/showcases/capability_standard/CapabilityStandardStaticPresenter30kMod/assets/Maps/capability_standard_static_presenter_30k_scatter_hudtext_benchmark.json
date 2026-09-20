@@ -1,6 +1,17 @@
 {
   "Id": "capability_standard_static_presenter_30k_scatter_hudtext_benchmark",
-  "Tags": ["showcase", "presenter", "benchmark", "scatter", "capability_static_presenter", "hudbar", "hudtext"],
+  "Tuning": {
+    "LoadedChunkCapacity": 64
+  },
+  "Tags": [
+    "showcase",
+    "presenter",
+    "benchmark",
+    "scatter",
+    "capability_static_presenter",
+    "hudbar",
+    "hudtext"
+  ],
   "Metadata": {
     "capabilityStandardStaticPresenter30k": {
       "scatterInitialTarget": 30000,
@@ -14,10 +25,9 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 2,
-      "HeightInMacroTiles": 2,
-      "GridCellSizeCm": 100,
-      "LoadedChunkCapacity": 64
+      "WidthCells": 512,
+      "HeightCells": 512,
+      "GridCellSizeCm": 100
     }
   ],
   "DefaultCamera": {

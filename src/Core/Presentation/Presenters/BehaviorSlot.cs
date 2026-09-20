@@ -18,6 +18,7 @@ namespace Ludots.Core.Presentation.Presenters
         public AssetBindingConfig AssetBinding;
         public AttributeBindingConfig AttributeBinding;
         public TagBindingConfig TagBinding;
+        public InteractionContextBindingConfig InteractionContextBinding;
         public AnimatorConfig Animator;
         public AttachmentConfig Attachment;
         public SoundConfig Sound;
@@ -74,11 +75,14 @@ namespace Ludots.Core.Presentation.Presenters
         InstancedBatch = 13,
         TrailMesh = 14,
         ScreenRect = 15,
+        InteractionContextBinding = 16,
         Extension = 255,
     }
 
     public struct WorldTextConfig
     {
+        public const int UnboundAttributeId = -1;
+
         public WorldTextConfig()
         {
             TextTokenId = 0;
@@ -86,6 +90,7 @@ namespace Ludots.Core.Presentation.Presenters
             ValueParamKey = PresenterParamKeyRegistry.UnsetParamKey;
             SecondaryValueParamKey = PresenterParamKeyRegistry.UnsetParamKey;
             FontSize = 16;
+            BoundAttributeId = UnboundAttributeId;
         }
 
         public int TextTokenId;
@@ -93,6 +98,13 @@ namespace Ludots.Core.Presentation.Presenters
         public int ValueParamKey;
         public int SecondaryValueParamKey;
         public int FontSize;
+
+        /// <summary>
+        /// 值绑定声明（定义编译期从同定义 attributeBinding 解析）：模式化文本的值参数
+        /// 由属性直接供给时非负，投影期按 Owner 的 AttributeBuffer 现读权威值；
+        /// 解析不出同源属性则保持 Unbound，走既有参数快照语义。
+        /// </summary>
+        public int BoundAttributeId;
     }
 
     public struct TrailMeshConfig
@@ -234,6 +246,7 @@ namespace Ludots.Core.Presentation.Presenters
         public readonly int SlotIndex;
         public readonly int SourceAttributeId;
         public readonly int SourceTagId;
+        public readonly int SourceInteractionContextProfileId;
         public readonly int TargetParamKey;
         public readonly ValueSourceKind Mode;
         public readonly bool InvertLogic;
@@ -243,6 +256,7 @@ namespace Ludots.Core.Presentation.Presenters
             int slotIndex,
             int sourceAttributeId,
             int sourceTagId,
+            int sourceInteractionContextProfileId,
             int targetParamKey,
             ValueSourceKind mode,
             bool invertLogic,
@@ -251,6 +265,7 @@ namespace Ludots.Core.Presentation.Presenters
             SlotIndex = slotIndex;
             SourceAttributeId = sourceAttributeId;
             SourceTagId = sourceTagId;
+            SourceInteractionContextProfileId = sourceInteractionContextProfileId;
             TargetParamKey = targetParamKey;
             Mode = mode;
             InvertLogic = invertLogic;
@@ -259,12 +274,14 @@ namespace Ludots.Core.Presentation.Presenters
 
         public bool IsAttributeBound => SourceAttributeId >= 0;
         public bool IsTagBound => SourceTagId >= 0;
+        public bool IsInteractionContextBound => SourceInteractionContextProfileId >= 0;
 
         public static CompiledBinding FromAttribute(int slotIndex, in AttributeBindingConfig config)
         {
             return new CompiledBinding(
                 slotIndex,
                 config.AttributeId,
+                UnboundSourceId,
                 UnboundSourceId,
                 config.TargetParamKey,
                 config.Mode,
@@ -278,6 +295,20 @@ namespace Ludots.Core.Presentation.Presenters
                 slotIndex,
                 UnboundSourceId,
                 config.TagId,
+                UnboundSourceId,
+                config.TargetParamKey,
+                ValueSourceKind.Constant,
+                config.InvertLogic,
+                System.Array.Empty<ThresholdMapping>());
+        }
+
+        public static CompiledBinding FromInteractionContext(int slotIndex, in InteractionContextBindingConfig config)
+        {
+            return new CompiledBinding(
+                slotIndex,
+                UnboundSourceId,
+                UnboundSourceId,
+                config.InteractionContextProfileId,
                 config.TargetParamKey,
                 ValueSourceKind.Constant,
                 config.InvertLogic,
@@ -310,6 +341,16 @@ namespace Ludots.Core.Presentation.Presenters
             return tagActive ? 1 : 0;
         }
 
+        public int ResolveInteractionContextInt(bool contextActive)
+        {
+            if (InvertLogic)
+            {
+                contextActive = !contextActive;
+            }
+
+            return contextActive ? 1 : 0;
+        }
+
         internal static ThresholdMapping[] CompileThresholds(ThresholdMapping[]? source)
         {
             if (source == null || source.Length == 0)
@@ -327,6 +368,13 @@ namespace Ludots.Core.Presentation.Presenters
     public struct TagBindingConfig
     {
         public int TagId;
+        public int TargetParamKey;
+        public bool InvertLogic;
+    }
+
+    public struct InteractionContextBindingConfig
+    {
+        public int InteractionContextProfileId;
         public int TargetParamKey;
         public bool InvertLogic;
     }

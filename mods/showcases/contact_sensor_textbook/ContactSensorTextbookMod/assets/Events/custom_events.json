@@ -1,0 +1,16 @@
+[
+  {
+    "id": "demo.plate.pressed",
+    "scope": "map",
+    "params": [
+      { "name": "zone", "type": "string", "key": "plate.zone" }
+    ]
+  },
+  {
+    "id": "demo.plate.released",
+    "scope": "map",
+    "params": [
+      { "name": "zone", "type": "string", "key": "plate.zone", "optional": true }
+    ]
+  }
+]

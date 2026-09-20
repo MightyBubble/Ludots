@@ -1,0 +1,42 @@
+[
+  {
+    "id": "Graph.Textbook.Contact",
+    "kind": "TriggerGraph",
+    "entries": [
+      { "label": "on_plate_pressed", "event": "demo.plate.pressed", "start": "read_press" },
+      { "label": "on_plate_released", "event": "demo.plate.released", "start": "read_release" }
+    ],
+    "nodes": [
+      { "id": "read_press", "op": "ReadMapVarInt", "var": "press.count" },
+      { "id": "one_p", "op": "ConstInt", "intValue": 1 },
+      { "id": "add_p", "op": "AddInt" },
+      { "id": "write_p", "op": "WriteMapVarInt", "var": "press.count" },
+      { "id": "halt_p", "op": "HaltReturnInt" },
+      { "id": "read_release", "op": "ReadMapVarInt", "var": "release.count" },
+      { "id": "one_r", "op": "ConstInt", "intValue": 1 },
+      { "id": "add_r", "op": "AddInt" },
+      { "id": "write_r", "op": "WriteMapVarInt", "var": "release.count" },
+      { "id": "halt_r", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "read_press", "fromPort": "next", "to": "one_p" },
+      { "from": "one_p", "fromPort": "next", "to": "add_p" },
+      { "from": "add_p", "fromPort": "next", "to": "write_p" },
+      { "from": "write_p", "fromPort": "next", "to": "halt_p" },
+      { "from": "read_release", "fromPort": "next", "to": "one_r" },
+      { "from": "one_r", "fromPort": "next", "to": "add_r" },
+      { "from": "add_r", "fromPort": "next", "to": "write_r" },
+      { "from": "write_r", "fromPort": "next", "to": "halt_r" }
+    ],
+    "valueEdges": [
+      { "from": "read_press", "fromPort": "value", "to": "add_p", "toPort": "a" },
+      { "from": "one_p", "fromPort": "value", "to": "add_p", "toPort": "b" },
+      { "from": "add_p", "fromPort": "value", "to": "write_p", "toPort": "value" },
+      { "from": "add_p", "fromPort": "value", "to": "halt_p", "toPort": "value" },
+      { "from": "read_release", "fromPort": "value", "to": "add_r", "toPort": "a" },
+      { "from": "one_r", "fromPort": "value", "to": "add_r", "toPort": "b" },
+      { "from": "add_r", "fromPort": "value", "to": "write_r", "toPort": "value" },
+      { "from": "add_r", "fromPort": "value", "to": "halt_r", "toPort": "value" }
+    ]
+  }
+]

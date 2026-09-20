@@ -563,7 +563,6 @@ namespace Ludots.Tests.GasTests.UI
             public int ResolveRelationshipType(string name) => throw new InvalidOperationException($"Unexpected relationship type '{name}'.");
             public int ResolveRelationshipMetric(string name) => throw new InvalidOperationException($"Unexpected relationship metric '{name}'.");
             public int ResolveRelationshipFlag(string name) => throw new InvalidOperationException($"Unexpected relationship flag '{name}'.");
-            public int ResolveRelationshipReason(string name) => throw new InvalidOperationException($"Unexpected relationship reason '{name}'.");
             public int ResolveTargetDispatchPreset(string name) => throw new InvalidOperationException($"Unexpected dispatch preset '{name}'.");
             public int ResolveEntityTemplate(string name) => throw new InvalidOperationException($"Unexpected entity template '{name}'.");
         }

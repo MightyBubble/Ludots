@@ -18,6 +18,14 @@ namespace Ludots.Core.Knowledge
                    resolverObj is KnowledgeProjectionResolver;
         }
 
+        public static bool IsAudienceRevealHidden(Dictionary<string, object>? globals)
+        {
+            return globals != null &&
+                   globals.TryGetValue(CoreServiceKeys.PresentationAudienceRevealHidden.Name, out object? value) &&
+                   value is bool revealHidden &&
+                   revealHidden;
+        }
+
         public static bool TryResolve(
             World world,
             Dictionary<string, object> globals,
@@ -116,6 +124,28 @@ namespace Ludots.Core.Knowledge
                 relationTargets,
                 requiredAttributeIds,
                 out projection);
+        }
+
+        /// <summary>
+        /// Per-marker consumers (the minimap projects one marker per agent) only need the raw disclosure
+        /// behind a viewer/target pair. This skips scope resolution, the accumulator merge and the
+        /// KnowledgeProjection construction, which is where thousands of per-frame resolutions spent
+        /// their time.
+        /// </summary>
+        /// <summary>Dense-consumer form: caller hoists the resolver and tick out of its per-entity loop.</summary>
+
+
+        /// <summary>
+        /// Resolves the viewer's knowledge resolver and the current step tick once, so dense consumers
+        /// (one query per on-screen entity) do not repeat two string-keyed global lookups per entity.
+        /// </summary>
+        public static bool TryGetResolveContext(
+            Dictionary<string, object> globals,
+            out KnowledgeProjectionResolver resolver,
+            out int currentTick)
+        {
+            currentTick = ResolveCurrentTick(globals);
+            return TryGetResolver(globals, out resolver);
         }
 
         public static bool CanReadPositionForViewer(

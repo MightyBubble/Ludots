@@ -19,8 +19,8 @@ namespace Ludots.Core.Input.Interaction
         CastCommitOp = 1,
 
         /// <summary>
-        /// Mounted at entity spawn by the template's <c>initialInteractionContext</c> field
-        /// (#1398 S2b); lives until the entity dies — no foreign lifecycle reclaims it.
+        /// Mounted at entity spawn by the template's <c>initialInteractionContext</c> field;
+        /// lives until the entity dies — no foreign lifecycle reclaims it.
         /// </summary>
         TemplateSpawn = 2,
 
@@ -45,12 +45,12 @@ namespace Ludots.Core.Input.Interaction
     /// majority of entities never carry it, and holders are discoverable by archetype query.
     /// <para>
     /// As the single-slot component it is the base instance mounted by the exec / cast /
-    /// spawn chains (ParentContextId and ScopeTag stay 0). The <c>ActivateContext</c> graph
+    /// spawn chains (ParentContextId stays 0). The <c>ActivateContext</c> graph
     /// op mounts the same shape onto the coexisting set
-    /// <see cref="InteractionContextInstances"/> with ParentContextId/ScopeTag filled —
+    /// <see cref="InteractionContextInstances"/> with ParentContextId filled —
     /// a set member with ParentContextId != 0 is a derived instance (a child of that parent
     /// context); members written by the mount chains are base instances. There is no third
-    /// kind (constitution §8.2, #1398 S2b).
+    /// kind (constitution §8.2).
     /// </para>
     /// <para>
     /// All int fields are registry ids resolved once at
@@ -112,14 +112,6 @@ namespace Ludots.Core.Input.Interaction
         /// descendants transitively.
         /// </summary>
         public int ParentContextId;
-
-        /// <summary>
-        /// Presenter scope tag of this instance (instance-set members only; band arithmetic in
-        /// <see cref="InteractionContextInstanceRuntime"/>): presenters created while the
-        /// context is active bind this scope and are destroyed wholesale on deactivation
-        /// through <c>PresenterCommand(DestroyPresenterScope)</c>. 0 on base mounts.
-        /// </summary>
-        public int ScopeTag;
 
         /// <summary>Lifecycle that mounted this context; see <see cref="InteractionContextInstanceSource"/>.</summary>
         public InteractionContextInstanceSource Source;

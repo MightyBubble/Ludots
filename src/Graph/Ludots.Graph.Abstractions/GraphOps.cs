@@ -351,7 +351,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         StickToDirection = 473,
 
-        // ── Derived interaction context ops (#1398 S2b, constitution §8.2/§8.3). The
+        // ── Derived interaction context ops (constitution §8.2/§8.3). The
         // entity-mounted context set is world state; these ops are its only derived-context
         // writers. Scope lifecycle (presenter Create/DestroyScope) rides the presenter
         // command pipeline; activation/deactivation publish ContextActivated/Deactivated
@@ -389,6 +389,37 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// Pure float read; fail closed when the input snapshot is unavailable.
         /// </summary>
         LoadPointerScreenY = 480,
+        BindQueryCollection = 481,
+        QueryScreenRegionCollection = 482,
+        QueryFilterControllable = 483,
+
+        // ── Order-driven graph brains (issue #1536; 484-499 reserved as the
+        //    graph-input-order-chain line's renumbering buffer) ──
+
+        /// <summary>Read an entity's world X in int centimeters. E[A] = source; I[Dst] = xCm; B[Flags] = 0 when the entity is dead or has no WorldPositionCm (routine guard, brains branch on it).</summary>
+        LoadEntityPosX = 500,
+        /// <summary>Read an entity's world Y in int centimeters. E[A] = source; I[Dst] = yCm; B[Flags] = 0 when the entity is dead or has no WorldPositionCm (routine guard, brains branch on it).</summary>
+        LoadEntityPosY = 501,
+        IntToFloat = 502,    // F[Dst] = I[A]
+        /// <summary>Float→Int with round-half-away-from-zero, matching the world-centimeter rounding convention.</summary>
+        FloatToInt = 503,
+        SqrtFloat = 504,     // F[Dst] = sqrt(F[A]); negative input fails closed
+        /// <summary>
+        /// Behavior-side order submission: the acting unit enqueues an assigned order into
+        /// the OrderQueue. Imm = order type id (semantic key resolved at patch time);
+        /// E[A] = target entity; I[B] = xCm; I[C] = yCm. Script slice hosts only; the
+        /// input-side SubmitCommandIntent intent-buffer contract is separate.
+        /// </summary>
+        /// <summary>E[A] = source; B[Dst] = 1 when the entity is alive and has a WorldPositionCm, 0 otherwise (edge-readable guard companion of LoadEntityPosX/Y).</summary>
+        LoadEntityPosValid = 508,
+        /// <summary>Load an order type id from its semantic key (Imm resolved at patch time) into I[Dst]. Pure register materialization for order-type dispatch in behavior graphs.</summary>
+        LoadOrderTypeId = 507,
+        SubmitAssignedOrder = 505,
+        /// <summary>
+        /// Publish the acting unit's terminal outcome for its active order through the
+        /// OrderTerminalResultBuffer. Caster = the acting unit. Script slice hosts only.
+        /// </summary>
+        CompleteActiveOrder = 506,
 
         /// <summary>
         /// Submit one command intent into the order pipeline's per-tick submission buffer
@@ -399,7 +430,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// order kernel drains the buffer in its own system-group phase: the op never routes,
         /// reads collections, or touches the OrderQueue.
         /// </summary>
-        SubmitCommandIntent = 483,
+        SubmitCommandIntent = 497,
 
         /// <summary>
         /// Submit one cast intent into the order pipeline's per-tick submission buffer
@@ -410,7 +441,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// the rep's active-context-declared active collection members — same §12 resolution as
         /// command intents.
         /// </summary>
-        SubmitCast = 484,
+        SubmitCast = 498,
 
         /// <summary>
         /// TargetList := candidates the viewer E[A] currently has a knowledge projection of

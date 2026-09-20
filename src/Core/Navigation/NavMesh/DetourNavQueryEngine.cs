@@ -351,7 +351,7 @@ namespace Ludots.Core.Navigation.NavMesh
                 filtered.Add(tile);
                 maxPolys = Math.Max(maxPolys, tile.TriangleCount);
                 baseOriginXcm = Math.Min(baseOriginXcm, (long)tile.OriginXcm - (long)tile.TileId.ChunkX * tileWidthCm);
-                baseOriginZcm = Math.Min(baseOriginZcm, (long)tile.OriginZcm - (long)tile.TileId.ChunkY * tileHeightCm);
+                baseOriginZcm = Math.Min(baseOriginZcm, (long)tile.OriginYcm - (long)tile.TileId.ChunkY * tileHeightCm);
             }
 
             if (filtered.Count == 0 || maxPolys == 0)
@@ -451,8 +451,8 @@ namespace Ludots.Core.Navigation.NavMesh
                 walkableHeight = 2f,
                 walkableRadius = 0.5f,
                 walkableClimb = 0.5f,
-                bmin = new RcVec3f(tile.OriginXcm / 100f, minYcm / 100f, tile.OriginZcm / 100f),
-                bmax = new RcVec3f((tile.OriginXcm + tileWidthCm) / 100f, maxYcm / 100f, (tile.OriginZcm + tileHeightCm) / 100f),
+                bmin = new RcVec3f(tile.OriginXcm / 100f, minYcm / 100f, tile.OriginYcm / 100f),
+                bmax = new RcVec3f((tile.OriginXcm + tileWidthCm) / 100f, maxYcm / 100f, (tile.OriginYcm + tileHeightCm) / 100f),
                 cs = QuantizationCellM,
                 ch = QuantizationHeightM,
                 tileX = tile.TileId.ChunkX,
@@ -512,8 +512,8 @@ namespace Ludots.Core.Navigation.NavMesh
                 walkableHeight = 2f,
                 walkableRadius = 0.5f,
                 walkableClimb = 0.5f,
-                bmin = new RcVec3f(tile.OriginXcm / 100f, minYcm / 100f, tile.OriginZcm / 100f),
-                bmax = new RcVec3f((tile.OriginXcm + tileWidthCm) / 100f, maxYcm / 100f, (tile.OriginZcm + tileHeightCm) / 100f),
+                bmin = new RcVec3f(tile.OriginXcm / 100f, minYcm / 100f, tile.OriginYcm / 100f),
+                bmax = new RcVec3f((tile.OriginXcm + tileWidthCm) / 100f, maxYcm / 100f, (tile.OriginYcm + tileHeightCm) / 100f),
                 cs = QuantizationCellM,
                 ch = QuantizationHeightM,
                 tileX = tile.TileId.ChunkX,

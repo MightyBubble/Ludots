@@ -1,4 +1,5 @@
 using System;
+using Ludots.Core.GraphRuntime;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Relationships;
@@ -111,7 +112,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
-        /// Activates an interaction context instance (#1398 S2b) on the subject: context and
+        /// Activates an interaction context instance on the subject: context and
         /// parent are ConfigKeyRegistry ids (parent 0 = no parent constraint). Idempotent-failure
         /// on an already-active context; fail-closed on dead subjects, unknown key ids, and
         /// declared parents that are not active. Default rejects — the engine binds a context
@@ -244,6 +245,26 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("Graph entity query runtime is not available.");
         }
 
+        Span<Entity> QueryMapEntities(GraphEntityQueryPlan? plan, MapId? map, scoped ReadOnlySpan<int> ints, scoped ReadOnlySpan<float> floats, int depth)
+        {
+            throw new InvalidOperationException("Graph complete entity query runtime is not available.");
+        }
+
+        Span<Entity> QueryCollection(Entity owner, int collectionKeyId, int depth) =>
+            throw new InvalidOperationException("Graph complete collection query runtime is not available.");
+
+        Span<Entity> QueryScreenRegionCollection(Entity owner, int collectionKeyId, scoped in ScreenRect rect, string? seatId, int depth) =>
+            throw new InvalidOperationException("Graph indexed screen query runtime is not available.");
+
+        void BeginEntityQueryExecution() { }
+        void EndEntityQueryExecution() { }
+
+        Span<Entity> GetEntityQueryBuffer(int depth, int capacity) =>
+            throw new InvalidOperationException("Graph entity query buffer is not available.");
+
+        void BindQueryCollection(Entity owner, int collectionKeyId, int graphId, GraphProgramRegistry programs) =>
+            throw new InvalidOperationException("Graph derived collection runtime is not available.");
+
         int CopyEntityCollection(Entity owner, int collectionKeyId, Span<Entity> buffer)
         {
             throw new InvalidOperationException("Graph entity collection runtime is not available.");
@@ -343,6 +364,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("Graph entity query runtime is not available.");
         }
 
+        int FilterControllable(Span<Entity> entities, int count, Entity controller)
+        {
+            throw new InvalidOperationException("Graph entity query runtime is not available.");
+        }
+
         int FilterNotEntity(Span<Entity> entities, int count, Entity exclude)
         {
             throw new InvalidOperationException("Graph entity query runtime is not available.");
@@ -421,12 +447,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
-        short SetRelationshipMetric(Entity source, Entity target, int metricId, int value, int reasonId, int typeId)
+        short SetRelationshipMetric(Entity source, Entity target, int metricId, int value, int typeId)
         {
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
-        short AddRelationshipMetric(Entity source, Entity target, int metricId, int delta, int reasonId, int typeId)
+        short AddRelationshipMetric(Entity source, Entity target, int metricId, int delta, int typeId)
         {
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
@@ -441,7 +467,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
-        void SetRelationshipFlag(Entity source, Entity target, int flagId, bool enabled, int reasonId, int typeId)
+        void SetRelationshipFlag(Entity source, Entity target, int flagId, bool enabled, int typeId)
         {
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
@@ -544,6 +570,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         int FilterKnowledgeVisible(Span<Entity> candidates, int count, Entity viewer)
         {
             return 0;
+        }
+        /// Behavior-side order submission (issue #1536): the acting unit enqueues an assigned
+        /// order. Separate contract from the input-side command-intent buffer.
+        void SubmitAssignedOrder(Entity actor, Entity target, int orderTypeId, int xCm, int yCm)
+        {
+            throw new InvalidOperationException("Graph order pipeline is not available.");
+        }
+
+        /// <summary>Publishes the acting unit's terminal outcome for its active order.</summary>
+        void CompleteActiveOrder(Entity actor)
+        {
+            throw new InvalidOperationException("Graph order pipeline is not available.");
         }
         void ApplyEffectTemplate(Entity caster, Entity target, int templateId);
         void ApplyEffectTemplate(Entity caster, Entity target, int templateId, in EffectArgs args);
@@ -718,6 +756,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         int ResolveTag(string name);
         int ResolveAttribute(string name);
         int ResolveEffectTemplate(string name);
+        int ResolveOrderType(string name)
+        {
+            throw new InvalidOperationException(
+                $"Graph references order type '{name}', but no OrderTypeRegistry resolver is available.");
+        }
         int ResolveAbility(string name)
         {
             throw new InvalidOperationException(
@@ -743,7 +786,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         int ResolveRelationshipType(string name);
         int ResolveRelationshipMetric(string name);
         int ResolveRelationshipFlag(string name);
-        int ResolveRelationshipReason(string name);
         int ResolveTargetDispatchPreset(string name);
         int ResolveEntityTemplate(string name);
 

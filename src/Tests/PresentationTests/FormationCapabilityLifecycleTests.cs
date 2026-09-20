@@ -97,6 +97,7 @@ public sealed class FormationCapabilityLifecycleTests
                     "LudotsCoreMod",
                     "CoreInputMod",
                     "CameraProfilesMod",
+                    "SelectionInteractionMod",
                     "MassNavigationMod",
                     "FormationCapabilityShowcaseMod",
                 }),

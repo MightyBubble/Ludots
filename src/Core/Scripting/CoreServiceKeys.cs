@@ -10,6 +10,7 @@ using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Engine.TimeFlow;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.EntityQueries;
+using Ludots.Core.Fields.Influence;
 using Ludots.Core.TypedCollections;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.AI.Config;
@@ -223,8 +224,11 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<GasController> GasController = new("GasController");
         public static readonly ServiceKey<GasConditionRegistry> GasConditionRegistry = new("GasConditionRegistry");
         public static readonly ServiceKey<TagOps> TagOps = new("TagOps");
+        public static readonly ServiceKey<Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry> AttributeAggregateDirtyRegistry = new("AttributeAggregateDirtyRegistry");
         public static readonly ServiceKey<DirtyEntityQueue> DirtyEntityQueue = new("DirtyEntityQueue");
         public static readonly ServiceKey<EffectTemplateRegistry> EffectTemplateRegistry = new("EffectTemplateRegistry");
+        public static readonly ServiceKey<Ludots.Core.Gameplay.GAS.GasLoadTimeCapacityPlan> GasLoadTimeCapacityPlan = new("GasLoadTimeCapacityPlan");
+        public static readonly ServiceKey<Ludots.Core.Gameplay.GAS.WorldAttributeStore> WorldAttributeStore = new("WorldAttributeStore");
         public static readonly ServiceKey<TargetDispatchPresetRegistry> TargetDispatchPresetRegistry = new("TargetDispatchPresetRegistry");
         public static readonly ServiceKey<EffectRequestQueue> EffectRequestQueue = new("EffectRequestQueue");
         public static readonly ServiceKey<OrderAdmissionResultBuffer> OrderAdmissionResultBuffer = new("OrderAdmissionResultBuffer");
@@ -238,6 +242,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<ProgressionRequirementEvaluator> ProgressionRequirementEvaluator = new("ProgressionRequirementEvaluator");
         public static readonly ServiceKey<ContextGroupRegistry> ContextGroupRegistry = new("ContextGroupRegistry");
         public static readonly ServiceKey<GraphProgramRegistry> GraphProgramRegistry = new("GraphProgramRegistry");
+        public static readonly ServiceKey<TriggerGraphExecutionSlotStore> TriggerGraphExecutionSlots = new("TriggerGraphExecutionSlots");
         public static readonly ServiceKey<GraphFunctionCatalog> GraphFunctionCatalog = new("GraphFunctionCatalog");
         public static readonly ServiceKey<GraphActionCatalog> GraphActionCatalog = new("GraphActionCatalog");
         public static readonly ServiceKey<GraphLookupTableRegistry> GraphLookupTableRegistry = new("GraphLookupTableRegistry");
@@ -254,7 +259,6 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<StringIntRegistry> GraphOutputValueKeyRegistry = new("GraphOutputValueKeyRegistry");
         public static readonly ServiceKey<GraphOutputValueStore> GraphOutputValueStore = new("GraphOutputValueStore");
         public static readonly ServiceKey<GraphReturnWriter> GraphReturnWriter = new("GraphReturnWriter");
-        public static readonly ServiceKey<ExtensionAttributeRegistry> ExtensionAttributeRegistry = new("ExtensionAttributeRegistry");
         public static readonly ServiceKey<AttributeSchemaUpdateQueue> AttributeSchemaUpdateQueue = new("AttributeSchemaUpdateQueue");
         public static readonly ServiceKey<DeferredTriggerQueue> DeferredTriggerQueue = new("DeferredTriggerQueue");
         public static readonly ServiceKey<AttributeSinkRegistry> AttributeSinkRegistry = new("AttributeSinkRegistry");
@@ -272,7 +276,6 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<RelationshipMetricRegistry> RelationshipMetricRegistry = new("RelationshipMetricRegistry");
         public static readonly ServiceKey<RelationshipFlagRegistry> RelationshipFlagRegistry = new("RelationshipFlagRegistry");
         public static readonly ServiceKey<RelationshipBandRegistry> RelationshipBandRegistry = new("RelationshipBandRegistry");
-        public static readonly ServiceKey<RelationshipReasonRegistry> RelationshipReasonRegistry = new("RelationshipReasonRegistry");
         public static readonly ServiceKey<RelationshipChangeBuffer> RelationshipChangeBuffer = new("RelationshipChangeBuffer");
         public static readonly ServiceKey<RelationshipRuntime> RelationshipRuntime = new("RelationshipRuntime");
         public static readonly ServiceKey<RelationshipCatalogConfig> RelationshipCatalogConfig = new("RelationshipCatalogConfig");
@@ -289,6 +292,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<DynamicParticipantVisibilityPublisher> DynamicParticipantVisibilityPublisher = new("DynamicParticipantVisibilityPublisher");
         public static readonly ServiceKey<FogLayerRegistry> VisionFogLayerRegistry = new("Vision.FogLayerRegistry");
         public static readonly ServiceKey<FogFieldStore> VisionFogFieldStore = new("Vision.FogFieldStore");
+        public static readonly ServiceKey<InfluenceFieldRegistry> InfluenceFieldRegistry = new("Fields.InfluenceFieldRegistry");
         public static readonly ServiceKey<FogSnapshotStore> VisionFogSnapshotStore = new("Vision.FogSnapshotStore");
         public static readonly ServiceKey<FogCellMap> VisionFogCellMap = new("Vision.FogCellMap");
         public static readonly ServiceKey<VisionResolver> VisionResolver = new("Vision.Resolver");
@@ -300,7 +304,6 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<int> RelationshipEventMetricId = new("RelationshipEvent.MetricId");
         public static readonly ServiceKey<int> RelationshipEventMetricValue = new("RelationshipEvent.MetricValue");
         public static readonly ServiceKey<int> RelationshipEventTypeId = new("RelationshipEvent.TypeId");
-        public static readonly ServiceKey<int> RelationshipEventReasonId = new("RelationshipEvent.ReasonId");
         public static readonly ServiceKey<int> RelationshipEventCount = new("RelationshipEvent.Count");
 
         // --- GAS Input / Command Sources / Orders ---

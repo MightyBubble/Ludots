@@ -6,12 +6,12 @@ namespace Ludots.Core.Spatial
 {
     public static class SpatialQueryPostProcessor
     {
-        private static readonly IComparer<Entity> StableComparerInstance = new StableEntityComparer();
+        private static readonly Comparison<Entity> StableComparison = CompareStable;
 
         public static int SortStableDedup(Span<Entity> span)
         {
             if (span.Length <= 1) return span.Length;
-            span.Sort(StableComparerInstance);
+            span.Sort(StableComparison);
             return DedupSorted(span);
         }
 
@@ -28,16 +28,13 @@ namespace Ludots.Core.Spatial
             return write;
         }
 
-        private sealed class StableEntityComparer : IComparer<Entity>
+        private static int CompareStable(Entity x, Entity y)
         {
-            public int Compare(Entity x, Entity y)
-            {
-                int c = x.WorldId.CompareTo(y.WorldId);
-                if (c != 0) return c;
-                c = x.Id.CompareTo(y.Id);
-                if (c != 0) return c;
-                return x.Version.CompareTo(y.Version);
-            }
+            int c = x.WorldId.CompareTo(y.WorldId);
+            if (c != 0) return c;
+            c = x.Id.CompareTo(y.Id);
+            if (c != 0) return c;
+            return x.Version.CompareTo(y.Version);
         }
     }
 }

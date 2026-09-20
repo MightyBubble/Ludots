@@ -14,7 +14,10 @@ namespace Ludots.Core.Gameplay.FieldRegions
     /// </summary>
     public static class FieldRegionMaterializer
     {
-        public static RegionEntityIndex Materialize(World world, MapSession session)
+        public static RegionEntityIndex Materialize(
+            World world,
+            MapSession session,
+            IReadOnlyDictionary<string, Ludots.Core.Gameplay.MapTriggers.RegionVolumeEmissionCm>? emissions = null)
         {
             if (world == null) throw new ArgumentNullException(nameof(world));
             if (session == null) throw new ArgumentNullException(nameof(session));
@@ -50,6 +53,11 @@ namespace Ludots.Core.Gameplay.FieldRegions
                         mapTag,
                         new RegionCm { LayerId = discrete.LayerId, RegionId = regionId, RegionKey = regionKey },
                         new RegionFootprintCm { CellCount = cellCount });
+                    if (emissions != null && emissions.TryGetValue(regionKey, out Ludots.Core.Gameplay.MapTriggers.RegionVolumeEmissionCm emission))
+                    {
+                        world.Add(entity, emission);
+                    }
+
                     index.Put(discrete.LayerId, regionId, entity);
                 }
             }
@@ -88,6 +96,12 @@ namespace Ludots.Core.Gameplay.FieldRegions
                     mapTag,
                     new RegionCm { LayerId = layer.LayerId, RegionId = regionId, RegionKey = regionKey },
                     new RegionFootprintCm { CellCount = cellCount });
+                if (session.FieldRegionEmissions != null &&
+                    session.FieldRegionEmissions.TryGetValue(regionKey, out Ludots.Core.Gameplay.MapTriggers.RegionVolumeEmissionCm emission))
+                {
+                    world.Add(entity, emission);
+                }
+
                 index.Put(layer.LayerId, regionId, entity);
             }
         }

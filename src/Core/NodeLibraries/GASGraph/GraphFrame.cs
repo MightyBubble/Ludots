@@ -138,6 +138,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     throw new ArgumentOutOfRangeException(nameof(slot2), slot2.Kind, "Graph frame E[2] preset is not supported.");
             }
 
+            if (cursor.IsSuspended && cursor.TargetSnapshot != null)
+                targets = cursor.TargetSnapshot;
+            var targetList = new GraphTargetList(targets);
+            if (cursor.IsSuspended) targetList.SetCount(cursor.TargetCount);
             return new GraphFrame
             {
                 Kind = kind,
@@ -157,7 +161,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 B = bools,
                 E = entities,
                 Targets = targets,
-                TargetList = new GraphTargetList(targets),
+                TargetList = targetList,
                 IntIds = intIds,
                 IntIdList = new GraphIntIdList(intIds),
                 SubjectIntId = subjectIntId,
@@ -220,6 +224,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             TargetList = state.TargetList;
+            Targets = state.Targets;
             IntIdList = state.IntIdList;
             SubjectIntId = state.SubjectIntId;
         }

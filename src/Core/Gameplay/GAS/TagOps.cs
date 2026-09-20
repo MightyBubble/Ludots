@@ -26,13 +26,17 @@ namespace Ludots.Core.Gameplay.GAS
         private readonly DirtyEntityQueue _dirtyEntities;
         private readonly Dictionary<int, TagRuleSet> _authoredRuleSets = new();
 
-        public TagOps(DirtyEntityQueue dirtyEntities, TagRuleRegistry rules, GasBudget budget = null)
+        public TagOps(DirtyEntityQueue dirtyEntities, TagRuleRegistry rules, GasBudget budget = null, AttributeAggregateDirtyRegistry aggregateDirty = null)
         {
             _rules = rules ?? throw new ArgumentNullException(nameof(rules));
             _transaction = new TagRuleTransaction();
             _budget = budget;
             _dirtyEntities = dirtyEntities ?? throw new ArgumentNullException(nameof(dirtyEntities));
+            AggregateDirty = aggregateDirty;
         }
+
+        /// <summary>属性聚合脏注册表：属性变异经 TagOps 统一携带，标记与消费共享同一实例。</summary>
+        public AttributeAggregateDirtyRegistry? AggregateDirty { get; }
 
         /// <summary>
         /// Access the underlying TagRuleRegistry (e.g. for OrderSubmitter).
@@ -48,6 +52,10 @@ namespace Ludots.Core.Gameplay.GAS
         public bool AddTag(World world, Entity entity, int tagId)
         {
             RequireTagState(world, entity);
+            if ((uint)(tagId - 1) >= (uint)GameplayTagContainer.MAX_TAG_ID)
+            {
+                return AddTagHigh(world, entity, tagId);
+            }
             ref GameplayTagContainer tags = ref world.Get<GameplayTagContainer>(entity);
             ref TagCountContainer counts = ref world.Get<TagCountContainer>(entity);
             ref DirtyFlags dirty = ref world.Get<DirtyFlags>(entity);
@@ -57,7 +65,12 @@ namespace Ludots.Core.Gameplay.GAS
             try
             {
                 bool changed = AddTag(ref tags, ref counts, tagId, ref dirty);
-                if (changed) _dirtyEntities.Track(world, entity);
+                if (changed)
+                {
+                    _dirtyEntities.Track(world, entity);
+                    MirrorTagLow(world, entity, ref tags);
+                }
+
                 return changed;
             }
             catch
@@ -72,6 +85,10 @@ namespace Ludots.Core.Gameplay.GAS
         public bool RemoveTag(World world, Entity entity, int tagId)
         {
             RequireTagState(world, entity);
+            if ((uint)(tagId - 1) >= (uint)GameplayTagContainer.MAX_TAG_ID)
+            {
+                return RemoveTagHigh(world, entity, tagId);
+            }
             ref GameplayTagContainer tags = ref world.Get<GameplayTagContainer>(entity);
             ref TagCountContainer counts = ref world.Get<TagCountContainer>(entity);
             ref DirtyFlags dirty = ref world.Get<DirtyFlags>(entity);
@@ -81,7 +98,12 @@ namespace Ludots.Core.Gameplay.GAS
             try
             {
                 bool changed = RemoveTag(ref tags, ref counts, tagId, ref dirty);
-                if (changed) _dirtyEntities.Track(world, entity);
+                if (changed)
+                {
+                    _dirtyEntities.Track(world, entity);
+                    MirrorTagLow(world, entity, ref tags);
+                }
+
                 return changed;
             }
             catch
@@ -91,6 +113,97 @@ namespace Ludots.Core.Gameplay.GAS
                 dirty = dirtyBefore;
                 throw;
             }
+        }
+
+        /// <summary>高槽位标签车道（RFC-0067 P2）：位 [256, Plan) 只在世界列存。
+        /// 规则引擎按 256 编译，高 id 声明规则属未对齐面——失败关闭并指明，不静默降级。</summary>
+        private bool AddTagHigh(World world, Entity entity, int tagId)
+        {
+            WorldAttributeStore store = WorldAttributeStoreAmbient.Current
+                ?? throw HighTagLaneUnavailable();
+            if (tagId <= 0 || tagId >= store.TagIdSpace)
+            {
+                throw new ArgumentOutOfRangeException(nameof(tagId), tagId, $"tagId must be in [1, {store.TagIdSpace}).");
+            }
+
+            if (_rules.HasRule(tagId))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.CAPACITY.ERR.TagRuleNotAligned: tagId={tagId} ≥ 256 声明了 TagRule——规则引擎按 256 位编译，高 id 规则属 P3 对齐面（RFC-0067 §3.3）。");
+            }
+
+            int row = store.EnsureRow(entity);
+            ref TagCountContainer counts = ref world.Get<TagCountContainer>(entity);
+            if (!counts.AddCount(tagId))
+            {
+                throw new InvalidOperationException(TagCountOverflowError);
+            }
+
+            if (store.HasTag(row, tagId))
+            {
+                return false;
+            }
+
+            store.SetTag(row, tagId);
+            store.MarkTagDirtyHigh(row, tagId);
+            _dirtyEntities.Track(world, entity);
+            return true;
+        }
+
+        private bool RemoveTagHigh(World world, Entity entity, int tagId)
+        {
+            WorldAttributeStore store = WorldAttributeStoreAmbient.Current
+                ?? throw HighTagLaneUnavailable();
+            if (tagId <= 0 || tagId >= store.TagIdSpace)
+            {
+                throw new ArgumentOutOfRangeException(nameof(tagId), tagId, $"tagId must be in [1, {store.TagIdSpace}).");
+            }
+
+            if (_rules.HasRule(tagId))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.CAPACITY.ERR.TagRuleNotAligned: tagId={tagId} ≥ 256 声明了 TagRule——规则引擎按 256 位编译，高 id 规则属 P3 对齐面（RFC-0067 §3.3）。");
+            }
+
+            int row = store.EnsureRow(entity);
+            if (!store.HasTag(row, tagId))
+            {
+                return false;
+            }
+
+            world.Get<TagCountContainer>(entity).RemoveCount(tagId);
+            store.ClearTag(row, tagId);
+            store.MarkTagDirtyHigh(row, tagId);
+            _dirtyEntities.Track(world, entity);
+            return true;
+        }
+
+        private static InvalidOperationException HighTagLaneUnavailable()
+        {
+            return new InvalidOperationException(
+                "GAS.CAPACITY.ERR.HighLaneUnavailable: tagId ≥ 256 需要世界列存（RFC-0067 P2），但 WorldAttributeStore 未绑定。");
+        }
+
+        private static void MirrorTagLow(World world, Entity entity, ref GameplayTagContainer tags)
+        {
+            WorldAttributeStore store = WorldAttributeStoreAmbient.Current;
+            if (store != null && store.TryGetRow(entity, out int row))
+            {
+                store.MirrorTagWords(row, in tags);
+            }
+        }
+
+        /// <summary>标签读路由：[1,255] 内嵌容器，[256, Plan) 列存（规则 sense 仅内嵌域有效）。</summary>
+        public static bool HasTagRouted(World world, Entity entity, int tagId)
+        {
+            if ((uint)tagId <= (uint)GameplayTagContainer.MAX_TAG_ID)
+            {
+                return world.Get<GameplayTagContainer>(entity).HasTag(tagId);
+            }
+
+            WorldAttributeStore store = WorldAttributeStoreAmbient.Current
+                ?? throw HighTagLaneUnavailable();
+            return store.TryGetRow(entity, out int row) && store.HasTag(row, tagId);
         }
 
         public static void RequireTagState(World world, Entity entity)

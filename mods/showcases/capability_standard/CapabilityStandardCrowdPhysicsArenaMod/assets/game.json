@@ -6,8 +6,6 @@
   ],
   "windowTitle": "Ludots Engine - Capability Standard Crowd Physics Arena",
   "targetFps": 0,
-  "worldWidthInMacroTiles": 250,
-  "worldHeightInMacroTiles": 250,
   "gasRuntimeCapacity": {
     "orderQueueCapacity": 16384,
     "orderAdmissionResultCapacity": 32768,

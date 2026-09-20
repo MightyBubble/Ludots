@@ -1,6 +1,16 @@
 {
   "Id": "presenter_blacksmith_dynamic_worker_benchmark",
-  "Tags": ["showcase", "presenter", "benchmark", "dynamic", "skinned", "animator"],
+  "Tuning": {
+    "LoadedChunkCapacity": 256
+  },
+  "Tags": [
+    "showcase",
+    "presenter",
+    "benchmark",
+    "dynamic",
+    "skinned",
+    "animator"
+  ],
   "ContinuousHeightmapAsset": "assets/terrain/presenter_blacksmith_dynamic_worker_hills.height",
   "Metadata": {
     "presenterBlacksmith": {
@@ -16,10 +26,9 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 5,
-      "HeightInMacroTiles": 5,
-      "GridCellSizeCm": 100,
-      "LoadedChunkCapacity": 256
+      "WidthCells": 1280,
+      "HeightCells": 1280,
+      "GridCellSizeCm": 100
     }
   ],
   "DefaultCamera": {

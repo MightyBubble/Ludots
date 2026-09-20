@@ -1,0 +1,128 @@
+[
+  {
+    "id": "graph.case_e.box_commit",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_box_select_release",
+        "start": "read_modifiers",
+        "refire": "restart",
+        "action": "CaseE.BoxSelectEnd"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "read_modifiers",
+        "op": "LoadEntryPayloadInt",
+        "payloadKey": "MapTrigger.Modifiers"
+      },
+      {
+        "id": "rep",
+        "op": "LoadEntryPayloadEntity",
+        "payloadKey": "MapTrigger.Rep"
+      },
+      {
+        "id": "write_modifiers",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "case_e.select.modifiers"
+      },
+      {
+        "id": "run_hit",
+        "op": "InvokeGraph",
+        "functionName": "graph.case_e.box_hit"
+      },
+      {
+        "id": "op_replace",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "write_pending",
+        "op": "WriteCollection",
+        "collectionKey": "selection.pending"
+      },
+      {
+        "id": "deactivate_boxing",
+        "op": "DeactivateContext",
+        "context": "interaction.context.case_e.boxing"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "read_modifiers",
+        "fromPort": "next",
+        "to": "rep"
+      },
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "write_modifiers"
+      },
+      {
+        "from": "write_modifiers",
+        "fromPort": "next",
+        "to": "run_hit"
+      },
+      {
+        "from": "run_hit",
+        "fromPort": "next",
+        "to": "op_replace"
+      },
+      {
+        "from": "op_replace",
+        "fromPort": "next",
+        "to": "write_pending"
+      },
+      {
+        "from": "write_pending",
+        "fromPort": "next",
+        "to": "deactivate_boxing"
+      },
+      {
+        "from": "deactivate_boxing",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "read_modifiers",
+        "fromPort": "value",
+        "to": "write_modifiers",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "write_modifiers",
+        "toPort": "source"
+      },
+      {
+        "from": "op_replace",
+        "fromPort": "value",
+        "to": "write_pending",
+        "toPort": "value"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

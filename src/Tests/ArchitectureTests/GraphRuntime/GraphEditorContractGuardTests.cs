@@ -174,6 +174,11 @@ namespace Ludots.Tests.Architecture.GraphRuntime
                 GraphAuthoringSugar.BtSequence,
                 GraphAuthoringSugar.BtSelector,
                 GraphAuthoringSugar.BtDecorator,
+                GraphAuthoringSugar.BtLeaf,
+                GraphAuthoringSugar.BtAction,
+                GraphAuthoringSugar.BtCondition,
+                GraphAuthoringSugar.FsmAction,
+                "functionGraphPortal",
                 GraphAuthoringSugar.Wait,
                 GraphAuthoringSugar.While,
                 GraphAuthoringSugar.Until,
@@ -218,6 +223,43 @@ namespace Ludots.Tests.Architecture.GraphRuntime
                 Regex.Matches(source, @"TryValidateAnnotationTargets\(modRoot, graphId,").Count,
                 Is.GreaterThanOrEqualTo(2),
                 "Both the sidecar read and write paths must check annotation targets.");
+        }
+
+        [Test]
+        public void BridgeAiTopologyWritePaths_UseProductionValidation()
+        {
+            string repoRoot = FindRepoRoot();
+            string bridgePath = Path.Combine(repoRoot, "src", "Tools", "Ludots.Editor.Bridge", "Program.cs");
+            string source = File.ReadAllText(bridgePath);
+
+            Assert.That(
+                Regex.Matches(source, @"GraphBehaviorDefinitionLoader\.ValidateBehaviorTrees\(items, actions, functions\)").Count,
+                Is.EqualTo(1),
+                "The behavior-tree PUT path must reject data that the production loader cannot compile.");
+            Assert.That(
+                Regex.Matches(source, @"GraphBehaviorDefinitionLoader\.ValidateHfsms\(items, actions, functions\)").Count,
+                Is.EqualTo(1),
+                "The HFSM PUT path must reject data that the production loader cannot compile.");
+            Assert.That(
+                source.Contains("TryBuildAiTopologyFunctionCatalog"),
+                Is.True,
+                "Both PUT paths must validate conditions against FuncLib, not ActionLib.");
+            Assert.That(
+                source,
+                Does.Not.Contain("if (!hasBt && !hasHfsm)"),
+                "The topology catalog must list every discovered mod, including overlays that do not exist yet.");
+            Assert.That(
+                source,
+                Does.Contain("ReadAiTopologyFile("),
+                "Missing Mod overlays must read as an empty list, not 404.");
+            Assert.That(
+                source,
+                Does.Contain("TryCollectMergedActionLibRows("),
+                "ActionLib lookup must merge Core with the selected Mod overlay.");
+            Assert.That(
+                Regex.Matches(source, @"TryBuildAiTopologyActionCatalog\(launcher, resolvedSource").Count,
+                Is.EqualTo(2),
+                "Both topology PUT paths must validate against the selected source's merged ActionLib.");
         }
 
         [Test]

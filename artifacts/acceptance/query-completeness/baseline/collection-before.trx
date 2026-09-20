@@ -1,0 +1,63 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="89095dcc-a0c4-495f-a7d6-91434d6ca53a" name="sietg@CODESEAL 2026-09-07 17:26:24" runUser="CODESEAL\sietg" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-09-07T17:26:24.3491371+08:00" queuing="2026-09-07T17:26:24.3491382+08:00" start="2026-09-07T17:26:21.6800789+08:00" finish="2026-09-07T17:26:26.1377200+08:00" />
+  <TestSettings name="default" id="b9854e7b-6c3a-4f66-83ea-bdab1ef8345f">
+    <Deployment runDeploymentRoot="sietg_CODESEAL_2026-09-07_17_26_24" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="cdda7749-c1c5-4649-ad15-2c84c8c0522d" testId="ef5b1dad-f03e-5234-78b6-3d378c104f59" testName="WarmAddSubtract_ReportsTimeAndAllocation(10000)" computerName="CODESEAL" duration="00:00:02.3675550" startTime="2026-09-07T17:26:23.5987057+08:00" endTime="2026-09-07T17:26:25.9661694+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cdda7749-c1c5-4649-ad15-2c84c8c0522d">
+      <Output>
+        <StdOut>members=10000, pairs=15, p50_ms=121.977300, p95_ms=148.646800, allocated_bytes=2700720</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="480982d7-674c-46a4-b395-2858320f104f" testId="5075a8fb-f242-234d-7220-caac45f87bbc" testName="WarmAddSubtract_ReportsTimeAndAllocation(100)" computerName="CODESEAL" duration="00:00:00.0438160" startTime="2026-09-07T17:26:23.3943502+08:00" endTime="2026-09-07T17:26:23.4381156+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="480982d7-674c-46a4-b395-2858320f104f">
+      <Output>
+        <StdOut>members=100, pairs=15, p50_ms=0.116900, p95_ms=0.989300, allocated_bytes=27720</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="3c820f4d-f16f-45cd-a932-5334f4254ea4" testId="52ad9943-146e-cb9a-724c-69e0ca5dacee" testName="WarmAddSubtract_ReportsTimeAndAllocation(1000)" computerName="CODESEAL" duration="00:00:00.1591620" startTime="2026-09-07T17:26:23.4394498+08:00" endTime="2026-09-07T17:26:23.5986056+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3c820f4d-f16f-45cd-a932-5334f4254ea4">
+      <Output>
+        <StdOut>members=1000, pairs=15, p50_ms=8.573700, p95_ms=16.200200, allocated_bytes=270720</StdOut>
+      </Output>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="WarmAddSubtract_ReportsTimeAndAllocation(1000)" storage="c:\001_ai\wt-case-e-query-baseline\src\tests\gastests\bin\release\net9.0\gastests.dll" id="52ad9943-146e-cb9a-724c-69e0ca5dacee">
+      <Execution id="3c820f4d-f16f-45cd-a932-5334f4254ea4" />
+      <TestMethod codeBase="C:\001_AI\wt-case-e-query-baseline\src\Tests\GasTests\bin\Release\net9.0\GasTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.GAS.CollectionWriteComparisonTests" name="WarmAddSubtract_ReportsTimeAndAllocation(1000)" />
+    </UnitTest>
+    <UnitTest name="WarmAddSubtract_ReportsTimeAndAllocation(100)" storage="c:\001_ai\wt-case-e-query-baseline\src\tests\gastests\bin\release\net9.0\gastests.dll" id="5075a8fb-f242-234d-7220-caac45f87bbc">
+      <Execution id="480982d7-674c-46a4-b395-2858320f104f" />
+      <TestMethod codeBase="C:\001_AI\wt-case-e-query-baseline\src\Tests\GasTests\bin\Release\net9.0\GasTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.GAS.CollectionWriteComparisonTests" name="WarmAddSubtract_ReportsTimeAndAllocation(100)" />
+    </UnitTest>
+    <UnitTest name="WarmAddSubtract_ReportsTimeAndAllocation(10000)" storage="c:\001_ai\wt-case-e-query-baseline\src\tests\gastests\bin\release\net9.0\gastests.dll" id="ef5b1dad-f03e-5234-78b6-3d378c104f59">
+      <Execution id="cdda7749-c1c5-4649-ad15-2c84c8c0522d" />
+      <TestMethod codeBase="C:\001_AI\wt-case-e-query-baseline\src\Tests\GasTests\bin\Release\net9.0\GasTests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.GAS.CollectionWriteComparisonTests" name="WarmAddSubtract_ReportsTimeAndAllocation(10000)" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="ef5b1dad-f03e-5234-78b6-3d378c104f59" executionId="cdda7749-c1c5-4649-ad15-2c84c8c0522d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5075a8fb-f242-234d-7220-caac45f87bbc" executionId="480982d7-674c-46a4-b395-2858320f104f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="52ad9943-146e-cb9a-724c-69e0ca5dacee" executionId="3c820f4d-f16f-45cd-a932-5334f4254ea4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="3" executed="3" passed="3" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>NUnit Adapter 4.6.0.0: Test execution started&#xD;
+Running selected tests in C:\001_AI\wt-case-e-query-baseline\src\Tests\GasTests\bin\Release\net9.0\GasTests.dll&#xD;
+   NUnit3TestExecutor discovered 3 of 3 NUnit test cases using Current Discovery mode, Non-Explicit run&#xD;
+members=100, pairs=15, p50_ms=0.116900, p95_ms=0.989300, allocated_bytes=27720&#xD;
+&#xD;
+members=1000, pairs=15, p50_ms=8.573700, p95_ms=16.200200, allocated_bytes=270720&#xD;
+&#xD;
+members=10000, pairs=15, p50_ms=121.977300, p95_ms=148.646800, allocated_bytes=2700720&#xD;
+&#xD;
+NUnit Adapter 4.6.0.0: Test execution complete&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

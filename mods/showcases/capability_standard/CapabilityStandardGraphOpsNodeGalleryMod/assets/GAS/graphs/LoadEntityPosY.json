@@ -1,0 +1,115 @@
+[
+  {
+    "id": "showcase.graph_op.LoadEntityPosY",
+    "kind": "Effect",
+    "entry": "explicit",
+    "nodes": [
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "posY",
+        "op": "LoadEntityPosY"
+      },
+      {
+        "id": "toF",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "const",
+        "op": "ConstFloat",
+        "floatValue": 0.05
+      },
+      {
+        "id": "scale",
+        "op": "MulFloat"
+      },
+      {
+        "id": "flip",
+        "op": "NegFloat"
+      },
+      {
+        "id": "hit",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "posY"
+      },
+      {
+        "from": "posY",
+        "fromPort": "next",
+        "to": "toF"
+      },
+      {
+        "from": "toF",
+        "fromPort": "next",
+        "to": "const"
+      },
+      {
+        "from": "const",
+        "fromPort": "next",
+        "to": "scale"
+      },
+      {
+        "from": "scale",
+        "fromPort": "next",
+        "to": "flip"
+      },
+      {
+        "from": "flip",
+        "fromPort": "next",
+        "to": "hit"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "posY",
+        "toPort": "source"
+      },
+      {
+        "from": "posY",
+        "fromPort": "value",
+        "to": "toF",
+        "toPort": "a"
+      },
+      {
+        "from": "toF",
+        "fromPort": "value",
+        "to": "scale",
+        "toPort": "a"
+      },
+      {
+        "from": "const",
+        "fromPort": "value",
+        "to": "scale",
+        "toPort": "b"
+      },
+      {
+        "from": "scale",
+        "fromPort": "value",
+        "to": "flip",
+        "toPort": "value"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "target"
+      },
+      {
+        "from": "flip",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "value"
+      }
+    ]
+  }
+]

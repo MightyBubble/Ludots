@@ -161,6 +161,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     }
                 }
 
+                AttributeHighLane.CollectAttributeChanges(World, entity, TriggerQueue);
+                AttributeHighLane.CollectHighTagChanges(World, entity, TriggerQueue);
+
                 bool hasTags = World.Has<GameplayTagContainer>(entity);
                 bool hasCounts = World.Has<TagCountContainer>(entity);
                 if (!hasTags && !hasCounts)

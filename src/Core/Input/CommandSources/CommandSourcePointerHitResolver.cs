@@ -61,10 +61,11 @@ namespace Ludots.Core.Input.CommandSources
             Entity best = Entity.Null;
             ScreenRect bestBounds = default;
             bool hasBestBounds = false;
+            ScreenProjectionPoseContext projectionPose = ScreenProjectionGrounding.Resolve(world, globals);
 
             world.Query(in SelectableQuery, (Entity entity, ref CommandSourceSelectableTag selectable) =>
             {
-                ConsiderCandidate(world, globals, owner, projector, pointer, radiusPixels, entity, ref best, ref bestBounds, ref hasBestBounds);
+                ConsiderCandidate(world, globals, owner, projector, pointer, radiusPixels, entity, in projectionPose, ref best, ref bestBounds, ref hasBestBounds);
             });
 
             return best;
@@ -96,6 +97,7 @@ namespace Ludots.Core.Input.CommandSources
             Entity best = Entity.Null;
             ScreenRect bestBounds = default;
             bool hasBestBounds = false;
+            ScreenProjectionPoseContext projectionPose = ScreenProjectionGrounding.Resolve(world, globals);
 
             for (int i = 0; i < candidates.Length; i++)
             {
@@ -105,7 +107,7 @@ namespace Ludots.Core.Input.CommandSources
                     continue;
                 }
 
-                ConsiderCandidate(world, globals, owner, projector, pointer, radiusPixels, entity, ref best, ref bestBounds, ref hasBestBounds);
+                ConsiderCandidate(world, globals, owner, projector, pointer, radiusPixels, entity, in projectionPose, ref best, ref bestBounds, ref hasBestBounds);
             }
 
             return best;
@@ -119,6 +121,7 @@ namespace Ludots.Core.Input.CommandSources
             Vector2 pointer,
             float radiusPixels,
             Entity entity,
+            in ScreenProjectionPoseContext projectionPose,
             ref Entity best,
             ref ScreenRect bestBounds,
             ref bool hasBestBounds)
@@ -128,12 +131,12 @@ namespace Ludots.Core.Input.CommandSources
                 return;
             }
 
-            if (!SpatialBoundsUtility.PointerHitsEntity(world, entity, projector, pointer, radiusPixels))
+            if (!SpatialBoundsUtility.PointerHitsEntity(world, entity, projector, pointer, radiusPixels, in projectionPose))
             {
                 return;
             }
 
-            if (!SpatialBoundsUtility.TryProjectScreenBounds(world, entity, projector, out ScreenRect candidateBounds))
+            if (!SpatialBoundsUtility.TryProjectScreenBounds(world, entity, projector, out ScreenRect candidateBounds, in projectionPose))
             {
                 return;
             }

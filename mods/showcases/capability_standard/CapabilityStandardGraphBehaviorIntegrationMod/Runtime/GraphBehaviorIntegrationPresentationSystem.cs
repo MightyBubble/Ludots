@@ -1,6 +1,7 @@
 using System;
 using Arch.System;
 using CapabilityStandardGraphBehaviorCommon;
+using Ludots.Core.Engine;
 using Ludots.Platform.Abstractions;
 
 namespace CapabilityStandardGraphBehaviorIntegrationMod.Runtime;
@@ -9,14 +10,20 @@ internal sealed class GraphBehaviorIntegrationPresentationSystem : ISystem<float
 {
     private readonly GraphBehaviorIntegrationRuntime _runtime;
     private readonly DebugDrawCommandBuffer _debugDraw;
+    private readonly GameEngine _engine;
+    private readonly GraphShowcasePanelController _panel;
     private readonly GraphShowcaseConfig _config = new();
 
     public GraphBehaviorIntegrationPresentationSystem(
+        GameEngine engine,
         GraphBehaviorIntegrationRuntime runtime,
-        DebugDrawCommandBuffer debugDraw)
+        DebugDrawCommandBuffer debugDraw,
+        GraphShowcasePanelController panel)
     {
+        _engine = engine;
         _runtime = runtime;
         _debugDraw = debugDraw;
+        _panel = panel;
     }
 
     public void Initialize() { }
@@ -28,12 +35,21 @@ internal sealed class GraphBehaviorIntegrationPresentationSystem : ISystem<float
     {
         GraphShowcaseStagePresenter.Clear(_debugDraw);
         GraphShowcaseStagePresenter.DrawPolyline(_debugDraw, GraphBehaviorIntegrationRuntime.LeftPatrol, GraphShowcaseStagePresenter.PathColor);
+        if (_runtime.GuardCount > 0)
+        {
+            GraphShowcaseStagePresenter.DrawTriggerRing(
+                _debugDraw,
+                _runtime.GuardX[0],
+                _runtime.GuardY[0],
+                _runtime.SensorRadius,
+                _runtime.L2Enabled);
+        }
         GraphShowcaseStagePresenter.DrawTriggerRing(_debugDraw, 0f, -8f, 1.6f, armed: !_runtime.EnemyStaged);
 
         _debugDraw.Lines.Add(new DebugDrawLine2D
         {
-            A = new System.Numerics.Vector2(5.5f, -5.5f),
-            B = new System.Numerics.Vector2(5.5f, 5.5f),
+            A = new System.Numerics.Vector2(_runtime.SentryX[0], _runtime.SentryY[0]),
+            B = new System.Numerics.Vector2(_runtime.SentryX[^1], _runtime.SentryY[^1]),
             Thickness = 0.12f,
             Color = GraphShowcaseStagePresenter.PathColor
         });
@@ -49,7 +65,9 @@ internal sealed class GraphBehaviorIntegrationPresentationSystem : ISystem<float
 
         for (int i = 0; i < _runtime.GuardCount; i++)
         {
-            var color = _runtime.Intent[i] switch
+            var color = !_runtime.L2Enabled
+                ? DebugDrawColor.Gray
+                : _runtime.Intent[i] switch
             {
                 1 => GraphShowcaseStagePresenter.SentryAlert,
                 2 => GraphShowcaseStagePresenter.SentryCombat,
@@ -68,7 +86,9 @@ internal sealed class GraphBehaviorIntegrationPresentationSystem : ISystem<float
             for (int i = 0; i < _runtime.SentryCount; i++)
             {
                 int leaf = _runtime.Hfsm.GetLeafState(i);
-                DebugDrawColor color = leaf switch
+                DebugDrawColor color = !_runtime.L2Enabled
+                    ? DebugDrawColor.Gray
+                    : leaf switch
                 {
                     1 => GraphShowcaseStagePresenter.SentryIdle,
                     3 => GraphShowcaseStagePresenter.SentryAlert,
@@ -86,5 +106,6 @@ internal sealed class GraphBehaviorIntegrationPresentationSystem : ISystem<float
         }
 
         GraphShowcaseStagePresenter.DrawBudgetBar(_debugDraw, _runtime.Metrics.LastThinkMs, _config.ThinkBudgetMs);
+        _panel.MountOrRefresh(_engine);
     }
 }

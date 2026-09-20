@@ -30,19 +30,29 @@ React /gas-graphs  ──/api──▶ Editor.Bridge :5299  ──descriptor─�
 
 ### 3.1 启动编辑器
 
+一键（正门是作者工作室，不是地图）：
+
+```bash
+./scripts/run-authoring-studio.sh
+```
+
+Windows：`.\scripts\run-authoring-studio.cmd`。合同见 [作者工作室](authoring-studio.md)。
+
+拆开手动起：
+
 ```bash
 dotnet run --project src/Tools/Ludots.Editor.Bridge -c Release
 cd src/Tools/Ludots.Editor.React && npm ci && npm run dev
 ```
 
-打开 <http://localhost:5173/gas-graphs>。
+打开 <http://localhost:5173/> 进工作室，或 <http://localhost:5173/blueprint>（旧址 `/gas-graphs` 仍认）。
 
 | 字段 | 示例 |
 |------|------|
 | modId | `MapTriggerNightRaidMod` |
 | graphId | `Graph.NightRaid.Flow` |
 
-Load 后画布显示控制边（蓝）与值边。左侧节点表里的作者糖只来自 Bridge `authoringSugars`（含 `BranchBool`、`SwitchInt`、`SelectByEnum`、`FsmState`、`Wait`、`While`、`Until`、`Break`；Script 另有 `BtSequence` / `BtSelector` / `BtDecorator`；TriggerGraph 另有 `InlineGraph`）。普通节点的 `Jump.target`、`Call.call/next` 等端口来自 Bridge，不是前端硬编码。`FsmState` 必须绑 `enumType` + `stateVar`，case 臂用枚举成员名。BT 组合糖用 `child:{n}` 臂（Decorator 固定 `child:0` + `decoratorKind`）。
+Load 后画布显示控制边（蓝）与值边。左侧节点表里的作者糖只来自 Bridge `authoringSugars`（含 `BranchBool`、`SwitchInt`、`SelectByEnum`、`FsmState`、`Wait`、`While`、`Until`、`Break`；Script 另有 `BtSequence` / `BtSelector` / `BtDecorator` / `BtLeaf` / `FsmAction`；TriggerGraph 另有 `InlineGraph`）。普通节点的 `Jump.target`、`Call.call/next` 等端口来自 Bridge，不是前端硬编码。`FsmState` 必须绑 `enumType` + `stateVar`，case 臂用枚举成员名。BT 组合糖用 `child:{n}` 臂（Decorator 固定 `child:0` + `decoratorKind`）。`BtLeaf` / `FsmAction` 填 `functionName` 指向函数图；双击节点打开该图（见 [BT/FSM 外层与双击进函数图](graph-bt-fsm-nested-func.md)）。
 
 Validate 走 `GraphProgramAuthoringFrontDoor`；缺控制边 / 未知 op 失败关闭。Save 只在 Validate 通过后写 `assets/GAS/graphs.json`；布局写 `graph_editor.json`，不进运行时合同。
 
@@ -68,7 +78,7 @@ curl -s http://127.0.0.1:47921/tools | jq '.[].name'   # 或 .tools[].name
 1. 编辑器加载与游戏同一 `graphId`（如 `Graph.NightRaid.Flow`）。
 2. 右侧 Live Debug → 选择已挂载入口 → Watch。
 3. 工具动作：`list` → `configure { mode: nodeAndPins }` → `drain { since }`；drain 事件带 `nodeId` / `op` / `controlPort` / pin 值。
-4. 画布做 Flow Canvas 式可视化：**控制边**走暖黄粗线 + 流动光点（只亮当前走过的路径）；**数值边**走细实线，当前值标在线上或引脚旁（不用虚线）；节点本身只做轻量高亮，热度约 2 秒内衰减。配色参考 agent 前端套件（zinc 深色画布、n8n 节点壳、暖黄执行 / 冷蓝数据）。Watch 某一入口时只留下从该入口可达的短链（含其间的数值边），其它链隐藏；同时自动收起左右侧栏，把 Live Debug 收到画布底栏，方便单屏「左游戏右编辑器」。右侧日志只是辅助轨迹，不再是唯一反馈。
+4. 画布做 Flow Canvas 式可视化：**控制边**走暖黄粗线 + 流动光点（只亮当前走过的路径）；**数值边**走细实线，当前值标在线上或引脚旁（不用虚线）；节点本身只做轻量高亮，热度约 2 秒内衰减。配色和作者工作室同一张 `--studio-*` 表（深灰底、暖黄执行、冷蓝数据），不再另抄一份。Watch 某一入口时只留下从该入口可达的短链（含其间的数值边），其它链隐藏；同时自动收起左右侧栏，把 Live Debug 收到画布底栏，方便单屏「左游戏右编辑器」。右侧日志只是辅助轨迹，不再是唯一反馈。
 5. **一拍跑完的链是齐亮齐灭，不是逐步流动。** `GraphDebugTraceRecord` 只有序号和步数，没有时间或帧号；编辑器按 `drain` 收到的时刻盖戳。所以纯读写比较、没有 `Wait` / `AwaitCallback` 的链在同一拍跑完，整批事件同时到达、同时衰减。跨拍挂起的链才看得到先后。不许把单拍链的齐闪说成流动光点。
 6. 不声称完整 `NodeExit` 生命周期。嵌套 `InvokeScript` 记录带 `graphId`；source map 缺失时 AgentBridge 失败关闭，错误含 graph id 与 pc。
 

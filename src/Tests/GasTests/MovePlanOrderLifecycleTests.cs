@@ -14,6 +14,63 @@ public sealed class MovePlanOrderLifecycleTests
 {
     private const int MoveOrderTypeId = 17;
 
+    [TestCase(false)]
+    [TestCase(true)]
+    public void BatchProjection_GroupsLogicalCommandsAndCompletesDistinctReceipts(bool clustered)
+    {
+        using var world = World.Create();
+        Entity firstSource = world.Create();
+        Entity secondSource = world.Create();
+        var queue = CreateOrderQueue(64);
+        var orderTypes = CreateMoveOrderRegistry(SameTypePolicy.Replace);
+        Order[] batch = new Order[3];
+        for (int i = 0; i < batch.Length; i++)
+        {
+            Entity actor = world.Create(OrderBuffer.CreateEmpty(), new OrderContinuationBuffer(),
+                default(MovePlanExecutionIntent), default(MovePlanExecutionResult));
+            OrderBlackboardStateInstaller.EnsureInstalled(world, actor);
+            batch[i] = CreateOrder(actor, clustered ? (i < 2 ? firstSource : secondSource) : Entity.Null);
+        }
+
+        Assert.That(clustered ? queue.TryEnqueueClusteredBatch(batch) : queue.TryEnqueueSharedBatch(batch),
+            Is.EqualTo(OrderSubmitResult.Queued));
+        var intake = new OrderBufferSystem(world, new DiscreteClock(), orderTypes,
+            new OrderRuleRegistry(), queue.AdmissionResults, queue);
+        queue.AdmissionResults.BeginLogicStep();
+        intake.Update(0f);
+        queue.AdmissionResults.EndLogicStep();
+        new MovePlanOrderProjectionSystem(world, MoveOrderTypeId).Update(0f);
+
+        for (int i = 0; i < batch.Length; i++)
+        {
+            Assert.That(queue.AdmissionResults.TryGet(batch[i].OrderId, OrderAdmissionStage.EntityIntake,
+                out var outcome), Is.True);
+            Assert.That(outcome.Result, Is.EqualTo(OrderSubmitResult.Activated));
+            Assert.That(world.Get<OrderBuffer>(batch[i].Actor).HasActive, Is.True,
+                $"Member {i} did not activate an order.");
+            Assert.That(world.Get<OrderBuffer>(batch[i].Actor).ActiveOrder.Order.OrderTypeId,
+                Is.EqualTo(MoveOrderTypeId), $"Member {i} activated an unexpected order type.");
+            int expectedToken = clustered && i == 2 ? batch[2].OrderId : batch[0].OrderId;
+            Assert.That(world.Get<MovePlanExecutionIntent>(batch[i].Actor).CommandGroupToken,
+                Is.EqualTo(expectedToken), $"Member {i} must retain its logical command group.");
+            world.Set(batch[i].Actor, new MovePlanExecutionResult
+            {
+                CommandGroupToken = expectedToken,
+                Kind = MovePlanExecutionResultKind.Arrived,
+            });
+        }
+
+        new MovePlanOrderLifecycleSystem(world, orderTypes, MoveOrderTypeId).Update(0f);
+        Assert.That(orderTypes.TerminalResults.Count, Is.EqualTo(batch.Length));
+        for (int i = 0; i < batch.Length; i++)
+        {
+            Assert.That(world.Get<OrderBuffer>(batch[i].Actor).HasActive, Is.False);
+            Assert.That(orderTypes.TerminalResults.TryGet(batch[i].OrderId, out var terminal), Is.True);
+            Assert.That(terminal.Actor, Is.EqualTo(batch[i].Actor));
+            Assert.That(terminal.State, Is.EqualTo(OrderTerminalState.Completed));
+        }
+    }
+
     [Test]
     public void ClusteredBatch_AssignsUniqueReceiptsAndPreservesAtomicAdmission()
     {

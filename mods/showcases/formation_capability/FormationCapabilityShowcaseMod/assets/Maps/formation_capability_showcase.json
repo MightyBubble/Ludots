@@ -1,5 +1,14 @@
 {
   "Id": "formation_capability_showcase",
+  "Tuning": {
+    "LoadedChunkCapacity": 512
+  },
+  "TriggerGraphs": [
+    {
+      "graph": "graph.mass_navigation.selection_roster",
+      "scopeInstanceId": "formation.local_player"
+    }
+  ],
   "ContinuousHeightmapAsset": "assets/terrain/formation_capability_showcase_relief.height",
   "Tags": [
     "mass_navigation",
@@ -18,11 +27,9 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 250,
-      "HeightInMacroTiles": 250,
-      "GridCellSizeCm": 100,
-      "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 512
+      "WidthCells": 64000,
+      "HeightCells": 64000,
+      "GridCellSizeCm": 100
     }
   ],
   "Entities": [

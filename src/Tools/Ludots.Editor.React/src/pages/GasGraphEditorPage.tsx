@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   ReactFlow,
   Background,
@@ -34,7 +34,17 @@ import {
 import { GasNode, isPureValueOp, type EventSchemaView } from './gas-graph-editor/GasNode';
 import { gasEdgeTypes } from './gas-graph-editor/GasEdges';
 import { GAS_GRAPH_THEME } from './gas-graph-editor/gasGraphTheme';
+import { STUDIO_CHROME } from './authoring-studio/authoringTheme';
 import { authoredFieldsForOp, type AuthoredFieldKey } from './gas-graph-editor/authoredFields';
+import {
+  catalogGraphMatchesDialect,
+  dialectPath,
+  dialectTitle,
+  isFunctionGraphPortalOp,
+  isOpAllowedInDialect,
+  preferredDialectForGraphId,
+  type GraphEditorDialect,
+} from './gas-graph-editor/graphEditorDialect';
 import { computeAutoLayout, eventEntryNodeId, isEventEntryNodeId } from './gas-graph-editor/autoLayout';
 import { EventEntryInspector, type InputActionView } from './gas-graph-editor/EventEntryInspector';
 import { GraphCodegenPanel } from './gas-graph-editor/GraphCodegenPanel';
@@ -172,6 +182,7 @@ type GraphSugarDescriptor = {
   outputType: string;
   lowersTo: string;
   childArms?: boolean;
+  functionGraphPortal?: boolean;
 };
 
 type EnumTypeView = {
@@ -280,7 +291,15 @@ type ValidateResponse = {
 };
 
 const DEFAULT_MOD_ID = 'UiPlayerAggregateGraphMvpShowcaseMod';
-const DEFAULT_GRAPH_ID = 'ui.panel.player.resource.aggregate';
+const DEFAULT_FUNC_GRAPH_ID = 'ui.panel.player.resource.aggregate';
+const DEFAULT_BT_GRAPH_ID = 'Graph.BT.Leaf.SeeEnemy';
+const DEFAULT_FSM_GRAPH_ID = 'Graph.HFSM.Combat.OnTick';
+
+function defaultGraphIdForDialect(dialect: GraphEditorDialect): string {
+  if (dialect === 'bt') return DEFAULT_BT_GRAPH_ID;
+  if (dialect === 'fsm') return DEFAULT_FSM_GRAPH_ID;
+  return DEFAULT_FUNC_GRAPH_ID;
+}
 
 const nodeTypes = { gas: GasNode };
 const edgeTypes = gasEdgeTypes;
@@ -717,16 +736,18 @@ function flowToGraph(graph: GraphConfig, nodes: Node<GasNodeData>[], edges: Edge
   };
 }
 
-function readEditorSelection(): { modId: string; graphId: string } {
+function readEditorSelection(dialect: GraphEditorDialect): { modId: string; graphId: string } {
   const params = new URLSearchParams(window.location.search);
   return {
     modId: params.get('mod')?.trim() || DEFAULT_MOD_ID,
-    graphId: params.get('graph')?.trim() || DEFAULT_GRAPH_ID,
+    graphId: params.get('graph')?.trim() || defaultGraphIdForDialect(dialect),
   };
 }
 
-export const GasGraphEditorPage: React.FC = () => {
-  const initialSelection = React.useMemo(() => readEditorSelection(), []);
+export const GasGraphEditorPage: React.FC<{ dialect?: GraphEditorDialect }> = ({ dialect = 'func' }) => {
+  const navigate = useNavigate();
+  const titles = dialectTitle(dialect);
+  const initialSelection = React.useMemo(() => readEditorSelection(dialect), [dialect]);
   const [modId, setModId] = React.useState(initialSelection.modId);
   const [graphId, setGraphId] = React.useState(initialSelection.graphId);
   const [graph, setGraph] = React.useState<GraphConfig | null>(null);
@@ -1071,7 +1092,13 @@ export const GasGraphEditorPage: React.FC = () => {
       setSelectedEdgeId(null);
       setSelectedVariable(null);
       setStatus(`Loaded ${loaded.id} (${loaded.kind})`);
-      await loadMapVariables(loaded.id);
+      try {
+        await loadMapVariables(loaded.id);
+      } catch (mapVarErr) {
+        setDeclaredVariables([]);
+        setVariableMapId(null);
+        setVariableStatus(mapVarErr instanceof Error ? mapVarErr.message : String(mapVarErr));
+      }
     } catch (err) {
       setGraph(null);
       setNodes([]);
@@ -1096,6 +1123,13 @@ export const GasGraphEditorPage: React.FC = () => {
     const next = `${window.location.pathname}?${params.toString()}`;
     window.history.replaceState(null, '', next);
   }, [graphId, modId]);
+
+  React.useEffect(() => {
+    const preferred = preferredDialectForGraphId(graphId);
+    if (preferred === dialect) return;
+    const params = new URLSearchParams({ mod: modId, graph: graphId });
+    navigate(`${dialectPath(preferred)}?${params.toString()}`, { replace: true });
+  }, [dialect, graphId, modId, navigate]);
 
   const loadCatalog = React.useCallback(async () => {
     try {
@@ -1189,6 +1223,26 @@ export const GasGraphEditorPage: React.FC = () => {
       }),
     );
   };
+
+  const openFunctionGraphPortal = React.useCallback((node: Node<GasNodeData>) => {
+    const portal = sugars[node.data.op]?.functionGraphPortal
+      || isFunctionGraphPortalOp(node.data.op);
+    if (!portal) return;
+    const target = (node.data.functionName ?? '').trim();
+    if (!target) {
+      setStatus(`${node.data.op} needs a function graph id before you can open it.`);
+      return;
+    }
+    // BT/FSM editors jump into the Func Graph editor; Func editor stays in-place.
+    if (dialect === 'bt' || dialect === 'fsm') {
+      const params = new URLSearchParams({ mod: modId, graph: target });
+      navigate(`/gas-graphs?${params.toString()}`);
+      setStatus(`Opened Func Graph ${target} in Graph Editor.`);
+      return;
+    }
+    setGraphId(target);
+    setStatus(`Opened function graph ${target}.`);
+  }, [dialect, modId, navigate, sugars]);
 
   const onNodesChange = React.useCallback((changes: NodeChange<Node<GasNodeData>>[]) => {
     setNodes((prev) => applyNodeChanges(changes, prev));
@@ -1417,17 +1471,31 @@ export const GasGraphEditorPage: React.FC = () => {
 
   const availableNodes = React.useMemo(() => {
     const entries = [
-      ...Object.values(descriptors).map((descriptor) => ({ op: descriptor.op, descriptor, sugar: undefined })),
-      ...Object.values(sugars).map((sugar) => ({ op: sugar.op, descriptor: undefined, sugar })),
+      ...Object.values(descriptors).map((descriptor) => ({ op: descriptor.op, descriptor, sugar: undefined as GraphSugarDescriptor | undefined })),
+      ...Object.values(sugars).map((sugar) => ({ op: sugar.op, descriptor: undefined as GraphDescriptor | undefined, sugar })),
     ];
     const query = nodeSearch.trim().toLocaleLowerCase();
     return entries
+      .filter((entry) => isOpAllowedInDialect(entry.op, dialect))
       .filter((entry) => !query || entry.op.toLocaleLowerCase().includes(query))
       .sort((a, b) => a.op.localeCompare(b.op));
-  }, [descriptors, nodeSearch, sugars]);
+  }, [descriptors, dialect, nodeSearch, sugars]);
+
+  const catalogModsForDialect = React.useMemo(() => {
+    return catalog
+      .map((mod) => ({
+        ...mod,
+        graphs: (mod.graphs ?? []).filter((graph) => catalogGraphMatchesDialect(graph.id, graph.kind, dialect)),
+      }))
+      .filter((mod) => (mod.graphs?.length ?? 0) > 0);
+  }, [catalog, dialect]);
 
   const addAuthoringNode = React.useCallback((op: string, position?: { x: number; y: number }, extras?: { var?: string; instanceId?: string }) => {
     if (!graph) return;
+    if (!isOpAllowedInDialect(op, dialect)) {
+      setStatus(`Cannot add '${op}' in the ${dialect} editor — open the matching editor.`);
+      return;
+    }
     if (!descriptors[op] && !sugars[op]) {
       setStatus(`Cannot add '${op}': this graph kind has no runtime descriptor for it.`);
       return;
@@ -1461,7 +1529,7 @@ export const GasGraphEditorPage: React.FC = () => {
     setPaletteMenu(null);
     setVarDropMenu(null);
     setStatus(extras?.var ?? extras?.instanceId ? `Added ${op} for ${extras.var ?? extras.instanceId}.` : `Added ${op}; wire its pins before validation.`);
-  }, [descriptors, graph, nodes, sugars]);
+  }, [descriptors, dialect, graph, nodes, sugars]);
 
   const addEventEntry = React.useCallback((position?: { x: number; y: number }) => {
     if (!graph || graph.kind !== 'TriggerGraph') {
@@ -1491,6 +1559,22 @@ export const GasGraphEditorPage: React.FC = () => {
     setPaletteMenu(null);
     setStatus('Added Event. Fill Event name, then wire Then to the first node.');
   }, [graph, nodes]);
+
+  const removeSelectedGraphNode = React.useCallback(() => {
+    if (!selectedNodeId) return;
+    setNodes((prev) => prev.filter((node) => node.id !== selectedNodeId));
+    setEdges((prev) => prev.filter((edge) => edge.source !== selectedNodeId && edge.target !== selectedNodeId));
+    setSelectedNodeId(null);
+    setSelectedEdgeId(null);
+    setStatus(`Deleted node ${selectedNodeId}.`);
+  }, [selectedNodeId]);
+
+  const removeSelectedGraphEdge = React.useCallback(() => {
+    if (!selectedEdgeId) return;
+    setEdges((prev) => prev.filter((edge) => edge.id !== selectedEdgeId));
+    setSelectedEdgeId(null);
+    setStatus('Deleted edge.');
+  }, [selectedEdgeId]);
 
   const updateSelectedEntry = (nextEntry: EventEntryConfig) => {
     if (!selectedNodeId || !graph) return;
@@ -1831,7 +1915,7 @@ export const GasGraphEditorPage: React.FC = () => {
         ...node,
         style: {
           ...node.style,
-          outline: '2px solid #fbbf24',
+          outline: `2px solid ${GAS_GRAPH_THEME.execLive}`,
           outlineOffset: '2px',
         },
       } as Node<GasNodeData>;
@@ -2053,37 +2137,51 @@ export const GasGraphEditorPage: React.FC = () => {
     addAuthoringNode(op, position, { instanceId });
   };
 
+  const dialectNavClass = (target: GraphEditorDialect) =>
+    target === dialect
+      ? 'rounded-md border border-studio-blue bg-studio-blue/15 px-2 py-1 text-xs font-semibold text-studio-blue'
+      : 'rounded-md border border-studio-elevated px-2 py-1 text-xs text-studio-muted hover:bg-studio-elevated';
+
   return (
-    <div className="flex h-screen w-screen flex-col bg-slate-950 text-slate-100">
-      <header className="flex flex-wrap items-center gap-3 border-b border-slate-800 bg-slate-900 px-4 py-3">
+    <div className="flex h-full w-full flex-col bg-studio-bg text-studio-label">
+      <header className="flex flex-wrap items-center gap-3 border-b border-studio-elevated bg-studio-surface px-4 py-3">
         <div className="min-w-40">
-          <div className="text-sm font-semibold text-white">Ludots Graph Editor</div>
-          <div className="text-[10px] text-slate-500">Author contract · compiler diagnostics · live execution</div>
+          <div className="text-sm font-semibold text-studio-label">{titles.title}</div>
+          <div className="text-[10px] text-studio-muted">{titles.subtitle}</div>
         </div>
-        <Link to="/" className="rounded border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:bg-slate-800">
-          Map Editor
+        <Link to="/" className="rounded-md border border-studio-elevated px-2 py-1 text-xs text-studio-secondary hover:bg-studio-elevated">
+          工作室
         </Link>
-        <label className="flex items-center gap-2 text-xs text-slate-400">
+        <Link to={dialectPath('func')} className={dialectNavClass('func')}>
+          Graph Editor
+        </Link>
+        <Link to={dialectPath('bt')} className={dialectNavClass('bt')}>
+          BT Editor
+        </Link>
+        <Link to={dialectPath('fsm')} className={dialectNavClass('fsm')}>
+          FSM Editor
+        </Link>
+        <label className="flex items-center gap-2 text-xs text-studio-muted">
           modId
           <input
             value={modId}
             onChange={(e) => setModId(e.target.value)}
-            className="w-72 rounded border border-slate-700 bg-slate-950 px-2 py-1 text-slate-100"
+            className="w-72 rounded border border-studio-fill bg-studio-bg px-2 py-1 text-studio-label"
           />
         </label>
-        <label className="flex items-center gap-2 text-xs text-slate-400">
+        <label className="flex items-center gap-2 text-xs text-studio-muted">
           graphId
           <input
             value={graphId}
             onChange={(e) => setGraphId(e.target.value)}
-            className="w-80 rounded border border-slate-700 bg-slate-950 px-2 py-1 text-slate-100"
+            className="w-80 rounded border border-studio-fill bg-studio-bg px-2 py-1 text-studio-label"
           />
         </label>
         <button
           type="button"
           disabled={busy}
           onClick={() => void loadGraph()}
-          className="rounded bg-slate-700 px-3 py-1 text-xs font-semibold hover:bg-slate-600 disabled:opacity-50"
+          className="rounded bg-studio-fill px-3 py-1 text-xs font-semibold hover:bg-studio-elevated disabled:opacity-50"
         >
           Load
         </button>
@@ -2091,7 +2189,7 @@ export const GasGraphEditorPage: React.FC = () => {
           type="button"
           disabled={busy || !currentGraph}
           onClick={() => void onValidate()}
-          className="rounded bg-sky-700 px-3 py-1 text-xs font-semibold hover:bg-sky-600 disabled:opacity-50"
+          className="rounded bg-studio-blue px-3 py-1 text-xs font-semibold hover:brightness-110 disabled:opacity-50"
         >
           Validate
         </button>
@@ -2099,7 +2197,7 @@ export const GasGraphEditorPage: React.FC = () => {
           type="button"
           disabled={busy || !currentGraph}
           onClick={() => void onSave()}
-          className="rounded bg-emerald-700 px-3 py-1 text-xs font-semibold hover:bg-emerald-600 disabled:opacity-50"
+          className="rounded bg-studio-blue px-3 py-1 text-xs font-semibold hover:brightness-110 disabled:opacity-50"
         >
           Save
         </button>
@@ -2107,7 +2205,7 @@ export const GasGraphEditorPage: React.FC = () => {
           type="button"
           disabled={busy || nodes.length === 0}
           onClick={applyAutoLayout}
-          className="rounded bg-indigo-700 px-3 py-1 text-xs font-semibold hover:bg-indigo-600 disabled:opacity-50"
+          className="rounded bg-studio-fill px-3 py-1 text-xs font-semibold hover:bg-studio-elevated disabled:opacity-50"
         >
           Auto Layout
         </button>
@@ -2115,28 +2213,28 @@ export const GasGraphEditorPage: React.FC = () => {
           type="button"
           disabled={busy || !currentGraph}
           onClick={() => void saveLayout()}
-          className="rounded border border-slate-600 px-3 py-1 text-xs font-semibold text-slate-200 hover:bg-slate-800 disabled:opacity-50"
+          className="rounded border border-studio-fill px-3 py-1 text-xs font-semibold text-studio-label hover:bg-studio-elevated disabled:opacity-50"
         >
           Save Layout
         </button>
         <button
           type="button"
           onClick={() => void loadCatalog()}
-          className="rounded border border-slate-600 px-3 py-1 text-xs font-semibold text-slate-200 hover:bg-slate-800"
+          className="rounded border border-studio-fill px-3 py-1 text-xs font-semibold text-studio-label hover:bg-studio-elevated"
         >
           Refresh Tree
         </button>
         <button
           type="button"
           onClick={() => void refreshDebugMounts()}
-          className="rounded border border-amber-700 px-3 py-1 text-xs font-semibold text-amber-200 hover:bg-amber-950"
+          className="rounded border border-studio-yellow/50 px-3 py-1 text-xs font-semibold text-studio-yellow hover:bg-studio-yellow/15"
         >
           Refresh Live
         </button>
         <button
           type="button"
           onClick={() => setLeftRailCollapsed((v) => !v)}
-          className="rounded border border-slate-600 px-3 py-1 text-xs font-semibold text-slate-200 hover:bg-slate-800"
+          className="rounded border border-studio-fill px-3 py-1 text-xs font-semibold text-studio-label hover:bg-studio-elevated"
           title="Toggle catalog / variables rail"
         >
           {leftRailCollapsed ? 'Show Tree' : 'Hide Tree'}
@@ -2144,12 +2242,12 @@ export const GasGraphEditorPage: React.FC = () => {
         <button
           type="button"
           onClick={() => setRightRailCollapsed((v) => !v)}
-          className="rounded border border-slate-600 px-3 py-1 text-xs font-semibold text-slate-200 hover:bg-slate-800"
+          className="rounded border border-studio-fill px-3 py-1 text-xs font-semibold text-studio-label hover:bg-studio-elevated"
           title="Toggle inspector rail"
         >
           {rightRailCollapsed ? 'Show Inspector' : 'Hide Inspector'}
         </button>
-        <div className="text-xs text-slate-400">{status}</div>
+        <div className="text-xs text-studio-muted">{status}</div>
       </header>
 
       <div
@@ -2168,20 +2266,26 @@ export const GasGraphEditorPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setLeftRailCollapsed(false)}
-            className="flex min-h-0 flex-col items-center justify-start gap-2 border-r border-slate-800 bg-slate-950/80 px-1 py-3 text-[10px] font-semibold uppercase tracking-wide text-slate-400 hover:bg-slate-900 hover:text-slate-200"
+            className="flex min-h-0 flex-col items-center justify-start gap-2 border-r border-studio-elevated bg-studio-bg/80 px-1 py-3 text-[10px] font-semibold uppercase tracking-wide text-studio-muted hover:bg-studio-surface hover:text-studio-label"
             title="Show catalog and variables"
           >
             <span className="[writing-mode:vertical-rl] rotate-180">Tree</span>
           </button>
         ) : (
-        <div className="flex min-h-0 flex-col border-r border-slate-800">
+        <div className="flex min-h-0 flex-col border-r border-studio-elevated">
           <div className="min-h-0 flex-[3] overflow-hidden [&_aside]:h-full [&_aside]:border-r-0">
             <GraphCatalogTree
-              mods={catalog}
+              mods={catalogModsForDialect}
               selectedModId={modId}
               selectedGraphId={graphId}
               status={catalogStatus}
               onSelect={(nextModId, nextGraphId) => {
+                const preferred = preferredDialectForGraphId(nextGraphId);
+                if (preferred !== dialect) {
+                  const params = new URLSearchParams({ mod: nextModId, graph: nextGraphId });
+                  navigate(`${dialectPath(preferred)}?${params.toString()}`);
+                  return;
+                }
                 setModId(nextModId);
                 setGraphId(nextGraphId);
                 setSelectedVariable(null);
@@ -2233,9 +2337,16 @@ export const GasGraphEditorPage: React.FC = () => {
                   event.preventDefault();
                   openPaletteAt(event.clientX, event.clientY);
                 }}
+                onNodeDoubleClick={(_, node) => openFunctionGraphPortal(node)}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
+                onNodesDelete={(deleted) => {
+                  setStatus(`Deleted ${deleted.length} node${deleted.length === 1 ? '' : 's'}.`);
+                }}
+                onEdgesDelete={(deleted) => {
+                  setStatus(`Deleted ${deleted.length} edge${deleted.length === 1 ? '' : 's'}.`);
+                }}
                 onSelectionChange={({ nodes: selected, edges: selectedEdges }) => {
                   setSelectedNodeId(selected[0]?.id ?? null);
                   setSelectedEdgeId(selectedEdges[0]?.id ?? null);
@@ -2256,28 +2367,28 @@ export const GasGraphEditorPage: React.FC = () => {
                   zoomable
                   bgColor={GAS_GRAPH_THEME.minimapBg}
                   maskColor={GAS_GRAPH_THEME.minimapMask}
-                  nodeStrokeColor="#71717a"
+                  nodeStrokeColor={GAS_GRAPH_THEME.nodeMuted}
                   nodeColor={(node) => {
                     if (node.data.role === 'event-entry') return GAS_GRAPH_THEME.eventAccent;
                     if (node.data.op === 'SwitchInt' || node.data.op === 'FsmState') return GAS_GRAPH_THEME.execLiveHot;
-                    if (sugars[node.data.op as string]?.childArms || node.data.op === 'BtDecorator') return '#a78bfa';
+                    if (sugars[node.data.op as string]?.childArms || node.data.op === 'BtDecorator') return GAS_GRAPH_THEME.eventAccent;
                     if (isPureValueOp(String(node.data.op ?? ''))) return GAS_GRAPH_THEME.valueAccent;
                     return GAS_GRAPH_THEME.dataLive;
                   }}
                 />
               </ReactFlow>
-              <div className="pointer-events-none absolute left-3 top-3 z-10 rounded border border-zinc-800 bg-zinc-950/80 px-2 py-1 text-[10px] text-zinc-400">
+              <div className="pointer-events-none absolute left-3 top-3 z-10 rounded border border-studio-elevated bg-studio-bg/80 px-2 py-1 text-[10px] text-studio-muted">
                 Middle-drag to pan · Left-drag to box-select · Right-click to add a node
               </div>
               {(debugEnabled || rightRailCollapsed) ? (
-                <div className="absolute bottom-0 left-0 right-0 z-20 border-t border-amber-900/40 bg-zinc-950/95 px-3 py-2 shadow-[0_-8px_24px_rgba(0,0,0,.45)]">
-                  <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-amber-300">
+                <div className="absolute bottom-0 left-0 right-0 z-20 border-t border-studio-yellow/30 bg-studio-bg/95 px-3 py-2 shadow-[0_-8px_24px_rgba(0,0,0,.45)]">
+                  <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-studio-yellow">
                     <span>
                       Live Debug · {debugMounts.find((m) => m.entryLabel === debugEntryLabel)?.executionBackend
                         ?? debugMounts[0]?.executionBackend
                         ?? 'Interpret'}
                     </span>
-                    <span className="font-normal normal-case tracking-normal text-zinc-500">
+                    <span className="font-normal normal-case tracking-normal text-studio-muted">
                       amber flow = control · value on wire/pin · heat ~2s
                     </span>
                   </div>
@@ -2288,16 +2399,16 @@ export const GasGraphEditorPage: React.FC = () => {
                       value={debugEntryLabel}
                       onChange={(entryLabel) => { setDebugEntryLabel(entryLabel); setDebugSince(0); setDebugEvents([]); }}
                     />
-                    <button type="button" onClick={() => void toggleDebug()} className="rounded bg-amber-700 px-2 py-1 font-semibold text-amber-50 hover:bg-amber-600">
+                    <button type="button" onClick={() => void toggleDebug()} className="rounded bg-studio-yellow px-2 py-1 font-semibold text-studio-bg hover:brightness-110">
                       {debugEnabled ? 'Stop' : 'Watch'}
                     </button>
                   </div>
-                  <div className="mt-1 text-[10px] text-slate-400">{debugStatus}</div>
+                  <div className="mt-1 text-[10px] text-studio-muted">{debugStatus}</div>
                   {debugEnabled ? (
-                    <div className="mt-1 rounded border border-amber-900/50 bg-amber-950/30 px-2 py-1.5 text-[11px] leading-4 text-amber-50/95">
-                      <div className="font-semibold text-amber-200">
+                    <div className="mt-1 rounded border border-studio-yellow/40 bg-studio-yellow/10 px-2 py-1.5 text-[11px] leading-4 text-studio-label">
+                      <div className="font-semibold text-studio-yellow">
                         {entryStory ? entryStory.title : (debugEntryLabel || '—')}
-                        <span className="ml-2 font-normal text-zinc-400">
+                        <span className="ml-2 font-normal text-studio-muted">
                           {entryStory
                             ? entryStory.summary
                             : `${watchFocus.nodeIds.size} nodes framed; other chains hidden.`}
@@ -2307,22 +2418,22 @@ export const GasGraphEditorPage: React.FC = () => {
                         <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1">
                           {walkedGroups.map((group, index) => (
                             <React.Fragment key={group.id}>
-                              {index > 0 ? <span className="text-amber-700">›</span> : null}
+                              {index > 0 ? <span className="text-studio-yellow">›</span> : null}
                               <span
                                 className={index === walkedGroups.length - 1
-                                  ? 'rounded bg-amber-800/70 px-1.5 py-0.5 font-semibold text-amber-50'
-                                  : 'rounded bg-amber-950/70 px-1.5 py-0.5 text-amber-100/80'}
+                                  ? 'rounded bg-studio-yellow/30 px-1.5 py-0.5 font-semibold text-studio-bg'
+                                  : 'rounded bg-studio-yellow/10 px-1.5 py-0.5 text-studio-secondary'}
                               >
                                 {group.text}
                               </span>
                             </React.Fragment>
                           ))}
-                          <span className="ml-1 text-[10px] text-zinc-500">
+                          <span className="ml-1 text-[10px] text-studio-muted">
                             {annotations.groups.length > 0 ? '这一趟走到这里为止' : null}
                           </span>
                         </div>
                       ) : (
-                        <div className="mt-0.5 text-amber-100/80">
+                        <div className="mt-0.5 text-studio-secondary">
                           {annotations.groups.length > 0
                             ? '等游戏里发生对应事件——左边战场，右边这条链会亮起来。'
                             : '等这个入口被触发；链路上的节点和控制边会亮起来。给节点分组写说明，这里就会用人话讲这一趟。'}
@@ -2330,9 +2441,9 @@ export const GasGraphEditorPage: React.FC = () => {
                       )}
                     </div>
                   ) : null}
-                  <div className="mt-1 max-h-16 overflow-auto rounded border border-slate-800 bg-slate-950 p-1.5 font-mono text-[10px]">
+                  <div className="mt-1 max-h-16 overflow-auto rounded border border-studio-elevated bg-studio-bg p-1.5 font-mono text-[10px]">
                     {debugEvents.length === 0 ? 'No trace changes yet.' : debugEvents.slice(-16).map((event) => (
-                      <div key={event.sequence} className={event.nodeId ? 'text-cyan-200' : 'text-slate-400'}>
+                      <div key={event.sequence} className={event.nodeId ? 'text-studio-blue' : 'text-studio-muted'}>
                         #{event.sequence} {event.event} {event.nodeId ?? `pc:${event.steps}`}
                         {event.controlPort ? ` →${event.controlPort}` : ''}
                         {event.pinIndex !== undefined ? ` pin[${event.pinIndex}]=${String(event.value)}` : ''}
@@ -2343,15 +2454,15 @@ export const GasGraphEditorPage: React.FC = () => {
               ) : null}
               {paletteMenu ? (
                 <div
-                  className="fixed z-50 w-72 rounded border border-slate-700 bg-slate-950/95 p-2 shadow-xl"
+                  className="fixed z-50 w-72 rounded border border-studio-fill bg-studio-bg/95 p-2 shadow-xl"
                   style={{
                     left: Math.min(paletteMenu.clientX, window.innerWidth - 300),
                     top: Math.min(paletteMenu.clientY, window.innerHeight - 360),
                   }}
                   onMouseDown={(event) => event.stopPropagation()}
                 >
-                  <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
-                    <Search size={14} className="text-slate-500" aria-hidden="true" />
+                  <div className="flex items-center gap-2 border-b border-studio-elevated pb-2">
+                    <Search size={14} className="text-studio-muted" aria-hidden="true" />
                     <input
                       autoFocus
                       value={nodeSearch}
@@ -2364,20 +2475,20 @@ export const GasGraphEditorPage: React.FC = () => {
                       }}
                       placeholder="Find node"
                       aria-label="Find graph node"
-                      className="min-w-0 flex-1 bg-transparent text-xs text-slate-100 outline-none placeholder:text-slate-600"
+                      className="min-w-0 flex-1 bg-transparent text-xs text-studio-label outline-none placeholder:text-studio-muted"
                     />
-                    <span className="text-[10px] text-slate-600">Enter</span>
+                    <span className="text-[10px] text-studio-muted">Enter</span>
                   </div>
                   <div className="mt-2 max-h-64 overflow-auto">
                     {graph.kind === 'TriggerGraph' && (!nodeSearch.trim() || 'event'.includes(nodeSearch.trim().toLocaleLowerCase())) ? (
                       <button
                         type="button"
                         onClick={() => addEventEntry({ x: paletteMenu.flowX, y: paletteMenu.flowY })}
-                        className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs text-rose-100 hover:bg-rose-950"
+                        className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs text-studio-label hover:bg-studio-red/20"
                       >
-                        <Plus size={12} className="text-rose-400" aria-hidden="true" />
+                        <Plus size={12} className="text-studio-red" aria-hidden="true" />
                         <span className="font-mono">Event</span>
-                        <span className="ml-auto text-[10px] text-rose-300">entry</span>
+                        <span className="ml-auto text-[10px] text-studio-red">entry</span>
                       </button>
                     ) : null}
                     {availableNodes.slice(0, 24).map((entry) => (
@@ -2385,27 +2496,27 @@ export const GasGraphEditorPage: React.FC = () => {
                         key={entry.op}
                         type="button"
                         onClick={() => addAuthoringNode(entry.op, { x: paletteMenu.flowX, y: paletteMenu.flowY })}
-                        className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs text-slate-300 hover:bg-slate-800"
+                        className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs text-studio-secondary hover:bg-studio-elevated"
                       >
-                        <Plus size={12} className="text-emerald-400" aria-hidden="true" />
+                        <Plus size={12} className="text-studio-blue" aria-hidden="true" />
                         <span className="font-mono">{entry.op}</span>
-                        {entry.sugar ? <span className="ml-auto text-[10px] text-amber-300">sugar</span> : null}
+                        {entry.sugar ? <span className="ml-auto text-[10px] text-studio-yellow">sugar</span> : null}
                       </button>
                     ))}
-                    {availableNodes.length === 0 ? <div className="px-2 py-2 text-xs text-slate-600">No runtime node matches.</div> : null}
+                    {availableNodes.length === 0 ? <div className="px-2 py-2 text-xs text-studio-muted">No runtime node matches.</div> : null}
                   </div>
                 </div>
               ) : null}
               {varDropMenu ? (
                 <div
-                  className="fixed z-50 w-56 rounded border border-amber-800 bg-slate-950/95 p-2 shadow-xl"
+                  className="fixed z-50 w-56 rounded border border-studio-yellow/40 bg-studio-bg/95 p-2 shadow-xl"
                   style={{
                     left: Math.min(varDropMenu.clientX, window.innerWidth - 240),
                     top: Math.min(varDropMenu.clientY, window.innerHeight - 160),
                   }}
                   onMouseDown={(event) => event.stopPropagation()}
                 >
-                  <div className="mb-2 px-1 text-[11px] text-amber-100">
+                  <div className="mb-2 px-1 text-[11px] text-studio-label">
                     Place <span className="font-mono">{varDropMenu.name}</span>
                   </div>
                   {varDropMenu.placed ? (
@@ -2415,10 +2526,10 @@ export const GasGraphEditorPage: React.FC = () => {
                         { x: varDropMenu.flowX, y: varDropMenu.flowY },
                         varDropMenu.name,
                         varDropMenu.placedKind ?? 'entity')}
-                      className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs text-slate-200 hover:bg-slate-800"
+                      className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs text-studio-label hover:bg-studio-elevated"
                     >
                       <span>Get</span>
-                      <span className="font-mono text-[10px] text-slate-500">
+                      <span className="font-mono text-[10px] text-studio-muted">
                         {(varDropMenu.placedKind ?? 'entity') === 'region'
                           ? 'LoadPlacedRegion'
                           : (varDropMenu.placedKind ?? 'entity') === 'anchor'
@@ -2431,20 +2542,20 @@ export const GasGraphEditorPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => placeVariableAccess('get', { x: varDropMenu.flowX, y: varDropMenu.flowY }, varDropMenu.name, varDropMenu.type)}
-                        className="mb-1 flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs text-slate-200 hover:bg-slate-800"
+                        className="mb-1 flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs text-studio-label hover:bg-studio-elevated"
                       >
                         <span>Get</span>
-                        <span className="font-mono text-[10px] text-slate-500">
+                        <span className="font-mono text-[10px] text-studio-muted">
                           {varDropMenu.type === 'float' ? 'ReadMapVarFloat' : 'ReadMapVarInt'}
                         </span>
                       </button>
                       <button
                         type="button"
                         onClick={() => placeVariableAccess('set', { x: varDropMenu.flowX, y: varDropMenu.flowY }, varDropMenu.name, varDropMenu.type)}
-                        className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs text-slate-200 hover:bg-slate-800"
+                        className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs text-studio-label hover:bg-studio-elevated"
                       >
                         <span>Set</span>
-                        <span className="font-mono text-[10px] text-slate-500">
+                        <span className="font-mono text-[10px] text-studio-muted">
                           {varDropMenu.type === 'float' ? 'WriteMapVarFloat' : 'WriteMapVarInt'}
                         </span>
                       </button>
@@ -2454,7 +2565,7 @@ export const GasGraphEditorPage: React.FC = () => {
               ) : null}
             </div>
           ) : (
-            <div className="flex h-full items-center justify-center text-sm text-slate-500">
+            <div className="flex h-full items-center justify-center text-sm text-studio-muted">
               Select a graph in the left tree. Bridge must be running on :5299.
             </div>
           )}
@@ -2464,14 +2575,14 @@ export const GasGraphEditorPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setRightRailCollapsed(false)}
-            className="flex min-h-0 flex-col items-center justify-start gap-2 border-l border-slate-800 bg-slate-950/80 px-1 py-3 text-[10px] font-semibold uppercase tracking-wide text-slate-400 hover:bg-slate-900 hover:text-slate-200"
+            className="flex min-h-0 flex-col items-center justify-start gap-2 border-l border-studio-elevated bg-studio-bg/80 px-1 py-3 text-[10px] font-semibold uppercase tracking-wide text-studio-muted hover:bg-studio-surface hover:text-studio-label"
             title="Show inspector"
           >
             <span className="[writing-mode:vertical-rl]">Inspector</span>
           </button>
         ) : (
-        <aside className="flex min-h-0 flex-col border-l border-slate-800 bg-slate-900/80">
-          <div className="border-b border-slate-800 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+        <aside className="flex min-h-0 flex-col border-l border-studio-elevated bg-studio-surface/80">
+          <div className="border-b border-studio-elevated px-3 py-2 text-xs font-semibold uppercase tracking-wide text-studio-muted">
             Inspector
           </div>
           <div className="space-y-3 overflow-auto p-3 text-xs">
@@ -2491,12 +2602,12 @@ export const GasGraphEditorPage: React.FC = () => {
                 ) : (
                   <>
                 <div>
-                  <div className="text-slate-500">Id</div>
-                  <div className="font-mono text-slate-100">{selectedData.id}</div>
+                  <div className="text-studio-muted">Id</div>
+                  <div className="font-mono text-studio-label">{selectedData.id}</div>
                 </div>
                 <div>
-                  <div className="text-slate-500">Op</div>
-                  <div className="font-mono text-sky-300">{selectedData.op}</div>
+                  <div className="text-studio-muted">Op</div>
+                  <div className="font-mono text-studio-blue">{selectedData.op}</div>
                 </div>
                 {authoredFieldsForOp(selectedData.op).map((field) => {
                   const raw = selectedData[field.key];
@@ -2508,7 +2619,7 @@ export const GasGraphEditorPage: React.FC = () => {
                           checked={Boolean(raw)}
                           onChange={(event) => updateSelectedField(field.key, event.target.checked)}
                         />
-                        <span className="text-slate-400">{field.label}</span>
+                        <span className="text-studio-muted">{field.label}</span>
                       </label>
                     );
                   }
@@ -2519,11 +2630,11 @@ export const GasGraphEditorPage: React.FC = () => {
                           : panelAnchors;
                         return (
                           <label key={field.key} className="block">
-                            <div className="mb-1 text-slate-500">{field.label}</div>
+                            <div className="mb-1 text-studio-muted">{field.label}</div>
                             <select
                               value={current}
                               onChange={(event) => updateSelectedField(field.key, event.target.value)}
-                              className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                              className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                             >
                               <option value="">Select anchor</option>
                               {options.map((anchor) => (
@@ -2540,11 +2651,11 @@ export const GasGraphEditorPage: React.FC = () => {
                           : payloadKeys;
                         return (
                           <label key={field.key} className="block">
-                            <div className="mb-1 text-slate-500">{field.label}</div>
+                            <div className="mb-1 text-studio-muted">{field.label}</div>
                             <select
                               value={current}
                               onChange={(event) => updateSelectedField(field.key, event.target.value)}
-                              className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                              className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                             >
                               <option value="">Select payload key</option>
                               {options.map((key) => (
@@ -2561,11 +2672,11 @@ export const GasGraphEditorPage: React.FC = () => {
                           : enumCatalog.map((candidate) => candidate.name);
                         return (
                           <label key={field.key} className="block">
-                            <div className="mb-1 text-slate-500">{field.label}</div>
+                            <div className="mb-1 text-studio-muted">{field.label}</div>
                             <select
                               value={current}
                               onChange={(event) => updateSelectedField(field.key, event.target.value)}
-                              className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                              className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                             >
                               <option value="">Unbound (raw case ints)</option>
                               {options.map((name) => (
@@ -2582,11 +2693,11 @@ export const GasGraphEditorPage: React.FC = () => {
                           : textKeyCatalog.map((candidate) => candidate.id);
                         return (
                           <label key={field.key} className="block">
-                            <div className="mb-1 text-slate-500">{field.label}</div>
+                            <div className="mb-1 text-studio-muted">{field.label}</div>
                             <select
                               value={current}
                               onChange={(event) => updateSelectedField(field.key, event.target.value)}
-                              className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                              className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                             >
                               <option value="">Select text key</option>
                               {options.map((id) => {
@@ -2619,11 +2730,11 @@ export const GasGraphEditorPage: React.FC = () => {
                           : instanceIds;
                         return (
                           <label key={field.key} className="block">
-                            <div className="mb-1 text-slate-500">{field.label}</div>
+                            <div className="mb-1 text-studio-muted">{field.label}</div>
                             <select
                               value={current}
                               onChange={(event) => updateSelectedField(field.key, event.target.value)}
-                              className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                              className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                             >
                               <option value="">Select placed instance</option>
                               {options.map((id) => (
@@ -2639,11 +2750,11 @@ export const GasGraphEditorPage: React.FC = () => {
                         const options = current && !known.includes(current) ? [...known, current] : known;
                         return (
                           <label key={field.key} className="block">
-                            <div className="mb-1 text-slate-500">{field.label}</div>
+                            <div className="mb-1 text-studio-muted">{field.label}</div>
                             <select
                               value={current}
                               onChange={(event) => updateSelectedField(field.key, event.target.value)}
-                              className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                              className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                             >
                               <option value="">Select kind</option>
                               {options.map((kind) => (
@@ -2655,28 +2766,28 @@ export const GasGraphEditorPage: React.FC = () => {
                       }
                   return (
                     <label key={field.key} className="block">
-                      <div className="mb-1 text-slate-500">{field.label}</div>
+                      <div className="mb-1 text-studio-muted">{field.label}</div>
                       <input
                         type={field.kind === 'string' ? 'text' : 'number'}
                         step={field.kind === 'int' ? '1' : undefined}
                         value={raw == null ? '' : String(raw)}
                         onChange={(event) => updateSelectedField(field.key, event.target.value)}
-                        className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                        className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                       />
                     </label>
                   );
                 })}
                 {selectedData.descriptor ? (
-                  <div className="rounded border border-slate-800 bg-slate-950/70 p-2">
-                    <div className="mb-1 text-slate-500">Descriptor ports</div>
-                    <div className="font-mono text-[10px] text-emerald-300">
+                  <div className="rounded border border-studio-elevated bg-studio-bg/80 p-2">
+                    <div className="mb-1 text-studio-muted">Descriptor ports</div>
+                    <div className="font-mono text-[10px] text-studio-blue">
                       in: {[...new Set([
                         ...selectedData.descriptor.linearInputPorts,
                         ...selectedData.descriptor.queryInputPorts,
                         ...selectedData.descriptor.scriptInputPorts,
                       ])].join(', ') || 'none'}
                     </div>
-                    <div className="font-mono text-[10px] text-violet-300">
+                    <div className="font-mono text-[10px] text-studio-red">
                       out: {selectedData.descriptor.queryOutputType !== 'Void'
                         ? selectedData.descriptor.queryOutputType
                         : selectedData.descriptor.linearOutputType}
@@ -2684,15 +2795,15 @@ export const GasGraphEditorPage: React.FC = () => {
                   </div>
                 ) : null}
                 {(selectedData.op === 'SwitchInt' || selectedData.op === 'FsmState') && graph && isControlFlowGraph(graph) ? (
-                  <div className="space-y-2 rounded border border-sky-900 bg-sky-950/30 p-2">
-                    <div className="text-sky-300">{selectedData.op === 'FsmState' ? 'FsmState case arms' : 'Switch cases'}</div>
+                  <div className="space-y-2 rounded border border-studio-blue/40 bg-studio-blue/10 p-2">
+                    <div className="text-studio-blue">{selectedData.op === 'FsmState' ? 'FsmState case arms' : 'Switch cases'}</div>
                     {(() => {
                       const boundEnum = selectedData.enumType
                         ? enumCatalog.find((candidate) => candidate.name === selectedData.enumType)
                         : null;
                       if (selectedData.op === 'FsmState' && !boundEnum) {
                         return (
-                          <div className="text-[11px] text-amber-300">
+                          <div className="text-[11px] text-studio-yellow">
                             Bind enumType before adding case arms (FsmState fails closed without it).
                           </div>
                         );
@@ -2700,11 +2811,11 @@ export const GasGraphEditorPage: React.FC = () => {
                       if (boundEnum) {
                         return (
                           <label className="block">
-                            <div className="mb-1 text-slate-500">Case member ({boundEnum.name})</div>
+                            <div className="mb-1 text-studio-muted">Case member ({boundEnum.name})</div>
                             <select
                               value={boundEnum.members.some((member) => member.name === switchCaseValue) ? switchCaseValue : ''}
                               onChange={(event) => setSwitchCaseValue(event.target.value)}
-                              className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                              className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                             >
                               <option value="">Select member</option>
                               {boundEnum.members.map((member) => (
@@ -2716,23 +2827,23 @@ export const GasGraphEditorPage: React.FC = () => {
                       }
                       return (
                         <label className="block">
-                          <div className="mb-1 text-slate-500">Case value</div>
+                          <div className="mb-1 text-studio-muted">Case value</div>
                           <input
                             type="number"
                             step="1"
                             value={switchCaseValue}
                             onChange={(event) => setSwitchCaseValue(event.target.value)}
-                            className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                            className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                           />
                         </label>
                       );
                     })()}
                     <label className="block">
-                      <div className="mb-1 text-slate-500">Target node</div>
+                      <div className="mb-1 text-studio-muted">Target node</div>
                       <select
                         value={switchCaseTarget}
                         onChange={(event) => setSwitchCaseTarget(event.target.value)}
-                        className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                        className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                       >
                         <option value="">Select target</option>
                         {nodes.filter((node) => node.id !== selectedNodeId).map((node) => (
@@ -2743,24 +2854,24 @@ export const GasGraphEditorPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={addSwitchCase}
-                      className="w-full rounded bg-sky-700 px-2 py-1 font-semibold text-sky-50 hover:bg-sky-600"
+                      className="w-full rounded bg-studio-blue px-2 py-1 font-semibold text-studio-label hover:brightness-110"
                     >
                       Add case edge
                     </button>
                   </div>
                 ) : null}
                 {selectedData.op && sugars[selectedData.op]?.childArms && graph && isControlFlowGraph(graph) ? (
-                  <div className="space-y-2 rounded border border-violet-900 bg-violet-950/30 p-2">
-                    <div className="text-violet-300">{selectedData.op} child arms</div>
-                    <div className="font-mono text-[10px] text-violet-200/80">
+                  <div className="space-y-2 rounded border border-studio-red/40 bg-studio-red/10 p-2">
+                    <div className="text-studio-red">{selectedData.op} child arms</div>
+                    <div className="font-mono text-[10px] text-studio-secondary">
                       {(selectedData.controlOutputPorts ?? []).filter((port) => port.startsWith('child:')).join(', ') || 'none yet'}
                     </div>
                     <label className="block">
-                      <div className="mb-1 text-slate-500">Target node</div>
+                      <div className="mb-1 text-studio-muted">Target node</div>
                       <select
                         value={btChildTarget}
                         onChange={(event) => setBtChildTarget(event.target.value)}
-                        className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                        className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                       >
                         <option value="">Select target</option>
                         {nodes.filter((node) => node.id !== selectedNodeId).map((node) => (
@@ -2771,7 +2882,7 @@ export const GasGraphEditorPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={addBtChildArm}
-                      className="w-full rounded bg-violet-700 px-2 py-1 font-semibold text-violet-50 hover:bg-violet-600"
+                      className="w-full rounded bg-studio-red px-2 py-1 font-semibold text-studio-label hover:brightness-110"
                     >
                       Add child edge
                     </button>
@@ -2779,66 +2890,80 @@ export const GasGraphEditorPage: React.FC = () => {
                 ) : null}
                 {!graph || !isControlFlowGraph(graph) ? (
                   <label className="block">
-                    <div className="mb-1 text-slate-500">Next</div>
+                    <div className="mb-1 text-studio-muted">Next</div>
                     <input
                       value={selectedData.next ?? ''}
                       onChange={(e) => updateSelectedField('next', e.target.value)}
-                      className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                      className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                     />
                   </label>
                 ) : null}
                   </>
                 )}
+                <button
+                  type="button"
+                  onClick={removeSelectedGraphNode}
+                  className={`w-full ${STUDIO_CHROME.btnDanger}`}
+                >
+                  删除此节点
+                </button>
               </>
             ) : selectedEdge ? (
               <>
                 <div>
-                  <div className="text-slate-500">Edge</div>
-                  <div className="font-mono text-slate-100">{selectedEdge.data?.kind ?? 'edge'}</div>
+                  <div className="text-studio-muted">Edge</div>
+                  <div className="font-mono text-studio-label">{selectedEdge.data?.kind ?? 'edge'}</div>
                 </div>
                 <label className="block">
-                  <div className="mb-1 text-slate-500">From node</div>
+                  <div className="mb-1 text-studio-muted">From node</div>
                   <input
                     value={selectedEdge.source}
                     onChange={(e) => updateSelectedEdgeField('source', e.target.value)}
-                    className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                    className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                   />
                 </label>
                 <label className="block">
-                  <div className="mb-1 text-slate-500">From port</div>
+                  <div className="mb-1 text-studio-muted">From port</div>
                   <input
                     value={selectedEdge.sourceHandle ?? ''}
                     onChange={(e) => updateSelectedEdgeField('sourceHandle', e.target.value)}
-                    className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                    className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                   />
                 </label>
                 <label className="block">
-                  <div className="mb-1 text-slate-500">To node</div>
+                  <div className="mb-1 text-studio-muted">To node</div>
                   <input
                     value={selectedEdge.target}
                     onChange={(e) => updateSelectedEdgeField('target', e.target.value)}
-                    className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                    className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                   />
                 </label>
                 {selectedEdge.data?.kind === 'value' ? (
                   <label className="block">
-                    <div className="mb-1 text-slate-500">To port</div>
+                    <div className="mb-1 text-studio-muted">To port</div>
                     <input
                       value={selectedEdge.targetHandle ?? ''}
                       onChange={(e) => updateSelectedEdgeField('targetHandle', e.target.value)}
-                      className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                      className="w-full rounded border border-studio-fill bg-studio-bg px-2 py-1 font-mono"
                     />
                   </label>
                 ) : null}
+                <button
+                  type="button"
+                  onClick={removeSelectedGraphEdge}
+                  className={`w-full ${STUDIO_CHROME.btnDanger}`}
+                >
+                  删除此连线
+                </button>
               </>
             ) : (
               <div className="space-y-2">
-                <div className="text-slate-500">Select a node or an Event card.</div>
+                <div className="text-studio-muted">Select a node or an Event card.</div>
                 {graph?.kind === 'TriggerGraph' ? (
                   <button
                     type="button"
                     onClick={() => addEventEntry()}
-                    className="w-full rounded bg-rose-800 px-2 py-1 font-semibold text-rose-50 hover:bg-rose-700"
+                    className="w-full rounded bg-studio-red px-2 py-1 font-semibold text-studio-label hover:brightness-110"
                   >
                     Add Event
                   </button>
@@ -2847,10 +2972,10 @@ export const GasGraphEditorPage: React.FC = () => {
             )}
           </div>
 
-          <div className="border-t border-slate-800 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+          <div className="border-t border-studio-elevated px-3 py-2 text-xs font-semibold uppercase tracking-wide text-studio-muted">
             Diagnostics
           </div>
-          <pre className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap p-3 font-mono text-[11px] text-amber-200">
+          <pre className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap p-3 font-mono text-[11px] text-studio-yellow">
             {diagnosticsText || 'Validate or Save to run the Bridge compiler.'}
           </pre>
 
@@ -2868,17 +2993,17 @@ export const GasGraphEditorPage: React.FC = () => {
           ) : null}
 
           {debugEnabled ? (
-            <div className="border-t border-slate-800 px-3 py-2 text-[10px] leading-4 text-slate-500">
+            <div className="border-t border-studio-elevated px-3 py-2 text-[10px] leading-4 text-studio-muted">
               Live Debug is docked under the canvas while Watching — keeps the node chain readable on a half screen.
             </div>
           ) : (
             <>
-          <div className="border-t border-slate-800 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-amber-300">
+          <div className="border-t border-studio-elevated px-3 py-2 text-xs font-semibold uppercase tracking-wide text-studio-yellow">
             Live Debug · {debugMounts.find((m) => m.entryLabel === debugEntryLabel)?.executionBackend
               ?? debugMounts[0]?.executionBackend
               ?? 'Interpret'}
           </div>
-          <div className="space-y-2 border-t border-slate-800 p-3 text-xs">
+          <div className="space-y-2 border-t border-studio-elevated p-3 text-xs">
             <div className="flex items-center gap-2">
               <LiveDebugEntryPicker
                 mounts={debugMounts}
@@ -2886,14 +3011,14 @@ export const GasGraphEditorPage: React.FC = () => {
                 value={debugEntryLabel}
                 onChange={(entryLabel) => { setDebugEntryLabel(entryLabel); setDebugSince(0); setDebugEvents([]); }}
               />
-              <button type="button" onClick={() => void toggleDebug()} className="rounded bg-amber-700 px-2 py-1 font-semibold text-amber-50 hover:bg-amber-600">
+              <button type="button" onClick={() => void toggleDebug()} className="rounded bg-studio-yellow px-2 py-1 font-semibold text-studio-bg hover:brightness-110">
                 {debugEnabled ? 'Stop' : 'Watch'}
               </button>
             </div>
-            <div className="text-[10px] text-slate-400">{debugStatus}</div>
-            <div className="max-h-28 overflow-auto rounded border border-slate-800 bg-slate-950 p-2 font-mono text-[10px]">
+            <div className="text-[10px] text-studio-muted">{debugStatus}</div>
+            <div className="max-h-28 overflow-auto rounded border border-studio-elevated bg-studio-bg p-2 font-mono text-[10px]">
               {debugEvents.length === 0 ? 'No trace changes yet.' : debugEvents.slice(-24).map((event) => (
-                <div key={event.sequence} className={event.nodeId ? 'text-cyan-200' : 'text-slate-400'}>
+                <div key={event.sequence} className={event.nodeId ? 'text-studio-blue' : 'text-studio-muted'}>
                   #{event.sequence} {event.event} {event.nodeId ?? `pc:${event.steps}`}
                   {event.controlPort ? ` →${event.controlPort}` : ''}
                   {event.pinIndex !== undefined ? ` pin[${event.pinIndex}]=${String(event.value)}` : ''}

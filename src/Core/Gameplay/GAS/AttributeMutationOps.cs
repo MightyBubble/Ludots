@@ -16,8 +16,10 @@ namespace Ludots.Core.Gameplay.GAS
                 return;
             }
 
-            ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(target);
-            SetCurrent(world, target, attributeId, attributes.GetCurrent(attributeId) + delta, tagOps);
+            float current = (uint)attributeId < (uint)Components.AttributeBuffer.MAX_ATTRS
+                ? world.Get<Components.AttributeBuffer>(target).GetCurrent(attributeId)
+                : AttributeReads.Current(world, target, attributeId);
+            SetCurrent(world, target, attributeId, current + delta, tagOps);
         }
 
         public static void SetCurrent(World world, Entity target, int attributeId, float value, TagOps tagOps)
@@ -28,7 +30,20 @@ namespace Ludots.Core.Gameplay.GAS
             }
 
             RequireTagOps(tagOps);
+            if (attributeId < 0 || attributeId >= Registry.AttributeRegistry.MaxAttributeIds)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(attributeId), attributeId,
+                    $"attributeId must be in [0, {Registry.AttributeRegistry.MaxAttributeIds}).");
+            }
+
             EnsureDirtyFlags(world, target);
+            if ((uint)attributeId >= (uint)Components.AttributeBuffer.MAX_ATTRS)
+            {
+                SetCurrentHigh(world, target, attributeId, value, tagOps);
+                return;
+            }
+
             ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(target);
             AttributeBuffer attributesBefore = attributes;
             DirtyFlags dirtyBefore = world.Get<DirtyFlags>(target);
@@ -44,7 +59,8 @@ namespace Ludots.Core.Gameplay.GAS
             {
                 world.Get<DirtyFlags>(target).MarkAttributeDirty(attributeId);
                 tagOps.MarkDirtyEntity(world, target);
-                MarkAttributeAggregateDirty(world, target);
+                MarkAttributeAggregateDirty(world, target, tagOps);
+                MirrorToStore(world, target, attributeId);
             }
             catch
             {
@@ -63,7 +79,10 @@ namespace Ludots.Core.Gameplay.GAS
                 return;
             }
 
-            SetCurrent(world, target, attributeId, world.Get<AttributeBuffer>(target).GetCap(attributeId), tagOps);
+            float cap = (uint)attributeId < (uint)Components.AttributeBuffer.MAX_ATTRS
+                ? world.Get<Components.AttributeBuffer>(target).GetCap(attributeId)
+                : AttributeReads.Cap(world, target, attributeId);
+            SetCurrent(world, target, attributeId, cap, tagOps);
         }
 
         public static void SetBase(World world, Entity target, int attributeId, float value, TagOps tagOps)
@@ -74,7 +93,20 @@ namespace Ludots.Core.Gameplay.GAS
             }
 
             RequireTagOps(tagOps);
+            if (attributeId < 0 || attributeId >= Registry.AttributeRegistry.MaxAttributeIds)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(attributeId), attributeId,
+                    $"attributeId must be in [0, {Registry.AttributeRegistry.MaxAttributeIds}).");
+            }
+
             EnsureDirtyFlags(world, target);
+            if ((uint)attributeId >= (uint)Components.AttributeBuffer.MAX_ATTRS)
+            {
+                SetBaseHigh(world, target, attributeId, value, tagOps);
+                return;
+            }
+
             ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(target);
             AttributeBuffer attributesBefore = attributes;
             DirtyFlags dirtyBefore = world.Get<DirtyFlags>(target);
@@ -92,7 +124,8 @@ namespace Ludots.Core.Gameplay.GAS
             {
                 world.Get<DirtyFlags>(target).MarkAttributeDirty(attributeId);
                 tagOps.MarkDirtyEntity(world, target);
-                MarkAttributeAggregateDirty(world, target);
+                MarkAttributeAggregateDirty(world, target, tagOps);
+                MirrorToStore(world, target, attributeId);
             }
             catch
             {
@@ -112,13 +145,17 @@ namespace Ludots.Core.Gameplay.GAS
             }
 
             RequireTagOps(tagOps);
+            ApplyModifiersHigh(world, target, in modifiers, tagOps);
             ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(target);
             Span<float> beforeValues = stackalloc float[AttributeBuffer.MAX_ATTRS];
             ulong touchedMask = 0UL;
             for (int i = 0; i < modifiers.Count; i++)
             {
                 int attributeId = modifiers.Get(i).AttributeId;
-                AttributeBuffer.ValidateAttributeId(attributeId);
+                if ((uint)attributeId >= (uint)Components.AttributeBuffer.MAX_ATTRS)
+                {
+                    continue;
+                }
 
                 ulong bit = 1UL << attributeId;
                 if ((touchedMask & bit) != 0UL)
@@ -169,7 +206,7 @@ namespace Ludots.Core.Gameplay.GAS
                 try
                 {
                     tagOps.MarkDirtyEntity(world, target);
-                    MarkAttributeAggregateDirty(world, target);
+                    MarkAttributeAggregateDirty(world, target, tagOps);
                 }
                 catch
                 {
@@ -186,6 +223,113 @@ namespace Ludots.Core.Gameplay.GAS
                     }
                 }
             }
+        }
+
+        private static void SetCurrentHigh(World world, Entity target, int attributeId, float value, TagOps tagOps)
+        {
+            WorldAttributeStore store = WorldAttributeStoreAmbient.Current
+                ?? throw new InvalidOperationException(
+                    "GAS.CAPACITY.ERR.HighLaneUnavailable: attributeId >= 64 需要世界列存（RFC-0067 P1），但 WorldAttributeStore 未绑定。");
+            int row = store.EnsureRow(target);
+            float before = store.GetCurrent(row, attributeId);
+            store.SetCurrentHigh(row, attributeId, value);
+            if (before == store.GetCurrent(row, attributeId))
+            {
+                return;
+            }
+
+            store.MarkAttributeDirtyHigh(row, attributeId);
+            store.MarkAggregateDirty(row);
+            tagOps.MarkDirtyEntity(world, target);
+            MarkAttributeAggregateDirty(world, target, tagOps);
+        }
+
+        private static void SetBaseHigh(World world, Entity target, int attributeId, float value, TagOps tagOps)
+        {
+            WorldAttributeStore store = WorldAttributeStoreAmbient.Current
+                ?? throw new InvalidOperationException(
+                    "GAS.CAPACITY.ERR.HighLaneUnavailable: attributeId >= 64 需要世界列存（RFC-0067 P1），但 WorldAttributeStore 未绑定。");
+            int row = store.EnsureRow(target);
+            float beforeBase = store.GetBase(row, attributeId);
+            float beforeCurrent = store.GetCurrent(row, attributeId);
+            store.SetBase(row, attributeId, value);
+            if (beforeBase == store.GetBase(row, attributeId) && beforeCurrent == store.GetCurrent(row, attributeId))
+            {
+                return;
+            }
+
+            store.MarkAttributeDirtyHigh(row, attributeId);
+            store.MarkAggregateDirty(row);
+            tagOps.MarkDirtyEntity(world, target);
+            MarkAttributeAggregateDirty(world, target, tagOps);
+        }
+
+        /// <summary>ApplyModifiers 的高槽位前置补丁：内嵌车道由本方法与 EffectModifierOps 共同跳过 ≥64。</summary>
+        private static void ApplyModifiersHigh(World world, Entity target, in EffectModifiers modifiers, TagOps tagOps)
+        {
+            bool hasHigh = false;
+            for (int i = 0; i < modifiers.Count; i++)
+            {
+                if (modifiers.Get(i).AttributeId >= Components.AttributeBuffer.MAX_ATTRS)
+                {
+                    hasHigh = true;
+                    break;
+                }
+            }
+
+            if (!hasHigh)
+            {
+                return;
+            }
+
+            WorldAttributeStore store = WorldAttributeStoreAmbient.Current
+                ?? throw new InvalidOperationException(
+                    "GAS.CAPACITY.ERR.HighLaneUnavailable: modifier 引用 attributeId >= 64 需要世界列存（RFC-0067 P1）。");
+            int row = store.EnsureRow(target);
+            bool changed = false;
+            for (int i = 0; i < modifiers.Count; i++)
+            {
+                var mod = modifiers.Get(i);
+                if (mod.AttributeId < Components.AttributeBuffer.MAX_ATTRS)
+                {
+                    continue;
+                }
+
+                float before = store.GetCurrent(row, mod.AttributeId);
+                float value = mod.Operation switch
+                {
+                    Components.ModifierOp.Add => before + mod.Value,
+                    Components.ModifierOp.Multiply => before * mod.Value,
+                    _ => mod.Value,
+                };
+                store.SetCurrentHigh(row, mod.AttributeId, value);
+                if (before != store.GetCurrent(row, mod.AttributeId))
+                {
+                    store.MarkAttributeDirtyHigh(row, mod.AttributeId);
+                    changed = true;
+                }
+            }
+
+            if (changed)
+            {
+                store.MarkAggregateDirty(row);
+                tagOps.MarkDirtyEntity(world, target);
+                MarkAttributeAggregateDirty(world, target, tagOps);
+            }
+        }
+
+        /// <summary>内嵌车道 settle 后把最终值（含钳制）镜像进列存；未建行（无种子来源）则跳过——
+        /// 列存在 P1 是 ≥64 槽位的运行真相与 <64 槽位的种子期镜像，不做无源镜像。</summary>
+        private static void MirrorToStore(World world, Entity target, int attributeId)
+        {
+            WorldAttributeStore store = WorldAttributeStoreAmbient.Current;
+            if (store == null || !store.TryGetRow(target, out int row))
+            {
+                return;
+            }
+
+            ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(target);
+            store.MirrorCurrent(row, attributeId, attributes.GetBase(attributeId), attributes.GetCap(attributeId), attributes.GetCurrent(attributeId));
         }
 
         private static void EnsureDirtyFlags(World world, Entity target)
@@ -205,14 +349,14 @@ namespace Ludots.Core.Gameplay.GAS
             }
         }
 
-        private static void MarkAttributeAggregateDirty(World world, Entity target)
+        private static void MarkAttributeAggregateDirty(World world, Entity target, TagOps tagOps)
         {
-            if (!world.Has<ActiveEffectContainer>(target) || world.Has<AttributeAggregateDirty>(target))
+            if (!world.Has<ActiveEffectContainer>(target))
             {
                 return;
             }
 
-            world.Add(target, new AttributeAggregateDirty());
+            (tagOps.AggregateDirty ?? throw new InvalidOperationException(AttributeAggregateDirtyRegistry.MissingRegistryError)).MarkDirty(target);
         }
 
         private static void MarkPresentationChanged(World world, Entity target, int attributeId)

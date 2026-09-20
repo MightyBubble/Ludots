@@ -11,9 +11,11 @@ public sealed partial class MassNavigationFlowSolverState
     {
         if (UnitCount <= 0 || _entitySyncDirtyCount <= 0)
         {
+            LastEntitySyncAgentCount = 0;
             return;
         }
 
+        int syncedCount = 0;
         int dirtyCount = _entitySyncDirtyCount;
         for (int dirtyIndex = 0; dirtyIndex < dirtyCount; dirtyIndex++)
         {
@@ -33,6 +35,7 @@ public sealed partial class MassNavigationFlowSolverState
                 continue;
             }
 
+            syncedCount++;
             if (!agentState.TryGetAgentEntity(i, out Entity entity))
             {
                 throw new InvalidOperationException(
@@ -49,12 +52,13 @@ public sealed partial class MassNavigationFlowSolverState
             float xCm = _positionsCm[i2];
             float yCm = _positionsCm[i2 + 1];
             float worldXCm = _worldOriginXCm + xCm;
-            float worldYCm = _worldOriginYCm + yCm;
+            float worldYCm = _worldOriginYcm + yCm;
             Fix64Vec2 worldValue = Fix64Vec2.FromInt((int)MathF.Round(worldXCm), (int)MathF.Round(worldYCm));
             ref WorldPositionCm worldPosition = ref world.Get<WorldPositionCm>(entity);
             worldPosition.Value = worldValue;
         }
 
+        LastEntitySyncAgentCount = syncedCount;
         _entitySyncDirtyCount = 0;
     }
 

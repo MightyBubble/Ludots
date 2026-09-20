@@ -42,6 +42,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.LoadTextKey:
                         ins.Imm = symbolResolver.ResolveTextToken(ResolveSymbol(symbols, ins.Imm));
                         break;
+                    case GraphNodeOp.SubmitAssignedOrder:
+                    case GraphNodeOp.LoadOrderTypeId:
+                        ins.Imm = symbolResolver.ResolveOrderType(ResolveSymbol(symbols, ins.Imm));
+                        break;
                     case GraphNodeOp.StartDialogue:
                     case GraphNodeOp.SubmitCast:
                         ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
@@ -150,6 +154,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.QueryFromCollection:
                         ins.Imm = ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, ins.Imm));
                         break;
+                    case GraphNodeOp.QueryScreenRegionCollection:
+                        ins.ImmF = BitConverter.Int32BitsToSingle(ResolveEntityCollectionKey(entityCollections,
+                            ResolveSymbol(symbols, BitConverter.SingleToInt32Bits(ins.ImmF))));
+                        ins.Imm = ins.Imm >= 0 ? ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm)) : 0;
+                        break;
+                    case GraphNodeOp.BindQueryCollection:
+                        ins.Imm = GraphIdRegistry.GetId(ResolveSymbol(symbols, ins.Imm));
+                        if (ins.Imm <= 0) throw new InvalidOperationException("ENTITY_QUERY.ERR.QueryGraphUnknown");
+                        ins.ImmF = BitConverter.Int32BitsToSingle(ResolveEntityCollectionKey(entityCollections,
+                            ResolveSymbol(symbols, BitConverter.SingleToInt32Bits(ins.ImmF))));
+                        break;
                     case GraphNodeOp.ScreenPointToEntity:
                         if (ins.Imm >= 0)
                         {
@@ -218,7 +233,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         if ((op == GraphNodeOp.RelationshipSetMetric || op == GraphNodeOp.RelationshipAddMetric) &&
                             ins.Dst != byte.MaxValue)
                         {
-                            ins.Dst = checked((byte)symbolResolver.ResolveRelationshipReason(ResolveSymbol(symbols, ins.Dst)));
                         }
 
                         if (ins.Flags != byte.MaxValue)
@@ -248,7 +262,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
                         if (op == GraphNodeOp.RelationshipSetFlag && ins.Dst != byte.MaxValue)
                         {
-                            ins.Dst = checked((byte)symbolResolver.ResolveRelationshipReason(ResolveSymbol(symbols, ins.Dst)));
                         }
 
                         if (op == GraphNodeOp.RelationshipSetFlag || op == GraphNodeOp.RelationshipHasFlag)

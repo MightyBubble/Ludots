@@ -28,6 +28,13 @@ public sealed class MassNavigationTelemetry
     public float SimStepMs { get; private set; }
     public float HardResolveMs { get; private set; }
     public float EntitySyncMs { get; private set; }
+    public float LastGroupTargetUpdateMs { get; private set; }
+    public float LastFlowFieldRebuildMs { get; private set; }
+    public float LastStepPrepMs { get; private set; }
+    public float LastLocalSteeringMs { get; private set; }
+    public float LastSimStepMs { get; private set; }
+    public float LastHardResolveMs { get; private set; }
+    public float LastEntitySyncMs { get; private set; }
     public float PresenterCommandMs { get; private set; }
     public float ControlHzObserved { get; private set; }
     public float CommandHzObserved { get; private set; }
@@ -52,17 +59,58 @@ public sealed class MassNavigationTelemetry
         StreamingWindowUpdatesFrame = 0;
         FocusBudgetUpdatesFrame = 0;
         SolverWindowMovesFrame = 0;
+        LastGroupTargetUpdateMs = 0f;
+        LastFlowFieldRebuildMs = 0f;
+        LastStepPrepMs = 0f;
+        LastLocalSteeringMs = 0f;
+        LastSimStepMs = 0f;
+        LastHardResolveMs = 0f;
+        LastEntitySyncMs = 0f;
         FrameMs = dt > 0f ? dt * 1000f : 0f;
         Fps = FrameMs > 0.001f ? 1000f / FrameMs : 0f;
     }
 
-    public void ObserveGroupTargetUpdate(double sampleMs) => GroupTargetUpdateMs = Smooth(GroupTargetUpdateMs, (float)sampleMs);
-    public void ObserveFlowFieldRebuild(double sampleMs) => FlowFieldRebuildMs = Smooth(FlowFieldRebuildMs, (float)sampleMs);
-    public void ObserveStepPrep(double sampleMs) => StepPrepMs = Smooth(StepPrepMs, (float)sampleMs);
-    public void ObserveLocalSteering(double sampleMs) => LocalSteeringMs = Smooth(LocalSteeringMs, (float)sampleMs);
-    public void ObserveSimStep(double sampleMs) => SimStepMs = Smooth(SimStepMs, (float)sampleMs);
-    public void ObserveHardResolve(double sampleMs) => HardResolveMs = Smooth(HardResolveMs, (float)sampleMs);
-    public void ObserveEntitySync(double sampleMs) => EntitySyncMs = Smooth(EntitySyncMs, (float)sampleMs);
+    public void ObserveGroupTargetUpdate(double sampleMs)
+    {
+        LastGroupTargetUpdateMs = (float)Math.Max(0d, sampleMs);
+        GroupTargetUpdateMs = Smooth(GroupTargetUpdateMs, LastGroupTargetUpdateMs);
+    }
+
+    public void ObserveFlowFieldRebuild(double sampleMs)
+    {
+        LastFlowFieldRebuildMs = (float)Math.Max(0d, sampleMs);
+        FlowFieldRebuildMs = Smooth(FlowFieldRebuildMs, LastFlowFieldRebuildMs);
+    }
+
+    public void ObserveStepPrep(double sampleMs)
+    {
+        LastStepPrepMs = (float)Math.Max(0d, sampleMs);
+        StepPrepMs = Smooth(StepPrepMs, LastStepPrepMs);
+    }
+
+    public void ObserveLocalSteering(double sampleMs)
+    {
+        LastLocalSteeringMs = (float)Math.Max(0d, sampleMs);
+        LocalSteeringMs = Smooth(LocalSteeringMs, LastLocalSteeringMs);
+    }
+
+    public void ObserveSimStep(double sampleMs)
+    {
+        LastSimStepMs = (float)Math.Max(0d, sampleMs);
+        SimStepMs = Smooth(SimStepMs, LastSimStepMs);
+    }
+
+    public void ObserveHardResolve(double sampleMs)
+    {
+        LastHardResolveMs = (float)Math.Max(0d, sampleMs);
+        HardResolveMs = Smooth(HardResolveMs, LastHardResolveMs);
+    }
+
+    public void ObserveEntitySync(double sampleMs)
+    {
+        LastEntitySyncMs = (float)Math.Max(0d, sampleMs);
+        EntitySyncMs = Smooth(EntitySyncMs, LastEntitySyncMs);
+    }
     public void ObservePresenterCommand(double sampleMs) => PresenterCommandMs = Smooth(PresenterCommandMs, (float)sampleMs);
 
     public void ObservePresenterCoverage(

@@ -91,6 +91,16 @@ namespace Ludots.Core.Presentation.Presenters
         /// <summary>The literal value when Source == Constant.</summary>
         public float ConstantValue;
 
+        /// <summary>
+        /// Explicit opt-in for source-missing tolerance (author-facing <c>optional: true</c>;
+        /// never a silent default). When set, a source that cannot be resolved right now
+        /// (e.g. an owner blackboard key not yet written because the driving state has not
+        /// occurred) projects 0 instead of throwing — the consumer decides what absent data
+        /// means (e.g. ScreenRect visibility hides the render). Without it, a missing source
+        /// remains a hard fail-fast contract error.
+        /// </summary>
+        public bool Optional;
+
         public static ValueRef FromConstant(float value) => new()
         {
             Source = ValueSourceKind.Constant,

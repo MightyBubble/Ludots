@@ -4,13 +4,6 @@
 
 生成器：`scripts/generate-graph-op-node-wiki.py`（从 vignette 与引擎描述表生成，勿手改正文）。
 
-## 下令桥
-
-> 作者语义与全量字段见手册分册 [地图触发器 · map-02](../mod-editor-prd/config/map-02-triggers.md)。
-
-- [一声令下先进缓冲](SubmitCommandIntent.md) — 图里定好落点，一声令下交给缓冲，下令内核下一拍再路由。
-- [施法令先进缓冲](SubmitCast.md) — 图里定好槽位，一声施法交给缓冲，下令内核下一拍按活跃集成员扇出。
-
 ## 事件与吸附
 
 > 作者语义与全量字段见手册分册 [事件与情境 · gr-op-01](../mod-editor-prd/config/gr-op-01-context.md)。
@@ -69,6 +62,7 @@
 - [全场最低血量](AggMinAttribute.md) — 台面翻出最低一格，亮出的数短得像那条空血条。
 - [全场最高血量](AggMaxAttribute.md) — 台面翻出最高一格，亮出的数顶着满格血条。
 - [全场生命合计](AggSumAttribute.md) — 十三根血条一根根收进台面，台面亮出总数。
+- [只圈你能指挥的](QueryFilterControllable.md) — 满场单位里，被实线指挥的才留下圈，其余退成灰影。
 - [只圈残血的](QueryFilterAttributeRange.md) — 全场先亮一圈，再只剩短血条的留着。
 - [只挑侦察兵](QueryFilterTemplate.md) — 全场先亮一圈，再只剩两个矮个子亮着。
 - [圈出对面十个](QueryFilterTeam.md) — 红的一排留圈，蓝的退成灰影。
@@ -89,7 +83,6 @@
 - [翻开效果图鉴](QueryCollectEffectTemplates.md) — 墙上贴着一批效果说明书。
 - [翻开物品图鉴](QueryCollectItemDefinitions.md) — 物品说明书贴在墙上。
 - [翻开背包](QueryCollectInventoryItems.md) — 背包里的物被点名线牵住。
-- [认知筛只留看得见的](QueryFilterKnowledgeVisible.md) — 名单先问观察者认不认识：认识的留下，不认识的当场划掉，顺序不变。
 - [谁会这招](QueryCollectAbilityHolders.md) — 会这招的人被点名线牵住。
 
 ## 子图调用与事件派发
@@ -98,7 +91,7 @@
 
 - [先存参数，再点子图](StoreArgInt.md) — 整数参数放进暂存表，子图按名字取走，回执就是同一数字。
 - [实体参数递过去，子图亲自搬人](StoreArgEntity.md) — 把木桩实体暂存给子图，子图按参数把它搬到新位置。
-- [按事件账本派发心跳](DispatchMapEvent.md) — 载荷按 schema 组装成事件，地图上的监听者按账本收货。
+- [按事件账本派发地图事件](DispatchMapEvent.md) — 载荷组装成地图事件，监听者按账本收货。
 - [浮点参数过一手，地图变量作回音](StoreArgFloat.md) — 比例系数暂存后交给子图，子图把它写进地图变量当回音。
 - [点名子图，指定入口直接回话](InvokeGraph.md) — 主图一声令下，子图从 boost 入口出发，把九号命令带回来。
 
@@ -140,6 +133,13 @@
 - [点名放置的木桩，名册一翻就到](LoadPlacedEntity.md) — 记录官翻出名册一点名，放置的木桩大王立刻在岗应答；倒下后名册读出空位。
 - [点名预放置锚点，名册一翻就到](LoadPlacedAnchor.md) — 记录官翻出名册点到锚点，营地锚立刻在岗应答；倒下后名册读出空位。
 
+## 派生名单与框选
+
+> 作者语义与全量字段见手册分册 [名单筛选与汇总 · gr-op-07](../mod-editor-prd/config/gr-op-07-entityset.md)。
+
+- [只点框内的敌军](QueryScreenRegionCollection.md) — 左半场点名，友军与框外敌军留在圈外。
+- [换队后，名单跟着变](BindQueryCollection.md) — 左侧士兵换队，点名圈随之摘下或补回。
+
 ## 瞄准源
 
 > 作者语义与全量字段见手册分册 [空间圈人 · gr-op-06](../mod-editor-prd/config/gr-op-06-spatial.md)。
@@ -177,6 +177,7 @@
 - [两段伤害叠成一刀](AddFloat.md) — 30 的一段先摆上，12 的一段接在尾巴上，接成的一整段有多长，木桩就掉多少血。
 - [亮出情报面板](ShowPanel.md) — 选中单位的一瞬间，属性卡跟着亮起来。
 - [伤害拉长一半](MulFloat.md) — 20 的伤害段被拉长一半，原样留着影子，拉成多长就掉多少血。
+- [先看坐标读不读得出](LoadEntityPosValid.md) — 图里先确认木桩站在原地，坐标读得出才谈得上追击。
 - [刻死的一刀](ConstFloat.md) — 台上没有表盘，只有一块刻好长度的铭牌；每一刀都和铭牌一样长。
 - [命运袋里掏一件](WeightedPick.md) — 掌心探进命运袋，掏出第几件全看权重，木桩照数挨一下。
 - [图内切瞄准](SetInteractionMode.md) — 不用碰键位表，一枚目标在图里被切进了瞄准模式。
@@ -184,13 +185,18 @@
 - [图内激活瞄准 context](ActivateContext.md) — 不用碰键位表，一枚指令把木桩切进瞄准 context，实例集里立起一条。
 - [图内造兵](SpawnTemplate.md) — 不用预置实体，阈值一到援军从图里长了出来。
 - [对折零轴取长度](AbsFloat.md) — 负 8 的修正段沿零轴对折，折过来的长度是多少就打多少。
+- [开方求真长度](SqrtFloat.md) — 81 的平方开出来是 9，折成 9 点伤打在木桩上。
 - [按编号翻名册点将](ResolveTableRow.md) — 报出 2 号，名册翻到那一行，册上的扣血照着木桩落下。
 - [撞到上限就停](ClampFloat.md) — 90 的伤害段沿轨道左移，撞上 40 的墙就停住，打出去的是停下来的那一段。
 - [收起情报面板](HidePanel.md) — 点掉选中，属性卡跟着隐去。
+- [整数换算成浮点刻度](IntToFloat.md) — 记在整数位上的 -9，换到浮点刻度再打出去，数值不变，刻度变了。
 - [格挡先咬掉一截](SubFloat.md) — 50 的伤害段送到木桩前，格挡块先咬掉头上的 12，剩下的才进血条。
 - [永远放行的许可](ConstBool.md) — 门闩每一拍都开着，亮一个绿点放一刀，一排刻记里从来没有红点。
+- [浮点折回整数位](FloatToInt.md) — -8.6 的伤害按四舍五入折回整数位，折完是多少打多少。
 - [热座换手](SetPanelAudience.md) — 回合一换，面板受众跟着换到当令座位，等待的座位点不动面板。
 - [砍不砍得死，比一下](CompareGtFloat.md) — 同样长的一刀，血条比它长的木桩挨不动，血条比它短的木桩一刀就没。
+- [读出木桩的横坐标](LoadEntityPosX.md) — 不靠眼睛看，图里直接读木桩站在第几厘米，读数顺手折成伤打出去。
+- [读出木桩的纵坐标](LoadEntityPosY.md) — 横向读过了，这次读纵坐标，木桩站得多偏一看便知。
 - [读名册上的扣血力度](TableReadFloat.md) — 同一行名册，读出这一击该扣多少血，木桩照单落账。
 - [读名册上的星数](TableReadInt.md) — 点到 2 号那行，册上记着三颗星，照数挂印。
 - [读活指针横向](LoadPointerScreenX.md) — 活指针横向停在 42，读数进伤害链。
@@ -243,6 +249,14 @@
 - [算出一个整数就收工](HaltReturnInt.md) — 数落进托盘、卷轴拉下打烊条、人挪到答案旁边——这三件事同时发生，就是收工。
 - [续一杯，歇一口气](Yield.md) — 每续一杯就停一拍：人影顿一下，杯里水涨一格，三格满就完。
 - [进图开一场对话](StartDialogue.md) — 图节点点名对话 id；跑完，会话已开，字幕报「对话已开」。
+
+## 订单与行为
+
+> 作者语义与全量字段见手册分册 [脚本控制流 · gr-op-14](../mod-editor-prd/config/gr-op-14-control-flow.md)。
+
+- [亲手把令办结](CompleteActiveOrder.md) — 手上那道移动令由图里销账，订单缓冲腾出来接下一单。
+- [替自己下移动令](SubmitAssignedOrder.md) — 行为图不等玩家发话，直接往订单队列里塞一道移动令。
+- [认出移动令的编号](LoadOrderTypeId.md) — 图里先把移动令的编号认出来，认得出才指挥得动。
 
 ## 集合写入
 

@@ -73,12 +73,27 @@ namespace Ludots.Tool
                 throw new InvalidOperationException($"Map '{map.Id}' has no BoardConfig entries.");
             }
 
+            string? rootDesignation = map.RootBoard?.Trim();
+            if (!string.IsNullOrWhiteSpace(rootDesignation))
+            {
+                foreach (var board in map.Boards)
+                {
+                    if (string.Equals(board.Name, rootDesignation, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return board;
+                    }
+                }
+
+                throw new InvalidOperationException(
+                    $"Map '{map.Id}' RootBoard '{rootDesignation}' matches no board (#1567).");
+            }
+
             BoardConfig? defaultNavigationBoard = null;
             BoardConfig? firstNavigationBoard = null;
             for (int i = 0; i < map.Boards.Count; i++)
             {
                 BoardConfig board = map.Boards[i];
-                if (board == null || !board.NavigationEnabled)
+                if (board == null)
                 {
                     continue;
                 }
@@ -289,10 +304,12 @@ namespace Ludots.Tool
             {
                 MapConfig parent = LoadMergedMap(repoRoot, mods, loadOrder, merged.ParentId);
                 MergeMap(parent, merged);
-                return parent;
+                Ludots.Core.Map.MapManager.ApplyWorldTuningToBoards(parent);
+            return parent;
             }
 
-            return merged;
+            Ludots.Core.Map.MapManager.ApplyWorldTuningToBoards(merged);
+        return merged;
         }
 
         private static void MergeMap(MapConfig target, MapConfig source)
@@ -365,6 +382,16 @@ namespace Ludots.Tool
             if (source.DefaultCamera != null) target.DefaultCamera = source.DefaultCamera;
             if (source.ContinuousHeightmap != null) target.ContinuousHeightmap = source.ContinuousHeightmap;
             if (source.ParticipantRelationships != null) target.ParticipantRelationships = source.ParticipantRelationships;
+        if (!string.IsNullOrWhiteSpace(source.RootBoard))
+        {
+            target.RootBoard = source.RootBoard;
+        }
+
+        if (source.Tuning is { } srcTuning && srcTuning.IsAuthored)
+        {
+            target.Tuning = srcTuning.Clone();
+        }
+
         }
 
         private static bool MapFileExists(string rootPath, string mapId)
@@ -384,10 +411,11 @@ namespace Ludots.Tool
                 return;
             }
 
-            if (ContainsKey(root, "WidthInTiles") || ContainsKey(root, "HeightInTiles"))
+            if (ContainsKey(root, "WidthInTiles") || ContainsKey(root, "HeightInTiles") ||
+                ContainsKey(root, "WidthInPages") || ContainsKey(root, "HeightInPages"))
             {
                 throw new InvalidOperationException(
-                    $"Map config '{path}' uses legacy WidthInTiles/HeightInTiles. Use WidthInMacroTiles/HeightInMacroTiles.");
+                    $"Map config '{path}' uses legacy tile-count world keys. Use Boards[].WidthCells/HeightCells; the root board anchors the host world.");
             }
 
             if (TryGetObjectArray(root, "boards", out JsonArray? boards) && boards != null)
@@ -396,10 +424,11 @@ namespace Ludots.Tool
                 {
                     JsonNode? boardNode = boards[i];
                     if (boardNode is JsonObject board &&
-                        (ContainsKey(board, "WidthInTiles") || ContainsKey(board, "HeightInTiles")))
+                        (ContainsKey(board, "WidthInTiles") || ContainsKey(board, "HeightInTiles") ||
+                         ContainsKey(board, "WidthInPages") || ContainsKey(board, "HeightInPages")))
                     {
                         throw new InvalidOperationException(
-                            $"Map config '{path}' board[{i}] uses legacy WidthInTiles/HeightInTiles. Use WidthInMacroTiles/HeightInMacroTiles.");
+                            $"Map config '{path}' board[{i}] uses legacy tile-count extent keys. Use Boards[].WidthCells/HeightCells; the root board anchors the host world.");
                     }
                 }
             }
@@ -409,7 +438,7 @@ namespace Ludots.Tool
         {
             foreach (KeyValuePair<string, JsonNode?> kvp in obj)
             {
-                if (string.Equals(kvp.Key, key, StringComparison.Ordinal))
+                if (string.Equals(kvp.Key, key, StringComparison.OrdinalIgnoreCase))
                 {
                     return true;
                 }

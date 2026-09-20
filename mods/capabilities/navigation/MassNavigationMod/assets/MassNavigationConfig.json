@@ -62,7 +62,6 @@
   "presentation": {
     "requiredMeshAssetIds": [
       "mass_navigation.agent.soldier",
-      "mass_navigation.command.marker",
       "mass_navigation.blocker.rock",
       "mass_navigation.hotspot.obelisk"
     ],
@@ -73,7 +72,6 @@
     "teams": [
       {
         "teamId": 1,
-        "styleId": "blue",
         "lightTemplateId": "mass_navigation_agent_azure_light",
         "heavyTemplateId": "mass_navigation_agent_azure_heavy",
         "lightPresenterId": "mass_navigation_agent_azure_light",
@@ -81,7 +79,6 @@
       },
       {
         "teamId": 2,
-        "styleId": "red",
         "lightTemplateId": "mass_navigation_agent_crimson_light",
         "heavyTemplateId": "mass_navigation_agent_crimson_heavy",
         "lightPresenterId": "mass_navigation_agent_crimson_light",
@@ -89,7 +86,6 @@
       },
       {
         "teamId": 3,
-        "styleId": "gold",
         "lightTemplateId": "mass_navigation_agent_amber_light",
         "heavyTemplateId": "mass_navigation_agent_amber_heavy",
         "lightPresenterId": "mass_navigation_agent_amber_light",
@@ -97,7 +93,6 @@
       },
       {
         "teamId": 4,
-        "styleId": "green",
         "lightTemplateId": "mass_navigation_agent_emerald_light",
         "heavyTemplateId": "mass_navigation_agent_emerald_heavy",
         "lightPresenterId": "mass_navigation_agent_emerald_light",
@@ -126,7 +121,7 @@
       }
     ],
     "spawnLayout": {
-      "kind": "OrbitOpposedTargets",
+      "kind": "QuadrantSpread",
       "orbitRadiusCm": 3650,
       "randomSeed": 12648430
     }
@@ -136,14 +131,11 @@
     "runtimeCapacity": {
       "navigationGroupCapacity": 256,
       "groupMembershipAgentCapacity": 160000,
-      "groupMemberCapacity": 10000,
       "movePlanExecutionGroupCapacity": 256,
-      "movePlanExecutionMemberCapacity": 10000,
       "routeStateCapacity": 10000,
       "routeMaxExpandedPerRequest": 2048,
       "routeWaypointCapacityPerAgent": 64,
       "loadedChunkCapacity": 256,
-      "relationshipDomainCapacity": 4,
       "displacedAgentCapacity": 64
     }
   },
@@ -195,43 +187,17 @@
   },
   "flow": {
     "enabled": false,
-    "iterationsPerStep": 4096,
-    "maxIterationsPerStep": 131072,
-    "forceRefreshFlow": false,
-    "forceRefreshCrowd": false,
-    "forceRefreshObstacles": false
+    "iterationsPerStep": 4096
   },
   "arrival": {
     "enabled": true,
     "timeoutMs": 1500,
-    "timeoutMinMs": 250,
-    "timeoutMaxMs": 10000,
     "progressDistanceCm": 60,
-    "progressDistanceMinCm": 10,
-    "progressDistanceMaxCm": 500,
     "wakePushDistanceCm": 80,
-    "wakePushDistanceMinCm": 10,
-    "wakePushDistanceMaxCm": 500,
-    "maxRetryCountMin": 0,
-    "maxRetryCountMax": 16,
     "maxRetryCount": 2
   },
   "avoidance": {
     "mode": "Separation",
-    "orca": {
-      "timeHorizonSeconds": 0.85,
-      "maxNeighbors": 16
-    },
-    "sonar": {
-      "maxSteerAngleDeg": 280,
-      "backwardPenaltyAngleDeg": 230,
-      "predictionTimeScale": 0.9,
-      "ignoreBehindMovingAgents": true,
-      "blockedStop": false,
-      "usePreferredVelocityWhenBlocked": true,
-      "timeHorizonSeconds": 0.85,
-      "maxNeighbors": 16
-    },
     "dominantMassRatio": 2.25,
     "friendlyResponseScale": 1.1,
     "friendlyResponseMin": 0.35,
@@ -296,6 +262,7 @@
       "minVisualScale": 0.01,
       "maxStepDtSeconds": 0.05,
       "parallelStepMinAgents": 2048,
+      "hardResolveMaxSeparatesPerAgentPass": 2,
       "directionEpsilonSq": 0.0001,
       "normalizationEpsilonSq": 0.000001,
       "inverseSqrtMinValue": 1e-8,

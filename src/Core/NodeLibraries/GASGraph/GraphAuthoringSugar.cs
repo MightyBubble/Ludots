@@ -26,6 +26,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public const string BtSelector = "BtSelector";
         public const string BtDecorator = "BtDecorator";
         /// <summary>
+        /// BT leaf portal: functionName points at a Script function graph (often an ActionLib
+        /// target). BehaviorGraphLeafWeaver splices that Script into the host tree before
+        /// compile so Yield may live in the leaf. Editor double-click opens the function graph.
+        /// Never a GraphNodeOp.
+        /// </summary>
+        public const string BtLeaf = "BtLeaf";
+        /// <summary>
+        /// BT Action leaf portal (same weave path as BtLeaf). functionName → Script Func Graph.
+        /// </summary>
+        public const string BtAction = "BtAction";
+        /// <summary>
+        /// BT Condition leaf portal (same weave path as BtLeaf). functionName → Script Func Graph.
+        /// </summary>
+        public const string BtCondition = "BtCondition";
+        /// <summary>
         /// FSM state dispatch container: reads the map variable named by stateVar, then
         /// SwitchInt-style case:{memberName} arms per enum member (enumType required).
         /// Lowers to ReadMapVarInt + ConstInt/CompareEqInt/JumpIfFalse/Jump; the running
@@ -34,14 +49,30 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         public const string FsmState = "FsmState";
         /// <summary>
+        /// FSM arm portal: functionName points at a Script function graph for one state body.
+        /// BehaviorGraphLeafWeaver splices it (HaltReturnInt kept — GraphFsmHost requires halt).
+        /// Editor double-click opens the function graph. Never a GraphNodeOp.
+        /// </summary>
+        public const string FsmAction = "FsmAction";
+        /// <summary>
         /// Compile-time macro splice (Unreal Macro style): replace this site with the
         /// body of another TriggerGraph so AwaitCallback/Yield may appear inside the
         /// reusable fragment. Never becomes a GraphNodeOp; runtime InvokeGraph stays sync-only.
         /// </summary>
         public const string InlineGraph = "InlineGraph";
         /// <summary>
-        /// Formal-text authoring sugar: template in <c>text</c> with <c>{0}</c>/<c>{name}</c>
-        /// holes becomes ConstText + ConcatText (brace ports are Text). Never a GraphNodeOp.
+        /// <summary>
+        /// One-shot flow gate (UE DoOnce analogue): the int map variable named by
+        /// <c>var</c> (0 = not yet fired) latches to 1 on the first pass. Control port
+        /// <c>true</c> continues only on that first pass; <c>false</c> receives every
+        /// later activation. Reset is graph-body composition: WriteMapVarInt(var, 0).
+        /// Lowers to ReadMapVarInt + ConstInt/CompareEqInt/JumpIfFalse + ConstInt +
+        /// WriteMapVarInt + Jump; never becomes a GraphNodeOp.
+        /// </summary>
+        public const string DoOnce = "DoOnce";
+        /// <summary>
+        /// Formal-text authoring sugar: template in <c>text</c> with <c>{0}</c>/<c>{name}</c> holes
+        /// becomes ConstText + ConcatText (brace ports are Text). Never becomes a GraphNodeOp.
         /// </summary>
         public const string FormatText = "FormatText";
 
@@ -59,13 +90,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                    string.Equals(opName, While, StringComparison.Ordinal) ||
                    string.Equals(opName, Until, StringComparison.Ordinal) ||
                    string.Equals(opName, Break, StringComparison.Ordinal) ||
+                   string.Equals(opName, DoOnce, StringComparison.Ordinal) ||
                    IsFsmSugar(opName);
         }
 
         /// <summary>
-        /// Behavior-tree composition sugar. Strictly Script-kind: the whole tree compiles into one
-        /// Script program (Call/Return + CompareEqInt + JumpIfFalse; status channel 0/1/2 in an int
-        /// register) driven by GraphBehaviorTreeHost. Never becomes a GraphNodeOp value.
+        /// Behavior-tree composition sugar (Sequence/Selector/Decorator). Strictly Script-kind.
+        /// BtLeaf is a portal sugar expanded before compile — see <see cref="IsBtLeafPortal"/>.
         /// </summary>
         public static bool IsBtSugar(string? opName)
         {
@@ -78,6 +109,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                    string.Equals(opName, BtSelector, StringComparison.Ordinal) ||
                    string.Equals(opName, BtDecorator, StringComparison.Ordinal);
         }
+
+        public static bool IsBtLeafPortal(string? opName)
+            => string.Equals(opName, BtLeaf, StringComparison.Ordinal)
+               || string.Equals(opName, BtAction, StringComparison.Ordinal)
+               || string.Equals(opName, BtCondition, StringComparison.Ordinal);
 
         /// <summary>
         /// FSM dispatch sugar (FSM-1a). Script/TriggerGraph only: reads stateVar, then SwitchInt-style
@@ -93,13 +129,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             return string.Equals(opName, FsmState, StringComparison.Ordinal);
         }
 
+        public static bool IsFsmActionPortal(string? opName)
+            => string.Equals(opName, FsmAction, StringComparison.Ordinal);
+
         public static string DescribeScriptOnlySugar()
-            => $"{BranchBool}, {SwitchInt}, {SelectByEnum}, {Wait}, {While}, {Until}, {Break}, {FsmState}";
+            => $"{BranchBool}, {SwitchInt}, {SelectByEnum}, {Wait}, {While}, {Until}, {Break}, {DoOnce}, {FsmState}, {FsmAction}";
 
         public static string DescribeBtSugar()
-            => $"{BtSequence}, {BtSelector}, {BtDecorator}";
+            => $"{BtSequence}, {BtSelector}, {BtDecorator}, {BtLeaf}, {BtAction}, {BtCondition}";
 
         public static string DescribeFsmSugar()
-            => FsmState;
+            => $"{FsmState}, {FsmAction}";
     }
 }

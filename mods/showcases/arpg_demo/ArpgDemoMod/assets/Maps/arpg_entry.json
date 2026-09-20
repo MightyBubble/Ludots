@@ -1,5 +1,10 @@
 {
   "Id": "arpg_entry",
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  },
   "Tags": [
     "arpg"
   ],
@@ -68,14 +73,5 @@
     ],
     "Players": [],
     "PlayerTeams": []
-  },
-  "Players": [
-    {
-      "PlayerId": 1,
-      "TeamId": 1,
-      "RepresentativeInstanceId": "arpg-entry-hero"
-    }
-  ],
-  "HeartbeatIntervalTicks": 6,
-  "ContinuousHeightmapAsset": "assets/terrain/arpg_flat.height"
+  }
 }

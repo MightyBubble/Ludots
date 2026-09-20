@@ -97,6 +97,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                     break;
 
+                case GraphNodeOp.QueryFilterControllable:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
                 case GraphNodeOp.QueryFromCollection:
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireNonEmpty(node.CollectionKey, "collectionKey", node, graphId, diagnostics);
@@ -142,7 +146,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                     break;
 
+                case GraphNodeOp.QueryScreenRegionCollection:
                 case GraphNodeOp.ScreenRegionToEntities:
+                    if (op.NodeOp == GraphNodeOp.QueryScreenRegionCollection)
+                    {
+                        RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                        RequireNonEmpty(node.CollectionKey, "collectionKey", node, graphId, diagnostics);
+                    }
                     RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.C, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
@@ -388,6 +398,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.WriteCollection:
                     RequireNonEmpty(node.CollectionKey, "collectionKey", node, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Source)))
+                    {
+                        RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    }
+
                     break;
 
                 case GraphNodeOp.SubmitCommandIntent:
@@ -526,6 +541,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireNonEmpty(node.CollectionKey, "collectionKey", node, graphId, diagnostics);
                     break;
 
+                case GraphNodeOp.BindQueryCollection:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.FunctionName, "functionName", node, graphId, diagnostics);
+                    RequireNonEmpty(node.CollectionKey, "collectionKey", node, graphId, diagnostics);
+                    break;
+
                 case GraphNodeOp.SnapToNearestGraphEdge:
                     RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
@@ -661,6 +682,37 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 case GraphNodeOp.FloatToText:
                     RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.LoadEntityPosX:
+                case GraphNodeOp.LoadEntityPosY:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.IntToFloat:
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.FloatToInt:
+                case GraphNodeOp.SqrtFloat:
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.SubmitAssignedOrder:
+                    RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.OrderType, "orderType", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.CompleteActiveOrder:
+                    break;
+                case GraphNodeOp.LoadOrderTypeId:
+                    RequireNonEmpty(node.OrderType, "orderType", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.LoadEntityPosValid:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.SinkPresentationText:
@@ -928,6 +980,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     instruction.Imm = RequireSymbol(node.CollectionKey, "collectionKey", node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
 
+                case GraphNodeOp.QueryFilterControllable:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
                 case GraphNodeOp.QueryFilterTeam:
                     if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.TeamId)))
                     {
@@ -987,7 +1045,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     instruction.ImmF = node.PickRadiusPx;
                     break;
 
+                case GraphNodeOp.QueryScreenRegionCollection:
                 case GraphNodeOp.ScreenRegionToEntities:
+                    if (op.NodeOp == GraphNodeOp.QueryScreenRegionCollection)
+                    {
+                        instruction.Dst = ResolveValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                        instruction.ImmF = BitConverter.Int32BitsToSingle(RequireSymbol(node.CollectionKey, "collectionKey", node,
+                            symbolToIndex, symbols, graphId, diagnostics));
+                    }
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.A, GraphValueType.Float,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
@@ -1375,6 +1441,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 case GraphNodeOp.WriteCollection:
                     instruction.Imm = RequireSymbol(node.CollectionKey, "collectionKey", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.A = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Source))
+                        ? ResolveValueInput(
+                            node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics)
+                        : byte.MaxValue;
                     instruction.B = ResolveValueInput(
                         node, GraphControlFlowPorts.Value, GraphValueType.Int,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
@@ -1406,6 +1477,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                             node, GraphControlFlowPorts.Condition, GraphValueType.Bool,
                             valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics)
                         : byte.MaxValue;
+                    break;
+
+                case GraphNodeOp.BindQueryCollection:
+                    instruction.Imm = RequireSymbol(node.FunctionName, "functionName", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.ImmF = BitConverter.Int32BitsToSingle(RequireSymbol(node.CollectionKey, "collectionKey", node, symbolToIndex, symbols, graphId, diagnostics));
+                    instruction.A = ResolveValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.SetPanelAudience:
@@ -1763,6 +1841,53 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.FloatToText:
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.A, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.LoadEntityPosX:
+                case GraphNodeOp.LoadEntityPosY:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Flags = boolScratches[nodeIndex];
+                    break;
+
+                case GraphNodeOp.IntToFloat:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.FloatToInt:
+                case GraphNodeOp.SqrtFloat:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.SubmitAssignedOrder:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Target, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.C = ResolveValueInput(
+                        node, GraphControlFlowPorts.B, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.OrderType, "orderType", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.CompleteActiveOrder:
+                    break;
+
+                case GraphNodeOp.LoadOrderTypeId:
+                    instruction.Imm = RequireSymbol(node.OrderType, "orderType", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.LoadEntityPosValid:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     break;
 

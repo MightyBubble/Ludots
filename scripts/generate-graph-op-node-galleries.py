@@ -216,7 +216,28 @@ def write_map(
     if regions:
         if not isinstance(regions, list):
             raise SystemExit(f"Map {map_id} regions must be an array.")
-        payload["Regions"] = regions
+        # Region volumes are placed entities (#1461): each vignette region becomes an
+        # Entities[] placement whose RegionVolumeCm override carries key and shape.
+        for region in regions:
+            region_id = region.get("id")
+            if not region_id:
+                raise SystemExit(f"Map {map_id} region entry requires an id.")
+            volume = {"volumeKey": region_id, "shape": region.get("shape", "circle")}
+            for field in ("radiusCm", "halfWidthCm", "halfHeightCm"):
+                if field in region:
+                    volume[field] = region[field]
+            if "points" in region:
+                volume["points"] = region["points"]
+            for field in ("ax", "ay", "bx", "by", "halfThicknessCm"):
+                if field in region:
+                    volume[field] = region[field]
+            payload["Entities"].append({
+                "InstanceId": f"{region_id}_region",
+                "Template": "GraphOps.RegionVolumeAnchor",
+                "PositionXCm": int(region.get("x", 0)),
+                "PositionYCm": int(region.get("y", 0)),
+                "Overrides": {"RegionVolumeCm": volume},
+            })
     teams = collect_team_bindings(actors, template_teams or {})
     if teams:
         payload["Teams"] = teams

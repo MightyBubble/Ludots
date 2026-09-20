@@ -28,32 +28,49 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
     private readonly RelationshipTypeRegistry _types;
     private readonly RelationshipMetricRegistry _metrics;
     private readonly RelationshipFlagRegistry _flags;
-    private readonly RelationshipReasonRegistry _reasons;
     private readonly TargetDispatchPresetRegistry _dispatchPresets;
     private readonly GraphLookupTableRegistry? _lookupTables;
     private readonly PresentationTextCatalog? _presentationTextCatalog;
     private readonly Ludots.Core.Gameplay.Rng.RngPickService? _rngPicks;
+    private readonly Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry? _orderTypes;
 
     public GraphOpsNodeGallerySymbolResolver(
         EntityTemplateKeyRegistry templates,
         RelationshipTypeRegistry types,
         RelationshipMetricRegistry metrics,
         RelationshipFlagRegistry flags,
-        RelationshipReasonRegistry reasons,
         TargetDispatchPresetRegistry dispatchPresets,
         GraphLookupTableRegistry? lookupTables = null,
         Ludots.Core.Gameplay.Rng.RngPickService? rngPicks = null,
-        PresentationTextCatalog? presentationTextCatalog = null)
+        PresentationTextCatalog? presentationTextCatalog = null,
+        Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry? orderTypes = null)
     {
         _templates = templates ?? throw new ArgumentNullException(nameof(templates));
         _types = types ?? throw new ArgumentNullException(nameof(types));
         _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
         _flags = flags ?? throw new ArgumentNullException(nameof(flags));
-        _reasons = reasons ?? throw new ArgumentNullException(nameof(reasons));
         _dispatchPresets = dispatchPresets ?? throw new ArgumentNullException(nameof(dispatchPresets));
         _lookupTables = lookupTables;
         _rngPicks = rngPicks;
+        _orderTypes = orderTypes;
         _presentationTextCatalog = presentationTextCatalog;
+    }
+
+    public int ResolveOrderType(string name)
+    {
+        if (_orderTypes == null)
+        {
+            throw new InvalidOperationException(
+                $"Graph references order type '{name}', but the gallery resolver has no OrderTypeRegistry.");
+        }
+
+        if (!_orderTypes.TryGetId(name, out int orderTypeId) || orderTypeId <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Graph references unknown order type '{name}'. Register order types before compiling gallery graphs.");
+        }
+
+        return orderTypeId;
     }
 
     public int ResolveRngDistribution(string name)
@@ -85,8 +102,6 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
         var flags = new RelationshipFlagRegistry();
         flags.Register("Trusted");
         flags.Register("Estranged");
-        var reasons = new RelationshipReasonRegistry();
-        reasons.Register("Scenario.Setup");
         var presets = new TargetDispatchPresetRegistry();
         presets.Register(
             TargetToResolvedPreset,
@@ -102,11 +117,31 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
             types,
             metrics,
             flags,
-            reasons,
             presets,
             LoadLookupTables(Path.Combine(assetsRoot, "GraphTables")),
             LoadDistributionPicks(assetsRoot),
-            LoadPresentationTextCatalog(assetsRoot));
+            LoadPresentationTextCatalog(assetsRoot),
+            CreateStandaloneOrderTypes());
+    }
+
+    private static Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry CreateStandaloneOrderTypes()
+    {
+        var terminalResults = new Ludots.Core.Gameplay.GAS.Orders.OrderTerminalResultBuffer(
+            Ludots.Core.Gameplay.GAS.Orders.OrderTerminalResultBuffer.DefaultCapacity);
+        var orderTypes = new Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry(terminalResults);
+        orderTypes.Register(new Ludots.Core.Gameplay.GAS.Orders.OrderTypeConfig
+        {
+            Key = "moveTo",
+            OrderTypeId = 101,
+            Label = "Move To",
+        });
+        orderTypes.Register(new Ludots.Core.Gameplay.GAS.Orders.OrderTypeConfig
+        {
+            Key = "attackTarget",
+            OrderTypeId = 102,
+            Label = "Attack Target",
+        });
+        return orderTypes;
     }
 
     private static Ludots.Core.Gameplay.Rng.RngPickService? LoadDistributionPicks(string assetsRoot)
@@ -398,16 +433,6 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
     public int ResolveRelationshipType(string name) => _types.GetId(name);
     public int ResolveRelationshipMetric(string name) => _metrics.GetId(name);
     public int ResolveRelationshipFlag(string name) => _flags.GetId(name);
-
-    public int ResolveRelationshipReason(string name)
-    {
-        if (!_reasons.TryGetId(name, out int id) || id <= 0)
-        {
-            throw new InvalidOperationException($"Graph references unknown relationship reason '{name}'.");
-        }
-
-        return id;
-    }
 
     public int ResolveTargetDispatchPreset(string name) => _dispatchPresets.GetId(name);
 

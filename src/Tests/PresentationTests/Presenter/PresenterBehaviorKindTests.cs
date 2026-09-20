@@ -6,6 +6,7 @@ using Ludots.Tests.TestCommon;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Rendering;
@@ -31,7 +32,7 @@ namespace Ludots.Tests.Presentation
         public void BehaviorKindContract_ArchitectureExposesCoreKinds()
         {
             BehaviorKind[] values = (BehaviorKind[])Enum.GetValues(typeof(BehaviorKind));
-            Assert.That(values.Length, Is.EqualTo(17), "BehaviorKind SSOT is the architecture enum.");
+            Assert.That(values.Length, Is.EqualTo(18), "BehaviorKind SSOT is the architecture enum.");
             Assert.That(values, Does.Contain(BehaviorKind.None));
             Assert.That(values, Does.Contain(BehaviorKind.AssetBinding));
             Assert.That(values, Does.Contain(BehaviorKind.AttributeBinding));
@@ -48,6 +49,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(values, Does.Contain(BehaviorKind.InstancedBatch));
             Assert.That(values, Does.Contain(BehaviorKind.TrailMesh));
             Assert.That(values, Does.Contain(BehaviorKind.ScreenRect));
+            Assert.That(values, Does.Contain(BehaviorKind.InteractionContextBinding));
             Assert.That(values, Does.Contain(BehaviorKind.Extension));
         }
 
@@ -70,6 +72,7 @@ namespace Ludots.Tests.Presentation
             Assert.That((byte)BehaviorKind.InstancedBatch, Is.EqualTo(13));
             Assert.That((byte)BehaviorKind.TrailMesh, Is.EqualTo(14));
             Assert.That((byte)BehaviorKind.ScreenRect, Is.EqualTo(15));
+            Assert.That((byte)BehaviorKind.InteractionContextBinding, Is.EqualTo(16));
             Assert.That((byte)BehaviorKind.Extension, Is.EqualTo(255));
         }
 
@@ -593,6 +596,86 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void InteractionContextBinding_SnapshotResolvesFromOwnerMountedInstances_AndTracksPerfMarker()
+        {
+            using var world = World.Create();
+            Entity owner = world.Create();
+            var instances = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+
+            int aimProfileId = 4201;
+            int defId = definitions.Register("behavior.interaction-context.binding", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.InteractionContextBinding,
+                        ActiveByDefault = true,
+                        InteractionContextBinding = new InteractionContextBindingConfig
+                        {
+                            InteractionContextProfileId = aimProfileId,
+                            TargetParamKey = 2101,
+                        },
+                    },
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 1,
+                        Kind = BehaviorKind.InteractionContextBinding,
+                        ActiveByDefault = true,
+                        InteractionContextBinding = new InteractionContextBindingConfig
+                        {
+                            InteractionContextProfileId = aimProfileId,
+                            TargetParamKey = 2102,
+                            InvertLogic = true,
+                        },
+                    },
+                ],
+            });
+
+            instances.BindDefinitions(definitions);
+            Entity presenter = instances.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 9211, Entity.Null, default);
+            world.Add(presenter, new PresenterBootstrapPending());
+            world.Get<PresenterState>(presenter).BehaviorActiveMask = 0b11u;
+
+            // Interaction context binding advertises per-frame snapshot resolution via the
+            // Perf marker (low-frequency transitions make a dirty channel unnecessary).
+            Assert.That(world.Has<PerfHasInteractionContextBinding>(presenter), Is.True,
+                "context binding presenter must carry the per-frame resolution marker");
+
+            var ownerChanges = new PresentationOwnerChangeBuffer(8);
+            using var system = new PresenterBehaviorSystem(
+                world,
+                instances,
+                definitions,
+                new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
+                ownerChanges,
+                new SoundRequestBuffer());
+
+            // No context mounted → binding resolves inactive (0 / inverted 1).
+            system.Update(0.016f);
+            Assert.That(instances.ResolveInt(presenter, 2101), Is.EqualTo(0));
+            Assert.That(instances.ResolveInt(presenter, 2102), Is.EqualTo(1));
+
+            // Mount the context on the owner (persistent component = the single source of
+            // truth; snapshot resolution recovers from save/restore without events).
+            var instancesOnOwner = new InteractionContextInstances();
+            instancesOnOwner.Add(new InteractionContextInstance { ContextId = aimProfileId, ParentContextId = 0 });
+            world.Add(owner, instancesOnOwner);
+
+            // No presentation event, no owner change: the per-frame pass resolves the new value.
+            system.Update(0.016f);
+            Assert.That(instances.ResolveInt(presenter, 2101), Is.EqualTo(1), "mounted context flips the binding to active");
+            Assert.That(instances.ResolveInt(presenter, 2102), Is.EqualTo(0), "invertLogic flips with it");
+
+            // Removing the context instance restores the inactive projection — pure state, no event.
+            world.Set(owner, new InteractionContextInstances());
+            system.Update(0.016f);
+            Assert.That(instances.ResolveInt(presenter, 2101), Is.EqualTo(0));
+        }
+
+        [Test]
         public void TickBehaviorMarkers_TrackActiveBehaviorMask()
         {
             using var world = World.Create();
@@ -1004,6 +1087,33 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(worldHud.TryGetByStableId(stableId, out WorldHudItem moved), Is.True);
             Assert.That(moved.WorldPosition, Is.EqualTo(new Vector3(30f, 2f, 40f)));
+
+            instances.SetParam(hud, 100, ParamLane.Float, 0.5f, 0, default);
+            world.Get<PresenterWorldPosition>(parent).Value = new Vector3(40f, 0f, 50f);
+            behavior.Update(0.016f);
+            emit.Update(0.016f);
+            Assert.That(worldHud.TryGetByStableId(stableId, out WorldHudItem changed), Is.True);
+            Assert.That(changed.WorldPosition, Is.EqualTo(new Vector3(40f, 2f, 50f)));
+            Assert.That(changed.Value0, Is.EqualTo(0.5f));
+
+            world.Get<PresenterWorldScale>(hud).Value = new Vector3(2f, 2f, 1f);
+            instances.MarkTransformDrivenEmitDirty(hud);
+            emit.Update(0.016f);
+            Assert.That(worldHud.TryGetByStableId(stableId, out WorldHudItem resized), Is.True);
+            Assert.That(resized.Width, Is.EqualTo(changed.Width * 2f));
+            Assert.That(resized.Height, Is.EqualTo(changed.Height * 2f));
+
+            world.Get<CullState>(owner).IsVisible = false;
+            instances.MarkTransformDrivenEmitDirty(hud);
+            emit.Update(0.016f);
+            Assert.That(worldHud.Count, Is.Zero);
+
+            world.Get<CullState>(owner).IsVisible = true;
+            instances.MarkTransformDrivenEmitDirty(hud);
+            emit.Update(0.016f);
+            Assert.That(worldHud.TryGetByStableId(stableId, out WorldHudItem restored), Is.True);
+            Assert.That(restored.Value0, Is.EqualTo(0.5f));
+            Assert.That(restored.Width, Is.EqualTo(resized.Width));
         }
 
         [Test]

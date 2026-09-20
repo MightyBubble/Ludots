@@ -28,6 +28,7 @@ namespace Ludots.Core.GraphRuntime
         private readonly Waiter[] _waiters = new Waiter[MaxHandles + 1];
         private readonly int[] _pendingCompleteHandles = new int[MaxPendingCompletions];
         private readonly bool[] _pendingConfirmed = new bool[MaxPendingCompletions];
+        private readonly int[] _pendingRegistrationOrders = new int[MaxPendingCompletions];
         private readonly IGraphCallbackResumeTarget?[] _resumeTargetStack = new IGraphCallbackResumeTarget?[MaxResumeTargetDepth];
         private int _nextHandle = 1;
         private int _pendingCount;
@@ -172,6 +173,7 @@ namespace Ludots.Core.GraphRuntime
             w.Confirmed = confirmed;
             _pendingCompleteHandles[_pendingCount] = handleId;
             _pendingConfirmed[_pendingCount] = confirmed;
+            _pendingRegistrationOrders[_pendingCount] = w.RegistrationOrder;
             _pendingCount++;
         }
 
@@ -186,7 +188,13 @@ namespace Ludots.Core.GraphRuntime
                 return;
             }
 
-            // Compact pending into a scratch ordered by RegistrationOrder ascending.
+            // Resume can enqueue new completions or recycle handles in this same drain.
+            Span<int> handles = stackalloc int[_pendingCount];
+            Span<bool> confirmations = stackalloc bool[_pendingCount];
+            Span<int> registrations = stackalloc int[_pendingCount];
+            _pendingCompleteHandles.AsSpan(0, _pendingCount).CopyTo(handles);
+            _pendingConfirmed.AsSpan(0, _pendingCount).CopyTo(confirmations);
+            _pendingRegistrationOrders.AsSpan(0, _pendingCount).CopyTo(registrations);
             Span<int> order = stackalloc int[_pendingCount];
             for (int i = 0; i < _pendingCount; i++)
             {
@@ -196,13 +204,11 @@ namespace Ludots.Core.GraphRuntime
             for (int i = 1; i < _pendingCount; i++)
             {
                 int key = order[i];
-                int keyHandle = _pendingCompleteHandles[key];
-                int keyReg = _waiters[keyHandle].RegistrationOrder;
+                int keyReg = registrations[key];
                 int j = i - 1;
                 while (j >= 0)
                 {
-                    int otherHandle = _pendingCompleteHandles[order[j]];
-                    if (_waiters[otherHandle].RegistrationOrder <= keyReg)
+                    if (registrations[order[j]] <= keyReg)
                     {
                         break;
                     }
@@ -220,9 +226,9 @@ namespace Ludots.Core.GraphRuntime
             for (int i = 0; i < pending; i++)
             {
                 int slot = order[i];
-                int handleId = _pendingCompleteHandles[slot];
-                bool confirmed = _pendingConfirmed[slot];
-                if (!IsLiveHandle(handleId))
+                int handleId = handles[slot];
+                bool confirmed = confirmations[slot];
+                if (!IsLiveHandle(handleId) || _waiters[handleId].RegistrationOrder != registrations[slot])
                 {
                     continue;
                 }
@@ -333,6 +339,16 @@ namespace Ludots.Core.GraphRuntime
                 {
                     ReleaseHandle(i);
                 }
+            }
+        }
+
+        public void InvalidateTarget(IGraphCallbackResumeTarget target)
+        {
+            ArgumentNullException.ThrowIfNull(target);
+            for (int i = 1; i <= MaxHandles; i++)
+            {
+                if (_waiters[i].Occupied && ReferenceEquals(_waiters[i].Target, target))
+                    ReleaseHandle(i);
             }
         }
 

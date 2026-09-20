@@ -3,6 +3,8 @@ using System.Diagnostics;
 using Arch.System;
 using Ludots.Core.Engine;
 using Ludots.Core.MassNavigation.Runtime;
+using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Scripting;
 
 namespace Ludots.Core.MassNavigation.Systems;
 
@@ -14,10 +16,12 @@ internal sealed class MassNavigationSimulationStepSystem : ISystem<float>
     private Action<double>? _observeLocalSteering;
     private Action<double>? _observeHardResolve;
     private Action<double>? _observeFlowFieldRebuild;
+    private readonly PresentationTimingDiagnostics? _timingDiagnostics;
 
     public MassNavigationSimulationStepSystem(GameEngine engine)
     {
         _engine = engine;
+        _timingDiagnostics = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
     }
 
     public void Initialize() { }
@@ -42,9 +46,12 @@ internal sealed class MassNavigationSimulationStepSystem : ISystem<float>
         for (int stepIndex = 0; stepIndex < stepsToRun; stepIndex++)
         {
             MassNavigationCadenceStep step = simulation.CadenceScheduler.NextSimulationStep();
-            simulation.ObserveSimTick();
+            if (step.AgentSliceRoundStart)
+            {
+                simulation.ObserveSimTick();
+            }
 
-            if (step.UpdateTargets)
+            if (step.UpdateTargets && step.AgentSliceRoundStart)
             {
                 long targetStart = Stopwatch.GetTimestamp();
                 simulation.NavGroupRuntime.UpdateTargets(
@@ -59,6 +66,8 @@ internal sealed class MassNavigationSimulationStepSystem : ISystem<float>
                     step.RefreshFlow,
                     step.RefreshCrowd,
                     step.RefreshObstacles,
+                    step.AgentSliceIndex,
+                    step.AgentSliceCount,
                     _observeFlowFieldRebuild!))
             {
                 simulation.MarkFlowReconcile();
@@ -71,6 +80,8 @@ internal sealed class MassNavigationSimulationStepSystem : ISystem<float>
                 simulation.NavGroupRuntime,
                 step.RunHardResolve,
                 simulation.Cadence.HardResolveCandidateThresholdAgents,
+                step.AgentSliceIndex,
+                step.AgentSliceCount,
                 _observeStepPrep!,
                 _observeLocalSteering!,
                 _observeHardResolve!);
@@ -87,6 +98,16 @@ internal sealed class MassNavigationSimulationStepSystem : ISystem<float>
                 simulation.ObserveEntitySync((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
             }
         }
+
+        _timingDiagnostics?.ObserveMassNavigation(
+            simulation.LastGroupTargetUpdateMs,
+            simulation.LastFlowFieldRebuildMs,
+            simulation.LastStepPrepMs,
+            simulation.LastLocalSteeringMs,
+            simulation.LastSimStepMs,
+            simulation.LastHardResolveMs,
+            simulation.LastEntitySyncMs,
+            simulation.MassNavigationFlow.PendingEntitySyncCount);
     }
 
     private void EnsureObserverCache(MassNavigationSimulationRuntime simulation)

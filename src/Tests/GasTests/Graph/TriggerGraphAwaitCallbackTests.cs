@@ -149,6 +149,62 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(callbacks.TryCompleteByCallbackType(GraphCallbackTypes.DialogConfirm, true), Is.False);
         }
 
+        [Test]
+        public void InvalidateTarget_QueuedCompletionCannotResumeReusedHandle()
+        {
+            var callbacks = new GraphCallbackService();
+            var old = new RecordingTarget();
+            int oldHandle = BeginAwait(callbacks, old, DialogConfirm, 0);
+            callbacks.Complete(oldHandle, true);
+            callbacks.InvalidateTarget(old);
+            var replacement = new RecordingTarget();
+            int replacementHandle = 0;
+            for (int i = 0; i < GraphCallbackService.MaxHandles; i++)
+                replacementHandle = BeginAwait(callbacks, replacement, DialogConfirm, 0);
+            Assert.That(replacementHandle, Is.EqualTo(oldHandle));
+            callbacks.Drain();
+            Assert.That(old.ResumeOrder, Is.Zero);
+            Assert.That(replacement.ResumeOrder, Is.Zero);
+            Assert.That(callbacks.HasLiveWaiterForTarget(replacement), Is.True);
+            callbacks.Complete(replacementHandle, false);
+            callbacks.Drain();
+            Assert.That(replacement.ResumeOrder, Is.EqualTo(1));
+            Assert.That(replacement.Confirmed, Is.False);
+        }
+
+        [Test]
+        public void Drain_ResumedTargetEnqueuesNextBatchWithoutOverwritingCurrentBatch()
+        {
+            var callbacks = new GraphCallbackService();
+            int thirdHandle = 0;
+            int fourthHandle = 0;
+            var first = new RecordingTarget
+            {
+                OnResume = () =>
+                {
+                    callbacks.Complete(thirdHandle, true);
+                    callbacks.Complete(fourthHandle, false);
+                },
+            };
+            var second = new RecordingTarget();
+            var third = new RecordingTarget();
+            var fourth = new RecordingTarget();
+            int firstHandle = BeginAwait(callbacks, first, DialogConfirm, 0);
+            int secondHandle = BeginAwait(callbacks, second, DialogConfirm, 0);
+            thirdHandle = BeginAwait(callbacks, third, DialogConfirm, 0);
+            fourthHandle = BeginAwait(callbacks, fourth, DialogConfirm, 0);
+            callbacks.Complete(firstHandle, true);
+            callbacks.Complete(secondHandle, false);
+            callbacks.Drain();
+            Assert.That(first.ResumeOrder, Is.EqualTo(1));
+            Assert.That(second.ResumeOrder, Is.EqualTo(2));
+            Assert.That(third.ResumeOrder, Is.Zero);
+            Assert.That(fourth.ResumeOrder, Is.Zero);
+            callbacks.Drain();
+            Assert.That(third.ResumeOrder, Is.EqualTo(3));
+            Assert.That(fourth.ResumeOrder, Is.EqualTo(4));
+        }
+
         private static int BeginAwait(
             GraphCallbackService callbacks,
             IGraphCallbackResumeTarget target,
@@ -176,6 +232,7 @@ namespace Ludots.Tests.Gas.Graph
             public bool Confirmed { get; private set; }
             public int ResultBoolRegister { get; private set; } = -1;
             public bool IsCallbackResumeAlive { get; private set; } = true;
+            public Action? OnResume { get; init; }
 
             public void Kill() => IsCallbackResumeAlive = false;
 
@@ -184,6 +241,7 @@ namespace Ludots.Tests.Gas.Graph
                 ResumeOrder = ++s_resumeSeq;
                 Confirmed = confirmed;
                 ResultBoolRegister = resultBoolRegister;
+                OnResume?.Invoke();
             }
         }
     }

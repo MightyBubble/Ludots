@@ -6,6 +6,7 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Fields;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation.Components;
@@ -302,14 +303,37 @@ namespace Ludots.Core.Gameplay.FieldRegions
         private void FireRegionEvent(
             MapSession session, EventKey eventKey, Entity entity, DiscreteIdFieldLayerData layer, int regionId)
         {
-            ScriptContext context = _contextFactory();
-            context.Set(CoreServiceKeys.MapId, session.MapId);
-            context.Set(CoreServiceKeys.MapSession, session);
-            context.Set(CoreServiceKeys.MapTags, session.MapConfig?.Tags ?? EmptyTags);
-            context.Set(MapTriggerEventPayloadKeys.SourceEntity, entity);
-            context.Set(MapTriggerEventPayloadKeys.RegionId, layer.Regions.GetName(regionId));
-            context.Set(MapTriggerEventPayloadKeys.FieldLayer, layer.LayerKey);
-            _triggerManager.FireMapEvent(session.MapId, eventKey, context);
+            // Unified emission outlet (#1468): a region entity authored with
+            // RegionVolumeEmissionCm (Fields/region_emissions.json) redirects its
+            // crossings to the declared events with the authored payload; the
+            // engine defaults stay FieldRegionEntered/Exited with the same facts.
+            RegionVolumeEmissionCm? emission = null;
+            if (session.RegionIndex != null &&
+                session.RegionIndex.TryResolve(layer.LayerId, regionId, out Entity regionEntity) &&
+                World.TryGet(regionEntity, out RegionVolumeEmissionCm authored))
+            {
+                emission = authored;
+            }
+
+            bool entering = eventKey.Value == GameEvents.FieldRegionEntered.Value;
+            EventKey fireKey = emission == null
+                ? eventKey
+                : entering ? emission.Value.EnterEvent : emission.Value.ExitEvent;
+            EventSchema? schema = _triggerManager.EventSchemas != null &&
+                _triggerManager.EventSchemas.TryGet(fireKey.Value, out EventSchema resolved)
+                    ? resolved
+                    : null;
+            RegionEmissionFiring.Fire(
+                _triggerManager,
+                _contextFactory,
+                session,
+                fireKey,
+                layer.Regions.GetName(regionId),
+                entity,
+                schema,
+                emission?.Payload,
+                MapTriggerEventPayloadKeys.FieldLayer,
+                layer.LayerKey);
         }
     }
 }

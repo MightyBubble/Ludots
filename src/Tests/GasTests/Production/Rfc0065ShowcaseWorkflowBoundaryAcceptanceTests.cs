@@ -125,7 +125,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(hovered, Is.EqualTo(vanguard));
 
             Assert.That(engine.GetService(CoreServiceKeys.ActiveInputOrderMapping), Is.Not.Null,
-                "InteractionShowcaseLocalOrderSourceSystem must create the production InputOrderMappingSystem.");
+                "The declared local order source must create the production InputOrderMappingSystem.");
 
             Vector2 targetWorldCm = new(2080f, 1080f);
             DispatchVariantEvidence[] dispatchVariants = AssertDispatchVariants(dispatch, actors, engine.World, targetWorldCm);
@@ -1002,7 +1002,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("## Scenario Card");
             sb.AppendLine("- Player goal: issue a ground pointer command with three command-source actors active.");
             sb.AppendLine("- Gameplay domain: RFC-0065 SHOW-5 / SHOW-6 production pointer command workflow.");
-            sb.AppendLine("- Runtime path: `PlayerInputHandler` -> `InputRuntimeSystem` -> `AuthoritativeInputSnapshotSystem` -> `InteractionShowcaseLocalOrderSourceSystem` -> `InputOrderMappingSystem` -> `CommandIntentArbiter` -> `CommandIntentProfileRegistry.RouteGroup` -> `CastDispatchProfileRegistry.SelectDispatchTargets` -> `OrderQueue` -> `OrderBufferSystem`.");
+            sb.AppendLine("- Runtime path: `PlayerInputHandler` -> `InputRuntimeSystem` -> `AuthoritativeInputSnapshotSystem` -> `LocalOrderSourceSystem` -> `InputOrderMappingSystem` -> `CommandIntentArbiter` -> `CommandIntentProfileRegistry.RouteGroup` -> `CastDispatchProfileRegistry.SelectDispatchTargets` -> `OrderQueue` -> `OrderBufferSystem`.");
             sb.AppendLine($"- Launcher binding: `{LauncherBindingName}` (`{ManualGuiLaunchCommand}`).");
             sb.AppendLine("- Primary success condition: Arcweaver, Vanguard, and Commander all receive unique moveTo order receipts in one atomic admission batch at the target point, even when the hover collection contains an entity.");
             sb.AppendLine("- Failure branch condition: no active scheme intent, no command-source collection, hidden legacy fallback, split admission batch, duplicate order receipts, or missing OrderBuffer promotion.");
@@ -1150,7 +1150,7 @@ namespace Ludots.Tests.GAS.Production
                 "    C --> D[\"Publish collection.command.source for 3 actors\"]",
                 "    D --> E[\"Right mouse Command captured by PlayerInputHandler\"]",
                 "    E --> F[\"InputRuntimeSystem writes authoritative snapshot + ground override\"]",
-                "    F --> G[\"InteractionShowcaseLocalOrderSourceSystem updates production mapping\"]",
+                "    F --> G[\"LocalOrderSourceSystem updates production mapping\"]",
                 "    G --> H[\"CommandIntentArbiter.ResolveActiveCommandIntent\"]",
                 "    H --> I[\"CommandIntentProfileRegistry.RouteGroup -> moveTo\"]",
                 "    I --> J[\"CastDispatchProfileRegistry.SelectDispatchTargets dispatch.all_together\"]",

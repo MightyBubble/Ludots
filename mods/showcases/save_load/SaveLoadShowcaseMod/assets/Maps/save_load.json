@@ -1,5 +1,8 @@
 {
   "Id": "save_load",
+  "Tuning": {
+    "LoadedChunkCapacity": 16
+  },
   "Tags": [
     "showcase",
     "save",
@@ -9,12 +12,9 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInMacroTiles": 1,
-      "HeightInMacroTiles": 1,
-      "GridCellSizeCm": 100,
-      "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 16,
-      "NavigationEnabled": true
+      "WidthCells": 256,
+      "HeightCells": 256,
+      "GridCellSizeCm": 100
     }
   ],
   "Entities": [

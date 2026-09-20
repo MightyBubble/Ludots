@@ -1,0 +1,34 @@
+{
+  "Id": "eg_camp_site",
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "GridCellSizeCm": 200,
+      "WidthCells": 6144,
+      "HeightCells": 4096
+    }
+  ],
+  "Entities": [
+    {
+      "InstanceId": "mule.harbor",
+      "Template": "eg.camp",
+      "PositionXCm": 1200,
+      "PositionYCm": -800,
+      "Overrides": {
+        "Name": {
+          "Value": "Mule Harbor Camp"
+        }
+      }
+    },
+    {
+      "InstanceId": "mule.alpine",
+      "Template": "eg.camp",
+      "PositionXCm": 500,
+      "PositionYCm": 2400
+    }
+  ],
+  "Tuning": {
+    "LoadedChunkCapacity": 256
+  }
+}

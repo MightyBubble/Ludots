@@ -48,7 +48,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             RelationshipTypeRegistry typeRegistry,
             RelationshipMetricRegistry metricRegistry,
             RelationshipFlagRegistry flagRegistry,
-            RelationshipReasonRegistry reasonRegistry,
             TargetDispatchPresetRegistry targetDispatchPresets,
             EntityCollectionStore entityCollections,
             EntitySetQueryRuntime entityQueries,
@@ -69,7 +68,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             TypeRegistry = typeRegistry ?? throw new ArgumentNullException(nameof(typeRegistry));
             MetricRegistry = metricRegistry ?? throw new ArgumentNullException(nameof(metricRegistry));
             FlagRegistry = flagRegistry ?? throw new ArgumentNullException(nameof(flagRegistry));
-            ReasonRegistry = reasonRegistry ?? throw new ArgumentNullException(nameof(reasonRegistry));
             TargetDispatchPresets = targetDispatchPresets ?? throw new ArgumentNullException(nameof(targetDispatchPresets));
             EntityCollections = entityCollections ?? throw new ArgumentNullException(nameof(entityCollections));
             EntityQueries = entityQueries ?? throw new ArgumentNullException(nameof(entityQueries));
@@ -91,7 +89,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public RelationshipTypeRegistry TypeRegistry { get; }
         public RelationshipMetricRegistry MetricRegistry { get; }
         public RelationshipFlagRegistry FlagRegistry { get; }
-        public RelationshipReasonRegistry ReasonRegistry { get; }
         public TargetDispatchPresetRegistry TargetDispatchPresets { get; }
         public EntityCollectionStore EntityCollections { get; }
         public GraphLookupTableRegistry? LookupTables { get; }
@@ -115,6 +112,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly ISpatialCoordinateConverter? _coords;
         private readonly GameplayEventBus? _eventBus;
         private readonly EffectRequestQueue? _effectRequests;
+        private Ludots.Core.Gameplay.GAS.Orders.OrderQueue? _orderQueue;
+        private Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry? _orderTypes;
         private readonly TagOps? _tagOps;
         private readonly RelationshipRuntime? _relationshipRuntime;
         private readonly TargetDispatchPresetRegistry? _targetDispatchPresets;
@@ -197,7 +196,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 RequireService(services, CoreServiceKeys.RelationshipTypeRegistry),
                 RequireService(services, CoreServiceKeys.RelationshipMetricRegistry),
                 RequireService(services, CoreServiceKeys.RelationshipFlagRegistry),
-                RequireService(services, CoreServiceKeys.RelationshipReasonRegistry),
                 RequireService(services, CoreServiceKeys.TargetDispatchPresetRegistry),
                 RequireService(services, CoreServiceKeys.EntityCollectionStore),
                 RequireService(services, CoreServiceKeys.EntitySetQueryRuntime),
@@ -226,7 +224,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 services.TypeRegistry,
                 services.MetricRegistry,
                 services.FlagRegistry,
-                services.ReasonRegistry,
                 services.TargetDispatchPresets,
                 services.EntityCollections,
                 services.EntityQueries,
@@ -371,6 +368,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _engineResolver = engineResolver ?? throw new ArgumentNullException(nameof(engineResolver));
         }
 
+        /// <summary>共享到期时间轮；直接取消路径写标记后强制快道效果下一 slice 出桶。</summary>
+        internal Ludots.Core.Gameplay.GAS.Systems.EffectDueWheel? DueWheel { get; set; }
+        internal Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry? AggregateDirty { get; set; }
+
         public GasGraphRuntimeApi(
             World world,
             ISpatialQueryService? spatialQueries = null,
@@ -382,7 +383,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             RelationshipTypeRegistry? typeRegistry = null,
             RelationshipMetricRegistry? metricRegistry = null,
             RelationshipFlagRegistry? flagRegistry = null,
-            RelationshipReasonRegistry? reasonRegistry = null,
             TargetDispatchPresetRegistry? targetDispatchPresets = null,
             EntityCollectionStore? entityCollections = null,
             EntitySetQueryRuntime? entityQueries = null,
@@ -406,12 +406,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _ = typeRegistry;
             _ = metricRegistry;
             _ = flagRegistry;
-            _ = reasonRegistry;
         }
 
         private TagOps RequireTagOps()
         {
             return _tagOps ?? throw new InvalidOperationException("GAS.GRAPH.ERR.MissingTagOps");
+        }
+
+        private Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry RequireAggregateDirty()
+        {
+            return AggregateDirty ?? throw new InvalidOperationException(Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry.MissingRegistryError);
         }
 
 
@@ -930,7 +934,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         }
 
         /// <summary>
-        /// Activates a derived interaction context on the subject (#1398 S2b). The kernel owns
+        /// Activates a derived interaction context on the subject. The kernel owns
         /// parent validation, scope creation, and the ContextActivated presentation event;
         /// fail-closed on every mis-declared input by name.
         /// </summary>
@@ -956,7 +960,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         }
 
         /// <summary>
-        /// Fires the collection pass-through event (#1398 S2b gap 9): schema-less map dispatch
+        /// Fires the collection pass-through event: schema-less map dispatch
         /// so the Entity[] payload rides the reserved MapTrigger.Collection* keys; the event
         /// key must be a declared custom event (fail closed) and a map scope is required.
         /// </summary>
@@ -1501,7 +1505,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
             if (_world.IsAlive(entity) && _world.Has<AttributeBuffer>(entity))
             {
-                value = _world.Get<AttributeBuffer>(entity).GetCurrent(attributeId);
+                value = Ludots.Core.Gameplay.GAS.AttributeReads.Current(_world, entity, attributeId);
                 return true;
             }
 
@@ -1547,6 +1551,43 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public int CollectMapEntities(Span<Entity> buffer)
         {
             return RequireEntityQueries().CollectMapEntities(buffer);
+        }
+
+        public Span<Entity> QueryMapEntities(GraphEntityQueryPlan? plan, MapId? map, scoped ReadOnlySpan<int> ints, scoped ReadOnlySpan<float> floats, int depth)
+        {
+            return RequireEntityQueries().QueryMap(plan, map, ints, floats, depth);
+        }
+
+        public Span<Entity> GetEntityQueryBuffer(int depth, int capacity) => RequireEntityQueries().GetQueryBuffer(depth, capacity);
+
+        public void BeginEntityQueryExecution() => _entityQueries?.BeginExecution();
+        public void EndEntityQueryExecution() => _entityQueries?.EndExecution();
+
+        public void BindQueryCollection(Entity owner, int collectionKeyId, int graphId, GraphProgramRegistry programs)
+        {
+            if (_entityCollections == null) throw new InvalidOperationException("GAS.GRAPH.ERR.MissingEntityCollectionStore");
+            if (!programs.TryGetRegistration(graphId, out var registration)) throw new InvalidOperationException("ENTITY_QUERY.ERR.QueryGraphUnknown");
+            RequireEntityQueries().BindCollection(_entityCollections, owner, collectionKeyId, registration,
+                () => programs.TryGetRegistration(graphId, out var current) && ReferenceEquals(current.Program, registration.Program));
+        }
+
+        public Span<Entity> QueryCollection(Entity owner, int collectionKeyId, int depth)
+        {
+            if (_entityCollections == null) throw new InvalidOperationException("GAS.GRAPH.ERR.MissingEntityCollectionStore");
+            if (!_entityCollections.TryGet(owner, collectionKeyId, out var handle)) return Span<Entity>.Empty;
+            if (!_entityCollections.TryGetView(handle, out var view)) throw new InvalidOperationException("GAS.GRAPH.ERR.CollectionInvalid");
+            Span<Entity> result = GetEntityQueryBuffer(depth, view.Count);
+            int count = _entityCollections.CopyEntities(handle, 0, result);
+            return result.Slice(0, count);
+        }
+
+        public Span<Entity> QueryScreenRegionCollection(Entity owner, int collectionKeyId, scoped in ScreenRect rect, string? seatId, int depth)
+        {
+            if (_entityCollections == null) throw new InvalidOperationException("GAS.GRAPH.ERR.MissingEntityCollectionStore");
+            ReadOnlySpan<Entity> hits = RequireAimSource().QueryScreenRegion(_entityCollections.RequireSource(owner, collectionKeyId), rect, seatId);
+            Span<Entity> result = GetEntityQueryBuffer(depth, hits.Length);
+            hits.CopyTo(result);
+            return result[..hits.Length];
         }
 
         public int CopyEntityCollection(Entity owner, int collectionKeyId, Span<Entity> buffer)
@@ -1849,6 +1890,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return RequireEntityQueries().FilterLayer(entities, count, requiredMask);
         }
 
+        public int FilterControllable(Span<Entity> entities, int count, Entity controller)
+        {
+            if ((uint)count > (uint)entities.Length) throw new ArgumentOutOfRangeException(nameof(count));
+            ControlDomainQuery domains = RequireControlDomains();
+            int written = 0;
+            for (int i = 0; i < count; i++)
+            {
+                Entity candidate = entities[i];
+                if (domains.IsControllableBy(controller, candidate))
+                    entities[written++] = candidate;
+            }
+            return written;
+        }
+
         public int FilterNotEntity(Span<Entity> entities, int count, Entity exclude)
         {
             return RequireEntityQueries().FilterNotEntity(entities, count, exclude);
@@ -1934,27 +1989,27 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             RejectNonTransactionalEffectSideEffect(nameof(RemoveRelationshipLink));
             RequireRelationshipRuntime().RemoveLink(source, target, typeId);
         }
-        public short SetRelationshipMetric(Entity source, Entity target, int metricId, int value, int reasonId, int typeId)
+        public short SetRelationshipMetric(Entity source, Entity target, int metricId, int value, int typeId)
         {
             RejectDerivedAttributeSideEffect(nameof(SetRelationshipMetric));
             RejectNonTransactionalEffectSideEffect(nameof(SetRelationshipMetric));
-            return RequireRelationshipRuntime().SetMetric(source, target, typeId, metricId, value, reasonId);
+            return RequireRelationshipRuntime().SetMetric(source, target, typeId, metricId, value);
         }
-        public short AddRelationshipMetric(Entity source, Entity target, int metricId, int delta, int reasonId, int typeId)
+        public short AddRelationshipMetric(Entity source, Entity target, int metricId, int delta, int typeId)
         {
             RejectDerivedAttributeSideEffect(nameof(AddRelationshipMetric));
             RejectNonTransactionalEffectSideEffect(nameof(AddRelationshipMetric));
-            return RequireRelationshipRuntime().AddMetric(source, target, typeId, metricId, delta, reasonId);
+            return RequireRelationshipRuntime().AddMetric(source, target, typeId, metricId, delta);
         }
         public short GetRelationshipMetric(Entity source, Entity target, int metricId, int typeId)
             => RequireRelationshipRuntime().GetMetric(source, target, typeId, metricId);
         public bool HasRelationshipFlag(Entity source, Entity target, int flagId, int typeId)
             => RequireRelationshipRuntime().HasFlag(source, target, typeId, flagId);
-        public void SetRelationshipFlag(Entity source, Entity target, int flagId, bool enabled, int reasonId, int typeId)
+        public void SetRelationshipFlag(Entity source, Entity target, int flagId, bool enabled, int typeId)
         {
             RejectDerivedAttributeSideEffect(nameof(SetRelationshipFlag));
             RejectNonTransactionalEffectSideEffect(nameof(SetRelationshipFlag));
-            RequireRelationshipRuntime().SetFlag(source, target, typeId, flagId, enabled, reasonId);
+            RequireRelationshipRuntime().SetFlag(source, target, typeId, flagId, enabled);
         }
         public RelationshipQueryResult CollectOutgoing(Entity source, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
         {
@@ -2038,6 +2093,68 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private int CurrentStepTick()
         {
             return _clock?.Now(ClockDomainId.Step) ?? 0;
+        }
+
+        /// <summary>
+        /// Binds the order pipeline for behavior-side order ops (SubmitAssignedOrder /
+        /// CompleteActiveOrder). Order submission stays fail-closed until this is bound.
+        /// </summary>
+        public void BindOrderPipeline(
+            Ludots.Core.Gameplay.GAS.Orders.OrderQueue orders,
+            Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry orderTypes)
+        {
+            _orderQueue = orders ?? throw new ArgumentNullException(nameof(orders));
+            _orderTypes = orderTypes ?? throw new ArgumentNullException(nameof(orderTypes));
+        }
+
+        public void SubmitAssignedOrder(Entity actor, Entity target, int orderTypeId, int xCm, int yCm)
+        {
+            if (_orderQueue == null || _orderTypes == null)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.MissingOrderPipeline");
+            }
+
+            if (!_orderTypes.IsRegistered(orderTypeId))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.UnknownOrderType: SubmitAssignedOrder references unregistered order type {orderTypeId}.");
+            }
+
+            if (!_world.Has<PlayerOwner>(actor))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.SubmitAssignedOrderActorMissingOwner: acting entity {actor} has no PlayerOwner.");
+            }
+
+            var order = new Ludots.Core.Gameplay.GAS.Orders.Order
+            {
+                OrderTypeId = orderTypeId,
+                PlayerId = _world.Get<PlayerOwner>(actor).PlayerId,
+                Actor = actor,
+                Target = target,
+                Args = Ludots.Core.Gameplay.GAS.Orders.OrderArgs.CreateSingleWorldCm(
+                    new System.Numerics.Vector3(xCm, 0f, yCm)),
+                SubmitMode = Ludots.Core.Gameplay.GAS.Orders.OrderSubmitMode.Immediate,
+            };
+            if (!_orderQueue.TryEnqueueAssigned(ref order))
+            {
+                throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.OrderQueueFull: SubmitAssignedOrder could not enqueue the pursuit order.");
+            }
+        }
+
+        public void CompleteActiveOrder(Entity actor)
+        {
+            if (_orderTypes == null)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.MissingOrderPipeline");
+            }
+
+            if (!Ludots.Core.Gameplay.GAS.Orders.OrderSubmitter.NotifyOrderComplete(_world, actor, _orderTypes))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.NoActiveOrderToComplete: acting entity {actor} has no active order to complete.");
+            }
         }
 
         public void ApplyEffectTemplate(Entity caster, Entity target, int templateId)
@@ -2177,10 +2294,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
                 ref var gameplayEffect = ref _world.Get<GameplayEffect>(effectEntity);
                 gameplayEffect.CancelRequested = true;
-                if (gameplayEffect.AggregatesModifiers && !_world.Has<AttributeAggregateDirty>(target))
+                if (gameplayEffect.AggregatesModifiers)
                 {
-                    _world.Add(target, new AttributeAggregateDirty());
+                    RequireAggregateDirty().MarkDirty(target);
                 }
+
+                DueWheel?.ForceVisit(effectEntity);
             }
         }
 

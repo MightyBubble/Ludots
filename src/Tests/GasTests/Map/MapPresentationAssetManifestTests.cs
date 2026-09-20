@@ -84,6 +84,17 @@ public sealed class MapPresentationAssetManifestTests
             int planChildMeshId = meshes.Register(
                 "manifest.plan-child.mesh",
                 MeshAssetDescriptor.Model(0, "mod:plan-child.glb"));
+            int planChildLod1MeshId = meshes.Register(
+                "manifest.plan-child.mesh.lod1",
+                MeshAssetDescriptor.Model(0, "mod:plan-child-lod1.glb"));
+            int planChildLod2MeshId = meshes.Register(
+                "manifest.plan-child.mesh.lod2",
+                MeshAssetDescriptor.Model(0, "mod:plan-child-lod2.glb"));
+            Assert.That(meshes.TryGetDescriptor(planChildMeshId, out MeshAssetDescriptor planChildMesh), Is.True);
+            var planChildMainLods = new MeshLodAssetIds(planChildMeshId, planChildLod1MeshId, planChildLod2MeshId);
+            var planChildShadowLods = new MeshLodAssetIds(planChildLod1MeshId, planChildLod2MeshId, planChildLod2MeshId);
+            planChildMesh.GpuSkinnedLod = new GpuSkinnedLodAssetSet(in planChildMainLods, in planChildShadowLods);
+            meshes.Register("manifest.plan-child.mesh", in planChildMesh);
             int templateChildMeshId = meshes.Register(
                 "manifest.template-child.mesh",
                 MeshAssetDescriptor.Model(0, "mod:template-child.glb"));
@@ -247,12 +258,14 @@ public sealed class MapPresentationAssetManifestTests
             MapPresentationAssetManifest manifest = loader.BuildPresentationAssetManifest(map);
 
             Assert.That(manifest.IsSealed, Is.True);
-            Assert.That(manifest.Count, Is.EqualTo(9));
+            Assert.That(manifest.Count, Is.EqualTo(11));
             Assert.That(CollectAssetIds(manifest), Is.EquivalentTo(new[]
             {
                 rootMeshId,
                 swapMeshId,
                 planChildMeshId,
+                planChildLod1MeshId,
+                planChildLod2MeshId,
                 templateChildMeshId,
                 batchMeshId,
                 overrideMeshId,

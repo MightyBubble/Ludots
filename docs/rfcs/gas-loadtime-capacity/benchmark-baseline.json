@@ -1,0 +1,71 @@
+{
+  "GeneratedAtUtc": "2026-09-20T12:36:25.1113729Z",
+  "Machine": {
+    "Name": "CODESEAL",
+    "Os": "Microsoft Windows NT 10.0.26220.0",
+    "ProcessorCount": 32
+  },
+  "Parameters": {
+    "EntityCount": 10000,
+    "Iterations": 100,
+    "StorageKind": "embedded-fixed-64-256"
+  },
+  "Metrics": [
+    {
+      "Id": "attr.aggregate.tick",
+      "ElapsedMs": 0.58904,
+      "AllocatedBytes": 0,
+      "Ops": 1000,
+      "PerEntityBytes": 0,
+      "Note": "load: 1/10 \u5B9E\u4F53\u518D\u810F \u002B \u5168\u91CF 64 \u69FD\u57FA\u503C\u91CD\u7B97\uFF0C\u810F\u9A71\u52A8\u5355\u5E27\u805A\u5408\uFF0810 \u5468\u671F/\u91C7\u6837\u53D6\u5747\uFF09"
+    },
+    {
+      "Id": "attr.footprint.per_entity",
+      "ElapsedMs": 4.029,
+      "AllocatedBytes": 10772592,
+      "Ops": 10000,
+      "PerEntityBytes": 1077.2592,
+      "Note": "load: AttributeBuffer\u002BAttributeLastSnapshot \u5185\u5D4C\u5B9A\u957F 64 \u69FD"
+    },
+    {
+      "Id": "attr.setw.get.hot",
+      "ElapsedMs": 465.4884,
+      "AllocatedBytes": 0,
+      "Ops": 2000000,
+      "PerEntityBytes": 0,
+      "Note": "load: AttributeMutationOps.SetCurrent \u002B buffer.GetCurrent \u00D7100 \u8FED\u4EE3"
+    },
+    {
+      "Id": "gas.pipeline.100k",
+      "ElapsedMs": 171.1586,
+      "AllocatedBytes": 1184490600,
+      "Ops": 100000,
+      "PerEntityBytes": 0,
+      "Note": "load: GasBenchmark.Run \u5168\u7BA1\u7EBF\uFF08100k \u5B9E\u4F53 / 100 \u5E27\u4E8B\u4EF6\u98CE\u66B4\uFF09\uFF0C\u540C\u53C2\u7981\u6F02\u79FB"
+    },
+    {
+      "Id": "tag.add.has.hot",
+      "ElapsedMs": 16.4906,
+      "AllocatedBytes": 0,
+      "Ops": 3000000,
+      "PerEntityBytes": 0,
+      "Note": "load: \u5BB9\u5668\u7EA7 AddTag\u002BHasTag\u002BRemoveTag \u00D7100 \u8FED\u4EE3"
+    },
+    {
+      "Id": "tag.dirty.collect",
+      "ElapsedMs": 0.0002,
+      "AllocatedBytes": 0,
+      "Ops": 1000,
+      "PerEntityBytes": 0,
+      "Note": "load: 1000 \u7A00\u758F\u810F\u5B9E\u4F53\u51FA\u961F \u002B \u5BB9\u5668\u63A2\u6D4B"
+    },
+    {
+      "Id": "tag.footprint.per_entity",
+      "ElapsedMs": 1.7666,
+      "AllocatedBytes": 1363992,
+      "Ops": 10000,
+      "PerEntityBytes": 136.3992,
+      "Note": "load: GameplayTagContainer\u002BSnapshot\u002BEffectiveCache \u5185\u5D4C 256 \u4F4D"
+    }
+  ]
+}

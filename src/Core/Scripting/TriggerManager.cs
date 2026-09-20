@@ -45,7 +45,7 @@ namespace Ludots.Core.Scripting
         private readonly Dictionary<MapId, List<Trigger>> _mapTriggers = new Dictionary<MapId, List<Trigger>>();
         // Owner-keyed view over the map tables (entity-domain mounts only). The map tables
         // stay the single ledger; this index only answers "which mounts did owner X create"
-        // so no feature keeps a parallel shadow list (#1398 D10).
+        // so no feature keeps a parallel shadow list.
         private readonly Dictionary<Entity, List<OwnedMountRecord>> _ownedMountsBySubject = new();
 
         // Map -> Event -> triggers, maintained in priority order at registration time so
@@ -139,6 +139,30 @@ namespace Ludots.Core.Scripting
             }
         }
 
+        /// <summary>
+        /// True when any map/entity-domain mount registered for the given map carries a
+        /// suspended run. The map resume clock uses this to gate its per-map pulse
+        /// (<see cref="GameEvents.MapTriggerResume"/>) — zero work and zero firing when no
+        /// map-domain run is parked (the retired MapHeartbeat fired unconditionally).
+        /// </summary>
+        public bool HasSuspendedMapTriggers(MapId mapId)
+        {
+            if (!_mapTriggers.TryGetValue(mapId, out List<Trigger>? triggers))
+            {
+                return false;
+            }
+
+            for (int i = 0; i < triggers.Count; i++)
+            {
+                if (triggers[i] is ITriggerResumeProbe probe && probe.IsSuspended)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
 
         public void RegisterTrigger(Trigger trigger)
         {
@@ -186,6 +210,8 @@ namespace Ludots.Core.Scripting
         public void RegisterMapTriggers(MapId mapId, IReadOnlyList<Trigger> triggers)
         {
             if (triggers == null || triggers.Count == 0) return;
+            if (_mapTriggers.TryGetValue(mapId, out List<Trigger>? previous) && previous.Count > 0)
+                RemoveMapTriggers(mapId, previous.ToArray());
 
             var list = new List<Trigger>(triggers.Count);
             _mapTriggers[mapId] = list;
@@ -271,7 +297,7 @@ namespace Ludots.Core.Scripting
 
         /// <summary>
         /// Remove exactly one owner's mounts from its map — the owner-scoped removal path
-        /// features use instead of tracking their own trigger lists (#1398 D10).
+        /// features use instead of tracking their own trigger lists.
         /// </summary>
         public void RemoveOwnedMounts(TriggerMountOwner owner)
         {
@@ -566,6 +592,7 @@ namespace Ludots.Core.Scripting
             for (int i = 0; i < owned.Count; i++)
             {
                 RemoveGlobalEventTrigger(owned[i]);
+                if (owned[i] is TriggerGraphMountTrigger mount) mount.Unregister();
             }
 
             _mapGlobalTriggers.Remove(mapId);
@@ -733,6 +760,34 @@ namespace Ludots.Core.Scripting
         /// Triggers are sorted by Priority (lower values execute first).
         /// Also invokes matching EventHandlers.
         /// </summary>
+        /// <summary>
+        /// 廉价判断某 eventKey 是否存在任何消费者（mod 回调/地图触发器/全局触发器）。
+        /// 无消费者时调用方可完全跳过分发（不建 ScriptContext、不拼字符串）。
+        /// </summary>
+        public bool HasDispatchTarget(MapId mapId, string eventKeyValue)
+        {
+            var key = new EventKey(eventKeyValue);
+            if (_eventHandlers.ContainsKey(key))
+            {
+                return true;
+            }
+
+            if (_globalEventTriggers.TryGetValue(key, out List<Trigger>? global) && global != null && global.Count > 0)
+            {
+                return true;
+            }
+
+            if (_mapEventTriggers.TryGetValue(mapId, out Dictionary<EventKey, List<Trigger>>? mapTriggers) &&
+                mapTriggers.TryGetValue(key, out List<Trigger>? matching) &&
+                matching != null &&
+                matching.Count > 0)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
         public void FireMapEvent(MapId mapId, EventKey eventKey, ScriptContext context)
         {
             EventSchemas?.ValidateFirePayload(eventKey, context);
@@ -895,6 +950,26 @@ namespace Ludots.Core.Scripting
             for (int i = 0; i < triggerList.Count; i++)
             {
                 FireTrigger(triggerList[i], GameEvents.ModTriggerResume, context);
+            }
+        }
+
+        /// <summary>
+        /// Resolve map/entity-domain suspended runs on the given map. Pure
+        /// dispatch to the map's MapTriggerResume subscribers; the clock gates the call on
+        /// <see cref="HasSuspendedMapTriggers"/> so an idle map fires nothing.
+        /// </summary>
+        public void FireMapTriggerResume(MapId mapId, ScriptContext context)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+            if (!_mapEventTriggers.TryGetValue(mapId, out Dictionary<EventKey, List<Trigger>>? eventTriggers) ||
+                !eventTriggers.TryGetValue(GameEvents.MapTriggerResume, out List<Trigger>? resumeTriggers))
+            {
+                return;
+            }
+
+            for (int i = 0; i < resumeTriggers.Count; i++)
+            {
+                FireTrigger(resumeTriggers[i], GameEvents.MapTriggerResume, context);
             }
         }
 
@@ -1139,6 +1214,7 @@ private async Task ObserveTriggerExecutionAsync(Trigger trigger, EventKey eventK
         public void UnregisterTrigger(Trigger trigger)
         {
              if (trigger == null) return;
+             if (trigger is TriggerGraphMountTrigger mount) mount.Unregister();
              if (!string.IsNullOrEmpty(trigger.EventKey.Value) && _triggers.TryGetValue(trigger.EventKey, out var list))
              {
                  list.Remove(trigger);

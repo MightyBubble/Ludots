@@ -56,14 +56,6 @@
       <Link>water.fs</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\..\Platforms\Desktop\skinning_instanced_pose_texture.vs">
-      <Link>skinning_instanced_pose_texture.vs</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\..\Platforms\Desktop\shadow_depth_skinning_pose_texture.vs">
-      <Link>shadow_depth_skinning_pose_texture.vs</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Include="..\..\..\Platforms\Desktop\skinning_instanced.fs">
       <Link>skinning_instanced.fs</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -202,6 +194,18 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="raylib.agent-demo.launch.graph.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="launcher.mass-navigation-10k-hud.runtime.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="raylib.mass-navigation-10k-hud.launch.graph.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="launcher.case-e.runtime.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="raylib.case-e.launch.graph.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>

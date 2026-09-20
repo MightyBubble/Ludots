@@ -81,12 +81,11 @@ namespace Ludots.Core.Config
         public int SimulationBudgetMsPerFrame { get; set; } = 4;
         public int SimulationMaxSlicesPerLogicFrame { get; set; } = 120;
 
+        public int TriggerGraphExecutionCapacity { get; set; }
+
         public GasRuntimeCapacityConfig GasRuntimeCapacity { get; set; } = null!;
 
-        public int GridCellSizeCm { get; set; } = 100;
-
-        public int WorldWidthInMacroTiles { get; set; } = 64;
-        public int WorldHeightInMacroTiles { get; set; } = 64;
+        /// <summary>Host map binding (#1567): the startup map roots the boot world via its root board.</summary>
 
         public Physics2DConfig Physics2D { get; set; } = new Physics2DConfig();
 
@@ -151,6 +150,7 @@ namespace Ludots.Core.Config
         public int OrderAdmissionRejectionCapacity { get; set; }
         public int OrderTerminalResultCapacity { get; set; }
         public int DeferredTriggerActiveEntityCapacity { get; set; }
+        public int DeferredTriggerPerFrameCapacity { get; set; }
         public int ProjectileCollisionCandidateCapacity { get; set; }
         public int ProjectileRuntimeEntityCapacity { get; set; }
         public int EffectPhaseGraphProgramScratchCapacity { get; set; }
@@ -237,6 +237,12 @@ namespace Ludots.Core.Config
             {
                 throw new System.InvalidOperationException(
                     "GameConfig.gasRuntimeCapacity.deferredTriggerActiveEntityCapacity must be positive.");
+            }
+
+            if (DeferredTriggerPerFrameCapacity <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.deferredTriggerPerFrameCapacity must be positive.");
             }
 
             if (ProjectileCollisionCandidateCapacity <= 0)

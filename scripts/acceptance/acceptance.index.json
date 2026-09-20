@@ -6,9 +6,9 @@
     "status": "active"
   },
   "counts": {
-    "runnable": 50,
+    "runnable": 52,
     "testOnly": 0,
-    "total": 50
+    "total": 52
   },
   "runnable": [
     {
@@ -177,6 +177,22 @@
       "binding": "engine_gallery",
       "testFilter": "RaylibEngineGalleryTests",
       "artifactDir": "artifacts/acceptance/engine_raylib_frame_lighting",
+      "hasScreenshotEvidence": true
+    },
+    {
+      "id": "engine_raylib_gpu_crowd",
+      "preset": "gpu_crowd",
+      "binding": "engine_gallery",
+      "testFilter": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_gpu_crowd",
+      "hasScreenshotEvidence": true
+    },
+    {
+      "id": "engine_raylib_gpu_crowd_sim",
+      "preset": "gpu_crowd_sim",
+      "binding": "engine_gallery",
+      "testFilter": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_gpu_crowd_sim",
       "hasScreenshotEvidence": true
     },
     {

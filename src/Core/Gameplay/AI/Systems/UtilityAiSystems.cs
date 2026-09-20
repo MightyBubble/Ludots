@@ -100,7 +100,7 @@ namespace Ludots.Core.Gameplay.AI.Systems
             _orders = orders;
             _admissionResults = orders?.AdmissionResults ?? throw new ArgumentNullException(nameof(orders));
             _terminalResults = terminalResults ?? throw new ArgumentNullException(nameof(terminalResults));
-            _evaluator = new UtilityAiRuntimeEvaluator(world, spatialQueries, graphs, graphApi, ResolveTargetScratchCapacity(in runtime));
+            _evaluator = new UtilityAiRuntimeEvaluator(world, spatialQueries, graphs, graphApi, targetCapacity: ResolveTargetScratchCapacity(in runtime));
         }
 
         public override void Update(in float dt)

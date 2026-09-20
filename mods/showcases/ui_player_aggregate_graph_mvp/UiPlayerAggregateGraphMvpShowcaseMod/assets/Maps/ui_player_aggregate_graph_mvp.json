@@ -1,6 +1,17 @@
 {
   "Id": "ui_player_aggregate_graph_mvp",
-  "Tags": ["showcase", "ui", "panel", "graph", "aggregate"],
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  },
+  "Tags": [
+    "showcase",
+    "ui",
+    "panel",
+    "graph",
+    "aggregate"
+  ],
   "DefaultCamera": {
     "VirtualCameraId": "Tactical",
     "TargetXCm": 1400,
@@ -15,27 +26,49 @@
       "Template": "ui_player_aggregate_faction_owner",
       "InstanceId": "ui-player-aggregate-faction-owner",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 1040, "Y": 900 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1040,
+            "Y": 900
+          }
+        }
       }
     },
     {
       "Template": "ui_player_aggregate_producer",
       "InstanceId": "ui-player-aggregate-ore-depot",
       "Overrides": {
-        "Name": { "Value": "Ore Depot Alpha" },
-        "WorldPositionCm": { "Value": { "X": 1320, "Y": 760 } }
+        "Name": {
+          "Value": "Ore Depot Alpha"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1320,
+            "Y": 760
+          }
+        }
       }
     },
     {
       "Template": "ui_player_aggregate_producer",
       "InstanceId": "ui-player-aggregate-crystal-hub",
       "Overrides": {
-        "Name": { "Value": "Crystal Hub Beta" },
-        "WorldPositionCm": { "Value": { "X": 1680, "Y": 1040 } }
+        "Name": {
+          "Value": "Crystal Hub Beta"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1680,
+            "Y": 1040
+          }
+        }
       }
     }
   ],
   "Teams": [
-    { "TeamId": 1, "RepresentativeInstanceId": "ui-player-aggregate-faction-owner" }
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "ui-player-aggregate-faction-owner"
+    }
   ]
 }

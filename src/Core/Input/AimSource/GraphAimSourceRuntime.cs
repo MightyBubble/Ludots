@@ -12,6 +12,9 @@ using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
+using Ludots.Core.EntityCollections;
+using Ludots.Core.Components;
+using Ludots.Core.Presentation.Components;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Input.AimSource
@@ -33,6 +36,140 @@ namespace Ludots.Core.Input.AimSource
 
         private CoreScreenRayProvider? _seatRay;
         private CoreScreenProjector? _seatProjector;
+        private Entity[] _regionBuffer = new Entity[256];
+        private IContinuousHeightmapRenderSource? _heightRangeSource;
+        private int _heightRangeRevision = int.MinValue;
+        private float _minHeightMeters;
+        private float _maxHeightMeters;
+        private readonly System.Runtime.CompilerServices.ConditionalWeakTable<IEntityCollectionSource, SourceValidation> _validatedSources = new();
+        private sealed class SourceValidation
+        {
+            public uint Source;
+            public long Spatial;
+        }
+        public long RegionBroadphaseCandidates { get; private set; }
+        public long RegionExactTests { get; private set; }
+
+        public ReadOnlySpan<Entity> QueryScreenRegion(IEntityCollectionSource source, in ScreenRect rect, string? seatId)
+        {
+            source.Read();
+            if (!TryResolveProjector(seatId, rect.MinX, rect.MinY, out IScreenProjector projector, out Vector2 origin))
+                throw new InvalidOperationException("SPATIAL.ERR.ScreenProjectorMissing");
+            IScreenRayProvider rays;
+            if (seatId == null)
+                rays = _globals.TryGetValue(CoreServiceKeys.ScreenRayProvider.Name, out var rayObject) && rayObject is IScreenRayProvider installed
+                    ? installed : throw new InvalidOperationException("SPATIAL.ERR.ScreenRayProviderMissing");
+            else
+            {
+                if (!TryBindSeatSurface(seatId, out PresentBinding binding, out IViewController view))
+                    throw new InvalidOperationException("SPATIAL.ERR.SeatSurfaceMissing");
+                CameraManager camera = ClientLocalSeatAccess.RequireLogicViews(_globals).RequireCamera(binding.LogicViewId);
+                _seatRay ??= new CoreScreenRayProvider(camera, view);
+                _seatRay.Rebind(camera, new PresentBindingSurface(binding, view.Fov));
+                rays = _seatRay;
+            }
+            var localRect = new ScreenRect(origin.X, origin.Y, origin.X + rect.MaxX - rect.MinX, origin.Y + rect.MaxY - rect.MinY);
+            ScreenProjectionPoseContext projectionPose = ScreenProjectionGrounding.Resolve(_world, _globals);
+            var spatial = _globals[CoreServiceKeys.SpatialQueryService.Name] as SpatialQueryService
+                ?? throw new InvalidOperationException("SPATIAL.ERR.SharedQueryServiceMissing");
+            SourceValidation validated = _validatedSources.GetValue(source, static _ => new SourceValidation());
+            if (validated.Source != source.Revision || validated.Spatial != spatial.MembershipRevision)
+            {
+                foreach (Entity entity in source.Read())
+                {
+                    if (!_world.TryGet(entity, out SpatialCellRef membership) || membership.State != SpatialMembershipState.Active ||
+                        _world.Has<SuspendedTag>(entity) || _world.Has<PresentationStaticTransform>(entity) ||
+                        _world.Has<SpatialPartitionExcluded>(entity) || _world.Has<PresentationDestroyPending>(entity))
+                        throw new InvalidOperationException($"SPATIAL.ERR.CandidateNotIndexed: entity={entity.Id}");
+                }
+                validated.Source = source.Revision;
+                validated.Spatial = spatial.MembershipRevision;
+            }
+            var spec = (WorldSizeSpec)_globals[CoreServiceKeys.WorldSizeSpec.Name];
+            (float minHeightMeters, float maxHeightMeters) = ResolveHeightSpan(projectionPose.GroundHeightmap);
+            if (!ScreenRegionBroadphase.TryGetBounds(rays, localRect, spec.Bounds, spatial.ReadBoundsRadiusCm(), out WorldAabbCm bounds, minHeightMeters, maxHeightMeters))
+                return ReadOnlySpan<Entity>.Empty;
+            int halfWidth = checked((bounds.Width + 1) / 2);
+            int halfHeight = checked((bounds.Height + 1) / 2);
+            var center = new WorldCmInt2(checked(bounds.Left + halfWidth), checked(bounds.Top + halfHeight));
+            SpatialQueryResult result;
+            do
+            {
+                result = spatial.QueryRectangle(center, halfWidth, halfHeight, 0, _regionBuffer);
+                if (result.Dropped > 0) Array.Resize(ref _regionBuffer, checked(_regionBuffer.Length + result.Dropped));
+            } while (result.Dropped > 0);
+            RegionBroadphaseCandidates += result.Count;
+            int kept = 0;
+            for (int i = 0; i < result.Count; i++)
+            {
+                Entity entity = _regionBuffer[i];
+                if (!source.Contains(entity)) continue;
+                RegionExactTests++;
+                if (SpatialBoundsUtility.EntityIntersectsScreenRect(_world, entity, projector, localRect, in projectionPose))
+                    _regionBuffer[kept++] = entity;
+            }
+            return _regionBuffer.AsSpan(0, kept);
+        }
+
+
+        private (float Min, float Max) ResolveHeightSpan(IContinuousHeightmap? heightmap)
+        {
+            if (heightmap == null)
+            {
+                return (0f, 0f);
+            }
+
+            if (heightmap is not IContinuousHeightmapRenderSource source)
+            {
+                throw new InvalidOperationException("SPATIAL.ERR.HeightRangeUnavailable");
+            }
+
+            if (ReferenceEquals(source, _heightRangeSource) && source.Revision == _heightRangeRevision)
+            {
+                return (_minHeightMeters, _maxHeightMeters);
+            }
+
+            float minCm = float.MaxValue;
+            float maxCm = float.MinValue;
+            int sampleCount = 0;
+            for (int chunkY = 0; chunkY < source.ChunkRows; chunkY++)
+            {
+                for (int chunkX = 0; chunkX < source.ChunkColumns; chunkX++)
+                {
+                    if (!source.TryGetChunk(chunkX, chunkY, out ContinuousHeightmapRenderChunk chunk))
+                    {
+                        continue;
+                    }
+
+                    for (int sampleY = 0; sampleY < chunk.SampleRows; sampleY++)
+                    {
+                        for (int sampleX = 0; sampleX < chunk.SampleColumns; sampleX++)
+                        {
+                            if (!chunk.TryReadHeightCm(sampleX, sampleY, out float heightCm) || !float.IsFinite(heightCm))
+                            {
+                                throw new InvalidOperationException(
+                                    $"SPATIAL.ERR.InvalidHeightSample: chunk=({chunkX},{chunkY}), sample=({sampleX},{sampleY})");
+                            }
+
+                            minCm = MathF.Min(minCm, heightCm);
+                            maxCm = MathF.Max(maxCm, heightCm);
+                            sampleCount++;
+                        }
+                    }
+                }
+            }
+
+            if (sampleCount == 0)
+            {
+                throw new InvalidOperationException("SPATIAL.ERR.HeightRangeEmpty");
+            }
+
+            _heightRangeSource = source;
+            _heightRangeRevision = source.Revision;
+            _minHeightMeters = minCm / 100f;
+            _maxHeightMeters = maxCm / 100f;
+            return (_minHeightMeters, _maxHeightMeters);
+        }
 
         public GraphAimSourceRuntime(World world, IReadOnlyDictionary<string, object> globals)
         {
@@ -127,10 +264,11 @@ namespace Ludots.Core.Input.AimSource
                 localOrigin.Y,
                 localOrigin.X + (rect.MaxX - rect.MinX),
                 localOrigin.Y + (rect.MaxY - rect.MinY));
+            ScreenProjectionPoseContext projectionPose = ScreenProjectionGrounding.Resolve(_world, _globals);
             int kept = 0;
             for (int i = 0; i < count; i++)
             {
-                if (SpatialBoundsUtility.EntityIntersectsScreenRect(_world, entities[i], projector, in localRect))
+                if (SpatialBoundsUtility.EntityIntersectsScreenRect(_world, entities[i], projector, in localRect, in projectionPose))
                 {
                     entities[kept++] = entities[i];
                 }

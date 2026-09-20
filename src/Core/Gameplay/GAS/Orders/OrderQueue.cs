@@ -32,6 +32,23 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         public int AdmissionBatchId;
         public ushort AdmissionBatchSize;
         public ushort AdmissionBatchIndex;
+        public int CommandGroupToken;
+
+        public readonly int RequireCommandGroupToken()
+        {
+            if (AdmissionBatchId == 0)
+            {
+                return OrderId;
+            }
+
+            if (CommandGroupToken <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Order admission batch {AdmissionBatchId} has no command group identity for order {OrderId}.");
+            }
+
+            return CommandGroupToken;
+        }
     }
 
     public sealed class OrderQueue
@@ -85,6 +102,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             order.AdmissionBatchId = 0;
             order.AdmissionBatchSize = 0;
             order.AdmissionBatchIndex = 0;
+            order.CommandGroupToken = 0;
 
             if (!_admissionResults.CanReserve(OrderAdmissionStage.GlobalIntake, 1))
             {
@@ -151,6 +169,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 orders[i].AdmissionBatchId = 0;
                 orders[i].AdmissionBatchSize = 0;
                 orders[i].AdmissionBatchIndex = 0;
+                orders[i].CommandGroupToken = 0;
             }
             ValidateUniqueOrderIds(orders);
 
@@ -177,7 +196,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         /// <summary>
         /// Atomically admits a fan-out batch whose rows represent one logical order. The queue owns
-        /// the shared id so producers cannot create ids that collide with other intake paths.
+        /// the group identity while each member retains a distinct admission and terminal receipt.
         /// </summary>
         public OrderSubmitResult TryEnqueueSharedBatch(Span<Order> orders)
         {
@@ -214,6 +233,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 orders[i].AdmissionBatchId = admissionBatchId;
                 orders[i].AdmissionBatchSize = batchSize;
                 orders[i].AdmissionBatchIndex = (ushort)i;
+                orders[i].CommandGroupToken = orders[0].OrderId;
             }
             ValidateUniqueOrderIds(orders);
 
@@ -279,17 +299,20 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
 
             previousCluster = Entity.Null;
+            int commandGroupId = 0;
             int admissionBatchId = NextAdmissionBatchId();
             ushort batchSize = (ushort)orders.Length;
             _admissionResults.EnsureWritableForNewOrders(OrderAdmissionStage.GlobalIntake, orders.Length);
             for (int i = 0; i < orders.Length; i++)
             {
+                EnsureOrderId(ref orders[i]);
                 if (orders[i].CommandSource != previousCluster)
                 {
                     previousCluster = orders[i].CommandSource;
+                    commandGroupId = orders[i].OrderId;
                 }
 
-                EnsureOrderId(ref orders[i]);
+                orders[i].CommandGroupToken = commandGroupId;
                 orders[i].AdmissionBatchId = admissionBatchId;
                 orders[i].AdmissionBatchSize = batchSize;
                 orders[i].AdmissionBatchIndex = (ushort)i;

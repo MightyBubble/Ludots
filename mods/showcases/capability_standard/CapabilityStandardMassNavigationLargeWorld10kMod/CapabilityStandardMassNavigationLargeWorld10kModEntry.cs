@@ -1,8 +1,7 @@
 using System;
 using System.Threading.Tasks;
-using CapabilityStandardMassNavigationLargeWorld10kMod.Systems;
 using Ludots.Core.Engine;
-using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.MassNavigation.Systems;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Scripting;
@@ -17,7 +16,6 @@ public sealed class CapabilityStandardMassNavigationLargeWorld10kModEntry : IMod
 
     public void OnLoad(IModContext context)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
         context.Log("[CapabilityStandardMassNavigationLargeWorld10kMod] Loaded");
         context.OnEvent(GameEvents.GameStart, ConfigureLargeWorldShowcaseAsync);
         context.OnEvent(GameEvents.MapLoaded, ConfigureLargeWorldShowcaseAsync);
@@ -63,7 +61,7 @@ public sealed class CapabilityStandardMassNavigationLargeWorld10kModEntry : IMod
         }
 
         engine.RegisterSystem(
-            new MassNavigationObserverVisibilityBindingSystem(engine),
+            MassNavigationObserverDisclosure.CreateLocalAgentDisclosure(engine),
             SystemGroup.RuntimeEntityBinding);
         engine.GlobalContext[ObserverVisibilitySystemInstalledKey] = true;
     }

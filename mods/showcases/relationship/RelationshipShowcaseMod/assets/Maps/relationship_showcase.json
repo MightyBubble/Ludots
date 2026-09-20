@@ -1,6 +1,14 @@
 {
   "Id": "relationship_showcase",
-  "Tags": ["relationship.showcase", "relationship.peach_garden"],
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  },
+  "Tags": [
+    "relationship.showcase",
+    "relationship.peach_garden"
+  ],
   "DefaultCamera": {
     "VirtualCameraId": "Camera.Profile.Tactical",
     "TargetXCm": 1600,
@@ -14,44 +22,93 @@
       "Template": "relationship_liu_bei",
       "InstanceId": "relationship-liu-bei",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 1080, "Y": 920 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1080,
+            "Y": 920
+          }
+        }
       }
     },
     {
       "Template": "relationship_guan_yu",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 1280, "Y": 660 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1280,
+            "Y": 660
+          }
+        }
       }
     },
     {
       "Template": "relationship_zhang_fei",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 1280, "Y": 1180 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1280,
+            "Y": 1180
+          }
+        }
       }
     },
     {
       "Template": "relationship_rebel_captain",
       "InstanceId": "relationship-rebel-captain",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 1940, "Y": 860 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1940,
+            "Y": 860
+          }
+        }
       }
     },
     {
       "Template": "relationship_rebel_spearman",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 2140, "Y": 1090 } }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2140,
+            "Y": 1090
+          }
+        }
       }
     }
   ],
   "Teams": [
-    { "TeamId": 1, "RepresentativeInstanceId": "relationship-liu-bei" },
-    { "TeamId": 2, "RepresentativeInstanceId": "relationship-rebel-captain" }
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "relationship-liu-bei"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "relationship-rebel-captain"
+    }
   ],
   "ParticipantRelationships": {
     "Teams": [
-      { "TeamA": 1, "TeamB": 1, "TypeId": "RelationshipShowcase.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 2, "TeamB": 2, "TypeId": "RelationshipShowcase.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 1, "TeamB": 2, "TypeId": "RelationshipShowcase.Participant", "Attitude": "Hostile", "Symmetric": true }
+      {
+        "TeamA": 1,
+        "TeamB": 1,
+        "TypeId": "RelationshipShowcase.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 2,
+        "TeamB": 2,
+        "TypeId": "RelationshipShowcase.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 1,
+        "TeamB": 2,
+        "TypeId": "RelationshipShowcase.Participant",
+        "Attitude": "Hostile",
+        "Symmetric": true
+      }
     ],
     "Players": [],
     "PlayerTeams": []

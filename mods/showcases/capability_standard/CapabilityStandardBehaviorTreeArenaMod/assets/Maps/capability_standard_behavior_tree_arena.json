@@ -1,5 +1,10 @@
 {
   "Id": "capability_standard_behavior_tree_arena",
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  },
   "Tags": [
     "showcase",
     "capability-standard",
@@ -7,7 +12,7 @@
     "graph"
   ],
   "DefaultCamera": {
-    "VirtualCameraId": "Camera.Profile.Tactical",
+    "VirtualCameraId": "Camera.Profile.FixedArena",
     "TargetXCm": 0,
     "TargetYCm": 0,
     "DistanceCm": 2600,

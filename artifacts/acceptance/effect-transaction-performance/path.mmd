@@ -1,0 +1,13 @@
+flowchart TD
+    A[Setup: 10k distinct effects] --> B[Scan fixed tick]
+    B -->|state unchanged| C[No gameplay state stage]
+    B -->|state changed| D[Dictionary resolves staged row]
+    D --> E[Graph side effects stage in arrays]
+    E --> F{Commit or abort?}
+    F -->|commit| G[Apply in array order]
+    F -->|abort| H[Rollback world and external queues]
+    G --> I[Single pass and sliced pass agree]
+    H --> J[World remains unchanged]
+    D --> K{Capacity or stale entity?}
+    K -->|yes| L[Explicit error]
+    K -->|no| E

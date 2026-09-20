@@ -4,7 +4,7 @@
     C --> D["Publish collection.command.source for 3 actors"]
     D --> E["Right mouse Command captured by PlayerInputHandler"]
     E --> F["InputRuntimeSystem writes authoritative snapshot + ground override"]
-    F --> G["InteractionShowcaseLocalOrderSourceSystem updates production mapping"]
+    F --> G["LocalOrderSourceSystem updates production mapping"]
     G --> H["CommandIntentArbiter.ResolveActiveCommandIntent"]
     H --> I["CommandIntentProfileRegistry.RouteGroup -> moveTo"]
     I --> J["CastDispatchProfileRegistry.SelectDispatchTargets dispatch.all_together"]

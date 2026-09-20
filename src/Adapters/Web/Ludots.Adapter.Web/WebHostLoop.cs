@@ -83,7 +83,13 @@ namespace Ludots.Adapter.Web
             {
                 var worldHudStrings = engine.GetService(CoreServiceKeys.PresentationWorldHudStrings);
                 hudProjection = new WorldHudToScreenSystem(
-                    engine.World, worldHud, worldHudStrings, screenProjector, viewController, screenHud);
+                    engine.World,
+                    worldHud,
+                    worldHudStrings,
+                    screenProjector,
+                    viewController,
+                    screenHud,
+                    heightmapProvider: () => engine.GetService(CoreServiceKeys.ContinuousHeightmap));
             }
 
             ValidateRequiredContext(engine);

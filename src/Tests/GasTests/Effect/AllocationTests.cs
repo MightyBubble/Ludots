@@ -71,7 +71,7 @@ namespace Ludots.Tests.GAS
                 ref var attr = ref world.Get<AttributeBuffer>(target);
                 attr.SetCurrent(0, 1000f);
 
-                var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+                var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry());
                 var abilitySystem = new AbilitySystem(world, requests, abilityDefs, tagOps);
                 var proposalSystem = new EffectProposalProcessingSystem(
                     world,
@@ -178,7 +178,7 @@ namespace Ludots.Tests.GAS
                 inputRequests: null,
                 chainOrders: chainOrders,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry()));
 
             var sinks = new Ludots.Core.Gameplay.GAS.Bindings.AttributeSinkRegistry();
             Ludots.Core.Gameplay.GAS.Bindings.GasAttributeSinks.RegisterBuiltins(sinks);
@@ -288,6 +288,7 @@ namespace Ludots.Tests.GAS
                 GasGraphOpHandlerTable.Instance,
                 new EffectTemplateRegistry());
             var api = new GasGraphRuntimeApi(world);
+            api.AggregateDirty = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
             EffectPhaseGraphBindings behavior = default;
             using var transaction = new EffectPhaseSideEffectTransaction(
                 world,
@@ -326,7 +327,7 @@ namespace Ludots.Tests.GAS
             var clock = new DiscreteClock();
             var requests = new EffectRequestQueue();
             var dirtyQueue = new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME);
-            var tagOps = new TagOps(dirtyQueue, new TagRuleRegistry());
+            var tagOps = new TagOps(dirtyQueue, new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry());
             var triggerQueue = new DeferredTriggerQueue();
             var conditions = new GasConditionRegistry();
             var templates = new EffectTemplateRegistry();
@@ -347,7 +348,7 @@ namespace Ludots.Tests.GAS
                 requests,
                 templates: templates,
                 tagOps: tagOps);
-            using var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps);
+            using var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps, aggregateDirty: tagOps.AggregateDirty);
             using var lifetime = new EffectLifetimeSystem(
                 world,
                 clock,
@@ -365,7 +366,6 @@ namespace Ludots.Tests.GAS
                 new AttributeBuffer(),
                 new DirtyFlags(),
                 new ActiveEffectContainer(),
-                new AttributeAggregateDirty(),
                 new GameplayTagContainer(),
                 new TagCountContainer(),
                 new TimedTagBuffer());

@@ -62,7 +62,6 @@
     <ProjectReference Include="..\..\..\mods\capabilities\camera\VirtualCameraShotsMod\VirtualCameraShotsMod.csproj" />
     <ProjectReference Include="..\..\..\mods\capabilities\participant_view\ParticipantViewCapabilityMod\ParticipantViewCapabilityMod.csproj" />
     <ProjectReference Include="..\..\..\mods\capabilities\narrativefrontend\NarrativeFrontendMod\NarrativeFrontendMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\capabilities\navigation\MassNavigationMod\MassNavigationMod.csproj" />
     <ProjectReference Include="..\..\..\mods\fixtures\version_mismatch\VersionMismatchMod\VersionMismatchMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\fourx_demo\FourXDemoMod\FourXDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\tcg_demo\TcgDemoMod\TcgDemoMod.csproj" />
@@ -70,6 +69,8 @@
     <ProjectReference Include="..\..\..\mods\showcases\rts_demo\RtsDemoMod\RtsDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\rts_showcase\RtsShowcaseMod\RtsShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\rts_multiplayer_frontline\RtsMultiplayerFrontlineMod\RtsMultiplayerFrontlineMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\rts_multiplayer_frontline\RtsMultiplayerFrontlineNetworkedMod\RtsMultiplayerFrontlineNetworkedMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\navmesh_runtime_gate\NavGateShowcaseMod\NavGateShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\ai_demo\AIDemoMod\AIDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\AIInspectorMod\AIInspectorMod.csproj" />
     <ProjectReference Include="..\..\..\mods\CombatStanceBehaviorMod\CombatStanceBehaviorMod.csproj" />
@@ -115,6 +116,8 @@
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardModExtensibleRuntimeShowcaseShared\CapabilityStandardModExtensibleRuntimeShowcaseShared.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardConfigShardsShowcaseMod\CapabilityStandardConfigShardsShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardEffectPresetTypeCodeShowcaseMod\CapabilityStandardEffectPresetTypeCodeShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardGraphOpProviderMod\CapabilityStandardGraphOpProviderMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardGraphOpExtensionShowcaseMod\CapabilityStandardGraphOpExtensionShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPresenterBehaviorExtensionShowcaseMod\CapabilityStandardPresenterBehaviorExtensionShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPresenterCommandExtensionShowcaseMod\CapabilityStandardPresenterCommandExtensionShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardTransportNetworkMod\CapabilityStandardTransportNetworkMod.csproj" />
@@ -143,6 +146,7 @@
     <ProjectReference Include="..\..\..\mods\showcases\control_plane_projection\ControlPlaneProjectionShowcaseMod\ControlPlaneProjectionShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\combat_stance\CombatStanceShowcaseMod\CombatStanceShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\panel_entity_list\PanelEntityListShowcaseMod\PanelEntityListShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\panel_fireball_shared\FireballSharedMod\FireballSharedMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\dual_seat_panels\DualSeatPanelsShowcaseMod\DualSeatPanelsShowcaseMod.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Panels\Ludots.UI.Panels.csproj" />

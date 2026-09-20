@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using CapabilityStandardCrowdPhysicsArenaMod.Runtime;
 using CapabilityStandardCrowdPhysicsArenaMod.Systems;
 using Ludots.Core.Engine;
-using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.MassNavigation.Systems;
 using Ludots.Core.Modding;
 using Ludots.Core.Movement.Physics2DBridge;
 using Ludots.Core.Presentation.Minimap;
@@ -17,7 +17,6 @@ public sealed class CapabilityStandardCrowdPhysicsArenaModEntry : IMod
         "CapabilityStandardCrowdPhysicsArena.ObserverVisibilitySystemInstalled";
     private const string PressurePlateDoorSystemInstalledKey =
         "CapabilityStandardCrowdPhysicsArena.PressurePlateDoorSystemInstalled";
-    private IModContext? _context;
 
     /// <summary>Queryable plate/door state for tests and HUD (installed once per engine).</summary>
     public static readonly ServiceKey<CrowdPhysicsArenaPressurePlateDoorSystem> PressurePlateDoorSystemKey =
@@ -25,7 +24,6 @@ public sealed class CapabilityStandardCrowdPhysicsArenaModEntry : IMod
 
     public void OnLoad(IModContext context)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
         context.Log("[CapabilityStandardCrowdPhysicsArenaMod] Loaded");
         CrowdPhysicsArenaComponentAuthoring.Register(context.ModId);
         context.OnEvent(GameEvents.GameStart, ConfigureArenaShowcaseAsync);
@@ -75,13 +73,10 @@ public sealed class CapabilityStandardCrowdPhysicsArenaModEntry : IMod
         }
 
         engine.RegisterSystem(
-            new CrowdPhysicsArenaObserverVisibilityBindingSystem(engine),
+            MassNavigationObserverDisclosure.CreateLocalAgentDisclosure(engine),
             SystemGroup.RuntimeEntityBinding);
         engine.GlobalContext[ObserverVisibilitySystemInstalledKey] = true;
     }
-
-
-
 
     private static void EnsurePressurePlateDoorSystem(GameEngine engine)
     {

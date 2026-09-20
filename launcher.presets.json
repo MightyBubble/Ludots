@@ -505,6 +505,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_mod_graph_op_extension_showcase_raylib",
+      "name": "Capability Standard Graph Op Extension Raylib",
+      "selectors": [
+        "$capability_standard_mod_graph_op_extension_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_presenter_behavior_extension_showcase_raylib",
       "name": "Capability Standard Presenter Behavior Extension Raylib",
       "selectors": [
@@ -3255,6 +3264,143 @@
       "name": "Graph Op LoadPointerScreenY Raylib",
       "selectors": [
         "$capability_standard_graph_op_LoadPointerScreenY"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_BindQueryCollection_raylib",
+      "name": "Graph Op BindQueryCollection Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_BindQueryCollection"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryScreenRegionCollection_raylib",
+      "name": "Graph Op QueryScreenRegionCollection Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryScreenRegionCollection"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "region_volume_textbook_raylib",
+      "name": "Region Volume Textbook Raylib",
+      "selectors": [
+        "$region_volume_textbook",
+        "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "contact_sensor_textbook_raylib",
+      "name": "Contact Sensor Textbook Raylib",
+      "selectors": [
+        "$contact_sensor_textbook",
+        "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryFilterControllable_raylib",
+      "name": "Graph Op QueryFilterControllable Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryFilterControllable"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_CompleteActiveOrder_raylib",
+      "name": "Graph Op CompleteActiveOrder Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_CompleteActiveOrder"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_FloatToInt_raylib",
+      "name": "Graph Op FloatToInt Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_FloatToInt"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_IntToFloat_raylib",
+      "name": "Graph Op IntToFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_IntToFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadEntityPosValid_raylib",
+      "name": "Graph Op LoadEntityPosValid Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadEntityPosValid"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadEntityPosX_raylib",
+      "name": "Graph Op LoadEntityPosX Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadEntityPosX"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadEntityPosY_raylib",
+      "name": "Graph Op LoadEntityPosY Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadEntityPosY"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadOrderTypeId_raylib",
+      "name": "Graph Op LoadOrderTypeId Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadOrderTypeId"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SqrtFloat_raylib",
+      "name": "Graph Op SqrtFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SqrtFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SubmitAssignedOrder_raylib",
+      "name": "Graph Op SubmitAssignedOrder Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SubmitAssignedOrder"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "eqs_influence_raylib",
+      "name": "EQS Influence Raylib",
+      "selectors": [
+        "$eqs_influence"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

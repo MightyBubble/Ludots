@@ -252,7 +252,7 @@ namespace Ludots.Tests.GAS.Integration.ProductionWiring
             Assert.That(functions, Is.Not.Null);
             Assert.That(actions, Is.Not.Null);
             Assert.That(functions.Require("demo.const.seven").GraphId, Is.GreaterThan(0));
-            Assert.That(actions.Require("bt.patrol", GraphActionHost.BehaviorTree), Is.GreaterThan(0));
+            Assert.That(actions.Require("bt.patrol"), Is.GreaterThan(0));
             GraphOutputValueStore graphOutputValues = engine.GetService(CoreServiceKeys.GraphOutputValueStore);
             Assert.That(graphOutputValues, Is.Not.Null);
             Assert.That(
@@ -327,16 +327,17 @@ namespace Ludots.Tests.GAS.Integration.ProductionWiring
             Entity entity = engine.World.Create(
                 attributes,
                 new ActiveEffectContainer(),
-                new AttributeAggregateDirty(),
                 new DirtyFlags(),
                 binding);
 
+            var registry = engine.GetService(CoreServiceKeys.AttributeAggregateDirtyRegistry) ?? throw new InvalidOperationException("Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry.MissingRegistryError");
+            registry.MarkDirty(entity);
             var simulationLoop = engine.GetService(CoreServiceKeys.SimulationLoopController);
             engine.Start();
             simulationLoop.Step();
             Assert.DoesNotThrow(() =>
             {
-                for (int frame = 0; frame < 16 && engine.World.Has<AttributeAggregateDirty>(entity); frame++)
+                for (int frame = 0; frame < 16 && registry.Contains(entity); frame++)
                 {
                     engine.Tick(1f / 60f);
                 }
@@ -345,7 +346,7 @@ namespace Ludots.Tests.GAS.Integration.ProductionWiring
             ref AttributeBuffer result = ref engine.World.Get<AttributeBuffer>(entity);
             Assert.That(result.GetCurrent(doubledAttributeId), Is.EqualTo(20f));
             Assert.That(result.GetCurrent(offsetAttributeId), Is.EqualTo(13f));
-            Assert.That(engine.World.Has<AttributeAggregateDirty>(entity), Is.False);
+            Assert.That(registry.Contains(entity), Is.False, "聚合完成后脏注册表必须清空该实体。");
         }
 
         [Test]

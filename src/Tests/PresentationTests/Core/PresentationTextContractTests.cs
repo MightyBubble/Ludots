@@ -249,14 +249,12 @@ namespace Ludots.Tests.Presentation
   }
 }");
 
-            string coreDirectDir = Path.Combine(_root, "Core", "Presentation");
-            Directory.CreateDirectory(coreDirectDir);
-            File.WriteAllText(Path.Combine(coreDirectDir, "text_tokens.json"),
+            WriteFile("TestMod", "assets/Presentation/text_tokens.json",
                 @"[
   { ""id"": ""hud.current"", ""argCount"": 1 }
 ]");
 
-            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var (_, _, pipeline, catalog) = BuildPipeline(_root, new[] { "TestMod" });
             var loader = new PresentationTextCatalogLoader(pipeline);
 
             var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));

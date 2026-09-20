@@ -65,6 +65,8 @@ public sealed class DirtyEntityQueue
         }
 
         ref DirtyFlags dirty = ref world.Get<DirtyFlags>(entity);
+        if (dirty.IsAnyAttributeDirty()) world.NotifyComponentChanged<AttributeBuffer>(entity);
+        if (dirty.IsAnyTagDirty()) world.NotifyComponentChanged<GameplayTagContainer>(entity);
         if (dirty.DeferredTriggerQueued != 0)
         {
             return false;

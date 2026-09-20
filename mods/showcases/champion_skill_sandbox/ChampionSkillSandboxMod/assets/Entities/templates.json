@@ -1,7 +1,6 @@
 [
   {
     "id": "champion_skill_sandbox_participant_anchor",
-    "initialInteractionContext": "interaction.context.champion.battle",
     "components": {
       "Name": {
         "Value": "ChampionSkillSandbox.ParticipantAnchor"
@@ -36,14 +35,10 @@
         }
       },
       "Collider2D": {
-        "shape": {
-          "type": "Circle",
-          "radiusCm": 36,
-          "localCenterCm": {
-            "x": 0,
-            "y": 0
-          }
-        }
+        "shape": "circle",
+        "radiusCm": 36,
+        "localCenterXCm": 0,
+        "localCenterYCm": 0
       },
       "PhysicsMaterial2D": {
         "friction": 0.92,
@@ -93,14 +88,10 @@
         }
       },
       "Collider2D": {
-        "shape": {
-          "type": "Circle",
-          "radiusCm": 46,
-          "localCenterCm": {
-            "x": 0,
-            "y": 0
-          }
-        }
+        "shape": "circle",
+        "radiusCm": 46,
+        "localCenterXCm": 0,
+        "localCenterYCm": 0
       },
       "PhysicsMaterial2D": {
         "friction": 0.92,
@@ -150,14 +141,10 @@
         }
       },
       "Collider2D": {
-        "shape": {
-          "type": "Circle",
-          "radiusCm": 40,
-          "localCenterCm": {
-            "x": 0,
-            "y": 0
-          }
-        }
+        "shape": "circle",
+        "radiusCm": 40,
+        "localCenterXCm": 0,
+        "localCenterYCm": 0
       },
       "PhysicsMaterial2D": {
         "friction": 0.92,
@@ -593,14 +580,10 @@
         }
       },
       "Collider2D": {
-        "shape": {
-          "type": "Circle",
-          "radiusCm": 46,
-          "localCenterCm": {
-            "x": 0,
-            "y": 0
-          }
-        }
+        "shape": "circle",
+        "radiusCm": 46,
+        "localCenterXCm": 0,
+        "localCenterYCm": 0
       },
       "PhysicsMaterial2D": {
         "friction": 0.92,
@@ -650,14 +633,10 @@
         }
       },
       "Collider2D": {
-        "shape": {
-          "type": "Circle",
-          "radiusCm": 38,
-          "localCenterCm": {
-            "x": 0,
-            "y": 0
-          }
-        }
+        "shape": "circle",
+        "radiusCm": 38,
+        "localCenterXCm": 0,
+        "localCenterYCm": 0
       },
       "PhysicsMaterial2D": {
         "friction": 0.92,
@@ -707,14 +686,10 @@
         }
       },
       "Collider2D": {
-        "shape": {
-          "type": "Circle",
-          "radiusCm": 36,
-          "localCenterCm": {
-            "x": 0,
-            "y": 0
-          }
-        }
+        "shape": "circle",
+        "radiusCm": 36,
+        "localCenterXCm": 0,
+        "localCenterYCm": 0
       },
       "PhysicsMaterial2D": {
         "friction": 0.92,
@@ -764,14 +739,10 @@
         }
       },
       "Collider2D": {
-        "shape": {
-          "type": "Circle",
-          "radiusCm": 34,
-          "localCenterCm": {
-            "x": 0,
-            "y": 0
-          }
-        }
+        "shape": "circle",
+        "radiusCm": 34,
+        "localCenterXCm": 0,
+        "localCenterYCm": 0
       },
       "PhysicsMaterial2D": {
         "friction": 0.92,
@@ -821,14 +792,10 @@
         }
       },
       "Collider2D": {
-        "shape": {
-          "type": "Circle",
-          "radiusCm": 46,
-          "localCenterCm": {
-            "x": 0,
-            "y": 0
-          }
-        }
+        "shape": "circle",
+        "radiusCm": 46,
+        "localCenterXCm": 0,
+        "localCenterYCm": 0
       },
       "PhysicsMaterial2D": {
         "friction": 0.92,
@@ -878,14 +845,10 @@
         }
       },
       "Collider2D": {
-        "shape": {
-          "type": "Circle",
-          "radiusCm": 38,
-          "localCenterCm": {
-            "x": 0,
-            "y": 0
-          }
-        }
+        "shape": "circle",
+        "radiusCm": 38,
+        "localCenterXCm": 0,
+        "localCenterYCm": 0
       },
       "PhysicsMaterial2D": {
         "friction": 0.92,
@@ -935,14 +898,10 @@
         }
       },
       "Collider2D": {
-        "shape": {
-          "type": "Circle",
-          "radiusCm": 36,
-          "localCenterCm": {
-            "x": 0,
-            "y": 0
-          }
-        }
+        "shape": "circle",
+        "radiusCm": 36,
+        "localCenterXCm": 0,
+        "localCenterYCm": 0
       },
       "PhysicsMaterial2D": {
         "friction": 0.92,
@@ -992,14 +951,10 @@
         }
       },
       "Collider2D": {
-        "shape": {
-          "type": "Circle",
-          "radiusCm": 34,
-          "localCenterCm": {
-            "x": 0,
-            "y": 0
-          }
-        }
+        "shape": "circle",
+        "radiusCm": 34,
+        "localCenterXCm": 0,
+        "localCenterYCm": 0
       },
       "PhysicsMaterial2D": {
         "friction": 0.92,

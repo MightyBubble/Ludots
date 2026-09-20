@@ -17,7 +17,7 @@
       },
       "PresentationStaticTransform": {},
       "FacingDirection": {
-        "AngleRad": 0.0
+        "AngleRad": 0
       },
       "AttributeBuffer": {
         "base": {
@@ -32,35 +32,40 @@
       "BlackboardFloatBuffer": {}
     }
   },
-    {
-      "id": "case_e_marine",
-      "components": {
-        "Name": {
-          "Value": "可框选单位"
-        },
-        "Team": {
-          "Id": 1
-        },
-        "PlayerOwner": {
-          "PlayerId": 1
-        },
+  {
+    "id": "case_e_marine",
+    "components": {
+      "Name": {
+        "Value": "可框选单位"
+      },
+      "Team": {
+        "Id": 0
+      },
       "WorldPositionCm": {
         "Value": {
           "X": 0,
           "Y": 0
         }
       },
-      "PresentationStaticTransform": {},
       "FacingDirection": {
-        "AngleRad": 0.0
+        "AngleRad": 0
       },
       "AttributeBuffer": {
         "base": {
           "Health": 60
         }
       },
-      "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 120, "localCenterZCm": 0 },
-      "SpatialBox3D": { "halfSizeXCm": 90, "halfSizeYCm": 120, "halfSizeZCm": 90 },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 120,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 90,
+        "halfSizeYCm": 120,
+        "halfSizeZCm": 90
+      },
       "GameplayTagContainer": {},
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
@@ -85,7 +90,7 @@
       },
       "PresentationStaticTransform": {},
       "FacingDirection": {
-        "AngleRad": 0.0
+        "AngleRad": 0
       },
       "AttributeBuffer": {
         "base": {

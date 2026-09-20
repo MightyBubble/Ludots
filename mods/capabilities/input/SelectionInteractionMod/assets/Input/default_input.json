@@ -1,0 +1,61 @@
+{
+  "actions": [
+    {
+      "id": "CaseE.BoxSelectBegin",
+      "name": "CaseE_BoxSelectBegin",
+      "type": "Button"
+    },
+    {
+      "id": "CaseE.BoxSelectEnd",
+      "name": "CaseE_BoxSelectEnd",
+      "type": "Button",
+      "firesOn": "release"
+    },
+    {
+      "id": "Command",
+      "name": "Gameplay_Command",
+      "type": "Button"
+    }
+  ],
+  "contexts": [
+    {
+      "id": "CaseE.Controls",
+      "name": "Case E Selection Controls",
+      "priority": 60,
+      "bindings": [
+        {
+          "actionId": "CaseE.BoxSelectBegin",
+          "path": "<Mouse>/leftButton"
+        },
+        {
+          "actionId": "CaseE.BoxSelectEnd",
+          "path": "<Mouse>/leftButton"
+        },
+        {
+          "actionId": "PointerPos",
+          "path": "<Mouse>/Pos"
+        },
+        {
+          "actionId": "PointerMoved",
+          "path": "<Mouse>/Pos"
+        },
+        {
+          "actionId": "Command",
+          "path": "<Mouse>/rightButton"
+        },
+        {
+          "actionId": "QueueModifier",
+          "path": "<Keyboard>/leftShift"
+        },
+        {
+          "actionId": "PrecisionModifier",
+          "path": "<Keyboard>/leftCtrl"
+        },
+        {
+          "actionId": "ModifierSubtract",
+          "path": "<Keyboard>/leftAlt"
+        }
+      ]
+    }
+  ]
+}

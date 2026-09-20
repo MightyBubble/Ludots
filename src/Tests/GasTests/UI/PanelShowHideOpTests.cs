@@ -195,7 +195,6 @@ namespace Ludots.Tests.GasTests.UI
             public int ResolveRelationshipType(string name) => throw new InvalidOperationException($"Panel ops must not reference relationship types; got '{name}'.");
             public int ResolveRelationshipMetric(string name) => throw new InvalidOperationException($"Panel ops must not reference relationship metrics; got '{name}'.");
             public int ResolveRelationshipFlag(string name) => throw new InvalidOperationException($"Panel ops must not reference relationship flags; got '{name}'.");
-            public int ResolveRelationshipReason(string name) => throw new InvalidOperationException($"Panel ops must not reference relationship reasons; got '{name}'.");
             public int ResolveTargetDispatchPreset(string name) => throw new InvalidOperationException($"Panel ops must not reference dispatch presets; got '{name}'.");
             public int ResolveEntityTemplate(string name) => throw new InvalidOperationException($"Panel ops must not reference entity templates; got '{name}'.");
         }

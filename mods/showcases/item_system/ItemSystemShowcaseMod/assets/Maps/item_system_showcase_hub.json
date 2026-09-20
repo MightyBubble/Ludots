@@ -1,5 +1,13 @@
 {
   "Id": "item_system_showcase_hub",
-  "Tags": ["item.showcase", "item.showcase.hub"],
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  },
+  "Tags": [
+    "item.showcase",
+    "item.showcase.hub"
+  ],
   "Entities": []
 }

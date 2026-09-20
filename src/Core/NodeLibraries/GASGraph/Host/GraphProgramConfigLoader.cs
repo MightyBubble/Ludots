@@ -22,6 +22,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly EntityCollectionStore? _entityCollections;
         private readonly IntIdCollectionStore? _intIdCollections;
         private readonly GasGraphOpRegistry? _opRegistry;
+        private readonly GasGraphOpHandlerTable _operationHandlers;
         private readonly BuiltinHandlerRegistry? _builtinHandlers;
         private readonly Ludots.Core.Scripting.EventSchemaRegistry? _eventSchemas;
         private readonly Ludots.Core.Scripting.EnumCatalog? _enums;
@@ -42,7 +43,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             BuiltinHandlerRegistry? builtinHandlers = null,
             Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas = null,
             Ludots.Core.Scripting.EnumCatalog? enums = null,
-            IntIdCollectionStore? intIdCollections = null)
+            IntIdCollectionStore? intIdCollections = null,
+            GasGraphOpHandlerTable? operationHandlers = null)
         {
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
@@ -52,6 +54,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _entityCollections = entityCollections;
             _intIdCollections = intIdCollections;
             _opRegistry = opRegistry;
+            _operationHandlers = operationHandlers ?? GasGraphOpHandlerTable.Instance;
             _builtinHandlers = builtinHandlers;
             _eventSchemas = eventSchemas;
             _enums = enums;
@@ -130,11 +133,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             try
             {
                 TriggerGraphInlineWeaver.ExpandDocuments(documents);
+                BehaviorGraphLeafWeaver.ExpandDocuments(documents);
             }
             catch (Exception ex)
             {
                 throw new InvalidOperationException(
-                    $"[GraphProgramConfigLoader] InlineGraph expand failed in '{relativePath}': {ex.Message}",
+                    $"[GraphProgramConfigLoader] leaf/Inline expand failed in '{relativePath}': {ex.Message}",
                     ex);
             }
 
@@ -144,7 +148,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 try
                 {
                     GraphControlFlowCompileResult compiled =
-                        GraphControlFlowCompiler.Compile(pair.Value, _eventSchemas, _enums);
+                        GraphControlFlowCompiler.Compile(pair.Value, _eventSchemas, _enums, _opRegistry);
                     GraphProgramPackage? pkg = compiled.Package;
                     GraphOutputSchema outputSchema = compiled.OutputSchema;
                     List<GraphDiagnostic> diags = compiled.Diagnostics;
@@ -196,7 +200,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 GraphKindOperationPolicy.RequireAllowed(
                     kind,
                     program,
-                    GasGraphOpHandlerTable.Instance,
+                    _operationHandlers,
                     id,
                     nameof(GraphProgramConfigLoader));
 
@@ -232,7 +236,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 _eventSchemas,
                 _entityCollections,
                 _builtinHandlers,
-                _enums);
+                _enums,
+                _opRegistry);
             _pendingDocuments.Clear();
         }
 

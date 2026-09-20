@@ -667,7 +667,6 @@ namespace Ludots.Tests.GasTests
                 new Ludots.Core.Gameplay.Relationships.RelationshipTypeRegistry(),
                 new Ludots.Core.Gameplay.Relationships.RelationshipMetricRegistry(),
                 new Ludots.Core.Gameplay.Relationships.RelationshipFlagRegistry(),
-                new Ludots.Core.Gameplay.Relationships.RelationshipReasonRegistry(),
                 new TargetDispatchPresetRegistry(),
                 new EntityTemplateKeyRegistry());
             var lifecycleBuiltinHandlers = new Ludots.Core.Gameplay.GAS.BuiltinHandlerRegistry();

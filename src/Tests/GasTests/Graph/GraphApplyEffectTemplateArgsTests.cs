@@ -70,6 +70,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var q = new EffectRequestQueue();
             var api = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null, effectRequests: q);
+            if (api is GasGraphRuntimeApi concreteApi) concreteApi.AggregateDirty ??= new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
 
             var target = world.Create();
 
@@ -99,6 +100,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var requests = new EffectRequestQueue();
             var api = new GasGraphRuntimeApi(world, effectRequests: requests);
+            if (api is GasGraphRuntimeApi concreteApi) concreteApi.AggregateDirty ??= new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
             var effectEntity = world.Create();
             var caster = world.Create();
             var target = world.Create();
@@ -123,6 +125,7 @@ namespace Ludots.Tests.GAS
                 GraphInstruction[] program =
                 {
                     new() { Op = (ushort)GraphNodeOp.ApplyEffectTemplate, A = 1, Imm = 123 },
+                    new() { Op = (ushort)GraphNodeOp.HaltReturnInt },
                 };
 
                 GraphExecutor.Execute(world, caster, target, new IntVector2(0, 0), program, api);
@@ -142,11 +145,13 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var requests = new EffectRequestQueue();
             var api = new GasGraphRuntimeApi(world, effectRequests: requests);
+            if (api is GasGraphRuntimeApi concreteApi) concreteApi.AggregateDirty ??= new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
             var caster = world.Create();
             var target = world.Create();
             GraphInstruction[] program =
             {
                 new() { Op = (ushort)GraphNodeOp.ApplyEffectTemplate, A = 1, Imm = 123 },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt },
             };
 
             GraphExecutor.Execute(world, caster, target, new IntVector2(0, 0), program, api);

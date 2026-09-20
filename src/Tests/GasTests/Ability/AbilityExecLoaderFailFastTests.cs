@@ -543,7 +543,7 @@ namespace Ludots.Tests.GAS
                     }
                     """));
 
-            That(ex!.Message, Does.Contain("field 'indicator' is removed"));
+            That(ex!.Message, Does.Contain("field 'indicator': declare gameplay targeting"));
         }
 
         [Test]
@@ -569,7 +569,7 @@ namespace Ludots.Tests.GAS
                     }
                     """));
 
-            That(ex!.Message, Does.Contain("field 'indicator' is removed"));
+            That(ex!.Message, Does.Contain("field 'indicator': declare gameplay targeting"));
         }
 
         [Test]
@@ -594,7 +594,7 @@ namespace Ludots.Tests.GAS
                     }
                     """));
 
-            That(ex!.Message, Does.Contain("field 'indicator' is removed"));
+            That(ex!.Message, Does.Contain("field 'indicator': declare gameplay targeting"));
         }
 
         [Test]
@@ -621,7 +621,7 @@ namespace Ludots.Tests.GAS
                     }
                     """));
 
-            That(ex!.Message, Does.Contain("field 'indicator' is removed"));
+            That(ex!.Message, Does.Contain("field 'indicator': declare gameplay targeting"));
         }
 
         [Test]
@@ -649,7 +649,7 @@ namespace Ludots.Tests.GAS
                     }
                     """));
 
-            That(ex!.Message, Does.Contain("field 'indicator' is removed"));
+            That(ex!.Message, Does.Contain("field 'indicator': declare gameplay targeting"));
         }
 
         [Test]
@@ -676,7 +676,7 @@ namespace Ludots.Tests.GAS
                     }
                     """));
 
-            That(ex!.Message, Does.Contain("field 'indicator' is removed"));
+            That(ex!.Message, Does.Contain("field 'indicator': declare gameplay targeting"));
         }
 
         [Test]
@@ -703,7 +703,7 @@ namespace Ludots.Tests.GAS
                     }
                     """));
 
-            That(ex!.Message, Does.Contain("field 'indicator' is removed"));
+            That(ex!.Message, Does.Contain("field 'indicator': declare gameplay targeting"));
         }
 
         [Test]
@@ -730,7 +730,7 @@ namespace Ludots.Tests.GAS
                     }
                     """));
 
-            That(ex!.Message, Does.Contain("field 'indicator' is removed"));
+            That(ex!.Message, Does.Contain("field 'indicator': declare gameplay targeting"));
         }
 
         [Test]

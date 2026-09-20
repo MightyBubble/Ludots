@@ -1,0 +1,68 @@
+[
+  {
+    "name": "rts.attack.cond.moveOrdered",
+    "graph": "rts.attack.cond.moveOrdered",
+    "kind": "Script",
+    "purity": "pure"
+  },
+  {
+    "name": "rts.attack.cond.targetLost",
+    "graph": "rts.attack.cond.targetLost",
+    "kind": "Script",
+    "purity": "pure"
+  },
+  {
+    "name": "rts.attack.engage.outOfRange",
+    "graph": "rts.attack.engage.outOfRange",
+    "kind": "Script",
+    "purity": "pure"
+  },
+  {
+    "name": "rts.attack.idle.guardAttack",
+    "graph": "rts.attack.idle.guardAttack",
+    "kind": "Script",
+    "purity": "pure"
+  },
+  {
+    "name": "rts.attack.pursuit.inRange",
+    "graph": "rts.attack.pursuit.inRange",
+    "kind": "Script",
+    "purity": "pure"
+  },
+  {
+    "name": "rts.attack.wait.resumeTarget",
+    "graph": "rts.attack.wait.resumeTarget",
+    "kind": "Script",
+    "purity": "pure"
+  },
+  {
+    "name": "rts.transport.idle.guardGather",
+    "graph": "rts.transport.idle.guardGather",
+    "kind": "Script",
+    "purity": "pure"
+  },
+  {
+    "name": "rts.transport.loading.loaded",
+    "graph": "rts.transport.loading.loaded",
+    "kind": "Script",
+    "purity": "pure"
+  },
+  {
+    "name": "rts.transport.toSink.atSink",
+    "graph": "rts.transport.toSink.atSink",
+    "kind": "Script",
+    "purity": "pure"
+  },
+  {
+    "name": "rts.transport.toSink.sinkLost",
+    "graph": "rts.transport.toSink.sinkLost",
+    "kind": "Script",
+    "purity": "pure"
+  },
+  {
+    "name": "rts.transport.toSource.atSource",
+    "graph": "rts.transport.toSource.atSource",
+    "kind": "Script",
+    "purity": "pure"
+  }
+]

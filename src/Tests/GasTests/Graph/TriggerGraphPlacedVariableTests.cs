@@ -21,7 +21,7 @@ namespace Ludots.Tests.Gas.Graph
     /// #1108 placed-entity variable reads: compile-side instanceId shape validation,
     /// mount-time fail-closed membership against the mounting map's catalog, the
     /// Entity.Null (not throw) run-time miss contract with the World.IsAlive double
-    /// insurance, and the InstanceExposure "declared" load-time stub.
+    /// insurance.
     /// </summary>
     [TestFixture]
     public sealed class TriggerGraphPlacedVariableTests
@@ -342,52 +342,41 @@ namespace Ludots.Tests.Gas.Graph
                 Throws.InvalidOperationException.With.Message.Contains("GAS.GRAPH.ERR.PlacedIndexUnavailable"));
         }
 
-        [Test]
-        public void LoadEntitiesAndIndex_DeclaredExposure_FailsClosedAwaitingHitl()
-        {
-            using var world = World.Create();
-            MapLoader loader = CreateBareLoader(world);
-            var map = new MapConfig { Id = MapId, InstanceExposure = "declared" };
-
-            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.LoadEntitiesAndIndex(map))!;
-
-            Assert.That(ex.Message, Does.Contain(MapId));
-            Assert.That(ex.Message, Does.Contain("declared"));
-            Assert.That(ex.Message, Does.Contain("HITL"));
-        }
-
-        [Test]
-        public void LoadEntitiesAndIndex_UnknownExposure_FailsClosed()
-        {
-            using var world = World.Create();
-            MapLoader loader = CreateBareLoader(world);
-            var map = new MapConfig { Id = MapId, InstanceExposure = "everyone" };
-
-            Assert.That(
-                () => loader.LoadEntitiesAndIndex(map),
-                Throws.InvalidOperationException.With.Message.Contains("\"all\" or \"declared\""));
-        }
 
         private static MapSession CreateSession(World world, string[] registeredInstances, string[]? regionIds = null)
         {
             var config = new MapConfig { Id = MapId };
             config.TriggerGraphs = JsonNode.Parse($$"""[ { "graph": "{{GraphName}}" } ]""");
-            if (regionIds != null && regionIds.Length > 0)
-            {
-                var regions = new JsonArray();
-                for (int i = 0; i < regionIds.Length; i++)
-                {
-                    regions.Add(JsonNode.Parse($$"""{ "id": "{{regionIds[i]}}", "shape": "circle", "x": 0, "y": 0, "radiusCm": 100 }"""));
-                }
-
-                config.Regions = regions;
-            }
-
             var session = new MapSession(new MapId(MapId), config);
             var index = new MapLoadEntityIndex();
             for (int i = 0; i < registeredInstances.Length; i++)
             {
                 index.Register(MapId, registeredInstances[i], world.Create());
+            }
+
+            if (regionIds != null && regionIds.Length > 0)
+            {
+                for (int i = 0; i < regionIds.Length; i++)
+                {
+                    world.Create(
+                        new Ludots.Core.Components.MapEntity { MapId = new MapId(MapId) },
+                        new Ludots.Core.Components.WorldPositionCm { Value = Ludots.Core.Mathematics.FixedPoint.Fix64Vec2.Zero },
+                        new Ludots.Core.Gameplay.MapTriggers.RegionVolumeCm
+                        {
+                            VolumeKey = regionIds[i],
+                            Shape = new Ludots.Core.Gameplay.MapTriggers.RegionVolumeShape
+                            {
+                                Kind = Ludots.Core.Gameplay.MapTriggers.RegionVolumeShapeKind.Circle,
+                                Radius = Ludots.Core.Mathematics.FixedPoint.Fix64.FromFloat(100f),
+                            },
+                        });
+                }
+
+                session.RegionVolumeKeys = Ludots.Core.Gameplay.MapTriggers.RegionVolumeBakePass.Bake(
+                    world,
+                    session,
+                    new Ludots.Core.Gameplay.MapTriggers.CustomEventNameRegistry(),
+                    new Ludots.Core.Scripting.EventSchemaRegistry());
             }
 
             session.EntityIndex = index;

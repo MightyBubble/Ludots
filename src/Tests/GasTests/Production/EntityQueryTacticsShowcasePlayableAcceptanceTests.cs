@@ -290,12 +290,11 @@ namespace Ludots.Tests.GAS.Production
                 ?? throw new InvalidOperationException("RelationshipMetricRegistry missing.");
             RelationshipChangeBuffer relationshipChanges = engine.GetService(CoreServiceKeys.RelationshipChangeBuffer)
                 ?? throw new InvalidOperationException("RelationshipChangeBuffer missing.");
-            RelationshipReasonRegistry reasons = engine.GetService(CoreServiceKeys.RelationshipReasonRegistry)
-                ?? throw new InvalidOperationException("RelationshipReasonRegistry missing.");
+            RelationshipBandRegistry reasons = engine.GetService(CoreServiceKeys.RelationshipBandRegistry)
+                ?? throw new InvalidOperationException("RelationshipBandRegistry missing.");
             int tacticalIntelTypeId = relationshipTypes.GetId(config.Relationships.TacticalIntel);
             int pressureMetricId = relationshipMetrics.GetId(config.Scenario.PressurePulse.Metric);
-            int pressureReasonId = reasons.Register("Benchmark.PressurePulse");
-            GraphConfig selectedGraphConfig = LoadGraphConfig(engine, config.Graphs.SelectedFriendlies);
+                GraphConfig selectedGraphConfig = LoadGraphConfig(engine, config.Graphs.SelectedFriendlies);
             GraphConfig hostileGraphConfig = LoadGraphConfig(engine, config.Graphs.HostileThreats);
             GraphConfig formationGraphConfig = LoadGraphConfig(engine, config.Graphs.FormationCache);
             GraphOutputSchemaRegistry schemas = engine.GetService(CoreServiceKeys.GraphOutputSchemaRegistry)
@@ -366,7 +365,7 @@ namespace Ludots.Tests.GAS.Production
                 iteration =>
                 {
                     int delta = (iteration & 1) == 0 ? config.Scenario.PressurePulse.Delta : -config.Scenario.PressurePulse.Delta;
-                    relationships.AddMetric(owner, pressureTarget, tacticalIntelTypeId, pressureMetricId, delta, pressureReasonId);
+                    relationships.AddMetric(owner, pressureTarget, tacticalIntelTypeId, pressureMetricId, delta);
                     ExecuteProductionGraphs(writer, graphIds, owner, api, (uint)(iteration + 50000));
                 },
                 relationshipChanges.Clear);

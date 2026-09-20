@@ -77,5 +77,13 @@
       },
       "GameplayTagContainer": {}
     }
+  },
+  {
+    "id": "GraphOps.RegionVolumeAnchor",
+    "components": {
+      "Name": {
+        "Value": "RegionVolumeAnchor"
+      }
+    }
   }
 ]

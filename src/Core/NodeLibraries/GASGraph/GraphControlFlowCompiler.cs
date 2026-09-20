@@ -73,11 +73,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private readonly struct SugarScratch
         {
-            public SugarScratch(byte intReg, byte boolReg)
+            public SugarScratch(byte intReg, byte boolReg, byte? stateReg = null)
             {
                 IntReg = intReg;
                 BoolReg = boolReg;
+                StateReg = stateReg;
             }
+
+            /// <summary>Optional second int cell (DoOnce state latch); null for single-int sugars.</summary>
+            public byte? StateReg { get; }
 
             public byte IntReg { get; }
             public byte BoolReg { get; }
@@ -210,19 +214,28 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             BtSelector = 6,
             BtDecorator = 7,
             SelectByEnum = 8,
-            FsmState = 9
+            FsmState = 9,
+            DoOnce = 10,
+            ExtensionOp = 11
         }
 
         private readonly struct AuthoredOp
         {
             public AuthoredOp(AuthoredOpKind kind, GraphNodeOp nodeOp)
+                : this(kind, nodeOp, extension: null)
+            {
+            }
+
+            public AuthoredOp(AuthoredOpKind kind, GraphNodeOp nodeOp, GasGraphOpDefinition? extension)
             {
                 Kind = kind;
                 NodeOp = nodeOp;
+                Extension = extension;
             }
 
             public AuthoredOpKind Kind { get; }
             public GraphNodeOp NodeOp { get; }
+            public GasGraphOpDefinition? Extension { get; }
         }
 
         public static GraphControlFlowCompileResult Compile(GraphControlFlowDocument document)
@@ -246,20 +259,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public static GraphControlFlowCompileResult Compile(
             GraphControlFlowDocument document,
             Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas,
-            Ludots.Core.Scripting.EnumCatalog? enums)
-            => CompileCore(document, eventSchemas, enums) with { Document = document };
+            Ludots.Core.Scripting.EnumCatalog? enums,
+            GasGraphOpRegistry? opRegistry = null)
+            => CompileCore(document, eventSchemas, enums, opRegistry) with { Document = document };
 
         public static (GraphProgramPackage? Package, GraphOutputSchema OutputSchema, List<GraphDiagnostic> Diagnostics) CompileWithOutputs(
             GraphControlFlowDocument document)
         {
-            GraphControlFlowCompileResult result = CompileCore(document, eventSchemas: null, enums: null);
+            GraphControlFlowCompileResult result = CompileCore(document, eventSchemas: null, enums: null, opRegistry: null);
             return (result.Package, result.OutputSchema, result.Diagnostics);
         }
 
         private static GraphControlFlowCompileResult CompileCore(
             GraphControlFlowDocument document,
             Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas,
-            Ludots.Core.Scripting.EnumCatalog? enums)
+            Ludots.Core.Scripting.EnumCatalog? enums,
+            GasGraphOpRegistry? opRegistry = null)
         {
             if (document == null) throw new ArgumentNullException(nameof(document));
 
@@ -273,7 +288,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             List<GraphControlFlowNode> nodes = document.Nodes ?? new List<GraphControlFlowNode>();
             Dictionary<string, int> nodeIndices = BuildNodeIndex(nodes, graphId, diagnostics);
             var ops = new AuthoredOp[nodes.Count];
-            ParseOps(nodes, ops, graphKind, graphId, diagnostics);
+            ParseOps(nodes, ops, graphKind, graphId, diagnostics, opRegistry);
             EnumCaseTable enumCases = BuildEnumCaseTable(document, nodes, ops, enums, graphId, diagnostics);
 
             Dictionary<string, Ludots.Core.Scripting.EventSchema> dispatchSchemas =
@@ -937,7 +952,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             AuthoredOp[] ops,
             GraphKind graphKind,
             string graphId,
-            List<GraphDiagnostic> diagnostics)
+            List<GraphDiagnostic> diagnostics,
+            GasGraphOpRegistry? opRegistry)
         {
             for (int i = 0; i < nodes.Count; i++)
             {
@@ -1010,6 +1026,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     continue;
                 }
 
+                if (GraphAuthoringSugar.IsBtLeafPortal(node.Op)
+                    || GraphAuthoringSugar.IsFsmActionPortal(node.Op))
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
+                        $"{node.Op} is compile-time sugar that must be expanded by " +
+                        "BehaviorGraphLeafWeaver before GraphControlFlowCompiler; leftover sites fail closed.",
+                        node.Id));
+                    ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
+                    continue;
+                }
+
                 if (string.Equals(node.Op, WhileOp, StringComparison.Ordinal))
                 {
                     if (graphKind is not (GraphKind.Script or GraphKind.TriggerGraph))
@@ -1035,6 +1062,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     }
 
                     ops[i] = new AuthoredOp(AuthoredOpKind.Until, GraphNodeOp.None);
+                    continue;
+                }
+
+                if (string.Equals(node.Op, GraphAuthoringSugar.DoOnce, StringComparison.Ordinal))
+                {
+                    if (graphKind is not (GraphKind.Script or GraphKind.TriggerGraph))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
+                            $"{GraphAuthoringSugar.DoOnce} is Script/TriggerGraph compile-time sugar only.", node.Id));
+                        ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
+                        continue;
+                    }
+
+                    ops[i] = new AuthoredOp(AuthoredOpKind.DoOnce, GraphNodeOp.None);
                     continue;
                 }
 
@@ -1094,16 +1135,29 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 }
 
                 bool parsedNodeOp = GraphNodeOpParser.TryParse(node.Op, out GraphNodeOp nodeOp);
-                if (!parsedNodeOp ||
-                    !IsControlFlowAuthorable(graphKind, nodeOp))
+                if (parsedNodeOp && IsControlFlowAuthorable(graphKind, nodeOp))
                 {
-                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
-                        $"Unknown or non-{GraphKindLabel(graphKind)}-authorable op '{node.Op}'.", node.Id));
-                    ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
+                    ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, nodeOp);
                     continue;
                 }
 
-                ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, nodeOp);
+                if (opRegistry != null && opRegistry.TryGet(node.Op, out GasGraphOpDefinition extensionOp))
+                {
+                    if (!IsExtensionAuthorableKind(graphKind))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
+                            $"Extension op '{node.Op}' is not authorable on {GraphKindLabel(graphKind)}.", node.Id));
+                        ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
+                        continue;
+                    }
+
+                    ops[i] = new AuthoredOp(AuthoredOpKind.ExtensionOp, GraphNodeOp.None, extensionOp);
+                    continue;
+                }
+
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
+                    $"Unknown or non-{GraphKindLabel(graphKind)}-authorable op '{node.Op}'.", node.Id));
+                ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
             }
         }
 
@@ -1341,6 +1395,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     continue;
                 }
 
+                if (ops[i].Kind == AuthoredOpKind.ExtensionOp && ops[i].Extension?.FixedRegister is byte fixedRegister)
+                {
+                    outputRegisters[i] = fixedRegister;
+                    continue;
+                }
+
                 if (nodes[i].PinRegister >= 0)
                 {
                     if (outputType != GraphValueType.Int)
@@ -1358,6 +1418,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             {
                 GraphValueType outputType = outputTypes[i];
                 if (outputType == GraphValueType.Void || outputType == GraphValueType.TargetList || outputType == GraphValueType.IntIdList || nodes[i].PinRegister >= 0)
+                {
+                    continue;
+                }
+
+                if (ops[i].Kind == AuthoredOpKind.ExtensionOp && ops[i].Extension?.FixedRegister != null)
                 {
                     continue;
                 }
@@ -1380,9 +1445,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static GraphValueType GetOutputType(AuthoredOp op, GraphKind graphKind)
         {
+            if (op.Kind == AuthoredOpKind.ExtensionOp)
+            {
+                return op.Extension?.OutputType ?? GraphValueType.Void;
+            }
+
             if (op.Kind is AuthoredOpKind.BranchBool or AuthoredOpKind.SwitchInt
                 or AuthoredOpKind.While or AuthoredOpKind.Until
-                or AuthoredOpKind.BtSequence or AuthoredOpKind.BtSelector or AuthoredOpKind.BtDecorator)
+                or AuthoredOpKind.BtSequence or AuthoredOpKind.BtSelector or AuthoredOpKind.BtDecorator
+                or AuthoredOpKind.DoOnce)
             {
                 return GraphValueType.Void;
             }
@@ -1524,6 +1595,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 ValidateAuxiliaryOutputs(node, op, graphKind, graphId, diagnostics);
                 ValidateAllowedPorts(node, op, graphKind, controlEdges, valueEdges, graphId, diagnostics, dispatchSchemas, enumCases);
 
+                if (op.Kind == AuthoredOpKind.ExtensionOp)
+                {
+                    ValidateExtensionNode(node, op, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    continue;
+                }
+
                 if (graphKind == GraphKind.Query)
                 {
                     ValidateQueryNode(
@@ -1562,6 +1639,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireControlEdge(node, GraphControlFlowPorts.True, controlEdges, graphId, diagnostics);
                     RequireControlEdge(node, GraphControlFlowPorts.False, controlEdges, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Condition, GraphValueType.Bool, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    continue;
+                }
+
+                if (op.Kind == AuthoredOpKind.DoOnce)
+                {
+                    RequireControlEdge(node, GraphControlFlowPorts.True, controlEdges, graphId, diagnostics);
+                    RequireControlEdge(node, GraphControlFlowPorts.False, controlEdges, graphId, diagnostics);
                     continue;
                 }
 
@@ -1722,12 +1806,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static bool IsAllowedControlPort(AuthoredOp op, GraphKind graphKind, string port)
         {
+            if (op.Kind == AuthoredOpKind.ExtensionOp)
+            {
+                return port == GraphControlFlowPorts.Next;
+            }
             if (op.Kind is AuthoredOpKind.BtSequence or AuthoredOpKind.BtSelector or AuthoredOpKind.BtDecorator)
             {
                 return GraphControlFlowPorts.TryParseChildPort(port, out _);
             }
 
             if (op.Kind == AuthoredOpKind.BranchBool || op.NodeOp == GraphNodeOp.JumpIfFalse)
+            {
+                return port is GraphControlFlowPorts.True or GraphControlFlowPorts.False;
+            }
+
+            if (op.Kind == AuthoredOpKind.DoOnce)
             {
                 return port is GraphControlFlowPorts.True or GraphControlFlowPorts.False;
             }
@@ -1781,6 +1874,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Dictionary<string, Ludots.Core.Scripting.EventSchema>? dispatchSchemas = null,
             EnumCaseTable? enumCases = null)
         {
+            if (op.Kind == AuthoredOpKind.ExtensionOp)
+            {
+                return IsAllowedExtensionInputPort(op, port);
+            }
+
             // DispatchMapEvent payload ports are dynamic (schema parameter names); the
             // per-port name/type contract is enforced in ValidateLinearNode.
             if (op.NodeOp == GraphNodeOp.DispatchMapEvent && dispatchSchemas != null)
@@ -1837,6 +1935,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static bool IsAllowedOutputPort(GraphControlFlowNode node, AuthoredOp op, GraphKind graphKind, string port)
         {
+            if (op.Kind == AuthoredOpKind.ExtensionOp)
+            {
+                return IsAllowedExtensionOutputPort(op, port);
+            }
             if (!string.IsNullOrWhiteSpace(node.ValidOutput) &&
                 string.Equals(port, node.ValidOutput, StringComparison.Ordinal))
             {
@@ -1966,6 +2068,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             int nodeIndex = -1,
             EnumCaseTable? enumCases = null)
         {
+            if (op.Kind == AuthoredOpKind.ExtensionOp)
+            {
+                return 2;
+            }
+
             if (btPlan != null && nodeIndex >= 0 && btPlan.IsComposite(nodeIndex))
             {
                 return CountBtCompositeInstructions(op, btPlan, nodeIndex, node.DecoratorKind);
@@ -1992,6 +2099,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 op.NodeOp == GraphNodeOp.JumpIfFalse)
             {
                 return 2; // JumpIfFalse + Jump(arm)
+            }
+
+            if (op.Kind == AuthoredOpKind.DoOnce)
+            {
+                // ReadMapVarInt + ConstInt(0) + CompareEqInt + JumpIfFalse(false arm)
+                // + ConstInt(1) + WriteMapVarInt(latch) + Jump(true arm)
+                return 7;
             }
 
             if (op.Kind == AuthoredOpKind.SwitchInt)
@@ -2098,6 +2212,29 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             int nodeIndex = nodeIndices[node.Id];
             int bodyIndex = layouts[nodeIndex].BodyIndex;
 
+            if (op.Kind == AuthoredOpKind.ExtensionOp)
+            {
+                EmitExtensionNode(
+                    document,
+                    node,
+                    op,
+                    outputRegisters,
+                    outputTypes,
+                    boolScratches,
+                    droppedRegisters,
+                    controlEdges,
+                    valueEdges,
+                    nodeIndices,
+                    layouts,
+                    program,
+                    sources,
+                    definedInts,
+                    definedBools,
+                    graphId,
+                    diagnostics);
+                return;
+            }
+
             if (op.Kind == AuthoredOpKind.BranchBool || op.NodeOp == GraphNodeOp.JumpIfFalse)
             {
                 byte cond = ResolveValueInput(
@@ -2198,6 +2335,26 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     graphId,
                     diagnostics,
                     enumCases);
+                return;
+            }
+
+            if (op.Kind == AuthoredOpKind.DoOnce)
+            {
+                CompileDoOnce(
+                    document,
+                    node,
+                    sugarScratches[nodeIndex],
+                    controlEdges,
+                    nodeIndices,
+                    layouts,
+                    program,
+                    sources,
+                    outputRegisters,
+                    definedInts,
+                    symbolToIndex,
+                    symbols,
+                    graphId,
+                    diagnostics);
                 return;
             }
 
@@ -2481,7 +2638,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             for (int i = 0; i < nodes.Count; i++)
             {
-                if (ops[i].NodeOp == GraphNodeOp.TargetListGet)
+                if (ops[i].NodeOp == GraphNodeOp.TargetListGet ||
+                    ops[i].NodeOp == GraphNodeOp.LoadEntityPosX ||
+                    ops[i].NodeOp == GraphNodeOp.LoadEntityPosY)
                 {
                     boolScratches[i] = registers.AllocScratch(GraphValueType.Bool, graphId, nodes[i].Id, diagnostics);
                     continue;
@@ -2546,6 +2705,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             for (int i = 0; i < nodes.Count; i++)
             {
+                if (ops[i].Kind is AuthoredOpKind.DoOnce)
+                {
+                    // State latch (read result) + compare const cell + compare bool cell;
+                    // the Void node's output slot is the shared 0 register and must not
+                    // hold sugar state.
+                    byte doOnceState = registers.AllocScratch(GraphValueType.Int, graphId, nodes[i].Id, diagnostics);
+                    byte doOnceConst = registers.AllocScratch(GraphValueType.Int, graphId, nodes[i].Id, diagnostics);
+                    byte doOnceBool = registers.AllocScratch(GraphValueType.Bool, graphId, nodes[i].Id, diagnostics);
+                    sugarScratches[i] = new SugarScratch(doOnceConst, doOnceBool, doOnceState);
+                    continue;
+                }
+
                 if (ops[i].Kind is not (AuthoredOpKind.SwitchInt or AuthoredOpKind.SelectByEnum or AuthoredOpKind.FsmState))
                 {
                     continue;

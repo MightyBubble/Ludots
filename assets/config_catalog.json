@@ -409,6 +409,11 @@
     "Policy": "DeepObject"
   },
   {
+    "Path": "Relationships/projection.json",
+    "Policy": "DeepObject",
+    "AllowEmpty": true
+  },
+  {
     "Path": "Input/default_input.json",
     "Policy": "DeepObject",
     "ArrayAppendFields": [

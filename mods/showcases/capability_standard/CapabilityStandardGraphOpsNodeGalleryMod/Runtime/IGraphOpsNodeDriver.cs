@@ -32,6 +32,8 @@ public sealed class GraphOpsNodeDriverContext
     public required byte FeaturedDest { get; init; }
     public required World SimWorld { get; init; }
     public required GasGraphRuntimeApi Api { get; init; }
+    public required Ludots.Core.Gameplay.GAS.Orders.OrderQueue Orders { get; init; }
+    public required Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry OrderTypes { get; init; }
     public required GraphShowcaseMetrics Metrics { get; init; }
     public GraphOpsStageVisuals? Stage { get; set; }
     public EffectRequestQueue? EffectRequests { get; set; }
@@ -47,6 +49,7 @@ public sealed class GraphOpsNodeDriverContext
     public OwnershipResolver? Ownership { get; set; }
     public KnowledgeProjectionStore? Knowledge { get; set; }
     public ISpatialCoordinateConverter? Coords { get; set; }
+    public ISpatialQueryService? SpatialQueries { get; set; }
     public BuiltinHandlerRegistry? BuiltinHandlers { get; set; }
     public EffectTemplateRegistry? EffectTemplates { get; set; }
     public ItemDefinitionRegistry? ItemDefinitions { get; set; }

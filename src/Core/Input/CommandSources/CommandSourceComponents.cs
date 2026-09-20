@@ -14,6 +14,7 @@ namespace Ludots.Core.Input.CommandSources
 
     public sealed class CommandSourceAcquisitionCollectionConfig
     {
+        public bool Enabled { get; set; } = true;
         public string CollectionKey { get; set; } = string.Empty;
         public string Title { get; set; } = "Command acquisition";
     }

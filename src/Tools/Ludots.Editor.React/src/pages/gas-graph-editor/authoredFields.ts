@@ -27,6 +27,7 @@ export type AuthoredFieldKey =
   | 'text'
   | 'textKey'
   | 'decoratorKind'
+  | 'functionName'
   | 'presentationSurface';
 
 export type AuthoredFieldKind = 'string' | 'int' | 'float' | 'bool' | 'anchor' | 'payloadKey' | 'instanceId' | 'enumType' | 'textKey';
@@ -71,6 +72,11 @@ const textKey: AuthoredFieldSpec = {
 const decoratorKind: AuthoredFieldSpec = {
   key: 'decoratorKind',
   label: 'Decorator kind (inverter / forceSuccess / forceFailure)',
+  kind: 'string',
+};
+const functionName: AuthoredFieldSpec = {
+  key: 'functionName',
+  label: 'Function graph id (double-click node to open)',
   kind: 'string',
 };
 const presentationSurface: AuthoredFieldSpec = {
@@ -126,6 +132,10 @@ const FIELDS: Record<string, AuthoredFieldSpec[]> = {
   SelectByEnum: [enumType],
   FsmState: [enumType, stateVar],
   BtDecorator: [decoratorKind],
+  BtLeaf: [functionName],
+  BtAction: [functionName],
+  BtCondition: [functionName],
+  FsmAction: [functionName],
   StoreArgInt: [argKey],
   StoreArgFloat: [argKey],
   StoreArgEntity: [argKey],

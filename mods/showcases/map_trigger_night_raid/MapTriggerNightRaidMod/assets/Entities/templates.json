@@ -30,7 +30,7 @@
       "OrderBuffer": {},
       "EntityTriggerGraphAggregateRoot": {}
     },
-    "TriggerGraphs": ["Graph.NightRaid.EntitySettlement"]
+    "triggerGraphs": ["Graph.NightRaid.EntitySettlement"]
   },
   {
     "id": "night_raid_raid_circle",
@@ -47,6 +47,11 @@
       "ContinuousHeightmapSampleState": {},
       "FacingDirection": {
         "AngleRad": 0.0
+      },
+      "RegionVolumeCm": {
+        "volumeKey": "raid_circle",
+        "shape": "circle",
+        "radiusCm": 250
       }
     }
   },

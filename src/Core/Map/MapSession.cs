@@ -63,7 +63,22 @@ namespace Ludots.Core.Map
         /// </summary>
         public Ludots.Core.Gameplay.FieldRegions.RegionHierarchyRuntime? RegionGroups { get; internal set; }
 
+        /// <summary>
+        /// Region volume keys materialized from map JSON "Regions" at map load; backs
+        /// placed-region addressing (LoadPlacedRegion) and TriggerGraph mount
+        /// validation. Null after Cleanup/Dispose.
+        /// </summary>
+        public IReadOnlySet<string>? RegionVolumeKeys { get; internal set; }
+
+        /// <summary>
+        /// Field region emission contracts keyed by region key, loaded from
+        /// Fields/region_emissions.json at map load (#1468); region entities carry
+        /// the matching RegionVolumeEmissionCm. Null after Cleanup/Dispose.
+        /// </summary>
+        public IReadOnlyDictionary<string, Ludots.Core.Gameplay.MapTriggers.RegionVolumeEmissionCm>? FieldRegionEmissions { get; internal set; }
+
         private readonly Dictionary<string, IBoard> _boards = new Dictionary<string, IBoard>(StringComparer.OrdinalIgnoreCase);
+        private readonly string _rootBoardName;
         private readonly List<Trigger> _triggers = new List<Trigger>();
 
         private static readonly QueryDescription _mapEntityQuery =
@@ -73,6 +88,7 @@ namespace Ludots.Core.Map
         {
             MapId = mapId;
             MapConfig = mapConfig;
+            _rootBoardName = mapConfig?.RootBoard;
             State = MapSessionState.Active;
             Context = new MapContext(parentContext);
             Variables = MapVariableStore.Create(mapId, mapConfig?.Variables);
@@ -94,12 +110,19 @@ namespace Ludots.Core.Map
         }
 
         /// <summary>
-        /// Returns the first board, or null. Convenience for single-board maps.
+        /// The root board (#1567): anchors the host world frame and backs engine-level
+        /// spatial services. Honors the map's RootBoard designation; falls back to the
+        /// first board exactly like the pre-#1567 behavior. Null on boardless maps.
         /// </summary>
         public IBoard PrimaryBoard
         {
             get
             {
+                if (_rootBoardName != null && _boards.TryGetValue(_rootBoardName, out var designated))
+                {
+                    return designated;
+                }
+
                 foreach (var kvp in _boards)
                     return kvp.Value;
                 return null;
@@ -185,6 +208,8 @@ namespace Ludots.Core.Map
             Fields = null;
             RegionIndex = null;
             RegionGroups = null;
+            RegionVolumeKeys = null;
+            FieldRegionEmissions = null;
 
             State = MapSessionState.Disposed;
         }
@@ -202,6 +227,8 @@ namespace Ludots.Core.Map
                 Fields = null;
                 RegionIndex = null;
                 RegionGroups = null;
+                RegionVolumeKeys = null;
+                FieldRegionEmissions = null;
                 State = MapSessionState.Disposed;
             }
         }

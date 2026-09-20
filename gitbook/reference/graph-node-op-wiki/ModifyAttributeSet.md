@@ -2,9 +2,7 @@
 
 面板按钮触发 TriggerGraph，木桩当前生命直接写成 42，属性变化仍从 GAS 正式入口落账。
 
-<video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_ModifyAttributeSet/poster.png" src="artifacts/evidence/capability_standard_graph_op_ModifyAttributeSet/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_ModifyAttributeSet/play.mp4。
-</video>
+本页演示录像尚未录制，可用下方启动命令运行场景。
 
 ## 作者写法
 
@@ -34,7 +32,7 @@
 
 ## 这场是怎么搭出来的
 
-上面的录像不是特效，是画廊里一张真实可跑的图（作者图 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/ModifyAttributeSet.json`，共 4 个节点）。照抄这张图，你就能在自家 mod 里得到同样的效果：
+这场演示使用画廊里的作者图 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/ModifyAttributeSet.json`，共 4 个节点。下列调用顺序可供编写自己的图时参考：
 
 ConstFloat → LoadExplicitTarget → **ModifyAttributeSet**（本篇） → HaltReturnInt
 

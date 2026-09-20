@@ -63,6 +63,9 @@ namespace Ludots.Core.Presentation.Presenters
 
         public int ActiveCount => _activeCount;
         public int StructureVersion => _structureVersion;
+        public int RelationContextVersion { get; private set; }
+
+        public void NotifyRelationContextChanged() => RelationContextVersion++;
         public bool HasNonRootPresenters => _nonRootCount != 0;
         public bool HasDirtyStaticVisuals => _dirtyStaticVisualCount != 0;
         public bool HasDirtyRetainedPresentationRequests => _dirtyRetainedPresentationRequestCount != 0;
@@ -1440,6 +1443,8 @@ namespace Ludots.Core.Presentation.Presenters
 
         public void SyncTickBehaviorMarkers(Entity entity, PresenterDefinition definition, uint activeBehaviorMask)
         {
+            // Keep dependency-driven slots provisioned when their condition temporarily turns false.
+            activeBehaviorMask |= definition.PossessionActivationMask;
             if (!_world.IsAlive(entity))
             {
                 return;
@@ -1468,6 +1473,7 @@ namespace Ludots.Core.Presentation.Presenters
             bool hasOwnerFacingBinding = definition.HasOwnerFacingBindingWork;
             bool hasGraphParamBinding = definition.HasGraphParamBindingWork;
             bool hasLiveParamBinding = definition.HasLiveParamBindingWork;
+            bool hasInteractionContextBinding = definition.HasOwnerInteractionContextBindingWork;
             bool hasMinimapMarker = false;
             bool hasScreenRect = false;
             bool hasExtensionBehavior = false;
@@ -1557,6 +1563,7 @@ namespace Ludots.Core.Presentation.Presenters
             SyncTickBehaviorMarker<PerfHasOwnerFacingBinding>(entity, hasOwnerFacingBinding);
             SyncTickBehaviorMarker<PerfHasGraphParamBinding>(entity, hasGraphParamBinding);
             SyncTickBehaviorMarker<PerfHasLiveParamBinding>(entity, hasLiveParamBinding);
+            SyncTickBehaviorMarker<PerfHasInteractionContextBinding>(entity, hasInteractionContextBinding);
             SyncTickBehaviorMarker<PerfHasMinimapMarker>(entity, hasMinimapMarker);
             SyncTickBehaviorMarker<PerfHasScreenRect>(entity, hasScreenRect);
             SyncTickBehaviorMarker<PerfHasExtensionBehavior>(entity, hasExtensionBehavior);
@@ -1571,6 +1578,7 @@ namespace Ludots.Core.Presentation.Presenters
 
         public void SyncEmitWorkMarkers(Entity entity, PresenterDefinition definition, uint activeBehaviorMask)
         {
+            activeBehaviorMask |= definition.PossessionActivationMask;
             if (!_world.IsAlive(entity))
             {
                 return;
@@ -1663,6 +1671,11 @@ namespace Ludots.Core.Presentation.Presenters
 
             state.BehaviorActiveMask = nextMask;
             state.Version++;
+            if ((definition.RetainedOutputActivationMask & bit) != 0)
+            {
+                MarkStaticDirty(entity);
+                return true;
+            }
             RefreshOwnerPayloadMarker(state.OwnerEntity);
             SyncTickBehaviorMarkers(entity, definition, nextMask);
             SyncEmitWorkMarkers(entity, definition, nextMask);
@@ -1742,6 +1755,11 @@ namespace Ludots.Core.Presentation.Presenters
             if (_world.Has<PerfHasLiveParamBinding>(entity))
             {
                 RemoveMarker<PerfHasLiveParamBinding>(entity);
+            }
+
+            if (_world.Has<PerfHasInteractionContextBinding>(entity))
+            {
+                RemoveMarker<PerfHasInteractionContextBinding>(entity);
             }
 
             if (_world.Has<PerfHasMinimapMarker>(entity))
@@ -1937,7 +1955,6 @@ namespace Ludots.Core.Presentation.Presenters
                 !_world.IsAlive(state.OwnerEntity) ||
                 !_world.Has<VisualTransform>(state.OwnerEntity) ||
                 !_world.Has<ContinuousHeightmapSampleState>(state.OwnerEntity) ||
-                _world.Get<ContinuousHeightmapSampleState>(state.OwnerEntity).Sampled == 0 ||
                 !_world.Has<PresenterTransformSource>(presenter) ||
                 _world.Get<PresenterTransformSource>(presenter).Value != TransformSource.EntityTransform)
             {
@@ -2318,6 +2335,18 @@ namespace Ludots.Core.Presentation.Presenters
                     ? rootScopeId
                     : _planNodeScopes[node.ParentNodeIndex];
                 int childScopeId = node.ScopeTag > 0 ? node.ScopeTag : parentScopeId;
+                if (definitions.TryGet(node.DefinitionId, out PresenterDefinition diversionDefinition) &&
+                    PresenterInlineHudFeature.TryCompileDescriptor(diversionDefinition, out PresenterInlineHudDescriptor diversionDescriptor) &&
+                    !node.HasOverridePayload)
+                {
+                    // HUD 内联专 lane：HUD-only 子定义不实例化 presenter 实体，描述符挂父
+                    //（ParentNodeIndex<0 的节点挂计划根 presenter——massnav 血条即此形态）。
+                    // bootstrap 管线服务的是子 presenter 的参数绑定初始化；内联路径合成期直读
+                    // 属主 AttributeBuffer，不需要该管线，门槛不放行。
+                    DivertInlineHudChild(parentEntity, in diversionDescriptor);
+                    continue;
+                }
+
                 int childStableId = allocateStableId != null ? allocateStableId() : 0;
                 if (parentEntity == Entity.Null ||
                     !_world.IsAlive(parentEntity) ||
@@ -2403,6 +2432,19 @@ namespace Ludots.Core.Presentation.Presenters
             int capacity = Math.Max(required, Math.Max(64, _planNodeEntities.Length * 2));
             Array.Resize(ref _planNodeEntities, capacity);
             Array.Resize(ref _planNodeScopes, capacity);
+        }
+
+        private void DivertInlineHudChild(Entity parentEntity, in PresenterInlineHudDescriptor descriptor)
+        {
+            if (_world.TryGet<PresenterInlineHud>(parentEntity, out PresenterInlineHud inline))
+            {
+                Array.Resize(ref inline.Descriptors, inline.Descriptors.Length + 1);
+                inline.Descriptors[^1] = descriptor;
+                _world.Set(parentEntity, inline);
+                return;
+            }
+
+            _world.Add(parentEntity, new PresenterInlineHud { Descriptors = new[] { descriptor } });
         }
 
         private void AppendCreateTrace(in PresenterCreateTraceEntry entry)
@@ -3605,6 +3647,12 @@ namespace Ludots.Core.Presentation.Presenters
 
         private static float ResolveAttributeValue(ref AttributeBuffer attributes, int attributeId, ValueSourceKind mode)
         {
+            if ((uint)attributeId >= (uint)AttributeBuffer.MAX_ATTRS)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.CAPACITY.ERR.InlineInitialHighAttribute: 内联初始属性绑定 id={attributeId} ≥ 64 需要 owner 上下文读列存（RFC-0067 P3 边界）——初始值改用运行期属性绑定（PresenterBehaviorSystem 已支持高槽读）。");
+            }
+
             return mode switch
             {
                 ValueSourceKind.Attribute => attributes.GetCurrent(attributeId),
@@ -4624,6 +4672,7 @@ namespace Ludots.Core.Presentation.Presenters
             if (emitCache.RetainedDirty != 0)
             {
                 emitCache.RetainedDirty = 0;
+                emitCache.RetainedPositionOnlyDirty = 0;
                 if (_dirtyRetainedPresentationRequestCount > 0)
                 {
                     _dirtyRetainedPresentationRequestCount--;
@@ -4765,6 +4814,84 @@ namespace Ludots.Core.Presentation.Presenters
             if (_world.Has<PresenterState>(presenter))
             {
                 EnsureRequestBackedEmitWorkScheduled(presenter);
+            }
+        }
+
+        public void MarkTransformPositionDrivenEmitDirty(Entity presenter)
+        {
+            if (!_world.IsAlive(presenter) ||
+                !_world.Has<PresenterEmitCache>(presenter))
+            {
+                return;
+            }
+
+            ref PresenterEmitCache emitCache = ref _world.Get<PresenterEmitCache>(presenter);
+            if (_world.Has<PerfStaticStableVisual>(presenter))
+            {
+                MarkStaticDirty(ref emitCache);
+            }
+
+            if (_world.Has<PerfRetainedPresentationRequest>(presenter) &&
+                MarkRetainedPresentationRequestPositionDirty(ref emitCache))
+            {
+                AppendRetainedPresentationDirtyEntity(presenter);
+            }
+
+            if (_world.Has<PresenterState>(presenter))
+            {
+                EnsureRequestBackedEmitWorkScheduled(presenter);
+            }
+        }
+
+        internal void MarkCompiledTransformDrivenEmitDirty(
+            Entity presenter,
+            ref PresenterEmitCache emitCache,
+            bool hasStaticStableVisual,
+            bool hasRetainedPresentationRequest,
+            bool positionOnly)
+        {
+            if (hasStaticStableVisual)
+            {
+                MarkStaticDirty(ref emitCache);
+            }
+
+            if (hasRetainedPresentationRequest &&
+                (positionOnly
+                    ? MarkRetainedPresentationRequestPositionDirty(ref emitCache)
+                    : MarkRetainedPresentationRequestDirty(ref emitCache)))
+            {
+                AppendRetainedPresentationDirtyEntity(presenter);
+            }
+        }
+
+        /// <summary>
+        /// Chunk-batched variant of <see cref="MarkTransformDrivenEmitDirty"/> for callers that already hold the
+        /// presenter's <see cref="PresenterEmitCache"/> span slot, its resolved definition, and the chunk-level
+        /// membership flags; reproduces the retained-dirty append plus the request-backed emit-work marker
+        /// decision without re-resolving the entity per component.
+        /// </summary>
+        internal void MarkCompiledTransformDrivenEmitDirty(
+            Entity presenter,
+            ref PresenterEmitCache emitCache,
+            PresenterDefinition definition,
+            uint behaviorActiveMask,
+            bool hasEmitWorkMarker,
+            bool hasRetainedPresentationRequest,
+            bool positionOnly)
+        {
+            if (hasRetainedPresentationRequest &&
+                (positionOnly
+                    ? MarkRetainedPresentationRequestPositionDirty(ref emitCache)
+                    : MarkRetainedPresentationRequestDirty(ref emitCache)))
+            {
+                AppendRetainedPresentationDirtyEntity(presenter);
+            }
+
+            if (!hasEmitWorkMarker &&
+                _definitions != null &&
+                DefinitionUsesRequestBackedEmitWork(definition, behaviorActiveMask))
+            {
+                AddMarker<PerfHasEmitWork>(presenter);
             }
         }
 
@@ -5090,10 +5217,25 @@ namespace Ludots.Core.Presentation.Presenters
         {
             if (emitCache.RetainedDirty != 0)
             {
+                emitCache.RetainedPositionOnlyDirty = 0;
                 return false;
             }
 
             emitCache.RetainedDirty = 1;
+            emitCache.RetainedPositionOnlyDirty = 0;
+            _dirtyRetainedPresentationRequestCount++;
+            return true;
+        }
+
+        private bool MarkRetainedPresentationRequestPositionDirty(ref PresenterEmitCache emitCache)
+        {
+            if (emitCache.RetainedDirty != 0)
+            {
+                return false;
+            }
+
+            emitCache.RetainedDirty = 1;
+            emitCache.RetainedPositionOnlyDirty = 1;
             _dirtyRetainedPresentationRequestCount++;
             return true;
         }

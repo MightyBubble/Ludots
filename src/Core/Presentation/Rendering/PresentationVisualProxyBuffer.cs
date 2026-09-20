@@ -6,8 +6,10 @@ namespace Ludots.Core.Presentation.Rendering
     {
         private readonly PresentationVisualProxy[] _buffer;
         private int _count;
+        private int _staticBaseCount;
 
         public int Count => _count;
+        public int StaticBaseCount => _staticBaseCount;
         public int Capacity => _buffer.Length;
         public int DroppedSinceClear { get; private set; }
         public int DroppedTotal { get; private set; }
@@ -36,7 +38,19 @@ namespace Ludots.Core.Presentation.Rendering
         public void Clear()
         {
             _count = 0;
+            _staticBaseCount = 0;
             DroppedSinceClear = 0;
+        }
+
+        public void ClearTransientProjection()
+        {
+            Array.Clear(_buffer, _staticBaseCount, _count - _staticBaseCount);
+            _count = _staticBaseCount;
+        }
+
+        public void MarkStaticProjectionBoundary()
+        {
+            _staticBaseCount = _count;
         }
     }
 }

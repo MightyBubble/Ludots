@@ -62,7 +62,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         public static bool IsPolicyAllowed(GraphKind kind, GraphNodeOp op, in EffectOperationMetadata metadata)
         {
-            GraphOpDescriptor descriptor = Get(op);
+            if (!TryGet(op, out GraphOpDescriptor descriptor))
+            {
+                return IsExtensionOpPolicyAllowed(kind, (ushort)op, in metadata);
+            }
             if (descriptor.ScriptSliceOnly)
             {
                 return kind is GraphKind.Script or GraphKind.TriggerGraph;
@@ -75,12 +78,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
             if (kind is GraphKind.Script or GraphKind.TriggerGraph)
             {
-                // TriggerGraph already carves ModifyAttributeSet; WriteBlackboardFloat must also
-                // stay GasTransactional for Effect-phase rollback while still authorable on
-                // Script/TriggerGraph (Case E box_begin stores press corners on the operator rep).
+                // TriggerGraph already carves ModifyAttributeSet; the blackboard float write
+                // must also stay GasTransactional for Effect-phase rollback while still
+                // authorable on Script/TriggerGraph (Case E box_begin stores press corners on
+                // the operator rep). WriteBlackboardInt joins the same carve-out for the D15
+                // modifier handoff (box_commit stores case_e.select.modifiers on the rep).
                 if (metadata.Kind == EffectOperationKind.GasTransactional &&
                     ((kind == GraphKind.TriggerGraph && op == GraphNodeOp.ModifyAttributeSet) ||
-                     op == GraphNodeOp.WriteBlackboardFloat))
+                     op == GraphNodeOp.WriteBlackboardFloat ||
+                     op == GraphNodeOp.WriteBlackboardInt ||
+                     op == GraphNodeOp.WriteBlackboardEntity ||
+                     op == GraphNodeOp.ApplyEffectTemplate ||
+                     op == GraphNodeOp.ModifyAttributeAdd))
                 {
                     return true;
                 }
@@ -150,6 +159,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             {
                 names.Add(kind.ToString());
             }
+        }
+
+        private static bool IsExtensionOpPolicyAllowed(
+            GraphKind kind,
+            ushort encodedOp,
+            in EffectOperationMetadata metadata)
+        {
+            if (encodedOp < GasGraphOpRegistry.FirstModOpCode)
+            {
+                throw new InvalidOperationException($"Graph opcode '{encodedOp}' has no descriptor.");
+            }
+
+            if (kind == GraphKind.Effect)
+            {
+                return true;
+            }
+
+            return metadata.Kind == EffectOperationKind.Pure;
         }
     }
 }

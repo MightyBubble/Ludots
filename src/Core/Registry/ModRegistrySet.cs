@@ -9,7 +9,7 @@ public sealed class ModRegistrySet
         GraphIds = CreateGraphIds();
         Tags = CreateTags();
         Attributes = CreateAttributes();
-        AttributeConstraints = new AttributeRegistry.AttributeConstraints[AttributeRegistry.MaxAttributes];
+        AttributeConstraints = new AttributeRegistry.AttributeConstraints[AttributeRegistry.MaxAttributeIds];
         AbilityIds = CreateAbilityIds();
         AbilityCategories = CreateAbilityCategories();
         EffectTemplateIds = CreateEffectTemplateIds();
@@ -61,7 +61,7 @@ public sealed class ModRegistrySet
     public void ReplaceAttributes()
     {
         Attributes = CreateAttributes();
-        AttributeConstraints = new AttributeRegistry.AttributeConstraints[AttributeRegistry.MaxAttributes];
+        AttributeConstraints = new AttributeRegistry.AttributeConstraints[AttributeRegistry.MaxAttributeIds];
     }
     public void ReplaceAbilityIds()
     {
@@ -88,7 +88,7 @@ public sealed class ModRegistrySet
     private static IdentityTable CreateTags()
         => new(
             "Tag",
-            maxExclusive: 256,
+            maxExclusive: TagRegistry.MaxTagIds,
             startId: 1,
             invalidId: 0,
             comparer: StringComparer.Ordinal);
@@ -96,7 +96,7 @@ public sealed class ModRegistrySet
     private static IdentityTable CreateAttributes()
         => new(
             "Attribute",
-            maxExclusive: AttributeRegistry.MaxAttributes,
+            maxExclusive: AttributeRegistry.MaxAttributeIds,
             startId: 0,
             invalidId: -1,
             comparer: StringComparer.Ordinal,
