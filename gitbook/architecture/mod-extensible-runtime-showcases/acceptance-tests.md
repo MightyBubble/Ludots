@@ -52,13 +52,13 @@ dotnet test src/Tests/GasTests/GasTests.csproj --filter "FullyQualifiedName~Capa
 dotnet test src/Tests/GasTests/GasTests.csproj --filter "FullyQualifiedName~EffectCompositionSsotTests"
 ```
 
-可玩验收用四个 preset（合同与启动说明见 [README](README.md)）；对应 `showcase.registry.json` binding：`capability_standard_config_shards_showcase`、`capability_standard_effect_preset_type_code_showcase`、`capability_standard_presenter_behavior_extension_showcase`、`capability_standard_presenter_command_extension_showcase`。
+可玩验收用四个 binding（adapter 由 preset 决定；合同与启动说明见 [README](README.md)）；对应 `showcase.registry.json` binding：`capability_standard_config_shards_showcase`、`capability_standard_effect_preset_type_code_showcase`、`capability_standard_presenter_behavior_extension_showcase`、`capability_standard_presenter_command_extension_showcase`。
 
 ```powershell
-.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_config_shards_showcase_raylib'
-.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_effect_preset_type_code_showcase_raylib'
-.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_presenter_behavior_extension_showcase_raylib'
-.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_presenter_command_extension_showcase_raylib'
+.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_config_shards_showcase' --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_effect_preset_type_code_showcase' --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_presenter_behavior_extension_showcase' --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_presenter_command_extension_showcase' --adapter raylib
 ```
 
 ## UAT

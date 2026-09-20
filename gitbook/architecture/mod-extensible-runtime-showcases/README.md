@@ -44,12 +44,14 @@ mods/showcases/capability_standard/
 标准启动命令：
 
 ```powershell
-.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_config_shards_showcase_raylib'
-.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_effect_preset_type_code_showcase_raylib'
-.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_mod_graph_op_extension_showcase_raylib'
-.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_presenter_behavior_extension_showcase_raylib'
-.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_presenter_command_extension_showcase_raylib'
+.\scriptsun-mod-launcher.cmd cli launch '$capability_standard_config_shards_showcase' --adapter raylib
+.\scriptsun-mod-launcher.cmd cli launch '$capability_standard_effect_preset_type_code_showcase' --adapter raylib
+.\scriptsun-mod-launcher.cmd cli launch '$capability_standard_mod_graph_op_extension_showcase' --adapter raylib
+.\scriptsun-mod-launcher.cmd cli launch '$capability_standard_presenter_behavior_extension_showcase' --adapter raylib
+.\scriptsun-mod-launcher.cmd cli launch '$capability_standard_presenter_command_extension_showcase' --adapter raylib
 ```
+
+`cli launch` 的 adapter 只认 `--adapter` 参数，缺省用机器默认平台（例如 web）；`launcher.presets.json` 里 preset 的 `adapterId` 不驱动 CLI 启动。跑 raylib 必须显式写 `--adapter raylib`。
 
 ## 场景
 

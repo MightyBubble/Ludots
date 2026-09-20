@@ -71,6 +71,7 @@
   - [Mod 架构](architecture/mod-architecture.md)
   - [Mod Extensible Runtime](architecture/mod-extensible-runtime.md)
   - [Mod Extensible Runtime Showcases](architecture/mod-extensible-runtime-showcases/README.md)
+    - [Mod 作者上手：四个扩展面的完整走法](architecture/mod-extensible-runtime-showcases/mod-author-guide.md)
     - [Config Shards](architecture/mod-extensible-runtime-showcases/config-shards.md)
     - [Effect Preset Type Code](architecture/mod-extensible-runtime-showcases/effect-preset-type-code.md)
     - [Graph Op Extension](architecture/mod-extensible-runtime-showcases/graph-op-extension.md)
