@@ -15,6 +15,7 @@ namespace Ludots.Core.Spatial
         public const int DefaultTerrainWidthChunks = 64;
         public const int DefaultTerrainHeightChunks = 64;
         public const int PartitionChunkCells = 64;
+        public const int DefaultLoadedChunkCapacity = 256;
         public const int TerrainChunkCells = 64;
         public const int FlowCellCm = CellCm;
         public const int AvoidanceSeparationHashCellCm = CellCm;

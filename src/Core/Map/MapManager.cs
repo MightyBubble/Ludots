@@ -424,7 +424,6 @@ namespace Ludots.Core.Map
                 return;
             }
 
-            bool needsStreamingCapacity = false;
             foreach (var board in config.Boards)
             {
                 string spatialType = (board.SpatialType ?? "Grid").Trim();
@@ -437,18 +436,6 @@ namespace Ludots.Core.Map
                     throw new InvalidOperationException(
                         $"Map '{mapId}' board '{board.Name}' has unknown SpatialType '{spatialType}'; use Grid/HexGrid/NodeGraph.");
                 }
-
-                if (spatialType.Equals("Grid", StringComparison.OrdinalIgnoreCase) ||
-                    spatialType.Equals("NodeGraph", StringComparison.OrdinalIgnoreCase))
-                {
-                    needsStreamingCapacity = true;
-                }
-            }
-
-            if (needsStreamingCapacity && config.Tuning.LoadedChunkCapacity is not > 0)
-            {
-                throw new InvalidOperationException(
-                    $"Map '{mapId}' has Grid/NodeGraph boards and must declare Tuning.LoadedChunkCapacity (board-level budget fields are retired, #1567).");
             }
 
             BoardConfig root = ResolveRootBoard(config, mapId);
@@ -503,23 +490,21 @@ namespace Ludots.Core.Map
 
         public static void ApplyWorldTuningToBoards(MapConfig config)
         {
-            var tuning = config?.Tuning;
-            if (config?.Boards is not { Count: > 0 } || tuning is null || !tuning.IsAuthored)
+            if (config?.Boards is not { Count: > 0 })
             {
                 return;
             }
 
+            var tuning = config.Tuning;
+            int partition = tuning?.PartitionChunkCells
+                ?? Ludots.Core.Spatial.SpatialScaleDefaults.PartitionChunkCells;
+            int capacity = tuning?.LoadedChunkCapacity
+                ?? Ludots.Core.Spatial.SpatialScaleDefaults.DefaultLoadedChunkCapacity;
+
             foreach (var board in config.Boards)
             {
-                if (tuning.PartitionChunkCells is int applyPartition)
-                {
-                    board.ChunkSizeCells = applyPartition;
-                }
-
-                if (tuning.LoadedChunkCapacity is int applyCapacity)
-                {
-                    board.LoadedChunkCapacity = applyCapacity;
-                }
+                board.ChunkSizeCells = partition;
+                board.LoadedChunkCapacity = capacity;
             }
         }
 

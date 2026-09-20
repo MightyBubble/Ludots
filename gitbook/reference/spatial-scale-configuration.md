@@ -103,7 +103,7 @@ flowchart TD
 | 域 | 目标键 | 单位 | 含义 | 取代的现状键 |
 |---|---|---|---|---|
 | 世界（host world） | map `RootBoard`（缺省第一块板） | 板名 | 有板图根板锚定；无板图 game.json `world` | 宏块数量键 |
-| map | `Tuning.PartitionChunkCells` / `LoadedChunkCapacity` | cells / 个 | map 级分区与 streaming 预算，缺省由引擎推导（4b） | `Boards[].ChunkSizeCells` / `LoadedChunkCapacity` |
+| map | `Tuning.PartitionChunkCells` / `LoadedChunkCapacity` | cells / 个 | map 级分区与 streaming 预算，可选 override；缺省分区 64、容量 256（SpatialScaleDefaults） | `Boards[].ChunkSizeCells` / `LoadedChunkCapacity` |
 | 板 | `Boards[].WidthCells/HeightCells` + `CellSizeCm` | cells | Grid 板范围（格子数直写） | 宏块数 × 256 换算 |
 | 板 | `Boards[].WidthHexes/HeightHexes` + `HexEdgeLengthCm` | hexes | Hex 板范围，世界足迹经 `HexMetrics` 派生 | 同上（含借 `GridCellSizeCm` 算 hex 板足迹的现状做法） |
 | 板 | `Boards[].OriginXCm` / `OriginYCm` | cm | 板摆在世界坐标哪里，缺省居中；越出世界 fail-fast | 板恒居中（无 origin 字段） |
