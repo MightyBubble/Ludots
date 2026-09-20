@@ -117,7 +117,7 @@ Mod 要启用历法，写 `Calendar/world.json`，并保证 catalog 里有这条
 - 指定日期：订 `DayAdvanced`，过滤 `Calendar.DayIndex = 360`（整数比较）。
 - 多历并存时加一条 `Calendar.CalendarId` 过滤即可只听某份历；不过滤则每份历的相位都各发一次。
 
-符号走项目统一的「配置期符号、运行期 int」：历法表装载时 calendar / cycle / phase / era / dayPhase 符号注册进 `ConfigKeyRegistry`，事件载荷里的 `CalendarId` / `CycleId` / `PhaseId` / `EraId` 全是 key id（int），`filters.payload` 里的字符串期望值在图编译时解析成同一个 id，派发期只做 int 比较。图内读相位 / 日历 / 日序用 `LoadEntryPayloadInt`（载荷键如 `Calendar.PhaseId`）；要显示符号名时用 `ConfigKeyRegistry.GetName` 反查。
+符号走项目统一的「配置期符号、运行期 int」：历法表装载时 calendar / cycle / phase / era / dayPhase 符号注册进 `ConfigKeyRegistry`，事件载荷里的 `CalendarId` / `CycleId` / `PhaseId` / `EraId` 全是 key id（int），`filters.payload` 里的字符串期望值在图编译时解析成同一个 id，派发期只做 int 比较。`filters.payload` 的键和值类型按事件 schema 校验（声明外的键、string 参数写数值、float/entity 参数都在编译期拒绝）。图内读相位 / 日历 / 日序用 `LoadEntryPayloadInt`（载荷键如 `Calendar.PhaseId`）；要显示符号名时用 `ConfigKeyRegistry.GetName` 反查。
 
 ### 3.4 存档
 

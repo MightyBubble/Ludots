@@ -169,6 +169,119 @@ namespace Ludots.Tests.Gas.Graph
                 $"raw value {rawValue} must fail compile");
         }
 
+        [Test]
+        public void Compile_PayloadFilter_UndeclaredKey_Rejected()
+        {
+            GraphControlFlowCompileResult result = CompileCalendarDoc("""
+                {
+                  "id": "Graph.Probe.Calendar.Payload.UnknownKey",
+                  "kind": "TriggerGraph",
+                  "entries": [
+                    {
+                      "label": "on_typo",
+                      "event": "Calendar.CyclePhaseEntered",
+                      "start": "act",
+                      "filters": { "payload": { "Calendar.PhaseIdTypo": "spring" } }
+                    }
+                  ],
+                  "nodes": [ { "id": "act", "op": "HaltReturnInt" } ],
+                  "controlEdges": [],
+                  "valueEdges": []
+                }
+                """);
+
+            Assert.That(
+                result.Diagnostics.Any(d =>
+                    d.Severity == GraphDiagnosticSeverity.Error &&
+                    d.Code == GraphDiagnosticCodes.InvalidEntryFilters &&
+                    d.Message.Contains("Calendar.PhaseIdTypo") &&
+                    d.Message.Contains("not a declared payload key")),
+                Is.True,
+                "a mistyped payload key must fail compile naming the key, not silently never match");
+        }
+
+        [Test]
+        public void Compile_PayloadFilter_StringParam_KeepsStringCompare_IntParamCompilesSymbol()
+        {
+            var schemas = new EventSchemaRegistry();
+            schemas.RegisterCustom(new EventSchema(
+                "Probe.Payload.Mixed",
+                EventScope.Global,
+                new EventParamSchema[]
+                {
+                    new("name", EventParamType.String, "Probe.Payload.Name"),
+                    new("phase", EventParamType.Int, MapTriggerEventPayloadKeys.CalendarPhaseId),
+                    new("ratio", EventParamType.Float, "Probe.Payload.Ratio"),
+                }));
+
+            GraphControlFlowCompileResult result = CompileDoc("""
+                {
+                  "id": "Graph.Probe.Payload.Mixed",
+                  "kind": "TriggerGraph",
+                  "entries": [
+                    {
+                      "label": "on_mixed",
+                      "event": "Probe.Payload.Mixed",
+                      "start": "act",
+                      "filters": { "payload": { "Probe.Payload.Name": "raid_started", "Calendar.PhaseId": "spring" } }
+                    }
+                  ],
+                  "nodes": [ { "id": "act", "op": "HaltReturnInt" } ],
+                  "controlEdges": [],
+                  "valueEdges": []
+                }
+                """, schemas);
+
+            Assert.That(result.Diagnostics.Where(d => d.Severity == GraphDiagnosticSeverity.Error).ToList(), Is.Empty,
+                () => string.Join("\n", result.Diagnostics.Select(d => d.Message)));
+
+            TriggerGraphEntryFilters filters = result.Package!.Value.TriggerGraphEntries.Single().Filters;
+            TriggerGraphEntryPayloadFilter name = filters.Payload!.Single(f => f.Key == "Probe.Payload.Name");
+            Assert.That(name.StringValue, Is.EqualTo("raid_started"), "string params compare as strings");
+            Assert.That(name.IntValue, Is.Null);
+            TriggerGraphEntryPayloadFilter phase = filters.Payload!.Single(f => f.Key == MapTriggerEventPayloadKeys.CalendarPhaseId);
+            Assert.That(phase.StringValue, Is.Null);
+            Assert.That(phase.IntValue, Is.EqualTo(ConfigKeyRegistry.GetId("spring")), "int params compile symbols to key ids");
+        }
+
+        [Test]
+        public void Compile_PayloadFilter_FloatParam_Rejected()
+        {
+            var schemas = new EventSchemaRegistry();
+            schemas.RegisterCustom(new EventSchema(
+                "Probe.Payload.Mixed",
+                EventScope.Global,
+                new EventParamSchema[]
+                {
+                    new("ratio", EventParamType.Float, "Probe.Payload.Ratio"),
+                }));
+
+            GraphControlFlowCompileResult result = CompileDoc("""
+                {
+                  "id": "Graph.Probe.Payload.Float",
+                  "kind": "TriggerGraph",
+                  "entries": [
+                    {
+                      "label": "on_float",
+                      "event": "Probe.Payload.Mixed",
+                      "start": "act",
+                      "filters": { "payload": { "Probe.Payload.Ratio": 1 } }
+                    }
+                  ],
+                  "nodes": [ { "id": "act", "op": "HaltReturnInt" } ],
+                  "controlEdges": [],
+                  "valueEdges": []
+                }
+                """, schemas);
+
+            Assert.That(
+                result.Diagnostics.Any(d =>
+                    d.Severity == GraphDiagnosticSeverity.Error &&
+                    d.Message.Contains("support int and string params only")),
+                Is.True,
+                "float/entity params cannot be payload-filtered");
+        }
+
         // ── 端到端订阅：真实历法事件上下文 × 挂载触发器 CheckConditions ──
 
         [Test]
@@ -276,6 +389,9 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         private static GraphControlFlowCompileResult CompileCalendarDoc(string json)
+            => CompileDoc(json, new EventSchemaRegistry());
+
+        private static GraphControlFlowCompileResult CompileDoc(string json, EventSchemaRegistry schemas)
         {
             var options = new JsonSerializerOptions
             {
@@ -283,7 +399,7 @@ namespace Ludots.Tests.Gas.Graph
                 PropertyNameCaseInsensitive = true,
             };
             GraphControlFlowDocument doc = JsonSerializer.Deserialize<GraphControlFlowDocument>(json, options)!;
-            return GraphControlFlowCompiler.Compile(doc, new EventSchemaRegistry());
+            return GraphControlFlowCompiler.Compile(doc, schemas);
         }
 
         /// <summary>用默认三历表跑一天跨界，捕获指定事件的真实派发上下文。</summary>

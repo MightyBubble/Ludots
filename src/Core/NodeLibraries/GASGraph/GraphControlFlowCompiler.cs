@@ -281,7 +281,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 BuildDispatchEventSchemas(nodes, graphKind, eventSchemas, graphId, diagnostics);
 
             List<TriggerGraphEntryConfig> triggerGraphEntries = ValidateTriggerGraphEntries(
-                document, nodeIndices, graphKind, graphId, diagnostics);
+                document, nodeIndices, graphKind, graphId, diagnostics, eventSchemas);
 
             if (graphKind != GraphKind.TriggerGraph &&
                 !string.IsNullOrWhiteSpace(document.Entry) &&
@@ -615,7 +615,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Dictionary<string, int> nodeIndices,
             GraphKind graphKind,
             string graphId,
-            List<GraphDiagnostic> diagnostics)
+            List<GraphDiagnostic> diagnostics,
+            Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas)
         {
             if (graphKind != GraphKind.TriggerGraph)
             {
@@ -675,7 +676,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     Once = authored[i].Once,
                     Priority = authored[i].Priority,
                     NormalizedRefire = NormalizeEntryRefire(authored[i].Refire, graphId, shown, diagnostics),
-                    ParsedFilters = ParseEntryFilters(authored[i].Filters, graphId, shown, diagnostics),
+                    ParsedFilters = ParseEntryFilters(authored[i].Filters, graphId, shown, diagnostics, eventSchemas, authored[i].Event),
                     ParsedHook = ParseEntryHook(authored[i], graphId, shown, diagnostics)
                 });
             }
@@ -803,7 +804,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             TriggerGraphEntryFiltersConfig? filters,
             string graphId,
             string shown,
-            List<GraphDiagnostic> diagnostics)
+            List<GraphDiagnostic> diagnostics,
+            Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas,
+            string eventName)
         {
             if (filters == null)
             {
@@ -893,6 +896,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             List<TriggerGraphEntryPayloadFilter>? payloadFilters = null;
             if (filters.Payload != null)
             {
+                Ludots.Core.Scripting.EventSchema? entrySchema =
+                    eventSchemas != null && eventSchemas.TryGet(eventName, out Ludots.Core.Scripting.EventSchema schema)
+                        ? schema
+                        : null;
                 foreach (KeyValuePair<string, JsonElement> pair in filters.Payload)
                 {
                     string payloadKey = pair.Key.Trim();
@@ -900,6 +907,44 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     {
                         diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
                             $"TriggerGraph graph '{graphId}' entry '{shown}' filters field 'payload' requires non-empty payload keys.", pair.Key));
+                        continue;
+                    }
+
+                    // 键闭集走事件 schema 基建：声明的参数载荷键才可过滤；无 schema 的
+                    // 裸编译退回引擎已知载荷键白名单。拼错的键编译期点名，不静默永不匹配。
+                    Ludots.Core.Scripting.EventParamType? declaredType = null;
+                    if (entrySchema != null)
+                    {
+                        bool declared = false;
+                        for (int p = 0; p < entrySchema.Params.Count; p++)
+                        {
+                            if (string.Equals(entrySchema.Params[p].PayloadKey, payloadKey, StringComparison.Ordinal))
+                            {
+                                declaredType = entrySchema.Params[p].Type;
+                                declared = true;
+                                break;
+                            }
+                        }
+
+                        if (!declared)
+                        {
+                            diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
+                                $"TriggerGraph graph '{graphId}' entry '{shown}' filters payload '{payloadKey}' is not a declared payload key of event '{eventName}'.", payloadKey));
+                            continue;
+                        }
+                    }
+                    else if (!Ludots.Core.Scripting.MapTriggerEventPayloadKeys.IsKnownKey(payloadKey))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
+                            $"TriggerGraph graph '{graphId}' entry '{shown}' filters payload '{payloadKey}' matches no engine payload key and event '{eventName}' declares no schema.", payloadKey));
+                        continue;
+                    }
+
+                    if (declaredType == Ludots.Core.Scripting.EventParamType.Float ||
+                        declaredType == Ludots.Core.Scripting.EventParamType.Entity)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
+                            $"TriggerGraph graph '{graphId}' entry '{shown}' filters payload '{payloadKey}' has type {declaredType}; payload filters support int and string params only.", payloadKey));
                         continue;
                     }
 
@@ -913,16 +958,31 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                             continue;
                         }
 
-                        // 配置期符号、运行期 int：字符串期望值是符号，编译成 ConfigKey id，
-                        // 派发期对载荷做 int 比较（历法相位订阅即此用法）。
-                        (payloadFilters ??= new List<TriggerGraphEntryPayloadFilter>()).Add(
-                            new TriggerGraphEntryPayloadFilter(
-                                payloadKey,
-                                null,
-                                Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(expected)));
+                        if (declaredType == Ludots.Core.Scripting.EventParamType.Int)
+                        {
+                            // 配置期符号、运行期 int：int 参数的字符串期望值是符号，编译成
+                            // ConfigKey id（幂等，装载/编译顺序无关），派发期 int 比较。
+                            (payloadFilters ??= new List<TriggerGraphEntryPayloadFilter>()).Add(
+                                new TriggerGraphEntryPayloadFilter(
+                                    payloadKey,
+                                    null,
+                                    Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(expected)));
+                        }
+                        else
+                        {
+                            (payloadFilters ??= new List<TriggerGraphEntryPayloadFilter>()).Add(
+                                new TriggerGraphEntryPayloadFilter(payloadKey, expected, null));
+                        }
                     }
                     else if (pair.Value.ValueKind == JsonValueKind.Number)
                     {
+                        if (declaredType == Ludots.Core.Scripting.EventParamType.String)
+                        {
+                            diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
+                                $"TriggerGraph graph '{graphId}' entry '{shown}' filters payload '{payloadKey}' is a string param; author a string value.", payloadKey));
+                            continue;
+                        }
+
                         if (!pair.Value.TryGetInt32(out int expected))
                         {
                             diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
