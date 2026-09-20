@@ -4644,6 +4644,7 @@ static class EditorRepo
             var cfg = JsonSerializer.Deserialize<Ludots.Core.Config.MapConfig>(File.ReadAllText(path), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             if (cfg == null) return;
             MergeMapConfig(merged, cfg);
+            Ludots.Core.Map.MapManager.ApplyWorldTuningToBoards(merged);
             sources.Add(path);
         }
 
@@ -4924,6 +4925,12 @@ static class EditorRepo
         map.Boards ??= new List<Ludots.Core.Map.Board.BoardConfig>();
         EnsureNoBoardNameConflict(map, name);
 
+        if (map.Tuning is not { } mapTuning || mapTuning.LoadedChunkCapacity is not > 0)
+        {
+            throw new InvalidOperationException(
+                $"Map '{mapId}' must declare Tuning.LoadedChunkCapacity before boards can be added (single map budget, #1567).");
+        }
+
         int widthCells = request.WidthCells > 0
             ? request.WidthCells
             : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultWorldWidthMacroTiles * Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells;
@@ -4968,12 +4975,6 @@ static class EditorRepo
             {
                 dataPath = null;
             }
-        }
-
-        if (map.Tuning is not { } mapTuning || mapTuning.LoadedChunkCapacity is not > 0)
-        {
-            throw new InvalidOperationException(
-                $"Map '{mapId}' must declare Tuning.LoadedChunkCapacity before boards can be added (single map budget, #1567).");
         }
 
         EnsureBoardFitsRoot(map, board);

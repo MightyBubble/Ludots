@@ -414,7 +414,7 @@ namespace Ludots.Core.Map
             }
         }
 
-        private static void ValidateSpatialDeclaration(MapConfig config, MapId mapId)
+        public static void ValidateSpatialDeclaration(MapConfig config, MapId mapId)
         {
             ValidateTuningValues(config.Tuning, mapId);
 
@@ -428,6 +428,16 @@ namespace Ludots.Core.Map
             foreach (var board in config.Boards)
             {
                 string spatialType = (board.SpatialType ?? "Grid").Trim();
+                if (!spatialType.Equals("Grid", StringComparison.OrdinalIgnoreCase) &&
+                    !spatialType.Equals("HexGrid", StringComparison.OrdinalIgnoreCase) &&
+                    !spatialType.Equals("Hex", StringComparison.OrdinalIgnoreCase) &&
+                    !spatialType.Equals("Hybrid", StringComparison.OrdinalIgnoreCase) &&
+                    !spatialType.Equals("NodeGraph", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapId}' board '{board.Name}' has unknown SpatialType '{spatialType}'; use Grid/HexGrid/NodeGraph.");
+                }
+
                 if (spatialType.Equals("Grid", StringComparison.OrdinalIgnoreCase) ||
                     spatialType.Equals("NodeGraph", StringComparison.OrdinalIgnoreCase))
                 {

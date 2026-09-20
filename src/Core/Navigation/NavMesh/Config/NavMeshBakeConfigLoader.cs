@@ -199,8 +199,13 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                 _ = NavBakeNames.ParseTerrainFeed(RequireString(root, "terrainFeed", "NavMeshBakeConfig"), "NavMeshBakeConfig.terrainFeed");
             }
 
-            if (root.TryGetPropertyValue("maps", out var mapsNode) && mapsNode is JsonObject maps)
+            if (root.TryGetPropertyValue("maps", out var mapsNode))
             {
+                if (mapsNode is not JsonObject maps)
+                {
+                    throw new InvalidOperationException("NavMeshBakeConfig.maps must be an object keyed by map id.");
+                }
+
                 foreach (var mapEntry in maps)
                 {
                     if (mapEntry.Value is not JsonObject mapObj)

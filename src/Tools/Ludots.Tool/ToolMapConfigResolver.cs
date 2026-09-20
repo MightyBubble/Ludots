@@ -304,7 +304,8 @@ namespace Ludots.Tool
             {
                 MapConfig parent = LoadMergedMap(repoRoot, mods, loadOrder, merged.ParentId);
                 MergeMap(parent, merged);
-                return parent;
+                Ludots.Core.Map.MapManager.ApplyWorldTuningToBoards(parent);
+            return parent;
             }
 
             Ludots.Core.Map.MapManager.ApplyWorldTuningToBoards(merged);

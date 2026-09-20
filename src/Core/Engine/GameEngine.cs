@@ -3526,6 +3526,29 @@ namespace Ludots.Core.Engine
                 _spatialPartitionUpdateSystem?.SetPartition(_spatialPartition, WorldSizeSpec);
         }
 
+        private static bool TryGetBoardNavTileGrid(NavMeshBakeConfig bakeConfig, string mapId, string boardName, out NavTileGridConfig grid)
+        {
+            grid = null;
+            foreach (var mapEntry in bakeConfig.Maps)
+            {
+                if (!string.Equals(mapEntry.Key, mapId, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                foreach (var boardEntry in mapEntry.Value.Boards)
+                {
+                    if (string.Equals(boardEntry.Key, boardName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        grid = boardEntry.Value;
+                        return grid != null;
+                    }
+                }
+            }
+
+            return false;
+        }
+
         private void LoadBoardTerrainData(MapSession session, MapConfig mapConfig)
         {
             VertexMap?.UnsubscribeFromLoadedChunks();
@@ -4123,8 +4146,7 @@ namespace Ludots.Core.Engine
             // grid (authored with the bake). Runtime never derives it from boards or
             // terrain objects; an undeclared grid is a map-authoring error.
             var tileGrids = mapConfig.Boards
-                .Select(b => bakeConfig.Maps.TryGetValue(mapId, out var mapBoards) &&
-                             mapBoards.Boards.TryGetValue(b.Name, out var grid) ? grid : null)
+                .Select(b => TryGetBoardNavTileGrid(bakeConfig, mapId, b.Name, out var grid) ? grid : null)
                 .ToList();
             if (tileGrids.Any(g => g == null))
                 throw new InvalidOperationException(
