@@ -30,7 +30,7 @@ namespace Ludots.Core.Map.Board
         /// <summary>Spatial partition chunk size in cells per side. Must be a power of two.</summary>
         public int ChunkSizeCells { get; set; } = SpatialScaleDefaults.PartitionChunkCells;
 
-        /// <summary>Maximum simultaneously loaded graph chunks. Required for NodeGraph boards.</summary>
+        /// <summary>Maximum simultaneously loaded chunks. Must be positive for every board kind; Grid boards construct their chunk window eagerly on load.</summary>
         public int LoadedChunkCapacity { get; set; }
 
         /// <summary>Path to binary data file (.hex, .graph) — optional.</summary>

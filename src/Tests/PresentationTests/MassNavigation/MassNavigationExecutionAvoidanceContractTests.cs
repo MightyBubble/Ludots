@@ -232,6 +232,7 @@ namespace Ludots.Tests.Presentation
             config.World!.SolverWindowWidthCm = solver.FieldWidthCm;
             config.World.SolverWindowHeightCm = solver.FieldHeightCm;
             config.Avoidance.Mode = avoidanceMode;
+            MassNavigationOrderChainTests.PopulateModeSpecificAvoidance(config.Avoidance, avoidanceMode);
             config.Avoidance.Validate();
             config.Solver.Validate();
             config.World.Validate(config.Solver);

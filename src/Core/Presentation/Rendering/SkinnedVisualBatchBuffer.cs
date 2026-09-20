@@ -41,6 +41,26 @@ namespace Ludots.Core.Presentation.Rendering
             return TryAdd(in item);
         }
 
+        public bool TryReserveDirect(out int reservedIndex)
+        {
+            _directWrittenThisFrame = true;
+            if (_count >= _buffer.Length)
+            {
+                DroppedSinceClear++;
+                DroppedTotal++;
+                reservedIndex = -1;
+                return false;
+            }
+
+            reservedIndex = _count++;
+            return true;
+        }
+
+        public ref SkinnedVisualBatchItem ReservedItem(int reservedIndex)
+        {
+            return ref _buffer[reservedIndex];
+        }
+
         public ReadOnlySpan<SkinnedVisualBatchItem> GetSpan() => new ReadOnlySpan<SkinnedVisualBatchItem>(_buffer, 0, _count);
 
         public void Clear()

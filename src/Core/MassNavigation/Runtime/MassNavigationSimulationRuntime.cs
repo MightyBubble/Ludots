@@ -180,6 +180,11 @@ public sealed class MassNavigationSimulationRuntime
     public float LastSimStepMs => Telemetry.LastSimStepMs;
     public float LastHardResolveMs => Telemetry.LastHardResolveMs;
     public int LastHardResolveCandidateAgentCount => MassNavigationFlow.LastHardResolveCandidateAgentCount;
+    public int LastSteppingAgentCount => MassNavigationFlow.LastSteppingAgentCount;
+    public int LastHardResolveOwnerAgentCount => MassNavigationFlow.LastHardResolveOwnerAgentCount;
+    public int LastEntitySyncAgentCount => MassNavigationFlow.LastEntitySyncAgentCount;
+    public int LastFlowRefreshStateCount => MassNavigationFlow.LastFlowRefreshStateCount;
+    public int CadenceAgentSliceCount => Cadence.AgentSliceCount;
     public int LastHardResolveFallbackProbeAgentCount => MassNavigationFlow.LastHardResolveFallbackProbeAgentCount;
     public long LastHardResolveFallbackPairCheckCount => MassNavigationFlow.LastHardResolveFallbackPairCheckCount;
     public long LastHardResolvePairCheckCount => MassNavigationFlow.LastHardResolvePairCheckCount;
@@ -287,13 +292,16 @@ public sealed class MassNavigationSimulationRuntime
         MassNavigationFlow.PreallocateDomainRelationshipCapacity(config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity);
         MassNavigationFlow.PreallocateDisplacedAgentCapacity(config.ScenarioRuntime.RuntimeCapacity.DisplacedAgentCapacity);
         WorldConfig = config.World ?? throw new InvalidOperationException("MassNavigationSimulationRuntime requires explicit world config.");
-        MassNavigationHotZoneConfig activeHotZone = WorldConfig.GetRequiredHotZone(WorldConfig.ActiveHotZoneId);
-        _activeHotZoneId = activeHotZone.Id;
-        _activeHotZoneLabel = activeHotZone.Label;
-        _activeHotZoneCenterXCm = activeHotZone.CenterXCm;
-        _activeHotZoneCenterYCm = activeHotZone.CenterYCm;
-        _activeHotZoneWidthCm = activeHotZone.WidthCm;
-        _activeHotZoneHeightCm = activeHotZone.HeightCm;
+        if (WorldConfig.HotZones.Length > 0)
+        {
+            MassNavigationHotZoneConfig activeHotZone = WorldConfig.GetRequiredHotZone(WorldConfig.ActiveHotZoneId);
+            _activeHotZoneId = activeHotZone.Id;
+            _activeHotZoneLabel = activeHotZone.Label;
+            _activeHotZoneCenterXCm = activeHotZone.CenterXCm;
+            _activeHotZoneCenterYCm = activeHotZone.CenterYCm;
+            _activeHotZoneWidthCm = activeHotZone.WidthCm;
+            _activeHotZoneHeightCm = activeHotZone.HeightCm;
+        }
         Cadence = config.Cadence;
         CadenceScheduler = new MassNavigationCadenceScheduler(Cadence);
         _loadedChunkCapacity = config.ScenarioRuntime.RuntimeCapacity.LoadedChunkCapacity;

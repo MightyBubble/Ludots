@@ -22,6 +22,12 @@ namespace Ludots.Core.Systems
 {
     public class CameraCullingSystem : BaseSystem<World, float>
     {
+        private const int SpatialQueryIntervalFrames = 4;
+        private const float DynamicHysteresisDisplacementCm = 128f;
+        private const float DynamicHysteresisDisplacementSqCm =
+            DynamicHysteresisDisplacementCm * DynamicHysteresisDisplacementCm;
+        private const float SpatialRefreshTargetDriftSqCm = 64f * 64f;
+
         private static readonly QueryDescription _presentationStateQuery = new QueryDescription()
             .WithAll<PresentationFrameState>();
         private static readonly QueryDescription _visualBoundsLodQuery = new QueryDescription()
@@ -164,9 +170,22 @@ namespace Ludots.Core.Systems
         private float[] _passLastStaticAspectRatio = Array.Empty<float>();
         private bool[] _passHasStaticCameraState = Array.Empty<bool>();
         private int[] _passLastStaticVisibleCount = Array.Empty<int>();
+        private CameraStateSnapshot[] _passLastSpatialRefreshCameraState = Array.Empty<CameraStateSnapshot>();
+        private float[] _passLastSpatialRefreshAspectRatio = Array.Empty<float>();
+        private bool[] _passHasSpatialRefreshCameraState = Array.Empty<bool>();
+        private CameraStateSnapshot[] _passLastSpatialFrameCameraState = Array.Empty<CameraStateSnapshot>();
+        private float[] _passLastSpatialFrameAspectRatio = Array.Empty<float>();
+        private bool[] _passHasSpatialFrameCameraState = Array.Empty<bool>();
+        private int[] _passSpatialCameraStableSinceFrame = Array.Empty<int>();
         private bool _unionPass;
         private int _staticCullEpoch;
         private int _visibilityRevision;
+        private int _frameCounter;
+        private int _lastSpatialRefreshFrameId = int.MinValue / 2;
+        private bool _spatialCandidatesFresh;
+        private bool _dynamicHysteresisActive;
+        private readonly int _hysteresisOwnerToken = System.Threading.Interlocked.Increment(ref _nextHysteresisOwnerToken);
+        private static int _nextHysteresisOwnerToken;
 
         public CameraCullingDebugState DebugState { get; } = new CameraCullingDebugState();
 
@@ -271,17 +290,26 @@ namespace Ludots.Core.Systems
         private void ResetPassStaticCaches()
         {
             int count = _presentBindingPasses.Count;
-            if (_passHasStaticCameraState.Length != count)
+            if (_passHasStaticCameraState.Length == count)
             {
-                _passLastStaticCameraState = new CameraStateSnapshot[count];
-                _passLastStaticAspectRatio = new float[count];
-                _passHasStaticCameraState = new bool[count];
-                _passLastStaticVisibleCount = new int[count];
+                // Hosts re-arm the pass list every frame with the same seat layout; camera baselines
+                // stay valid because each pass comparison reads live camera state. Wiping them here
+                // would run the full static path and defeat the spatial cadence every frame.
                 return;
             }
 
-            Array.Clear(_passHasStaticCameraState);
-            Array.Clear(_passLastStaticVisibleCount);
+            _passLastStaticCameraState = new CameraStateSnapshot[count];
+            _passLastStaticAspectRatio = new float[count];
+            _passHasStaticCameraState = new bool[count];
+            _passLastStaticVisibleCount = new int[count];
+            _passLastSpatialRefreshCameraState = new CameraStateSnapshot[count];
+            _passLastSpatialRefreshAspectRatio = new float[count];
+            _passHasSpatialRefreshCameraState = new bool[count];
+            _passLastSpatialFrameCameraState = new CameraStateSnapshot[count];
+            _passLastSpatialFrameAspectRatio = new float[count];
+            _passHasSpatialFrameCameraState = new bool[count];
+            _passSpatialCameraStableSinceFrame = new int[count];
+            _spatialCandidatesFresh = false;
         }
 
         public override void Update(in float dt)
@@ -291,6 +319,8 @@ namespace Ludots.Core.Systems
                 return;
             }
 
+            _frameCounter++;
+            _dynamicHysteresisActive = false;
             long start = Stopwatch.GetTimestamp();
             float presentationAlpha = ReadPresentationAlpha();
             _changedOwners.Clear();
@@ -408,15 +438,37 @@ namespace Ludots.Core.Systems
             }
 
             bool hasDynamicCullWork = HasDynamicCullWork();
-            if (hasDynamicCullWork)
+            bool singleBinding = _presentBindingPasses.Count == 1;
+            bool spatialFrameCameraMoved = SpatialRefreshFrameCameraDiffers(passIndex, in cameraState, aspectRatio);
+            if (spatialFrameCameraMoved)
+            {
+                _passSpatialCameraStableSinceFrame[passIndex] = _frameCounter;
+            }
+
+            bool spatialCadenceEngaged =
+                (_frameCounter - _passSpatialCameraStableSinceFrame[passIndex]) >= SpatialQueryIntervalFrames;
+            bool spatialDriftSinceRefresh = _passHasSpatialRefreshCameraState[passIndex] &&
+                SpatialCameraDiffers(
+                    in _passLastSpatialRefreshCameraState[passIndex],
+                    in cameraState,
+                    _passLastSpatialRefreshAspectRatio[passIndex],
+                    aspectRatio);
+            bool spatialRefreshDue = !singleBinding ||
+                                     !_spatialCandidatesFresh ||
+                                     !spatialCadenceEngaged ||
+                                     spatialDriftSinceRefresh ||
+                                     (_frameCounter - _lastSpatialRefreshFrameId) >= SpatialQueryIntervalFrames;
+            if (hasDynamicCullWork && spatialRefreshDue)
             {
                 long spatialQueryStart = Stopwatch.GetTimestamp();
                 RefreshSpatialCandidates(in queryBounds);
                 spatialQueryMs += ElapsedMs(spatialQueryStart);
+                RecordSpatialRefresh(passIndex, in cameraState, aspectRatio);
             }
-            else if (_spatialCandidates.Count != 0)
+            else if (!hasDynamicCullWork && _spatialCandidates.Count != 0)
             {
                 _spatialCandidates.Clear();
+                _spatialCandidatesFresh = false;
             }
 
             float tx = target.X;
@@ -431,7 +483,6 @@ namespace Ludots.Core.Systems
             long staticProcessStart = Stopwatch.GetTimestamp();
             int passStaticCount;
             bool runFullStatic = anyPassFullStatic || cameraChanged || !hasStaticCullCameraState;
-
             if (runFullStatic)
             {
                 anyPassFullStatic = true;
@@ -472,6 +523,10 @@ namespace Ludots.Core.Systems
 
             if (hasDynamicCullWork)
             {
+                // Hysteresis engages only between refreshes of a sole binding whose camera has not
+                // drifted past the refresh tolerance: those are the only frames whose spatial
+                // candidates and viewport are known to still match the anchor's evaluation.
+                _dynamicHysteresisActive = singleBinding && _spatialCandidatesFresh && !spatialRefreshDue;
                 long dynamicProcessStart = Stopwatch.GetTimestamp();
                 ProcessVisualBoundsLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref unionVisibleCount, VisualBoundsLodQuery, useSpatialGate: true);
                 ProcessVisualBounds(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref unionVisibleCount, VisualBoundsQuery, useSpatialGate: true);
@@ -484,6 +539,7 @@ namespace Ludots.Core.Systems
                 ProcessVisualDefault(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref unionVisibleCount, SpatialExcludedVisualDefaultQuery, useSpatialGate: false);
                 ProcessNoVisual(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref unionVisibleCount, SpatialExcludedNoVisualQuery, useSpatialGate: false);
                 dynamicProcessMs += ElapsedMs(dynamicProcessStart);
+                _dynamicHysteresisActive = false;
             }
         }
 
@@ -638,6 +694,92 @@ namespace Ludots.Core.Systems
                    last.RigKind != state.RigKind ||
                    last.ZoomLevel != state.ZoomLevel ||
                    last.IsFollowing != state.IsFollowing;
+        }
+
+        /// <summary>
+        /// Camera-differs test used by the spatial refresh cadence. Target drift uses a tolerance
+        /// instead of the static path's per-frame epsilon: candidates may be reused across small
+        /// camera moves because hysteresis-skipped entities keep an evaluation whose viewport error
+        /// is bounded by this tolerance plus the entity displacement threshold.
+        /// </summary>
+        private static bool SpatialCameraDiffers(
+            in CameraStateSnapshot last,
+            in CameraStateSnapshot state,
+            float lastAspectRatio,
+            float aspectRatio)
+        {
+            const float scalarEpsilon = 0.01f;
+            return MathF.Abs(lastAspectRatio - aspectRatio) > scalarEpsilon ||
+                   Vector2.DistanceSquared(last.TargetCm, state.TargetCm) > SpatialRefreshTargetDriftSqCm ||
+                   MathF.Abs(last.TargetHeightCm - state.TargetHeightCm) > scalarEpsilon ||
+                   MathF.Abs(AngleDeltaDeg(last.Yaw, state.Yaw)) > scalarEpsilon ||
+                   MathF.Abs(last.Pitch - state.Pitch) > scalarEpsilon ||
+                   MathF.Abs(last.DistanceCm - state.DistanceCm) > scalarEpsilon ||
+                   MathF.Abs(last.FovYDeg - state.FovYDeg) > scalarEpsilon ||
+                   last.RigKind != state.RigKind ||
+                   last.ZoomLevel != state.ZoomLevel ||
+                   last.IsFollowing != state.IsFollowing;
+        }
+
+        private bool SpatialRefreshFrameCameraDiffers(int passIndex, in CameraStateSnapshot state, float aspectRatio)
+        {
+            bool differs = !_passHasSpatialFrameCameraState[passIndex] ||
+                SpatialCameraDiffers(
+                    in _passLastSpatialFrameCameraState[passIndex],
+                    in state,
+                    _passLastSpatialFrameAspectRatio[passIndex],
+                    aspectRatio);
+            _passHasSpatialFrameCameraState[passIndex] = true;
+            _passLastSpatialFrameCameraState[passIndex] = state;
+            _passLastSpatialFrameAspectRatio[passIndex] = aspectRatio;
+            return differs;
+        }
+
+        private void RecordSpatialRefresh(int passIndex, in CameraStateSnapshot cameraState, float aspectRatio)
+        {
+            _spatialCandidatesFresh = true;
+            _lastSpatialRefreshFrameId = _frameCounter;
+            _passHasSpatialRefreshCameraState[passIndex] = true;
+            _passLastSpatialRefreshCameraState[passIndex] = cameraState;
+            _passLastSpatialRefreshAspectRatio[passIndex] = aspectRatio;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool TrySkipByDynamicHysteresis(ref CullState cull, float px, float py, ref int visibleCount)
+        {
+            if (!_dynamicHysteresisActive || cull.HysteresisOwnerToken != _hysteresisOwnerToken)
+            {
+                return false;
+            }
+
+            float dx = px - cull.HysteresisAnchorXCm;
+            float dy = py - cull.HysteresisAnchorYCm;
+            if ((dx * dx) + (dy * dy) >= DynamicHysteresisDisplacementSqCm)
+            {
+                return false;
+            }
+
+            if (cull.IsVisible)
+            {
+                visibleCount++;
+            }
+
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void WriteDynamicHysteresisAnchor(ref CullState cull, float px, float py)
+        {
+            cull.HysteresisOwnerToken = _hysteresisOwnerToken;
+            cull.HysteresisAnchorXCm = px;
+            cull.HysteresisAnchorYCm = py;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool IsInsideQueryBounds(float px, float py, in WorldAabbCm queryBounds)
+        {
+            return px >= queryBounds.Left && px <= queryBounds.Right &&
+                   py >= queryBounds.Top && py <= queryBounds.Bottom;
         }
 
         private void RefreshSpatialCandidates(in WorldAabbCm queryBounds)
@@ -1470,7 +1612,14 @@ namespace Ludots.Core.Systems
             var wp = worldPosition.Value;
             float px = wp.X.ToFloat();
             float py = wp.Y.ToFloat();
-            if (useSpatialGate && !PassesSpatialCandidateGate(entity))
+            if (TrySkipByDynamicHysteresis(ref cull, px, py, ref visibleCount))
+            {
+                return;
+            }
+
+            WriteDynamicHysteresisAnchor(ref cull, px, py);
+            if (useSpatialGate && !PassesSpatialCandidateGate(entity) &&
+                (!_dynamicHysteresisActive || !IsInsideQueryBounds(px, py, in queryBounds)))
             {
                 ForceCull(entity, ref cull);
                 return;
@@ -1610,7 +1759,14 @@ namespace Ludots.Core.Systems
             var wp = worldPosition.Value;
             float px = wp.X.ToFloat();
             float py = wp.Y.ToFloat();
-            if (useSpatialGate && !PassesSpatialCandidateGate(entity))
+            if (TrySkipByDynamicHysteresis(ref cull, px, py, ref visibleCount))
+            {
+                return;
+            }
+
+            WriteDynamicHysteresisAnchor(ref cull, px, py);
+            if (useSpatialGate && !PassesSpatialCandidateGate(entity) &&
+                (!_dynamicHysteresisActive || !IsInsideQueryBounds(px, py, in queryBounds)))
             {
                 ForceCull(entity, ref cull);
                 return;
@@ -1744,7 +1900,14 @@ namespace Ludots.Core.Systems
             var wp = worldPosition.Value;
             float px = wp.X.ToFloat();
             float py = wp.Y.ToFloat();
-            if (useSpatialGate && !PassesSpatialCandidateGate(entity))
+            if (TrySkipByDynamicHysteresis(ref cull, px, py, ref visibleCount))
+            {
+                return;
+            }
+
+            WriteDynamicHysteresisAnchor(ref cull, px, py);
+            if (useSpatialGate && !PassesSpatialCandidateGate(entity) &&
+                (!_dynamicHysteresisActive || !IsInsideQueryBounds(px, py, in queryBounds)))
             {
                 ForceCull(entity, ref cull);
                 return;

@@ -145,7 +145,6 @@ namespace Ludots.Tests.GAS
             var entity = world.Create(
                 new AttributeBuffer(),
                 new ActiveEffectContainer(),
-                new AttributeAggregateDirty(),
                 new DirtyFlags());
             ref AttributeBuffer buffer = ref world.Get<AttributeBuffer>(entity);
             buffer.SetBase(sourceAttr, 10f);
@@ -157,12 +156,13 @@ namespace Ludots.Tests.GAS
                 "AttributeDerivedGraphBinding",
                 JsonNode.Parse("""{ "graphs": [ "tests.graph.derived-attribute" ] }""")!);
 
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry());
             using var system = new AttributeAggregatorSystem(
                 world,
                 programs,
                 new GasGraphRuntimeApi(world, tagOps: tagOps),
-                tagOps);
+                tagOps, aggregateDirty: tagOps.AggregateDirty);
+            tagOps.AggregateDirty.MarkDirty(entity);
             system.Update(0f);
 
             Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(derivedAttr), Is.EqualTo(12.5f));

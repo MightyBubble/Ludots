@@ -4833,6 +4833,37 @@ namespace Ludots.Core.Presentation.Presenters
             }
         }
 
+        /// <summary>
+        /// Chunk-batched variant of <see cref="MarkTransformDrivenEmitDirty"/> for callers that already hold the
+        /// presenter's <see cref="PresenterEmitCache"/> span slot, its resolved definition, and the chunk-level
+        /// membership flags; reproduces the retained-dirty append plus the request-backed emit-work marker
+        /// decision without re-resolving the entity per component.
+        /// </summary>
+        internal void MarkCompiledTransformDrivenEmitDirty(
+            Entity presenter,
+            ref PresenterEmitCache emitCache,
+            PresenterDefinition definition,
+            uint behaviorActiveMask,
+            bool hasEmitWorkMarker,
+            bool hasRetainedPresentationRequest,
+            bool positionOnly)
+        {
+            if (hasRetainedPresentationRequest &&
+                (positionOnly
+                    ? MarkRetainedPresentationRequestPositionDirty(ref emitCache)
+                    : MarkRetainedPresentationRequestDirty(ref emitCache)))
+            {
+                AppendRetainedPresentationDirtyEntity(presenter);
+            }
+
+            if (!hasEmitWorkMarker &&
+                _definitions != null &&
+                DefinitionUsesRequestBackedEmitWork(definition, behaviorActiveMask))
+            {
+                AddMarker<PerfHasEmitWork>(presenter);
+            }
+        }
+
         public void PropagateParentDrivenTransforms(Entity parent)
         {
             if (parent == Entity.Null ||

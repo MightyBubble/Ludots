@@ -22,8 +22,8 @@ namespace Ludots.Content.EngineGallery.Scenes
     [EngineSceneComponent("crowd_anim")]
     public sealed unsafe class CrowdAnimScene : IEngineSceneComponent, IEngineSceneComponentAssets
     {
-        private const int TargetInstances = 4096;
-        private const int RingCount = 14;
+        private const int TargetInstances = 10_000;
+        private const int RingCount = 36;
         private const int ColorBandCount = 7;
         private const int MannequinAssetId = 9001;
         private const int GroundAssetId = 9002;
@@ -46,6 +46,7 @@ namespace Ludots.Content.EngineGallery.Scenes
         private EngineSceneAsset _mannequin = null!;
         private int _walkClipIndex = -1;
         private int _walkClipFrameCount;
+        private bool _gpuSkinnedDeviceReady;
         private int _phaseBucketCount;
         private bool _disposed;
 
@@ -73,7 +74,13 @@ namespace Ludots.Content.EngineGallery.Scenes
                 RaylibPrimitiveRenderMode.Instanced,
                 vfs: GalleryAssetPaths.Instance,
                 materials: null,
-                channelRegistrar: GalleryAnimationChannels.Register);
+                channelRegistrar: GalleryAnimationChannels.Register,
+                gpuSkinnedCapacity: new RaylibGpuSkinnedCapacity(
+                    TargetInstances,
+                    MaxBatches: DesiredPhaseBuckets,
+                    MaxUniquePoses: DesiredPhaseBuckets,
+                    MaxBoneSlots: 256),
+                gpuSkinnedPosePhaseBuckets: DesiredPhaseBuckets);
             _shadowMap = new RaylibDirectionalShadowMap();
 
             // 只探测 clip 元数据（名字/帧数）供相位分桶；绘制模型由渲染器内置
@@ -85,7 +92,7 @@ namespace Ludots.Content.EngineGallery.Scenes
             for (int i = 0; i < TargetInstances; i++)
             {
                 int ring = i % RingCount;
-                float radius = 8f + (ring * 2.2f);
+                float radius = 8f + (ring * 2.5f);
                 float baseAngle = (i / (float)RingCount) * MathF.Tau + (random.NextSingle() * 0.24f);
                 float speed = 0.16f - (ring * 0.006f);
                 float baseWalkPhase = (i * GoldenRatioFract) % 1f;
@@ -95,9 +102,15 @@ namespace Ludots.Content.EngineGallery.Scenes
 
         public void Draw(float deltaSeconds, double totalTimeSeconds, ref Camera3D camera)
         {
+            if (!_gpuSkinnedDeviceReady)
+            {
+                _primitives.InitializeGpuSkinnedDeviceResources();
+                _gpuSkinnedDeviceReady = true;
+            }
+
             camera.target.Y = 1.4f;
-            camera.position = camera.target + new Vector3(0.62f, 0.46f, 0.62f);
-            GalleryCamera.EnforceDistance(ref camera, 32f);
+            camera.position = camera.target + new Vector3(0.52f, 0.60f, 0.52f);
+            GalleryCamera.EnforceDistance(ref camera, 130f);
             float t = (float)totalTimeSeconds;
             // raylib 以 ~60fps 采样 glTF clip（62 帧 / 1.042s），按帧数反推原始节奏播放。
             float walkCyclesPerSecond = _walkClipFrameCount / 60f;
@@ -110,7 +123,7 @@ namespace Ludots.Content.EngineGallery.Scenes
                 GroundAssetId,
                 900000,
                 new Vector3(0f, -0.17f, 0f),
-                new Vector3(86f, 0.3f, 86f),
+                new Vector3(110f, 0.3f, 110f),
                 new Vector4(0.74f, 0.75f, 0.66f, 1f)));
             for (int i = 0; i < TargetInstances; i++)
             {
@@ -145,28 +158,36 @@ namespace Ludots.Content.EngineGallery.Scenes
                 });
             }
 
-            _shadowMap.BeginFrame(_lighting.SunDirectionToward, new Vector3(0f, 1f, 0f), 52f);
-            _primitives.DrawShadow(_snapshot, _shadowMap, _meshes, camera);
-            _primitives.DrawShadow(_skinnedBatch, _shadowMap, _meshes);
-            _shadowMap.EndFrame();
+            _primitives.PrepareSkinnedFrame(_skinnedBatch, _meshes);
+            try
+            {
+                _shadowMap.BeginFrame(_lighting.SunDirectionToward, new Vector3(0f, 1f, 0f), 52f);
+                _primitives.DrawShadow(_snapshot, _shadowMap, _meshes, camera);
+                _primitives.DrawShadow(_skinnedBatch, _shadowMap, _meshes);
+                _shadowMap.EndFrame();
 
-            RaylibRenderEnvironmentConfig skyConfig = GallerySunSky.CreateConfig(_lighting, sizeMeters: 1400f);
-            Rl.ClearBackground(skyConfig.Skybox.ClearColor);
-            Rl.BeginMode3D(camera);
-            _skybox.Draw(camera, totalTimeSeconds, skyConfig);
-            _primitives.ApplyFrameLighting(_lighting, camera.position, _shadowMap, shadowTexelWorld: 0.12f);
+                RaylibRenderEnvironmentConfig skyConfig = GallerySunSky.CreateConfig(_lighting, sizeMeters: 1400f);
+                Rl.ClearBackground(skyConfig.Skybox.ClearColor);
+                Rl.BeginMode3D(camera);
+                _skybox.Draw(camera, totalTimeSeconds, skyConfig);
+                _primitives.ApplyFrameLighting(_lighting, camera.position, _shadowMap, shadowTexelWorld: 0.12f);
 
-            // snapshot 形参保持非空以进入 persistent-lanes 调用形态（RaylibFrameRenderer 同款），
-            // 其中蒙皮批次先于动态 lane 绘制；图元快照仅承载地面盘，人群全部走蒙皮车道。
-            _primitives.Draw(
-                _snapshot,
-                camera,
-                snapshot: _snapshot,
-                skinnedBatch: _skinnedBatch,
-                _meshes,
-                timeSeconds: totalTimeSeconds);
+                // snapshot 形参保持非空以进入 persistent-lanes 调用形态（RaylibFrameRenderer 同款），
+                // 其中蒙皮批次先于动态 lane 绘制；图元快照仅承载地面盘，人群全部走蒙皮车道。
+                _primitives.Draw(
+                    _snapshot,
+                    camera,
+                    snapshot: _snapshot,
+                    skinnedBatch: _skinnedBatch,
+                    _meshes,
+                    timeSeconds: totalTimeSeconds);
 
-            Rl.EndMode3D();
+                Rl.EndMode3D();
+            }
+            finally
+            {
+                _primitives.EndSkinnedFrame();
+            }
 
             GalleryFont.Draw(
                 $"crowd {_primitives.LastGpuSkinnedInstances} gpu-skinned  rings {RingCount}/{ColorBandCount}bands  phase {_phaseBucketCount}/{_walkClipFrameCount}f  draws {_primitives.LastGpuSkinnedBatches}  gpu {_primitives.LastGpuSkinnedMeshDrawMs:F2}ms  mat {_primitives.LastGpuSkinnedMatrixBuildMs:F2}ms",

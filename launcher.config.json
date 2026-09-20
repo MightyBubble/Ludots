@@ -149,8 +149,7 @@
       "name": "mass_navigation",
       "target": {
         "type": "path",
-        "value": "mods/capabilities/navigation/MassNavigationMod",
-        "projectPath": "MassNavigationMod.csproj"
+        "value": "mods/capabilities/navigation/MassNavigationMod"
       }
     },
     {

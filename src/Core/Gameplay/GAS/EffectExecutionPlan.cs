@@ -224,6 +224,10 @@ namespace Ludots.Core.Gameplay.GAS
             }
 
             templates.FinalizeExecutionPlans(plannedExecutionPlans);
+            templates.SetPeriodKernelTable(EffectPeriodKernelCompiler.Compile(
+                templates,
+                presetTypes,
+                graphPrograms));
         }
 
         private static unsafe void AnalyzeListenerGraphs(

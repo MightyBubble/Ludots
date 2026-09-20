@@ -105,6 +105,191 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void MassNavigationConfig_SeparationModeAvoidanceToleratesMissingOrcaAndSonarSections()
+        {
+            JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            JsonObject avoidance = config["avoidance"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.avoidance must be authored.");
+            Assert.That(avoidance["mode"]?.GetValue<string>(), Is.EqualTo("Separation"));
+            Assert.That(avoidance.ContainsKey("orca"), Is.False);
+            Assert.That(avoidance.ContainsKey("sonar"), Is.False);
+
+            MassNavigationConfig loaded = MassNavigationConfig.Load(config);
+            Assert.That(loaded.Avoidance.ParsedMode, Is.EqualTo(MassNavigationFlowAvoidanceMode.Separation));
+        }
+
+        [Test]
+        public void MassNavigationConfig_OrcaModeRequiresOrcaSectionButNotSonar()
+        {
+            JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            JsonObject avoidance = config["avoidance"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.avoidance must be authored.");
+            avoidance["mode"] = "Orca";
+            avoidance["orca"] = new JsonObject
+            {
+                ["timeHorizonSeconds"] = 0.85,
+                ["maxNeighbors"] = 16,
+            };
+
+            MassNavigationConfig loaded = MassNavigationConfig.Load(config);
+            Assert.That(loaded.Avoidance.ParsedMode, Is.EqualTo(MassNavigationFlowAvoidanceMode.Orca));
+
+            JsonObject missingOrca = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            JsonObject missingOrcaAvoidance = missingOrca["avoidance"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.avoidance must be authored.");
+            missingOrcaAvoidance["mode"] = "Orca";
+            missingOrcaAvoidance["orca"] = new JsonObject
+            {
+                ["maxNeighbors"] = 16,
+            };
+
+            InvalidOperationException missingHorizon = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(missingOrca))!;
+            Assert.That(missingHorizon.Message, Does.Contain("timeHorizonSeconds"));
+        }
+
+        [Test]
+        public void MassNavigationConfig_SonarModeRequiresSonarSection()
+        {
+            JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            JsonObject avoidance = config["avoidance"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.avoidance must be authored.");
+            avoidance["mode"] = "Sonar";
+            avoidance.Remove("sonar");
+            avoidance["sonar"] = new JsonObject
+            {
+                ["maxSteerAngleDeg"] = 280,
+                ["backwardPenaltyAngleDeg"] = 230,
+                ["predictionTimeScale"] = 0.9,
+                ["ignoreBehindMovingAgents"] = true,
+                ["blockedStop"] = false,
+                ["usePreferredVelocityWhenBlocked"] = true,
+                ["timeHorizonSeconds"] = 0.85,
+                ["maxNeighbors"] = 16,
+            };
+
+            MassNavigationConfig loaded = MassNavigationConfig.Load(config);
+            Assert.That(loaded.Avoidance.ParsedMode, Is.EqualTo(MassNavigationFlowAvoidanceMode.Sonar));
+
+            avoidance["sonar"] = new JsonObject
+            {
+                ["maxSteerAngleDeg"] = 280,
+                ["backwardPenaltyAngleDeg"] = 230,
+                ["predictionTimeScale"] = 0.9,
+                ["ignoreBehindMovingAgents"] = true,
+                ["blockedStop"] = false,
+                ["usePreferredVelocityWhenBlocked"] = true,
+                ["timeHorizonSeconds"] = 0.85,
+            };
+
+            InvalidOperationException missingNeighbors = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(config))!;
+            Assert.That(missingNeighbors.Message, Does.Contain("maxNeighbors"));
+        }
+
+        [Test]
+        public void MassNavigationConfig_HotZonesAreOptionalDebugSection()
+        {
+            JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            JsonObject world = config["world"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.world must be authored.");
+            world.Remove("hotZones");
+            world.Remove("activeHotZoneId");
+
+            MassNavigationConfig loaded = MassNavigationConfig.Load(config);
+            Assert.That(loaded.World!.HotZones, Is.Empty);
+            Assert.That(loaded.World.ActiveHotZoneId, Is.Empty);
+
+            JsonObject danglingActiveZone = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            (danglingActiveZone["world"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.world must be authored.")).Remove("hotZones");
+
+            InvalidOperationException dangling = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(danglingActiveZone))!;
+            Assert.That(dangling.Message, Does.Contain("ActiveHotZoneId"));
+
+            JsonObject zonesWithoutActive = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            (zonesWithoutActive["world"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.world must be authored.")).Remove("activeHotZoneId");
+
+            InvalidOperationException missingActive = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(zonesWithoutActive))!;
+            Assert.That(missingActive.Message, Does.Contain("activeHotZoneId"));
+        }
+
+        [Test]
+        public void MassNavigationConfig_RuntimeCapacityDerivesScenarioScaleDefaults()
+        {
+            JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            MassNavigationConfig loaded = MassNavigationConfig.Load(config);
+            int authoredAgentCount = checked(loaded.Scenario.Teams.Length * loaded.Scenario.AgentsPerTeam);
+            Assert.That(loaded.ScenarioRuntime.RuntimeCapacity.GroupMemberCapacity, Is.EqualTo(authoredAgentCount));
+            Assert.That(loaded.ScenarioRuntime.RuntimeCapacity.MovePlanExecutionMemberCapacity, Is.EqualTo(authoredAgentCount));
+            Assert.That(loaded.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity, Is.EqualTo(loaded.Scenario.Teams.Length));
+            Assert.That(loaded.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity, Is.EqualTo(160_000),
+                "An explicit override larger than the derived minimum must survive derivation.");
+            Assert.That(loaded.ScenarioRuntime.RuntimeCapacity.LoadedChunkCapacity, Is.EqualTo(256),
+                "An explicit override larger than the streaming window minimum must survive derivation.");
+
+            JsonObject externalAuthoring = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            JsonObject externalScenarioRuntime = externalAuthoring["scenarioRuntime"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.scenarioRuntime must be authored.");
+            externalScenarioRuntime["autoSpawnConfiguredScenario"] = false;
+            (externalScenarioRuntime["runtimeCapacity"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.scenarioRuntime.runtimeCapacity must be authored.")).Remove("groupMembershipAgentCapacity");
+            (externalAuthoring["scenario"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.scenario must be authored."))["agentsPerTeam"] = 0;
+
+            InvalidOperationException external = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(externalAuthoring))!;
+            Assert.That(external.Message, Does.Contain("groupMembershipAgentCapacity"));
+            Assert.That(external.Message, Does.Contain("explicitly configured"));
+        }
+
+        [Test]
+        public void MassNavigationConfig_ExternalAuthoringOmitsRequiredMeshAssetIds()
+        {
+            JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            JsonObject presentation = config["presentation"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.presentation must be authored.");
+            presentation.Remove("requiredMeshAssetIds");
+            presentation["teams"] = new JsonArray();
+            (config["scenarioRuntime"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.scenarioRuntime must be authored."))["autoSpawnConfiguredScenario"] = false;
+
+            MassNavigationConfig loaded = MassNavigationConfig.Load(config);
+            Assert.That(loaded.Presentation.RequiredMeshAssetIds, Is.Empty);
+
+            JsonObject autoSpawnMissingMeshIds = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            (autoSpawnMissingMeshIds["presentation"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.presentation must be authored.")).Remove("requiredMeshAssetIds");
+
+            InvalidOperationException missingMeshIds = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(autoSpawnMissingMeshIds))!;
+            Assert.That(missingMeshIds.Message, Does.Contain("requiredMeshAssetIds"));
+        }
+
+        [Test]
+        public void MassNavigationConfig_RejectsRemovedDeadKeysThroughStrictMapping()
+        {
+            JsonObject styleIdConfig = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            JsonArray teams = styleIdConfig["presentation"]?["teams"]?.AsArray()
+                ?? throw new InvalidOperationException("MassNavigationConfig.presentation.teams must be authored.");
+            teams[0]!.AsObject()["styleId"] = "blue";
+
+            JsonException styleId = Assert.Throws<JsonException>(() => MassNavigationConfig.Load(styleIdConfig))!;
+            Assert.That(styleId.Message, Does.Contain("styleId"));
+
+            JsonObject flowConfig = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            (flowConfig["flow"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.flow must be authored."))["forceRefreshFlow"] = true;
+
+            JsonException forceRefresh = Assert.Throws<JsonException>(() => MassNavigationConfig.Load(flowConfig))!;
+            Assert.That(forceRefresh.Message, Does.Contain("forceRefreshFlow"));
+
+            JsonObject arrivalConfig = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            (arrivalConfig["arrival"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.arrival must be authored."))["timeoutMinMs"] = 250;
+
+            JsonException arrivalRange = Assert.Throws<JsonException>(() => MassNavigationConfig.Load(arrivalConfig))!;
+            Assert.That(arrivalRange.Message, Does.Contain("timeoutMinMs"));
+        }
+
+        [Test]
         public void ParallelStep_RequiresSchedulerWhenConfiguredParallel()
         {
             JobScheduler? previousScheduler = World.SharedJobScheduler;
@@ -904,6 +1089,126 @@ namespace Ludots.Tests.Presentation
                 new EntityLayer(layer.CategoryMask, layer.InteractionMask),
                 new FacingDirection { AngleRad = 0f },
                 OrderBuffer.CreateEmpty());
+        }
+
+        [Test]
+        public void CadenceAgentSlicing_SpreadsSolverRoundsAcrossFixedTicks()
+        {
+            var config = new MassNavigationCadenceConfig
+            {
+                SimulationHz = 15,
+                TargetUpdateHz = 15,
+                FlowStepHz = 5,
+                FlowCrowdStampHz = 5,
+                FlowObstacleStampHz = 2,
+                HardResolveHz = 10,
+                EntitySyncHz = 15,
+                MaxStepsPerFixedTick = 1,
+                HardResolveCandidateThresholdAgents = 1,
+                AgentSliceCount = 3,
+            };
+            var scheduler = new MassNavigationCadenceScheduler(config);
+            const float fixedDt = 1f / 45f;
+            const int fixedTicks = 90;
+            int sliceSteps = 0;
+            var sliceVisits = new int[3];
+            int roundStarts = 0;
+            int hardResolveRounds = 0;
+            for (int tick = 0; tick < fixedTicks; tick++)
+            {
+                int stepsToRun = scheduler.BeginFixedTick(fixedDt);
+                Assert.That(stepsToRun, Is.LessThanOrEqualTo(1), "Sliced cadence must keep one slice step per fixed tick.");
+                for (int step = 0; step < stepsToRun; step++)
+                {
+                    MassNavigationCadenceStep cadenceStep = scheduler.NextSimulationStep();
+                    Assert.That(cadenceStep.SimulationDt, Is.EqualTo(1f / 15f).Within(0.00001f),
+                        "Each agent must keep stepping with the full simulationHz delta.");
+                    Assert.That(cadenceStep.AgentSliceCount, Is.EqualTo(3));
+                    sliceVisits[cadenceStep.AgentSliceIndex]++;
+                    if (cadenceStep.AgentSliceRoundStart)
+                    {
+                        roundStarts++;
+                        if (cadenceStep.RunHardResolve)
+                        {
+                            hardResolveRounds++;
+                        }
+                    }
+
+                    sliceSteps++;
+                }
+            }
+
+            Assert.That(sliceSteps, Is.EqualTo(90), "45 slice steps per second must amortize across every fixed tick.");
+            Assert.That(roundStarts, Is.EqualTo(30), "Rounds must complete at simulationHz (15 per second).");
+            foreach (int visits in sliceVisits)
+            {
+                Assert.That(visits, Is.EqualTo(30), "Every agent slice must be visited exactly once per round.");
+            }
+
+            Assert.That(hardResolveRounds, Is.EqualTo(20), "Hard resolve must keep its 10Hz round cadence.");
+        }
+
+        [Test]
+        public void CadenceAgentSlicing_DefaultSingleSliceKeepsLegacyStepRhythm()
+        {
+            var config = new MassNavigationCadenceConfig
+            {
+                SimulationHz = 15,
+                TargetUpdateHz = 15,
+                FlowStepHz = 5,
+                FlowCrowdStampHz = 5,
+                FlowObstacleStampHz = 2,
+                HardResolveHz = 10,
+                EntitySyncHz = 15,
+                MaxStepsPerFixedTick = 1,
+                HardResolveCandidateThresholdAgents = 1,
+                AgentSliceCount = 1,
+            };
+            var scheduler = new MassNavigationCadenceScheduler(config);
+            int steps = 0;
+            int hardResolveSteps = 0;
+            for (int tick = 0; tick < 90; tick++)
+            {
+                int stepsToRun = scheduler.BeginFixedTick(1f / 45f);
+                for (int step = 0; step < stepsToRun; step++)
+                {
+                    MassNavigationCadenceStep cadenceStep = scheduler.NextSimulationStep();
+                    Assert.That(cadenceStep.AgentSliceIndex, Is.EqualTo(0));
+                    Assert.That(cadenceStep.AgentSliceCount, Is.EqualTo(1));
+                    Assert.That(cadenceStep.AgentSliceRoundStart, Is.True);
+                    if (cadenceStep.RunHardResolve)
+                    {
+                        hardResolveSteps++;
+                    }
+
+                    steps++;
+                }
+            }
+
+            Assert.That(steps, Is.EqualTo(30), "Default cadence keeps the legacy 15Hz simulation rhythm at fixed 45Hz.");
+            Assert.That(hardResolveSteps, Is.EqualTo(20));
+        }
+
+        [Test]
+        public void CadenceAgentSlicing_RejectsUnsustainableSliceRate()
+        {
+            var config = new MassNavigationCadenceConfig
+            {
+                SimulationHz = 15,
+                TargetUpdateHz = 15,
+                FlowStepHz = 5,
+                FlowCrowdStampHz = 5,
+                FlowObstacleStampHz = 2,
+                HardResolveHz = 10,
+                EntitySyncHz = 15,
+                MaxStepsPerFixedTick = 1,
+                HardResolveCandidateThresholdAgents = 1,
+                AgentSliceCount = 4,
+            };
+            var scheduler = new MassNavigationCadenceScheduler(config);
+            InvalidOperationException rejected = Assert.Throws<InvalidOperationException>(
+                () => scheduler.BeginFixedTick(1f / 45f))!;
+            Assert.That(rejected.Message, Does.Contain("agentSliceCount"));
         }
 
         private static JsonObject ReadObject(string path)

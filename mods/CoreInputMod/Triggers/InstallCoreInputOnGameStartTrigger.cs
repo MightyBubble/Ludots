@@ -1,16 +1,19 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using Arch.Core;
 using CoreInputMod.Systems;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Systems;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
+using Ludots.Core.Networking.Runtime;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Client;
@@ -96,8 +99,52 @@ namespace CoreInputMod.Triggers
             RegisterLoadedModViewModes(engine);
             engine.RegisterSystem(new ViewModeSwitchSystem(engine.GlobalContext), SystemGroup.LocalInput);
 
+            InstallDeclaredLocalOrderSources(engine);
+
             _ctx.Log($"[CoreInputMod] Acquisition enabled: {commandSourceAcquisitionConfig.Acquisition.Enabled}; input and presentation systems registered.");
             return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Standard local order sources are config-declared: every loaded mod shipping
+        /// assets/Input/local_order_source.json gets LocalOrderSourceSystem installed against its
+        /// own input_order_mappings.json, replacing per-mod wrapper systems. Local order sources
+        /// exist only where local presentation exists; authoritative servers skip them.
+        /// </summary>
+        private void InstallDeclaredLocalOrderSources(GameEngine engine)
+        {
+            if (engine.ModLoader?.LoadedModIds == null ||
+                engine.GetService(CoreServiceKeys.NetworkProcessRole) == NetworkProcessRole.AuthoritativeServer)
+            {
+                return;
+            }
+
+            OrderQueue orders = engine.GetService(CoreServiceKeys.OrderQueue)
+                ?? throw new InvalidOperationException("Declared local order sources require OrderQueue.");
+            IReadOnlyList<string> modIds = engine.ModLoader.LoadedModIds;
+            for (int i = 0; i < modIds.Count; i++)
+            {
+                string modId = modIds[i];
+                string uri = $"{modId}:assets/Input/local_order_source.json";
+                if (!_ctx.VFS.TryResolveFullPath(uri, out string? fullPath) || !File.Exists(fullPath))
+                {
+                    continue;
+                }
+
+                LocalOrderSourceConfig config;
+                using (var stream = File.OpenRead(fullPath))
+                {
+                    config = LocalOrderSourceConfig.LoadFromStream(stream);
+                }
+
+                var group = string.Equals(config.SystemGroup, "LocalInput", StringComparison.Ordinal)
+                    ? SystemGroup.LocalInput
+                    : SystemGroup.InputCollection;
+                engine.RegisterSystem(
+                    new LocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx, config, modId),
+                    group);
+                _ctx.Log($"[CoreInputMod] Installed declared local order source for {modId} ({config.SystemGroup}).");
+            }
         }
 
         private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)

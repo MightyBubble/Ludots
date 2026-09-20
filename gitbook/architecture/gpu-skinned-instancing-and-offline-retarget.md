@@ -36,11 +36,12 @@ src/Client/.../RaylibPrimitiveRenderer.cs
 
 ### 3.2 GPU 骨骼实例化合同
 
-- 采样：`LoadModelAnimations` + 帧索引 → `UpdateModelAnimationBones`（写 `mesh.boneMatrices`）
-- 分桶键：`(meshAssetId, materialId, clipIndex, frameIndex, colorKey)`
-- 绘制：上传该桶 `boneMatrices[MAX_BONES]`，再 `DrawMeshInstanced(worldMatrices)`
-- 着色器：`skin(boneIds, boneWeights, boneMatrices) * instanceTransform * mvp`
-- 不同步动画时间的实例进不同桶；同姿势共享一次骨骼上传
+- 采样：关键帧全局 TRS + `bindPose⁻¹` 一次性驻模型数据 SSBO；每帧 compute（`skinning_pose_compute.glsl`）按行描述合成骨骼矩阵（raylib 5.5 `UpdateModelAnimationBones` 的 TRS 分解式逐位等价，5330 万元素对账合同）
+- 分桶键：`(meshAssetId, materialId, LOD, profile, clipIndex, 相位桶)`；姿势行驻姿势 SSBO（每行 `MaxBoneSlots` 个 mat4），实例（仿射变换 3×vec4 + poseRow/tint）驻实例 SSBO——零逐实例上传
+- 绘制：每帧每 program 一次 1 实例 raylib `DrawMeshInstanced` priming（NVIDIA GL 按首次调用模式特化 program，实验锁定），其余全部直接 `glDrawElementsInstanced`
+- 着色器：`skin(poseMatrices[poseRow*uPoseStride+uBoneBase+boneId], weights) * instanceTransform * mvp`（binding 2=姿势、3=实例，GLSL 430）
+- 能力门：`Gl43.Initialize` 探针——ARB 扩展 + 最小 430 着色器实测编译，缺失即 fail-closed（mac GL 4.1 不在此特性级）
+- GPU 计时：`gpuSkinPoseGpu/gpuSkinMainGpu/gpuSkinShadowGpu` 三列（glQueryCounter 延迟回读）
 
 ### 3.3 复用与禁区
 

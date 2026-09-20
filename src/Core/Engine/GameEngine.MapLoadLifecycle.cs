@@ -4,9 +4,12 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
+using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
+using Ludots.Core.MovePlanning;
 using Ludots.Core.Persistence;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
@@ -17,6 +20,9 @@ namespace Ludots.Core.Engine
 {
     public partial class GameEngine
     {
+        private const string MassNavigationMovePlanOrderAdapterInstalledKey =
+            "GameEngine.MassNavigationMovePlanOrderAdapterInstalled";
+
         public MapSession CurrentMapSession { get; private set; }
 
         private readonly Dictionary<MapId, PendingMapLoadState> _pendingMapLoads = new();
@@ -491,7 +497,10 @@ namespace Ludots.Core.Engine
             {
                 SetMapEntitiesSuspended(session.MapId, false);
                 ApplyDefaultCamera(mapConfig);
-                _massNavigationRuntime.HandleMapFocused(this, session.MapId);
+                if (_massNavigationRuntime.HandleMapFocused(this, session.MapId))
+                {
+                    InstallMassNavigationMovePlanOrderAdapter();
+                }
             }
             else
             {
@@ -614,11 +623,48 @@ namespace Ludots.Core.Engine
             }
 
             ApplyDefaultCamera(session.MapConfig);
-            _massNavigationRuntime.HandleMapFocused(this, session.MapId);
+            if (_massNavigationRuntime.HandleMapFocused(this, session.MapId))
+            {
+                InstallMassNavigationMovePlanOrderAdapter();
+            }
             ScriptContext resumeCtx = CreateMapEventContext(session);
             CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(session.MapId, GameEvents.MapResumed, resumeCtx));
             CaptureFocusedParticipantOverrides(session);
             session.TeamRelationships = TeamManager.CaptureSnapshot();
+        }
+
+        /// <summary>
+        /// MovePlan order adapter (Projection + Lifecycle) installs when the mass-navigation
+        /// runtime activates on its configured mapId — the activation contract — so downstream
+        /// mods never wire the adapter themselves. Lives in the engine composition layer because
+        /// RFC-0065 keeps the MassNavigation execution domain free of order-type knowledge; the
+        /// projection system anchors directly before the MovePlan execution system the runtime
+        /// installed during activation.
+        /// </summary>
+        internal void InstallMassNavigationMovePlanOrderAdapter()
+        {
+            if (GlobalContext.ContainsKey(MassNavigationMovePlanOrderAdapterInstalledKey))
+            {
+                return;
+            }
+
+            OrderTypeRegistry orderTypes = GetService(CoreServiceKeys.OrderTypeRegistry)
+                ?? throw new InvalidOperationException(
+                    "MassNavigation map focus requires OrderTypeRegistry before installing the MovePlan order adapter.");
+            if (!orderTypes.TryGetId(MassNavigationOrderKeys.Move, out int moveOrderTypeId))
+            {
+                throw new InvalidOperationException(
+                    $"MassNavigation map focus requires GAS/order_types.json to define '{MassNavigationOrderKeys.Move}' " +
+                    "before the MovePlan order adapter can install.");
+            }
+
+            InsertSystemBeforeRequired<IMovePlanCommandGroupExecutionSystem>(
+                new MovePlanOrderProjectionSystem(World, moveOrderTypeId),
+                SystemGroup.AbilityActivation);
+            RegisterSystem(
+                new MovePlanOrderLifecycleSystem(World, orderTypes, moveOrderTypeId),
+                SystemGroup.AbilityActivation);
+            GlobalContext[MassNavigationMovePlanOrderAdapterInstalledKey] = true;
         }
 
         private void CancelPendingMapLoad(MapId mapId, string reason, bool markFailed)

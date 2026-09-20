@@ -23,8 +23,10 @@ namespace Ludots.Core.Presentation.Rendering
         private int _skinnedLaneItemCount;
         private int _staticMeshDeltaItemCount;
         private int _staticMeshRemovedStableIdCount;
+        private int _staticBaseCount;
 
         public int Count => _count;
+        public int StaticBaseCount => _staticBaseCount;
         public int Capacity => _buffer.Length;
         public int Revision => _revision;
         public int ProjectionGeneration => _projectionGeneration;
@@ -79,7 +81,12 @@ namespace Ludots.Core.Presentation.Rendering
             if (item.RenderPath.IsStaticInstanceLane())
             {
                 _staticMeshLaneItemCount++;
-                _staticSlotByStableId[item.StableId] = slot;
+                if (slot < _staticBaseCount ||
+                    !_staticSlotByStableId.TryGetValue(item.StableId, out int mappedSlot) ||
+                    mappedSlot >= _staticBaseCount)
+                {
+                    _staticSlotByStableId[item.StableId] = slot;
+                }
             }
             else if (item.RenderPath.IsSkinnedLane())
             {
@@ -123,6 +130,8 @@ namespace Ludots.Core.Presentation.Rendering
                     Add(in item);
                 }
             }
+
+            _staticBaseCount = _count;
         }
 
         private void RemoveStaticMeshInstance(int stableId)
@@ -194,6 +203,7 @@ namespace Ludots.Core.Presentation.Rendering
         public void Clear()
         {
             _count = 0;
+            _staticBaseCount = 0;
             _staticSlotByStableId.Clear();
             _staticMeshLaneItemCount = 0;
             _skinnedLaneItemCount = 0;
@@ -201,6 +211,34 @@ namespace Ludots.Core.Presentation.Rendering
             _staticMeshDeltaItemCount = 0;
             _staticMeshRemovedStableIdCount = 0;
             DroppedSinceClear = 0;
+        }
+
+        public void ClearTransientProjection()
+        {
+            for (int i = _staticBaseCount; i < _count; i++)
+            {
+                if (_buffer[i].RenderPath.IsStaticInstanceLane())
+                {
+                    _staticMeshLaneItemCount--;
+                    if (_staticSlotByStableId.TryGetValue(_buffer[i].StableId, out int slot) && slot == i)
+                    {
+                        _staticSlotByStableId.Remove(_buffer[i].StableId);
+                    }
+                }
+                else if (_buffer[i].RenderPath.IsSkinnedLane())
+                {
+                    _skinnedLaneItemCount--;
+                }
+
+                _buffer[i] = default;
+            }
+
+            _count = _staticBaseCount;
+        }
+
+        public void MarkStaticProjectionBoundary()
+        {
+            _staticBaseCount = _count;
         }
     }
 }

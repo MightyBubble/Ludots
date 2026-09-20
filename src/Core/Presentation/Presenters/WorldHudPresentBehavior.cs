@@ -98,10 +98,7 @@ namespace Ludots.Core.Presentation.Presenters
 
         private static bool ResolveRevealHidden(Dictionary<string, object> globals)
         {
-            return globals != null &&
-                   globals.TryGetValue(CoreServiceKeys.PresentationAudienceRevealHidden.Name, out object value) &&
-                   value is bool revealHidden &&
-                   revealHidden;
+            return KnowledgeProjectionConsumer.IsAudienceRevealHidden(globals);
         }
 
         private static PresentProjectionFacts ResolveProjectionFacts(
@@ -111,6 +108,11 @@ namespace Ludots.Core.Presentation.Presenters
             Entity owner,
             ReadOnlySpan<int> requiredAttributeIds)
         {
+            if (KnowledgeProjectionConsumer.IsAudienceRevealHidden(globals))
+            {
+                return default;
+            }
+
             if (globals != null &&
                 KnowledgeProjectionConsumer.TryResolveForViewer(
                     world,

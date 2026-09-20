@@ -81,6 +81,8 @@ namespace Ludots.Core.Presentation.Presenters
 
     public struct WorldTextConfig
     {
+        public const int UnboundAttributeId = -1;
+
         public WorldTextConfig()
         {
             TextTokenId = 0;
@@ -88,6 +90,7 @@ namespace Ludots.Core.Presentation.Presenters
             ValueParamKey = PresenterParamKeyRegistry.UnsetParamKey;
             SecondaryValueParamKey = PresenterParamKeyRegistry.UnsetParamKey;
             FontSize = 16;
+            BoundAttributeId = UnboundAttributeId;
         }
 
         public int TextTokenId;
@@ -95,6 +98,13 @@ namespace Ludots.Core.Presentation.Presenters
         public int ValueParamKey;
         public int SecondaryValueParamKey;
         public int FontSize;
+
+        /// <summary>
+        /// 值绑定声明（定义编译期从同定义 attributeBinding 解析）：模式化文本的值参数
+        /// 由属性直接供给时非负，投影期按 Owner 的 AttributeBuffer 现读权威值；
+        /// 解析不出同源属性则保持 Unbound，走既有参数快照语义。
+        /// </summary>
+        public int BoundAttributeId;
     }
 
     public struct TrailMeshConfig

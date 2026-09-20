@@ -127,6 +127,22 @@ namespace Ludots.Raylib.Render
                 out _);
         }
 
+        public static IReadOnlyDictionary<int, int>? ResolveStateMap(
+            int profileId,
+            int logicalMeshAssetId,
+            Func<int, int, IReadOnlyDictionary<int, int>?>? resolver)
+        {
+            if (profileId == 0) return null;
+            if (resolver == null)
+            {
+                throw new InvalidOperationException(
+                    $"Animation profile id={profileId} requires a bound Raylib state map resolver.");
+            }
+
+            return resolver(profileId, logicalMeshAssetId)
+                ?? throw new InvalidOperationException($"Animation profile id={profileId} has no Raylib state map.");
+        }
+
         public static void ResolveFromAnimator(
             in AnimatorPackedState packed,
             ModelAnimation* animations,
@@ -188,6 +204,35 @@ namespace Ludots.Raylib.Render
             }
 
             return (int)(t * (frameCount - 1));
+        }
+
+        public static int QuantizeFrameIndex(int frameIndex, int frameCount, int phaseBuckets)
+        {
+            if (phaseBuckets <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibSkinnedPlayback)} posePhaseBuckets={phaseBuckets}; a positive configured value is required.");
+            }
+
+            if (frameCount <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibSkinnedPlayback)} clip has frameCount={frameCount}; GpuSkinnedInstance requires a usable clip.");
+            }
+
+            if ((uint)frameIndex >= (uint)frameCount)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibSkinnedPlayback)} frameIndex={frameIndex} is outside frameCount={frameCount}.");
+            }
+
+            if (phaseBuckets >= frameCount)
+            {
+                return frameIndex;
+            }
+
+            int bucket = (int)((long)frameIndex * phaseBuckets / frameCount);
+            return ResolveFrameIndex(frameCount, (bucket + 0.5f) / phaseBuckets, looping: true);
         }
 
         private void EnsureBound()

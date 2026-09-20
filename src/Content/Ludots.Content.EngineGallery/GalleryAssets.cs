@@ -211,7 +211,12 @@ namespace Ludots.Content.EngineGallery
     /// <summary>蒙皮批次快照的最小直读实现。</summary>
     public sealed class GallerySkinnedBatch : ISkinnedVisualBatchSnapshot
     {
-        private readonly List<SkinnedVisualBatchItem> _items = new(128);
+        private readonly List<SkinnedVisualBatchItem> _items;
+
+        public GallerySkinnedBatch(int capacity = 128)
+        {
+            _items = new List<SkinnedVisualBatchItem>(Math.Max(capacity, 128));
+        }
 
         public IReadOnlyList<SkinnedVisualBatchItem> Items => _items;
 

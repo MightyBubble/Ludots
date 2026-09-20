@@ -351,6 +351,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _engineResolver = engineResolver ?? throw new ArgumentNullException(nameof(engineResolver));
         }
 
+        /// <summary>共享到期时间轮；直接取消路径写标记后强制快道效果下一 slice 出桶。</summary>
+        internal Ludots.Core.Gameplay.GAS.Systems.EffectDueWheel? DueWheel { get; set; }
+        internal Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry? AggregateDirty { get; set; }
+
         public GasGraphRuntimeApi(
             World world,
             ISpatialQueryService? spatialQueries = null,
@@ -392,6 +396,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private TagOps RequireTagOps()
         {
             return _tagOps ?? throw new InvalidOperationException("GAS.GRAPH.ERR.MissingTagOps");
+        }
+
+        private Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry RequireAggregateDirty()
+        {
+            return AggregateDirty ?? throw new InvalidOperationException(Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry.MissingRegistryError);
         }
 
 
@@ -2151,10 +2160,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
                 ref var gameplayEffect = ref _world.Get<GameplayEffect>(effectEntity);
                 gameplayEffect.CancelRequested = true;
-                if (gameplayEffect.AggregatesModifiers && !_world.Has<AttributeAggregateDirty>(target))
+                if (gameplayEffect.AggregatesModifiers)
                 {
-                    _world.Add(target, new AttributeAggregateDirty());
+                    RequireAggregateDirty().MarkDirty(target);
                 }
+
+                DueWheel?.ForceVisit(effectEntity);
             }
         }
 

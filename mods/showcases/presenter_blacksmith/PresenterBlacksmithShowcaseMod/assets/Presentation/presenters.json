@@ -1508,7 +1508,7 @@
           "assetId": "cube",
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
-          "mobility": "Movable",
+          "mobility": "Static",
           "localOffset": [
             0,
             0.18,

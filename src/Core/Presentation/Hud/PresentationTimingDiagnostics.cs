@@ -217,6 +217,9 @@ namespace Ludots.Core.Presentation.Hud
         public float LastGpuSkinnedMeshDrawMs { get; private set; }
         public float LastGpuSkinnedPoseBuildMs { get; private set; }
         public float LastGpuSkinnedTextureUploadMs { get; private set; }
+        public float LastGpuSkinnedPoseComputeGpuMs { get; private set; }
+        public float LastGpuSkinnedMainDrawGpuMs { get; private set; }
+        public float LastGpuSkinnedShadowDrawGpuMs { get; private set; }
         public int GpuSkinnedUniquePosesLastFrame { get; private set; }
         public long GpuSkinnedTextureUploadBytesLastFrame { get; private set; }
         public int PrimitiveMatrixCacheHitsLastFrame { get; private set; }
@@ -654,6 +657,9 @@ namespace Ludots.Core.Presentation.Hud
             double gpuSkinnedMeshDrawMs = 0d,
             double gpuSkinnedPoseBuildMs = 0d,
             double gpuSkinnedTextureUploadMs = 0d,
+            double gpuSkinnedPoseComputeGpuMs = 0d,
+            double gpuSkinnedMainDrawGpuMs = 0d,
+            double gpuSkinnedShadowDrawGpuMs = 0d,
             int gpuSkinnedUniquePoses = 0,
             long gpuSkinnedTextureUploadBytes = 0)
         {
@@ -678,6 +684,9 @@ namespace Ludots.Core.Presentation.Hud
             LastGpuSkinnedMeshDrawMs = (float)gpuSkinnedMeshDrawMs;
             LastGpuSkinnedPoseBuildMs = (float)gpuSkinnedPoseBuildMs;
             LastGpuSkinnedTextureUploadMs = (float)gpuSkinnedTextureUploadMs;
+            LastGpuSkinnedPoseComputeGpuMs = (float)gpuSkinnedPoseComputeGpuMs;
+            LastGpuSkinnedMainDrawGpuMs = (float)gpuSkinnedMainDrawGpuMs;
+            LastGpuSkinnedShadowDrawGpuMs = (float)gpuSkinnedShadowDrawGpuMs;
             GpuSkinnedUniquePosesLastFrame = gpuSkinnedUniquePoses;
             GpuSkinnedTextureUploadBytesLastFrame = gpuSkinnedTextureUploadBytes;
             PrimitiveMatrixCacheHitsLastFrame = matrixCacheHits;

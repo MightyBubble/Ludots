@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using CapabilityStandardCrowdPhysicsArenaMod.Runtime;
 using CapabilityStandardCrowdPhysicsArenaMod.Systems;
 using Ludots.Core.Engine;
-using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.MassNavigation.Systems;
 using Ludots.Core.Modding;
 using Ludots.Core.Movement.Physics2DBridge;
 using Ludots.Core.Presentation.Minimap;
@@ -15,11 +15,8 @@ public sealed class CapabilityStandardCrowdPhysicsArenaModEntry : IMod
 {
     private const string ObserverVisibilitySystemInstalledKey =
         "CapabilityStandardCrowdPhysicsArena.ObserverVisibilitySystemInstalled";
-    private const string LocalOrderSourceSystemInstalledKey =
-        "CapabilityStandardCrowdPhysicsArena.LocalOrderSourceSystemInstalled";
     private const string PressurePlateDoorSystemInstalledKey =
         "CapabilityStandardCrowdPhysicsArena.PressurePlateDoorSystemInstalled";
-    private IModContext? _context;
 
     /// <summary>Queryable plate/door state for tests and HUD (installed once per engine).</summary>
     public static readonly ServiceKey<CrowdPhysicsArenaPressurePlateDoorSystem> PressurePlateDoorSystemKey =
@@ -27,7 +24,6 @@ public sealed class CapabilityStandardCrowdPhysicsArenaModEntry : IMod
 
     public void OnLoad(IModContext context)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
         context.Log("[CapabilityStandardCrowdPhysicsArenaMod] Loaded");
         CrowdPhysicsArenaComponentAuthoring.Register(context.ModId);
         context.OnEvent(GameEvents.GameStart, ConfigureArenaShowcaseAsync);
@@ -47,13 +43,10 @@ public sealed class CapabilityStandardCrowdPhysicsArenaModEntry : IMod
             return Task.CompletedTask;
         }
 
-        IModContext modContext = _context
-            ?? throw new InvalidOperationException("CapabilityStandardCrowdPhysicsArenaMod requires IModContext.");
         // 竞技场 Q/E 技能通过按键施放（input mapping），技能栏 overlay 是纯显示且无点击交互，
         // 在竞技场里没有信息增益——显式关闭（CoreInputMod.SkillBarEnabled）。
         engine.GlobalContext["CoreInputMod.SkillBarEnabled"] = false;
         EnsureObserverVisibilitySystem(engine);
-        EnsureLocalOrderSourceSystem(engine, modContext);
         EnsurePressurePlateDoorSystem(engine);
         bool mapFocused = CapabilityStandardCrowdPhysicsArenaMapFocus.IsStartupMapFocused(engine);
         engine.SetService(CoreServiceKeys.PresentationAudienceRevealHidden, mapFocused);
@@ -80,13 +73,10 @@ public sealed class CapabilityStandardCrowdPhysicsArenaModEntry : IMod
         }
 
         engine.RegisterSystem(
-            new CrowdPhysicsArenaObserverVisibilityBindingSystem(engine),
+            MassNavigationObserverDisclosure.CreateLocalAgentDisclosure(engine),
             SystemGroup.RuntimeEntityBinding);
         engine.GlobalContext[ObserverVisibilitySystemInstalledKey] = true;
     }
-
-
-
 
     private static void EnsurePressurePlateDoorSystem(GameEngine engine)
     {
@@ -106,20 +96,5 @@ public sealed class CapabilityStandardCrowdPhysicsArenaModEntry : IMod
         engine.SetService(PressurePlateDoorSystemKey, plateSystem);
 
         engine.GlobalContext[PressurePlateDoorSystemInstalledKey] = true;
-    }
-
-    private static void EnsureLocalOrderSourceSystem(GameEngine engine, IModContext context)
-    {
-        if (engine.GlobalContext.ContainsKey(LocalOrderSourceSystemInstalledKey))
-        {
-            return;
-        }
-
-        OrderQueue orders = engine.GetService(CoreServiceKeys.OrderQueue)
-            ?? throw new InvalidOperationException("CapabilityStandardCrowdPhysicsArenaMod requires OrderQueue.");
-        engine.RegisterSystem(
-            new CrowdPhysicsArenaLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, context),
-            SystemGroup.InputCollection);
-        engine.GlobalContext[LocalOrderSourceSystemInstalledKey] = true;
     }
 }

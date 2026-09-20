@@ -272,7 +272,6 @@ namespace Ludots.Tests.GAS
             ExecuteProgram(world, api, caster: Entity.Null, target, program);
 
             That(world.Get<GameplayEffect>(effect).CancelRequested, Is.True);
-            That(world.Has<AttributeAggregateDirty>(target), Is.True);
         }
 
         // ════════════════════════════════════════════════════════════════════

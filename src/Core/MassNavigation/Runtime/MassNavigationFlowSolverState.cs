@@ -111,6 +111,8 @@ public sealed partial class MassNavigationFlowSolverState
     private float[] _maxInteractingBodyRadiiCm = Array.Empty<float>();
     private bool _maxInteractingBodyRadiiDirty = true;
     private int _crowdStampCursor;
+    private int _flowRefreshCursor = int.MaxValue;
+    private int _staticCostRevision;
     private float _worldOriginXCm;
     private float _worldOriginYCm;
     private float _worldMinXCm = float.NegativeInfinity;
@@ -125,6 +127,10 @@ public sealed partial class MassNavigationFlowSolverState
     public int PendingEntitySyncCount => _entitySyncDirtyCount;
     public int PendingArrivalEventCount => _arrivalEventCount;
     public float LastFlowFieldRebuildMs { get; private set; }
+    public int LastSteppingAgentCount { get; private set; }
+    public int LastHardResolveOwnerAgentCount { get; private set; }
+    public int LastEntitySyncAgentCount { get; private set; }
+    public int LastFlowRefreshStateCount { get; private set; }
     public int LastHardResolveCandidateAgentCount { get; private set; }
     public int LastHardResolveFallbackProbeAgentCount { get; private set; }
     public long LastHardResolveFallbackPairCheckCount { get; private set; }
@@ -964,9 +970,40 @@ public sealed partial class MassNavigationFlowSolverState
         Action<double>? observeLocalSteering = null,
         Action<double>? observeHardResolve = null)
     {
+        Step(
+            dt,
+            world,
+            navGroupRuntime,
+            runHardResolve,
+            hardResolveCandidateThresholdAgents,
+            agentSliceIndex: 0,
+            agentSliceCount: 1,
+            observeStepPrep,
+            observeLocalSteering,
+            observeHardResolve);
+    }
+
+    internal void Step(
+        float dt,
+        World world,
+        MassNavigationGroupRuntime navGroupRuntime,
+        bool runHardResolve,
+        int hardResolveCandidateThresholdAgents,
+        int agentSliceIndex,
+        int agentSliceCount,
+        Action<double>? observeStepPrep = null,
+        Action<double>? observeLocalSteering = null,
+        Action<double>? observeHardResolve = null)
+    {
         if (UnitCount <= 0)
         {
             return;
+        }
+
+        if (agentSliceCount < 1 || (uint)agentSliceIndex >= (uint)agentSliceCount)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigationFlow solver agent slice {agentSliceIndex}/{agentSliceCount} is outside the valid cadence slice range.");
         }
 
         if (_quadrantSpreadSpawnActive && !_quadrantSpreadTargetsPlanted)
@@ -974,23 +1011,38 @@ public sealed partial class MassNavigationFlowSolverState
             PlantQuadrantSpreadUnitTargets();
         }
 
+        ComputeAgentSliceWindow(agentSliceIndex, agentSliceCount, out int sliceStart, out int sliceEnd);
+        bool roundStart = agentSliceIndex == 0;
         long prepStart = System.Diagnostics.Stopwatch.GetTimestamp();
         RefreshTeamRelationshipMatrixIfStale();
 
         float clampedDt = Math.Clamp(dt, 0f, Semantics.Solver.MaxStepDtSeconds);
-        _frameCount++;
-        int scalarCount = UnitCount * 2;
-        Array.Copy(_positionsCm, _readPositionsCm, scalarCount);
-        Array.Copy(_velocitiesCm, _readVelocitiesCm, scalarCount);
-        _useCandidateGating = UnitCount >= Math.Max(1, hardResolveCandidateThresholdAgents);
-        if (_useCandidateGating)
+        if (roundStart)
         {
-            Array.Clear(_hardResolveCandidates, 0, UnitCount);
-            for (int displacedIndex = 0; displacedIndex < _displacedAgentCount; displacedIndex++)
+            _frameCount++;
+            int scalarCount = UnitCount * 2;
+            Array.Copy(_positionsCm, _readPositionsCm, scalarCount);
+            Array.Copy(_velocitiesCm, _readVelocitiesCm, scalarCount);
+            _useCandidateGating = UnitCount >= Math.Max(1, hardResolveCandidateThresholdAgents);
+            if (_useCandidateGating)
             {
-                _hardResolveCandidates[_displacedAgents[displacedIndex]] = 1;
+                Array.Clear(_hardResolveCandidates, 0, UnitCount);
+                for (int displacedIndex = 0; displacedIndex < _displacedAgentCount; displacedIndex++)
+                {
+                    _hardResolveCandidates[_displacedAgents[displacedIndex]] = 1;
+                }
             }
+
+            RecomputeMaxInteractingBodyRadiiCmIfDirty();
+            BuildSeparationHash(_readPositionsCm);
         }
+
+        observeStepPrep?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - prepStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
+
+        int hwm1 = _separationHashWidth - 1;
+        int hhm1 = _separationHashHeight - 1;
+        float invHashCell = 1f / _separationHashCellSizeCm;
+        int flowObstacleNeighborRadiusCells = Semantics.Solver.FlowObstacleNeighborRadiusCells;
 
         float sepRadiusCm = Semantics.Steering.SeparationRadiusCm;
         float sepRadiusSq = sepRadiusCm * sepRadiusCm;
@@ -999,39 +1051,32 @@ public sealed partial class MassNavigationFlowSolverState
         float unitTargetStopThresholdCm = Semantics.Group.UnitTargetStopThresholdCm;
         float unitTargetStopThresholdSq = unitTargetStopThresholdCm * unitTargetStopThresholdCm;
 
-        RecomputeMaxInteractingBodyRadiiCmIfDirty();
-        BuildSeparationHash(_readPositionsCm);
-        observeStepPrep?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - prepStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
-
-        int hwm1 = _separationHashWidth - 1;
-        int hhm1 = _separationHashHeight - 1;
-        float invHashCell = 1f / _separationHashCellSizeCm;
-        int flowObstacleNeighborRadiusCells = Semantics.Solver.FlowObstacleNeighborRadiusCells;
-
-        int workerCount = Math.Min(_parallelWorkerCount, UnitCount);
+        LastSteppingAgentCount = sliceEnd - sliceStart;
+        int sliceLength = sliceEnd - sliceStart;
+        int workerCount = Math.Min(_parallelWorkerCount, sliceLength);
         if (workerCount <= 1 || UnitCount < Semantics.Solver.ParallelStepMinAgents)
         {
             long steeringStart = System.Diagnostics.Stopwatch.GetTimestamp();
-            StepRange(0, UnitCount, scratchWorkerIndex: 0, clampedDt, navGroupRuntime, sepRadiusSq, sepRadiusCm, arrivalRadiusCm, arrivalRadiusSq, unitTargetStopThresholdSq, hwm1, hhm1, invHashCell, flowObstacleNeighborRadiusCells, _useCandidateGating);
+            StepRange(sliceStart, sliceEnd, scratchWorkerIndex: 0, clampedDt, navGroupRuntime, sepRadiusSq, sepRadiusCm, arrivalRadiusCm, arrivalRadiusSq, unitTargetStopThresholdSq, hwm1, hhm1, invHashCell, flowObstacleNeighborRadiusCells, _useCandidateGating);
             observeLocalSteering?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - steeringStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
-            ClampAllPositionsToWorldBounds();
+            ClampPositionsToWorldBounds(sliceStart, sliceEnd);
             long resolveStart = System.Diagnostics.Stopwatch.GetTimestamp();
             if (runHardResolve)
             {
-                ResolveHardPenetration();
-                ClampAllPositionsToWorldBounds();
+                ResolveHardPenetration(sliceStart, sliceEnd);
+                ClampPositionsToWorldBounds(sliceStart, sliceEnd);
             }
             observeHardResolve?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - resolveStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
             UpdateSettledUnitCount();
-            MarkMovedEntitiesDirty();
+            MarkMovedEntitiesDirty(sliceStart, sliceEnd);
             return;
         }
 
         var scheduler = World.SharedJobScheduler ?? throw new InvalidOperationException(
             "MassNavigationFlowSolverState requires World.SharedJobScheduler when solver.parallelWorkerCount requests parallel stepping.");
-        int baseCount = UnitCount / workerCount;
-        int remainder = UnitCount % workerCount;
-        int startIndex = 0;
+        int baseCount = sliceLength / workerCount;
+        int remainder = sliceLength % workerCount;
+        int startIndex = sliceStart;
         long threadedSteeringStart = System.Diagnostics.Stopwatch.GetTimestamp();
         for (int workerIndex = 0; workerIndex < workerCount; workerIndex++)
         {
@@ -1064,16 +1109,28 @@ public sealed partial class MassNavigationFlowSolverState
         }
         observeLocalSteering?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - threadedSteeringStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
 
-        ClampAllPositionsToWorldBounds();
+        ClampPositionsToWorldBounds(sliceStart, sliceEnd);
         long hardResolveStart = System.Diagnostics.Stopwatch.GetTimestamp();
         if (runHardResolve)
         {
-            ResolveHardPenetration();
-            ClampAllPositionsToWorldBounds();
+            ResolveHardPenetration(sliceStart, sliceEnd);
+            ClampPositionsToWorldBounds(sliceStart, sliceEnd);
         }
         observeHardResolve?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - hardResolveStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
         UpdateSettledUnitCount();
-        MarkMovedEntitiesDirty();
+        MarkMovedEntitiesDirty(sliceStart, sliceEnd);
+    }
+
+    internal void ComputeAgentSliceWindow(int agentSliceIndex, int agentSliceCount, out int sliceStart, out int sliceEnd)
+    {
+        if (agentSliceCount < 1 || (uint)agentSliceIndex >= (uint)agentSliceCount)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigationFlow agent slice {agentSliceIndex}/{agentSliceCount} is outside the valid cadence slice range.");
+        }
+
+        sliceStart = (int)(((long)UnitCount * agentSliceIndex) / agentSliceCount);
+        sliceEnd = (int)(((long)UnitCount * (agentSliceIndex + 1)) / agentSliceCount);
     }
 
     public bool AdvanceFlowPipeline(
@@ -1083,42 +1140,105 @@ public sealed partial class MassNavigationFlowSolverState
         bool refreshObstacles,
         Action<double>? observeFlowFieldRebuild = null)
     {
-        return AdvanceFlowPipelineCore(tuning, refreshFlow, refreshCrowd, refreshObstacles, observeFlowFieldRebuild);
+        return AdvanceFlowPipeline(
+            tuning,
+            refreshFlow,
+            refreshCrowd,
+            refreshObstacles,
+            agentSliceIndex: 0,
+            agentSliceCount: 1,
+            observeFlowFieldRebuild);
     }
 
-    private bool AdvanceFlowPipelineCore(
+    /// <summary>
+    /// 错峰流场刷新：一次刷新请求把 flow state 集合按 cadence 分片步切 chunk，
+    /// 每个 fixed tick 只重建一个 chunk（grid 级工作、与 agent 分片窗口无关），
+    /// 跨一个轮次完成全量重建；期间分片步读到的新旧场差异与 15Hz 离散化同级。
+    /// </summary>
+    public bool AdvanceFlowPipeline(
         MassNavigationFlowTuning tuning,
-        bool forceRefreshFlow,
-        bool forceRefreshCrowd,
-        bool forceRefreshObstacles,
-        Action<double>? observeFlowFieldRebuild)
+        bool refreshFlow,
+        bool refreshCrowd,
+        bool refreshObstacles,
+        int agentSliceIndex,
+        int agentSliceCount,
+        Action<double>? observeFlowFieldRebuild = null)
     {
-        bool refreshObstacles = _flowDirty || forceRefreshObstacles;
-        bool refreshCrowd = _flowDirty || forceRefreshCrowd;
-        bool refreshFlow = _flowDirty || forceRefreshFlow;
-        tuning.ForceRefreshFlow = false;
-        tuning.ForceRefreshCrowd = false;
-        tuning.ForceRefreshObstacles = false;
-        if (!refreshObstacles && !refreshCrowd && !refreshFlow)
+        if (agentSliceCount < 1 || (uint)agentSliceIndex >= (uint)agentSliceCount)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigationFlow flow pipeline slice {agentSliceIndex}/{agentSliceCount} is outside the valid cadence slice range.");
+        }
+
+        bool shouldRefreshObstacles = _flowDirty || refreshObstacles;
+        bool shouldRefreshCrowd = _flowDirty || refreshCrowd;
+        bool shouldRefreshFlow = _flowDirty || refreshFlow;
+        if (!shouldRefreshObstacles && !shouldRefreshCrowd && !shouldRefreshFlow && _flowRefreshCursor >= _flowStates.Count)
         {
             return false;
         }
 
         long start = System.Diagnostics.Stopwatch.GetTimestamp();
-        if (refreshObstacles)
+        LastFlowRefreshStateCount = 0;
+        if (shouldRefreshObstacles || shouldRefreshCrowd || shouldRefreshFlow)
         {
-            RebuildStaticObstacleCost();
+            if (shouldRefreshObstacles)
+            {
+                RebuildStaticObstacleCost();
+            }
+
+            _flowRefreshCursor = 0;
         }
 
-        if (refreshCrowd || refreshObstacles)
+        int stateCount = _flowStates.Count;
+        if (stateCount <= 0)
         {
-            refreshFlow = true;
-        }
-
-        if (refreshFlow)
-        {
-            ComputeFlowFields(tuning.Enabled ? tuning.IterationsPerStep : 0);
+            _flowRefreshCursor = int.MaxValue;
             _flowDirty = false;
+            LastFlowFieldRebuildMs = (System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000f / System.Diagnostics.Stopwatch.Frequency;
+            observeFlowFieldRebuild?.Invoke(LastFlowFieldRebuildMs);
+            return true;
+        }
+
+        if (_flowRefreshCursor < stateCount)
+        {
+            // 单 slice 步只重建一个 chunk 的 flow state；chunk 上限把整个刷新摊到
+            // 约两个轮次内，避免单 tick 吸收多个 grid 级重建。
+            int chunkSize = agentSliceCount <= 1
+                ? stateCount
+                : Math.Max(1, (stateCount + agentSliceCount) / (agentSliceCount + 1));
+            int stateEnd = Math.Min(stateCount, _flowRefreshCursor + chunkSize);
+            int crowdStampBudgetUnits = tuning.Enabled ? tuning.IterationsPerStep : 0;
+            for (int i = _flowRefreshCursor; i < stateEnd; i++)
+            {
+                FlowRuntimeState flowState = _flowStates[i];
+                TeamRuntimeState team = _teamStates[flowState.TeamStateIndex];
+                if (crowdStampBudgetUnits == 0 &&
+                    flowState.LastComputedCostRevision == _staticCostRevision &&
+                    flowState.LastComputedTargetX == team.TargetX &&
+                    flowState.LastComputedTargetY == team.TargetY)
+                {
+                    continue;
+                }
+
+                RebuildFlowCostForState(flowState, crowdStampBudgetUnits);
+                ComputeFlow(flowState.Flow, team.TargetX, team.TargetY);
+                flowState.LastComputedCostRevision = _staticCostRevision;
+                flowState.LastComputedTargetX = team.TargetX;
+                flowState.LastComputedTargetY = team.TargetY;
+            }
+
+            LastFlowRefreshStateCount = stateEnd - _flowRefreshCursor;
+            _flowRefreshCursor = stateEnd;
+            if (_flowRefreshCursor >= stateCount)
+            {
+                _flowDirty = false;
+                if (crowdStampBudgetUnits > 0 && UnitCount > 0)
+                {
+                    int budget = Math.Min(UnitCount, crowdStampBudgetUnits);
+                    _crowdStampCursor = (_crowdStampCursor + budget) % UnitCount;
+                }
+            }
         }
 
         LastFlowFieldRebuildMs = (System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000f / System.Diagnostics.Stopwatch.Frequency;
@@ -1490,6 +1610,7 @@ public sealed partial class MassNavigationFlowSolverState
 
     private void RebuildStaticObstacleCost()
     {
+        _staticCostRevision++;
         for (int y = 0; y < _gridHeight; y++)
         {
             for (int x = 0; x < _gridWidth; x++)
@@ -1624,11 +1745,11 @@ public sealed partial class MassNavigationFlowSolverState
         _maxInteractingBodyRadiiDirty = true;
     }
 
-    private void MarkMovedEntitiesDirty()
+    private void MarkMovedEntitiesDirty(int startIndex, int endIndex)
     {
         float positionEpsilonSq = Semantics.Solver.EntitySyncPositionEpsilonSq;
         float velocityEpsilonSq = Semantics.Solver.EntitySyncVelocityEpsilonSq;
-        for (int i = 0; i < UnitCount; i++)
+        for (int i = startIndex; i < endIndex; i++)
         {
             int i2 = i << 1;
             float dx = _positionsCm[i2] - _readPositionsCm[i2];
@@ -2194,12 +2315,17 @@ public sealed partial class MassNavigationFlowSolverState
 
     private void ClampAllPositionsToWorldBounds()
     {
+        ClampPositionsToWorldBounds(0, UnitCount);
+    }
+
+    private void ClampPositionsToWorldBounds(int startIndex, int endIndex)
+    {
         if (!HasWorldBounds())
         {
             return;
         }
 
-        for (int i = 0; i < UnitCount; i++)
+        for (int i = startIndex; i < endIndex; i++)
         {
             int offset = i << 1;
             float xCm = _positionsCm[offset];
@@ -2570,6 +2696,17 @@ public sealed partial class MassNavigationFlowSolverState
 
     private void ResolveHardPenetration()
     {
+        ResolveHardPenetration(0, UnitCount);
+    }
+
+    /// <summary>
+    /// 分片硬分离：pair 以较低索引为 owner（j &gt; i 恰好覆盖一次），
+    /// 本 pass 只处理 owner 落在 [ownerStart, ownerEnd) 的 pair；
+    /// 跨一个轮次的所有分片步合计等价于一次全量 pair 覆盖。
+    /// </summary>
+    private void ResolveHardPenetration(int ownerStart, int ownerEnd)
+    {
+        LastHardResolveOwnerAgentCount = ownerEnd - ownerStart;
         LastHardResolveCandidateAgentCount = 0;
         LastHardResolveFallbackProbeAgentCount = 0;
         LastHardResolveFallbackPairCheckCount = 0;
@@ -2602,7 +2739,7 @@ public sealed partial class MassNavigationFlowSolverState
         }
 
         int maxSeparatesPerAgent = Semantics.Solver.HardResolveMaxSeparatesPerAgentPass;
-        for (int i = 0; i < UnitCount; i++)
+        for (int i = ownerStart; i < ownerEnd; i++)
         {
             int i2 = i << 1;
             float px = _positionsCm[i2];

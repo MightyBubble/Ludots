@@ -1,3 +1,4 @@
+using Ludots.Core.Presentation.Hud;
 using System.Numerics;
 using Ludots.Platform.Abstractions;
 
@@ -791,6 +792,7 @@ namespace Ludots.Core.Presentation.Presenters
             StaticVisualIntParamKeys = staticIntParams.Count == 0 ? System.Array.Empty<int>() : Sort(staticIntParams);
             StaticVisualVectorParamKeys = staticVectorParams.Count == 0 ? System.Array.Empty<int>() : Sort(staticVectorParams);
             CompiledBindings = compiledBindings?.ToArray() ?? System.Array.Empty<CompiledBinding>();
+            ResolveWorldTextValueBindings(compiledBindings);
             OwnerAttributeWork = BuildOwnerAttributeWork(attributeCompiledMap);
             OwnerTagWork = BuildOwnerTagWork(tagCompiledMap);
             OwnerInteractionContextWork = BuildOwnerInteractionContextWork(interactionContextCompiledMap);
@@ -838,6 +840,73 @@ namespace Ludots.Core.Presentation.Presenters
         {
             return slot.Motion.YDriftPerSecond != 0f ||
                    (slot.Style.AlphaPolicy == BehaviorAlphaPolicy.FadeOverLifetime && defaultLifetime > 0f);
+        }
+
+        /// <summary>
+        /// 值绑定声明解析：模式化 worldText 的值参数若由本定义的 attributeBinding
+        /// （Attribute 模式供主值、AttributeBase 模式供次值、同一属性源）直接供给，
+        /// 则条目声明属性源，投影期现读；否则保持 Unbound 走参数快照语义。
+        /// </summary>
+        private void ResolveWorldTextValueBindings(System.Collections.Generic.List<CompiledBinding>? compiledBindings)
+        {
+            if (compiledBindings == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < Behaviors.Length; i++)
+            {
+                ref BehaviorSlot slot = ref Behaviors[i];
+                if (slot.Kind != BehaviorKind.WorldText)
+                {
+                    continue;
+                }
+
+                slot.WorldText.BoundAttributeId = ResolveWorldTextBoundAttribute(compiledBindings, in slot.WorldText);
+            }
+        }
+
+        private static int ResolveWorldTextBoundAttribute(
+            System.Collections.Generic.List<CompiledBinding> compiledBindings,
+            in WorldTextConfig worldText)
+        {
+            if (worldText.Mode != WorldHudValueMode.AttributeCurrentOverBase &&
+                worldText.Mode != WorldHudValueMode.AttributeCurrent)
+            {
+                return WorldTextConfig.UnboundAttributeId;
+            }
+
+            int currentSource = FindAttributeSource(compiledBindings, worldText.ValueParamKey, ValueSourceKind.Attribute);
+            if (currentSource < 0)
+            {
+                return WorldTextConfig.UnboundAttributeId;
+            }
+
+            if (worldText.Mode == WorldHudValueMode.AttributeCurrent)
+            {
+                return currentSource;
+            }
+
+            int baseSource = FindAttributeSource(compiledBindings, worldText.SecondaryValueParamKey, ValueSourceKind.AttributeBase);
+            return baseSource == currentSource ? currentSource : WorldTextConfig.UnboundAttributeId;
+        }
+
+        private static int FindAttributeSource(
+            System.Collections.Generic.List<CompiledBinding> compiledBindings,
+            int paramKey,
+            ValueSourceKind mode)
+        {
+            for (int i = 0; i < compiledBindings.Count; i++)
+            {
+                if (compiledBindings[i].TargetParamKey == paramKey &&
+                    compiledBindings[i].SourceAttributeId >= 0 &&
+                    compiledBindings[i].Mode == mode)
+                {
+                    return compiledBindings[i].SourceAttributeId;
+                }
+            }
+
+            return -1;
         }
 
         private static int FindBehaviorIndexForSlot(BehaviorSlot[] behaviors, int slotIndex, BehaviorKind kind)

@@ -549,7 +549,7 @@ namespace Ludots.Tests.Presentation
             var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
-            Assert.That(ex.Message, Does.Contain("Circular child reference"));
+            Assert.That(ex.Message, Does.Contain(PresenterCreatePlanCompiler.CircularChildReferenceError));
         }
 
         [Test]

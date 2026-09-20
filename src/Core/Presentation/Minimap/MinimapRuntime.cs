@@ -90,6 +90,12 @@ namespace Ludots.Core.Presentation.Minimap
         private const int ToggleButtonHitPadding = 4;
         private const float FollowCameraToggleHalfExtentCm = 7000f;
         private const int MarkerStableIdSalt = 0x4d4d;
+        /// <summary>
+        /// 轮转重投影预算：标记数超过该值时投影与渲染帧率解耦——每 period = ceil(count/预算)
+        /// 帧做一次全量重投影，其余帧（相机/缩放/knowledge 视口未变）零重投影、整帧保留屏幕缓冲；
+        /// 不超过时 period = 1，保持逐帧全量投影的精确语义。
+        /// </summary>
+        private const int ReprojectionSliceBudget = 2500;
         private const int CameraFrustumPointCapacity = 16;
         private const int CameraFrustumLineThickness = 3;
         private const int CameraFrustumShadowThickness = 5;
@@ -106,6 +112,26 @@ namespace Ludots.Core.Presentation.Minimap
 
         private readonly MinimapRuntimeConfig _config;
         private readonly int _debugMarkerSampleCapacity;
+        private int _projectionFrameCounter;
+        private bool _projectionSeeded;
+        private int _seededMarkerCount;
+        private int _reprojectedMarkerCountLastFrame = -1;
+        private int _retainedMarkerCountLastFrame = -1;
+        private int _fullRebuildFrameCounter;
+        private float _seededCenterXcm;
+        private float _seededCenterYcm;
+        private float _seededHalfExtentCm;
+        private Vector2 _seededMapRight;
+        private Vector2 _seededMapUp;
+        private float _seededScreenFacingOffsetRad;
+        private int _seededFieldX;
+        private int _seededFieldY;
+        private int _seededFieldSize;
+        private PresentationClipShapeKind _seededFieldClipShapeKind;
+        private bool _seededRotateWithCamera;
+        private bool _seededHasKnowledgeResolver;
+        private bool _seededHasKnowledgeViewer;
+        private Entity _seededKnowledgeViewer;
         private static readonly string[] BandLabels =
         {
             "Strategic",
@@ -135,6 +161,8 @@ namespace Ludots.Core.Presentation.Minimap
 
         private readonly List<MinimapDebugMarker> _debugVisibleMarkers;
         private readonly Vector2[] _cameraFrustumScreenPoints = new Vector2[CameraFrustumPointCapacity];
+        private readonly Vector2[] _cameraFrustumMapPoints = new Vector2[CameraFrustumPointCapacity];
+        private readonly Vector2[] _cameraFrustumClipPoints = new Vector2[CameraFrustumPointCapacity];
         private string _currentMapId = string.Empty;
         private string _diagnostic = string.Empty;
         private float _centerXcm;
@@ -151,6 +179,7 @@ namespace Ludots.Core.Presentation.Minimap
         private Vector2 _mapRight = Vector2.UnitX;
         private Vector2 _mapUp = Vector2.UnitY;
         private float _screenFacingOffsetRad;
+        private bool _screenFacingReflected;
         private float _metricGridStepCm = 1000f;
         private bool _viewportInitialized;
         private bool _rtsCenterResetPending = true;
@@ -267,6 +296,18 @@ namespace Ludots.Core.Presentation.Minimap
 
         public float MetricGridStepCm => _metricGridStepCm;
 
+        /// <summary>本帧完整重投影（含 knowledge 解析）的标记数；轮转跳过帧为 0。</summary>
+        public int ReprojectedMarkerCountLastFrame => _reprojectedMarkerCountLastFrame;
+
+        /// <summary>本帧零工作留存的屏幕标记数（轮转跳过帧为上一投影帧的全部标记）。</summary>
+        public int RetainedMarkerCountLastFrame => _retainedMarkerCountLastFrame;
+
+        /// <summary>投影帧序号（含跳过帧与全量重建帧），测试用于断言轮转覆盖。</summary>
+        public int ProjectionFrameIndex => _projectionFrameCounter;
+
+        /// <summary>累计全量重建帧数（相机/缩放/结构变化触发），诊断用。</summary>
+        public int FullProjectionRebuildCount => _fullRebuildFrameCounter;
+
         public void SetExternalFieldRect(int x, int y, int width, int height)
         {
             if (width <= 0 || height <= 0)
@@ -372,8 +413,6 @@ namespace Ludots.Core.Presentation.Minimap
             ArgumentNullException.ThrowIfNull(screenMarkers);
 
             RefreshPanelLayout(engine);
-            screenMarkers.BeginFrame();
-            _debugVisibleMarkers.Clear();
             _markerCount = markers.Count;
             _visibleMarkerCount = 0;
             _diagnostic = string.Empty;
@@ -381,7 +420,9 @@ namespace Ludots.Core.Presentation.Minimap
 
             if (!Visible)
             {
+                screenMarkers.BeginFrame();
                 ResetBounds();
+                _projectionSeeded = false;
                 return;
             }
 
@@ -761,6 +802,87 @@ namespace Ludots.Core.Presentation.Minimap
 
         private void ProjectMarkers(GameEngine engine, MinimapMarkerBuffer markers, MinimapScreenMarkerBuffer screenMarkers)
         {
+            _projectionFrameCounter++;
+            bool hasKnowledgeResolver = KnowledgeProjectionConsumer.HasResolver(engine.GlobalContext);
+            bool hasKnowledgeViewer = false;
+            Entity knowledgeViewer = Entity.Null;
+            if (hasKnowledgeResolver &&
+                engine.TryGetService(CoreServiceKeys.MinimapKnowledgeViewerProvider, out MinimapKnowledgeViewerProvider knowledgeViewerProvider) &&
+                knowledgeViewerProvider(engine, out knowledgeViewer) &&
+                knowledgeViewer != Entity.Null &&
+                engine.World.IsAlive(knowledgeViewer))
+            {
+                hasKnowledgeViewer = true;
+            }
+
+            int count = markers.Count;
+            int period = Math.Max(1, (count + ReprojectionSliceBudget - 1) / ReprojectionSliceBudget);
+            bool sliceDueFrame = _projectionFrameCounter % period == 0;
+            if (!sliceDueFrame &&
+                _projectionSeeded &&
+                ProjectionInputsUnchanged(markers.Count, hasKnowledgeResolver, hasKnowledgeViewer, knowledgeViewer))
+            {
+                // 零重投影帧：相机/缩放/knowledge 视口未变且未轮到本切片相位，
+                // 屏幕缓冲整帧保留上一投影帧内容。
+                _visibleMarkerCount = screenMarkers.Count;
+                _retainedMarkerCountLastFrame = screenMarkers.Count;
+                _reprojectedMarkerCountLastFrame = 0;
+                return;
+            }
+
+            ProjectMarkersFullRebuild(engine, markers, screenMarkers, hasKnowledgeResolver, hasKnowledgeViewer, knowledgeViewer);
+        }
+
+        private bool ProjectionInputsUnchanged(int markerCount, bool hasKnowledgeResolver, bool hasKnowledgeViewer, Entity knowledgeViewer)
+        {
+            return markerCount == _seededMarkerCount &&
+                _centerXcm == _seededCenterXcm &&
+                _centerYcm == _seededCenterYcm &&
+                _halfExtentCm == _seededHalfExtentCm &&
+                _mapRight == _seededMapRight &&
+                _mapUp == _seededMapUp &&
+                _screenFacingOffsetRad == _seededScreenFacingOffsetRad &&
+                _fieldX == _seededFieldX &&
+                _fieldY == _seededFieldY &&
+                _fieldSize == _seededFieldSize &&
+                _fieldClipShapeKind == _seededFieldClipShapeKind &&
+                RotateWithCamera == _seededRotateWithCamera &&
+                hasKnowledgeResolver == _seededHasKnowledgeResolver &&
+                hasKnowledgeViewer == _seededHasKnowledgeViewer &&
+                knowledgeViewer == _seededKnowledgeViewer;
+        }
+
+        private void SeedProjectionInputs(int markerCount, bool hasKnowledgeResolver, bool hasKnowledgeViewer, Entity knowledgeViewer)
+        {
+            _seededCenterXcm = _centerXcm;
+            _seededCenterYcm = _centerYcm;
+            _seededHalfExtentCm = _halfExtentCm;
+            _seededMapRight = _mapRight;
+            _seededMapUp = _mapUp;
+            _seededScreenFacingOffsetRad = _screenFacingOffsetRad;
+            _seededMarkerCount = markerCount;
+            _seededFieldX = _fieldX;
+            _seededFieldY = _fieldY;
+            _seededFieldSize = _fieldSize;
+            _seededFieldClipShapeKind = _fieldClipShapeKind;
+            _seededRotateWithCamera = RotateWithCamera;
+            _seededHasKnowledgeResolver = hasKnowledgeResolver;
+            _seededHasKnowledgeViewer = hasKnowledgeViewer;
+            _seededKnowledgeViewer = knowledgeViewer;
+        }
+
+        private void ProjectMarkersFullRebuild(
+            GameEngine engine,
+            MinimapMarkerBuffer markers,
+            MinimapScreenMarkerBuffer screenMarkers,
+            bool hasKnowledgeResolver,
+            bool hasKnowledgeViewer,
+            Entity knowledgeViewer)
+        {
+            _fullRebuildFrameCounter++;
+            SeedProjectionInputs(markers.Count, hasKnowledgeResolver, hasKnowledgeViewer, knowledgeViewer);
+            _projectionSeeded = true;
+            _debugVisibleMarkers.Clear();
             screenMarkers.BeginBucketedFrame();
             screenMarkers.SetFieldBounds(_fieldX, _fieldY, _fieldSize);
             screenMarkers.SetClipShape(ResolveFieldClipShape());
@@ -776,6 +898,7 @@ namespace Ludots.Core.Presentation.Minimap
             float fieldX = _fieldX;
             float fieldY = _fieldY;
             float screenFacingOffsetRad = _screenFacingOffsetRad;
+            bool screenFacingReflected = _screenFacingReflected;
             ReadOnlySpan<int> stableIds = markers.StableIds;
             ReadOnlySpan<float> worldXcmValues = markers.WorldXcm;
             ReadOnlySpan<float> worldYcmValues = markers.WorldYcm;
@@ -792,18 +915,7 @@ namespace Ludots.Core.Presentation.Minimap
             cachedBucketIndices.Fill(-1);
 
             bool captureDebugMarkers = _debugMarkerSampleCapacity > 0;
-            bool hasKnowledgeResolver = KnowledgeProjectionConsumer.HasResolver(engine.GlobalContext);
-            bool hasKnowledgeViewer = false;
-            Entity knowledgeViewer = Entity.Null;
-            if (hasKnowledgeResolver &&
-                engine.TryGetService(CoreServiceKeys.MinimapKnowledgeViewerProvider, out MinimapKnowledgeViewerProvider knowledgeViewerProvider) &&
-                knowledgeViewerProvider(engine, out knowledgeViewer) &&
-                knowledgeViewer != Entity.Null &&
-                engine.World.IsAlive(knowledgeViewer))
-            {
-                hasKnowledgeViewer = true;
-            }
-
+            int reprojected = 0;
             for (int i = 0; i < count; i++)
             {
                 float worldXcm = worldXcmValues[i];
@@ -878,6 +990,7 @@ namespace Ludots.Core.Presentation.Minimap
                     orientationBucket = WorldPlane2D.ProjectFacingRadToScreenBucket(
                         orientationRadValues[i],
                         screenFacingOffsetRad,
+                        screenFacingReflected,
                         MinimapScreenMarkerBuffer.OrientationBucketCount);
                     orientationRad = WorldPlane2D.BucketToFacingRad(
                         orientationBucket,
@@ -927,6 +1040,7 @@ namespace Ludots.Core.Presentation.Minimap
                     continue;
                 }
 
+                reprojected++;
                 _visibleMarkerCount++;
                 if (captureDebugMarkers && _debugVisibleMarkers.Count < _debugMarkerSampleCapacity)
                 {
@@ -946,6 +1060,8 @@ namespace Ludots.Core.Presentation.Minimap
             }
 
             screenMarkers.MaterializeStagedBucketKeys();
+            _reprojectedMarkerCountLastFrame = reprojected;
+            _retainedMarkerCountLastFrame = 0;
         }
 
         private static MinimapKnowledgeState ResolveKnowledgeState(in KnowledgeProjection projection)
@@ -1028,7 +1144,7 @@ namespace Ludots.Core.Presentation.Minimap
             {
                 _mapRight = Vector2.UnitX;
                 _mapUp = Vector2.UnitY;
-                _screenFacingOffsetRad = WorldPlane2D.ResolveScreenFacingOffsetRad(in _mapRight, in _mapUp);
+                _screenFacingOffsetRad = WorldPlane2D.ResolveScreenFacingOffsetRad(in _mapRight, in _mapUp, out _screenFacingReflected);
                 return;
             }
 
@@ -1036,7 +1152,7 @@ namespace Ludots.Core.Presentation.Minimap
             WorldPlane2D.CameraMinimapBasisFromYawDegrees(state.Yaw, out Vector2 right, out Vector2 forward);
             _mapUp = WorldPlane2D.NormalizeOrDefault(forward, Vector2.UnitY);
             _mapRight = WorldPlane2D.NormalizeOrDefault(right, Vector2.UnitX);
-            _screenFacingOffsetRad = WorldPlane2D.ResolveScreenFacingOffsetRad(in _mapRight, in _mapUp);
+            _screenFacingOffsetRad = WorldPlane2D.ResolveScreenFacingOffsetRad(in _mapRight, in _mapUp, out _screenFacingReflected);
         }
 
         private void UpdateCameraFrustum(GameEngine engine)
@@ -1061,7 +1177,22 @@ namespace Ludots.Core.Presentation.Minimap
                 return;
             }
 
-            _cameraFrustumPointCount = 4;
+            int clippedCount = WorldPlane2D.ClipConvexPolygonToUnitSquare(
+                _cameraFrustumMapPoints.AsSpan(0, 4),
+                _cameraFrustumClipPoints);
+            if (clippedCount < 3)
+            {
+                return;
+            }
+
+            for (int i = 0; i < clippedCount; i++)
+            {
+                _cameraFrustumScreenPoints[i] = MapNormalizedToScreen(
+                    _cameraFrustumClipPoints[i].X,
+                    _cameraFrustumClipPoints[i].Y);
+            }
+
+            _cameraFrustumPointCount = clippedCount;
             EnsureCameraFrustumMinimumDisplaySize();
             _cameraFrustumVisible = true;
         }
@@ -1422,8 +1553,15 @@ namespace Ludots.Core.Presentation.Minimap
                 return false;
             }
 
-            ProjectWorldToScreenClamped(worldCm.X, worldCm.Y, out float screenX, out float screenY);
-            _cameraFrustumScreenPoints[index] = new Vector2(screenX, screenY);
+            // 屏幕上沿射线在低俯角时落点远超世界边界，这里只取未钳制的归一化坐标，
+            // 越界折叠交给凸多边形裁剪处理。
+            WorldToMapNormalizedUnclipped(worldCm.X, worldCm.Y, out float normalizedX, out float normalizedY);
+            if (!float.IsFinite(normalizedX) || !float.IsFinite(normalizedY))
+            {
+                return false;
+            }
+
+            _cameraFrustumMapPoints[index] = new Vector2(normalizedX, normalizedY);
             return true;
         }
 
@@ -1482,9 +1620,17 @@ namespace Ludots.Core.Presentation.Minimap
                 return false;
             }
 
-            screenX = _fieldX + (normalizedX * (_fieldSize - 1));
-            screenY = _fieldY + ((1f - normalizedY) * (_fieldSize - 1));
+            Vector2 screenPoint = MapNormalizedToScreen(normalizedX, normalizedY);
+            screenX = screenPoint.X;
+            screenY = screenPoint.Y;
             return true;
+        }
+
+        private Vector2 MapNormalizedToScreen(float normalizedX, float normalizedY)
+        {
+            return new Vector2(
+                _fieldX + (normalizedX * (_fieldSize - 1f)),
+                _fieldY + ((1f - normalizedY) * (_fieldSize - 1f)));
         }
 
         private bool TryWorldToMapNormalized(float worldXcm, float worldYcm, out float normalizedX, out float normalizedY)
@@ -1531,25 +1677,6 @@ namespace Ludots.Core.Presentation.Minimap
         private Vector2 MapLocalOffsetToWorld(float localXcm, float localYcm)
         {
             return WorldPlane2D.MapLocalOffsetToWorld(localXcm, localYcm, in _mapRight, in _mapUp);
-        }
-
-        private void ProjectWorldToScreenClamped(float worldXcm, float worldYcm, out float screenX, out float screenY)
-        {
-            WorldPlane2D.ProjectWorldCmToScreenClamped(
-                worldXcm,
-                worldYcm,
-                _centerXcm,
-                _centerYcm,
-                _mapRight.X,
-                _mapRight.Y,
-                _mapUp.X,
-                _mapUp.Y,
-                _halfExtentCm,
-                _fieldX,
-                _fieldY,
-                _fieldSize - 1f,
-                out screenX,
-                out screenY);
         }
 
         private void ProjectWorldToScreenUnclipped(float worldXcm, float worldYcm, out float screenX, out float screenY)

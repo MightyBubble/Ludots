@@ -53,6 +53,23 @@ namespace Ludots.Core.Presentation.Hud
             in Vector4 color,
             in PresentationTextPacket packet)
         {
+            return ComposeTextDirtySerial(fontSize, stringTableId, valueModeId, value0, value1, color, packet, valueBound: false);
+        }
+
+        /// <summary>
+        /// 值绑定条目的 emit 侧 serial：不混入数值——值漂移产生的重发在
+        /// WorldHudBatchBuffer.TryAdd 命中相同 serial 而归零，权威值由投影期现读刷新。
+        /// </summary>
+        public static int ComposeTextDirtySerial(
+            int fontSize,
+            int stringTableId,
+            int valueModeId,
+            float value0,
+            float value1,
+            in Vector4 color,
+            in PresentationTextPacket packet,
+            bool valueBound)
+        {
             int hash = 29;
             hash = Mix(hash, fontSize);
             hash = Mix(hash, stringTableId);
@@ -64,11 +81,31 @@ namespace Ludots.Core.Presentation.Hud
             hash = Mix(hash, packet.Arg1);
             hash = Mix(hash, packet.Arg2);
             hash = Mix(hash, packet.Arg3);
-            if (!packet.HasValue)
+            if (!packet.HasValue && !valueBound)
             {
                 hash = MixWorldHudValueModeText(hash, valueModeId, value0, value1);
             }
 
+            return Finalize(hash);
+        }
+
+        /// <summary>
+        /// 值绑定条目的刷新侧 serial：混入取整后的显示值（可见文本仅依赖 (int) 值），
+        /// 数值跨过整数边界时改变 serial 触发下游文本重解析与重绘。
+        /// </summary>
+        public static int ComposeBoundTextValueSerial(
+            int fontSize,
+            int valueModeId,
+            in Vector4 color,
+            float value0,
+            float value1)
+        {
+            int hash = 31;
+            hash = Mix(hash, fontSize);
+            hash = Mix(hash, valueModeId);
+            hash = Mix(hash, color);
+            hash = Mix(hash, (int)value0);
+            hash = Mix(hash, (int)value1);
             return Finalize(hash);
         }
 

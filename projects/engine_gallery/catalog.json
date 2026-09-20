@@ -82,12 +82,20 @@
       "asset": "scenes/crowd_anim.scene.json"
     },
     {
+      "id": "gpu_crowd",
+      "asset": "scenes/gpu_crowd.scene.json"
+    },
+    {
       "id": "slash_trail",
       "asset": "scenes/slash_trail.scene.json"
     },
     {
       "id": "composition",
       "asset": "scenes/composition.scene.json"
+    },
+    {
+      "id": "gpu_crowd_sim",
+      "asset": "scenes/gpu_crowd_sim.scene.json"
     }
   ]
 }

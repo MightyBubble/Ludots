@@ -99,19 +99,19 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void CameraMinimapBasis_IsRightHandedScreenProjection()
+        public void CameraMinimapBasis_UsesMainViewScreenRight()
         {
             WorldPlane2D.CameraMinimapBasisFromYawDegrees(0f, out Vector2 mapRight, out Vector2 mapUp);
-            AssertVector2(mapRight, new Vector2(1f, 0f));
+            AssertVector2(mapRight, new Vector2(-1f, 0f));
             AssertVector2(mapUp, new Vector2(0f, 1f));
-            Assert.That(WorldPlane2D.ProjectFacingRadToScreen(0f, in mapRight, in mapUp), Is.EqualTo(0f).Within(0.0001f));
+            Assert.That(WorldPlane2D.ProjectFacingRadToScreen(0f, in mapRight, in mapUp), Is.EqualTo(MathF.PI).Within(0.0001f));
             Assert.That(WorldPlane2D.ProjectFacingRadToScreen(MathF.PI * 0.5f, in mapRight, in mapUp), Is.EqualTo(-MathF.PI * 0.5f).Within(0.0001f));
 
             WorldPlane2D.CameraMinimapBasisFromYawDegrees(90f, out mapRight, out mapUp);
-            AssertVector2(mapRight, new Vector2(0f, 1f));
+            AssertVector2(mapRight, new Vector2(0f, -1f));
             AssertVector2(mapUp, new Vector2(-1f, 0f));
             Assert.That(WorldPlane2D.ProjectFacingRadToScreen(0f, in mapRight, in mapUp), Is.EqualTo(MathF.PI * 0.5f).Within(0.0001f));
-            Assert.That(WorldPlane2D.ProjectFacingRadToScreen(MathF.PI * 0.5f, in mapRight, in mapUp), Is.EqualTo(0f).Within(0.0001f));
+            Assert.That(WorldPlane2D.ProjectFacingRadToScreen(MathF.PI * 0.5f, in mapRight, in mapUp), Is.EqualTo(MathF.PI).Within(0.0001f));
         }
 
         [Test]
@@ -119,7 +119,7 @@ namespace Ludots.Tests.Presentation
         {
             Vector2 mapRight = Vector2.UnitY;
             Vector2 mapUp = new Vector2(-1f, 0f);
-            float offset = WorldPlane2D.ResolveScreenFacingOffsetRad(in mapRight, in mapUp);
+            float offset = WorldPlane2D.ResolveScreenFacingOffsetRad(in mapRight, in mapUp, out bool reflected);
 
             float[] samples =
             {
@@ -129,11 +129,24 @@ namespace Ludots.Tests.Presentation
                 -MathF.PI * 0.75f,
             };
 
+            Assert.That(reflected, Is.False, "det=+1 basis must not report reflection");
             for (int i = 0; i < samples.Length; i++)
             {
                 float facing = samples[i];
                 Assert.That(
-                    WorldPlane2D.ProjectFacingRadToScreen(facing, offset),
+                    WorldPlane2D.ProjectFacingRadToScreen(facing, offset, reflected),
+                    Is.EqualTo(WorldPlane2D.ProjectFacingRadToScreen(facing, in mapRight, in mapUp)).Within(0.0001f));
+            }
+
+            // det=−1 基（旋转随相机、与主视图同手性）：偏移快路径必须按反射换算。
+            WorldPlane2D.CameraMinimapBasisFromYawDegrees(0f, out mapRight, out mapUp);
+            offset = WorldPlane2D.ResolveScreenFacingOffsetRad(in mapRight, in mapUp, out reflected);
+            Assert.That(reflected, Is.True, "camera-facing minimap basis is reflected relative to logic XY");
+            for (int i = 0; i < samples.Length; i++)
+            {
+                float facing = samples[i];
+                Assert.That(
+                    WorldPlane2D.ProjectFacingRadToScreen(facing, offset, reflected),
                     Is.EqualTo(WorldPlane2D.ProjectFacingRadToScreen(facing, in mapRight, in mapUp)).Within(0.0001f));
             }
         }
@@ -156,10 +169,8 @@ namespace Ludots.Tests.Presentation
         {
             AssertVector2(WorldPlane2D.CameraForwardFromYawDegrees(0f), new Vector2(0f, 1f));
             AssertVector2(WorldPlane2D.CameraRightFromYawDegrees(0f), new Vector2(-1f, 0f));
-            AssertVector2(WorldPlane2D.CameraScreenRightFromYawDegrees(0f), new Vector2(1f, 0f));
             AssertVector2(WorldPlane2D.CameraForwardFromYawDegrees(90f), new Vector2(-1f, 0f));
             AssertVector2(WorldPlane2D.CameraRightFromYawDegrees(90f), new Vector2(0f, -1f));
-            AssertVector2(WorldPlane2D.CameraScreenRightFromYawDegrees(90f), new Vector2(0f, 1f));
         }
 
         [Test]
@@ -221,6 +232,159 @@ namespace Ludots.Tests.Presentation
                     out Vector2 worldCm),
                 Is.True);
             AssertVector2(worldCm, new Vector2(1200f, -700f));
+        }
+
+        [Test]
+        public void ClipConvexPolygonToUnitSquare_PassesThroughFullyInsidePolygon()
+        {
+            Vector2[] quad =
+            {
+                new(0.25f, 0.25f),
+                new(0.75f, 0.25f),
+                new(0.75f, 0.75f),
+                new(0.25f, 0.75f),
+            };
+            Vector2[] result = new Vector2[8];
+
+            int count = WorldPlane2D.ClipConvexPolygonToUnitSquare(quad, result);
+
+            Assert.That(count, Is.EqualTo(4));
+            for (int i = 0; i < 4; i++)
+            {
+                AssertVector2(result[i], quad[i]);
+            }
+        }
+
+        [Test]
+        public void ClipConvexPolygonToUnitSquare_ClipsFarOutCornersWithoutFolding()
+        {
+            // 低俯角视锥足迹：近边在界内，屏幕上沿射线的远边落点远超世界边界。
+            Vector2[] quad =
+            {
+                new(0.3f, 0.38f),
+                new(0.7f, 0.42f),
+                new(1.5f, 5f),
+                new(-0.5f, 5f),
+            };
+            Vector2[] result = new Vector2[8];
+
+            int count = WorldPlane2D.ClipConvexPolygonToUnitSquare(quad, result);
+
+            Assert.That(count, Is.GreaterThanOrEqualTo(3));
+            for (int i = 0; i < count; i++)
+            {
+                Assert.That(result[i].X, Is.InRange(0f, 1f), $"clipped x must stay inside the unit square at {i}");
+                Assert.That(result[i].Y, Is.InRange(0f, 1f), $"clipped y must stay inside the unit square at {i}");
+            }
+
+            AssertConvexWinding(result.AsSpan(0, count));
+
+            // 屏幕中心（相机目标）必然在视锥足迹内；逐顶点 clamp 折叠出的蝴蝶结会丢失包含性。
+            Vector2 target = new(0.5f, 0.5f);
+            Assert.That(ContainsPointConvex(result.AsSpan(0, count), target), Is.True,
+                "the clipped frustum footprint must still contain the camera target");
+        }
+
+        [Test]
+        public void ClipConvexPolygonToUnitSquare_FullyOutside_ReturnsEmpty()
+        {
+            Vector2[] quad =
+            {
+                new(2f, 2f),
+                new(3f, 2f),
+                new(3f, 3f),
+                new(2f, 3f),
+            };
+            Vector2[] result = new Vector2[8];
+
+            int count = WorldPlane2D.ClipConvexPolygonToUnitSquare(quad, result);
+
+            Assert.That(count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void ClipConvexPolygonToUnitSquare_PolygonEngulfingSquare_ClipsToSquare()
+        {
+            Vector2[] quad =
+            {
+                new(-5f, -5f),
+                new(5f, -5f),
+                new(5f, 5f),
+                new(-5f, 5f),
+            };
+            Vector2[] result = new Vector2[8];
+
+            int count = WorldPlane2D.ClipConvexPolygonToUnitSquare(quad, result);
+
+            Assert.That(count, Is.EqualTo(4));
+            foreach (Vector2 point in result.AsSpan(0, count))
+            {
+                Assert.That(MathF.Abs(point.X - Math.Clamp(point.X, 0f, 1f)), Is.LessThan(0.0001f));
+                Assert.That(MathF.Abs(point.Y - Math.Clamp(point.Y, 0f, 1f)), Is.LessThan(0.0001f));
+            }
+
+            // 四个角点都出现在输出里（顺序不限）。
+            foreach (Vector2 corner in new[] { new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(0f, 1f) })
+            {
+                bool found = false;
+                for (int i = 0; i < count && !found; i++)
+                {
+                    found = Vector2.DistanceSquared(result[i], corner) < 0.0001f;
+                }
+
+                Assert.That(found, Is.True, $"square corner {corner} must survive the clip");
+            }
+        }
+
+        private static void AssertConvexWinding(ReadOnlySpan<Vector2> polygon)
+        {
+            float firstCross = 0f;
+            for (int i = 0; i < polygon.Length; i++)
+            {
+                Vector2 previous = polygon[i];
+                Vector2 current = polygon[(i + 1) % polygon.Length];
+                Vector2 next = polygon[(i + 2) % polygon.Length];
+                float cross = ((current.X - previous.X) * (next.Y - current.Y)) -
+                              ((current.Y - previous.Y) * (next.X - current.X));
+                if (MathF.Abs(cross) < 0.0001f)
+                {
+                    continue;
+                }
+
+                if (firstCross == 0f)
+                {
+                    firstCross = cross;
+                }
+                else
+                {
+                    Assert.That(MathF.Sign(cross), Is.EqualTo(MathF.Sign(firstCross)),
+                        "clipped polygon must stay convex with a single winding; mixed signs mean a folded/bowtie shape");
+                }
+            }
+
+            Assert.That(firstCross, Is.Not.EqualTo(0f), "clipped polygon must not degenerate to a line");
+        }
+
+        private static bool ContainsPointConvex(ReadOnlySpan<Vector2> polygon, Vector2 point)
+        {
+            int positive = 0;
+            int negative = 0;
+            for (int i = 0; i < polygon.Length; i++)
+            {
+                Vector2 a = polygon[i];
+                Vector2 b = polygon[(i + 1) % polygon.Length];
+                float cross = ((b.X - a.X) * (point.Y - a.Y)) - ((b.Y - a.Y) * (point.X - a.X));
+                if (cross > 0.0001f)
+                {
+                    positive++;
+                }
+                else if (cross < -0.0001f)
+                {
+                    negative++;
+                }
+            }
+
+            return positive == 0 || negative == 0;
         }
 
         [Test]

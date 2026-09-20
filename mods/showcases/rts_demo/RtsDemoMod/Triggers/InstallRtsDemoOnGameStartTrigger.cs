@@ -45,14 +45,6 @@ namespace RtsDemoMod.Triggers
 
             bool hasLocalPresentation =
                 engine.GetService(CoreServiceKeys.NetworkProcessRole) != NetworkProcessRole.AuthoritativeServer;
-            if (hasLocalPresentation &&
-                engine.GlobalContext.TryGetValue(CoreServiceKeys.OrderQueue.Name, out var oq) &&
-                oq is OrderQueue orders)
-            {
-                engine.RegisterSystem(new RtsLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx), SystemGroup.LocalInput);
-                _ctx.Log("[RtsDemoMod] RTS local order source system registered");
-            }
-
             if (hasLocalPresentation)
             {
                 engine.RegisterSystem(new RtsPresentationBootstrapSystem(engine), SystemGroup.PostMovement);
