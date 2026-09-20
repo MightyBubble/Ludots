@@ -676,7 +676,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     Once = authored[i].Once,
                     Priority = authored[i].Priority,
                     NormalizedRefire = NormalizeEntryRefire(authored[i].Refire, graphId, shown, diagnostics),
-                    ParsedFilters = ParseEntryFilters(authored[i].Filters, graphId, shown, diagnostics, eventSchemas, authored[i].Event),
+                    ParsedFilters = ParseEntryFilters(authored[i].Filters, graphId, shown, diagnostics, eventSchemas, eventName),
                     ParsedHook = ParseEntryHook(authored[i], graphId, shown, diagnostics)
                 });
             }
@@ -902,11 +902,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         : null;
                 foreach (KeyValuePair<string, JsonElement> pair in filters.Payload)
                 {
-                    string payloadKey = pair.Key.Trim();
-                    if (payloadKey.Length == 0)
+                    if (string.IsNullOrWhiteSpace(pair.Key))
                     {
                         diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
                             $"TriggerGraph graph '{graphId}' entry '{shown}' filters field 'payload' requires non-empty payload keys.", pair.Key));
+                        continue;
+                    }
+
+                    string payloadKey = pair.Key;
+                    if (!string.Equals(payloadKey, payloadKey.Trim(), StringComparison.Ordinal))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
+                            $"TriggerGraph graph '{graphId}' entry '{shown}' filters payload key '{payloadKey}' must not include leading or trailing whitespace.", payloadKey));
                         continue;
                     }
 
@@ -933,10 +940,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                             continue;
                         }
                     }
-                    else if (!Ludots.Core.Scripting.MapTriggerEventPayloadKeys.IsKnownKey(payloadKey))
+                    else
                     {
                         diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
-                            $"TriggerGraph graph '{graphId}' entry '{shown}' filters payload '{payloadKey}' matches no engine payload key and event '{eventName}' declares no schema.", payloadKey));
+                            $"TriggerGraph graph '{graphId}' entry '{shown}' filters payload '{payloadKey}' requires event '{eventName}' to carry a schema; compile with the event schema registry.", payloadKey));
                         continue;
                     }
 
@@ -950,11 +957,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                     if (pair.Value.ValueKind == JsonValueKind.String)
                     {
-                        string expected = (pair.Value.GetString() ?? string.Empty).Trim();
-                        if (expected.Length == 0)
+                        string expected = pair.Value.GetString() ?? string.Empty;
+                        if (string.IsNullOrWhiteSpace(expected) ||
+                            !string.Equals(expected, expected.Trim(), StringComparison.Ordinal))
                         {
                             diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
-                                $"TriggerGraph graph '{graphId}' entry '{shown}' filters payload '{payloadKey}' requires a non-empty string value.", payloadKey));
+                                $"TriggerGraph graph '{graphId}' entry '{shown}' filters payload '{payloadKey}' requires a non-empty string value without surrounding whitespace.", payloadKey));
                             continue;
                         }
 

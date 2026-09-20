@@ -95,6 +95,10 @@ namespace Ludots.Core.Gameplay.Calendar
         public static CalendarCycleSnapshot ProjectCycle(CalendarCycleDefinition cycle, int dayIndex)
         {
             ArgumentNullException.ThrowIfNull(cycle);
+            if (dayIndex < 0)
+            {
+                throw new InvalidOperationException("Calendar dayIndex must be >= 0.");
+            }
             int offset = dayIndex % cycle.LengthDays;
             int cursor = 0;
             for (int i = 0; i < cycle.Phases.Count; i++)

@@ -201,7 +201,9 @@ namespace Ludots.Core.Gameplay.Calendar
             if (wantsAnyEvent &&
                 (hasSubscribers?.Invoke(GameEvents.CalendarDayAdvanced) ?? true))
             {
-                CalendarDateSnapshot active = ProjectActive();
+                CalendarDateSnapshot active = wantsProjections
+                    ? RequireActiveProjection()
+                    : ProjectActive();
                 int activeCalendarKeyId = RequireKeyId(active.CalendarId);
                 Fire(GameEvents.CalendarDayAdvanced, contextFactory!, fireEvent!, ctx =>
                 {
@@ -285,6 +287,20 @@ namespace Ludots.Core.Gameplay.Calendar
 
             Array.Sort(calendars, (a, b) => string.CompareOrdinal(a.Id, b.Id));
             return calendars;
+        }
+
+        private CalendarDateSnapshot RequireActiveProjection()
+        {
+            for (int i = 0; i < _projections.Length; i++)
+            {
+                if (string.Equals(_projections[i].CalendarId, ActiveCalendarId, StringComparison.Ordinal))
+                {
+                    return _projections[i];
+                }
+            }
+
+            throw new InvalidOperationException(
+                $"Active calendar '{ActiveCalendarId}' is missing from runtime projections.");
         }
 
         private CalendarDateSnapshot[] BuildProjections(int dayIndex)

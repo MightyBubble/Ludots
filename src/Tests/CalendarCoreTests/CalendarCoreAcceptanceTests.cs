@@ -97,7 +97,7 @@ public sealed class CalendarCoreAcceptanceTests
         Assert.That(newEra.Year, Is.EqualTo(11));
         checks++;
 
-        // ── 场景五：订阅派发（#1384 P0：地图全局订阅听得到；没订阅不发）──
+        // ── 场景五：订阅派发（地图全局订阅听得到；没订阅不发）──
         var manager = new TriggerManager { EventSchemas = new EventSchemaRegistry() };
         var heard = new List<string>();
         manager.RegisterGlobalTriggers(new MapId("calendar_acceptance_map"), new Trigger[]

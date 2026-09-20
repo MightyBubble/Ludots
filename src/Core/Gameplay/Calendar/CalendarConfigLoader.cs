@@ -222,6 +222,32 @@ namespace Ludots.Core.Gameplay.Calendar
             IReadOnlyList<CalendarEraDefinition> eras,
             IReadOnlyList<CalendarCycleDefinition> cycles)
         {
+            // ConfigKeyRegistry 大小写不敏感而历法表内符号按 Ordinal 去重：跨符号大小写
+            // 撞车会把两个相位折叠成同一个 key id，载荷无法区分——装载期点名失败。
+            var seenFolded = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { calendarId };
+            void RequireFoldable(string symbol, string context)
+            {
+                if (!seenFolded.Add(symbol))
+                {
+                    throw new InvalidOperationException(
+                        $"{context} symbol '{symbol}' collides with another calendar symbol case-insensitively; ConfigKey ids cannot tell them apart.");
+                }
+            }
+
+            for (int i = 0; i < eras.Count; i++)
+            {
+                RequireFoldable(eras[i].Id, $"{calendarId}.eras");
+            }
+
+            for (int c = 0; c < cycles.Count; c++)
+            {
+                RequireFoldable(cycles[c].Id, $"{calendarId}.cycles");
+                for (int pIdx = 0; pIdx < cycles[c].Phases.Count; pIdx++)
+                {
+                    RequireFoldable(cycles[c].Phases[pIdx].Id, $"{calendarId}.cycles[{cycles[c].Id}]");
+                }
+            }
+
             Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(calendarId);
             for (int i = 0; i < eras.Count; i++)
             {

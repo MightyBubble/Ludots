@@ -70,6 +70,30 @@ public sealed class CalendarRuntimeTests
     }
 
     [Test]
+    public void Advance_MultiDayCross_FiresEventsPerDayWithoutSkippingPhases()
+    {
+        CalendarRuntime runtime = new CalendarRuntime(
+            CalendarFixtures.World(ticksPerDay: 1),
+            CalendarFixtures.Registry(CalendarFixtures.Solar360()));
+        var events = new List<string>();
+        runtime.Advance(
+            3,
+            () => new ScriptContext(),
+            (key, ctx) =>
+            {
+                int dayIndex = ctx.Get<int>(MapTriggerEventPayloadKeys.CalendarDayIndex);
+                events.Add($"{key.Value}:{dayIndex}");
+            },
+            _ => true);
+
+        Assert.That(
+            events.Where(e => e.StartsWith(GameEvents.CalendarDayAdvanced.Value, System.StringComparison.Ordinal)).ToArray(),
+            Is.EqualTo(new[] { "Calendar.DayAdvanced:1", "Calendar.DayAdvanced:2", "Calendar.DayAdvanced:3" }),
+            "a three-day advance must emit one DayAdvanced per day, not one for the final day");
+        Assert.That(runtime.DayIndex, Is.EqualTo(3));
+    }
+
+    [Test]
     public void Advance_FiresDayPhaseChangedWithoutAdvancingTheDay()
     {
         CalendarRuntime runtime = CreateRuntime();
@@ -196,7 +220,7 @@ public sealed class CalendarRuntimeTests
             manager.FireGlobalEvent,
             manager.HasGlobalEventSubscribers);
 
-        Assert.That(seen, Is.Not.Empty, "map global subscription must hear calendar events (#1384 P0)");
+        Assert.That(seen, Is.Not.Empty, "map global subscription must hear calendar events");
         Assert.That(seen, Has.Some.Contains("summer"));
 
         manager.UnregisterGlobalTriggers(new MapId("calendar_probe_map"));

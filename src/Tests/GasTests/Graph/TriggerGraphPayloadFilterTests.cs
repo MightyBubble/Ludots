@@ -23,6 +23,7 @@ namespace Ludots.Tests.Gas.Graph
     /// CalendarRuntime 经 FireGlobalEvent 真实发出（多历并存时按 CalendarId 隔离）。
     /// </summary>
     [TestFixture]
+    [Category("ci-gate")]
     [NonParallelizable]
     public sealed class TriggerGraphPayloadFilterTests
     {
@@ -91,6 +92,64 @@ namespace Ludots.Tests.Gas.Graph
                 TriggerGraphEntryFiltersEvaluator.Matches(
                     Context(("Calendar.CycleId", seasonId), ("Calendar.PhaseId", springId + 1)), filters),
                 Is.False);
+        }
+
+        [Test]
+        public void PayloadFilter_IsNotShortCircuitedByMatchingThreshold()
+        {
+            var filters = new TriggerGraphEntryFilters(
+                region: null,
+                tag: null,
+                team: null,
+                threshold: 5,
+                direction: TriggerGraphEntryFilterDirection.CrossBelow,
+                payload: new[] { new TriggerGraphEntryPayloadFilter("Calendar.PhaseId", null, ConfigKeyRegistry.GetId("spring")) });
+
+            var countMatchingPhaseMismatched = Context(("MapTrigger.Count", 3), ("Calendar.PhaseId", ConfigKeyRegistry.GetId("summer")));
+            Assert.That(
+                TriggerGraphEntryFiltersEvaluator.Matches(countMatchingPhaseMismatched, filters),
+                Is.False,
+                "a matching threshold must not skip the payload filters");
+            var bothMatching = Context(("MapTrigger.Count", 3), ("Calendar.PhaseId", ConfigKeyRegistry.GetId("spring")));
+            Assert.That(TriggerGraphEntryFiltersEvaluator.Matches(bothMatching, filters), Is.True);
+        }
+
+        [Test]
+        public void ModDomain_GlobalScopeSubscription_FailsClosedAtMount()
+        {
+            var programs = new GraphProgramRegistry();
+            int graphId = GraphIdRegistry.Register("Graph.Probe.Mod.Calendar");
+            programs.Register(
+                graphId,
+                new[] { new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt } },
+                GraphKind.TriggerGraph,
+                GraphInstructionSourceMap.Empty,
+                null,
+                new[] { new TriggerGraphEntry("on_spring", GameEvents.CalendarCyclePhaseEntered.Value, 0, false, default) });
+
+            var manifest = new Ludots.Core.Modding.ModManifest { Name = "ProbeMod", Version = "1.0.0" };
+            manifest.TriggerGraphs = new List<string> { "Graph.Probe.Mod.Calendar" };
+            var customEvents = new CustomEventNameRegistry();
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                TriggerGraphMounting.BuildModMountTriggers(programs, manifest, customEvents, new EventSchemaRegistry()))!;
+            Assert.That(ex.Message, Does.Contain("on_spring"));
+            Assert.That(ex.Message, Does.Contain(GameEvents.CalendarCyclePhaseEntered.Value));
+            Assert.That(ex.Message, Does.Contain("mount it on a map"),
+                "the diagnostic must point the author at the supported path");
+
+            // ModLoaded 仍从遗留表派发：mod 域订阅它不受影响。
+            int legacyGraphId = GraphIdRegistry.Register("Graph.Probe.Mod.ModLoaded");
+            programs.Register(
+                legacyGraphId,
+                new[] { new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt } },
+                GraphKind.TriggerGraph,
+                GraphInstructionSourceMap.Empty,
+                null,
+                new[] { new TriggerGraphEntry("on_mod_loaded", GameEvents.ModLoaded.Value, 0, false, default) });
+            manifest.TriggerGraphs = new List<string> { "Graph.Probe.Mod.ModLoaded" };
+            Assert.DoesNotThrow(() =>
+                TriggerGraphMounting.BuildModMountTriggers(programs, manifest, customEvents, new EventSchemaRegistry()));
         }
 
         // ── 编译：authored payload 过滤进 TriggerGraphEntry ──

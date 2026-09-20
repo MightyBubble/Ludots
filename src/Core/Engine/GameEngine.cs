@@ -1520,7 +1520,7 @@ namespace Ludots.Core.Engine
             CalendarWorldConfig? calendarWorld = new CalendarConfigLoader(ConfigPipeline)
                 .Load(calendarRegistry, ConfigCatalog, ConfigConflictReport);
             var calendarRuntime = new CalendarRuntime(calendarWorld, calendarRegistry);
-            // Calendar.* schema 声明为 Global scope：走 #1123 全局订阅表派发（地图全局触发
+            // Calendar.* schema 声明为 Global scope：走全局订阅表派发（地图挂的全局触发
             // 听得到），并带订阅探针——没人听的日子事件连投影 diff 都不算。
             CalendarSystem? calendarSystem = calendarRuntime.IsEnabled
                 ? new CalendarSystem(
@@ -1674,7 +1674,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.GraphLookupTableRegistry, graphLookupTables);
             SetService(CoreServiceKeys.GraphFunctionCatalog, graphFunctionCatalog);
             SetService(CoreServiceKeys.GraphActionCatalog, graphActionCatalog);
-            var liveGasEditPipeline = new LiveGasEditPipeline(graphProgramRegistry, graphFunctionCatalog, effectTemplateRegistry, tagOps);
+            var liveGasEditPipeline = new LiveGasEditPipeline(graphProgramRegistry, graphFunctionCatalog, effectTemplateRegistry, tagOps, eventSchemas: TriggerManager.EventSchemas);
             var liveAttributeCommandExecutor = new LiveAttributeCommandExecutor(World, tagOps);
             var liveEffectChainTracer = new LiveEffectChainTracer(capacity: 256);
             var liveAiDraftBinder = new LiveAiDraftBinder();
@@ -3498,7 +3498,8 @@ namespace Ludots.Core.Engine
                     programs,
                     manifest,
                     GetService(CoreServiceKeys.CustomEventNameRegistry)
-                        ?? throw new InvalidOperationException("Mod TriggerGraph installation requires CustomEventNameRegistry."));
+                        ?? throw new InvalidOperationException("Mod TriggerGraph installation requires CustomEventNameRegistry."),
+                    TriggerManager.EventSchemas);
                 ApplyTriggerDecorators(triggers);
                 TriggerManager.RegisterModTriggers(manifest.Name, triggers);
             }

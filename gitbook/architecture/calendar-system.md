@@ -103,7 +103,7 @@ Mod 要启用历法，写 `Calendar/world.json`，并保证 catalog 里有这条
 - 订阅空窗期跨过的相位切换不补发。事件是通知，不是历史；订阅者后到，投影静默追平，不重放空窗内的进出对。
 - Mod 事件回调（`IModContext.OnEvent`）算订阅者，同样过探针。
 
-一次 Advance 跨过多天时，按天逐日发事件，不跳相位。
+一次 Advance 跨得多天时，按天逐日发事件，不跳相位。唯一例外是 `DayPhaseChanged`：昼夜相位按本次 Advance 的首尾比较，只发一次（或整日数倍跨天、首尾同相位时不发）——中间天的昼夜窗口不重放。
 
 订阅指定相位或日期用 TriggerGraph 条目的 `filters.payload`（载荷键值相等过滤，值限符号字符串或整数）：
 
@@ -117,7 +117,7 @@ Mod 要启用历法，写 `Calendar/world.json`，并保证 catalog 里有这条
 - 指定日期：订 `DayAdvanced`，过滤 `Calendar.DayIndex = 360`（整数比较）。
 - 多历并存时加一条 `Calendar.CalendarId` 过滤即可只听某份历；不过滤则每份历的相位都各发一次。
 
-符号走项目统一的「配置期符号、运行期 int」：历法表装载时 calendar / cycle / phase / era / dayPhase 符号注册进 `ConfigKeyRegistry`，事件载荷里的 `CalendarId` / `CycleId` / `PhaseId` / `EraId` 全是 key id（int），`filters.payload` 里的字符串期望值在图编译时解析成同一个 id，派发期只做 int 比较。`filters.payload` 的键和值类型按事件 schema 校验（声明外的键、string 参数写数值、float/entity 参数都在编译期拒绝）。图内读相位 / 日历 / 日序用 `LoadEntryPayloadInt`（载荷键如 `Calendar.PhaseId`）；要显示符号名时用 `ConfigKeyRegistry.GetName` 反查。
+`varName` 专用过滤槽是 payload 过滤的糖（`payload: {"MapTrigger.VarName": ...}` 等价），新作者面优先用 payload。符号走项目统一的「配置期符号、运行期 int」：历法表装载时 calendar / cycle / phase / era / dayPhase 符号注册进 `ConfigKeyRegistry`，事件载荷里的 `CalendarId` / `CycleId` / `PhaseId` / `EraId` 全是 key id（int），`filters.payload` 里的字符串期望值在图编译时解析成同一个 id，派发期只做 int 比较。`filters.payload` 的键和值类型按事件 schema 校验（声明外的键、string 参数写数值、float/entity 参数都在编译期拒绝）。图内读相位 / 日历 / 日序用 `LoadEntryPayloadInt`（载荷键如 `Calendar.PhaseId`）；要显示符号名时用 `ConfigKeyRegistry.GetName` 反查。
 
 ### 3.4 存档
 
