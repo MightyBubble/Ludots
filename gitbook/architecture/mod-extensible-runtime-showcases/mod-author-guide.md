@@ -92,7 +92,7 @@ context.Extensions.Gas.RegisterBuiltinHandler(
 
 **边界**：modifier 聚合语义绑死内置 `Buff` 枚举——自定义 preset 不会自动获得类 Buff 叠层聚合，要做聚合请复用内置 Buff。改行为差异改的是 graph 连线 / effect 步骤 / handler，不是给 `EffectPresetType` 加枚举值。详见 [Effect Preset Type Code](effect-preset-type-code.md)。
 
-## 旅程三：加一个图算子（main 上注册面可用，authoring 门待 PR #1495）
+## 旅程三：加一个图算子
 
 ```csharp
 context.Extensions.Gas.RegisterGraphOp(
@@ -103,7 +103,7 @@ context.Extensions.Gas.RegisterGraphOp(
 
 形状约束在注册期即拒：`TargetList` 是 VM 隐式 scratch，不能作签名类型；`Void` 不能作输入；fixed register 有上限。注册返回 opcode ≥1024，handler 真实装进引擎服务表。
 
-**main 上的现状**：`GAS/graphs.json` 节点写 `"op": "MyMod.QueryThreat"` 会被编译门按 `UnknownNodeOp` 失败关闭——mod op 还进不了正式图程序。正门替代路径是旅程二的 `RegisterBuiltinHandler` + preset 组合。完整 authoring 链（JSON 引用 mod 算子、配套 provider / consumer showcase、8 个编译门用例）在 [PR #1495](https://github.com/MightyBubble/Ludots/pull/1495) 待审合入，状态注记见 [Mod Extensible Runtime](../mod-extensible-runtime.md)。
+**authoring**：`GAS/graphs.json` 节点的 `op` 直接写 provider key（如 `"MyMod.QueryThreat"`），走与内置算子同一扇控制流编译门；未知键、Query 图挂扩展算子、缺输入都在编译期失败关闭。黄金模板：provider `CapabilityStandardGraphOpProviderMod`（注册 `QueryThreat`）+ consumer `CapabilityStandardGraphOpExtensionShowcaseMod`（图里引用它，玩家点按钮看威胁评分）；编译门用例 `GraphExtensionOpAuthoringTests` 8 例；详见 [Graph Op Extension](graph-op-extension.md)。
 
 ## 旅程四：加表现指令与行为
 
@@ -161,7 +161,7 @@ PresenterParamKeyRegistry.Register("my.cloud.drift");
 | config 的 route 与注册不一致 | `...route '...' does not match registered route '...' for '...'` |
 | config 的 lane 与注册不一致 | `...execution.lane '...' does not match registered lane '...'` |
 | 引用未注册的 preset type | `presetType '...' is not registered in preset_types.json, a Core EffectPresetType, or a loaded mod extension.` |
-| graphs.json 写 mod 算子键（PR #1495 合入前） | `UnknownNodeOp`：`Unknown or non-...-authorable op 'MyMod.QueryThreat'` |
+| graphs.json 写未注册的算子键 | `UnknownNodeOp`：`Unknown or non-...-authorable op 'MyMod.QueryThreat'` |
 
 ## 自验
 

@@ -34,14 +34,14 @@ showcase 端到端：`src/Tests/GasTests/Production/CapabilityStandardExtensible
 | 命名空间抢注拒绝 | 走 hub 统一路径 | 走 hub 统一路径 | 走 hub 统一路径 | 显式 |
 | 重复 key 拒绝 | 走 hub 统一路径 | 显式 | 走 hub 统一路径 | 走 hub 统一路径 |
 | 注册期形状校验 | 不适用 | 不适用 | 不适用 | 显式 |
-| JSON 编译 + 运行时执行 | 显式 | 显式 | 显式（command、behavior 各一） | 待 PR #1495 |
-| 装载期失败关闭单测 | 缺 | 缺 | 缺 | 待 PR #1495 |
+| JSON 编译 + 运行时执行 | 显式 | 显式 | 显式（command、behavior 各一） | 显式（`GraphExtensionOpAuthoringTests` 8 例 + showcase 验收） |
+| 装载期失败关闭单测 | 缺 | 缺 | 缺 | 显式（未知键 / Query 拒绝 / 缺输入三态） |
 
 「走 hub 统一路径」指合同由 `ExtensionKeyRegistry` / `ModExtensionKeyOwnership` 对四类 API 统一执行，显式用例以 Gas 侧 API 为代表，没有为该面单列用例。
 
 ## 缺口
 
-1. graph op 的 authoring 门（JSON 引用 mod op 键、Query 图拒绝扩展算子、缺输入失败关闭）共 8 个用例 `GraphExtensionOpAuthoringTests` 与 showcase 验收增强都在 [PR #1495](https://github.com/MightyBubble/Ludots/pull/1495) 待合入；合入前 main 上 mod op 注册成功但进不了正式图程序。
+1. graph op 的 authoring 门已随 [PR #1495](https://github.com/MightyBubble/Ludots/pull/1495) 合入 main：`GraphExtensionOpAuthoringTests` 8 例（未知键失败关闭、Query 图拒绝扩展算子、缺输入失败、执行、metadata 校验）与跨 Mod 威胁评分 showcase 验收都在 main 上。
 2. 装载期失败关闭（presenter 扩展的 route / lane 不匹配、preset type 引用未注册 handler）目前只有 loader 的抛异常实现和 showcase 正常路径覆盖，没有独立单测锁错误行为。补测试时挂在 PresentationTests / GasTests 现有工程下，不新建工程。
 
 ## 跑法
@@ -72,9 +72,9 @@ Feature: 扩展面测试说明与真实测试一一对应
     Then 对应测试全部通过
     And 页面表格里的用例名与测试文件里的方法名一致
 
-  Scenario: 我知道 graph op 缺口在哪
-    Given 我读到 graph op 的 JSON 编译格写着「待 PR #1495」
-    When 我打开 PR #1495
-    Then 能看到 GraphExtensionOpAuthoringTests 与配套 showcase 验收
+  Scenario: 我知道 graph op 门在哪验证
+    Given 我读到矩阵里 graph op 的失败关闭是显式用例
+    When 我跑 GraphExtensionOpAuthoringTests
+    Then 8 例全绿
     And 我不会在 main 上重写一遍同样的门
 ```

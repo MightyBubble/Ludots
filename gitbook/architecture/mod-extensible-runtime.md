@@ -35,7 +35,6 @@ Each feature has a player-facing authoring showcase. Use these pages when onboar
 - [Graph Op Extension](mod-extensible-runtime-showcases/graph-op-extension.md)
 - [Presenter Behavior Extension](mod-extensible-runtime-showcases/presenter-behavior-extension.md)
 - [Presenter Command Extension](mod-extensible-runtime-showcases/presenter-command-extension.md)
-- Graph Op Extension — pending [PR #1495](https://github.com/MightyBubble/Ludots/pull/1495); the showcase page ships with that PR. See the [showcase README](mod-extensible-runtime-showcases/README.md) for the hold note.
 
 ## Details
 
@@ -70,7 +69,7 @@ The key must start with the loading mod id plus a dot. Other Mods may reference 
 
 Effect preset definitions resolve handler keys through `BuiltinHandlerRegistry`. Graph definitions resolve extension op keys through `GasGraphOpRegistry`. The compiled program then runs against an explicit `GasGraphOpHandlerTable`; there is no static singleton.
 
-Status on main: the registration surface above (hub API, `GasGraphOpRegistry`, extension-aware `GasGraphOpHandlerTable`) is live. The authoring gate that lets `GAS/graphs.json` reference mod op keys (`"op": "MyMod.QueryThreat"`) lands with [PR #1495](https://github.com/MightyBubble/Ludots/pull/1495) under issue #861; until it merges, such a node fails closed with `UnknownNodeOp`. The graph-op scenario and UAT below describe the post-merge shape.
+Status: the authoring gate landed with [PR #1495](https://github.com/MightyBubble/Ludots/pull/1495) (2026-09-20, issue #861 line). `GAS/graphs.json` nodes now resolve mod-registered op keys through the same control-flow front door; unknown keys, extension ops on Query graphs, and missing inputs fail closed at compile time.
 
 Extension graph ops may expose `Void`, `Bool`, `Int`, `Float`, or `Entity` outputs and may consume up to three `Bool`, `Int`, `Float`, or `Entity` inputs. `TargetList` is an implicit VM scratch structure, not a register type for Mod op signatures.
 
