@@ -14,7 +14,7 @@
 | Presenter behavior 扩展 | `CapabilityStandardPresenterBehaviorExtensionShowcaseMod` | 进入地图后 CloudDrift 持续 tick，点击按钮时面板显示行为仍在运行 |
 | Presenter command 扩展 | `CapabilityStandardPresenterCommandExtensionShowcaseMod` | 点击按钮发送信号，面板显示信号被处理的次数 |
 
-`CapabilityStandardGraphOpProviderMod` 不是 root showcase。它只负责提供 `CapabilityStandardGraphOpProviderMod.QueryThreat` 和目标威胁分数契约，供 Graph Op Extension root mod 复用，因此没有独立 Raylib preset。
+> Graph op 扩展（`RegisterGraphOp` + JSON 图引用 mod 算子）的完整链路在 [PR #1495](https://github.com/MightyBubble/Ludots/pull/1495)（issue #861 线）待审合入：控制流编译器扩展、`CapabilityStandardGraphOpProviderMod` 与 `CapabilityStandardGraphOpExtensionShowcaseMod` 两个 root mod、`GraphExtensionOpAuthoringTests`。2026-09-20 基于 main `b2fdd1dbba` 复验：干净合并，过滤测试 12/12 通过。合入前本目录只有上表 4 个可启动 preset；结构清单里的 `CapabilityStandardGraphOpProviderMod/` 在 main 上还没有源码。
 
 ## 结构
 
@@ -44,12 +44,14 @@ mods/showcases/capability_standard/
 标准启动命令：
 
 ```powershell
-.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_config_shards_showcase_raylib'
-.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_effect_preset_type_code_showcase_raylib'
-.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_mod_graph_op_extension_showcase_raylib'
-.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_presenter_behavior_extension_showcase_raylib'
-.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_presenter_command_extension_showcase_raylib'
+.\scriptsun-mod-launcher.cmd cli launch '$capability_standard_config_shards_showcase' --adapter raylib
+.\scriptsun-mod-launcher.cmd cli launch '$capability_standard_effect_preset_type_code_showcase' --adapter raylib
+.\scriptsun-mod-launcher.cmd cli launch '$capability_standard_mod_graph_op_extension_showcase' --adapter raylib
+.\scriptsun-mod-launcher.cmd cli launch '$capability_standard_presenter_behavior_extension_showcase' --adapter raylib
+.\scriptsun-mod-launcher.cmd cli launch '$capability_standard_presenter_command_extension_showcase' --adapter raylib
 ```
+
+`cli launch` 的 adapter 只认 `--adapter` 参数，缺省用机器默认平台（例如 web）；`launcher.presets.json` 里 preset 的 `adapterId` 不驱动 CLI 启动。跑 raylib 必须显式写 `--adapter raylib`。
 
 ## 场景
 
