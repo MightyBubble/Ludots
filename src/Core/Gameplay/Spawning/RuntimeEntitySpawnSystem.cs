@@ -1118,6 +1118,13 @@ namespace Ludots.Core.Gameplay.Spawning
             {
                 World.Add(entity, team);
             }
+
+            // #1570 真相源反转：Team 组件是投影，MemberOf(unit→teamEntity) 边是唯一真相。
+            if (_relationships != null && _memberOfTypeId > 0 && _teamLookup != null &&
+                _teamLookup.TryGet(team.Id, out Entity teamEntity) && World.IsAlive(teamEntity))
+            {
+                _relationships.EnsureLink(entity, teamEntity, _memberOfTypeId);
+            }
         }
 
         private void TryApplyPlayerOwner(in RuntimeEntitySpawnRequest request, Entity entity)

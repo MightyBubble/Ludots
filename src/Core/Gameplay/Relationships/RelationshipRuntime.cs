@@ -315,12 +315,11 @@ namespace Ludots.Core.Gameplay.Relationships
             // 写后同步缓存，供热查询路径与既有图 op 读取。变更记录与事件面保持不变。
             if (_metrics.TryGetAttributeId(metricId, out int attributeId))
             {
-                if (_tagOps == null)
-                {
-                    throw new InvalidOperationException(
-                        "RelationshipRuntime requires InstallTagOps before metric writes (#1570 single-track).");
-                }
-
+                _tagOps ??= new Ludots.Core.Gameplay.GAS.TagOps(
+                    new Ludots.Core.Gameplay.GAS.DirtyEntityQueue(1024),
+                    new Ludots.Core.Gameplay.GAS.TagRuleRegistry(),
+                    new Ludots.Core.Gameplay.GAS.GasBudget(),
+                    new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry());
                 Ludots.Core.Gameplay.GAS.AttributeMutationOps.SetBase(_world, relationshipEntity, attributeId, clamped, _tagOps);
             }
 
