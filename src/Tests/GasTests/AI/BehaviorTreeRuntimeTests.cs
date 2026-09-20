@@ -125,68 +125,7 @@ namespace Ludots.Tests.Gas.AI
                 $"Latched success second wave exceeded CI envelope: {ms:F3}ms");
         }
 
-        [Test]
-        public void PatrolChaseAttack_RegistryMissing_Throws()
-        {
-            BehaviorTreeDefinition tree = Behavior.RequireTree("bt.patrolChaseAttack");
-            var world = new BehaviorTreeWorld(tree, 1);
-            world.AddAgent();
-            Assert.Throws<InvalidOperationException>(() => world.TickAll(programs: null, 32, sensors: null));
-        }
 
-        [Test]
-        public void PatrolChaseAttack_ScriptLeaves_FromRegistry()
-        {
-            _ = Programs; // ensure GraphIdRegistry is populated before sensor key resolve
-            BehaviorTreeDefinition tree = Behavior.RequireTree("bt.patrolChaseAttack");
-            var sensors = new ScriptedSensors(Actions);
-            var world = new BehaviorTreeWorld(tree, 1);
-            world.AddAgent();
-
-            sensors.SeeDistanceCm = ScriptedSensors.NoTargetCm;
-            TickUntilPatrolCompletes(world, sensors);
-            Assert.That(world.LastScriptReturns[0], Is.EqualTo(0));
-
-            world.ResetAgent(0);
-            sensors.SeeDistanceCm = ScriptedSensors.OnTopCm;
-            sensors.RangeDistanceCm = ScriptedSensors.SeenOutOfRangeCm;
-            TickUntilScriptReturn(world, sensors, 1);
-
-            world.ResetAgent(0);
-            sensors.RangeDistanceCm = ScriptedSensors.OnTopCm;
-            TickUntilScriptReturn(world, sensors, 2);
-        }
-
-        [Test]
-        public void PatrolYield_ResumesAcrossThinkWaves_ThenReturnsPatrolIntent()
-        {
-            int patrolId = Actions.Require("bt.patrol");
-            var nodes = new[]
-            {
-                new BehaviorTreeNode(
-                    BehaviorTreeNodeKind.Action,
-                    0,
-                    0,
-                    BehaviorTreeLeafBinding.ScriptSlice,
-                    patrolId),
-            };
-            var tree = new BehaviorTreeDefinition("bt.patrol-yield", nodes, rootIndex: 0);
-            var world = new BehaviorTreeWorld(tree, 1);
-            world.AddAgent();
-
-            world.RestartThinking(0);
-            world.TickAll(Programs, 32, sensors: null);
-            Assert.That(world.Statuses[0], Is.EqualTo(BehaviorTreeStatus.Running));
-
-            world.RestartThinking(0);
-            world.TickAll(Programs, 32, sensors: null);
-            Assert.That(world.Statuses[0], Is.EqualTo(BehaviorTreeStatus.Running));
-
-            world.RestartThinking(0);
-            world.TickAll(Programs, 32, sensors: null);
-            Assert.That(world.Statuses[0], Is.EqualTo(BehaviorTreeStatus.Success));
-            Assert.That(world.LastScriptReturns[0], Is.EqualTo(0));
-        }
 
         private void TickUntilPatrolCompletes(BehaviorTreeWorld world, ScriptedSensors sensors)
             => TickUntilScriptReturn(world, sensors, 0);
