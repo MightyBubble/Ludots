@@ -47,7 +47,8 @@ namespace Ludots.Tests.Architecture.Runtime
             {
                 typeof(DirtyEntityQueue),
                 typeof(TagRuleRegistry),
-                typeof(GasBudget)
+                typeof(GasBudget),
+                typeof(AttributeAggregateDirtyRegistry)
             }));
             Assert.That(parameters[0].IsOptional, Is.False);
             Assert.That(parameters[1].IsOptional, Is.False);

@@ -9992,6 +9992,29 @@
       "artifactDir": null,
       "screenshot": null,
       "status": "active"
+    },
+    {
+      "id": "entity_group_textbook",
+      "path": "mods/showcases/entity_group_textbook/EntityGroupTextbookMod",
+      "title": "Entity Group 教科书",
+      "summary": "实体组教科书（#1540）：营地作为普通 EntityTemplate（递归 children + localId + attach 标记）可复用、可多处置放；同一营地摆两处并做实例差异 override。当前已落：切A 结构底子（装载测试锁定 26 条可寻址路径）；路径 override 全集、关系物化、黑板相对引用属后续切片（见 issue #1540 切B–I）。零 showcase 代码。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "entity-group",
+        "override",
+        "relation",
+        "prefab-like",
+        "textbook"
+      ],
+      "binding": null,
+      "preset": null,
+      "docsPath": "gitbook/architecture/entity-group-and-override.md",
+      "readmePath": null,
+      "acceptanceTest": "EntityGroupTextbookLoadTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active"
     }
   ],
   "pathExemptions": [
