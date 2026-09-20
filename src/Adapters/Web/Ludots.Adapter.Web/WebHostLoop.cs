@@ -89,11 +89,7 @@ namespace Ludots.Adapter.Web
                     screenProjector,
                     viewController,
                     screenHud,
-                    heightmapProvider: () => engine.GetService(CoreServiceKeys.ContinuousHeightmap),
-                    occlusionConfig: new TerrainHudOcclusionConfig(
-                        engine.MergedConfig.Presentation.WorldHudTerrainOcclusionCacheCapacity,
-                        engine.MergedConfig.Presentation.WorldHudTerrainOcclusionCellDivisor,
-                        engine.MergedConfig.Presentation.WorldHudTerrainOcclusionHeightBucketCm));
+                    heightmapProvider: () => engine.GetService(CoreServiceKeys.ContinuousHeightmap));
             }
 
             ValidateRequiredContext(engine);

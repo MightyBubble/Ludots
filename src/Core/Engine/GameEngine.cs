@@ -2674,7 +2674,11 @@ namespace Ludots.Core.Engine
             }
 
             RegisterSystem(physics2dSystem, SystemGroup.InputCollection);
-            RegisterSystem(worldSyncSystem, SystemGroup.PostMovement);
+            // worldSync 必须钉在 SpatialPartitionUpdateSystem 之前：它把物理体位姿写回
+            // WorldPositionCm，是 PostMovement 组的位置生产者。追加到组尾会让 massnav
+            // 仿真步进（钉在分区同步前）读到上一拍的体位姿——步进写入被组尾回写覆盖，
+            // 解算器下拍又重吞旧位姿，运动学单位原地死锁（人群物理 arena 行军全灭）。
+            InsertSystemBeforeRequired<SpatialPartitionUpdateSystem>(worldSyncSystem, SystemGroup.PostMovement);
             GlobalContext["Ludots.Core.Physics2D.Ticking.Physics2DSimulationSystem"] = physics2dSystem;
             GlobalContext["Ludots.Core.Physics2D.Systems.Physics2DToWorldPositionSyncSystem"] = worldSyncSystem;
 
