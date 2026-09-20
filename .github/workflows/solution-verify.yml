@@ -201,6 +201,16 @@ jobs:
             exit $LASTEXITCODE
           }
 
+      # Calendar core suite gates the world-calendar layer (multi-calendar tables,
+      # subscriber-gated dispatch, save domain).
+      - name: Test calendar core suite
+        shell: pwsh
+        run: |
+          dotnet test src/Tests/CalendarCoreTests/CalendarCoreTests.csproj -c Debug --no-build -v minimal
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
       - name: Run Raylib field rendering tests
         shell: pwsh
         run: |

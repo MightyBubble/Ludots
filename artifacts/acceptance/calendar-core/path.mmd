@@ -1,0 +1,13 @@
+flowchart TD
+    A[Step consumed] --> B[ticksIntoDay / ticksPerDay]
+    B --> C{has subscribers?}
+    C -- no --> D1[dayIndex +1 only]
+    C -- yes --> D2[dayIndex +1, project all calendars, diff phases]
+    D2 --> E1[calendar.solar360 season/month/xun/solarTerm/festival]
+    D2 --> E2[calendar.lunisolar.zhang19 month/yearCycle]
+    D2 --> E3[calendar.regnal eras]
+    E1 --> F[FireGlobalEvent DayAdvanced / CyclePhaseEntered|Exited / EraChanged]
+    E2 --> F
+    E3 --> F
+    F --> G[Map global subscriptions #1123]
+    D1 --> H[late subscriber: silent catch-up, no replay]

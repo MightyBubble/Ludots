@@ -395,6 +395,20 @@ namespace Ludots.Core.GraphRuntime
                 throw new InvalidOperationException(
                     $"Graph program id {graphId} TriggerGraph entry '{label}' filters 'direction' value '{filters.Direction.Value}' is not a defined direction.");
             }
+
+            if (filters.Payload != null)
+            {
+                for (int i = 0; i < filters.Payload.Count; i++)
+                {
+                    TriggerGraphEntryPayloadFilter payloadFilter = filters.Payload[i];
+                    if (string.IsNullOrWhiteSpace(payloadFilter.Key) ||
+                        (payloadFilter.StringValue != null) == (payloadFilter.IntValue.HasValue))
+                    {
+                        throw new InvalidOperationException(
+                            $"Graph program id {graphId} TriggerGraph entry '{label}' filters payload '{payloadFilter.Key}' must name a non-empty payload key and exactly one string or int value.");
+                    }
+                }
+            }
         }
 
         private void EnsureProgramValid(int graphId, GraphInstruction[] program, GraphKind kind)
