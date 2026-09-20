@@ -335,6 +335,12 @@ export const Toolbar: React.FC = () => {
     const [newBoardHexEdgeLengthCm, setNewBoardHexEdgeLengthCm] = React.useState(String(DefaultHexEdgeLengthCm));
     const [editBoardCellSizeCm, setEditBoardCellSizeCm] = React.useState(CellCm);
     const [editBoardHexEdgeLengthCm, setEditBoardHexEdgeLengthCm] = React.useState(DefaultHexEdgeLengthCm);
+    const [newBoardOriginXCm, setNewBoardOriginXCm] = React.useState('');
+    const [newBoardOriginYCm, setNewBoardOriginYCm] = React.useState('');
+    const [editBoardOriginXCm, setEditBoardOriginXCm] = React.useState('');
+    const [editBoardOriginYCm, setEditBoardOriginYCm] = React.useState('');
+    const [editBoardWidthHexes, setEditBoardWidthHexes] = React.useState('');
+    const [editBoardHeightHexes, setEditBoardHeightHexes] = React.useState('');
     const [mapId, setMapId] = React.useState('');
     const [navScope, setNavScope] = React.useState<'dirty' | 'full'>('dirty');
     const [navIncludeNeighbors, setNavIncludeNeighbors] = React.useState(true);
@@ -444,7 +450,20 @@ export const Toolbar: React.FC = () => {
     const boardScalePreviewChunkCm = boardPropertyChunkSizeCells * boardScalePreviewCellSizeCm;
     const boardScaleCellChanged = boardScalePreviewCellSizeCm !== boardPropertyCellSizeCm;
     const boardScaleHexChanged = boardPropertyTopology === 'HexGrid' && boardScalePreviewHexEdgeLengthCm !== boardPropertyHexEdgeLengthCm;
-    const boardScaleHasChanges = boardScaleCellChanged || boardScaleHexChanged;
+    const boardSource = selectedBoardInfo ?? selectedMapInfo ?? null;
+    const editOriginXValid = editBoardOriginXCm.trim() === '' || Number.isFinite(Number(editBoardOriginXCm));
+    const editOriginYValid = editBoardOriginYCm.trim() === '' || Number.isFinite(Number(editBoardOriginYCm));
+    const editOriginComplete = editBoardOriginXCm.trim() !== '' && editBoardOriginYCm.trim() !== '';
+    const editOriginCleared = editBoardOriginXCm.trim() === '' && editBoardOriginYCm.trim() === '';
+    const editOriginChanged = boardSource != null && (
+        (editOriginComplete && (Math.floor(Number(editBoardOriginXCm)) !== boardSource.originXcm || Math.floor(Number(editBoardOriginYCm)) !== boardSource.originYcm)) ||
+        (editOriginCleared && boardSource.originXcm != null));
+    const editHexesComplete = editBoardWidthHexes.trim() !== '' && editBoardHeightHexes.trim() !== '';
+    const editHexesCleared = editBoardWidthHexes.trim() === '' && editBoardHeightHexes.trim() === '';
+    const editHexesChanged = boardSource != null && boardPropertyTopology === 'HexGrid' && (
+        (editHexesComplete && (Math.floor(Number(editBoardWidthHexes)) !== boardSource.widthHexes || Math.floor(Number(editBoardHeightHexes)) !== boardSource.heightHexes)) ||
+        (editHexesCleared && boardSource.widthHexes != null));
+    const boardScaleHasChanges = boardScaleCellChanged || boardScaleHexChanged || editOriginChanged || editHexesChanged;
     const newMapWidthMetersValue = parseDraftNumber(newMapWidthMeters);
     const newMapHeightMetersValue = parseDraftNumber(newMapHeightMeters);
     const newMapCellSizeCmValue = parseDraftNumber(newMapCellSizeCm);
@@ -531,6 +550,10 @@ export const Toolbar: React.FC = () => {
         const source = selectedBoardInfo ?? selectedMapInfo;
         setEditBoardCellSizeCm(source?.cellSizeCm ?? CellCm);
         setEditBoardHexEdgeLengthCm(source?.hexEdgeLengthCm ?? DefaultHexEdgeLengthCm);
+        setEditBoardOriginXCm(source?.originXcm != null ? String(source.originXcm) : '');
+        setEditBoardOriginYCm(source?.originYcm != null ? String(source.originYcm) : '');
+        setEditBoardWidthHexes(source?.widthHexes != null ? String(source.widthHexes) : '');
+        setEditBoardHeightHexes(source?.heightHexes != null ? String(source.heightHexes) : '');
     }, [selectedBoardInfo, selectedMapInfo, selectedMapId, selectedBoardName]);
 
     React.useEffect(() => {
@@ -609,6 +632,16 @@ export const Toolbar: React.FC = () => {
         if (newBoardTopology === 'HexGrid') {
             request.hexEdgeLengthCm = Math.max(1, Math.floor(newBoardHexEdgeLengthCmValue));
         }
+        const originX = Number(newBoardOriginXCm);
+        const originY = Number(newBoardOriginYCm);
+        if (newBoardOriginXCm.trim() !== '' || newBoardOriginYCm.trim() !== '') {
+            if (!Number.isFinite(originX) || !Number.isFinite(originY)) {
+                alert('Board origin must be two finite cm values (or both empty for centered).');
+                return;
+            }
+            request.originXCm = Math.floor(originX);
+            request.originYCm = Math.floor(originY);
+        }
         try {
             await createBoard(request);
             setShowAddBoard(false);
@@ -626,6 +659,18 @@ export const Toolbar: React.FC = () => {
         }
         if (boardScaleHexChanged) {
             request.hexEdgeLengthCm = boardScalePreviewHexEdgeLengthCm;
+        }
+        if (editOriginChanged && editOriginComplete && editOriginXValid && editOriginYValid) {
+            request.originXCm = Math.floor(Number(editBoardOriginXCm));
+            request.originYCm = Math.floor(Number(editBoardOriginYCm));
+        } else if (editOriginChanged && editOriginCleared) {
+            request.clearOrigin = true;
+        }
+        if (editHexesChanged && editHexesComplete) {
+            request.widthHexes = Math.max(1, Math.floor(Number(editBoardWidthHexes)));
+            request.heightHexes = Math.max(1, Math.floor(Number(editBoardHeightHexes)));
+        } else if (editHexesChanged && editHexesCleared) {
+            request.clearHexAuthoring = true;
         }
         try {
             await updateSelectedBoard(request);
@@ -1955,6 +2000,63 @@ export const Toolbar: React.FC = () => {
                                     title={boardPropertyTopology === 'HexGrid' ? 'Hex edge length for this board.' : 'Hex edge length only applies to HexGrid boards.'}
                                 />
                             </label>
+                            <div className="grid grid-cols-2 gap-2">
+                                <label className={fieldLabelClass}>
+                                    Origin X cm
+                                    <input
+                                        type="number"
+                                        value={editBoardOriginXCm}
+                                        onChange={(e) => setEditBoardOriginXCm(e.target.value)}
+                                        className={inputClass}
+                                        aria-invalid={!editOriginXValid}
+                                        title="Board min-corner anchor in world cm; empty = centered. Root boards stay centered."
+                                    />
+                                </label>
+                                <label className={fieldLabelClass}>
+                                    Origin Y cm
+                                    <input
+                                        type="number"
+                                        value={editBoardOriginYCm}
+                                        onChange={(e) => setEditBoardOriginYCm(e.target.value)}
+                                        className={inputClass}
+                                        aria-invalid={!editOriginYValid}
+                                        title="Board min-corner anchor in world cm; empty = centered. Root boards stay centered."
+                                    />
+                                </label>
+                            </div>
+                            {boardPropertyTopology === 'HexGrid' ? (
+                                <div className="grid grid-cols-2 gap-2">
+                                    <label className={fieldLabelClass}>
+                                        Width (hexes)
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            value={editBoardWidthHexes}
+                                            onChange={(e) => setEditBoardWidthHexes(e.target.value)}
+                                            className={inputClass}
+                                            title="Hex-count authoring takes precedence over cells; empty = fall back to cells."
+                                        />
+                                    </label>
+                                    <label className={fieldLabelClass}>
+                                        Height (hexes)
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            value={editBoardHeightHexes}
+                                            onChange={(e) => setEditBoardHeightHexes(e.target.value)}
+                                            className={inputClass}
+                                            title="Hex-count authoring takes precedence over cells; empty = fall back to cells."
+                                        />
+                                    </label>
+                                </div>
+                            ) : null}
+                            {boardSource != null && (boardSource.originXcm != null || boardSource.effectiveWidthCm > 0) ? (
+                                <div className="rounded border border-slate-800 bg-slate-950/70 px-2 py-1 font-mono text-[10px] text-slate-400">
+                                    effective {(boardSource.effectiveWidthCm / 100).toLocaleString()}m x {(boardSource.effectiveHeightCm / 100).toLocaleString()}m
+                                    {boardSource.originXcm != null ? ' @ (' + (boardSource.originXcm / 100).toLocaleString() + 'm, ' + ((boardSource.originYcm ?? 0) / 100) + 'm)' : ' centered'}
+                                    {boardSource.widthHexes != null ? ' - ' + boardSource.widthHexes + 'x' + boardSource.heightHexes + ' hexes' : ''}
+                                </div>
+                            ) : null}
                             <div className="grid grid-cols-2 gap-2 rounded border border-slate-800 bg-slate-950/70 p-2 text-[10px] text-slate-400">
                                 <div>
                                     <div className="uppercase tracking-wide text-slate-600">Board cells</div>
@@ -1978,12 +2080,6 @@ export const Toolbar: React.FC = () => {
                                         : 'Scale unchanged: Apply only persists changed board toggles.'}
                                 </div>
                             </div>
-                            <label className="flex items-center gap-2 text-sm text-slate-300">
-                                <input
-                                    type="checkbox"
-                                />
-                                <span>Navigation enabled</span>
-                            </label>
                             <button
                                 onClick={() => handleUpdateBoard()}
                                 className={darkButtonClass}
@@ -2967,12 +3063,32 @@ export const Toolbar: React.FC = () => {
                                     />
                                 </label>
                             </div>
-                            <label className="flex items-center gap-2 text-sm text-slate-300">
-                                <input
-                                    type="checkbox"
-                                />
-                                <span>Navigation enabled</span>
-                            </label>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <label className="block text-sm text-slate-400">
+                                    Origin X cm (optional)
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={newBoardOriginXCm}
+                                        onChange={(e) => setNewBoardOriginXCm(e.target.value)}
+                                        className={inputClass}
+                                        placeholder="centered"
+                                        title="Min-corner anchor in world cm; leave both empty for the centered default. Root boards cannot declare an origin."
+                                    />
+                                </label>
+                                <label className="block text-sm text-slate-400">
+                                    Origin Y cm (optional)
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={newBoardOriginYCm}
+                                        onChange={(e) => setNewBoardOriginYCm(e.target.value)}
+                                        className={inputClass}
+                                        placeholder="centered"
+                                        title="Min-corner anchor in world cm; leave both empty for the centered default. Root boards cannot declare an origin."
+                                    />
+                                </label>
+                            </div>
                             <div className={`rounded border p-2 text-[10px] leading-snug ${newBoardWithinFullFileBudget ? 'border-slate-800 bg-slate-900/60 text-slate-500' : 'border-sky-800/80 bg-sky-950/30 text-sky-100'}`}>
                                 <div className="grid grid-cols-2 gap-2">
                                     <div>
