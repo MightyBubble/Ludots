@@ -14,13 +14,27 @@ namespace Ludots.Core.Map.Board
         public BoardExtentSpec BoardExtent { get; }
         public WorldSizeSpec WorldSize { get; }
         public ISpatialCoordinateConverter CoordinateConverter { get; }
-        public ISpatialPartitionWorld SpatialPartition { get; }
-        public ISpatialQueryService QueryService { get; }
+        public ISpatialPartitionWorld SpatialPartition => Partition;
+        public ISpatialQueryService QueryService => QueryServiceInstance;
         public ILoadedChunks LoadedChunks => LoadedChunksSource;
         public WorldGridLoadedChunks LoadedChunksSource { get; }
         public ChunkedNodeGraphStore GraphStore { get; }
         public LoadedGraphRuntime GraphRuntime { get; }
 
+        // The graph store/runtime is the board's purpose and stays eager; only the entity
+        // partition/query pair defers (satellite boards carry no consumers until BoardRef
+        // dispatch lands, #1567 slice 2).
+        private ChunkedGridSpatialPartitionWorld? _partition;
+        private SpatialQueryService? _queryService;
+
+        private ChunkedGridSpatialPartitionWorld Partition =>
+            _partition ??= new ChunkedGridSpatialPartitionWorld(chunkSizeCells: _chunkSizeCells);
+
+        private SpatialQueryService QueryServiceInstance =>
+            _queryService ??= new SpatialQueryService(
+                new ChunkedGridSpatialPartitionBackend(Partition, WorldSize));
+
+        private readonly int _chunkSizeCells;
         private bool _disposed;
 
         public NodeGraphBoard(BoardId id, string name, BoardConfig config)
@@ -39,10 +53,7 @@ namespace Ludots.Core.Map.Board
                 config.GridCellSizeCm,
                 BoardExtent.OriginXCm ?? 0,
                 BoardExtent.OriginYCm ?? 0);
-
-            var partition = new ChunkedGridSpatialPartitionWorld(chunkSizeCells: config.ChunkSizeCells);
-            SpatialPartition = partition;
-            QueryService = new SpatialQueryService(new ChunkedGridSpatialPartitionBackend(partition, WorldSize));
+            _chunkSizeCells = config.ChunkSizeCells;
 
             int streamingChunkSizeCm = config.ChunkSizeCells * config.GridCellSizeCm;
             LoadedChunksSource = new WorldGridLoadedChunks(streamingChunkSizeCm, config.LoadedChunkCapacity);
@@ -61,7 +72,7 @@ namespace Ludots.Core.Map.Board
             GraphRuntime.Dispose();
             GraphStore.UnsubscribeFromLoadedChunks();
             LoadedChunksSource.Reset();
-            SpatialPartition?.Clear();
+            _partition?.Clear();
         }
     }
 }

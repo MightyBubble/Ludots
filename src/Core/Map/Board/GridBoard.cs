@@ -17,15 +17,30 @@ namespace Ludots.Core.Map.Board
         public BoardExtentSpec BoardExtent { get; }
         public WorldSizeSpec WorldSize { get; }
         public ISpatialCoordinateConverter CoordinateConverter { get; }
-        public ISpatialPartitionWorld SpatialPartition { get; }
-        public ISpatialQueryService QueryService { get; }
+        public ISpatialPartitionWorld SpatialPartition => Partition;
+        public ISpatialQueryService QueryService => QueryServiceInstance;
         public ILoadedChunks LoadedChunks => LoadedChunksSource;
-        public WorldGridLoadedChunks LoadedChunksSource { get; }
         public VertexMap VertexMap { get; set; }
         public LogicTerrainField LogicTerrain { get; set; }
         public NavQueryServiceRegistry NavServices { get; set; }
         public int GridCellSizeCm { get; }
         public int ChunkSizeCells { get; }
+
+        // Satellite boards carry no consumers until BoardRef dispatch lands (#1567 slice 2):
+        // partition/streaming/query state stays unallocated until first access.
+        public WorldGridLoadedChunks LoadedChunksSource => _loadedChunks ??= new WorldGridLoadedChunks(
+            ChunkSizeCells * GridCellSizeCm, _loadedChunkCapacity);
+        private ChunkedGridSpatialPartitionWorld? _partition;
+        private SpatialQueryService? _queryService;
+        private WorldGridLoadedChunks? _loadedChunks;
+        private readonly int _loadedChunkCapacity;
+
+        private ChunkedGridSpatialPartitionWorld Partition =>
+            _partition ??= new ChunkedGridSpatialPartitionWorld(chunkSizeCells: ChunkSizeCells);
+
+        private SpatialQueryService QueryServiceInstance =>
+            _queryService ??= new SpatialQueryService(
+                new ChunkedGridSpatialPartitionBackend(Partition, WorldSize));
 
         private bool _disposed;
 
@@ -47,21 +62,15 @@ namespace Ludots.Core.Map.Board
                 BoardExtent.OriginYCm ?? 0);
             GridCellSizeCm = config.GridCellSizeCm;
             ChunkSizeCells = config.ChunkSizeCells;
-            LoadedChunksSource = new WorldGridLoadedChunks(
-                config.ChunkSizeCells * config.GridCellSizeCm,
-                config.LoadedChunkCapacity);
-
-            var partition = new ChunkedGridSpatialPartitionWorld(chunkSizeCells: config.ChunkSizeCells);
-            SpatialPartition = partition;
-            QueryService = new SpatialQueryService(new ChunkedGridSpatialPartitionBackend(partition, WorldSize));
+            _loadedChunkCapacity = config.LoadedChunkCapacity;
         }
 
         public void Dispose()
         {
             if (_disposed) return;
             _disposed = true;
-            SpatialPartition?.Clear();
-            LoadedChunksSource.Reset();
+            _partition?.Clear();
+            _loadedChunks?.Reset();
         }
     }
 }

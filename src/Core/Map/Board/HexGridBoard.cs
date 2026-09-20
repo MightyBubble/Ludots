@@ -17,16 +17,41 @@ namespace Ludots.Core.Map.Board
         public BoardExtentSpec BoardExtent { get; }
         public WorldSizeSpec WorldSize { get; }
         public ISpatialCoordinateConverter CoordinateConverter { get; }
-        public ISpatialPartitionWorld SpatialPartition { get; }
-        public ISpatialQueryService QueryService { get; }
+        public ISpatialPartitionWorld SpatialPartition => Partition;
+        public ISpatialQueryService QueryService => QueryServiceInstance;
         public ILoadedChunks LoadedChunks => HexGridAOI;
         public VertexMap VertexMap { get; set; }
         public LogicTerrainField LogicTerrain { get; set; }
         public Navigation.NavMesh.NavQueryServiceRegistry NavServices { get; set; }
 
-        public HexGridAOI HexGridAOI { get; }
         public HexMetrics HexMetrics { get; }
 
+        // HexGridAOI doubles as the loaded-chunks source and is cheap; the partition and
+        // the hex-aware query service stay unallocated until first access (satellite boards
+        // carry no consumers until BoardRef dispatch lands, #1567 slice 2).
+        public HexGridAOI HexGridAOI { get; } = new();
+        private ChunkedGridSpatialPartitionWorld? _partition;
+        private SpatialQueryService? _queryService;
+
+        private ChunkedGridSpatialPartitionWorld Partition =>
+            _partition ??= new ChunkedGridSpatialPartitionWorld(chunkSizeCells: _chunkSizeCells);
+
+        private SpatialQueryService QueryServiceInstance
+        {
+            get
+            {
+                if (_queryService == null)
+                {
+                    _queryService = new SpatialQueryService(
+                        new ChunkedGridSpatialPartitionBackend(Partition, WorldSize));
+                    _queryService.SetHexMetrics(HexMetrics);
+                    _queryService.SetCoordinateConverter(CoordinateConverter);
+                }
+                return _queryService;
+            }
+        }
+
+        private readonly int _chunkSizeCells;
         private bool _disposed;
 
         public HexGridBoard(BoardId id, string name, BoardConfig config)
@@ -40,18 +65,8 @@ namespace Ludots.Core.Map.Board
                 config.GridCellSizeCm,
                 BoardExtent.OriginXCm ?? 0,
                 BoardExtent.OriginYCm ?? 0);
-
-            var partition = new ChunkedGridSpatialPartitionWorld(chunkSizeCells: config.ChunkSizeCells);
-            SpatialPartition = partition;
-            var queryService = new SpatialQueryService(new ChunkedGridSpatialPartitionBackend(partition, WorldSize));
-
-            var hexMetrics = new HexMetrics(config.HexEdgeLengthCm);
-            HexMetrics = hexMetrics;
-            queryService.SetHexMetrics(hexMetrics);
-            queryService.SetCoordinateConverter(CoordinateConverter);
-            QueryService = queryService;
-
-            HexGridAOI = new HexGridAOI();
+            HexMetrics = new HexMetrics(config.HexEdgeLengthCm);
+            _chunkSizeCells = config.ChunkSizeCells;
         }
 
         public void Dispose()
@@ -61,7 +76,7 @@ namespace Ludots.Core.Map.Board
 
             VertexMap?.UnsubscribeFromLoadedChunks();
             HexGridAOI?.Reset();
-            SpatialPartition?.Clear();
+            _partition?.Clear();
         }
     }
 }
