@@ -60,6 +60,10 @@ namespace Ludots.Core.Gameplay.Relationships
                     processed = _changeBuffer.Count;
                     if (processed > guard)
                     {
+                        // 抛之前清空：宿主若按拍捕获异常继续跑，不清会导致已处理记录逐拍重放
+                        // （回调重抹、事件重发）且 guard 随更大的 Count 重算而逐拍升级——
+                        // 熔断器不得放大它要防的故障。
+                        _changeBuffer.Clear();
                         throw new InvalidOperationException(
                             "Relationship change reentrancy exceeded guard (" + guard + "); a graph is likely self-triggering relation mutations without refire limits.");
                     }

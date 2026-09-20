@@ -71,8 +71,12 @@ namespace Ludots.Core.Map
             LastMergeReport.Clear();
             var visiting = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var chain = new List<string>(8);
-            MapConfig config = LoadMapInternal(mapId, visiting, chain);
-            ResolvePendingTombstones(config);
+            MapConfig? config = LoadMapInternal(mapId, visiting, chain);
+            if (config != null)
+            {
+                ResolvePendingTombstones(mapId.Value, config);
+            }
+
             return config;
         }
 
@@ -192,6 +196,7 @@ namespace Ludots.Core.Map
                     if (parentConfig != null)
                     {
                         var childConfig = finalConfig;
+                        childConfig.MergeSourceUri ??= $"map:{mapIdValue}";
                         finalConfig = parentConfig; 
                         MergeMapConfig(finalConfig, childConfig); 
                     }
@@ -373,6 +378,12 @@ namespace Ludots.Core.Map
                     }
 
                     string name = sourceVariable.Name ?? string.Empty;
+                    if (!string.Equals(name, name.Trim(), StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException(
+                            $"Map {target.Id} fragment {varSourceLabel} variable name {name} must be trimmed.");
+                    }
+
                     if (sourceVariable.Delete == true)
                     {
                         target.PendingVariableTombstones ??= new List<(string, string)>();
@@ -380,16 +391,18 @@ namespace Ludots.Core.Map
                         continue;
                     }
 
-                    // 同名重新声明撤销先前变量墓碑（复活）。
-                    target.PendingVariableTombstones?.RemoveAll(t => string.Equals(t.Name, name, StringComparison.Ordinal));
+                    // 同名重新声明撤销先前变量墓碑（复活）；墓碑标记过的 stale 条目允许改型替换
+                    // （delete-then-redeclare 的 redeclare 半边），未墓碑的活条目改型仍 fail-fast。
+                    bool wasTombstoned = (target.PendingVariableTombstones?.RemoveAll(
+                        t => string.Equals(t.Name, name, StringComparison.Ordinal)) ?? 0) > 0;
                     int existing = target.Variables.FindIndex(v =>
                         string.Equals(v.Name ?? string.Empty, name, StringComparison.Ordinal));
                     if (existing >= 0)
                     {
-                        if (target.Variables[existing].Type != sourceVariable.Type)
+                        if (target.Variables[existing].Type != sourceVariable.Type && !wasTombstoned)
                         {
                             throw new InvalidOperationException(
-                                $"Map '{target.Id}' fragment '{varSourceLabel}' redeclares variable '{name}' with type {sourceVariable.Type} (was {target.Variables[existing].Type}); cross-fragment type changes are contract breaks, delete-then-redeclare instead.");
+                                $"Map {target.Id} fragment {varSourceLabel} redeclares variable {name} with type {sourceVariable.Type} (was {target.Variables[existing].Type}); live variables cannot change type, __delete first then redeclare.");
                         }
 
                         target.Variables[existing] = sourceVariable;
@@ -412,7 +425,7 @@ namespace Ludots.Core.Map
         /// 墓碑在继承链展开后才消化：TryRemove 命中记 Deleted、未命中记 DeletionsNotFound。
         /// 此时父图实体已合入，子图墓碑可正确命中父图实例（继承方向的删除语义）。
         /// </summary>
-        private void ResolvePendingTombstones(MapConfig config)
+        private void ResolvePendingTombstones(string requestedMapId, MapConfig config)
         {
             if (config.PendingEntityTombstones != null && config.PendingEntityTombstones.Count > 0)
             {
@@ -420,11 +433,11 @@ namespace Ludots.Core.Map
                 {
                     if (TryRemoveEntityById(config, instanceId))
                     {
-                        LastMergeReport.RecordDeletion(config.Id, instanceId, sourceLabel);
+                        LastMergeReport.RecordDeletion(requestedMapId, instanceId, sourceLabel);
                     }
                     else
                     {
-                        LastMergeReport.RecordDeletionNotFound(config.Id, instanceId, sourceLabel);
+                        LastMergeReport.RecordDeletionNotFound(requestedMapId, instanceId, sourceLabel);
                     }
                 }
 
@@ -440,11 +453,11 @@ namespace Ludots.Core.Map
                     if (index >= 0)
                     {
                         config.Variables.RemoveAt(index);
-                        LastMergeReport.RecordVariableDeletion(config.Id, name, sourceLabel);
+                        LastMergeReport.RecordVariableDeletion(requestedMapId, name, sourceLabel);
                     }
                     else
                     {
-                        LastMergeReport.RecordVariableDeletionNotFound(config.Id, name, sourceLabel);
+                        LastMergeReport.RecordVariableDeletionNotFound(requestedMapId, name, sourceLabel);
                     }
                 }
 

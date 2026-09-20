@@ -124,8 +124,8 @@ namespace Ludots.Tests.GAS
 
             Assert.Multiple(() =>
             {
-                Assert.That(CountByName(harness.World, "S3BatchRoot"), Is.EqualTo(2), "两个同模板请求应走批量 lane");
-                Assert.That(CountByName(harness.World, "S3Leaf"), Is.EqualTo(2), "运行时任何 lane 都必须展开模板 children（batch 合同排除法）");
+                Assert.That(CountByName(harness.World, "S3BatchRoot"), Is.EqualTo(2), "两个同模板请求应走单实体 lane（batch 合同排除带 children 模板）");
+                Assert.That(CountByName(harness.World, "S3Leaf"), Is.EqualTo(2), "运行时任何 lane 都必须展开模板 children（单实体 lane 兜底）");
                 Assert.That(harness.Requests.Count, Is.EqualTo(0), "子代请求由同一队列自消费，必须排空");
             });
         }
@@ -168,6 +168,34 @@ namespace Ludots.Tests.GAS
             OffsetRotation = "None",
         };
 
+        private static readonly string NestedInlineCycleTemplates = """
+        [
+          { "id": "s3c.a", "components": { "Name": { "Value": "S3CRoot" }, "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } } },
+            "children": [ { "template": "s3c.b", "localPose": { "offsetXCm": 10, "offsetYCm": 0, "facingDeg": 0, "inheritParentFacing": false, "offsetRotation": "None" },
+              "children": [ { "template": "s3c.a", "localPose": { "offsetXCm": 10, "offsetYCm": 0, "facingDeg": 0, "inheritParentFacing": false, "offsetRotation": "None" } } ] } ] },
+          { "id": "s3c.b", "components": { "Name": { "Value": "S3CLeaf" } } }
+        ]
+        """;
+
+        [Test]
+        [Timeout(15000)]
+        public void S3_5_RuntimeNestedInlineCycle_FailsFastInsteadOfInfiniteLoop()
+        {
+            // 环藏在 A 的 child（模板 B）的内联 children 里再指回 A——只走被引用模板
+            // children 的守卫会漏，Update 将无限自旋。装载期/运行时都必须报'环'。
+            using Harness harness = Harness.Create(NestedInlineCycleTemplates);
+            Assert.That(harness.Requests.TryEnqueue(new RuntimeEntitySpawnRequest
+            {
+                Kind = RuntimeEntitySpawnKind.Template,
+                TemplateId = "s3c.a",
+                WorldPositionCm = Fix64Vec2.FromInt(0, 0),
+                HasWorldPosition = 1,
+            }), Is.True);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                harness.System.Update(0f))!;
+            Assert.That(ex.Message, Does.Contain("环"));
+        }
         private static int CountByName(World world, string name)
         {
             int count = 0;

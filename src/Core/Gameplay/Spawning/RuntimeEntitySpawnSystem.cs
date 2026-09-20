@@ -430,10 +430,22 @@ namespace Ludots.Core.Gameplay.Spawning
             if (!visiting.Add(templateId))
             {
                 throw new InvalidOperationException(
-                    $"SPAWN.RUNTIME.ERR.TemplateChildrenCycle: {chain} -> '{templateId}'——模板 children 引用图存在环；" +
-                    $"直接装配的 registry 必须fail-fast，不能等到队列溢出。");
+                    $"SPAWN.RUNTIME.ERR.TemplateChildrenCycle: {chain} -> {templateId}——模板 children 引用图存在环；" +
+                    "直接装配的 registry 必须fail-fast，不能等到队列溢出。");
             }
 
+            WalkChildNodes(templateId, children, registry, visiting, chain);
+            visiting.Remove(templateId);
+        }
+
+        /// <summary>不加键的内部遍历：模板展开边走 DetectTemplateChildCycle（加键），内联延伸走本方法（键已在栈上）。</summary>
+        private void WalkChildNodes(
+            string templateId,
+            List<EntityTemplateChild>? children,
+            DataRegistry<EntityTemplate> registry,
+            HashSet<string> visiting,
+            string chain)
+        {
             if (children != null)
             {
                 for (int i = 0; i < children.Count; i++)
@@ -454,10 +466,23 @@ namespace Ludots.Core.Gameplay.Spawning
                             visiting,
                             $"{chain} -> '{child.Template}'");
                     }
+
+                    // 嵌套内联边同样要查：child 自身声明的 children 里可能藏着指回祖先的引用，
+                    // 只走被引用模板的 children 会漏（A→[B+inline[A]] 型环即从此逃逸）。
+                    // 内联子树是当前模板展开的延伸，不引入新的 visiting 键——兄弟复用同一
+                    // 模板不是环，只有"被引用模板展开"的递归才会加键。
+                    if (child.Children is { Count: > 0 })
+                    {
+                        WalkChildNodes(
+                            templateId,
+                            child.Children,
+                            registry,
+                            visiting,
+                            $"{chain} (inline)");
+                    }
                 }
             }
 
-            visiting.Remove(templateId);
         }
 
         private void EnqueueChildNodes(

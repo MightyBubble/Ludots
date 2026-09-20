@@ -159,7 +159,7 @@ namespace Ludots.Core.Scripting
         /// <summary>
         /// Map-scoped: fired when a relationship flag changes (relationship change buffer,
         /// one tick after the mutation). Payload: SourceEntity, TargetEntity, RelationTypeId,
-        /// RelationMetricId (-1); OldValueInt/NewValueInt carry flag words.
+        /// OldValueInt/NewValueInt carrying flag words.
         /// </summary>
         public static readonly EventKey RelationFlagChanged = new EventKey("RelationFlagChanged");
 

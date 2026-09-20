@@ -7,6 +7,7 @@ using Arch.Core;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Hosting;
+using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Map;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
@@ -810,6 +811,93 @@ namespace Ludots.Tests.GAS
                 MapManager manager = CreateManager(root, "ModA", "ModB");
                 MapConfig merged = manager.LoadMap("harbor")!;
                 Assert.That(merged.Variables.Single(v => v.Name == "killCount").Initial, Is.EqualTo(42), "同型后写 initial 赢");
+            }
+            finally
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+        [Test]
+        public void LoadMap_MissingMap_ReturnsNullInsteadOfThrowing()
+        {
+            var root = Path.Combine(Path.GetTempPath(), "Ludots_1554_" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                Directory.CreateDirectory(root);
+                var vfs = new VirtualFileSystem();
+                vfs.Mount("Core", root);
+                var trigger = new TriggerManager();
+                var modLoader = new ModLoader(vfs, new FunctionRegistry(), trigger);
+                var pipeline = new ConfigPipeline(vfs, modLoader);
+                var manager = new MapManager(vfs, trigger, modLoader, pipeline);
+
+                Assert.That(manager.LoadMap("no-such-map"), Is.Null, "缺失地图维持 main 的 null 合同，不得退化为 NRE");
+            }
+            finally
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+
+        [Test]
+        public void CrossMod_VariableDeleteThenRedeclareWithNewType_Succeeds()
+        {
+            var root = Path.Combine(Path.GetTempPath(), "Ludots_1554_" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                WriteMod(root, "ModA",
+                """
+                {
+                  "id": "harbor",
+                  "variables": [ { "name": "morale", "type": "int", "initial": 75 } ],
+                  "entities": []
+                }
+                """);
+                WriteMod(root, "ModB",
+                """
+                {
+                  "id": "harbor",
+                  "variables": [ { "name": "morale", "__delete": true } ]
+                }
+                """);
+                WriteMod(root, "ModC",
+                """
+                {
+                  "id": "harbor",
+                  "variables": [ { "name": "morale", "type": "float", "initial": 75.5 } ]
+                }
+                """);
+
+                MapManager manager = CreateManager(root, "ModA", "ModB", "ModC");
+                MapConfig merged = manager.LoadMap("harbor")!;
+                MapVariableDeclaration morale = merged.Variables.Single(v => v.Name == "morale");
+                Assert.That(morale.Type.ToString(), Is.EqualTo("Float"), "墓碑后的重新声明允许改型（delete-then-redeclare 处方可执行）");
+                Assert.That(morale.Initial, Is.EqualTo(75.5));
+            }
+            finally
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+
+        [Test]
+        public void CrossMod_VariableUntrimmedName_FailsFast()
+        {
+            var root = Path.Combine(Path.GetTempPath(), "Ludots_1554_" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                WriteMod(root, "ModA",
+                """
+                {
+                  "id": "harbor",
+                  "variables": [ { "name": " morale ", "type": "int", "initial": 1 } ],
+                  "entities": []
+                }
+                """);
+
+                MapManager manager = CreateManager(root, "ModA");
+                InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("harbor"))!;
+                Assert.That(ex.Message, Does.Contain("must be trimmed"));
             }
             finally
             {
