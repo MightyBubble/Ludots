@@ -7,6 +7,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation;
+using Ludots.Core.Networking.Configuration;
 
 namespace Ludots.Core.Config
 {
@@ -41,6 +42,14 @@ namespace Ludots.Core.Config
 
         public bool HasStartupLocalSeats => StartupLocalSeats != null && StartupLocalSeats.Count > 0;
 
+        /// <summary>
+        /// Data-declared PresentBinding layout for the startup seat table:
+        /// "fullscreen" (default) | "horizontal-equal-split" | "vertical-equal-split".
+        /// Resolved by <c>ParticipantBindingResolver.PublishLocalSeats</c>; unknown ids fail map load
+        /// with the id named. Switching split orientation is a data change, not a code branch.
+        /// </summary>
+        public string? StartupPresentLayout { get; set; }
+
         /// <summary>Build launch context from <see cref="StartupLocalSeats"/> (Epic #896 SSOT).</summary>
         public MapLaunchContext? CreateStartupLaunchContext(
             IReadOnlyDictionary<string, object>? metadata = null)
@@ -72,6 +81,8 @@ namespace Ludots.Core.Config
         public int SimulationBudgetMsPerFrame { get; set; } = 4;
         public int SimulationMaxSlicesPerLogicFrame { get; set; } = 120;
 
+        public int TriggerGraphExecutionCapacity { get; set; }
+
         public GasRuntimeCapacityConfig GasRuntimeCapacity { get; set; } = null!;
 
         public int GridCellSizeCm { get; set; } = 100;
@@ -88,6 +99,8 @@ namespace Ludots.Core.Config
         public LogConfig Logging { get; set; } = new LogConfig();
 
         public BrowserRuntimeConfig BrowserRuntime { get; set; } = new BrowserRuntimeConfig();
+
+        public NetworkRuntimeConfig? Networking { get; set; }
 
         /// <summary>
         /// Skin id for engine-side panel presentation (e.g. "default", "markup", "compose",
@@ -115,6 +128,12 @@ namespace Ludots.Core.Config
         /// Contains order type ids, response-chain order type ids, attributes, etc.
         /// </summary>
         public GameConstants Constants { get; set; } = new GameConstants();
+
+        /// <summary>
+        /// Graph execution backend load mode: interpret | codegen | codegen-prefer.
+        /// Default interpret. codegen fails closed if any registered graph cannot bind generated execute.
+        /// </summary>
+        public string? GraphExecutionBackend { get; set; }
     }
 
     public sealed class Physics2DConfig
@@ -134,6 +153,7 @@ namespace Ludots.Core.Config
         public int OrderAdmissionRejectionCapacity { get; set; }
         public int OrderTerminalResultCapacity { get; set; }
         public int DeferredTriggerActiveEntityCapacity { get; set; }
+        public int DeferredTriggerPerFrameCapacity { get; set; }
         public int ProjectileCollisionCandidateCapacity { get; set; }
         public int ProjectileRuntimeEntityCapacity { get; set; }
         public int EffectPhaseGraphProgramScratchCapacity { get; set; }
@@ -141,6 +161,7 @@ namespace Ludots.Core.Config
         public int AbilityExecMaxWorkUnitsPerSlice { get; set; }
         public int EffectProcessingMaxWorkUnitsPerSlice { get; set; }
         public int CommandIntentScratchCapacity { get; set; }
+        public int AttachmentPositionSyncScratchCapacity { get; set; } = 8192;
 
         public void Validate()
         {
@@ -221,6 +242,12 @@ namespace Ludots.Core.Config
                     "GameConfig.gasRuntimeCapacity.deferredTriggerActiveEntityCapacity must be positive.");
             }
 
+            if (DeferredTriggerPerFrameCapacity <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.deferredTriggerPerFrameCapacity must be positive.");
+            }
+
             if (ProjectileCollisionCandidateCapacity <= 0)
             {
                 throw new System.InvalidOperationException(
@@ -256,6 +283,12 @@ namespace Ludots.Core.Config
             {
                 throw new System.InvalidOperationException(
                     "GameConfig.gasRuntimeCapacity.commandIntentScratchCapacity must be positive.");
+            }
+
+            if (AttachmentPositionSyncScratchCapacity <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.attachmentPositionSyncScratchCapacity must be positive.");
             }
         }
 

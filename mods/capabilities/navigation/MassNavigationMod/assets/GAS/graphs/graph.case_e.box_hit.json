@@ -1,0 +1,24 @@
+[
+  {
+    "id": "graph.case_e.box_hit",
+    "kind": "TriggerGraph",
+    "entries": [{ "label": "invoke", "start": "hits", "refire": "restart", "action": "PointerMoved" }],
+    "nodes": [
+      { "id": "hits", "op": "InvokeGraph", "functionName": "graph.selection.rectangle_hits" },
+      { "id": "owner", "op": "LoadCaster" },
+      { "id": "controlled", "op": "QueryFilterControllable" },
+      { "id": "ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "hits", "fromPort": "next", "to": "owner" },
+      { "from": "owner", "fromPort": "next", "to": "controlled" },
+      { "from": "controlled", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "owner", "fromPort": "value", "to": "controlled", "toPort": "source" },
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  }
+]

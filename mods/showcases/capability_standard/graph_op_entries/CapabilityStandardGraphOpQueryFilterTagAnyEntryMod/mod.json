@@ -2,7 +2,7 @@
   "name": "CapabilityStandardGraphOpQueryFilterTagAnyEntryMod",
   "version": "1.0.0",
   "description": "Launcher entry for GraphNodeOp QueryFilterTagAny player gallery.",
-  "main": "bin/net8.0/CapabilityStandardGraphOpQueryFilterTagAnyEntryMod.dll",
+  "main": "bin/net9.0/CapabilityStandardGraphOpQueryFilterTagAnyEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"

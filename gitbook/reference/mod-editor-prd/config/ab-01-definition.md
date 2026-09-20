@@ -20,7 +20,7 @@
 [ { "id": "Ability.Example.Full",
     "exec": { "clockId": "FixedFrame", "interruptAny": [], "callerParams": [], "items": [] },
     "cooldown": { "valueAttribute": "CooldownSeconds", "tag": "Cooldown.Example.Q" },
-    "blockTags": { "requiredAll": [], "blockedAny": [] }, "catalogTags": [ "Catalog.Hero.Damage" ],
+    "blockTags": { "requiredAll": [], "blockedAny": [] }, "categories": [ "Catalog.Hero.Damage" ],
     "interactionContextProfile": "ctxProfileId",
     "activationPrecondition": { "validationGraph": "Graph.Example.CanCast" },
     "toggleSpec": { "toggleTag": "State.Example.On", "activeEffects": [], "deactivateExec": {} },
@@ -37,7 +37,7 @@
 | `id` | 技能身份；同名后加载覆盖先加载 |
 | `exec` | **必填**执行时间轴：clockId 必填、items ≤16（详表见 ab-02）；`exec.callerParams` 参数池 ≤4 组（ab-03） |
 | `cooldown` / `blockTags` | 冷却数据契约（valueAttribute 须已注册 + tag 至少其一，ab-04）/ tag 激活门（ab-05） |
-| `catalogTags` / `interactionContextProfile` | 纯分类标签（运行时零判定）/ 交互上下文档案 id（非空 Trim）；前置校验图 `activationPrecondition.validationGraph` 必填已注册 |
+| `categories` / `interactionContextProfile` | 纯分类（进 AbilityCategoryRegistry，运行时零玩法判定）/ 交互上下文档案 id（非空 Trim）；前置校验图 `activationPrecondition.validationGraph` 必填已注册 |
 | `toggleSpec` / `targeting` | 开关声明（toggleTag 必填、activeEffects ≤4，ab-08）/ 射程与命中（必填非负 + 已注册，ab-09） |
 | `presentation` / `input` | 表现九字段（全空=不声明，mode 键须已知）/ 输入覆盖五字段至少一项 |
 | `useRequirement` / `showRequirement` | 进度需求 id，须已注册；分别管"可用"与"可见" |

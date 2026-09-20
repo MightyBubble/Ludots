@@ -16,7 +16,7 @@ namespace Ludots.Raylib.Render
         Instanced = 1
     }
 
-    public sealed unsafe class RaylibPrimitiveRenderer : IDisposable
+    public sealed unsafe class RaylibPrimitiveRenderer : IDisposable, IRenderAssetResidency
     {
         private readonly RaylibPrimitiveRenderMode _mode;
         private readonly System.Func<string, int> _channelRegistrar;
@@ -31,6 +31,7 @@ namespace Ludots.Raylib.Render
         private readonly RaylibMaterialLibrary? _materialLibrary;
         private const int DefaultMaxModelInstancesPerDraw = 32768;
         private const int HardMaxModelInstancesPerDraw = 131072;
+        private const uint ShadowColorKey = 0;
 
         private bool _initialized;
         internal const float DefaultVegetationAlphaCutoff = 0.9f;
@@ -40,7 +41,7 @@ namespace Ludots.Raylib.Render
         private Mesh _sphereMesh;
         private Mesh _vfxBillboardMesh;
         private IRaylibReceiverMeshProjector? _receiverMeshProjector;
-        private IVisualHeightmap? _frameVisualHeightmap;
+        private IContinuousHeightmap? _frameContinuousHeightmap;
         private Shader _shader;
         private Material _material;
         private RaylibLaneShader _instancingLane = null!;
@@ -63,19 +64,41 @@ namespace Ludots.Raylib.Render
         private readonly Dictionary<long, ModelInstanceBatch> _modelInstanceBatches = new Dictionary<long, ModelInstanceBatch>();
         private readonly Dictionary<RaylibIsmRenderBridge.Bucket, ModelInstanceBatch> _staticModelInstanceBatches = new();
         private readonly Dictionary<RaylibIsmRenderBridge.Bucket, ModelInstanceBatch> _shadowInstanceBatches = new();
+        private readonly Dictionary<int, ModelInstanceBatch> _typedLaneBatches = new();
+        private readonly Dictionary<int, ModelInstanceBatch> _typedLaneShadowBatches = new();
+        private readonly List<int> _typedLaneIdsSeen = new(8);
+        private IRaylibInstancedBatchLaneSource? _instancedBatchLaneSource;
         private readonly RaylibIsmRenderBridge _ismBridge = new RaylibIsmRenderBridge();
         private readonly RaylibGpuSkinnedModelCache _gpuSkinnedModelCache;
         private readonly RaylibInstancedMaterialPipeline _materialPipeline;
         private readonly RaylibGpuSkinnedBatchRenderer _gpuSkinned;
+        private ISkinnedVisualBatchSnapshot? _preparedSkinnedSnapshot;
+        private IRenderMeshAssets? _preparedSkinnedMeshes;
+        private float _preparedSkinnedScaleMul;
+        private bool _preparedSkinnedHasNonGpuItems;
         private readonly RaylibVfxRenderer _vfxRenderer;
         private readonly RaylibDecalProjectorRenderer _decalRenderer;
         private readonly RaylibStaticMeshReceiverProjector _staticMeshReceiverProjector = new();
         private readonly RaylibVegetationCutoutRenderer _vegetationCutout = new();
         private double _frameTimeSeconds;
+        private PresentationFrameReceiptBuffer? _frameReceipts;
+        private int _receiptSourceOwnerStableId;
+        private int _receiptSourceVisualStableId;
+        private int _receiptSourceTemplateId;
+        private Vector3 _receiptSourceWorldPosition;
 
         private readonly Dictionary<int, CachedModel> _modelCache = new Dictionary<int, CachedModel>();
+        private readonly RaylibAssetStore<Texture2D> _textureStore;
+        private Vector4[] _frameFrustumPlanes = Array.Empty<Vector4>();
+        private bool _frameFrustumValid;
+        private RaylibMatrix[] _laneCullScratch = Array.Empty<RaylibMatrix>();
+        private const float UnitCubeRadiusMeters = 0.867f;
+        public int LastInstancedLaneCullSkippedCount { get; private set; }
+        private readonly RaylibAssetStore<Model> _modelStore;
         private readonly Dictionary<int, CachedProceduralMesh> _proceduralMeshCache = new Dictionary<int, CachedProceduralMesh>();
         private readonly Dictionary<int, CachedTexture> _textureCache = new Dictionary<int, CachedTexture>();
+        private readonly Dictionary<string, Stack<IDisposable>> _residencyLeases = new(StringComparer.Ordinal);
+        private IRenderMeshAssets? _residencyMeshAssets;
         private readonly HashSet<int> _reportedMissingModelDraws = new HashSet<int>();
         private Material _proceduralMeshMaterial;
         private bool _proceduralMeshMaterialLoaded;
@@ -98,6 +121,15 @@ namespace Ludots.Raylib.Render
         public int LastGpuSkinnedBatches { get; private set; }
         public double LastGpuSkinnedMatrixBuildMs { get; private set; }
         public double LastGpuSkinnedMeshDrawMs { get; private set; }
+        public double LastGpuSkinnedPoseBuildCpuMs => _gpuSkinned.LastPoseBuildCpuMs;
+        public double LastGpuSkinnedTextureUploadCpuMs => _gpuSkinned.LastTextureUploadCpuMs;
+        public double LastGpuSkinnedShadowSubmitCpuMs => _gpuSkinned.LastShadowSubmitCpuMs;
+        public double LastGpuSkinnedPoseComputeGpuMs => _gpuSkinned.LastPoseComputeGpuMs;
+        public double LastGpuSkinnedMainDrawGpuMs => _gpuSkinned.LastMainDrawGpuMs;
+        public double LastGpuSkinnedShadowDrawGpuMs => _gpuSkinned.LastShadowDrawGpuMs;
+        public int LastGpuSkinnedUniquePoses => _gpuSkinned.LastUniquePoses;
+        public long LastGpuSkinnedTextureUploadBytes => _gpuSkinned.LastTextureUploadBytes;
+        public int LastGpuSkinnedValidatedStableIds => _gpuSkinned.LastValidatedStableIds;
         public int LastMeshVisualCount { get; private set; }
         public int LastDecalVisualCount { get; private set; }
         public int LastVfxVisualCount { get; private set; }
@@ -109,7 +141,19 @@ namespace Ludots.Raylib.Render
         public int LastDrawnVfxCount => _vfxRenderer.LastDrawnVfxCount;
         public int TotalDrawnVfxCount => _vfxRenderer.TotalDrawnVfxCount;
 
+        public bool HasPreparedSkinnedFrame => _gpuSkinned.FramePrepared;
+
         public RaylibIsmRenderBridge IsmBridge => _ismBridge;
+
+        public void BindResidencyMeshAssets(IRenderMeshAssets meshes)
+        {
+            _residencyMeshAssets = meshes ?? throw new ArgumentNullException(nameof(meshes));
+        }
+
+        public void InitializeGpuSkinnedDeviceResources()
+        {
+            _gpuSkinned.InitializeDeviceResources();
+        }
 
         /// <summary>GPU 蒙皮模型/动画缓存；宿主骨骼挂点 provider 与绘制路径共用同一实例（同一动画数据源）。</summary>
         public RaylibGpuSkinnedModelCache GpuSkinnedModelCache => _gpuSkinnedModelCache;
@@ -152,12 +196,10 @@ namespace Ludots.Raylib.Render
 
             _skyIbl ??= new RaylibSkyIbl();
             _skyIbl.Ensure(lighting);
-            Vector3 zenith = lighting.SkyZenithColor;
-            Vector3 ground = lighting.SkyGroundColor;
             foreach (RaylibLaneShader lane in _shaderCatalog.InstancingShaders)
             {
                 lane.ApplyFrameLighting(lighting, viewPos);
-                lane.ApplySkyUniforms(zenith, ground, envSpecular: 1f);
+                lane.ApplySkyUniforms(lighting, envSpecular: 1f);
             }
 
             Rl.SetMaterialTexture(ref _material, (int)Rl.MaterialMapIndex.MATERIAL_MAP_CUBEMAP, _skyIbl.EnvCubemap);
@@ -182,8 +224,19 @@ namespace Ludots.Raylib.Render
             _receiverMeshProjector = projector ?? throw new ArgumentNullException(nameof(projector));
         }
 
+        public void BindInstancedBatchLaneSource(IRaylibInstancedBatchLaneSource source)
+        {
+            _instancedBatchLaneSource = source ?? throw new ArgumentNullException(nameof(source));
+        }
+
         /// <summary>Surface 线框是调试可视化；宿主每帧用 RenderDebugState.DrawDebugDraw 与 cleanPerformanceMode 覆写。</summary>
         public bool DrawSurfaceWireBoxes { get; set; } = true;
+
+        public Func<int, int, IReadOnlyDictionary<int, int>?>? AnimationStateMapResolver
+        {
+            get => _gpuSkinned.AnimationStateMapResolver;
+            set => _gpuSkinned.AnimationStateMapResolver = value;
+        }
 
         internal static IRaylibReceiverMeshProjector RequireBoundReceiverMeshProjector(
             IRaylibReceiverMeshProjector? projector,
@@ -202,31 +255,387 @@ namespace Ludots.Raylib.Render
             RaylibPrimitiveRenderMode mode = RaylibPrimitiveRenderMode.Immediate,
             IRenderAssetPathResolver? vfs = null,
             IRenderMaterialAssets? materials = null,
-            System.Func<string, int>? channelRegistrar = null)
+            System.Func<string, int>? channelRegistrar = null,
+            RaylibGpuSkinnedCapacity? gpuSkinnedCapacity = null,
+            int gpuSkinnedPosePhaseBuckets = 0)
         {
             _mode = mode;
             _channelRegistrar = channelRegistrar ?? ThrowMissingChannelRegistrar;
             _vfs = vfs;
             _materials = materials;
+            bool syncAssetLoad = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_SYNC_ASSET_LOAD") == "1";
+            if (syncAssetLoad)
+            {
+                _textureStore = new RaylibAssetStore<Texture2D>(vfs, LoadTextureResource, RaylibNativeResources.UnloadTexture);
+                _modelStore = new RaylibAssetStore<Model>(vfs, LoadModelResource, RaylibNativeResources.UnloadModel);
+            }
+            else
+            {
+                _textureStore = new RaylibAssetStore<Texture2D>(
+                    vfs,
+                    LoadTextureResource,
+                    RaylibNativeResources.UnloadTexture,
+                    cpuPrepare: fullPath => RaylibNativeResources.LoadImageFile(fullPath),
+                    uploader: payload =>
+                    {
+                        var image = (Image)payload!;
+                        Texture2D texture = RaylibNativeResources.LoadTextureFromImage(image);
+                        Rl.UnloadImage(image);
+                        return ValidateTexture(texture, "cpu-prepared image");
+                    });
+                _modelStore = new RaylibAssetStore<Model>(
+                    vfs,
+                    LoadModelResource,
+                    RaylibNativeResources.UnloadModel,
+                    cpuPrepare: fullPath => RaylibModelFileLoader.PrepareNativeLoadable(fullPath),
+                    uploader: payload => LoadModelResource((string)payload!));
+            }
             _materialLibrary = vfs != null && materials != null
-                ? new RaylibMaterialLibrary(vfs, materials)
+                ? new RaylibMaterialLibrary(vfs, materials, _textureStore)
                 : null;
             _maxModelInstancesPerDraw = ResolveMaxModelInstancesPerDraw();
-            _gpuSkinnedModelCache = new RaylibGpuSkinnedModelCache(vfs);
+            _gpuSkinnedModelCache = new RaylibGpuSkinnedModelCache(vfs, _modelStore);
             _materialPipeline = new RaylibInstancedMaterialPipeline(_materialLibrary);
-            _gpuSkinned = new RaylibGpuSkinnedBatchRenderer(_gpuSkinnedModelCache, _materialPipeline, _maxModelInstancesPerDraw);
-            _vfxRenderer = new RaylibVfxRenderer(vfs);
+            gpuSkinnedCapacity?.Validate();
+            _gpuSkinned = new RaylibGpuSkinnedBatchRenderer(
+                _gpuSkinnedModelCache,
+                _materialPipeline,
+                _maxModelInstancesPerDraw,
+                gpuSkinnedCapacity);
+            if (gpuSkinnedPosePhaseBuckets > 0)
+            {
+                _gpuSkinned.PosePhaseBuckets = gpuSkinnedPosePhaseBuckets;
+            }
+            _vfxRenderer = new RaylibVfxRenderer(vfs, _textureStore);
             _decalRenderer = new RaylibDecalProjectorRenderer(materials, _materialLibrary);
         }
 
-        public void Draw(IPrimitiveDrawSnapshot draw, Camera3D camera, IRenderMeshAssets meshes, float scaleMul = 1f, IVisualHeightmap? visualHeightmap = null, double timeSeconds = 0d)
+        private static Texture2D LoadTextureResource(string fullPath)
         {
-            Draw(draw, camera, snapshot: null, skinnedBatch: null, meshes, scaleMul, visualHeightmap, timeSeconds);
+            Texture2D texture = RaylibNativeResources.LoadTexture(fullPath);
+            return ValidateTexture(texture, fullPath);
         }
 
-        public void Draw(IPrimitiveDrawSnapshot draw, Camera3D camera, IPrimitiveDrawSnapshot? snapshot, IRenderMeshAssets meshes, float scaleMul = 1f, IVisualHeightmap? visualHeightmap = null, double timeSeconds = 0d)
+        private static Texture2D ValidateTexture(Texture2D texture, string fullPath)
         {
-            Draw(draw, camera, snapshot, skinnedBatch: null, meshes, scaleMul, visualHeightmap, timeSeconds);
+            if (texture.id == 0 || texture.width <= 0 || texture.height <= 0)
+            {
+                if (texture.id != 0)
+                {
+                    RaylibNativeResources.UnloadTexture(texture);
+                }
+
+                throw new InvalidOperationException(
+                    $"raylib rejected texture '{fullPath}' (textureId={texture.id}, size={texture.width}x{texture.height}).");
+            }
+
+            return texture;
+        }
+
+        private static Model LoadModelResource(string fullPath)
+        {
+            // OBJ 直走 native LoadModel 是 #1050 的 AccessViolation 路径；统一经
+            // 装载入口分流（glTF native / OBJ、FBX、DAE 先转 GLB）。
+            Model model = RaylibModelFileLoader.LoadModel(fullPath);
+            if (model.meshCount <= 0)
+            {
+                RaylibNativeResources.UnloadModel(model);
+                throw new InvalidOperationException($"model '{fullPath}' loaded with meshCount=0.");
+            }
+
+            return model;
+        }
+
+        /// <summary>帧末冲刷引用归零的退役资产；由唯一帧执行者在 pass 序列后调用（#1327 帧末延迟销毁）。</summary>
+        public void FlushRetiredAssets()
+        {
+            _textureStore.FlushRetired();
+            _modelStore.FlushRetired();
+        }
+
+        public void PumpAssetUploads()
+        {
+            _textureStore.PumpUploads();
+            _modelStore.PumpUploads();
+        }
+
+        public int ResidentAssetCount => _modelStore.ResidentCount + _textureStore.ResidentCount;
+
+        public int InFlightAssetCount => _modelStore.InFlightCount + _textureStore.InFlightCount + _gpuSkinnedModelCache.AnimationInFlightCount;
+
+        public int RetiredAssetCount => _modelStore.RetiredCount + _textureStore.RetiredCount;
+
+        public RaylibAssetAcquireOutcome TryAcquireExternalModel(
+            string uri,
+            out RaylibAssetStore<Model>.Lease? lease,
+            out string? status)
+        {
+            if (string.IsNullOrWhiteSpace(uri))
+            {
+                throw new ArgumentException("External scene model URI must not be empty.", nameof(uri));
+            }
+
+            return _modelStore.TryAcquireOrBegin(uri, out lease, out status);
+        }
+
+        public void DrawExternalModel(
+            Model model,
+            Vector3 position,
+            Quaternion rotation,
+            Vector3 scale,
+            Vector4 tint)
+        {
+            if (model.meshCount <= 0 || model.materialCount <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} cannot draw an external model without meshes and materials.");
+            }
+
+            EnsureImmediateLitFrame();
+            _immediateLit!.AttachToModel(model);
+            for (int i = 0; i < model.materialCount; i++)
+            {
+                _immediateLit.BindIblToMaterial(ref model.materials[i]);
+                if (_frameShadow != null)
+                {
+                    _immediateLit.BindShadowToMaterial(ref model.materials[i], _frameShadow);
+                }
+            }
+
+            _immediateLit.ApplyDrawUniforms(tint);
+            ToAxisAngleDegrees(rotation, out Vector3 axis, out float angleDegrees);
+            RaylibInstancedMaterialPipeline.RestoreOpaqueModelState();
+            Rl.DrawModelEx(model, position, axis, angleDegrees, scale, ToRaylibColor(tint));
+        }
+
+        /// <summary>
+        /// Non-blocking backend bridge used by the map-load rendezvous. The residency lease is
+        /// retained until <see cref="ReleaseAsset"/> so a focused map cannot lose its warm-up
+        /// assets between the gate completing and the first draw.
+        /// </summary>
+        public RenderAssetResidencySnapshot EnsureAssetResident(in MapPresentationAsset asset)
+        {
+            string key = BuildResidencyKey(in asset);
+            if (asset.SourceUris == null || asset.SourceUris.Length == 0)
+            {
+                return new RenderAssetResidencySnapshot(
+                    RenderAssetResidencyState.Failed,
+                    "required render asset has no source URI");
+            }
+
+            MeshAssetDescriptor descriptor = _residencyMeshAssets != null &&
+                _residencyMeshAssets.TryGetDescriptor(asset.AssetId, out MeshAssetDescriptor registered)
+                ? registered
+                : MeshAssetDescriptor.Model(asset.AssetId, asset.SourceUris);
+            if (asset.AssetKind is AssetKind.SkinnedMesh || asset.RenderPath == VisualRenderPath.GpuSkinnedInstance)
+            {
+                RaylibGpuSkinnedModelAcquireOutcome outcome = _gpuSkinnedModelCache.TryGetOrLoad(
+                    asset.AssetId,
+                    in descriptor,
+                    out _,
+                    out string? status);
+                if (outcome == RaylibGpuSkinnedModelAcquireOutcome.InFlight)
+                {
+                    return BuildSkinnedResidencySnapshot(status);
+                }
+
+                if (outcome == RaylibGpuSkinnedModelAcquireOutcome.Failed)
+                {
+                    return new RenderAssetResidencySnapshot(RenderAssetResidencyState.Failed, status);
+                }
+
+                if (_gpuSkinnedModelCache.TryGetSelectedSourceUri(asset.AssetId, out string selectedUri))
+                {
+                    RaylibAssetAcquireOutcome selectedOutcome = _modelStore.TryAcquireOrBegin(
+                        selectedUri,
+                        out RaylibAssetStore<Model>.Lease? selectedLease,
+                        out string? selectedFailure);
+                    if (selectedOutcome == RaylibAssetAcquireOutcome.Resident)
+                    {
+                        RetainResidencyLease(key, selectedLease!);
+                        return new RenderAssetResidencySnapshot(RenderAssetResidencyState.Resident);
+                    }
+
+                    if (selectedOutcome == RaylibAssetAcquireOutcome.InFlight)
+                    {
+                        return BuildResidencySnapshot(_modelStore, selectedUri, selectedFailure);
+                    }
+
+                    return new RenderAssetResidencySnapshot(
+                        RenderAssetResidencyState.Failed,
+                        $"selected skinned model source URI '{selectedUri}' is no longer resident: {selectedFailure}");
+                }
+
+                List<string>? failures = null;
+                for (int i = 0; i < asset.SourceUris.Length; i++)
+                {
+                    string uri = asset.SourceUris[i];
+                    RaylibAssetAcquireOutcome modelOutcome = _modelStore.TryAcquireOrBegin(
+                        uri,
+                        out RaylibAssetStore<Model>.Lease? lease,
+                        out string? failure);
+                    if (modelOutcome == RaylibAssetAcquireOutcome.InFlight)
+                    {
+                        return BuildResidencySnapshot(_modelStore, uri, failure);
+                    }
+
+                    if (modelOutcome == RaylibAssetAcquireOutcome.Resident)
+                    {
+                        RetainResidencyLease(key, lease!);
+                        return new RenderAssetResidencySnapshot(RenderAssetResidencyState.Resident);
+                    }
+
+                    failures ??= new List<string>();
+                    failures.Add($"'{uri}': {failure}");
+                }
+
+                return new RenderAssetResidencySnapshot(
+                    RenderAssetResidencyState.Failed,
+                    $"no skinned model source URI loaded: {string.Join("; ", failures ?? new List<string>())}");
+            }
+
+            if (descriptor.Type == MeshAssetType.Billboard)
+            {
+                List<string>? failures = null;
+                for (int i = 0; i < asset.SourceUris.Length; i++)
+                {
+                    string uri = asset.SourceUris[i];
+                    RaylibAssetAcquireOutcome outcome = _textureStore.TryAcquireOrBegin(
+                        uri,
+                        out RaylibAssetStore<Texture2D>.Lease? lease,
+                        out string? status);
+                    if (outcome == RaylibAssetAcquireOutcome.InFlight)
+                    {
+                        return BuildResidencySnapshot(_textureStore, uri, status);
+                    }
+
+                    if (outcome == RaylibAssetAcquireOutcome.Resident)
+                    {
+                        RetainResidencyLease(key, lease!);
+                        return new RenderAssetResidencySnapshot(RenderAssetResidencyState.Resident);
+                    }
+
+                    failures ??= new List<string>();
+                    failures.Add($"'{uri}': {status}");
+                }
+
+                return new RenderAssetResidencySnapshot(
+                    RenderAssetResidencyState.Failed,
+                    $"no billboard source URI loaded: {string.Join("; ", failures ?? new List<string>())}");
+            }
+
+            List<string>? modelFailures = null;
+            for (int i = 0; i < asset.SourceUris.Length; i++)
+            {
+                string uri = asset.SourceUris[i];
+                RaylibAssetAcquireOutcome modelOutcome = _modelStore.TryAcquireOrBegin(
+                    uri,
+                    out RaylibAssetStore<Model>.Lease? modelLease,
+                    out string? modelStatus);
+                if (modelOutcome == RaylibAssetAcquireOutcome.InFlight)
+                {
+                    return BuildResidencySnapshot(_modelStore, uri, modelStatus);
+                }
+
+                if (modelOutcome == RaylibAssetAcquireOutcome.Resident)
+                {
+                    RetainResidencyLease(key, modelLease!);
+                    return new RenderAssetResidencySnapshot(RenderAssetResidencyState.Resident);
+                }
+
+                modelFailures ??= new List<string>();
+                modelFailures.Add($"'{uri}': {modelStatus}");
+            }
+
+            return new RenderAssetResidencySnapshot(
+                RenderAssetResidencyState.Failed,
+                $"no model source URI loaded: {string.Join("; ", modelFailures ?? new List<string>())}");
+        }
+
+        public void ReleaseAsset(in MapPresentationAsset asset)
+        {
+            string key = BuildResidencyKey(in asset);
+            if (!_residencyLeases.TryGetValue(key, out Stack<IDisposable>? leases) || leases.Count == 0)
+            {
+                return;
+            }
+
+            leases.Pop().Dispose();
+            if (leases.Count == 0)
+            {
+                _residencyLeases.Remove(key);
+            }
+        }
+
+        RenderAssetResidencySnapshot IRenderAssetResidency.EnsureResident(in MapPresentationAsset asset)
+            => EnsureAssetResident(in asset);
+
+        void IRenderAssetResidency.Release(in MapPresentationAsset asset)
+            => ReleaseAsset(in asset);
+
+        private static string BuildResidencyKey(in MapPresentationAsset asset)
+        {
+            string uris = asset.SourceUris == null ? string.Empty : string.Join('\u001f', asset.SourceUris);
+            return $"{(byte)asset.AssetKind}:{asset.AssetId}:{(byte)asset.RenderPath}:{uris}";
+        }
+
+        private void RetainResidencyLease(string key, IDisposable lease)
+        {
+            if (!_residencyLeases.TryGetValue(key, out Stack<IDisposable>? leases))
+            {
+                leases = new Stack<IDisposable>();
+                _residencyLeases.Add(key, leases);
+            }
+
+            leases.Push(lease);
+        }
+
+        private static RenderAssetResidencySnapshot BuildResidencySnapshot<T>(
+            RaylibAssetStore<T> store,
+            string uri,
+            string? status)
+            where T : struct
+        {
+            if (store.TryGetState(uri, out RaylibAssetState state, out string? failure, out _))
+            {
+                return new RenderAssetResidencySnapshot(MapResidencyState(state), failure ?? status);
+            }
+
+            return new RenderAssetResidencySnapshot(RenderAssetResidencyState.Unrequested, status);
+        }
+
+        private static RenderAssetResidencySnapshot BuildSkinnedResidencySnapshot(string? status)
+        {
+            if (Enum.TryParse(status, ignoreCase: false, out RaylibAssetState state))
+            {
+                return new RenderAssetResidencySnapshot(MapResidencyState(state), status);
+            }
+
+            return new RenderAssetResidencySnapshot(RenderAssetResidencyState.Preparing, status);
+        }
+
+        private static RenderAssetResidencyState MapResidencyState(RaylibAssetState state)
+        {
+            return state switch
+            {
+                RaylibAssetState.Unrequested => RenderAssetResidencyState.Unrequested,
+                RaylibAssetState.Preparing => RenderAssetResidencyState.Preparing,
+                RaylibAssetState.CpuReady => RenderAssetResidencyState.CpuReady,
+                RaylibAssetState.UploadQueued => RenderAssetResidencyState.UploadQueued,
+                RaylibAssetState.Resident => RenderAssetResidencyState.Resident,
+                RaylibAssetState.Failed => RenderAssetResidencyState.Failed,
+                _ => throw new ArgumentOutOfRangeException(nameof(state), state, "Unsupported raylib asset state."),
+            };
+        }
+
+        public void Draw(IPrimitiveDrawSnapshot draw, Camera3D camera, IRenderMeshAssets meshes, float scaleMul = 1f, IContinuousHeightmap? continuousHeightmap = null, double timeSeconds = 0d)
+        {
+            Draw(draw, camera, snapshot: null, skinnedBatch: null, meshes, scaleMul, continuousHeightmap, frameReceipts: null, timeSeconds);
+        }
+
+        public void Draw(IPrimitiveDrawSnapshot draw, Camera3D camera, IPrimitiveDrawSnapshot? snapshot, IRenderMeshAssets meshes, float scaleMul = 1f, IContinuousHeightmap? continuousHeightmap = null, double timeSeconds = 0d)
+        {
+            Draw(draw, camera, snapshot, skinnedBatch: null, meshes, scaleMul, continuousHeightmap, frameReceipts: null, timeSeconds);
         }
 
         public void Draw(
@@ -236,15 +645,23 @@ namespace Ludots.Raylib.Render
             ISkinnedVisualBatchSnapshot? skinnedBatch,
             IRenderMeshAssets meshes,
             float scaleMul = 1f,
-            IVisualHeightmap? visualHeightmap = null,
+            IContinuousHeightmap? continuousHeightmap = null,
+            PresentationFrameReceiptBuffer? frameReceipts = null,
             double timeSeconds = 0d)
         {
             if (draw == null) throw new ArgumentNullException(nameof(draw));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
 
+            PumpAssetUploads();
+            BuildFrameFrustum(in camera);
             _frameViewPos = camera.position;
             _hasFrameViewPos = true;
             _frameTimeSeconds = timeSeconds;
+            _frameReceipts = frameReceipts;
+            _receiptSourceOwnerStableId = 0;
+            _receiptSourceVisualStableId = 0;
+            _receiptSourceTemplateId = 0;
+            _receiptSourceWorldPosition = default;
 
             LastInstancedInstances = 0;
             LastInstancedBatches = 0;
@@ -256,6 +673,7 @@ namespace Ludots.Raylib.Render
             LastImmediateSkippedCount = 0;
             LastInstancedMatrixCacheHits = 0;
             LastInstancedMatrixCacheMisses = 0;
+            LastInstancedLaneCullSkippedCount = 0;
             LastPersistentCreates = 0;
             LastPersistentUpdates = 0;
             LastPersistentRemoves = 0;
@@ -263,12 +681,15 @@ namespace Ludots.Raylib.Render
             LastGpuSkinnedBatches = 0;
             LastGpuSkinnedMatrixBuildMs = 0d;
             LastGpuSkinnedMeshDrawMs = 0d;
-            _gpuSkinned.ResetStats();
+            if (!_gpuSkinned.FramePrepared)
+            {
+                _gpuSkinned.ResetStats();
+            }
             LastMeshVisualCount = 0;
             LastDecalVisualCount = 0;
             LastVfxVisualCount = 0;
             LastSurfaceVisualCount = 0;
-            _frameVisualHeightmap = visualHeightmap;
+            _frameContinuousHeightmap = continuousHeightmap;
             _vfxRenderer.BeginFrame();
             _staticMeshReceiverProjector.BeginFrame();
             try
@@ -285,6 +706,7 @@ namespace Ludots.Raylib.Render
                     long bucketStart = Stopwatch.GetTimestamp();
                     DrawPersistentStaticLanes(camera, meshes, scaleMul);
                     LastPersistentBucketDrawMs = (Stopwatch.GetTimestamp() - bucketStart) * 1000d / Stopwatch.Frequency;
+                    DrawInstancedBatchLanes(meshes, scaleMul);
                     if (skinnedBatch != null)
                     {
                         DrawSkinnedBatch(skinnedBatch, camera, meshes, scaleMul);
@@ -310,7 +732,7 @@ namespace Ludots.Raylib.Render
             finally
             {
                 _vfxRenderer.EndFrame();
-                _frameVisualHeightmap = null;
+                _frameContinuousHeightmap = null;
             }
         }
 
@@ -324,6 +746,8 @@ namespace Ludots.Raylib.Render
             if (draw == null) throw new ArgumentNullException(nameof(draw));
             if (shadow == null) throw new ArgumentNullException(nameof(shadow));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
+
+            PumpAssetUploads();
 
             EnsureInitialized();
             var span = draw.GetSpan();
@@ -347,6 +771,8 @@ namespace Ludots.Raylib.Render
                     shadow,
                     item.MaterialId);
             }
+
+            DrawInstancedBatchLaneShadows(meshes, shadow, scaleMul);
         }
 
         public void DrawShadow(
@@ -359,26 +785,96 @@ namespace Ludots.Raylib.Render
             if (shadow == null) throw new ArgumentNullException(nameof(shadow));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
 
-            var span = skinnedBatch.GetSpan();
-            _gpuSkinned.Prepare();
-            for (int i = 0; i < span.Length; i++)
+            ValidatePreparedSkinnedFrame(skinnedBatch, meshes, scaleMul);
+
+            DrawPreparedSkinnedShadow(shadow);
+            LastGpuSkinnedInstances = _gpuSkinned.LastInstances;
+            LastGpuSkinnedBatches = _gpuSkinned.LastBatches;
+            LastGpuSkinnedMatrixBuildMs = _gpuSkinned.LastMatrixBuildMs;
+            LastGpuSkinnedMeshDrawMs = _gpuSkinned.LastMeshDrawMs;
+        }
+
+        public void PrepareSkinnedFrame(
+            ISkinnedVisualBatchSnapshot skinnedBatch,
+            IRenderMeshAssets meshes,
+            float scaleMul = 1f)
+        {
+            if (skinnedBatch == null) throw new ArgumentNullException(nameof(skinnedBatch));
+            if (meshes == null) throw new ArgumentNullException(nameof(meshes));
+            if (_gpuSkinned.FramePrepared)
             {
-                ref readonly var item = ref span[i];
-                if (item.Visibility != VisualVisibility.Visible)
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} already has a prepared GPU-skinned frame.");
+            }
+
+            PumpAssetUploads();
+            _gpuSkinned.BeginFrame();
+            try
+            {
+                _preparedSkinnedSnapshot = skinnedBatch;
+                _preparedSkinnedMeshes = meshes;
+                _preparedSkinnedScaleMul = scaleMul;
+                _preparedSkinnedHasNonGpuItems = false;
+
+                ReadOnlySpan<SkinnedVisualBatchItem> span = skinnedBatch.GetSpan();
+                for (int i = 0; i < span.Length; i++)
                 {
-                    continue;
+                    ref readonly SkinnedVisualBatchItem item = ref span[i];
+                    if (item.Visibility != VisualVisibility.Visible)
+                    {
+                        continue;
+                    }
+
+                    if (_gpuSkinned.TryCollect(in item, meshes, scaleMul, out RaylibGpuSkinnedSubmitOutcome submitOutcome))
+                    {
+                        continue;
+                    }
+
+                    if (submitOutcome == RaylibGpuSkinnedSubmitOutcome.InFlight)
+                    {
+                        continue;
+                    }
+
+                    _preparedSkinnedHasNonGpuItems = true;
                 }
 
-                if (!RaylibMaterialDrawState.CastsShadow(RaylibMaterialDrawState.ResolveBlendMode(
+                _gpuSkinned.SealFrame();
+            }
+            catch
+            {
+                EndSkinnedFrame();
+                throw;
+            }
+        }
+
+        public void DrawPreparedSkinnedShadow(RaylibDirectionalShadowMap shadow)
+        {
+            if (shadow == null) throw new ArgumentNullException(nameof(shadow));
+            if (!_gpuSkinned.FramePrepared)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} requires PrepareSkinnedFrame before drawing skinned shadows.");
+            }
+
+            _gpuSkinned.DrawShadow(shadow);
+            if (!_preparedSkinnedHasNonGpuItems)
+            {
+                return;
+            }
+
+            ISkinnedVisualBatchSnapshot snapshot = _preparedSkinnedSnapshot!;
+            IRenderMeshAssets meshes = _preparedSkinnedMeshes!;
+            ReadOnlySpan<SkinnedVisualBatchItem> span = snapshot.GetSpan();
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref readonly SkinnedVisualBatchItem item = ref span[i];
+                if (item.Visibility != VisualVisibility.Visible ||
+                    item.RenderPath == VisualRenderPath.GpuSkinnedInstance ||
+                    !RaylibMaterialDrawState.CastsShadow(RaylibMaterialDrawState.ResolveBlendMode(
                         _materials,
                         item.MaterialId,
                         MaterialBlendMode.Opaque,
-                        $"{nameof(RaylibPrimitiveRenderer)} skinned shadow")))
-                {
-                    continue;
-                }
-
-                if (_gpuSkinned.TrySubmit(in item, meshes, scaleMul))
+                        $"{nameof(RaylibPrimitiveRenderer)} non-GPU skinned shadow")))
                 {
                     continue;
                 }
@@ -387,18 +883,41 @@ namespace Ludots.Raylib.Render
                     item.MeshAssetId,
                     item.Position,
                     item.Rotation,
-                    item.Scale * scaleMul,
+                    item.Scale * _preparedSkinnedScaleMul,
                     default,
                     meshes,
                     shadow,
                     item.MaterialId);
             }
+        }
 
-            _gpuSkinned.FlushShadow(shadow);
-            LastGpuSkinnedInstances = _gpuSkinned.LastInstances;
-            LastGpuSkinnedBatches = _gpuSkinned.LastBatches;
-            LastGpuSkinnedMatrixBuildMs = _gpuSkinned.LastMatrixBuildMs;
-            LastGpuSkinnedMeshDrawMs = _gpuSkinned.LastMeshDrawMs;
+        public void EndSkinnedFrame()
+        {
+            _gpuSkinned.EndFrame();
+            _preparedSkinnedSnapshot = null;
+            _preparedSkinnedMeshes = null;
+            _preparedSkinnedScaleMul = 0f;
+            _preparedSkinnedHasNonGpuItems = false;
+        }
+
+        internal void ValidatePreparedSkinnedFrame(
+            ISkinnedVisualBatchSnapshot skinnedBatch,
+            IRenderMeshAssets meshes,
+            float scaleMul)
+        {
+            if (!_gpuSkinned.FramePrepared)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} requires PrepareSkinnedFrame before drawing a GPU-skinned pass.");
+            }
+
+            if (!ReferenceEquals(_preparedSkinnedSnapshot, skinnedBatch) ||
+                !ReferenceEquals(_preparedSkinnedMeshes, meshes) ||
+                _preparedSkinnedScaleMul != scaleMul)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} prepared GPU-skinned frame must be reused with the same snapshot, mesh registry, and scale multiplier.");
+            }
         }
 
         private void DrawPersistentStaticLanes(Camera3D camera, IRenderMeshAssets meshes, float scaleMul)
@@ -498,6 +1017,7 @@ namespace Ludots.Raylib.Render
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
+                SetReceiptSource(in item);
                 if (TryDrawTypedPresenterChild(in item, camera, meshes, scaleMul, instancedPrimitives: false))
                 {
                     continue;
@@ -542,6 +1062,7 @@ namespace Ludots.Raylib.Render
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
+                SetReceiptSource(in item);
                 if (TryDrawTypedPresenterChild(in item, camera, meshes, scaleMul, instancedPrimitives: true))
                 {
                     continue;
@@ -578,6 +1099,29 @@ namespace Ludots.Raylib.Render
             FlushInstancedBatches();
         }
 
+        private void SetReceiptSource(in PrimitiveDrawItem item)
+        {
+            _receiptSourceOwnerStableId = item.OwnerStableId;
+            _receiptSourceVisualStableId = item.StableId;
+            _receiptSourceTemplateId = item.TemplateId;
+            _receiptSourceWorldPosition = item.Position;
+        }
+
+        private void RecordSubmittedLeaf(in MeshAssetDescriptor descriptor, in Vector3 position, in Quaternion rotation, in Vector3 scale)
+        {
+            _frameReceipts?.RecordSubmitted(
+                _receiptSourceOwnerStableId,
+                _receiptSourceVisualStableId,
+                _receiptSourceTemplateId,
+                _receiptSourceWorldPosition,
+                position,
+                rotation,
+                scale,
+                descriptor.Type == MeshAssetType.ProceduralMesh && descriptor.ProceduralMeshData != null
+                    ? descriptor.ProceduralMeshData.LocalBounds
+                    : new ProceduralMeshBounds(Vector3.Zero, new Vector3(0.5f, 0.5f, 0.5f)));
+        }
+
         internal bool ShouldSkipImmediateDraw(in PrimitiveDrawItem item, bool persistentStaticLanesActive)
         {
             if (!persistentStaticLanesActive ||
@@ -597,6 +1141,7 @@ namespace Ludots.Raylib.Render
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
+                SetReceiptSource(in item);
                 if (TryDrawTypedPresenterChild(in item, camera, meshes, scaleMul, instancedPrimitives: true))
                 {
                     continue;
@@ -769,49 +1314,63 @@ namespace Ludots.Raylib.Render
 
         private void DrawSkinnedBatch(ISkinnedVisualBatchSnapshot skinnedBatch, Camera3D camera, IRenderMeshAssets meshes, float scaleMul)
         {
-            var span = skinnedBatch.GetSpan();
-            if (!_gpuSkinned.BatchesPreparedForShadow)
+            bool ownsPreparedFrame = !_gpuSkinned.FramePrepared;
+            bool preparedHere = false;
+            try
             {
-                _gpuSkinned.Prepare();
-            }
-            for (int i = 0; i < span.Length; i++)
-            {
-                ref readonly var item = ref span[i];
-                if (item.Visibility != VisualVisibility.Visible)
+                if (ownsPreparedFrame)
                 {
-                    continue;
+                    PrepareSkinnedFrame(skinnedBatch, meshes, scaleMul);
+                    preparedHere = true;
+                }
+                ValidatePreparedSkinnedFrame(skinnedBatch, meshes, scaleMul);
+
+                if (_preparedSkinnedHasNonGpuItems)
+                {
+                    ReadOnlySpan<SkinnedVisualBatchItem> span = skinnedBatch.GetSpan();
+                    for (int i = 0; i < span.Length; i++)
+                    {
+                        ref readonly SkinnedVisualBatchItem item = ref span[i];
+                        if (item.Visibility != VisualVisibility.Visible ||
+                            item.RenderPath == VisualRenderPath.GpuSkinnedInstance)
+                        {
+                            continue;
+                        }
+
+                        if (TryDrawPrototypeSkinned(item, meshes, scaleMul))
+                        {
+                            continue;
+                        }
+
+                        DrawAssetRecursive(
+                            item.MeshAssetId,
+                            item.Position,
+                            item.Rotation,
+                            item.Scale * scaleMul,
+                            item.Color,
+                            camera,
+                            meshes,
+                            item.MaterialId);
+                    }
                 }
 
-                if (_gpuSkinned.TrySubmit(in item, meshes, scaleMul))
+                if (_gpuSkinned.HasActiveBatches)
                 {
-                    continue;
+                    EnsureInitialized();
                 }
-
-                if (TryDrawPrototypeSkinned(item, meshes, scaleMul))
-                {
-                    continue;
-                }
-
-                DrawAssetRecursive(
-                    item.MeshAssetId,
-                    item.Position,
-                    item.Rotation,
-                    item.Scale * scaleMul,
-                    item.Color,
-                    camera,
-                    meshes,
-                    item.MaterialId);
+                _gpuSkinned.DrawMain(_shader, in _instancingPbrLocs, _skyIbl);
+                LastGpuSkinnedInstances = _gpuSkinned.LastInstances;
+                LastGpuSkinnedBatches = _gpuSkinned.LastBatches;
+                LastGpuSkinnedMatrixBuildMs = _gpuSkinned.LastMatrixBuildMs;
+                LastGpuSkinnedMeshDrawMs = _gpuSkinned.LastMeshDrawMs;
             }
-
-            if (_gpuSkinned.HasActiveBatches)
+            finally
             {
-                EnsureInitialized();
+                if (preparedHere)
+                {
+                    EndSkinnedFrame();
+                }
             }
-            _gpuSkinned.Flush(_shader, in _instancingPbrLocs, _skyIbl);
-            LastGpuSkinnedInstances = _gpuSkinned.LastInstances;
-            LastGpuSkinnedBatches = _gpuSkinned.LastBatches;
-            LastGpuSkinnedMatrixBuildMs = _gpuSkinned.LastMatrixBuildMs;
-            LastGpuSkinnedMeshDrawMs = _gpuSkinned.LastMeshDrawMs;
         }
         private bool TryDrawPrototypeSkinned(in SkinnedVisualBatchItem item, IRenderMeshAssets meshes, float scaleMul)
         {
@@ -897,6 +1456,8 @@ namespace Ludots.Raylib.Render
                         CountMeshVisual();
                     }
 
+                    RecordSubmittedLeaf(in descriptor, position, rotation, scale);
+
                     if (instancedPrimitives)
                     {
                         SubmitPrimitive(descriptor.PrimitiveKind, position, rotation, scale, color, materialId);
@@ -913,6 +1474,8 @@ namespace Ludots.Raylib.Render
                         CountMeshVisual();
                     }
 
+                    RecordSubmittedLeaf(in descriptor, position, rotation, scale);
+
                     DrawModel(meshAssetId, descriptor, position, rotation, scale, color, materialId);
                     return;
                 case MeshAssetType.Billboard:
@@ -921,6 +1484,8 @@ namespace Ludots.Raylib.Render
                         CountMeshVisual();
                     }
 
+                    RecordSubmittedLeaf(in descriptor, position, rotation, scale);
+
                     DrawBillboard(meshAssetId, descriptor, position, scale, color, camera, materialId);
                     return;
                 case MeshAssetType.ProceduralMesh:
@@ -928,6 +1493,8 @@ namespace Ludots.Raylib.Render
                     {
                         CountMeshVisual();
                     }
+
+                    RecordSubmittedLeaf(in descriptor, position, rotation, scale);
 
                     DrawProceduralMesh(meshAssetId, in descriptor, position, rotation, scale, materialId);
                     return;
@@ -1352,8 +1919,13 @@ namespace Ludots.Raylib.Render
 
         private void DrawBillboard(int meshAssetId, in MeshAssetDescriptor desc, Vector3 position, Vector3 scale, Vector4 color, Camera3D camera, int materialId)
         {
-            if (!TryGetOrLoadTexture(meshAssetId, desc, out var cached))
+            if (!TryGetOrLoadTexture(meshAssetId, desc, out var cached, out bool textureInFlight))
             {
+                if (textureInFlight)
+                {
+                    return;
+                }
+
                 throw new InvalidOperationException(
                     $"{BillboardTextureRequiredError}: meshAssetId={meshAssetId}, sourceUris={FormatSourceUris(desc.SourceUris)}.");
             }
@@ -1430,8 +2002,13 @@ namespace Ludots.Raylib.Render
             RaylibDirectionalShadowMap shadow,
             MaterialBlendMode blendMode)
         {
-            if (!TryGetOrLoadTexture(meshAssetId, desc, out CachedTexture cached))
+            if (!TryGetOrLoadTexture(meshAssetId, desc, out CachedTexture cached, out bool textureInFlight))
             {
+                if (textureInFlight)
+                {
+                    return;
+                }
+
                 throw new InvalidOperationException(
                     $"{BillboardTextureRequiredError}: meshAssetId={meshAssetId}, sourceUris={FormatSourceUris(desc.SourceUris)}.");
             }
@@ -1613,34 +2190,35 @@ namespace Ludots.Raylib.Render
                 return false;
             }
 
-            for (int u = 0; u < desc.SourceUris.Length; u++)
+            List<string>? failures = null;
+            foreach (string uri in desc.SourceUris)
             {
-                string uri = desc.SourceUris[u];
-                if (string.IsNullOrWhiteSpace(uri)) continue;
-
-                if (!_vfs.TryResolveFullPath(uri, out string fullPath)) continue;
-                if (!File.Exists(fullPath)) continue;
-
-                // OBJ 直走 native LoadModel 是 #1050 的 AccessViolation 路径；统一经
-                // 装载入口分流（glTF native / OBJ、FBX、DAE 先转 GLB）。
-                Model model;
-                try
+                if (string.IsNullOrWhiteSpace(uri))
                 {
-                    model = RaylibModelFileLoader.LoadModel(fullPath);
-                }
-                catch (Exception ex)
-                {
-                    RenderDiagnostics.Warn($"RaylibPrimitiveRenderer meshAssetId={meshAssetId} 模型装载失败（'{fullPath}'）：{ex.Message}");
                     continue;
                 }
 
-                if (model.meshCount > 0)
+                RaylibAssetAcquireOutcome outcome = _modelStore.TryAcquireOrBegin(uri, out RaylibAssetStore<Model>.Lease? lease, out string? status);
+                if (outcome == RaylibAssetAcquireOutcome.InFlight)
                 {
-                    Mesh[] modelMeshes = CopyModelMeshes(model);
+                    // 两阶段装载进行中：本帧不绘制、不记负缓存，下一帧重问（#1328）。
+                    return false;
+                }
+
+                if (outcome == RaylibAssetAcquireOutcome.Failed)
+                {
+                    failures ??= new List<string>();
+                    failures.Add($"'{uri}': {status}");
+                    continue;
+                }
+
+                try
+                {
+                    Mesh[] modelMeshes = CopyModelMeshes(lease!.Resource);
                     ComputeModelLocalAabbMeters(modelMeshes, out Vector3 localMin, out Vector3 localMax);
                     cached = new CachedModel
                     {
-                        Model = model,
+                        Lease = lease,
                         Meshes = modelMeshes,
                         LocalMin = localMin,
                         LocalMax = localMax,
@@ -1649,14 +2227,16 @@ namespace Ludots.Raylib.Render
                     _modelCache[meshAssetId] = cached;
                     return true;
                 }
-
-                Rl.UnloadModel(model);
+                catch
+                {
+                    lease!.Dispose();
+                    throw;
+                }
             }
 
-            _modelCache[meshAssetId] = cached;
-            return false;
+            throw new InvalidOperationException(
+                $"{nameof(RaylibPrimitiveRenderer)} meshAssetId={meshAssetId} could not load any sourceUri. Attempts: [{string.Join("; ", failures ?? new List<string>())}]");
         }
-
         private static Mesh[] CopyModelMeshes(Model model)
         {
             var modelMeshes = new Mesh[model.meshCount];
@@ -1744,8 +2324,9 @@ namespace Ludots.Raylib.Render
             return true;
         }
 
-        private bool TryGetOrLoadTexture(int meshAssetId, in MeshAssetDescriptor desc, out CachedTexture cached)
+        private bool TryGetOrLoadTexture(int meshAssetId, in MeshAssetDescriptor desc, out CachedTexture cached, out bool inFlight)
         {
+            inFlight = false;
             if (_textureCache.TryGetValue(meshAssetId, out cached))
                 return cached.Loaded;
 
@@ -1758,47 +2339,42 @@ namespace Ludots.Raylib.Render
                 return false;
             }
 
-            for (int u = 0; u < desc.SourceUris.Length; u++)
+            List<string>? failures = null;
+            foreach (string uri in desc.SourceUris)
             {
-                string uri = desc.SourceUris[u];
-                if (string.IsNullOrWhiteSpace(uri)) continue;
-
-                if (!_vfs.TryResolveFullPath(uri, out string fullPath))
+                if (string.IsNullOrWhiteSpace(uri))
                 {
-                    RenderDiagnostics.Detail("texture", meshAssetId, $"texture-resolve failed; uri={uri}");
                     continue;
                 }
 
-                if (!File.Exists(fullPath))
+                RaylibAssetAcquireOutcome outcome = _textureStore.TryAcquireOrBegin(uri, out RaylibAssetStore<Texture2D>.Lease? lease, out string? status);
+                if (outcome == RaylibAssetAcquireOutcome.InFlight)
                 {
-                    RenderDiagnostics.Detail("texture", meshAssetId, $"texture-file missing; uri={uri}; fullPath={fullPath}");
+                    inFlight = true;
+                    return false;
+                }
+
+                if (outcome == RaylibAssetAcquireOutcome.Failed)
+                {
+                    failures ??= new List<string>();
+                    failures.Add($"'{uri}': {status}");
                     continue;
                 }
 
-                var texture = Rl.LoadTexture(fullPath);
-                if (texture.id != 0 && texture.width > 0 && texture.height > 0)
+                Texture2D texture = lease!.Resource;
+                cached = new CachedTexture
                 {
-                    cached = new CachedTexture
-                    {
-                        Texture = texture,
-                        Loaded = true,
-                        AspectRatio = texture.height > 0 ? (float)texture.width / texture.height : 1f,
-                    };
-                    _textureCache[meshAssetId] = cached;
-                    RenderDiagnostics.Detail("texture", meshAssetId, $"texture-load success; uri={uri}; fullPath={fullPath}; size={texture.width}x{texture.height}");
-                    return true;
-                }
-
-                RenderDiagnostics.Detail("texture", meshAssetId, $"texture-load failed; uri={uri}; fullPath={fullPath}; textureId={texture.id}; size={texture.width}x{texture.height}");
-
-                if (texture.id != 0)
-                    Rl.UnloadTexture(texture);
+                    Lease = lease,
+                    Loaded = true,
+                    AspectRatio = texture.height > 0 ? (float)texture.width / texture.height : 1f,
+                };
+                _textureCache[meshAssetId] = cached;
+                return true;
             }
 
-            _textureCache[meshAssetId] = cached;
-            return false;
+            throw new InvalidOperationException(
+                $"{nameof(RaylibPrimitiveRenderer)} texture meshAssetId={meshAssetId} could not load any sourceUri. Attempts: [{string.Join("; ", failures ?? new List<string>())}]");
         }
-
         private static string FormatSourceUris(string[]? sourceUris)
         {
             return sourceUris == null || sourceUris.Length == 0
@@ -1871,7 +2447,7 @@ namespace Ludots.Raylib.Render
                 proceduralMesh.Colors32.AsSpan(0, colorByteCount).CopyTo(new Span<byte>(mesh.colors, colorByteCount));
             }
 
-            Rl.UploadMesh(ref mesh, false);
+            RaylibNativeResources.UploadMesh(ref mesh, false);
             return mesh;
         }
 
@@ -1884,7 +2460,7 @@ namespace Ludots.Raylib.Render
 
             if (cached.Mesh.vertexCount > 0)
             {
-                Rl.UnloadMesh(cached.Mesh);
+                RaylibNativeResources.UnloadMesh(cached.Mesh);
             }
 
             if (cached.SubmeshMeshes == null)
@@ -1896,7 +2472,7 @@ namespace Ludots.Raylib.Render
             {
                 if (cached.SubmeshMeshes[i].vertexCount > 0)
                 {
-                    Rl.UnloadMesh(cached.SubmeshMeshes[i]);
+                    RaylibNativeResources.UnloadMesh(cached.SubmeshMeshes[i]);
                 }
             }
         }
@@ -1908,7 +2484,7 @@ namespace Ludots.Raylib.Render
                 return;
             }
 
-            _proceduralMeshMaterial = Rl.LoadMaterialDefault();
+            _proceduralMeshMaterial = RaylibNativeResources.LoadMaterialDefault();
             _proceduralMeshMaterialLoaded = true;
         }
 
@@ -2083,6 +2659,8 @@ namespace Ludots.Raylib.Render
 
         public void DrawInstancedBucket(RaylibIsmRenderBridge.Bucket bucket, IRenderMeshAssets meshes, float scaleMul = 1f)
         {
+            _textureStore.PumpUploads();
+            _modelStore.PumpUploads();
             if (bucket == null) throw new ArgumentNullException(nameof(bucket));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
 
@@ -2141,6 +2719,8 @@ namespace Ludots.Raylib.Render
             RaylibDirectionalShadowMap shadow,
             float scaleMul = 1f)
         {
+            _textureStore.PumpUploads();
+            _modelStore.PumpUploads();
             if (bucket == null) throw new ArgumentNullException(nameof(bucket));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
             if (shadow == null) throw new ArgumentNullException(nameof(shadow));
@@ -2191,6 +2771,371 @@ namespace Ludots.Raylib.Render
             }
         }
 
+        private void DrawInstancedBatchLanes(IRenderMeshAssets meshes, float scaleMul)
+        {
+            IRaylibInstancedBatchLaneSource? source = _instancedBatchLaneSource;
+            if (source == null)
+            {
+                return;
+            }
+
+            int laneCount = source.ResidentLaneCount;
+            if (laneCount == 0)
+            {
+                return;
+            }
+
+            EnsureInitialized();
+            _typedLaneIdsSeen.Clear();
+            for (int i = 0; i < laneCount; i++)
+            {
+                RaylibInstancedBatchLane lane = source.GetResidentLane(i);
+                _typedLaneIdsSeen.Add(lane.LaneId);
+                if (!lane.Visible || lane.Count <= 0)
+                {
+                    continue;
+                }
+
+                if (!meshes.TryGetDescriptor(lane.MeshAssetId, out MeshAssetDescriptor descriptor))
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibPrimitiveRenderer)} cannot draw typed instanced lane meshAssetId={lane.MeshAssetId}.");
+                }
+
+                switch (descriptor.Type)
+                {
+                    case MeshAssetType.Primitive when descriptor.PrimitiveKind is PrimitiveMeshKind.Cube or PrimitiveMeshKind.Sphere:
+                        DrawTypedPrimitiveLane(lane, descriptor.PrimitiveKind, scaleMul);
+                        break;
+                    case MeshAssetType.Model:
+                        DrawTypedModelLane(lane, descriptor, meshes, scaleMul);
+                        break;
+                    default:
+                        throw new InvalidOperationException(
+                            $"{nameof(RaylibPrimitiveRenderer)} refuses mesh type '{descriptor.Type}' for typed instanced lane meshAssetId={lane.MeshAssetId}. Use a Primitive or Model mesh asset.");
+                }
+            }
+
+            PruneTypedLaneBatches();
+        }
+
+        private void DrawInstancedBatchLaneShadows(IRenderMeshAssets meshes, RaylibDirectionalShadowMap shadow, float scaleMul)
+        {
+            IRaylibInstancedBatchLaneSource? source = _instancedBatchLaneSource;
+            if (source == null)
+            {
+                return;
+            }
+
+            int laneCount = source.ResidentLaneCount;
+            if (laneCount == 0)
+            {
+                return;
+            }
+
+            EnsureInitialized();
+            for (int i = 0; i < laneCount; i++)
+            {
+                RaylibInstancedBatchLane lane = source.GetResidentLane(i);
+                if (!lane.Visible || lane.Count <= 0)
+                {
+                    continue;
+                }
+
+                if (!meshes.TryGetDescriptor(lane.MeshAssetId, out MeshAssetDescriptor descriptor))
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibPrimitiveRenderer)} cannot shadow typed instanced lane meshAssetId={lane.MeshAssetId}.");
+                }
+
+                switch (descriptor.Type)
+                {
+                    case MeshAssetType.Primitive when descriptor.PrimitiveKind is PrimitiveMeshKind.Cube or PrimitiveMeshKind.Sphere:
+                        Mesh primitiveMesh = descriptor.PrimitiveKind == PrimitiveMeshKind.Cube ? _cubeMesh : _sphereMesh;
+                        DrawMeshInstancedShadow(
+                            primitiveMesh,
+                            ResolveTypedLaneBatch(_typedLaneShadowBatches, lane, ShadowColorKey, scaleMul),
+                            shadow);
+                        break;
+                    case MeshAssetType.Model:
+                        if (!TryGetOrLoadModel(lane.MeshAssetId, in descriptor, out CachedModel cached))
+                        {
+                            WarnMissingModelSkipped(lane.MeshAssetId, stableId: 0, "typed instanced batch lane shadow");
+                            break;
+                        }
+
+                        ModelInstanceBatch shadowBatch = ResolveTypedLaneBatch(_typedLaneShadowBatches, lane, ShadowColorKey, scaleMul);
+                        for (int meshIndex = 0; meshIndex < cached.Model.meshCount; meshIndex++)
+                        {
+                            DrawMeshInstancedShadow(cached.Model.meshes[meshIndex], shadowBatch, shadow);
+                        }
+
+                        break;
+                    default:
+                        throw new InvalidOperationException(
+                            $"{nameof(RaylibPrimitiveRenderer)} refuses shadow mesh type '{descriptor.Type}' for typed instanced lane meshAssetId={lane.MeshAssetId}. Use a Primitive or Model mesh asset.");
+                }
+            }
+        }
+
+        private void DrawTypedPrimitiveLane(
+            in RaylibInstancedBatchLane lane,
+            PrimitiveMeshKind primitiveKind,
+            float scaleMul)
+        {
+            Mesh mesh = primitiveKind == PrimitiveMeshKind.Cube ? _cubeMesh : _sphereMesh;
+            uint colorKey = RaylibInstancedMaterialPipeline.PackRgba(Vector4.One);
+            ModelInstanceBatch batch = ResolveTypedLaneBatch(_typedLaneBatches, lane, colorKey, scaleMul);
+            long drawStart = Stopwatch.GetTimestamp();
+            EnsureFrameLightingAppliedForInstancing();
+            RaylibInstancedMaterialPipeline.RequireMeshNormals(in mesh, "Instanced typed lane");
+            RaylibLaneShader laneShader = ResolveInstancingLaneShader(lane.MaterialAssetId);
+            _material.shader = laneShader.Shader;
+            SetTintUniform(laneShader, colorKey);
+            laneShader.SetColDiffuse(Vector4.One);
+            _materialPipeline.ApplyHostMaterialMaps(ref _material, lane.MaterialAssetId, laneShader.Shader, in laneShader.PbrLocs);
+            BindFrameShadow(ref _material);
+            int drawCalls = 0;
+            (RaylibMatrix[] visible, int visibleCount) = CompactVisibleInstances(batch, UnitCubeRadiusMeters);
+            fixed (RaylibMatrix* transforms = visible)
+            {
+                for (int offset = 0; offset < visibleCount; offset += _maxModelInstancesPerDraw)
+                {
+                    int chunkCount = Math.Min(_maxModelInstancesPerDraw, visibleCount - offset);
+                    Rl.DrawMeshInstanced(mesh, _material, transforms + offset, chunkCount);
+                    drawCalls++;
+                }
+            }
+
+            LastInstancedMeshDrawMs += (Stopwatch.GetTimestamp() - drawStart) * 1000.0 / Stopwatch.Frequency;
+            LastInstancedInstances += visibleCount;
+            LastInstancedBatches += drawCalls;
+        }
+
+        private void DrawTypedModelLane(
+            in RaylibInstancedBatchLane lane,
+            in MeshAssetDescriptor descriptor,
+            IRenderMeshAssets meshes,
+            float scaleMul)
+        {
+            if (!TryGetOrLoadModel(lane.MeshAssetId, in descriptor, out CachedModel cached))
+            {
+                WarnMissingModelSkipped(lane.MeshAssetId, stableId: 0, "typed instanced batch lane");
+                return;
+            }
+
+            uint colorKey = RaylibInstancedMaterialPipeline.PackRgba(Vector4.One);
+            ModelInstanceBatch batch = ResolveTypedLaneBatch(_typedLaneBatches, lane, colorKey, scaleMul);
+            Vector3 localExtents = cached.LocalMax - cached.LocalMin;
+            float modelRadius = 0.5f * localExtents.Length();
+            int drawCalls = DrawModelInstanceBatch(cached.Model, batch, colorKey, lane.MaterialAssetId, modelRadius);
+            LastInstancedInstances += batch.Count;
+            LastInstancedBatches += drawCalls;
+        }
+
+        /// <summary>
+        /// 帧级视锥侧平面（#1331）：System.Numerics 行向量约定下 clip = world*(view*proj)，
+        /// 平面取列组合 col1±col4 / col2±col4；只做四个侧平面的保守球筛选——近平面（near=0.05 收益可忽略）
+        /// 与远平面不参与，深度约定差异（GL -w..w vs D3D 0..w）因此不构成风险。平面构建失败兜底为全可见（保守方向）。
+        /// </summary>
+        private void BuildFrameFrustum(in Camera3D camera)
+        {
+            if (_frameFrustumPlanes.Length != 4)
+            {
+                _frameFrustumPlanes = new Vector4[4];
+            }
+
+            float aspect = MathF.Max(0.001f, Rl.GetScreenWidth() / (float)Math.Max(1, Rl.GetScreenHeight()));
+            Matrix4x4 view = Matrix4x4.CreateLookAt(camera.position, camera.target, camera.up);
+            Matrix4x4 proj = camera.projection == CameraProjection.CAMERA_ORTHOGRAPHIC
+                ? Matrix4x4.CreateOrthographic(camera.fovy * aspect, camera.fovy, 0.05f, 100000f)
+                : Matrix4x4.CreatePerspectiveFieldOfView(
+                    camera.fovy * MathF.PI / 180f,
+                    aspect,
+                    0.05f,
+                    100000f);
+            Matrix4x4 p = view * proj;
+            _frameFrustumPlanes[0] = NormalizePlane(new Vector4(p.M11 + p.M14, p.M21 + p.M24, p.M31 + p.M34, p.M41 + p.M44));
+            _frameFrustumPlanes[1] = NormalizePlane(new Vector4(p.M11 - p.M14, p.M21 - p.M24, p.M31 - p.M34, p.M41 - p.M44));
+            _frameFrustumPlanes[2] = NormalizePlane(new Vector4(p.M12 + p.M14, p.M22 + p.M24, p.M32 + p.M34, p.M42 + p.M44));
+            _frameFrustumPlanes[3] = NormalizePlane(new Vector4(p.M12 - p.M14, p.M22 - p.M24, p.M32 - p.M34, p.M42 - p.M44));
+            _frameFrustumValid = true;
+        }
+
+        private static Vector4 NormalizePlane(Vector4 plane)
+        {
+            float length = MathF.Sqrt(Vector4.Dot(plane, plane));
+            return length > 1e-9f ? plane / length : plane;
+        }
+
+        private static float InstanceRadiusMeters(in RaylibMatrix matrix, float localRadiusMeters)
+        {
+            float sx = MathF.Sqrt((matrix.m0 * matrix.m0) + (matrix.m1 * matrix.m1) + (matrix.m2 * matrix.m2));
+            float sy = MathF.Sqrt((matrix.m4 * matrix.m4) + (matrix.m5 * matrix.m5) + (matrix.m6 * matrix.m6));
+            float sz = MathF.Sqrt((matrix.m8 * matrix.m8) + (matrix.m9 * matrix.m9) + (matrix.m10 * matrix.m10));
+            return localRadiusMeters * MathF.Max(sx, MathF.Max(sy, sz));
+        }
+
+        private bool IsInstanceWithinFrameFrustum(in RaylibMatrix matrix, float localRadiusMeters)
+        {
+            if (!_frameFrustumValid)
+            {
+                return true;
+            }
+
+            Vector3 position = new(matrix.m12, matrix.m13, matrix.m14);
+            float radius = InstanceRadiusMeters(in matrix, localRadiusMeters);
+            Span<Vector4> planes = _frameFrustumPlanes;
+            for (int i = 0; i < planes.Length; i++)
+            {
+                Vector4 plane = planes[i];
+                if (plane.X * position.X + plane.Y * position.Y + plane.Z * position.Z + plane.W < -radius)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>主颜色 pass 提交点做逐实例压缩（#1331）：全可见时零拷贝直接用原批次；
+        /// 有剔除时压缩进复用 scratch。阴影 pass 不调用（光源视锥与主相机视锥不同，剔除语义不适用）。
+        /// revision 矩阵缓存不受剔除结果影响（缓存存原始全量，压缩每帧独立）。</summary>
+        private (RaylibMatrix[] Buffer, int Count) CompactVisibleInstances(ModelInstanceBatch batch, float localRadiusMeters)
+        {
+            Span<RaylibMatrix> source = batch.Transforms.AsSpan(0, batch.Count);
+            int firstInvisible = -1;
+            for (int i = 0; i < source.Length; i++)
+            {
+                if (!IsInstanceWithinFrameFrustum(in source[i], localRadiusMeters))
+                {
+                    firstInvisible = i;
+                    break;
+                }
+            }
+
+            if (firstInvisible < 0)
+            {
+                return (batch.Transforms, batch.Count);
+            }
+
+            if (_laneCullScratch.Length < batch.Count)
+            {
+                _laneCullScratch = new RaylibMatrix[Math.Max(64, batch.Count * 2)];
+            }
+
+            Span<RaylibMatrix> target = _laneCullScratch.AsSpan(0, batch.Count);
+            int kept = 0;
+            for (int i = 0; i < firstInvisible; i++)
+            {
+                target[kept++] = source[i];
+            }
+
+            int culled = 1;
+            for (int i = firstInvisible + 1; i < source.Length; i++)
+            {
+                if (IsInstanceWithinFrameFrustum(in source[i], localRadiusMeters))
+                {
+                    target[kept++] = source[i];
+                }
+                else
+                {
+                    culled++;
+                }
+            }
+
+            LastInstancedLaneCullSkippedCount += culled;
+            return (_laneCullScratch, kept);
+        }
+
+        private ModelInstanceBatch ResolveTypedLaneBatch(
+            Dictionary<int, ModelInstanceBatch> cache,
+            in RaylibInstancedBatchLane lane,
+            uint colorKey,
+            float scaleMul)
+        {
+            if (!cache.TryGetValue(lane.LaneId, out ModelInstanceBatch batch) || batch.ColorKey != colorKey)
+            {
+                batch = new ModelInstanceBatch(colorKey, Math.Max(4, lane.Count));
+            }
+
+            // scaleMul != 1 rescales the world-space matrix basis per frame, so only the exact
+            // static scale (acceptance zoom disabled) is cacheable — mirrors bucket lane policy.
+            bool canCacheStaticMatrices = MathF.Abs(scaleMul - 1f) <= 0.0001f;
+            if (!canCacheStaticMatrices ||
+                batch.Revision != lane.Revision ||
+                batch.Count != lane.Count)
+            {
+                LastInstancedMatrixCacheMisses++;
+                RebuildTypedLaneBatch(ref batch, in lane, scaleMul);
+                cache[lane.LaneId] = batch;
+            }
+            else
+            {
+                LastInstancedMatrixCacheHits++;
+            }
+
+            return batch;
+        }
+
+        private void RebuildTypedLaneBatch(ref ModelInstanceBatch batch, in RaylibInstancedBatchLane lane, float scaleMul)
+        {
+            long start = Stopwatch.GetTimestamp();
+            batch.Count = 0;
+            batch.Revision = lane.Revision;
+            bool rescale = MathF.Abs(scaleMul - 1f) > 0.0001f;
+            for (int i = 0; i < lane.Count; i++)
+            {
+                Matrix4x4 matrix = lane.Matrices[i];
+                if (rescale)
+                {
+                    matrix.M11 *= scaleMul;
+                    matrix.M12 *= scaleMul;
+                    matrix.M13 *= scaleMul;
+                    matrix.M21 *= scaleMul;
+                    matrix.M22 *= scaleMul;
+                    matrix.M23 *= scaleMul;
+                    matrix.M31 *= scaleMul;
+                    matrix.M32 *= scaleMul;
+                    matrix.M33 *= scaleMul;
+                }
+
+                batch.Add(RaylibMatrix.FromSystemNumerics(in matrix));
+            }
+
+            LastInstancedMatrixBuildMs += (Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency;
+        }
+
+        private void PruneTypedLaneBatches()
+        {
+            PruneTypedLaneCache(_typedLaneBatches);
+            PruneTypedLaneCache(_typedLaneShadowBatches);
+        }
+
+        private void PruneTypedLaneCache(Dictionary<int, ModelInstanceBatch> cache)
+        {
+            // A cache entry whose lane id is absent from this frame's resident enumeration belongs
+            // to a removed lane; free it instead of leaking the native-sized matrix array.
+            List<int>? stale = null;
+            foreach (int laneId in cache.Keys)
+            {
+                if (!_typedLaneIdsSeen.Contains(laneId))
+                {
+                    (stale ??= new List<int>()).Add(laneId);
+                }
+            }
+
+            if (stale == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < stale.Count; i++)
+            {
+                cache.Remove(stale[i]);
+            }
+        }
+
         private bool TryDrawModelInstancedBucket(RaylibIsmRenderBridge.Bucket bucket, List<PrimitiveDrawItem> items, IRenderMeshAssets meshes, float scaleMul)
         {
             PrimitiveDrawItem first = items[0];
@@ -2206,8 +3151,57 @@ namespace Ludots.Raylib.Render
                 return true;
             }
 
-            uint colorKey = RaylibInstancedMaterialPipeline.PackRgba(first.Color);
-            long batchKey = BuildModelInstanceBatchKey(first.MeshAssetId, colorKey);
+            // One tint per instanced draw: a lane bucket may mix authored colors on the same
+            // mesh (e.g. cube props), so split by packed color before batching. Uniform-color
+            // buckets keep the single-batch fast path.
+            uint firstColorKey = RaylibInstancedMaterialPipeline.PackRgba(first.Color);
+            bool mixedColors = false;
+            for (int i = 1; i < items.Count; i++)
+            {
+                if (RaylibInstancedMaterialPipeline.PackRgba(items[i].Color) != firstColorKey)
+                {
+                    mixedColors = true;
+                    break;
+                }
+            }
+
+            if (!mixedColors)
+            {
+                DrawModelInstancedColorGroup(bucket, items, first.MeshAssetId, cached, firstColorKey, first.MaterialId, scaleMul);
+                return true;
+            }
+
+            List<PrimitiveDrawItem> group = new(items.Count);
+            Dictionary<uint, List<PrimitiveDrawItem>> byColor = new();
+            for (int i = 0; i < items.Count; i++)
+            {
+                uint colorKey = RaylibInstancedMaterialPipeline.PackRgba(items[i].Color);
+                if (!byColor.TryGetValue(colorKey, out List<PrimitiveDrawItem> list))
+                {
+                    list = new List<PrimitiveDrawItem>(Math.Max(1, items.Count / 2));
+                    byColor[colorKey] = list;
+                }
+                list.Add(items[i]);
+            }
+
+            foreach (KeyValuePair<uint, List<PrimitiveDrawItem>> entry in byColor)
+            {
+                DrawModelInstancedColorGroup(bucket, entry.Value, entry.Value[0].MeshAssetId, cached, entry.Key, entry.Value[0].MaterialId, scaleMul);
+            }
+
+            return true;
+        }
+
+        private void DrawModelInstancedColorGroup(
+            RaylibIsmRenderBridge.Bucket bucket,
+            List<PrimitiveDrawItem> items,
+            int meshAssetId,
+            CachedModel cached,
+            uint colorKey,
+            int materialId,
+            float scaleMul)
+        {
+            long batchKey = BuildModelInstanceBatchKey(meshAssetId, colorKey);
             bool canCacheStaticMatrices = bucket.Lane.Mobility == VisualMobility.Static && MathF.Abs(scaleMul - 1f) <= 0.0001f;
             ModelInstanceBatch batch;
             if (canCacheStaticMatrices)
@@ -2232,10 +3226,9 @@ namespace Ludots.Raylib.Render
                 _modelInstanceBatches[batchKey] = batch;
             }
 
-            int drawCalls = DrawModelInstanceBatch(cached.Model, batch, colorKey, first.MaterialId);
+            int drawCalls = DrawModelInstanceBatch(cached.Model, batch, colorKey, materialId);
             LastInstancedInstances += batch.Count;
             LastInstancedBatches += drawCalls;
-            return true;
         }
 
         private void DrawPrimitiveInstancedBucketShadow(
@@ -2365,7 +3358,7 @@ namespace Ludots.Raylib.Render
             return ((long)meshAssetId << 32) | colorKey;
         }
 
-        private int DrawModelInstanceBatch(Model model, ModelInstanceBatch batch, uint colorKey, int materialId)
+        private int DrawModelInstanceBatch(Model model, ModelInstanceBatch batch, uint colorKey, int materialId, float cullLocalRadiusMeters = 0f)
         {
             if (model.meshCount <= 0 || batch.Count <= 0)
             {
@@ -2377,7 +3370,10 @@ namespace Ludots.Raylib.Render
             long drawStart = Stopwatch.GetTimestamp();
             RaylibInstancedMaterialPipeline.RestoreOpaqueModelState();
             RaylibLaneShader lane = ResolveInstancingLaneShader(materialId);
-            fixed (RaylibMatrix* transforms = batch.Transforms)
+            (RaylibMatrix[] buffer, int count) = cullLocalRadiusMeters > 0f
+                ? CompactVisibleInstances(batch, cullLocalRadiusMeters)
+                : (batch.Transforms, batch.Count);
+            fixed (RaylibMatrix* transforms = buffer)
             {
                 for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
                 {
@@ -2388,9 +3384,9 @@ namespace Ludots.Raylib.Render
                         continue;
                     }
                     ApplyInstancedMaterialTint(ref material, colorKey, lane);
-                    for (int offset = 0; offset < batch.Count; offset += _maxModelInstancesPerDraw)
+                    for (int offset = 0; offset < count; offset += _maxModelInstancesPerDraw)
                     {
-                        int chunkCount = Math.Min(_maxModelInstancesPerDraw, batch.Count - offset);
+                        int chunkCount = Math.Min(_maxModelInstancesPerDraw, count - offset);
                         Rl.DrawMeshInstanced(mesh, material, transforms + offset, chunkCount);
                         drawCalls++;
                     }
@@ -2532,37 +3528,37 @@ namespace Ludots.Raylib.Render
         {
             if (_initialized) return;
 
-            _cubeMesh = Rl.GenMeshCube(1f, 1f, 1f);
+            _cubeMesh = RaylibNativeResources.GenMeshCube(1f, 1f, 1f);
             if (_cubeMesh.colors == null)
             {
                 int bytes = _cubeMesh.vertexCount * 4;
                 _cubeMesh.colors = (byte*)Rl.MemAlloc(bytes);
                 for (int i = 0; i < bytes; i++) _cubeMesh.colors[i] = 255;
             }
-            Rl.UploadMesh(ref _cubeMesh, false);
+            RaylibNativeResources.UploadMesh(ref _cubeMesh, false);
 
-            _sphereMesh = Rl.GenMeshSphere(0.5f, 8, 8);
+            _sphereMesh = RaylibNativeResources.GenMeshSphere(0.5f, 8, 8);
             if (_sphereMesh.colors == null)
             {
                 int bytes = _sphereMesh.vertexCount * 4;
                 _sphereMesh.colors = (byte*)Rl.MemAlloc(bytes);
                 for (int i = 0; i < bytes; i++) _sphereMesh.colors[i] = 255;
             }
-            Rl.UploadMesh(ref _sphereMesh, false);
+            RaylibNativeResources.UploadMesh(ref _sphereMesh, false);
 
-            _vfxBillboardMesh = Rl.GenMeshCube(1f, 1f, 1f);
+            _vfxBillboardMesh = RaylibNativeResources.GenMeshCube(1f, 1f, 1f);
             if (_vfxBillboardMesh.colors == null)
             {
                 int bytes = _vfxBillboardMesh.vertexCount * 4;
                 _vfxBillboardMesh.colors = (byte*)Rl.MemAlloc(bytes);
                 for (int i = 0; i < bytes; i++) _vfxBillboardMesh.colors[i] = 255;
             }
-            Rl.UploadMesh(ref _vfxBillboardMesh, false);
+            RaylibNativeResources.UploadMesh(ref _vfxBillboardMesh, false);
 
             _billboardShadowMesh = CreateBillboardShadowMesh();
 
             RaylibEffectShader defaultVfx = _effectShaders.GetOrLoad(RaylibEffectShaderRegistry.DefaultUnlitTintKey);
-            _vfxMaterial = Rl.LoadMaterialDefault();
+            _vfxMaterial = RaylibNativeResources.LoadMaterialDefault();
             _vfxMaterial.shader = defaultVfx.Shader;
             _vfxMaterialLoaded = true;
 
@@ -2571,7 +3567,7 @@ namespace Ludots.Raylib.Render
             _shaderCatalog.RegisterInstancing(RaylibShaderKeys.Lit, _instancingLane);
             _shader = _instancingLane.Shader;
 
-            _material = Rl.LoadMaterialDefault();
+            _material = RaylibNativeResources.LoadMaterialDefault();
             _material.shader = _shader;
 
             _instancingPbrLocs = _instancingLane.PbrLocs;
@@ -2618,7 +3614,7 @@ namespace Ludots.Raylib.Render
             vertices.AsSpan().CopyTo(new Span<float>(mesh.vertices, vertices.Length));
             mesh.texcoords = (float*)Rl.MemAlloc(sizeof(float) * texcoords.Length);
             texcoords.AsSpan().CopyTo(new Span<float>(mesh.texcoords, texcoords.Length));
-            Rl.UploadMesh(ref mesh, false);
+            RaylibNativeResources.UploadMesh(ref mesh, false);
             return mesh;
         }
         private void EnsureFrameLightingAppliedForInstancing()
@@ -2680,6 +3676,16 @@ namespace Ludots.Raylib.Render
 
         public void Dispose()
         {
+            foreach (Stack<IDisposable> leases in _residencyLeases.Values)
+            {
+                while (leases.Count > 0)
+                {
+                    leases.Pop().Dispose();
+                }
+            }
+
+            _residencyLeases.Clear();
+
             foreach (var kvp in _modelCache)
             {
                 if (!kvp.Value.Loaded)
@@ -2687,9 +3693,8 @@ namespace Ludots.Raylib.Render
                     continue;
                 }
 
-                Model model = kvp.Value.Model;
-                _materialLibrary?.DetachOwnedMaps(model);
-                Rl.UnloadModel(model);
+                _materialLibrary?.DetachOwnedMaps(kvp.Value.Model);
+                kvp.Value.Lease?.Dispose();
             }
             _modelCache.Clear();
 
@@ -2703,7 +3708,7 @@ namespace Ludots.Raylib.Render
             foreach (var kvp in _textureCache)
             {
                 if (kvp.Value.Loaded)
-                    Rl.UnloadTexture(kvp.Value.Texture);
+                    kvp.Value.Lease?.Dispose();
             }
             _textureCache.Clear();
 
@@ -2711,14 +3716,14 @@ namespace Ludots.Raylib.Render
             {
                 _materialLibrary?.DetachOwnedMaps(ref _proceduralMeshMaterial);
                 RaylibShadowSampling.ClearTexture(ref _proceduralMeshMaterial);
-                Rl.UnloadMaterial(_proceduralMeshMaterial);
+                RaylibNativeResources.UnloadMaterial(_proceduralMeshMaterial);
                 _proceduralMeshMaterialLoaded = false;
             }
 
             if (_vfxMaterialLoaded)
             {
                 _vfxMaterial.shader = default;
-                Rl.UnloadMaterial(_vfxMaterial);
+                RaylibNativeResources.UnloadMaterial(_vfxMaterial);
                 _vfxMaterialLoaded = false;
             }
 
@@ -2738,36 +3743,43 @@ namespace Ludots.Raylib.Render
 
             if (!_initialized) return;
 
-            if (_cubeMesh.vertexCount > 0) Rl.UnloadMesh(_cubeMesh);
-            if (_sphereMesh.vertexCount > 0) Rl.UnloadMesh(_sphereMesh);
-            if (_vfxBillboardMesh.vertexCount > 0) Rl.UnloadMesh(_vfxBillboardMesh);
-            if (_billboardShadowMesh.vertexCount > 0) Rl.UnloadMesh(_billboardShadowMesh);
+            if (_cubeMesh.vertexCount > 0) RaylibNativeResources.UnloadMesh(_cubeMesh);
+            if (_sphereMesh.vertexCount > 0) RaylibNativeResources.UnloadMesh(_sphereMesh);
+            if (_vfxBillboardMesh.vertexCount > 0) RaylibNativeResources.UnloadMesh(_vfxBillboardMesh);
+            if (_billboardShadowMesh.vertexCount > 0) RaylibNativeResources.UnloadMesh(_billboardShadowMesh);
             _material.shader = default;
             // UnloadMaterial 会删除材质槽上的全部纹理；IBL 纹理归 RaylibSkyIbl 所有，先清槽防双删。
             _material.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_CUBEMAP].texture = default;
             _material.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_BRDF].texture = default;
             RaylibShadowSampling.ClearTexture(ref _material);
-            Rl.UnloadMaterial(_material);
-            Rl.UnloadShader(_shader);
+            RaylibNativeResources.UnloadMaterial(_material);
+            RaylibNativeResources.UnloadShader(_shader);
             _initialized = false;
+
+            // 存储销毁必须最晚：蒙皮缓存/材质库/VFX 的释放回调（DetachOwnedMaps 等）仍要触碰模型与贴图，
+            // 先销毁存储会产生悬空指针；模型先于贴图销毁保持与旧实现一致（模型内部纹理随模型释放）。
+            _modelStore.Dispose();
+            _textureStore.Dispose();
         }
 
         private struct CachedModel
         {
-            public Model Model;
+            public RaylibAssetStore<Model>.Lease? Lease;
             public Mesh[] Meshes;
             public Vector3 LocalMin;
             public Vector3 LocalMax;
             public bool Loaded;
-        }
 
+            public readonly Model Model => Lease!.Resource;
+        }
         private struct CachedTexture
         {
-            public Texture2D Texture;
+            public RaylibAssetStore<Texture2D>.Lease? Lease;
             public bool Loaded;
             public float AspectRatio;
-        }
 
+            public readonly Texture2D Texture => Lease!.Resource;
+        }
         private struct CachedProceduralMesh
         {
             public Mesh Mesh;

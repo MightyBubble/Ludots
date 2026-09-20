@@ -12,7 +12,7 @@
 |----|----|
 | scene id | `water` |
 | preset | `engine_raylib_water` |
-| 场景源码 | `src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Scenes/WaterScene.cs` |
+| 场景源码 | `src/Content/Ludots.Content.EngineGallery/Scenes/WaterScene.cs` |
 | 承接渲染器 | `RaylibWaterPass`（反射/折射双通道）+ `water` 着色器 |
 | 注册表条目 | `engine_raylib_water`（`showcase.registry.json`，tier T1） |
 

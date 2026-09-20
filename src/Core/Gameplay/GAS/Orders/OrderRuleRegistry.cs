@@ -1,8 +1,19 @@
 using System;
 using System.Runtime.CompilerServices;
+using Arch.Core;
+using Ludots.Core.Gameplay.GAS.Components;
 
 namespace Ludots.Core.Gameplay.GAS.Orders
 {
+    public interface IOrderAdmissionValidator
+    {
+        OrderSubmitResult Validate(
+            World world,
+            Entity entity,
+            in Order order,
+            in OrderBuffer buffer);
+    }
+
     public unsafe struct OrderRuleSet
     {
         public const int MAX_BLOCKED_ACTIVE_ORDER_TYPES = 8;
@@ -53,13 +64,20 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
     public sealed class OrderRuleRegistry
     {
+        public const int MaxAdmissionValidatorsPerOrderType = 8;
+
         private readonly OrderRuleSet[] _rules = new OrderRuleSet[OrderTypeRegistry.MaxOrderTypes];
         private readonly ulong[] _hasBits = new ulong[OrderTypeRegistry.MaxOrderTypes >> 6];
+        private readonly IOrderAdmissionValidator?[] _admissionValidators =
+            new IOrderAdmissionValidator[OrderTypeRegistry.MaxOrderTypes * MaxAdmissionValidatorsPerOrderType];
+        private readonly byte[] _admissionValidatorCounts = new byte[OrderTypeRegistry.MaxOrderTypes];
 
         public void Clear()
         {
             Array.Clear(_rules, 0, _rules.Length);
             Array.Clear(_hasBits, 0, _hasBits.Length);
+            Array.Clear(_admissionValidators, 0, _admissionValidators.Length);
+            Array.Clear(_admissionValidatorCounts, 0, _admissionValidatorCounts.Length);
         }
 
         public void Register(int orderTypeId, in OrderRuleSet ruleSet)
@@ -119,6 +137,68 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
 
             return _rules[orderTypeId].Blocks(activeOrderTypeId);
+        }
+
+        public void RegisterAdmissionValidator(
+            int orderTypeId,
+            IOrderAdmissionValidator validator)
+        {
+            if (orderTypeId <= 0 || (uint)orderTypeId >= OrderTypeRegistry.MaxOrderTypes)
+            {
+                throw new ArgumentOutOfRangeException(nameof(orderTypeId));
+            }
+
+            ArgumentNullException.ThrowIfNull(validator);
+            int count = _admissionValidatorCounts[orderTypeId];
+            int offset = orderTypeId * MaxAdmissionValidatorsPerOrderType;
+            for (int i = 0; i < count; i++)
+            {
+                if (ReferenceEquals(_admissionValidators[offset + i], validator))
+                {
+                    throw new InvalidOperationException(
+                        $"Order type {orderTypeId} already contains this admission validator instance.");
+                }
+            }
+
+            if (count >= MaxAdmissionValidatorsPerOrderType)
+            {
+                throw new InvalidOperationException(
+                    $"Order type {orderTypeId} exceeds the admission validator capacity " +
+                    $"{MaxAdmissionValidatorsPerOrderType}.");
+            }
+
+            _admissionValidators[offset + count] = validator;
+            _admissionValidatorCounts[orderTypeId] = checked((byte)(count + 1));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public OrderSubmitResult ValidateAdmission(
+            World world,
+            Entity entity,
+            in Order order,
+            in OrderBuffer buffer)
+        {
+            int orderTypeId = order.OrderTypeId;
+            if ((uint)orderTypeId >= OrderTypeRegistry.MaxOrderTypes)
+            {
+                return OrderSubmitResult.RejectedInvalidOrderType;
+            }
+
+            int count = _admissionValidatorCounts[orderTypeId];
+            int offset = orderTypeId * MaxAdmissionValidatorsPerOrderType;
+            for (int i = 0; i < count; i++)
+            {
+                IOrderAdmissionValidator validator = _admissionValidators[offset + i]
+                    ?? throw new InvalidOperationException(
+                        $"Order type {orderTypeId} admission validator slot {i} is empty.");
+                OrderSubmitResult result = validator.Validate(world, entity, in order, in buffer);
+                if (result != OrderSubmitResult.Activated)
+                {
+                    return result;
+                }
+            }
+
+            return OrderSubmitResult.Activated;
         }
     }
 }

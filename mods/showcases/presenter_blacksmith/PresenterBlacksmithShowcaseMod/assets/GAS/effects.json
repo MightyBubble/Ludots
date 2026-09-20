@@ -1,9 +1,6 @@
 [
   {
     "id": "Effect.Showcase.Blacksmith.RandomDrift",
-    "tags": [
-      "Effect.Showcase.Blacksmith.RandomDrift"
-    ],
     "presetType": "DoT",
     "lifetime": "Infinite",
     "participatesInResponse": false,
@@ -16,13 +13,13 @@
       "OnPeriod": {
         "post": "Graph.Showcase.Blacksmith.RandomDrift"
       }
-    }
+    },
+    "categories": [
+      "Effect.Showcase.Blacksmith.RandomDrift"
+    ]
   },
   {
     "id": "Effect.Showcase.Blacksmith.SetDurabilityIntact",
-    "tags": [
-      "Effect.Showcase.Blacksmith.Control"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -35,13 +32,13 @@
       "OnApply": {
         "post": "Graph.Showcase.Blacksmith.SetDurabilityIntact"
       }
-    }
+    },
+    "categories": [
+      "Effect.Showcase.Blacksmith.Control"
+    ]
   },
   {
     "id": "Effect.Showcase.Blacksmith.SetDurabilityDamaged",
-    "tags": [
-      "Effect.Showcase.Blacksmith.Control"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -54,13 +51,13 @@
       "OnApply": {
         "post": "Graph.Showcase.Blacksmith.SetDurabilityDamaged"
       }
-    }
+    },
+    "categories": [
+      "Effect.Showcase.Blacksmith.Control"
+    ]
   },
   {
     "id": "Effect.Showcase.Blacksmith.SetDurabilityRuined",
-    "tags": [
-      "Effect.Showcase.Blacksmith.Control"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -73,6 +70,9 @@
       "OnApply": {
         "post": "Graph.Showcase.Blacksmith.SetDurabilityRuined"
       }
-    }
+    },
+    "categories": [
+      "Effect.Showcase.Blacksmith.Control"
+    ]
   }
 ]

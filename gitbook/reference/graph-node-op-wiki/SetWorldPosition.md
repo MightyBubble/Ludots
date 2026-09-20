@@ -2,7 +2,9 @@
 
 不用挪动命令，一枚棋子从图里被放到了指定点。
 
-运行时证据由画廊验收测试提供；该页面不引用未提交的录像资产。
+<video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_SetWorldPosition/poster.png" src="artifacts/evidence/capability_standard_graph_op_SetWorldPosition/play.mp4">
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_SetWorldPosition/play.mp4。
+</video>
 
 ## 作者写法
 
@@ -10,7 +12,7 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | 七种全可用（Effect / Score / Validation / Derived / Query / Script / TriggerGraph） |
+| 可用图种 | Effect / Script / TriggerGraph |
 | 返回 | 无（副作用节点） |
 | 输入端口（值边 toPort） | `source`（来源实体）、`a`（第一操作数）、`b`（第二操作数） |
 | 特殊写法 | — |
@@ -43,7 +45,7 @@ ConstFloat → ConstInt → ConstInt → **SetWorldPosition**（本篇） → Lo
 
 ## 边界与更多用法
 
-- 图种边界：七种图全都能用，不必为它挑图种。
+- 图种边界：可用于 Effect / Script / TriggerGraph；Score / Validation / Derived / Query 图不可用（编译期白名单拒绝）。
 - 同类用法：伤害公式的缩放与浮动、斩杀线/格挡线这类阈值判断、把读数换算成另一个数。
 ## 怎么进
 

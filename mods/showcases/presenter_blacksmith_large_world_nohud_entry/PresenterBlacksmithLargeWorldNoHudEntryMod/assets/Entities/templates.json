@@ -5,7 +5,7 @@
     "components": {
       "Name": { "Value": "BlacksmithMinimapMarkerBall" },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "VisualHeightmapSampleState": {},
+      "ContinuousHeightmapSampleState": {},
       "FacingDirection": { "AngleRad": 0.0 },
       "GameplayTagContainer": {},
       "TagCountContainer": {},

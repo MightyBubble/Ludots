@@ -2,7 +2,7 @@
   "name": "WeaponBenchShowcaseMod",
   "version": "1.0.0",
   "description": "Focused weapon bench showcase entry mod for the shared Ludots item architecture demo.",
-  "main": "bin/net8.0/WeaponBenchShowcaseMod.dll",
+  "main": "bin/net9.0/WeaponBenchShowcaseMod.dll",
   "priority": 10,
   "dependencies": {
     "ItemSystemShowcaseMod": "^1.0.0"

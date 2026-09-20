@@ -419,6 +419,15 @@ namespace Raylib_cs
         public static extern void EndMode3D();
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void BeginScissorMode(int x, int y, int width, int height);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void EndScissorMode();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern unsafe byte* rlReadScreenPixels(int width, int height);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void rlDrawRenderBatchActive();
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
@@ -524,6 +533,12 @@ namespace Raylib_cs
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern int GetScreenHeight();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int GetRenderWidth();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int GetRenderHeight();
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern float GetMouseWheelMove();
@@ -771,6 +786,18 @@ namespace Raylib_cs
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void rlEnableBackfaceCulling();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlBegin(int mode);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlEnd();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlVertex3f(float x, float y, float z);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlColor4ub(byte r, byte g, byte b, byte a);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void rlEnableDepthTest();

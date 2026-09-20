@@ -23,6 +23,8 @@ namespace Ludots.Raylib.Render
         private Material _terrainMaterial;
         private RaylibFrameLightingLocations _terrainLightingLocs;
         private RaylibShadowSamplingLocations _terrainShadowLocs;
+        private int _locSkyZenith = -1;
+        private int _locSkyGround = -1;
 
         private Shader _waterShader;
         private Material _waterMaterial;
@@ -41,7 +43,7 @@ namespace Ludots.Raylib.Render
         private int _frameIndex;
         private Mesh _oceanPlaneMesh;
         private bool _oceanPlaneReady;
-        private IVisualHeightmap? _stampHeightSampleSource;
+        private IContinuousHeightmap? _stampHeightSampleSource;
 
         public int DrawnChunkCountLastFrame { get; private set; }
         public int BuiltChunkCountLastFrame { get; private set; }
@@ -65,7 +67,7 @@ namespace Ludots.Raylib.Render
             _frameShadowTexelWorld = shadowTexelWorld;
             if (_initialized)
             {
-                lighting.Apply(_terrainShader, in _terrainLightingLocs);
+                ApplySkyIrradianceUniforms();
                 ApplyTerrainShadow();
             }
         }
@@ -76,7 +78,7 @@ namespace Ludots.Raylib.Render
         }
 
         /// <summary>
-        /// Draws a single reflective ocean plane for VisualHeightmap maps (no VertexMap water mesh).
+        /// Draws a single reflective ocean plane for ContinuousHeightmap maps (no VertexMap water mesh).
         /// Requires <see cref="BindReflectiveWater"/> first.
         /// </summary>
         public void DrawReflectiveOceanPlane(float planeYMeters, float halfExtentMeters, in Camera3D camera)
@@ -146,7 +148,7 @@ namespace Ludots.Raylib.Render
             vertices.AsSpan().CopyTo(new Span<float>(mesh.vertices, vertices.Length));
             normals.AsSpan().CopyTo(new Span<float>(mesh.normals, normals.Length));
             colors.AsSpan().CopyTo(new Span<byte>(mesh.colors, colors.Length));
-            Rl.UploadMesh(ref mesh, false);
+            RaylibNativeResources.UploadMesh(ref mesh, false);
             return mesh;
         }
 
@@ -350,7 +352,7 @@ namespace Ludots.Raylib.Render
 
             string baseDir = AppContext.BaseDirectory;
             _terrainShader = RaylibShaderLoader.Load(baseDir, "terrain.vs", "terrain.fs", "terrain");
-            _terrainMaterial = Rl.LoadMaterialDefault();
+            _terrainMaterial = RaylibNativeResources.LoadMaterialDefault();
             _terrainMaterial.shader = _terrainShader;
 
             _terrainLightingLocs = RaylibFrameLightingLocations.ResolveOrThrow(_terrainShader, "terrain");
@@ -363,6 +365,8 @@ namespace Ludots.Raylib.Render
             int locTerrainVertexPosition = RaylibShaderBindingGuard.RequireAttribute(_terrainShader, "vertexPosition", "terrain");
             int locTerrainVertexNormal = RaylibShaderBindingGuard.RequireAttribute(_terrainShader, "vertexNormal", "terrain");
             int locTerrainVertexColor = RaylibShaderBindingGuard.RequireAttribute(_terrainShader, "vertexColor", "terrain");
+            _locSkyZenith = RaylibShaderBindingGuard.RequireUniform(_terrainShader, "uSkyZenith", "terrain");
+            _locSkyGround = RaylibShaderBindingGuard.RequireUniform(_terrainShader, "uSkyGround", "terrain");
             _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_POSITION] = locTerrainVertexPosition;
             _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_NORMAL] = locTerrainVertexNormal;
             _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_COLOR] = locTerrainVertexColor;
@@ -380,9 +384,9 @@ namespace Ludots.Raylib.Render
                     (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_INT);
             }
 
-            _waterShader = Rl.LoadShader(Path.Combine(baseDir, "water.vs"), Path.Combine(baseDir, "water.fs"));
+            _waterShader = RaylibNativeResources.LoadShader(Path.Combine(baseDir, "water.vs"), Path.Combine(baseDir, "water.fs"));
             if (_waterShader.id == 0) throw new InvalidOperationException("Failed to load water shader (shader.id == 0).");
-            _waterMaterial = Rl.LoadMaterialDefault();
+            _waterMaterial = RaylibNativeResources.LoadMaterialDefault();
             _waterMaterial.shader = _waterShader;
 
             _locWaterLightPos = Rl.GetShaderLocation(_waterShader, "uLightPos");
@@ -417,7 +421,7 @@ namespace Ludots.Raylib.Render
             ApplyTerrainShadow();
             if (_frameLighting != null)
             {
-                _frameLighting.Apply(_terrainShader, in _terrainLightingLocs);
+                ApplySkyIrradianceUniforms();
             }
         }
 
@@ -429,15 +433,14 @@ namespace Ludots.Raylib.Render
                     $"{nameof(RaylibTerrainRenderer)} requires {nameof(ApplyFrameLighting)} before Render.");
             }
 
-            RaylibFrameLighting lighting = _frameLighting;
-            lighting.Apply(_terrainShader, in _terrainLightingLocs);
+            ApplySkyIrradianceUniforms();
             Vector3 viewPos = camera.position;
-            lighting.ApplyViewPosition(_terrainShader, in _terrainLightingLocs, viewPos);
+            _frameLighting.ApplyViewPosition(_terrainShader, in _terrainLightingLocs, viewPos);
             ApplyTerrainShadow();
 
-            Vector3 lightPos = lighting.FarLightPosition();
-            float ambient = lighting.AmbientRgba.W;
-            float intensity = lighting.LightIntensity;
+            Vector3 lightPos = _frameLighting.FarLightPosition();
+            float ambient = _frameLighting.AmbientRgba.W;
+            float intensity = _frameLighting.LightIntensity;
             Rl.SetShaderValue(_waterShader, _locWaterLightPos, &lightPos, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
             Rl.SetShaderValue(_waterShader, _locWaterViewPos, &viewPos, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
             Rl.SetShaderValue(_waterShader, _locWaterAmbient, &ambient, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
@@ -482,6 +485,12 @@ namespace Ludots.Raylib.Render
             return ref CollectionsMarshal.GetValueRefOrNullRef(_chunks, key);
         }
 
+        private void ApplySkyIrradianceUniforms()
+        {
+            _frameLighting!.Apply(_terrainShader, in _terrainLightingLocs);
+            _frameLighting.ApplySkyIrradiance(_terrainShader, _locSkyZenith, _locSkyGround);
+        }
+
         private void ApplyTerrainShadow()
         {
             _terrainShadowLocs.ApplyUniforms(_terrainShader, _frameShadow, _frameShadowTexelWorld);
@@ -505,7 +514,7 @@ namespace Ludots.Raylib.Render
             src.Normals.AsSpan(0, vFloats).CopyTo(new Span<float>(mesh.normals, vFloats));
             src.Colors.AsSpan(0, cBytes).CopyTo(new Span<byte>(mesh.colors, cBytes));
 
-            Rl.UploadMesh(ref mesh, false);
+            RaylibNativeResources.UploadMesh(ref mesh, false);
             return mesh;
         }
 
@@ -548,7 +557,7 @@ namespace Ludots.Raylib.Render
 
             if (_oceanPlaneReady)
             {
-                Rl.UnloadMesh(_oceanPlaneMesh);
+                RaylibNativeResources.UnloadMesh(_oceanPlaneMesh);
                 _oceanPlaneMesh = default;
                 _oceanPlaneReady = false;
             }
@@ -556,11 +565,11 @@ namespace Ludots.Raylib.Render
             if (_initialized)
             {
                 _terrainMaterial.shader = default;
-                Rl.UnloadMaterial(_terrainMaterial);
-                Rl.UnloadShader(_terrainShader);
+                RaylibNativeResources.UnloadMaterial(_terrainMaterial);
+                RaylibNativeResources.UnloadShader(_terrainShader);
                 _waterMaterial.shader = default;
-                Rl.UnloadMaterial(_waterMaterial);
-                Rl.UnloadShader(_waterShader);
+                RaylibNativeResources.UnloadMaterial(_waterMaterial);
+                RaylibNativeResources.UnloadShader(_waterShader);
                 _initialized = false;
             }
         }
@@ -580,8 +589,8 @@ namespace Ludots.Raylib.Render
 
             public void Dispose()
             {
-                if (TerrainMesh.vertexCount > 0) Rl.UnloadMesh(TerrainMesh);
-                if (WaterMesh.vertexCount > 0) Rl.UnloadMesh(WaterMesh);
+                if (TerrainMesh.vertexCount > 0) RaylibNativeResources.UnloadMesh(TerrainMesh);
+                if (WaterMesh.vertexCount > 0) RaylibNativeResources.UnloadMesh(WaterMesh);
                 TerrainMesh = default;
                 WaterMesh = default;
             }
@@ -667,7 +676,7 @@ namespace Ludots.Raylib.Render
             return drawn;
         }
 
-        public void BindStampHeightSampleSource(IVisualHeightmap heightmap)
+        public void BindStampHeightSampleSource(IContinuousHeightmap heightmap)
         {
             _stampHeightSampleSource = heightmap ?? throw new ArgumentNullException(nameof(heightmap));
         }
@@ -678,7 +687,7 @@ namespace Ludots.Raylib.Render
             in Vector2 stampSizeMeters,
             int stableId)
         {
-            IVisualHeightmap heightmap = _stampHeightSampleSource
+            IContinuousHeightmap heightmap = _stampHeightSampleSource
                 ?? throw new InvalidOperationException(
                     $"{nameof(RaylibTerrainRenderer)} Decal stableId={stableId} has no stamp height sample source. Call {nameof(BindStampHeightSampleSource)} before projecting Decals.");
 

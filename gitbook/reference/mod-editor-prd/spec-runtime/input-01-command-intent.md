@@ -8,7 +8,7 @@
 ## 2. 设计
 - 解析链保持：交互帧显式意图 > 控制方案默认 > 0 不路由；仲裁器只输出意图 id，不耦合映射系统。
 - 规则裁决保持：priority 降序、命中即止、逐演员独立（independent 编组）；新编组策略经 mod 代码注册，不进 JSON。
-- 引用校验保持：orderTypeKey 与槽位来源（`byAbilityTag:`/`contextGroup:` 前缀）加载期解析，失败即启动失败。
+- 引用校验保持：orderTypeKey 与槽位来源（`byAbilityCategory:`/`contextGroup:` 前缀）加载期解析，失败即启动失败。
 - 安装保持：知识门（KnowledgeCommandTargetGate）随档案安装，目标条件读知识投影。
 
 ## 3. 精确语义与不变量

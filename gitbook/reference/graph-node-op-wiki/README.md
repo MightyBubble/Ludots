@@ -24,6 +24,14 @@
 - [读出落点在南北标尺上的读数](LoadTargetPosY.md) — 虚线打到标尺上，亮出 200。
 - [贴到花名册里最近的人](SnapToNearestInCollection.md) — X 标记离开原地，压到花名册里够得着的最近那人身上。
 
+## 事件载荷捕获
+
+> 作者语义与全量字段见手册分册 [地图触发器 · map-02](../mod-editor-prd/config/map-02-triggers.md)。
+
+- [倒下的是谁，问载荷就知道](LoadEntryPayloadEntity.md) — 木桩倒下那一刻，名册记下了它的名字。
+- [场上还剩几个人，载荷报数](LoadEntryPayloadInt.md) — 清点哨一响，存活数从事件载荷里飞进信件板。
+- [指针读数，小数也不丢](LoadEntryPayloadFloat.md) — 号令一落，指针像素读数带着小数从事件载荷里飞进信件板。
+
 ## 关系与好感
 
 > 作者语义与全量字段见手册分册 [关系与好感 · gr-op-08](../mod-editor-prd/config/gr-op-08-relationship.md)。
@@ -54,16 +62,38 @@
 - [全场最低血量](AggMinAttribute.md) — 台面翻出最低一格，亮出的数短得像那条空血条。
 - [全场最高血量](AggMaxAttribute.md) — 台面翻出最高一格，亮出的数顶着满格血条。
 - [全场生命合计](AggSumAttribute.md) — 十三根血条一根根收进台面，台面亮出总数。
+- [只圈你能指挥的](QueryFilterControllable.md) — 满场单位里，被实线指挥的才留下圈，其余退成灰影。
 - [只圈残血的](QueryFilterAttributeRange.md) — 全场先亮一圈，再只剩短血条的留着。
 - [只挑侦察兵](QueryFilterTemplate.md) — 全场先亮一圈，再只剩两个矮个子亮着。
 - [圈出对面十个](QueryFilterTeam.md) — 红的一排留圈，蓝的退成灰影。
 - [戴敌徽的全圈出来](QueryFilterTagAny.md) — 头顶红徽的九个留圈，没徽的退成灰影。
 - [把场上的人全点名](QueryAllMapEntities.md) — 扫描弧从指挥席扫过全场，点到谁谁亮。
+- [把身上的效果全点名](QueryCollectActiveEffects.md) — 指挥身上三条效果被点名线牵住，头上浮出计数。
 - [按血量从厚到薄排队](QuerySortByAttribute.md) — 最厚的顶着三道杠，箭头顺着血条一路排下去。
 - [摘掉阵亡徽的留下](QueryFilterTagNone.md) — 戴阵亡徽的退成灰影，没戴徽的留着圈。
+- [点出当前对话选项](QueryCollectActiveDialogueChoices.md) — 能回的话被点名线牵住。
+- [点出技能格](QueryCollectAbilitySlots.md) — 英雄身上的技能格被点名线牵住。
+- [点出身上印记](QueryCollectPresentTags.md) — 身上的印记被点名线牵住。
+- [点出进度节点](QueryCollectProgressionNodes.md) — 进度节点被点名线牵住。
+- [点出进行中的差事](QueryCollectActiveTasks.md) — 进行中的差事被点名线牵住。
+- [点出进行中的活动](QueryCollectActiveActivities.md) — 进行中的活动被点名线牵住。
 - [点名最残的那个](AggMinEntityByAttribute.md) — 全场退成灰影，空血条那个被点名徽钉住。
 - [点名最能扛的](AggMaxEntityByAttribute.md) — 全场退成灰影，满血条那个被点名徽钉住。
 - [照着名册点名](QueryFromCollection.md) — 名册板六格点亮，点名线拉向场上六人。
+- [翻开效果图鉴](QueryCollectEffectTemplates.md) — 墙上贴着一批效果说明书。
+- [翻开物品图鉴](QueryCollectItemDefinitions.md) — 物品说明书贴在墙上。
+- [翻开背包](QueryCollectInventoryItems.md) — 背包里的物被点名线牵住。
+- [谁会这招](QueryCollectAbilityHolders.md) — 会这招的人被点名线牵住。
+
+## 子图调用与事件派发
+
+> 作者语义与全量字段见手册分册 [地图触发器 · map-02](../mod-editor-prd/config/map-02-triggers.md)。
+
+- [先存参数，再点子图](StoreArgInt.md) — 整数参数放进暂存表，子图按名字取走，回执就是同一数字。
+- [实体参数递过去，子图亲自搬人](StoreArgEntity.md) — 把木桩实体暂存给子图，子图按参数把它搬到新位置。
+- [按事件账本派发地图事件](DispatchMapEvent.md) — 载荷组装成地图事件，监听者按账本收货。
+- [浮点参数过一手，地图变量作回音](StoreArgFloat.md) — 比例系数暂存后交给子图，子图把它写进地图变量当回音。
+- [点名子图，指定入口直接回话](InvokeGraph.md) — 主图一声令下，子图从 boost 入口出发，把九号命令带回来。
 
 ## 属性与效果
 
@@ -74,18 +104,51 @@
 - [先认出是谁出手](LoadCaster.md) — 白光柱落在施法者头顶，亮出出手人徽章，攻击线才从这亮起。
 - [写死的整数：一刀三层](ConstInt.md) — 铭牌铸死数字 3，带锁印；取数后木桩头顶亮三层空圈。
 - [出手前先看一眼对方的血](LoadAttribute.md) — 黄虚线搭到木桩，读出当前生命，头顶浮出 80。
+- [图内把血量写成 42](ModifyAttributeSet.md) — 面板按钮触发 TriggerGraph，木桩当前生命直接写成 42，属性变化仍从 GAS 正式入口落账。
 - [层数叠满就引爆](CompareEqInt.md) — 三层火苗对满层 3，天平对齐，爆出一击扣 18 血。
 - [岔路口选人打](SelectEntity.md) — 残影幕条件不成立→挑了自己挨打；正幕条件成立→挑了木桩，扣 18。
 - [把血直接写成 90](WriteSelfAttribute.md) — 施法者血 60，一道写入线落下，血条直接抬到 90，头顶浮出 =90。
 - [把身上的状态摘掉](RemoveEffectTemplate.md) — 木桩头顶紫色标记先挂着，白弧扫过，标记碎掉消失，血条不动。
 - [点名谁就打谁](LoadExplicitTarget.md) — 红色准星飞出锁扣木桩，一刀沿线打下，木桩 100 掉到 85。
 - [直接在血条上做加法](ModifyAttributeAdd.md) — 一刀 -25 写进血条，木桩 100 掉到 75，头顶浮出 -25。
+- [看效果叠了几层](LoadEffectStack.md) — 自查线绕回施法者身上的层数，头顶浮出 ×3。
+- [看效果还剩多久](LoadEffectTiming.md) — 自查线绕回施法者身上的计时，头顶浮出剩余 55。
 - [看自己还剩多少血](LoadSelfAttribute.md) — 自查线绕回施法者自己，头顶浮出 62；木桩满血没人碰。
 - [给木桩挂上看得见的状态](ApplyEffectTemplate.md) — 红线贴附不扣血：木桩头顶钉上紫色标记，带光环，血条不动。
 - [血量过线没：过线轻击，没过线全力](CompareLtInt.md) — 木桩 50 血低于 80 刻线，标尺闪红，全力一击扣 18，掉到 32。
 - [账本里的步骤逐条办](InvokeBuiltin.md) — 造出新身体，再把新身体的效果挂架扫净。
 - [这一击的单据上写着打谁](LoadContextTarget.md) — 从这一击自带单据里取出目标，取到木桩，扣 12 血。
 - [连击数加一](AddInt.md) — 两刀打进算式台 2+1，翻牌翻出 3，木桩头顶亮三枚连击火花。
+
+## 放置区域名册
+
+> 作者语义与全量字段见手册分册 [地图触发器 · map-02](../mod-editor-prd/config/map-02-triggers.md)。
+
+- [点名地图区域，名册有没有就报数](LoadPlacedRegion.md) — 记录官点名营地圈，地图名册回 1；点名不存在的鬼区，名册回 0。
+
+## 放置实体名册
+
+> 作者语义与全量字段见手册分册 [地图触发器 · map-02](../mod-editor-prd/config/map-02-triggers.md)。
+
+- [点名放置的木桩，名册一翻就到](LoadPlacedEntity.md) — 记录官翻出名册一点名，放置的木桩大王立刻在岗应答；倒下后名册读出空位。
+- [点名预放置锚点，名册一翻就到](LoadPlacedAnchor.md) — 记录官翻出名册点到锚点，营地锚立刻在岗应答；倒下后名册读出空位。
+
+## 派生名单与框选
+
+> 作者语义与全量字段见手册分册 [名单筛选与汇总 · gr-op-07](../mod-editor-prd/config/gr-op-07-entityset.md)。
+
+- [只点框内的敌军](QueryScreenRegionCollection.md) — 左半场点名，友军与框外敌军留在圈外。
+- [换队后，名单跟着变](BindQueryCollection.md) — 左侧士兵换队，点名圈随之摘下或补回。
+
+## 瞄准源
+
+> 作者语义与全量字段见手册分册 [空间圈人 · gr-op-06](../mod-editor-prd/config/gr-op-06-spatial.md)。
+
+- [光标点到谁](ScreenPointToEntity.md) — 光标压在人群一侧，点名线牵住被点到的那人。
+- [把光标钉到地上](ScreenPointToGround.md) — 光标点下的地方，落点圈在地图上亮起。
+- [摇杆掰方向](StickToDirection.md) — 摇杆斜掰，箭头随之指向东北。
+- [朝落点转向](PointToDirection.md) — 指挥转身，炮口指向地图东北的落点。
+- [框一圈点名](ScreenRegionToEntities.md) — 虚线框罩住西边一段，框里的人被点名线逐个牵住。
 
 ## 空间圈人
 
@@ -114,17 +177,30 @@
 - [两段伤害叠成一刀](AddFloat.md) — 30 的一段先摆上，12 的一段接在尾巴上，接成的一整段有多长，木桩就掉多少血。
 - [亮出情报面板](ShowPanel.md) — 选中单位的一瞬间，属性卡跟着亮起来。
 - [伤害拉长一半](MulFloat.md) — 20 的伤害段被拉长一半，原样留着影子，拉成多长就掉多少血。
+- [先看坐标读不读得出](LoadEntityPosValid.md) — 图里先确认木桩站在原地，坐标读得出才谈得上追击。
 - [刻死的一刀](ConstFloat.md) — 台上没有表盘，只有一块刻好长度的铭牌；每一刀都和铭牌一样长。
+- [命运袋里掏一件](WeightedPick.md) — 掌心探进命运袋，掏出第几件全看权重，木桩照数挨一下。
+- [图内切瞄准](SetInteractionMode.md) — 不用碰键位表，一枚目标在图里被切进了瞄准模式。
+- [图内收走瞄准 context](DeactivateContext.md) — 前一脚挂起的瞄准 context，后一脚原地收走，作用域整组清干净。
+- [图内激活瞄准 context](ActivateContext.md) — 不用碰键位表，一枚指令把木桩切进瞄准 context，实例集里立起一条。
 - [图内造兵](SpawnTemplate.md) — 不用预置实体，阈值一到援军从图里长了出来。
 - [对折零轴取长度](AbsFloat.md) — 负 8 的修正段沿零轴对折，折过来的长度是多少就打多少。
+- [开方求真长度](SqrtFloat.md) — 81 的平方开出来是 9，折成 9 点伤打在木桩上。
 - [按编号翻名册点将](ResolveTableRow.md) — 报出 2 号，名册翻到那一行，册上的扣血照着木桩落下。
 - [撞到上限就停](ClampFloat.md) — 90 的伤害段沿轨道左移，撞上 40 的墙就停住，打出去的是停下来的那一段。
 - [收起情报面板](HidePanel.md) — 点掉选中，属性卡跟着隐去。
+- [整数换算成浮点刻度](IntToFloat.md) — 记在整数位上的 -9，换到浮点刻度再打出去，数值不变，刻度变了。
 - [格挡先咬掉一截](SubFloat.md) — 50 的伤害段送到木桩前，格挡块先咬掉头上的 12，剩下的才进血条。
 - [永远放行的许可](ConstBool.md) — 门闩每一拍都开着，亮一个绿点放一刀，一排刻记里从来没有红点。
+- [浮点折回整数位](FloatToInt.md) — -8.6 的伤害按四舍五入折回整数位，折完是多少打多少。
+- [热座换手](SetPanelAudience.md) — 回合一换，面板受众跟着换到当令座位，等待的座位点不动面板。
 - [砍不砍得死，比一下](CompareGtFloat.md) — 同样长的一刀，血条比它长的木桩挨不动，血条比它短的木桩一刀就没。
+- [读出木桩的横坐标](LoadEntityPosX.md) — 不靠眼睛看，图里直接读木桩站在第几厘米，读数顺手折成伤打出去。
+- [读出木桩的纵坐标](LoadEntityPosY.md) — 横向读过了，这次读纵坐标，木桩站得多偏一看便知。
 - [读名册上的扣血力度](TableReadFloat.md) — 同一行名册，读出这一击该扣多少血，木桩照单落账。
 - [读名册上的星数](TableReadInt.md) — 点到 2 号那行，册上记着三颗星，照数挂印。
+- [读活指针横向](LoadPointerScreenX.md) — 活指针横向停在 42，读数进伤害链。
+- [读活指针纵向](LoadPointerScreenY.md) — 活指针纵向停在 42，读数进伤害链。
 - [负债翻面成正数](NegFloat.md) — 负 8 的欠条摆在零轴左边，沿零轴翻到右边变成正 8，翻过来的就是打出去的一刀。
 - [隔空落子](SetWorldPosition.md) — 不用挪动命令，一枚棋子从图里被放到了指定点。
 - [面板落地](CreatePanel.md) — 关卡蓝图一句话，属性卡从模板里长了出来。
@@ -151,18 +227,42 @@
 
 > 作者语义与全量字段见手册分册 [脚本控制流 · gr-op-14](../mod-editor-prd/config/gr-op-14-control-flow.md)。
 
+- [写死一句字幕](ConstText.md) — 作者把「你好」钉在图上；跑完，字幕口吐出同样三个字。
 - [出门办事，办完回家](Call.md) — 人走到驿站歇一脚，脚一落地就回原点，家这格空着时留个虚影。
 - [办完差事，交回原点](Return.md) — 差事办完这一步，人从驿站那格退回原点，虚影收回真人。
+- [句子送进对话框](SinkPresentationText.md) — 图里写好「字幕到了」，指定对话框通道，口吐出同样一句。
 - [叫另一张图来帮忙算](InvokeScript.md) — 主卷轴上叫一声外援，旁边那张小卷轴亮起来，算完把 7 送回来。
 - [士气指针](ReadMapVarFloat.md) — 士气存在地图变量里，指针一动读数就到。
 - [士气补给](WriteMapVarFloat.md) — 一次补给写回士气变量，地图记得这份涨幅。
+- [左右两段字接成一句](ConcatText.md) — 左边「左」、右边「右」并进同一句；字幕口吐出「左右」。
 - [开局战绩上墙](ReadMapVarInt.md) — 地图变量记得每一场胜利，开局张口就报数。
 - [战绩加一](WriteMapVarInt.md) — 赢一场就写回地图变量，战绩板自己会涨。
 - [把 3 抄一份到结果槽](MoveInt.md) — 左边格子里的 3 原样不动，右边结果格里多出一份 3。
+- [把小数念成字](FloatToText.md) — 小数 1.5 先变成文字，再送进字幕口。
+- [把整数念成字](IntToText.md) — 数字 7 先变成文字，再送进字幕口。
+- [按文案键出字幕](LoadTextKey.md) — 作者从名册里挑 gallery.hello；跑完，字幕口吐出本地化的「你好」。
 - [没满就再续一杯](JumpIfFalse.md) — 茶杯一格格见满：没满时绿箭头带着续一杯，满了那一下改走黄箭头，直接收工。
 - [满了就跳过续杯](Jump.md) — 杯是满的：续杯那几行被划掉，指针直接飞到收工行。
+- [点名派发任务](OfferTask.md) — 图节点指定任务 id；运行后，任务进入指定实体的任务列表，字幕显示「任务已派发」。
+- [点名派发待办活动](OfferActivity.md) — 图节点点名活动 id；跑完，活动已上桌，字幕报「活动已派发」。
+- [等回话再往下走](AwaitCallback.md) — 图停在门口等确认；回话一到，下一拍接着演。
 - [算出一个整数就收工](HaltReturnInt.md) — 数落进托盘、卷轴拉下打烊条、人挪到答案旁边——这三件事同时发生，就是收工。
 - [续一杯，歇一口气](Yield.md) — 每续一杯就停一拍：人影顿一下，杯里水涨一格，三格满就完。
+- [进图开一场对话](StartDialogue.md) — 图节点点名对话 id；跑完，会话已开，字幕报「对话已开」。
+
+## 订单与行为
+
+> 作者语义与全量字段见手册分册 [脚本控制流 · gr-op-14](../mod-editor-prd/config/gr-op-14-control-flow.md)。
+
+- [亲手把令办结](CompleteActiveOrder.md) — 手上那道移动令由图里销账，订单缓冲腾出来接下一单。
+- [替自己下移动令](SubmitAssignedOrder.md) — 行为图不等玩家发话，直接往订单队列里塞一道移动令。
+- [认出移动令的编号](LoadOrderTypeId.md) — 图里先把移动令的编号认出来，认得出才指挥得动。
+
+## 集合写入
+
+> 作者语义与全量字段见手册分册 [地图触发器 · map-02](../mod-editor-prd/config/map-02-triggers.md)。
+
+- [终选集按事件 key 落账](WriteCollection.md) — 图里点好的终选集，一声事件按 key 递出去，账房照单写进集合。
 
 ## 黑板与配置
 

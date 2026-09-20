@@ -23,6 +23,16 @@ export default tseslint.config(
         'warn',
         { allowConstantExport: true },
       ],
+      // `_name` is how this codebase spells "destructured only to drop it".
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+          ignoreRestSiblings: true,
+        },
+      ],
     },
   },
 )

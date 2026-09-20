@@ -4,7 +4,7 @@
 
 ## 1. 现状快照
 
-- EffectPhaseListenerBuffer：容量 8；字段 ListenTagIds/ListenEffectIds（0 通配）/Phases/Scopes(Target=0, Source=1)/ActionFlags(ExecuteGraph=1, PublishEvent=2, Both=3)/GraphProgramIds/EventTagIds/Priorities/OwnerEffectIds；匹配由 PhaseListenerMatcher 裁决。
+- EffectPhaseListenerBuffer：容量 8；字段 ListenCategoryIds/ListenEffectIds（0 通配）/Phases/Scopes(Target=0, Source=1)/ActionFlags(ExecuteGraph=1, PublishEvent=2, Both=3)/GraphProgramIds/EventTagIds/Priorities/OwnerEffectIds；匹配由 PhaseListenerMatcher 裁决（ListenCategory 对效果 CategoryId）。
 - 契约：flags 恰为三种组合；ExecuteGraph⇔graphProgramId>0、PublishEvent⇔eventTagId>0；纯相位禁 PublishEvent；loader 与执行计划双重校验。
 - 宿主：模板编译写 0；运行期以宿主效果实体 id 注册、应用事务内延迟回放；移除阶段按宿主清理（StageListenerRemoval→RemoveByOwner）并压缩缓冲。
 - Instant 模板禁携（loader 拒；运行期再遇抛持久监听需跨帧寿命错）。

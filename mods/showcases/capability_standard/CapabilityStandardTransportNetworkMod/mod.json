@@ -2,7 +2,7 @@
   "name": "CapabilityStandardTransportNetworkMod",
   "version": "1.0.0",
   "description": "Capability Standard Transport Network SSOT showcase for asset-authored NodeGraph chunks and ribbon payloads.",
-  "main": "bin/net8.0/CapabilityStandardTransportNetworkMod.dll",
+  "main": "bin/net9.0/CapabilityStandardTransportNetworkMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

@@ -1,9 +1,15 @@
+using System;
+using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using CapabilityStandardGraphBehaviorCommon;
-using Ludots.Platform.Abstractions;
+using Ludots.Core.Input.AimSource;
+using Ludots.Core.Input.Interaction;
+using Ludots.Core.Input.Runtime;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.Scripting;
+using Ludots.Platform.Abstractions;
 
 
 namespace CapabilityStandardGraphOpsNodeGalleryMod.Runtime.Drivers;
@@ -11,6 +17,7 @@ namespace CapabilityStandardGraphOpsNodeGalleryMod.Runtime.Drivers;
 public sealed class LinearNodeDriver : IGraphOpsNodeDriver
 {
     private const string GraphSettled = "graphSettled";
+    private const float PinnedPointerPx = 42f;
 
     // Settle bench scale: the 4.8m track is the same 100-point ruler as the health bar.
     private const float TrackMeters = 4.8f;
@@ -30,7 +37,49 @@ public sealed class LinearNodeDriver : IGraphOpsNodeDriver
     public void Seed(GraphOpsNodeDriverContext ctx)
     {
         GraphOpsNodeActorBinding.RequireMapActors(ctx);
+        if (IsLivePointerOp(ctx.Vignette.Op))
+        {
+            SeedPinnedLivePointer(ctx);
+        }
+
         GraphOpsNodeActorBinding.BindHud(ctx);
+    }
+
+    private static bool IsLivePointerOp(string op) =>
+        string.Equals(op, nameof(GraphNodeOp.LoadPointerScreenX), StringComparison.Ordinal)
+        || string.Equals(op, nameof(GraphNodeOp.LoadPointerScreenY), StringComparison.Ordinal);
+
+    private static void SeedPinnedLivePointer(GraphOpsNodeDriverContext ctx)
+    {
+        var globals = new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            [CoreServiceKeys.AuthoritativeInput.Name] = new FixedPointerActionReader(
+                new Vector2(PinnedPointerPx, PinnedPointerPx)),
+            [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+        };
+        ctx.Api.BindAimSource(new GraphAimSourceRuntime(ctx.SimWorld, globals));
+    }
+
+    private sealed class FixedPointerActionReader : IInputActionReader
+    {
+        private readonly Vector2 _pointer;
+
+        public FixedPointerActionReader(Vector2 pointer) => _pointer = pointer;
+
+        public T ReadAction<T>(string actionId) where T : struct
+        {
+            if (string.Equals(actionId, InteractionActionBindings.DefaultPointerPositionActionId, StringComparison.Ordinal)
+                && typeof(T) == typeof(Vector2))
+            {
+                return (T)(object)_pointer;
+            }
+
+            return default;
+        }
+
+        public bool IsDown(string actionId) => false;
+        public bool PressedThisFrame(string actionId) => false;
+        public bool ReleasedThisFrame(string actionId) => false;
     }
 
     public void Tick(GraphOpsNodeDriverContext ctx)

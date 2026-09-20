@@ -1,0 +1,8 @@
+{
+  "scene": "crowd_anim",
+  "frames": 180,
+  "avgFrameMs": 19.993,
+  "p95FrameMs": 38.151,
+  "maxFrameMs": 322.948,
+  "wallMs": 7048.3
+}

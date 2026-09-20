@@ -39,6 +39,7 @@ namespace Ludots.Tests.Architecture.Governance
         private static readonly string[] DesignedSystemGroupOrder =
         {
             nameof(SystemGroup.SchemaUpdate),
+            nameof(SystemGroup.LocalInput),
             nameof(SystemGroup.InputCollection),
             nameof(SystemGroup.PostMovement),
             nameof(SystemGroup.AbilityActivation),
@@ -46,10 +47,53 @@ namespace Ludots.Tests.Architecture.Governance
             nameof(SystemGroup.RuntimeEntityBinding),
             nameof(SystemGroup.AttributeCalculation),
             nameof(SystemGroup.DeferredTriggerCollection),
+            nameof(SystemGroup.Continuation),
             nameof(SystemGroup.Cleanup),
             nameof(SystemGroup.EventDispatch),
             nameof(SystemGroup.ClearPresentationFlags)
         };
+
+
+        [Test]
+        public void Core_MustNotContainConcreteGameplayActionLoops()
+        {
+            // issue #1536: behavior loops live as mod graph data on the generic
+            // GraphActionBrainHostSystem; a Core resurrection of a named behavior
+            // loop (attack/transport/...) is an architecture regression.
+            string coreRoot = Path.Combine(FindRepoRootForGuards(), "src", "Core", "Gameplay");
+            Assert.That(Directory.Exists(coreRoot), Is.True);
+            string[] resurrected = Directory.GetFiles(coreRoot, "*.cs", SearchOption.AllDirectories)
+                .Where(file => file.Contains("ActionLoop", StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            Assert.That(resurrected, Is.Empty,
+                "Core/Gameplay must not reintroduce ActionLoop systems; author behavior as Script graphs driven by GraphActionBrainHostSystem (issue #1536).");
+
+            string[] bannedTypes = { "DirectAttackSystem", "ResourceTransportSystem", "DirectAttackProfile", "ResourceTransportProfile" };
+            string[] typeResurrections = Directory.GetFiles(coreRoot, "*.cs", SearchOption.AllDirectories)
+                .Where(file => bannedTypes.Any(banned => File.ReadAllText(file).Contains($"class {banned}", StringComparison.Ordinal)))
+                .ToArray();
+            Assert.That(typeResurrections, Is.Empty,
+                "Core/Gameplay must not resurrect the deleted behavior-loop types by class declaration (issue #1536).");
+        }
+
+        [Test]
+        public void LODLevel_DoesNotEncodeCameraVisibility()
+        {
+            string lodLevelSource = File.ReadAllText(Path.Combine(
+                FindRepoRoot(),
+                "src",
+                "Platform",
+                "Ludots.Platform.Abstractions",
+                "LODLevel.cs"));
+            Assert.That(
+                lodLevelSource,
+                Does.Not.Contain("Culled"),
+                "LODLevel is a quality tier only; camera visibility lives in CullState.IsVisible (issue #999). Re-adding a Culled member reintroduces the conflated visibility contract.");
+            Assert.That(
+                Enum.GetNames(typeof(LODLevel)),
+                Does.Not.Contain("Culled"),
+                "LODLevel enum must not expose a Culled member; OwnerCullVisible / CullState.IsVisible are the visibility SSOT.");
+        }
 
         [Test]
         public void SystemGroup_MustMatchDesignDocument()
@@ -95,7 +139,7 @@ namespace Ludots.Tests.Architecture.Governance
         }
 
         [Test]
-        public void GasPresentationEvents_AreClearedOnlyByClearPresentationFlagsProjection()
+        public void GasPresentationEvents_AreClearedAtRoleSpecificPresentationBoundaries()
         {
             var repoRoot = FindRepoRoot();
             string engineSource = File.ReadAllText(Path.Combine(
@@ -111,6 +155,13 @@ namespace Ludots.Tests.Architecture.Governance
                 "Presentation",
                 "Systems",
                 "GameplayPresentationProjectionSystem.cs"));
+            string authoritativeCleanupSource = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "src",
+                "Core",
+                "Presentation",
+                "Systems",
+                "AuthoritativeServerPresentationCleanupSystem.cs"));
 
             Assert.That(
                 engineSource,
@@ -120,6 +171,14 @@ namespace Ludots.Tests.Architecture.Governance
                 projectionSource,
                 Does.Contain("_gasEvents.Clear();"),
                 "GameplayPresentationProjectionSystem owns GAS event cleanup after projection.");
+            Assert.That(
+                projectionSource,
+                Does.Contain("_gasEvents.Clear();"),
+                "GameplayPresentationProjectionSystem owns GAS event cleanup after projection.");
+            Assert.That(
+                authoritativeCleanupSource,
+                Does.Contain("_gasEvents.Clear();"),
+                "The authoritative server clears GAS presentation events at the logic-step boundary without projecting them.");
             Assert.That(
                 engineSource,
                 Does.Contain("RegisterSystem(clearPresentationFlagsSystem, SystemGroup.ClearPresentationFlags);"),
@@ -1238,6 +1297,7 @@ namespace Ludots.Tests.Architecture.Governance
                 typeof(AttributeBuffer),
                 typeof(AttributeMutationOps),
                 typeof(AttributeAggregatorSystem),
+                typeof(EffectPhaseSideEffectTransaction),
                 typeof(EffectModifierOps),
                 typeof(GasGraphRuntimeApi),
                 typeof(Ludots.Core.Config.ComponentRegistry),
@@ -2728,7 +2788,18 @@ namespace Ludots.Tests.Architecture.Governance
                 {
                     twoByteOpCodes[value & 0xFF] = opCode;
                 }
+             }
+        }
+
+        private static string FindRepoRootForGuards()
+        {
+            string dir = AppContext.BaseDirectory;
+            while (dir != null && !File.Exists(Path.Combine(dir, "showcase.registry.json")))
+            {
+                dir = Path.GetDirectoryName(dir);
             }
+
+            return dir ?? throw new InvalidOperationException("Repo root not found.");
         }
     }
 }

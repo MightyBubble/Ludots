@@ -9,6 +9,6 @@
   <text x="72" y="348" fill="#bccdde" font-size="20" font-family="Consolas, monospace">Roles A W/F/L/P = 19/11/10/8</text>
   <text x="72" y="388" fill="#bccdde" font-size="20" font-family="Consolas, monospace">Roles B W/F/L/P = 19/11/10/8</text>
   <text x="72" y="448" fill="#ffffff" font-size="24" font-family="Consolas, monospace">Injured A/B = 0/0  Projectiles = 4</text>
-  <text x="72" y="488" fill="#ffffff" font-size="24" font-family="Consolas, monospace">Primitive feedback = 12  World text = 0</text>
+  <text x="72" y="488" fill="#ffffff" font-size="24" font-family="Consolas, monospace">Primitive feedback = 16  World text = 0</text>
   <text x="72" y="560" fill="#bccdde" font-size="20" font-family="Consolas, monospace">Selection evidence is sourced from container/view SSOT, not a compat SelectedEntity mirror.</text>
 </svg>

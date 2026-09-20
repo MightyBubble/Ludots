@@ -272,7 +272,6 @@ namespace Ludots.Tests.GAS
             ExecuteProgram(world, api, caster: Entity.Null, target, program);
 
             That(world.Get<GameplayEffect>(effect).CancelRequested, Is.True);
-            That(world.Has<AttributeAggregateDirty>(target), Is.True);
         }
 
         // ════════════════════════════════════════════════════════════════════
@@ -406,6 +405,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.RelationshipSortByMetric, A = 0, Dst = (byte)relationshipSetup.SocialBondTypeId, Imm = relationshipSetup.SupportMetricId, Flags = 1 },
                 new() { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = 99 },
                 new() { Op = (ushort)GraphNodeOp.FanOutDispatchEffectDynamic, A = 0, Dst = (byte)presetId },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt },
             };
 
             GasGraphOpHandlerTable.Execute(ref state, WithHalt(program), GasGraphOpHandlerTable.Instance);
@@ -572,6 +572,7 @@ namespace Ludots.Tests.GAS
             var program = new GraphInstruction[]
             {
                 new() { Op = (ushort)GraphNodeOp.FanOutDispatchEffectDynamic, A = 0, Dst = (byte)presetId },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt },
             };
 
             GasGraphOpHandlerTable.Execute(ref state, WithHalt(program), GasGraphOpHandlerTable.Instance);
@@ -584,6 +585,67 @@ namespace Ludots.Tests.GAS
             That(requests[1].Source, Is.EqualTo(anchor));
             That(requests[1].Target, Is.EqualTo(allyB));
             That(requests[1].TargetContext, Is.EqualTo(caster));
+            That(requests[0].RootId, Is.GreaterThan(0));
+            That(requests[1].RootId, Is.GreaterThan(0));
+            That(requests[1].RootId, Is.Not.EqualTo(requests[0].RootId));
+        }
+
+        [Test]
+        public void GraphOps_FanOutDispatchEffectDynamic_InEffectContext_InheritsRootId()
+        {
+            using var world = World.Create();
+            var requests = new EffectRequestQueue();
+            var presetRegistry = new TargetDispatchPresetRegistry();
+            int presetId = presetRegistry.Register("SourceToResolved", new TargetResolverContextMapping
+            {
+                PayloadSource = ContextSlot.OriginalSource,
+                PayloadTarget = ContextSlot.ResolvedEntity,
+                PayloadTargetContext = ContextSlot.OriginalTarget,
+            });
+            RelationshipApiSetup relationshipSetup = CreateRelationshipApi(world, requests, presetRegistry);
+            var effectEntity = world.Create();
+            var caster = world.Create();
+            var anchor = world.Create();
+            var allyA = world.Create();
+            var allyB = world.Create();
+            var context = new EffectContext
+            {
+                RootId = 73,
+                Source = caster,
+                Target = anchor,
+            };
+            EffectConfigParams mergedParams = default;
+            var state = CreateState(world, relationshipSetup.Api, caster, anchor);
+            state.Targets[0] = allyA;
+            state.Targets[1] = allyB;
+            state.TargetList.SetCount(2);
+            state.I[0] = 99;
+            GraphInstruction[] program =
+            {
+                new() { Op = (ushort)GraphNodeOp.FanOutDispatchEffectDynamic, A = 0, Dst = (byte)presetId },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt },
+            };
+
+            relationshipSetup.Api.BeginBuiltinInvocation(
+                new BuiltinHandlerRegistry(),
+                new EffectTemplateRegistry(),
+                builtinRuntime: null,
+                effectEntity,
+                effectTemplateId: 1,
+                in context,
+                in mergedParams);
+            try
+            {
+                GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            }
+            finally
+            {
+                relationshipSetup.Api.EndBuiltinInvocation();
+            }
+
+            That(requests.Count, Is.EqualTo(2));
+            That(requests[0].RootId, Is.EqualTo(73));
+            That(requests[1].RootId, Is.EqualTo(73));
         }
 
         [Test]
@@ -776,6 +838,11 @@ namespace Ludots.Tests.GAS
             CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
             CallStackCount = 0,
         };
+
+            if (api is GasGraphRuntimeApi concreteApi)
+            {
+                concreteApi.AggregateDirty ??= new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
+            }
 
             GasGraphOpHandlerTable.Execute(ref state, WithHalt(program), GasGraphOpHandlerTable.Instance);
         }

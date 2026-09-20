@@ -9,6 +9,8 @@ namespace Ludots.Core.Config
         private readonly Dictionary<string, List<string>> _fragmentsByPath = new(StringComparer.Ordinal);
         private readonly Dictionary<(string Path, string Id), string> _winnerById = new();
         private readonly HashSet<(string Path, string Id)> _deleted = new();
+        private readonly Dictionary<(string Path, string Id), (string First, string Second)> _duplicates = new();
+        private readonly Dictionary<(string TemplateId, string Component), string> _componentOverrideChains = new();
 
         public void RecordFragment(string relativePath, string sourceUri)
         {
@@ -31,6 +33,55 @@ namespace Ludots.Core.Config
             _winnerById.Remove((relativePath, id));
             _deleted.Add((relativePath, id));
             RecordFragment(relativePath, sourceUri);
+        }
+
+        public void RecordDuplicateId(string relativePath, string id, string firstSource, string secondSource)
+        {
+            var key = (relativePath, id);
+            if (!_duplicates.TryGetValue(key, out var existing))
+            {
+                _duplicates[key] = (firstSource, secondSource);
+            }
+        }
+
+        public IReadOnlyList<(string Id, string FirstSource, string SecondSource)> GetDuplicateIds(string relativePath)
+        {
+            var result = new List<(string, string, string)>();
+            foreach (KeyValuePair<(string Path, string Id), (string First, string Second)> pair in _duplicates)
+            {
+                if (string.Equals(pair.Key.Path, relativePath, StringComparison.Ordinal))
+                {
+                    result.Add((pair.Key.Id, pair.Value.First, pair.Value.Second));
+                }
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// uses 折叠的组件覆盖链：同一组件被多个源写入时留痕，写入者按低到高优先级
+        /// 排列（自身记作 "self"）。字段拼写错误导致静默回退底值靠此定位。
+        /// </summary>
+        public void RecordComponentOverrideChain(string templateId, string component, string writerChain)
+        {
+            var key = (templateId, component);
+            if (!_componentOverrideChains.ContainsKey(key))
+            {
+                _componentOverrideChains[key] = writerChain;
+            }
+        }
+
+        public IReadOnlyList<(string Component, string WriterChain)> GetComponentOverrideChains(string templateId)
+        {
+            var result = new List<(string, string)>();
+            foreach (KeyValuePair<(string TemplateId, string Component), string> pair in _componentOverrideChains)
+            {
+                if (string.Equals(pair.Key.TemplateId, templateId, StringComparison.Ordinal))
+                {
+                    result.Add((pair.Key.Component, pair.Value));
+                }
+            }
+
+            return result;
         }
 
         public bool TryGetWinner(string relativePath, string id, out string sourceUri)

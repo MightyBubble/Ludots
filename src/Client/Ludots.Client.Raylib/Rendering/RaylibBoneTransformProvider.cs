@@ -23,6 +23,9 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly PresenterDefinitionRegistry _definitions;
         private readonly IRenderMeshAssets _meshAssets;
         private readonly EntryResolver _resolveEntry;
+        private readonly TryEntryResolver? _tryResolveEntry;
+
+        public Func<int, int, IReadOnlyDictionary<int, int>?>? AnimationStateMapResolver { get; set; }
 
         /// <summary>
         /// 蒙皮模型条目解析（meshAssetId+descriptor → Model/Animations）。
@@ -31,16 +34,33 @@ namespace Ludots.Client.Raylib.Rendering
         /// </summary>
         public delegate RaylibGpuSkinnedModelCache.Entry EntryResolver(int meshAssetId, MeshAssetDescriptor descriptor);
 
+        public delegate RaylibGpuSkinnedModelAcquireOutcome TryEntryResolver(
+            int meshAssetId,
+            MeshAssetDescriptor descriptor,
+            out RaylibGpuSkinnedModelCache.Entry entry,
+            out string? status);
+
         public RaylibBoneTransformProvider(
             SkinnedVisualBatchBuffer skinnedBatch,
             PresenterDefinitionRegistry definitions,
             IRenderMeshAssets meshAssets,
             EntryResolver resolveEntry)
+            : this(skinnedBatch, definitions, meshAssets, resolveEntry, null)
+        {
+        }
+
+        public RaylibBoneTransformProvider(
+            SkinnedVisualBatchBuffer skinnedBatch,
+            PresenterDefinitionRegistry definitions,
+            IRenderMeshAssets meshAssets,
+            EntryResolver resolveEntry,
+            TryEntryResolver? tryResolveEntry)
         {
             _skinnedBatch = skinnedBatch ?? throw new ArgumentNullException(nameof(skinnedBatch));
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
             _meshAssets = meshAssets ?? throw new ArgumentNullException(nameof(meshAssets));
             _resolveEntry = resolveEntry ?? throw new ArgumentNullException(nameof(resolveEntry));
+            _tryResolveEntry = tryResolveEntry;
         }
 
         public bool TryGetBoneWorldTransform(
@@ -63,13 +83,41 @@ namespace Ludots.Client.Raylib.Rendering
                 return false;
             }
 
-            RaylibGpuSkinnedModelCache.Entry entry = _resolveEntry(item.MeshAssetId, descriptor);
+            RaylibGpuSkinnedModelCache.Entry entry;
+            if (_tryResolveEntry != null)
+            {
+                RaylibGpuSkinnedModelAcquireOutcome outcome = _tryResolveEntry(
+                    item.MeshAssetId,
+                    descriptor,
+                    out entry,
+                    out string? status);
+                if (outcome == RaylibGpuSkinnedModelAcquireOutcome.InFlight)
+                {
+                    return false;
+                }
+
+                if (outcome == RaylibGpuSkinnedModelAcquireOutcome.Failed)
+                {
+                    string uris = descriptor.SourceUris == null
+                        ? string.Empty
+                        : string.Join("|", descriptor.SourceUris);
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibBoneTransformProvider)} meshAssetId={item.MeshAssetId} uris='{uris}' failed to resolve bone transform: {status ?? "backend reported Failed"}");
+                }
+            }
+            else
+            {
+                entry = _resolveEntry(item.MeshAssetId, descriptor);
+            }
             AnimatorPackedState animator = item.Animator;
             RaylibSkinnedPlayback.ResolveFromAnimator(
                 in animator,
                 entry.Animations,
                 entry.AnimCount,
-                stateToClipMap: null,
+                stateToClipMap: RaylibSkinnedPlayback.ResolveStateMap(
+                    item.AnimationProfileId,
+                    item.MeshAssetId,
+                    AnimationStateMapResolver),
                 out int clipIndex,
                 out int frameIndex);
 

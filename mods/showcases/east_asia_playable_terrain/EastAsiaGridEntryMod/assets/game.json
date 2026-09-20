@@ -1,0 +1,11 @@
+{
+  "startupMapId": "east_asia_grid",
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true,
+  "windowStartMaximized": true,
+  "presentation": {
+    "presenterInstanceCapacity": 8192,
+    "gasPresentationEventCapacity": 65536
+  }
+}

@@ -1,0 +1,115 @@
+{
+  "Id": "field_jing_yang_transit",
+  "Tags": [
+    "showcase",
+    "mapfield",
+    "field-region"
+  ],
+  "HeartbeatIntervalTicks": 6,
+  "Fields": {
+    "Layers": [
+      "ownership.transit"
+    ]
+  },
+  "Variables": [
+    {
+      "name": "stage",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "region_code",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "enter_count",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "exit_count",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "last_enter_code",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "last_exit_code",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "fire_scope",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "fire_cast_count",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "fire_last_result",
+      "type": "int",
+      "initial": 0
+    }
+  ],
+  "TriggerGraphs": [
+    {
+      "graph": "Graph.FieldJingYang.Flow",
+      "scopeInstanceId": "transit_hero"
+    }
+  ],
+  "Entities": [
+    {
+      "InstanceId": "transit_hero",
+      "Template": "field_transit_hero"
+    },
+    {
+      "InstanceId": "marker_jing",
+      "Template": "field_transit_marker_jing"
+    },
+    {
+      "InstanceId": "marker_yang",
+      "Template": "field_transit_marker_yang"
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "transit_hero"
+    }
+  ],
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "transit_hero"
+    }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      {
+        "TeamA": 1,
+        "TeamB": 1,
+        "TypeId": "LudotsCore.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      }
+    ],
+    "Players": [],
+    "PlayerTeams": []
+  },
+  "DefaultCamera": {
+    "TargetXCm": 500,
+    "TargetYCm": 150,
+    "Yaw": 45,
+    "Pitch": 52,
+    "DistanceCm": 2800,
+    "FovYDeg": 50
+  }
+}

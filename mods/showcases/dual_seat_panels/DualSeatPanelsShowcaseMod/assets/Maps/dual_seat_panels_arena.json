@@ -1,0 +1,109 @@
+{
+  "Id": "dual_seat_panels_arena",
+  "Tags": [
+    "showcase",
+    "panel",
+    "dual-seat"
+  ],
+  "Variables": [
+    {
+      "name": "dsp_shared_charges",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "dsp_boost_total",
+      "type": "int",
+      "initial": 0
+    }
+  ],
+  "TriggerGraphs": [
+    {
+      "graph": "Graph.DSP.Seat0.Open",
+      "scopeInstanceId": "dsp-hero-a"
+    },
+    {
+      "graph": "Graph.DSP.Seat1.Open",
+      "scopeInstanceId": "dsp-hero-b"
+    },
+    {
+      "graph": "Graph.DSP.Shared.Open",
+      "scopeInstanceId": "dsp-hero-a"
+    },
+    {
+      "graph": "Graph.DSP.Apply.Boost",
+      "scopeInstanceId": "dsp-hero-a"
+    },
+    {
+      "graph": "Graph.DSP.Apply.SharedCharge",
+      "scopeInstanceId": "dsp-hero-a"
+    }
+  ],
+  "Entities": [
+    {
+      "InstanceId": "dsp-hero-a",
+      "Template": "dsp_hero_a"
+    },
+    {
+      "InstanceId": "dsp-hero-b",
+      "Template": "dsp_hero_b"
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "dsp-hero-a"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "dsp-hero-b"
+    }
+  ],
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "dsp-hero-a"
+    },
+    {
+      "PlayerId": 2,
+      "TeamId": 2,
+      "RepresentativeInstanceId": "dsp-hero-b"
+    }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      {
+        "TeamA": 1,
+        "TeamB": 1,
+        "TypeId": "LudotsCore.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 2,
+        "TeamB": 2,
+        "TypeId": "LudotsCore.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 1,
+        "TeamB": 2,
+        "TypeId": "LudotsCore.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      }
+    ],
+    "Players": [],
+    "PlayerTeams": []
+  },
+  "DefaultCamera": {
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "Yaw": 45,
+    "Pitch": 35,
+    "DistanceCm": 1400,
+    "FovYDeg": 50
+  }
+}

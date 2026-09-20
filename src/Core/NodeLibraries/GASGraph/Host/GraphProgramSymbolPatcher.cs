@@ -39,8 +39,23 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.HasTag:
                         ins.Imm = symbolResolver.ResolveTag(ResolveSymbol(symbols, ins.Imm));
                         break;
+                    case GraphNodeOp.LoadTextKey:
+                        ins.Imm = symbolResolver.ResolveTextToken(ResolveSymbol(symbols, ins.Imm));
+                        break;
+                    case GraphNodeOp.SubmitAssignedOrder:
+                    case GraphNodeOp.LoadOrderTypeId:
+                        ins.Imm = symbolResolver.ResolveOrderType(ResolveSymbol(symbols, ins.Imm));
+                        break;
+                    case GraphNodeOp.StartDialogue:
+                        ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
+                        break;
+                    case GraphNodeOp.OfferActivity:
+                    case GraphNodeOp.OfferTask:
+                        _ = ResolveSymbol(symbols, ins.Imm);
+                        break;
                     case GraphNodeOp.LoadAttribute:
                     case GraphNodeOp.ModifyAttributeAdd:
+                    case GraphNodeOp.ModifyAttributeSet:
                     case GraphNodeOp.QueryFilterAttributeRange:
                     case GraphNodeOp.QuerySortByAttribute:
                     case GraphNodeOp.AggSumAttribute:
@@ -56,6 +71,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.QueryFilterTemplate:
                     case GraphNodeOp.SpawnTemplate:
                         ins.Imm = symbolResolver.ResolveEntityTemplate(ResolveSymbol(symbols, ins.Imm));
+                        break;
+                    case GraphNodeOp.QueryCollectAbilityHolders:
+                        ins.Imm = symbolResolver.ResolveAbility(ResolveSymbol(symbols, ins.Imm));
                         break;
                     case GraphNodeOp.ResolveTableRow:
                         ins.Imm = symbolResolver.ResolveGraphLookupTable(ResolveSymbol(symbols, ins.Imm));
@@ -75,6 +93,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.ReadMapVarFloat:
                     case GraphNodeOp.WriteMapVarInt:
                     case GraphNodeOp.WriteMapVarFloat:
+                    case GraphNodeOp.SetInteractionMode:
+                    case GraphNodeOp.LoadEntryPayloadEntity:
+                    case GraphNodeOp.LoadEntryPayloadInt:
+                    case GraphNodeOp.LoadEntryPayloadFloat:
+                    case GraphNodeOp.LoadPlacedEntity:
+                    case GraphNodeOp.LoadPlacedRegion:
+                    case GraphNodeOp.LoadPlacedAnchor:
+                    case GraphNodeOp.StoreArgInt:
+                    case GraphNodeOp.StoreArgFloat:
+                    case GraphNodeOp.StoreArgEntity:
+                    case GraphNodeOp.DispatchMapEvent:
+                    case GraphNodeOp.AwaitCallback:
                         ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
                         break;
                     case GraphNodeOp.CreatePanel:
@@ -95,8 +125,50 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.DestroyPanel:
                         ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
                         break;
+                    case GraphNodeOp.ActivateContext:
+                        ins.Imm = ContextOpEncoding.Pack(
+                            ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm)),
+                            ins.Dst == byte.MaxValue
+                                ? 0
+                                : ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Dst)));
+                        ins.Dst = 0;
+                        break;
+                    case GraphNodeOp.DeactivateContext:
+                        ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
+                        break;
+
+                    case GraphNodeOp.WriteCollection:
+                        // The collection key resolves in the EntityCollectionStore key space,
+                        // same space QueryFromCollection reads.
+                        ins.Imm = ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, ins.Imm));
+                        break;
+                    case GraphNodeOp.SetPanelAudience:
+                        ins.Imm = UI.PanelHosting.PanelOpEncoding.PackAudience(
+                            ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm)),
+                            ins.Dst == byte.MaxValue
+                                ? 0
+                                : ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Dst)));
+                        ins.Dst = 0;
+                        break;
                     case GraphNodeOp.QueryFromCollection:
                         ins.Imm = ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, ins.Imm));
+                        break;
+                    case GraphNodeOp.QueryScreenRegionCollection:
+                        ins.ImmF = BitConverter.Int32BitsToSingle(ResolveEntityCollectionKey(entityCollections,
+                            ResolveSymbol(symbols, BitConverter.SingleToInt32Bits(ins.ImmF))));
+                        ins.Imm = ins.Imm >= 0 ? ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm)) : 0;
+                        break;
+                    case GraphNodeOp.BindQueryCollection:
+                        ins.Imm = GraphIdRegistry.GetId(ResolveSymbol(symbols, ins.Imm));
+                        if (ins.Imm <= 0) throw new InvalidOperationException("ENTITY_QUERY.ERR.QueryGraphUnknown");
+                        ins.ImmF = BitConverter.Int32BitsToSingle(ResolveEntityCollectionKey(entityCollections,
+                            ResolveSymbol(symbols, BitConverter.SingleToInt32Bits(ins.ImmF))));
+                        break;
+                    case GraphNodeOp.ScreenPointToEntity:
+                        if (ins.Imm >= 0)
+                        {
+                            ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
+                        }
                         break;
                     case GraphNodeOp.SnapToNearestInCollection:
                         ins.Imm = ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, ins.Imm));
@@ -229,7 +301,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         }
 
         /// <summary>
-        /// Resolves InvokeScript instructions that carry Func Lib names (Flags=<see cref="GraphInstructionFlags.FuncLibName"/>).
+        /// Resolves InvokeScript instructions that carry Func Lib names (Flags=<see cref="GraphInstructionFlags.FuncLibName"/>)
+        /// and InvokeGraph instructions that carry graph keys (same flag): the script name goes
+        /// through the catalog, the TriggerGraph key resolves via <see cref="GraphIdRegistry"/>.
         /// </summary>
         public static void PatchFuncLib(string[] symbols, GraphInstruction[] program, GraphFunctionCatalog catalog)
         {
@@ -239,20 +313,29 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             for (int i = 0; i < program.Length; i++)
             {
                 ref var ins = ref program[i];
-                if (ins.Op != (ushort)GraphNodeOp.InvokeScript)
+                if ((ins.Op == (ushort)GraphNodeOp.InvokeScript || ins.Op == (ushort)GraphNodeOp.InvokeGraph) &&
+                    (ins.Flags & GraphInstructionFlags.FuncLibName) != 0)
                 {
-                    continue;
-                }
+                    string symbol = ResolveSymbol(symbols, ins.Imm);
+                    if (ins.Op == (ushort)GraphNodeOp.InvokeGraph)
+                    {
+                        int targetGraphId = GraphIdRegistry.GetId(symbol);
+                        if (targetGraphId <= 0)
+                        {
+                            throw new InvalidOperationException(
+                                $"InvokeGraph.functionName '{symbol}' is not a registered graph key.");
+                        }
 
-                if ((ins.Flags & GraphInstructionFlags.FuncLibName) == 0)
-                {
-                    continue;
-                }
+                        ins.Imm = targetGraphId;
+                    }
+                    else
+                    {
+                        GraphFunctionEntry entry = catalog.Require(symbol);
+                        ins.Imm = entry.GraphId;
+                    }
 
-                string functionName = ResolveSymbol(symbols, ins.Imm);
-                GraphFunctionEntry entry = catalog.Require(functionName);
-                ins.Imm = entry.GraphId;
-                ins.Flags = (byte)(ins.Flags & ~GraphInstructionFlags.FuncLibName);
+                    ins.Flags = (byte)(ins.Flags & ~GraphInstructionFlags.FuncLibName);
+                }
             }
         }
 

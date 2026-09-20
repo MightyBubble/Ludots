@@ -35,6 +35,7 @@ public sealed class DomainStanceBridgeAcceptanceTests
         "CoreInputMod",
         "CameraProfilesMod",
         "ParticipantViewCapabilityMod",
+        "SelectionInteractionMod",
         "MassNavigationMod",
         "CapabilityStandardParticipantViewsMod",
     };

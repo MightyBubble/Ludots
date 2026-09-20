@@ -1,0 +1,17 @@
+{
+  "startupMapId": "case_e_selection_10k_field",
+  "windowTitle": "Ludots - Case E 万人双玩家框选",
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true,
+  "targetFps": 60,
+  "commandSource": { "acquisition": { "enabled": false } },
+  "startupInputContexts": ["Default_Gameplay"],
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1,
+      "controlSchemeId": "scheme.case_e"
+    }
+  ]
+}

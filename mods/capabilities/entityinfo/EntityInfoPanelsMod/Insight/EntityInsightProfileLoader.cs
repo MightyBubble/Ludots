@@ -63,6 +63,7 @@ public sealed class EntityInsightProfileLoader
                 SurfaceColorHex = ReadRequiredString(node, "surfaceColorHex"),
                 GenreGlyph = ReadRequiredString(node, "genreGlyph"),
                 PortraitGlyph = ReadRequiredString(node, "portraitGlyph"),
+                PortraitImageId = node["portraitImageId"]?.GetValue<string>() ?? string.Empty,
                 GenreLabelTokenId = ResolveRequiredTokenId(textCatalog, node, "genreLabelToken", profileId),
                 SubtitleTokenId = ResolveRequiredTokenId(textCatalog, node, "subtitleToken", profileId),
                 BodyTokenId = ResolveRequiredTokenId(textCatalog, node, "bodyToken", profileId),

@@ -1,0 +1,194 @@
+[
+  {
+    "id": "Effect.Showcase.AuthorLayoutKit.Seed",
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "phaseGraphs": {
+      "OnApply": {
+        "main": "Graph.AuthorLayoutKit.Effects.Seed"
+      }
+    },
+    "categories": [
+      "Effect.Showcase.AuthorLayoutKit.Seed"
+    ]
+  },
+  {
+    "id": "Effect.Showcase.AuthorLayoutKit.Seed.Step2",
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "phaseGraphs": {
+      "OnApply": {
+        "main": "Graph.AuthorLayoutKit.Effects.Seed.Step2"
+      }
+    },
+    "categories": [
+      "Effect.Showcase.AuthorLayoutKit.Seed"
+    ]
+  },
+  {
+    "id": "Effect.Showcase.AuthorLayoutKit.Seed.Step3",
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "phaseGraphs": {
+      "OnApply": {
+        "main": "Graph.AuthorLayoutKit.Effects.Seed.Step3"
+      }
+    },
+    "categories": [
+      "Effect.Showcase.AuthorLayoutKit.Seed"
+    ]
+  },
+  {
+    "id": "Effect.Showcase.AuthorLayoutKit.Seed.Step4",
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "phaseGraphs": {
+      "OnApply": {
+        "main": "Graph.AuthorLayoutKit.Effects.Seed.Step4"
+      }
+    },
+    "categories": [
+      "Effect.Showcase.AuthorLayoutKit.Seed"
+    ]
+  },
+  {
+    "id": "Effect.Showcase.AuthorLayoutKit.Seed.Step5",
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "phaseGraphs": {
+      "OnApply": {
+        "main": "Graph.AuthorLayoutKit.Effects.Seed.Step5"
+      }
+    },
+    "categories": [
+      "Effect.Showcase.AuthorLayoutKit.Seed"
+    ]
+  },
+  {
+    "id": "Effect.Showcase.AuthorLayoutKit.Seed.Step6",
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "phaseGraphs": {
+      "OnApply": {
+        "main": "Graph.AuthorLayoutKit.Effects.Seed.Step6"
+      }
+    },
+    "categories": [
+      "Effect.Showcase.AuthorLayoutKit.Seed"
+    ]
+  },
+  {
+    "id": "Effect.Showcase.AuthorLayoutKit.Seed.Step7",
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "phaseGraphs": {
+      "OnApply": {
+        "main": "Graph.AuthorLayoutKit.Effects.Seed.Step7"
+      }
+    },
+    "categories": [
+      "Effect.Showcase.AuthorLayoutKit.Seed"
+    ]
+  },
+  {
+    "id": "祝福",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 100,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "stack": {
+      "limit": 5,
+      "policy": "RefreshDuration",
+      "overflowPolicy": "RejectNew"
+    },
+    "modifiers": [
+      {
+        "attribute": "Attack",
+        "op": "Add",
+        "value": 1.0
+      }
+    ],
+    "categories": [
+      "Effect.Showcase.BuffStrip"
+    ]
+  },
+  {
+    "id": "迅捷",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 60,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "modifiers": [
+      {
+        "attribute": "Attack",
+        "op": "Add",
+        "value": 2.0
+      }
+    ],
+    "categories": [
+      "Effect.Showcase.BuffStrip"
+    ]
+  },
+  {
+    "id": "护盾",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 40,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "stack": {
+      "limit": 5,
+      "policy": "RefreshDuration",
+      "overflowPolicy": "RejectNew"
+    },
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": 1.0
+      }
+    ],
+    "categories": [
+      "Effect.Showcase.BuffStrip"
+    ]
+  },
+  {
+    "id": "洞察",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 70,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "modifiers": [
+      {
+        "attribute": "Attack",
+        "op": "Add",
+        "value": 0.5
+      }
+    ],
+    "categories": [
+      "Effect.Showcase.AuthorLayoutKit"
+    ]
+  }
+]

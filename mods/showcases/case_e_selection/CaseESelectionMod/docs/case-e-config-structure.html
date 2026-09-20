@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Case E：配置结构（D15 现行）</title>
+<style>
+  :root{
+    --bg:#0f1117; --panel:#1b2030; --panel2:#202739; --border:#2b3247;
+    --text:#dfe3ec; --dim:#97a3b8; --faint:#6f7a90;
+    --accent:#5aa5ff; --accent2:#37d0b0; --warn:#f0b45a; --ok:#46c98b; --bad:#ff7a76;
+    --mono:"SF Mono",ui-monospace,"Cascadia Code",Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.7;font-size:15px;padding-bottom:90px}
+  .wrap{max-width:1100px;margin:0 auto;padding:36px 28px}
+  .hero{padding:36px 0 22px;border-bottom:1px solid var(--border);margin-bottom:26px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent2);margin-bottom:9px}
+  .hero h1{font-size:27px;font-weight:700;margin-bottom:10px}
+  .hero p{color:var(--dim);max-width:900px}
+  h2{font-size:19px;font-weight:700;margin:38px 0 12px;display:flex;align-items:center;gap:10px}
+  h2 .no{font-family:var(--mono);color:var(--accent);font-size:13px;background:rgba(90,165,255,.12);padding:2px 9px;border-radius:6px;border:1px solid rgba(90,165,255,.28)}
+  h3{font-size:15px;font-weight:600;margin:20px 0 8px}
+  .step{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px 22px;margin:16px 0}
+  .step h3{display:flex;align-items:center;gap:10px;margin:0 0 12px;flex-wrap:wrap}
+  .tag{font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:5px;border:1px solid}
+  .tag.cfg{color:var(--warn);border-color:rgba(240,180,90,.4);background:rgba(240,180,90,.08)}
+  .tag.code{color:var(--accent2);border-color:rgba(55,208,176,.4);background:rgba(55,208,176,.08)}
+  .tag.gap{color:var(--bad);border-color:rgba(255,122,118,.45);background:rgba(255,122,118,.08)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:820px){.grid2{grid-template-columns:1fr}}
+  .box{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+  .box h4{font-size:13px;font-weight:600;margin-bottom:8px;color:var(--accent)}
+  .box h4.code{color:var(--accent2)}
+  .kv{font-size:12.5px;color:var(--dim);line-height:1.8}
+  .kv .k{font-family:var(--mono);color:var(--accent);background:rgba(90,165,255,.08);padding:1px 6px;border-radius:4px;margin-right:6px;font-size:12px}
+  .kv .v{color:var(--text)}
+  .kv .dim{color:var(--faint)}
+  .form{background:var(--panel2);border:1px dashed var(--border);border-radius:10px;padding:16px 18px;margin-top:14px}
+  .form .ft{font-size:12px;font-family:var(--mono);color:var(--faint);margin-bottom:10px;letter-spacing:.05em}
+  .field{display:grid;grid-template-columns:220px 1fr;gap:8px 14px;align-items:baseline;padding:7px 0;border-bottom:1px solid rgba(43,50,71,.5);font-size:13px}
+  .field:last-child{border-bottom:none}
+  .field .fname{font-family:var(--mono);font-size:12.5px;color:var(--accent)}
+  .field .ftype{font-family:var(--mono);font-size:11px;color:var(--faint);margin-left:6px}
+  .field .fdesc{color:var(--dim);font-size:12.5px}
+  @media(max-width:700px){.field{grid-template-columns:1fr}}
+  .flowbox{background:linear-gradient(180deg,rgba(90,165,255,.05),transparent);border:1px solid rgba(90,165,255,.22);border-radius:10px;padding:14px 16px;margin-top:12px}
+  .flowbox .ft{font-size:12px;font-family:var(--mono);color:var(--accent);margin-bottom:8px;letter-spacing:.05em}
+  .pl{font-family:var(--mono);font-size:11.5px;color:var(--dim);background:var(--bg);border:1px solid var(--border);padding:4px 9px;border-radius:6px}
+  .pl b{color:var(--accent);font-weight:600}
+  .callout{border-left:3px solid var(--warn);background:rgba(240,180,90,.06);padding:10px 14px;margin:12px 0;border-radius:0 8px 8px 0;font-size:13px;color:var(--dim)}
+  .callout.bad{border-left-color:var(--bad);background:rgba(255,122,118,.06)}
+  .callout.ok{border-left-color:var(--ok);background:rgba(70,201,139,.06)}
+  footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--border);color:var(--faint);font-size:12px;font-family:var(--mono)}
+  table.summary{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+  table.summary th{text-align:left;color:var(--faint);padding:9px 11px;border-bottom:1px solid var(--border)}
+  table.summary td{padding:8px 11px;border-bottom:1px solid var(--border);color:var(--dim);vertical-align:top}
+  pre.json{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:12px;line-height:1.55;color:var(--text);margin-top:12px;white-space:pre}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <div class="kicker">Case E · 配置结构 · D15 现行合同</div>
+    <h1>框选：矩形单源 · 一张命中函数 · 生命周期函数化</h1>
+    <p>
+      本文是 Case E 框选链路的<strong>现行配置合同</strong>（D15 落地后）。输入更新回到输入域（<code>PointerMoved</code> 边沿，不设帧时钟）；
+      context 生命周期是 profile 上的<strong>瞬时边界槽</strong>（<code>onActivated</code> / <code>onDeactivated</code>，取代被废止的 whileActive 周期字段）；
+      手势与落定解耦：手势出口只写<strong>交接单</strong>，落定是<strong>一张全手势通用的 Script 函数体</strong>。
+    </p>
+  </div>
+
+  <div class="callout ok">
+    <b>和旧文档的关系</b>：历史 <code>case-e-config-report.html</code> 与更早的「结构修订」保留对照；<strong>以本文为准</strong>。
+    本文落到 D15 合入后的真实资产上；「函数愿景」（graph-callable-function-vision）中还没落地的部分单列在 §09。
+  </div>
+
+  <!-- 00 -->
+  <h2><span class="no">00</span>第一性：可复用的图体是函数；挂载是带监听的宿主</h2>
+  <div class="step">
+    <h3>合同立场 <span class="tag cfg">合同</span></h3>
+    <div class="kv">
+      可复用的图体都是<strong>函数</strong>：有入参、有返回，或写明副作用。打分返回分、校验返回是否通过、命中返回名单——<b>同一套调用模型</b>。<br>
+      <strong>函数</strong>用 <code>Script</code>（能挂起、能写、能读集合）或 <code>Query</code>（纯读、给表现层取数、作者面禁写）表达；二者是同一函数族的两种许可面，不是两种物种。<br>
+      边沿动作（按下 / 抬起 / 存活期指针变化）由<strong>带事件入口的 TriggerGraph</strong> 承载；它是<strong>调度宿主</strong>，不是另一种「函数物种」。宿主调函数；函数不回头调宿主。
+    </div>
+  </div>
+
+  <h2><span class="no">00b</span>D15 全链路概览</h2>
+  <div class="box">
+    <div class="kv">
+      <span class="k">01 进图</span><span class="v">实体出生（模板）</span><br>
+      <span class="k">02 挂默认</span><span class="v">initialInteractionContext → 战斗 context（battle）</span><br>
+      <span class="k">03 宿主</span><span class="v">battle.triggers[]：roster_sync（心跳维护候选）+ box_begin（按下）</span><br>
+      <span class="k">04 按下</span><span class="v">box_begin：写起角黑扳 + 预写修饰键黑扳(=0) + 激活 boxing</span><br>
+      <span class="k">05 拖拽</span><span class="v">指针移动 → PointerMoved 输入边沿 → selection_preview_tick 调同一张命中函数 → 写预览集（黄环）</span><br>
+      <span class="k">06 松手</span><span class="v">box_commit（出口图）：写修饰键黑扳 → 终局命中 → 写交接单 selection.pending → DeactivateContext</span><br>
+      <span class="k">06′ 结算</span><span class="v">onDeactivated 槽（下一 tick）：selection_preview_clear 清预览；selection_commit 读黑扳+交接单 → 写 selected → 交接单消费成空（蓝环）</span><br>
+      <span class="k">07 高亮</span><span class="v">预览 / 已选中都走集合成员变化；presenter 只换订阅 key</span>
+    </div>
+  </div>
+
+  <div class="box" style="margin-top:12px">
+    <h4>四个名词（先对齐）</h4>
+    <div class="form" style="margin-top:8px">
+      <div class="field"><span class="fname">候选<span class="ftype">集合</span></span><span class="fdesc">case_e.selectable——能被框的人。battle 挂载的 roster_sync 图随 MapHeartbeat 维护，开框前就位。</span></div>
+      <div class="field"><span class="fname">预览<span class="ftype">集合</span></span><span class="fdesc">case_e.selection_preview——拖拽时框里是谁，黄环。</span></div>
+      <div class="field"><span class="fname">交接单<span class="ftype">集合</span></span><span class="fdesc">selection.pending——松手时手势出口写的「待结算名单」，是手势与落定之间的唯一通道。</span></div>
+      <div class="field"><span class="fname">已选中<span class="ftype">集合</span></span><span class="fdesc">selected——正式结果，蓝环；replace / add / subtract。</span></div>
+    </div>
+  </div>
+
+  <!-- 03 -->
+  <h2><span class="no">03</span>profile：两类字段——监听的入口 + 生命周期的边界</h2>
+  <div class="step">
+    <h3>InteractionContext profile（D15 真实字段） <span class="tag cfg">配置</span></h3>
+    <div class="form">
+      <div class="ft">battle（常驻）</div>
+      <div class="field"><span class="fname">inputContextId<span class="ftype">string</span></span><span class="fdesc">CaseE.Controls（键位随实体投影，多 seat 各投影各的）</span></div>
+      <div class="field"><span class="fname">bindings<span class="ftype">string[]</span></span><span class="fdesc">按住即成立的语义动作（BoxSelectBegin/End + 修饰键）</span></div>
+      <div class="field"><span class="fname">triggers[]<span class="ftype">mount</span></span><span class="fdesc">roster_sync（EntitySpawned/EntityDied 事件驱动）+ box_begin（CaseE.BoxSelectBegin；boxing 前台激活时暂挂）</span></div>
+    </div>
+    <div class="form">
+      <div class="ft">boxing（按下时激活的衍生 context）</div>
+      <div class="field"><span class="fname">triggers[]<span class="ftype">mount</span></span><span class="fdesc">selection_preview_tick（action=PointerMoved）+ box_commit（action=CaseE.BoxSelectEnd）——框选活着时听的输入边沿</span></div>
+      <div class="field"><span class="fname">onActivated<span class="ftype">graph 数组</span></span><span class="fdesc">本用例留空；对称保留</span></div>
+      <div class="field"><span class="fname">foreground<span class="ftype">bool</span></span><span class="fdesc">true：前台接听——boxing 激活期间把父 battle 的互动类 trigger（box_begin）摘除监听，地图/被动类保留；scope 父子仍共存（非栈）；boxing 停用即恢复。由门控 reconcile 增量 diff 承担，配置驱动、引擎不写死。</span></div>
+      <div class="field"><span class="fname">onDeactivated<span class="ftype">graph 数组</span></span><span class="fdesc">selection_preview_clear + selection_commit（Script 函数体，框选结束时的清场与落定；全手势复用）</span></div>
+    </div>
+    <div class="callout ok">
+      <b>为什么是槽不是周期</b>：旧 <code>whileActive</code> 是「存活期每帧空耗周期」的野鸡字段，承载不了其他监听、还占帧。D15 把生命周期改成<strong>两个瞬间边界钩子</strong>——<code>onActivated</code> 跑在 boxing 的 triggers[] 开启之前，<code>onDeactivated</code> 跑在它们关闭之后（显式停用或主体死亡都走这里）。引擎只在边界调用命名图体，不做任何清理动作。
+    </div>
+  </div>
+
+  <!-- 04 -->
+  <h2><span class="no">04</span>框开始：起角 + 修饰键黑扳初始化 + 进 boxing</h2>
+  <div class="step">
+    <h3>按下 Trigger：box_begin <span class="tag cfg">配置图体</span></h3>
+    <div class="form">
+      <div class="ft">box_begin 必须做</div>
+      <div class="field"><span class="fname">写起角<span class="ftype">WriteBlackboardFloat ×2</span></span><span class="fdesc">case_e.press.px / case_e.press.py（写 rep 黑板，跨 seat 隔离）</span></div>
+      <div class="field"><span class="fname">预写修饰键<span class="ftype">WriteBlackboardInt</span></span><span class="fdesc">case_e.select.modifiers = 0——与起角同批建立，保证「boxing 存活 ⇒ 手势共享状态必在」，死亡也可直接结算</span></div>
+      <div class="field"><span class="fname">ActivateContext<span class="ftype">op</span></span><span class="fdesc">激活 boxing；父=battle，随 scope 建框 presenter</span></div>
+      <div class="field"><span class="fname">候选集<span class="ftype">另维</span></span><span class="fdesc">按下图不捞人。battle.roster_sync 已把 case_e.selectable 备好。</span></div>
+    </div>
+  </div>
+
+  <!-- 05 -->
+  <h2><span class="no">05</span>命中函数（唯一）与拖拽：输入更新回输入域</h2>
+  <div class="step">
+    <h3>一张纯函数，拖拽与松手共用 <span class="tag cfg">配置</span></h3>
+    <div class="kv">
+      命中链只剩<strong>一张</strong>：<code>box_hit</code>（Query 纯函数，入参=候选集合 + 起角黑扳 + 活指针）返回命中集；拖拽与松手都调它，不写第二套命中算法。
+    </div>
+    <pre class="json">{
+  "id": "graph.case_e.box_hit",
+  "kind": "Query",
+  "入参": {
+    "candidates": "QueryFromCollection(case_e.selectable)",
+    "press":    "ReadBlackboardFloat(case_e.press.px/py)",
+    "live":     "LoadPointerScreenX/Y"
+  },
+  "side effect": "无（Query 作者面禁写集合；命中结果留在 TargetList 交给调用方）"
+}</pre>
+    <div class="box" style="margin-top:14px">
+      <h4>拖拽中：PointerMoved 输入边沿，不是帧时钟</h4>
+      <div class="kv">
+        boxing 活着时挂 <code>selection_preview_tick</code>（TriggerGraph，条目 <code>action: PointerMoved</code>）。
+        指针位置一变，输入绑定系统按 seat 派发一次；图中 <code>InvokeGraph(box_hit)</code> → 尾节点 <code>WriteCollection(case_e.selection_preview, replace)</code>。
+        指针不动就不派发、不重算。<br>
+        <span class="dim">曾考虑 MapTick 每帧事件——那是把「输入更新」错当成模拟时钟，无人订阅时还空转；不用。</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 06 -->
+  <h2><span class="no">06</span>框结束：出口图 + 通用落定槽</h2>
+  <div class="step">
+    <h3>松手 Trigger：box_commit（手势出口图） <span class="tag cfg">配置图体</span></h3>
+    <div class="form">
+      <div class="ft">box_commit（瘦身为出口：只交接，不落定）</div>
+      <div class="field"><span class="fname">1. 读修饰<span class="ftype">LoadEntryPayloadInt</span></span><span class="fdesc">MapTrigger.Modifiers</span></div>
+      <div class="field"><span class="fname">2. 写修饰<span class="ftype">WriteBlackboardInt</span></span><span class="fdesc">case_e.select.modifiers ← 1：修饰键落 rep 黑板（落定槽读这里）</span></div>
+      <div class="field"><span class="fname">3. 终局命中<span class="ftype">InvokeGraph</span></span><span class="fdesc">调 box_hit（同一张命中函数）</span></div>
+      <div class="field"><span class="fname">4. 写交接单<span class="ftype">WriteCollection</span></span><span class="fdesc">selection.pending（replace）——手势产物归档，等落定</span></div>
+      <div class="field"><span class="fname">5. 停用<span class="ftype">DeactivateContext</span></span><span class="fdesc">宣布框选结束；boxing 监听卸载走门控下帧扫描</span></div>
+    </div>
+    <h3 style="margin-top:18px">onDeactivated 槽：清场 + 落定（Script 函数体） <span class="tag cfg">图体</span></h3>
+    <div class="form">
+      <div class="ft">两张槽图（都在 boxing 的 onDeactivated 里，顺序执行）</div>
+      <div class="field"><span class="fname">selection_preview_clear<span class="ftype">Script</span></span><span class="fdesc">WriteCollection(case_e.selection_preview, replace 空)——黄环灭</span></div>
+      <div class="field"><span class="fname">selection_commit<span class="ftype">Script</span></span><span class="fdesc">读黑扳修饰 → 读交接单 selection.pending → SwitchInt（无/Precision→replace，Queue→add，Subtract→subtract）→ WriteCollection(selected) → 交接单集合减法消费成空</span></div>
+    </div>
+    <div class="callout ok">
+      <b>交接单消费</b>：落定尾段用 <code>WriteCollection(selection.pending, subtract=2)</code> 把刚读出的名单从交接单里减去——M⊆pending 恒成立，减完必空。语义即「消费」，不需要额外的清除 op。
+    </div>
+  </div>
+
+  <!-- 06b -->
+  <h2><span class="no">06b</span>生命周期与结算的边界（D15 定稿）</h2>
+  <div class="step">
+    <div class="form">
+      <div class="ft">三件事按结构保证，不靠约定</div>
+      <div class="field"><span class="fname">开启前 / 变更点<span class="ftype">结构顺序</span></span><span class="fdesc">onActivated 在 boxing 的 triggers[] 注册之前跑（门控挂载点）；onDeactivated 在 DeactivateContext 的同一变更点同步跑（刀3：同拍结算），trigger 卸载由门控下一拍 reconcile 回收。槽贴窗口两侧——执行点是结构事实，不是系统间的时序约定。</span></div>
+      <div class="field"><span class="fname">死亡补发<span class="ftype">destroy 边界</span></span><span class="fdesc">主体带着 context 被销毁（拖拽半途被击杀、未走显式停用）时，门控在 destroy 回调里对携带的每个 context 跑 onDeactivated 槽——结算与清场不会因死亡漏掉。</span></div>
+      <div class="field"><span class="fname">结算时机<span class="ftype">同拍</span></span><span class="fdesc">selected 在 DeactivateContext 的同一变更点更新：帧 N 松手写交接单并 DeactivateContext，门控在变更点同步跑 onDeactivated 槽（selection_preview_clear + selection_commit）→ 结算与清场同拍完成，不再等下一帧扫描。变更点只跑槽，不碰 trigger 账本（避免在自己的图派发中途改账本）；卸载延迟到门控下一拍 reconcile，mount 已拆 → 槽不会双跑。</span></div>
+    </div>
+  </div>
+
+  <!-- 07 -->
+  <h2><span class="no">07</span>高亮：预览与已选中同面</h2>
+  <div class="step">
+    <h3>presenter 订两个 collection key <span class="tag cfg">配置</span></h3>
+    <div class="form">
+      <div class="ft">marine rules</div>
+      <div class="field"><span class="fname">selected<span class="ftype">Added/Removed</span></span><span class="fdesc">蓝环 attachment</span></div>
+      <div class="field"><span class="fname">case_e.selection_preview<span class="ftype">Added/Removed</span></span><span class="fdesc">黄环 preview</span></div>
+    </div>
+  </div>
+
+  <!-- 08 -->
+  <h2><span class="no">08</span>换手柄意味着什么（设计的验收思想实验）</h2>
+  <div class="step">
+    <div class="kv">
+      不用框选了、插上手柄：新手势 = 一个新 context + 自己的命中图 + 自己的 <code>box_commit</code> 出口，照旧写同一张交接单 <code>selection.pending</code> 与修饰键黑扳，然后在 <code>onDeactivated</code> 里列出 <code>selection_commit</code>。
+      落定层（读交接单、写 selected、消费交接单）<strong>零改动</strong>；清场层 <code>selection_preview_clear</code> 各手势按需换自己的预览 key。
+    </div>
+  </div>
+
+  <!-- 09 -->
+  <h2><span class="no">09</span>相对历史：D15 已落地 / 远景还欠</h2>
+  <div class="grid2">
+    <div class="box">
+      <h4>D15 已落地（真实资产）</h4>
+      <div class="kv">
+        · whileActive 四层删除；生命周期 = onActivated / onDeactivated 边界槽<br>
+        · 拖拽预览 = PointerMoved 输入边沿（输入域，无帧时钟）<br>
+        · 手势/落定解耦：交接单 + 通用 selection_commit（Script 函数体）<br>
+        · 落定/清场槽图 = Script 函数体；集合查询读面对齐 Script（修「能写不能读」不对称）<br>
+        · 死亡补发：destroy 边界跑 Deactivated 槽<br>
+        · 起角与修饰键黑扳随按下同批建立<br>
+        · 修复既有缺陷：未声明动作绑定别名到 index 0 槽（PlayerInputHandler.CompileBinding）
+      </div>
+    </div>
+    <div class="box">
+      <h4>远景还欠（先出方案，见 graph-callable-function-vision）</h4>
+      <div class="kv">
+        · 图顶层入参表 inputs[]（出参表 outputs[] 已有）<br>
+        · InvokeGraph 命名演进（InvokeFunc）与 FuncLib 划界<br>
+        · 预览写入 S1（图内副作用）/ S2（纯返回再写入）二选一收口<br>
+        · Query 作者面与「函数等价」的长期对齐
+      </div>
+    </div>
+  </div>
+
+  <div class="callout" style="margin-top:12px">
+    Case E 交接：<a href="./NEXT-AGENT-BRIEF.md"><code>docs/NEXT-AGENT-BRIEF.md</code></a>。
+    函数愿景正本：<code>gitbook/architecture/graph-callable-function-vision.md</code>。
+    图能力进度只看 <code>gitbook/architecture/graph-capability-status.md</code>。
+  </div>
+
+  <div class="callout" style="margin-top:16px">
+    <b>UAT（玩家话）</b>：按下拖，框跟着走，框里兵黄环；松手黄灭蓝留；加选/减选只动蓝环；敌人不进黄也不进蓝。中途把指挥官打死，框也不残留、不报错。换手柄只换手势，落定照旧。
+  </div>
+
+  <footer>
+    Case E · 配置结构（D15 现行）· 历史对照 case-e-config-report.html
+  </footer>
+</div>
+</body>
+</html>

@@ -1,7 +1,7 @@
 {
   "Id": "road_network_showcase_chunked",
   "Tags": ["road_network_showcase", "showcase", "navigation", "chunked"],
-  "VisualHeightmapAsset": "assets/terrain/road_network_showcase_chunked_flat.vhtm",
+  "ContinuousHeightmapAsset": "assets/terrain/road_network_showcase_chunked_flat.height",
   "Boards": [
     {
       "Name": "default",

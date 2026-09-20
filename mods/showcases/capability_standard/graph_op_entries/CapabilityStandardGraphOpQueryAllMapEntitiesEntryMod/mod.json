@@ -2,7 +2,7 @@
   "name": "CapabilityStandardGraphOpQueryAllMapEntitiesEntryMod",
   "version": "1.0.0",
   "description": "Launcher entry for GraphNodeOp QueryAllMapEntities player gallery.",
-  "main": "bin/net8.0/CapabilityStandardGraphOpQueryAllMapEntitiesEntryMod.dll",
+  "main": "bin/net9.0/CapabilityStandardGraphOpQueryAllMapEntitiesEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"

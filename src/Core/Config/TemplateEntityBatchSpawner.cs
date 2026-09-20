@@ -247,14 +247,17 @@ namespace Ludots.Core.Config
                 Span<PreviousWorldPositionCm> previousPositions = chunk.GetSpan<PreviousWorldPositionCm>();
                 Span<FacingDirection> facings = chunk.GetSpan<FacingDirection>();
                 Span<VisualTransform> visuals = chunk.GetSpan<VisualTransform>();
-                Span<VisualHeightmapSampleState> heightSamples = includeDynamicHeightSampling
-                    ? chunk.GetSpan<VisualHeightmapSampleState>()
+                Span<ContinuousHeightmapSampleState> heightSamples = includeDynamicHeightSampling
+                    ? chunk.GetSpan<ContinuousHeightmapSampleState>()
                     : default;
                 Span<CullState> culls = chunk.GetSpan<CullState>();
                 Span<AttributeBuffer> attributes = descriptor.HasAttributeBuffer ? chunk.GetSpan<AttributeBuffer>() : default;
                 Span<AttributeLastSnapshot> attributeSnapshots = descriptor.HasAttributeBuffer ? chunk.GetSpan<AttributeLastSnapshot>() : default;
                 Span<GameplayTagContainer> gameplayTags = descriptor.HasGameplayTagContainer ? chunk.GetSpan<GameplayTagContainer>() : default;
                 Span<TagCountContainer> tagCounts = descriptor.HasTagCountContainer ? chunk.GetSpan<TagCountContainer>() : default;
+                Span<GameplayTagSnapshot> tagSnapshots = descriptor.HasGameplayTagContainer ? chunk.GetSpan<GameplayTagSnapshot>() : default;
+                Span<GameplayTagEffectiveCache> effectiveCaches = descriptor.HasGameplayTagContainer ? chunk.GetSpan<GameplayTagEffectiveCache>() : default;
+                Span<TagCountSnapshot> countSnapshots = descriptor.HasTagCountContainer ? chunk.GetSpan<TagCountSnapshot>() : default;
                 Span<DirtyFlags> dirtyFlags = descriptor.HasDirtyFlags ? chunk.GetSpan<DirtyFlags>() : default;
                 Span<TimedTagBuffer> timedTags = descriptor.HasTimedTagBuffer ? chunk.GetSpan<TimedTagBuffer>() : default;
                 Span<EntityTemplateKeyRef> templateKeys = chunk.GetSpan<EntityTemplateKeyRef>();
@@ -310,11 +313,16 @@ namespace Ludots.Core.Config
                     if (descriptor.HasGameplayTagContainer)
                     {
                         gameplayTags[componentIndex] = descriptor.GameplayTags;
+                        GameplayTagContainer seedTags = descriptor.GameplayTags;
+                        tagSnapshots[componentIndex] = System.Runtime.CompilerServices.Unsafe.As<GameplayTagContainer, GameplayTagSnapshot>(ref seedTags);
+                        effectiveCaches[componentIndex] = System.Runtime.CompilerServices.Unsafe.As<GameplayTagContainer, GameplayTagEffectiveCache>(ref seedTags);
                     }
 
                     if (descriptor.HasTagCountContainer)
                     {
                         tagCounts[componentIndex] = descriptor.TagCounts;
+                        TagCountContainer seedCounts = descriptor.TagCounts;
+                        countSnapshots[componentIndex] = TagCountSnapshot.From(ref seedCounts);
                     }
                     if (descriptor.HasDirtyFlags)
                     {
@@ -408,7 +416,7 @@ namespace Ludots.Core.Config
                         {
                             CellX = cellX,
                             CellY = cellY,
-                            Initialized = 1,
+                            State = SpatialMembershipState.Active,
                         };
                         _partition!.Add(entity, cellX, cellY);
                     }
@@ -684,7 +692,7 @@ namespace Ludots.Core.Config
 
                 bool hasStaticTransform = template.Components.ContainsKey("PresentationStaticTransform");
                 bool hasStaticHeightPending = template.Components.ContainsKey("PresentationStaticHeightPending");
-                bool hasDynamicHeightSampling = template.Components.ContainsKey("VisualHeightmapSampleState");
+                bool hasDynamicHeightSampling = template.Components.ContainsKey("ContinuousHeightmapSampleState");
                 bool hasSpatialPartitionExcluded = template.Components.ContainsKey("SpatialPartitionExcluded");
                 bool hasAttributeBuffer = template.Components.ContainsKey("AttributeBuffer");
                 bool hasAbilityTagGrantReceiver = template.Components.ContainsKey("AbilityTagGrantReceiver");
@@ -749,7 +757,7 @@ namespace Ludots.Core.Config
 
                 if (hasDynamicHeightSampling)
                 {
-                    RequireEmptyObject(templateId, template.Components, "VisualHeightmapSampleState");
+                    RequireEmptyObject(templateId, template.Components, "ContinuousHeightmapSampleState");
                 }
 
                 if (hasSpatialPartitionExcluded)
@@ -780,11 +788,16 @@ namespace Ludots.Core.Config
                 if (hasGameplayTagContainer)
                 {
                     signature += Component<GameplayTagContainer>.Signature;
+                    // 出生即种 Quick 快照/缓存：DeferredTriggerCollection 的标签比较走
+                    // 引用更新路径，避免收集时对实体做结构性补件（CommandBuffer.Add）。
+                    signature += Component<GameplayTagSnapshot>.Signature;
+                    signature += Component<GameplayTagEffectiveCache>.Signature;
                 }
 
                 if (hasTagCountContainer)
                 {
                     signature += Component<TagCountContainer>.Signature;
+                    signature += Component<TagCountSnapshot>.Signature;
                 }
 
                 if (hasTimedTagBuffer)
@@ -799,7 +812,7 @@ namespace Ludots.Core.Config
 
                 if (hasDynamicHeightSampling)
                 {
-                    signature += Component<VisualHeightmapSampleState>.Signature;
+                    signature += Component<ContinuousHeightmapSampleState>.Signature;
                 }
 
                 if (hasStaticTransform)
@@ -932,7 +945,7 @@ namespace Ludots.Core.Config
                     if (string.Equals(componentName, "Name", StringComparison.Ordinal) ||
                         string.Equals(componentName, "WorldPositionCm", StringComparison.Ordinal) ||
                         string.Equals(componentName, "FacingDirection", StringComparison.Ordinal) ||
-                        string.Equals(componentName, "VisualHeightmapSampleState", StringComparison.Ordinal) ||
+                        string.Equals(componentName, "ContinuousHeightmapSampleState", StringComparison.Ordinal) ||
                         string.Equals(componentName, "AttributeBuffer", StringComparison.Ordinal) ||
                         string.Equals(componentName, "GameplayTagContainer", StringComparison.Ordinal) ||
                         string.Equals(componentName, "TagCountContainer", StringComparison.Ordinal) ||
@@ -997,7 +1010,7 @@ namespace Ludots.Core.Config
                 return string.Equals(componentName, "Name", StringComparison.Ordinal) ||
                        string.Equals(componentName, "WorldPositionCm", StringComparison.Ordinal) ||
                        string.Equals(componentName, "FacingDirection", StringComparison.Ordinal) ||
-                       string.Equals(componentName, "VisualHeightmapSampleState", StringComparison.Ordinal) ||
+                       string.Equals(componentName, "ContinuousHeightmapSampleState", StringComparison.Ordinal) ||
                        string.Equals(componentName, "AttributeBuffer", StringComparison.Ordinal) ||
                        string.Equals(componentName, "GameplayTagContainer", StringComparison.Ordinal) ||
                        string.Equals(componentName, "TagCountContainer", StringComparison.Ordinal) ||

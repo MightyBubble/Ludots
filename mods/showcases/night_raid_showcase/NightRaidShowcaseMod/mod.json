@@ -8,5 +8,5 @@
     "CoreInputMod": "^1.0.0",
     "MapTriggerNightRaidMod": "^1.0.0"
   },
-  "main": "bin/net8.0/NightRaidShowcaseMod.dll"
+  "main": "bin/net9.0/NightRaidShowcaseMod.dll"
 }

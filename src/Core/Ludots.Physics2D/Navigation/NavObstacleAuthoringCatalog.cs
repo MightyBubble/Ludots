@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.TransportNetwork;
 
 namespace Ludots.Core.Physics2D.Navigation;
 
@@ -40,7 +41,39 @@ public static class NavObstacleAuthoringCatalog
 
         MapConfig map = LoadMergedMap(root, mods, loadOrder, mapId);
         Dictionary<string, EntityTemplate> templates = LoadMergedTemplates(root, mods, loadOrder);
-        return NavObstacleAuthoringAdapter.BuildFromMapAuthoring(map, templates, layerId);
+        NavObstacleSet obstacles = NavObstacleAuthoringAdapter.BuildFromMapAuthoring(map, templates, layerId);
+        TransportNavObstacleSinkFiles.MergeFromExplicitFiles(
+            obstacles,
+            FindLatestExisting(root, mods, loadOrder, TransportNavObstacleSinkFiles.SinkConfigRelativePath),
+            FindLatestExisting(root, mods, loadOrder, TransportNavObstacleSinkFiles.TransportAssetRelativePath),
+            mapId);
+        return obstacles;
+    }
+
+    private static string? FindLatestExisting(
+        string repoRoot,
+        IReadOnlyList<ModInfo> mods,
+        IReadOnlyList<string> loadOrder,
+        string relativePath)
+    {
+        string? latest = null;
+        string corePath = Path.Combine(repoRoot, "assets", relativePath);
+        if (File.Exists(corePath))
+        {
+            latest = corePath;
+        }
+
+        var byId = mods.ToDictionary(mod => mod.Id, StringComparer.OrdinalIgnoreCase);
+        for (int i = 0; i < loadOrder.Count; i++)
+        {
+            string path = Path.Combine(byId[loadOrder[i]].RootPath, "assets", relativePath);
+            if (File.Exists(path))
+            {
+                latest = path;
+            }
+        }
+
+        return latest;
     }
 
     private static List<ModInfo> DiscoverMods(string repoRoot)
@@ -285,11 +318,13 @@ public static class NavObstacleAuthoringCatalog
             Load(byId[loadOrder[i]].RootPath);
         }
 
-        return templates.ToDictionary(
+        var mergedTemplates = templates.ToDictionary(
             kvp => kvp.Key,
             kvp => kvp.Value.Deserialize<EntityTemplate>(JsonOptions)
                 ?? throw new InvalidOperationException($"Entity template '{kvp.Key}' could not be deserialized."),
             StringComparer.Ordinal);
+        EntityTemplateInheritance.ExpandAll(mergedTemplates);
+        return mergedTemplates;
     }
 
     private static void MergeMap(MapConfig target, MapConfig source)
@@ -304,9 +339,14 @@ public static class NavObstacleAuthoringCatalog
             target.ParentId = source.ParentId;
         }
 
-        if (!string.IsNullOrWhiteSpace(source.VisualHeightmapAsset))
+        if (!string.IsNullOrWhiteSpace(source.ContinuousHeightmapAsset))
         {
-            target.VisualHeightmapAsset = source.VisualHeightmapAsset;
+            target.ContinuousHeightmapAsset = source.ContinuousHeightmapAsset;
+        }
+
+        if (source.TerrainPresentation != null)
+        {
+            target.TerrainPresentation = source.TerrainPresentation.Clone();
         }
 
         if (source.Dependencies != null)
@@ -386,9 +426,9 @@ public static class NavObstacleAuthoringCatalog
             target.DefaultCamera = source.DefaultCamera;
         }
 
-        if (source.VisualHeightmap != null)
+        if (source.ContinuousHeightmap != null)
         {
-            target.VisualHeightmap = source.VisualHeightmap;
+            target.ContinuousHeightmap = source.ContinuousHeightmap;
         }
 
         if (source.ParticipantRelationships != null)

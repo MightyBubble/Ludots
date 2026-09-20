@@ -22,6 +22,7 @@ namespace Ludots.Core.Modding
         private readonly TriggerDecoratorRegistry _triggerDecoratorRegistry;
         private readonly ModExtensionHub _extensions;
         private readonly List<IMod> _loadedMods = new List<IMod>();
+        private readonly List<ModManifest> _loadedManifests = new List<ModManifest>();
         private readonly List<ModLoadContext> _loadContexts = new List<ModLoadContext>();
         private readonly Dictionary<string, Assembly> _sharedAssemblies = new Dictionary<string, Assembly>(StringComparer.Ordinal);
         private readonly Dictionary<string, string> _modDirectories = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -32,6 +33,7 @@ namespace Ludots.Core.Modding
 
         public IMapManager MapManager { get; set; }
         public List<string> LoadedModIds { get; private set; } = new List<string>();
+        public IReadOnlyList<ModManifest> LoadedManifests => _loadedManifests;
         public IReadOnlyList<Assembly> LoadedAssemblies
         {
             get
@@ -215,6 +217,7 @@ namespace Ludots.Core.Modding
             {
                 LoadModAssembly(item.Manifest);
                 LoadedModIds.Add(item.Manifest.Name);
+                _loadedManifests.Add(item.Manifest);
             }
         }
 
@@ -250,6 +253,7 @@ namespace Ludots.Core.Modding
         {
             try
             {
+                _triggerManager.UnregisterAllModTriggers();
                 for (int i = _loadedMods.Count - 1; i >= 0; i--)
                 {
                     var mod = _loadedMods[i];
@@ -264,6 +268,7 @@ namespace Ludots.Core.Modding
                     }
                 }
                 _loadedMods.Clear();
+                _loadedManifests.Clear();
                 UnregisterModComponentAuthoring(LoadedModIds);
 
                 foreach (var ctx in _loadContexts)
@@ -294,6 +299,7 @@ namespace Ludots.Core.Modding
             finally
             {
                 _loadedMods.Clear();
+                _loadedManifests.Clear();
                 _loadContexts.Clear();
                 LoadedModIds.Clear();
                 _modDirectories.Clear();
@@ -609,6 +615,7 @@ namespace Ludots.Core.Modding
         {
             try
             {
+                _triggerManager.UnregisterAllModTriggers();
                 for (int i = _loadedMods.Count - 1; i >= 0; i--)
                 {
                     var mod = _loadedMods[i];
@@ -647,6 +654,7 @@ namespace Ludots.Core.Modding
             finally
             {
                 _loadedMods.Clear();
+                _loadedManifests.Clear();
                 _loadContexts.Clear();
                 LoadedModIds.Clear();
                 _modDirectories.Clear();

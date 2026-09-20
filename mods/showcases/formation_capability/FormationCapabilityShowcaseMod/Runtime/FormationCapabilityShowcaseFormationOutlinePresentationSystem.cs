@@ -28,7 +28,7 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
     private readonly GameEngine _engine;
     private readonly FormationCapabilityShowcaseRuntime _runtime;
     private readonly PresentationWorldFactPublisher _facts;
-    private readonly IVisualHeightmap _heightmap;
+    private readonly IContinuousHeightmap _heightmap;
     private readonly int _stableIdCapacity;
     private readonly int _ownerCapacity;
     private readonly List<int> _currentStableIds;
@@ -69,8 +69,8 @@ internal sealed class FormationCapabilityShowcaseFormationOutlinePresentationSys
             throw new InvalidOperationException("Formation Capability formation outline presentation requires PresentationEventStream.");
         }
 
-        _heightmap = engine.GetService(CoreServiceKeys.VisualHeightmap)
-            ?? throw new InvalidOperationException("Formation Capability formation outline requires VisualHeightmap.");
+        _heightmap = engine.GetService(CoreServiceKeys.ContinuousHeightmap)
+            ?? throw new InvalidOperationException("Formation Capability formation outline requires ContinuousHeightmap.");
     }
 
     public void Initialize() { }

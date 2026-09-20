@@ -2,7 +2,7 @@
 
 > 状态：🔴（配置可装载）——运行链路：G8/$payload、G9、#1015、任务条目依赖 G12（列表型引脚）。
 >
-> ⚠️ **基建依赖**：任务/活动系统 y5k 线建设中（#773/#774/#775/#830 均 OPEN，#774 为 Quest 退役重做）——值图与 mock 为设计意图，底层 Task/Activity entity 物化落地前不可装载；旧 Core `Gameplay/Quests/`（QuestRuntimeService 等）将退役，`Quests.Count`/`Quests.Active` 无稳定出口。
+> ⚠️ **基建依赖**：Task 运行时已落地（#774 已关闭，Quest 已退役）；Activity 运行时核心与通用事件面板已落地（入口见[叙事内容运行时 Wiki](../../reference/narrative-runtime-wiki/README.md)），内容包与 y5k 战略界面线仍建设中（#773/#775/#830 OPEN）。本页值图与 mock 为设计意图，装载以 registry 现状为准。
 
 > **高保真预期**（门户面板矩阵页可交互预览）：
 

@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.Gameplay.Story;
+using Ludots.Core.Presentation;
 
 namespace NarrativeFrontendMod.Runtime;
 
@@ -18,11 +20,25 @@ public sealed class NarrativeFrontendService
 
     public NarrativeFrontendRenderState Snapshot => _snapshot;
 
+    /// <summary>
+    /// Publish a Core story frame (dialogue/subtitle/choices as strings + imageId).
+    /// Paths are resolved at this boundary via <paramref name="display"/>.
+    /// </summary>
+    public void PublishStoryFrame(
+        string ownerId,
+        StoryPresentationFrame frame,
+        PresentationDisplayResolver? display,
+        string frameImageSrc = "")
+    {
+        Publish(StoryPresentationFrontendAdapter.ToPage(ownerId, frame, display, frameImageSrc));
+    }
+
     public void Publish(NarrativeFrontendPageState page)
     {
-        if (page == null || string.IsNullOrWhiteSpace(page.OwnerId))
+        ArgumentNullException.ThrowIfNull(page);
+        if (string.IsNullOrWhiteSpace(page.OwnerId))
         {
-            return;
+            throw new ArgumentException("NarrativeFrontend page requires OwnerId.", nameof(page));
         }
 
         if (!page.Visible || page.Surfaces == null || page.Surfaces.Count == 0)
@@ -39,7 +55,8 @@ public sealed class NarrativeFrontendService
 
         if (slot < 0)
         {
-            return;
+            throw new InvalidOperationException(
+                $"NarrativeFrontend page capacity ({PageCapacity}) exhausted while publishing '{page.OwnerId}'.");
         }
 
         NarrativeFrontendPageState? existing = _pages[slot];

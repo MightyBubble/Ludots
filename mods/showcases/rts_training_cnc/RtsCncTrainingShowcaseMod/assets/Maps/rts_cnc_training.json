@@ -11,7 +11,7 @@
     "FovYDeg": 60
   },
   "Boards": [
-    { "Name": "default", "SpatialType": "HexGrid", "DataFile": "ra2_shoreline.vtxm" }
+    { "Name": "default", "SpatialType": "HexGrid", "DataFile": "ra2_shoreline.hex" }
   ],
   "Entities": [
     {

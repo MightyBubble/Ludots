@@ -1,5 +1,0 @@
-[
-  { "id": "trust", "kind": "Int", "defaultInt": 0, "displayName": "Trust" },
-  { "id": "lore", "kind": "Int", "defaultInt": 0, "displayName": "Lore" },
-  { "id": "ending", "kind": "String", "defaultString": "Unwritten", "displayName": "Ending" }
-]

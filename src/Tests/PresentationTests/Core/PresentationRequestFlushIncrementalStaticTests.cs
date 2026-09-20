@@ -42,15 +42,15 @@ namespace Ludots.Tests.Presentation
                     proxyBuffer,
                     skinnedBatchBuffer);
 
-                requests.Add(PresentationRequest.FromVisualProxy(Entity.Null, CreateStaticProxy(9001, posX: 1f)));
-                requests.Add(PresentationRequest.FromVisualProxy(Entity.Null, CreateStaticProxy(9002, posX: 2f)));
+                requests.AddVisualProxy(Entity.Null, CreateStaticProxy(9001, posX: 1f));
+                requests.AddVisualProxy(Entity.Null, CreateStaticProxy(9002, posX: 2f));
                 flush.Update(0.016f);
 
                 Assert.That(snapshotBuffer.Count, Is.EqualTo(2));
                 Assert.That(proxyBuffer.Count, Is.EqualTo(2));
 
-                requests.Add(PresentationRequest.FromVisualProxy(Entity.Null, CreateStaticProxy(9001, posX: 99f)));
-                requests.Add(PresentationRequest.FromVisualProxy(Entity.Null, CreateStaticProxy(9002, posX: 2f)));
+                requests.AddVisualProxy(Entity.Null, CreateStaticProxy(9001, posX: 99f));
+                requests.AddVisualProxy(Entity.Null, CreateStaticProxy(9002, posX: 2f));
                 flush.Update(0.016f);
 
                 Dictionary<int, Vector3> snapshotById = IndexSnapshot(snapshotBuffer);
@@ -91,12 +91,12 @@ namespace Ludots.Tests.Presentation
                     proxyBuffer,
                     new SkinnedVisualBatchBuffer());
 
-                requests.Add(PresentationRequest.FromVisualProxy(Entity.Null, CreateStaticProxy(9001, posX: 1f)));
+                requests.AddVisualProxy(Entity.Null, CreateStaticProxy(9001, posX: 1f));
                 flush.Update(0.016f);
                 int proxyCountAfterFull = proxyBuffer.Count;
 
-                requests.Add(PresentationRequest.FromVisualProxy(Entity.Null, CreateStaticProxy(9001, posX: 1f)));
-                requests.Add(PresentationRequest.FromVisualProxy(Entity.Null, CreateStaticProxy(9002, posX: 5f)));
+                requests.AddVisualProxy(Entity.Null, CreateStaticProxy(9001, posX: 1f));
+                requests.AddVisualProxy(Entity.Null, CreateStaticProxy(9002, posX: 5f));
                 flush.Update(0.016f);
 
                 Assert.That(stableDrawCache.Count, Is.EqualTo(2));
@@ -133,14 +133,14 @@ namespace Ludots.Tests.Presentation
                     proxyBuffer,
                     new SkinnedVisualBatchBuffer());
 
-                requests.Add(PresentationRequest.FromVisualProxy(
+                requests.AddVisualProxy(
                     Entity.Null,
-                    CreateStaticProxy(9001, posX: 1f, templateId: 1001)));
+                    CreateStaticProxy(9001, posX: 1f, templateId: 1001));
                 flush.Update(0.016f);
 
-                requests.Add(PresentationRequest.FromVisualProxy(
+                requests.AddVisualProxy(
                     Entity.Null,
-                    CreateStaticProxy(9001, posX: 1f, templateId: 2002)));
+                    CreateStaticProxy(9001, posX: 1f, templateId: 2002));
                 flush.Update(0.016f);
 
                 Assert.That(snapshotBuffer.Count, Is.EqualTo(1));

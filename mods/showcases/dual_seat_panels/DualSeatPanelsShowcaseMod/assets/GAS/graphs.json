@@ -1,0 +1,598 @@
+[
+  {
+    "id": "Graph.DSP.SeatVitals",
+    "kind": "Query",
+    "entry": "hp",
+    "nodes": [
+      {
+        "id": "hp",
+        "op": "LoadSelfAttribute",
+        "attribute": "Health"
+      },
+      {
+        "id": "hpMax",
+        "op": "LoadSelfAttribute",
+        "attribute": "MaxHealth"
+      },
+      {
+        "id": "supply",
+        "op": "LoadSelfAttribute",
+        "attribute": "Supply"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "hp",
+        "fromPort": "next",
+        "to": "hpMax"
+      },
+      {
+        "from": "hpMax",
+        "fromPort": "next",
+        "to": "supply"
+      }
+    ],
+    "valueEdges": [],
+    "outputs": [
+      {
+        "id": "hp",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "hp",
+        "key": "dsp.seat.hp"
+      },
+      {
+        "id": "hpMax",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "hpMax",
+        "key": "dsp.seat.hpMax"
+      },
+      {
+        "id": "supply",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "supply",
+        "key": "dsp.seat.supply"
+      }
+    ]
+  },
+  {
+    "id": "Graph.DSP.SharedBoard",
+    "kind": "Query",
+    "entry": "all",
+    "nodes": [
+      {
+        "id": "all",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "heroes",
+        "op": "AggCount"
+      },
+      {
+        "id": "fieldHp",
+        "op": "AggSumAttribute",
+        "attribute": "Health"
+      },
+      {
+        "id": "charges",
+        "op": "ReadMapVarInt",
+        "var": "dsp_shared_charges"
+      },
+      {
+        "id": "boosts",
+        "op": "ReadMapVarInt",
+        "var": "dsp_boost_total"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "all",
+        "fromPort": "next",
+        "to": "heroes"
+      },
+      {
+        "from": "heroes",
+        "fromPort": "next",
+        "to": "fieldHp"
+      },
+      {
+        "from": "fieldHp",
+        "fromPort": "next",
+        "to": "charges"
+      },
+      {
+        "from": "charges",
+        "fromPort": "next",
+        "to": "boosts"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "all",
+        "fromPort": "list",
+        "to": "heroes",
+        "toPort": "list"
+      },
+      {
+        "from": "all",
+        "fromPort": "list",
+        "to": "fieldHp",
+        "toPort": "list"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "fieldHp",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "fieldHp",
+        "key": "dsp.shared.fieldHp"
+      },
+      {
+        "id": "heroes",
+        "destination": "Summary",
+        "type": "Int",
+        "source": "heroes",
+        "key": "dsp.shared.heroes"
+      },
+      {
+        "id": "charges",
+        "destination": "Summary",
+        "type": "Int",
+        "source": "charges",
+        "key": "dsp.shared.charges"
+      },
+      {
+        "id": "boosts",
+        "destination": "Summary",
+        "type": "Int",
+        "source": "boosts",
+        "key": "dsp.shared.boosts"
+      }
+    ]
+  },
+  {
+    "id": "Graph.DSP.Seat0.Open",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "scope",
+        "once": true
+      }
+    ],
+    "nodes": [
+      {
+        "id": "scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "create",
+        "op": "CreatePanel",
+        "panelType": "panel.dsp.seat0",
+        "panelAnchor": "screen.topLeft"
+      },
+      {
+        "id": "show",
+        "op": "ShowPanel",
+        "panelType": "panel.dsp.seat0"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "scope",
+        "fromPort": "next",
+        "to": "create"
+      },
+      {
+        "from": "create",
+        "fromPort": "next",
+        "to": "show"
+      },
+      {
+        "from": "show",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "create",
+        "toPort": "source"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.DSP.Seat1.Open",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "scope",
+        "once": true
+      }
+    ],
+    "nodes": [
+      {
+        "id": "scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "create",
+        "op": "CreatePanel",
+        "panelType": "panel.dsp.seat1",
+        "panelAnchor": "screen.topLeft"
+      },
+      {
+        "id": "show",
+        "op": "ShowPanel",
+        "panelType": "panel.dsp.seat1"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "scope",
+        "fromPort": "next",
+        "to": "create"
+      },
+      {
+        "from": "create",
+        "fromPort": "next",
+        "to": "show"
+      },
+      {
+        "from": "show",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "create",
+        "toPort": "source"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.DSP.Shared.Open",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "scope",
+        "once": true
+      }
+    ],
+    "nodes": [
+      {
+        "id": "scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "create",
+        "op": "CreatePanel",
+        "panelType": "panel.dsp.shared",
+        "panelAnchor": "screen.bottomCenter"
+      },
+      {
+        "id": "show",
+        "op": "ShowPanel",
+        "panelType": "panel.dsp.shared"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "scope",
+        "fromPort": "next",
+        "to": "create"
+      },
+      {
+        "from": "create",
+        "fromPort": "next",
+        "to": "show"
+      },
+      {
+        "from": "show",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "create",
+        "toPort": "source"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.DSP.Apply.Boost",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_panel_boost",
+        "event": "DSP.PanelBoost.Used",
+        "start": "scope",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "read",
+        "op": "ReadMapVarInt",
+        "var": "dsp_boost_total"
+      },
+      {
+        "id": "one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "add",
+        "op": "AddInt"
+      },
+      {
+        "id": "write",
+        "op": "WriteMapVarInt",
+        "var": "dsp_boost_total"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "scope",
+        "fromPort": "next",
+        "to": "read"
+      },
+      {
+        "from": "read",
+        "fromPort": "next",
+        "to": "one"
+      },
+      {
+        "from": "one",
+        "fromPort": "next",
+        "to": "add"
+      },
+      {
+        "from": "add",
+        "fromPort": "next",
+        "to": "write"
+      },
+      {
+        "from": "write",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "write",
+        "toPort": "source"
+      },
+      {
+        "from": "read",
+        "fromPort": "value",
+        "to": "add",
+        "toPort": "a"
+      },
+      {
+        "from": "one",
+        "fromPort": "value",
+        "to": "add",
+        "toPort": "b"
+      },
+      {
+        "from": "add",
+        "fromPort": "value",
+        "to": "write",
+        "toPort": "value"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.DSP.Apply.SharedCharge",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_shared_charge",
+        "event": "DSP.SharedCharge.Used",
+        "start": "scope",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "read",
+        "op": "ReadMapVarInt",
+        "var": "dsp_shared_charges"
+      },
+      {
+        "id": "one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "add",
+        "op": "AddInt"
+      },
+      {
+        "id": "write",
+        "op": "WriteMapVarInt",
+        "var": "dsp_shared_charges"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "scope",
+        "fromPort": "next",
+        "to": "read"
+      },
+      {
+        "from": "read",
+        "fromPort": "next",
+        "to": "one"
+      },
+      {
+        "from": "one",
+        "fromPort": "next",
+        "to": "add"
+      },
+      {
+        "from": "add",
+        "fromPort": "next",
+        "to": "write"
+      },
+      {
+        "from": "write",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "write",
+        "toPort": "source"
+      },
+      {
+        "from": "read",
+        "fromPort": "value",
+        "to": "add",
+        "toPort": "a"
+      },
+      {
+        "from": "one",
+        "fromPort": "value",
+        "to": "add",
+        "toPort": "b"
+      },
+      {
+        "from": "add",
+        "fromPort": "value",
+        "to": "write",
+        "toPort": "value"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

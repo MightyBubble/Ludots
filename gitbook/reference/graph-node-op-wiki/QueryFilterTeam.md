@@ -3,7 +3,7 @@
 红的一排留圈，蓝的退成灰影。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_QueryFilterTeam/poster.png" src="artifacts/evidence/capability_standard_graph_op_QueryFilterTeam/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_QueryFilterTeam/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_QueryFilterTeam/play.mp4。
 </video>
 
 ## 作者写法
@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | 仅 Query |
+| 可用图种 | Script / TriggerGraph / Query |
 | 返回 | 无（副作用节点） |
 | 输入端口（值边 toPort） | `list`（目标名单）、`teamid`（队伍 id） |
 | 特殊写法 | flags 填队伍来源 |
@@ -43,7 +43,7 @@ QueryAllMapEntities → **QueryFilterTeam**（本篇）
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Query；Effect / Score / Validation / Derived / Script / TriggerGraph 图不可用（编译期白名单拒绝）。
+- 图种边界：可用于 Query / Script / TriggerGraph；Effect / Score / Validation / Derived 图不可用（编译期白名单拒绝）。
 - 同类用法：战场统计（全场均值/最值）、点名最残或最能扛的目标、按条件筛名单再排序。
 ## 怎么进
 

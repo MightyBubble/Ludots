@@ -100,9 +100,9 @@ enum Acquisition
 
 ## 4. Ludots 映射
 
-### InteractionModeType → Acquisition
+### CastModeType → Acquisition
 
-| Ludots InteractionModeType | Acquisition | 说明 |
+| Ludots CastModeType | Acquisition | 说明 |
 |---------------------------|-------------|------|
 | `TargetFirst` | `Explicit` | 先选单位，再按键 |
 | `SmartCast` | `Explicit` | 按键时自动取光标下目标 |

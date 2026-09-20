@@ -21,6 +21,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
+using Ludots.Core.Networking.Runtime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.Rendering;
@@ -39,6 +40,7 @@ namespace CoreInputMod.Systems
 
         public const string LastGroundWorldDebugKey = "CoreInputMod.Debug.LastGroundWorldCm";
         public const string LastOrderDebugKey = "CoreInputMod.Debug.LastOrder";
+        public const string LastNetworkSubmitResultDebugKey = "CoreInputMod.Debug.LastNetworkSubmitResult";
 
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
@@ -90,15 +92,20 @@ namespace CoreInputMod.Systems
 
         public InputOrderMappingSystem? TryCreateMapping(IModContext ctx)
         {
+            return TryCreateMapping(ctx, ctx.ModId);
+        }
+
+        public InputOrderMappingSystem? TryCreateMapping(IModContext ctx, string sourceModId)
+        {
             if (!_globals.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out var inputObj) || inputObj is not IInputActionReader input)
             {
                 return null;
             }
 
-            string uri = $"{ctx.ModId}:assets/Input/input_order_mappings.json";
+            string uri = $"{sourceModId}:assets/Input/input_order_mappings.json";
             if (!ctx.VFS.TryResolveFullPath(uri, out var fullPath) || !File.Exists(fullPath))
             {
-                ctx.Log($"[{ctx.ModId}] input_order_mappings.json not found, skipping local order mapping.");
+                ctx.Log($"[{sourceModId}] input_order_mappings.json not found, skipping local order mapping.");
                 return null;
             }
 
@@ -123,7 +130,7 @@ namespace CoreInputMod.Systems
                 }
 
                 throw new InvalidOperationException(
-                    $"[{ctx.ModId}] input_order_mappings.json references unknown orderTypeKey '{key}'.");
+                    $"[{sourceModId}] input_order_mappings.json references unknown orderTypeKey '{key}'.");
             });
             mapping.SetGroundPositionProvider((out Vector3 worldCm) =>
             {
@@ -145,6 +152,7 @@ namespace CoreInputMod.Systems
                     : default;
                 return _world.IsAlive(entity);
             });
+            mapping.SetActorWorldPositionProvider(TryResolveActorWorldPosition);
             mapping.SetActivationActorValidator((actor, playerId) =>
                 InputOrderActorAuthorization.IsAuthorized(
                     _world,
@@ -177,9 +185,22 @@ namespace CoreInputMod.Systems
                     return OrderSubmitResult.RejectedInvalidActor;
                 }
 
-                OrderSubmitResult result = _planner != null
-                    ? _planner.Submit(in order)
-                    : _orders.Submit(in order);
+                OrderSubmitResult result;
+                if (TryGetReplicatedClientCommandPort(out IReplicatedClientCommandPort networkCommands))
+                {
+                    ReplicatedClientCommandSubmitResult networkResult = networkCommands.Submit(in order);
+                    _globals[LastNetworkSubmitResultDebugKey] = networkResult;
+                    result = networkResult == ReplicatedClientCommandSubmitResult.Submitted
+                        ? OrderSubmitResult.Queued
+                        : OrderSubmitResult.RejectedByRule;
+                }
+                else
+                {
+                    result = _planner != null
+                        ? _planner.Submit(in order)
+                        : _orders.Submit(in order);
+                }
+
                 if (OrderSubmitResultSemantics.IsAccepted(result))
                 {
                     AfterOrderAccepted?.Invoke(in order);
@@ -202,9 +223,22 @@ namespace CoreInputMod.Systems
                     }
                 }
 
-                OrderSubmitResult result = _planner != null
-                    ? _planner.TrySubmitSharedBatch(orders)
-                    : _orders.TryEnqueueSharedBatch(orders);
+                OrderSubmitResult result;
+                if (TryGetReplicatedClientCommandPort(out IReplicatedClientCommandPort networkCommands))
+                {
+                    ReplicatedClientCommandSubmitResult networkResult = networkCommands.Submit(orders);
+                    _globals[LastNetworkSubmitResultDebugKey] = networkResult;
+                    result = networkResult == ReplicatedClientCommandSubmitResult.Submitted
+                        ? OrderSubmitResult.Queued
+                        : OrderSubmitResult.RejectedByRule;
+                }
+                else
+                {
+                    result = _planner != null
+                        ? _planner.TrySubmitSharedBatch(orders)
+                        : _orders.TryEnqueueSharedBatch(orders);
+                }
+
                 if (OrderSubmitResultSemantics.IsAccepted(result))
                 {
                     for (int i = 0; i < orders.Length; i++)
@@ -231,9 +265,22 @@ namespace CoreInputMod.Systems
                     }
                 }
 
-                OrderSubmitResult result = _planner != null
-                    ? _planner.TrySubmitClusteredBatch(orders)
-                    : _orders.TryEnqueueClusteredBatch(orders);
+                OrderSubmitResult result;
+                if (TryGetReplicatedClientCommandPort(out IReplicatedClientCommandPort networkCommands))
+                {
+                    ReplicatedClientCommandSubmitResult networkResult = networkCommands.Submit(orders);
+                    _globals[LastNetworkSubmitResultDebugKey] = networkResult;
+                    result = networkResult == ReplicatedClientCommandSubmitResult.Submitted
+                        ? OrderSubmitResult.Queued
+                        : OrderSubmitResult.RejectedByRule;
+                }
+                else
+                {
+                    result = _planner != null
+                        ? _planner.TrySubmitClusteredBatch(orders)
+                        : _orders.TryEnqueueClusteredBatch(orders);
+                }
+
                 if (OrderSubmitResultSemantics.IsAccepted(result))
                 {
                     for (int i = 0; i < orders.Length; i++)
@@ -275,12 +322,31 @@ namespace CoreInputMod.Systems
             return mapping;
         }
 
+        private bool TryGetReplicatedClientCommandPort(out IReplicatedClientCommandPort port)
+        {
+            port = null!;
+            if (!_globals.TryGetValue(CoreServiceKeys.NetworkProcessRole.Name, out object? roleValue) ||
+                roleValue is not NetworkProcessRole role ||
+                role != NetworkProcessRole.ReplicatedClient)
+            {
+                return false;
+            }
+
+            if (!_globals.TryGetValue(CoreServiceKeys.ReplicatedClientCommandPort.Name, out object? portValue) ||
+                portValue is not IReplicatedClientCommandPort configured)
+            {
+                throw new InvalidOperationException(
+                    "Replicated client input requires the platform-neutral client command port before accepting orders.");
+            }
+
+            port = configured;
+            return true;
+        }
+
         private void RequireConfigureCommandIntentRouting(InputOrderMappingSystem mapping)
         {
-            if (!_globals.TryGetValue(CoreServiceKeys.InteractionContextStack.Name, out var stackObj) ||
-                stackObj is not InteractionContextStack stack ||
-                !_globals.TryGetValue(CoreServiceKeys.ControlSchemeRuntime.Name, out var schemeObj) ||
-                schemeObj is not ControlSchemeRuntime schemes ||
+            if (!_globals.TryGetValue(CoreServiceKeys.InteractionContextProfileRegistry.Name, out var contextProfilesObj) ||
+                contextProfilesObj is not InteractionContextProfileRegistry contextProfiles ||
                 !_globals.TryGetValue(CoreServiceKeys.CommandIntentProfileRegistry.Name, out var intentsObj) ||
                 intentsObj is not CommandIntentProfileRegistry intents ||
                 !_globals.TryGetValue(CoreServiceKeys.CastDispatchProfileRegistry.Name, out var dispatchObj) ||
@@ -294,12 +360,28 @@ namespace CoreInputMod.Systems
 
             mapping.SetCommandIntentRouting(
                 _world,
-                stack,
-                schemes,
+                contextProfiles,
                 intents,
                 dispatch,
                 collections,
-                TryGetCommandSourceOwner);
+                TryGetCommandSourceOwner,
+                TryGetPlayerRepresentative);
+        }
+
+        /// <summary>
+        /// Player id → representative entity through the map-binding player lookup — the entity
+        /// that carries the player's InteractionPref. The bound sole possessed actor may be a
+        /// controlled unit, so order routing preferences resolve through the player instead.
+        /// </summary>
+        private bool TryGetPlayerRepresentative(int playerId, out Entity rep)
+        {
+            rep = Entity.Null;
+            return playerId > 0 &&
+                _globals.TryGetValue(CoreServiceKeys.PlayerEntityLookup.Name, out object? lookupObj) &&
+                lookupObj is PlayerEntityLookup players &&
+                players.TryGet(playerId, out rep) &&
+                rep != Entity.Null &&
+                _world.IsAlive(rep);
         }
 
         public bool TryGetSolePossessedPlayerId(out int playerId)
@@ -339,24 +421,39 @@ namespace CoreInputMod.Systems
             return service;
         }
 
+        /// <summary>
+        /// The active interaction context's carrier entity, read from the sole possessed rep's
+        /// mounted <see cref="InteractionContextInstance"/>; false in steady state (the mapping
+        /// system then falls back to the sole possessed rep) and while a dead carrier is still
+        /// mounted in the pre-reclaim window (no silent fallback).
+        /// </summary>
         private bool TryGetCommandSourceOwner(out Entity owner)
         {
             owner = Entity.Null;
-            if (_globals.TryGetValue(CoreServiceKeys.InteractionContextStack.Name, out object? stackObj) &&
-                stackObj is InteractionContextStack stack &&
-                stack.TryPeek(out InteractionContextFrame frame) &&
-                HasEntityValue(frame.ContextEntity))
+            if (!_context.TryResolveLocalCommandSourceOwner(out Entity subject) ||
+                !_world.IsAlive(subject))
             {
-                if (!_world.IsAlive(frame.ContextEntity))
+                return false;
+            }
+
+            if (_world.TryGet<InteractionContextInstance>(subject, out InteractionContextInstance context))
+            {
+                if (context.ContextEntity == Entity.Null || !_world.IsAlive(context.ContextEntity))
                 {
+                    // Mounted-but-invalidated context is the pre-reclaim window; fail closed
+                    // instead of routing through the steady-state rep's collections.
+                    owner = Entity.Null;
                     return false;
                 }
 
-                owner = frame.ContextEntity;
+                owner = context.ContextEntity;
                 return true;
             }
 
-            return false;
+            // Replicated clients never mount InteractionContextInstance; the sole possessed
+            // seat rep is the command-source owner there (no silent fallback for hosts).
+            owner = subject;
+            return true;
         }
 
         private bool TryResolveCommandIntentTargetFacts(InputOrderMapping mapping, out CommandIntentTargetFacts facts)
@@ -437,9 +534,16 @@ namespace CoreInputMod.Systems
                 out rejection);
         }
 
-        private static bool HasEntityValue(Entity entity)
+        private bool TryResolveActorWorldPosition(Entity actor, out WorldCmInt2 worldCm)
         {
-            return entity.Id != 0 || entity.WorldId != 0 || entity.Version != 0;
+            worldCm = default;
+            if (!_world.IsAlive(actor) || !_world.TryGet(actor, out WorldPositionCm position))
+            {
+                return false;
+            }
+
+            worldCm = position.ToWorldCmInt2();
+            return true;
         }
 
         private bool TryCreateContextScoredResolver(out ContextScoredOrderResolver resolver)
@@ -562,7 +666,7 @@ namespace CoreInputMod.Systems
             return $"type:{order.OrderTypeId},player:{order.PlayerId},actor:{order.Actor.Id}:{order.Actor.WorldId}:{order.Actor.Version},target:{target},slot:{order.Args.I0},spatial:{spatial},submit:{order.SubmitMode}";
         }
 
-        public sealed class SkillMappingOverrideResolver
+        internal sealed class SkillMappingOverrideResolver
         {
             private readonly World _world;
             private readonly AbilityDefinitionRegistry _abilityDefinitions;
@@ -615,6 +719,16 @@ namespace CoreInputMod.Systems
                 if (inputOverride.HasCastModeOverride)
                 {
                     overrideMapping.CastModeOverride = inputOverride.CastModeOverride;
+                }
+
+                if (inputOverride.HasTargetType)
+                {
+                    overrideMapping.TargetType = inputOverride.TargetType;
+                }
+
+                if (inputOverride.HasModifierBehavior)
+                {
+                    overrideMapping.ModifierBehavior = inputOverride.ModifierBehavior;
                 }
 
                 if (inputOverride.HasAutoTargetPolicy)

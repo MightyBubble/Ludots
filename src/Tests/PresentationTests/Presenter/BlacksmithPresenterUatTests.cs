@@ -959,7 +959,7 @@ namespace Ludots.Tests.Presentation
                 _world.Dispose();
             }
 
-            private sealed class FlatHeightmap : IVisualHeightmap
+            private sealed class FlatHeightmap : IContinuousHeightmap
             {
                 public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = 0)
                 {

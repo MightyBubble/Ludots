@@ -30,6 +30,7 @@ namespace Ludots.Core.Client
 
         public void ReplaceAll(IReadOnlyList<ClientLocalSeat> seats)
         {
+
             Clear();
             if (seats == null)
             {

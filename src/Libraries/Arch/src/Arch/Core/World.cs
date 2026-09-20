@@ -855,10 +855,8 @@ public partial class World
             {
                 ref var component = ref Unsafe.Add(ref componentFirstElement, index);
                 component = value;
-#if EVENTS
                 ref var entity = ref chunk.Entity(index);
                 OnComponentSet<T>(entity);
-#endif
             }
         }
     }

@@ -2,7 +2,7 @@
   "name": "RtsStarCraftLikeShowcaseMod",
   "version": "1.0.0",
   "description": "Thin root mod for the StarCraft style multi-faction production browser showcase.",
-  "main": "bin/net8.0/RtsStarCraftLikeShowcaseMod.dll",
+  "main": "bin/net9.0/RtsStarCraftLikeShowcaseMod.dll",
   "priority": 220,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

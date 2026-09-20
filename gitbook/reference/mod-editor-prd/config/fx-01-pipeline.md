@@ -8,10 +8,10 @@
 
 ```json
 [
-  { "id": "Effect.Rts.RedAlert.CostPowerPlantStep", "tags": ["Effect.Rts.RedAlert.Cost"],
+  { "id": "Effect.Rts.RedAlert.CostPowerPlantStep", "categories": ["Effect.Rts.RedAlert.Cost"],
     "presetType": "InstantDamage", "lifetime": "Instant", "participatesInResponse": false,
     "modifiers": [ { "attribute": "Credits", "op": "Add", "value": -62.5 } ] },
-  { "id": "Effect.Rts.RedAlert.Construction", "tags": ["Effect.Rts.RedAlert.Construction"],
+  { "id": "Effect.Rts.RedAlert.Construction", "categories": ["Effect.Rts.RedAlert.Construction"],
     "presetType": "Buff", "lifetime": "After", "participatesInResponse": false,
     "duration": { "durationTicks": 45, "periodTicks": 0, "clockId": "FixedFrame" } }
 ]

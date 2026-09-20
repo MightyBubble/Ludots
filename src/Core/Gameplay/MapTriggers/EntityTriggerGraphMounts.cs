@@ -13,7 +13,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
 {
     /// <summary>
     /// Entity-domain TriggerGraph mount pipeline. Entities whose template declares
-    /// "TriggerGraphs" get one mount per graph (scope = the entity itself; caster =
+    /// "triggerGraphs" get one mount per graph (scope = the entity itself; caster =
     /// explicit target = E[0] convention = self), built by TriggerGraphMounting and
     /// registered through the map trigger pipeline of the entity's map
     /// (TriggerManager map registration, decorators, unload cleanup).
@@ -31,23 +31,23 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// - After death the entity's mounts are inert (TriggerGraphMountTrigger
     ///   CheckConditions false on dead scope) and swept lazily at think waves with a
     ///   bounded budget; entity mounts with any other event key dispatch through the
-    ///   map bus registration normally.
+    ///   map bus registration normally. Entity payloads are scope-filtered: an
+    ///   unmarked scope accepts only its own source/target, while a scope carrying
+    ///   EntityTriggerGraphAggregateRoot accepts attached descendants too.
     /// - Map unload drops the map's entity mounts before entity teardown, so
     ///   unload-time destruction produces no death dispatches.
     /// </summary>
     public sealed class EntityTriggerGraphMounts
     {
-        public const int SweepBudgetPerWave = 64;
-
         private readonly World _world;
         private readonly Func<MapSessionManager?> _sessions;
         private readonly TriggerManager _triggerManager;
         private readonly Func<ScriptContext> _contextFactory;
         private readonly Func<TriggerDecoratorRegistry?> _decorators;
         private readonly Func<GraphProgramRegistry?> _programs;
-        private readonly Dictionary<MapId, List<EntityMountSet>> _mapMounts = new();
+        private readonly Func<CustomEventNameRegistry?> _customEvents;
         private readonly List<MapLoadSpawn> _mapLoadBuffer = new();
-        private readonly List<EntityMountSet> _sweepScratch = new();
+        private readonly List<KeyValuePair<TriggerMountOwner, List<Trigger>>> _ownedScratch = new();
 
         public EntityTriggerGraphMounts(
             World world,
@@ -55,7 +55,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
             TriggerManager triggerManager,
             Func<ScriptContext> contextFactory,
             Func<TriggerDecoratorRegistry?> decorators,
-            Func<GraphProgramRegistry?> programs)
+            Func<GraphProgramRegistry?> programs,
+            Func<CustomEventNameRegistry?> customEvents)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
@@ -63,16 +64,30 @@ namespace Ludots.Core.Gameplay.MapTriggers
             _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
             _decorators = decorators ?? throw new ArgumentNullException(nameof(decorators));
             _programs = programs ?? throw new ArgumentNullException(nameof(programs));
+            _customEvents = customEvents ?? throw new ArgumentNullException(nameof(customEvents));
             _world.SubscribeEntityDestroyed(OnEntityDestroyed);
-            _triggerManager.RegisterEventHandler(GameEvents.MapHeartbeat, OnMapHeartbeat);
         }
 
-        /// <summary>Mounts created for still-unswept dead entities; test observability.</summary>
+        /// <summary>
+        /// Mount owners whose subject is dead but whose mounts are not yet reclaimed;
+        /// test observability. Destroy-time reclamation makes this transient: with the
+        /// think-wave sweep retired, a destroy reclaims its subject's mounts
+        /// in the same handler, so the count is non-zero only mid-handler.
+        /// </summary>
         public int GetDeadMountCount(MapId mapId)
         {
-            return _mapMounts.TryGetValue(mapId, out List<EntityMountSet> sets)
-                ? CountDead(sets)
-                : 0;
+            _ownedScratch.Clear();
+            _triggerManager.CollectOwnedMounts(mapId, _ownedScratch);
+            int dead = 0;
+            for (int i = 0; i < _ownedScratch.Count; i++)
+            {
+                if (!_world.IsAlive(_ownedScratch[i].Key.Subject))
+                {
+                    dead++;
+                }
+            }
+
+            return dead;
         }
 
         /// <summary>
@@ -115,14 +130,13 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 for (int i = 0; i < _mapLoadBuffer.Count; i++)
                 {
                     MapLoadSpawn spawn = _mapLoadBuffer[i];
-                    for (int g = 0; g < spawn.GraphNames.Count; g++)
-                    {
-                        triggers.AddRange(MountEntityGraphs(
-                            session,
-                            spawn.Entity,
-                            spawn.GraphNames[g],
-                            $"entity template '{spawn.TemplateId}'"));
-                    }
+                    List<Trigger> spawnTriggers = BuildEntityGraphList(
+                        session,
+                        spawn.Entity,
+                        spawn.GraphNames,
+                        $"entity template '{spawn.TemplateId}'");
+                    DecorateTrackAndDispatch(session, spawn.Entity, spawnTriggers);
+                    triggers.AddRange(spawnTriggers);
                 }
             }
             finally
@@ -154,12 +168,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     $"Entity template '{templateId}' declares TriggerGraphs but the entity's map '{mapId.Value}' has no active session; entity-domain mounts register through their map.");
             }
 
-            List<Trigger> triggers = new List<Trigger>(graphNames.Count);
-            for (int g = 0; g < graphNames.Count; g++)
-            {
-                triggers.AddRange(MountEntityGraphs(session, entity, graphNames[g], $"entity template '{templateId}'"));
-            }
-
+            List<Trigger> triggers = BuildEntityGraphList(session, entity, graphNames, $"entity template '{templateId}'");
+            DecorateTrackAndDispatch(session, entity, triggers);
             _triggerManager.AddMapTriggers(mapId, triggers);
         }
 
@@ -171,17 +181,27 @@ namespace Ludots.Core.Gameplay.MapTriggers
         /// </summary>
         public List<Trigger> MountEntityGraphs(MapSession session, Entity scope, string graph, string ownerLabel)
         {
-            GraphProgramRegistry? programs = _programs()
-                ?? throw new InvalidOperationException(
-                    $"{ownerLabel} requires GraphProgramRegistry to mount TriggerGraph '{graph}'.");
             if (!_world.IsAlive(scope))
             {
                 throw new InvalidOperationException(
                     $"{ownerLabel} cannot mount TriggerGraph '{graph}' on a dead scope entity.");
             }
 
-            List<Trigger> triggers = TriggerGraphMounting.BuildEntityMountTriggers(programs, scope, graph, ownerLabel);
-            Track(session.MapId, scope, triggers);
+            List<Trigger> triggers = BuildEntityGraphList(session, scope, new[] { graph }, ownerLabel);
+            DecorateTrackAndDispatch(session, scope, triggers);
+            return triggers;
+        }
+
+        private void DecorateTrackAndDispatch(MapSession session, Entity scope, List<Trigger> triggers)
+        {
+            TriggerMountOwner owner = new(TriggerMountOwnerKind.TemplateEntity, scope, 0);
+            for (int i = 0; i < triggers.Count; i++)
+            {
+                if (triggers[i] is TriggerGraphMountTrigger mount)
+                {
+                    mount.Owner = owner;
+                }
+            }
 
             TriggerDecoratorRegistry? decorators = _decorators();
             for (int i = 0; i < triggers.Count; i++)
@@ -190,24 +210,31 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
 
             DispatchLifecycle(session, scope, GameEvents.EntitySpawned, triggers);
-            return triggers;
         }
 
-        /// <summary>Drops all entity-mount state for a map; called before entity teardown on unload.</summary>
-        public void DropMap(MapId mapId)
+        private List<Trigger> BuildEntityGraphList(MapSession session, Entity scope, IReadOnlyList<string> graphNames, string ownerLabel)
         {
-            _mapMounts.Remove(mapId);
-        }
-
-        private void Track(MapId mapId, Entity scope, List<Trigger> triggers)
-        {
-            if (!_mapMounts.TryGetValue(mapId, out List<EntityMountSet> sets))
+            GraphProgramRegistry programs = _programs()
+                ?? throw new InvalidOperationException($"{ownerLabel} requires GraphProgramRegistry to mount TriggerGraphs.");
+            CustomEventNameRegistry customEvents = _customEvents()
+                ?? throw new InvalidOperationException($"{ownerLabel} requires CustomEventNameRegistry to validate TriggerGraphs.");
+            var triggers = new List<Trigger>(graphNames.Count);
+            for (int g = 0; g < graphNames.Count; g++)
             {
-                sets = new List<EntityMountSet>();
-                _mapMounts[mapId] = sets;
+                // Build every graph before tracking or dispatching any lifecycle entry.
+                // A missing graph therefore cannot leave a partially mounted entity.
+                triggers.AddRange(TriggerGraphMounting.BuildEntityMountTriggers(
+                    programs,
+                    scope,
+                    graphNames[g],
+                    ownerLabel,
+                    customEvents,
+                    session.EntityIndex,
+                    _triggerManager.EventSchemas,
+                    TriggerGraphMounting.CollectRegionIds(session)));
             }
 
-            sets.Add(new EntityMountSet(scope, triggers));
+            return triggers;
         }
 
         private void OnEntityDestroyed(in Entity entity)
@@ -220,60 +247,45 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
 
             MapId mapId = _world.Get<MapEntity>(entity).MapId;
-            if (!_mapMounts.TryGetValue(mapId, out List<EntityMountSet> sets))
+            MapSession? session = _sessions()?.GetSession(mapId);
+            if (session == null || session.State != MapSessionState.Active)
             {
                 return;
             }
 
-            for (int i = 0; i < sets.Count; i++)
+            _ownedScratch.Clear();
+            _triggerManager.CollectOwnedMounts(entity, _ownedScratch);
+            for (int i = 0; i < _ownedScratch.Count; i++)
             {
-                if (sets[i].Dead || sets[i].Scope != entity)
+                if (_ownedScratch[i].Key.Kind == TriggerMountOwnerKind.TemplateEntity)
                 {
-                    continue;
+                    DispatchLifecycle(session, entity, GameEvents.EntityDied, _ownedScratch[i].Value, destroyTick: true);
                 }
-
-                MapSession? session = _sessions()?.GetSession(mapId);
-                if (session != null && session.State == MapSessionState.Active)
+                else
                 {
-                    DispatchLifecycle(session, entity, GameEvents.EntityDied, sets[i].Triggers, destroyTick: true);
+                    ReclaimMounts(_ownedScratch[i].Key);
                 }
+            }
 
-                sets[i].Dead = true;
+            // The entity's own TemplateEntity mounts are reclaimed here too: no staged
+            // budget applies to a single destroy (it is naturally bounded by the dead
+            // subject's mount count) and the think-wave sweep is retired.
+            for (int i = 0; i < _ownedScratch.Count; i++)
+            {
+                if (_ownedScratch[i].Key.Kind == TriggerMountOwnerKind.TemplateEntity)
+                {
+                    ReclaimMounts(_ownedScratch[i].Key);
+                }
             }
         }
 
-        private Task OnMapHeartbeat(ScriptContext context)
+        /// <summary>
+        /// Reclaim every mount a dead subject owns, immediately and completely:
+        /// destroy-time reclamation replaces the retired heartbeat budget sweep).
+        /// </summary>
+        private void ReclaimMounts(TriggerMountOwner owner)
         {
-            MapId mapId = context.Get<MapId>(CoreServiceKeys.MapId);
-            if (mapId.Value != null && _mapMounts.TryGetValue(mapId, out List<EntityMountSet> sets))
-            {
-                SweepDeadMounts(mapId, sets);
-            }
-
-            return Task.CompletedTask;
-        }
-
-        private void SweepDeadMounts(MapId mapId, List<EntityMountSet> sets)
-        {
-            _sweepScratch.Clear();
-            for (int i = 0; i < sets.Count && _sweepScratch.Count < SweepBudgetPerWave; i++)
-            {
-                if (sets[i].Dead)
-                {
-                    _sweepScratch.Add(sets[i]);
-                }
-            }
-
-            for (int i = 0; i < _sweepScratch.Count; i++)
-            {
-                sets.Remove(_sweepScratch[i]);
-                _triggerManager.RemoveMapTriggers(mapId, _sweepScratch[i].Triggers);
-            }
-
-            if (sets.Count == 0)
-            {
-                _mapMounts.Remove(mapId);
-            }
+            _triggerManager.RemoveOwnedMounts(owner);
         }
 
         private void DispatchLifecycle(
@@ -296,6 +308,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 context.Set(CoreServiceKeys.MapTags, session.MapConfig?.Tags ?? new List<string>());
                 context.Set(MapTriggerEventPayloadKeys.SourceEntity, scope);
                 context.Set(MapTriggerEventPayloadKeys.SourceTeamId, ResolveTeamId(scope));
+                _triggerManager.EventSchemas?.ValidateFirePayload(eventKey, context);
                 _ = mount.ExecuteLifecycleDispatch(context);
             }
         }
@@ -318,20 +331,6 @@ namespace Ludots.Core.Gameplay.MapTriggers
             return _world.Get<MapEntity>(entity).MapId;
         }
 
-        private static int CountDead(List<EntityMountSet> sets)
-        {
-            int dead = 0;
-            for (int i = 0; i < sets.Count; i++)
-            {
-                if (sets[i].Dead)
-                {
-                    dead++;
-                }
-            }
-
-            return dead;
-        }
-
         private readonly struct MapLoadSpawn
         {
             public MapLoadSpawn(Entity entity, string templateId, IReadOnlyList<string> graphNames)
@@ -344,19 +343,6 @@ namespace Ludots.Core.Gameplay.MapTriggers
             public Entity Entity { get; }
             public string TemplateId { get; }
             public IReadOnlyList<string> GraphNames { get; }
-        }
-
-        private sealed class EntityMountSet
-        {
-            public EntityMountSet(Entity scope, List<Trigger> triggers)
-            {
-                Scope = scope;
-                Triggers = triggers;
-            }
-
-            public Entity Scope { get; }
-            public List<Trigger> Triggers { get; }
-            public bool Dead { get; set; }
         }
     }
 }

@@ -1,0 +1,45 @@
+name: graph-editor-frontend
+
+on:
+  pull_request:
+    paths:
+      - 'src/Tools/Ludots.Editor.React/**'
+      - 'mods/**/assets/GAS/graph_editor.json'
+      - '.github/workflows/graph-editor-frontend.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/Tools/Ludots.Editor.React/**'
+      - 'mods/**/assets/GAS/graph_editor.json'
+      - '.github/workflows/graph-editor-frontend.yml'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/Tools/Ludots.Editor.React
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck
+        run: npx tsc -b --noEmit
+
+      # Scoped to the graph editor: the rest of the app still carries pre-existing
+      # lint errors, and widening this gate would fail on files this job does not own.
+      - name: Lint graph editor
+        run: npm run lint:graph-editor
+
+      - name: Assert live debug helpers and graph annotations
+        run: npm run assert

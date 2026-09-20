@@ -140,10 +140,9 @@ namespace Ludots.Raylib.Render
             lighting.ApplyViewPosition(Shader, in LightingLocs, viewPos);
         }
 
-        internal void ApplySkyUniforms(Vector3 zenith, Vector3 ground, float envSpecular)
+        internal void ApplySkyUniforms(RaylibFrameLighting lighting, float envSpecular)
         {
-            Rl.SetShaderValue(Shader, LocSkyZenith, &zenith, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
-            Rl.SetShaderValue(Shader, LocSkyGround, &ground, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
+            lighting.ApplySkyIrradiance(Shader, LocSkyZenith, LocSkyGround);
             Rl.SetShaderValue(Shader, LocEnvSpecular, &envSpecular, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
         }
 

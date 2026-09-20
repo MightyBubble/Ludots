@@ -175,12 +175,10 @@ namespace Ludots.Tests.Architecture
                     "The command-source authority key must remain a first-class EntityCollectionKeys constant.");
                 Assert.That(gameEngine, Does.Contain("registry.Register(EntityCollectionKeys.CommandSource)"),
                     "GameEngine must register the command-source collection key with EntityCollectionStore.");
-                Assert.That(gameEngine, Does.Contain("InteractionContextFrameDescriptor.Create("),
-                    "GameEngine must create a default interaction context frame for command routing.");
                 Assert.That(gameEngine, Does.Contain("EntityCollectionKeys.CommandSource"),
-                    "The default interaction context must use EntityCollectionKeys.CommandSource.");
-                Assert.That(gameEngine, Does.Contain("EntityViewKeys.ControlPlaneCommand"),
-                    "The default interaction context must bind command-source authority to the control-plane command view.");
+                    "The steady-state interaction context must use EntityCollectionKeys.CommandSource.");
+                Assert.That(gameEngine, Does.Contain("InteractionContextIds.Default"),
+                    "GameEngine must install the engine-reserved steady-state interaction context profile (command routing anchor).");
                 Assert.That(contextRuntime, Does.Contain("TryResolveCollection(collections, owner, collectionKey"),
                     "EntityCollectionContextRuntime must resolve the caller-provided collection key, not hard-code command-source authority.");
                 Assert.That(contextRuntime, Does.Contain("collections.TryGet(owner, collectionKey"),
@@ -279,8 +277,8 @@ namespace Ludots.Tests.Architecture
             Assert.Multiple(() =>
             {
                 // DEC-14 whitelist: the only slot selectors the registry compiles are semantic ones.
-                Assert.That(registry, Does.Contain("\"byAbilityTag:\""),
-                    "CommandIntentProfileRegistry must whitelist the byAbilityTag: semantic slot selector.");
+                Assert.That(registry, Does.Contain("\"byAbilityCategory:\""),
+                    "CommandIntentProfileRegistry must whitelist the byAbilityCategory: semantic slot selector.");
                 Assert.That(registry, Does.Contain("\"contextGroup:\""),
                     "CommandIntentProfileRegistry must whitelist the contextGroup: semantic slot selector.");
                 Assert.That(registry, Does.Contain("is not a semantic selector"),

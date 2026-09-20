@@ -87,9 +87,9 @@ namespace Ludots.Tests.GAS
 
             var behavior = new EffectPhaseGraphBindings();
             executor.ExecutePhase(world, api, source, center, default, default,
-                EffectPhaseId.OnResolve, in behavior, EffectPresetType.Search, effectTagId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
+                EffectPhaseId.OnResolve, in behavior, EffectPresetType.Search, effectCategoryId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
             executor.ExecutePhase(world, api, source, center, default, default,
-                EffectPhaseId.OnApply, in behavior, EffectPresetType.Search, effectTagId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
+                EffectPhaseId.OnApply, in behavior, EffectPresetType.Search, effectCategoryId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
 
             That(runtime.FanOutCommands, Has.Count.EqualTo(1));
             var cmd = runtime.FanOutCommands![0];
@@ -163,7 +163,7 @@ namespace Ludots.Tests.GAS
 
             var behavior = new EffectPhaseGraphBindings();
             executor.ExecutePhase(world, api, source, center, default, default,
-                EffectPhaseId.OnPeriod, in behavior, EffectPresetType.PeriodicSearch, effectTagId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
+                EffectPhaseId.OnPeriod, in behavior, EffectPresetType.PeriodicSearch, effectCategoryId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
 
             That(runtime.FanOutCommands, Has.Count.EqualTo(1));
             var cmd = runtime.FanOutCommands![0];
@@ -321,9 +321,9 @@ namespace Ludots.Tests.GAS
 
                 var behavior = new EffectPhaseGraphBindings();
                 executor.ExecutePhase(world, api, source, center, default, default,
-                    EffectPhaseId.OnResolve, in behavior, EffectPresetType.Search, effectTagId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
+                    EffectPhaseId.OnResolve, in behavior, EffectPresetType.Search, effectCategoryId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
                 executor.ExecutePhase(world, api, source, center, default, default,
-                    EffectPhaseId.OnApply, in behavior, EffectPresetType.Search, effectTagId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
+                    EffectPhaseId.OnApply, in behavior, EffectPresetType.Search, effectCategoryId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
 
                 That(runtime.FanOutCommands, Has.Count.EqualTo(1));
                 That(runtime.FanOutCommands![0].ResolvedEntity, Is.EqualTo(hostile));
@@ -403,9 +403,9 @@ namespace Ludots.Tests.GAS
 
                 var behavior = new EffectPhaseGraphBindings();
                 executor.ExecutePhase(world, api, sourceWithoutTeam, center, default, default,
-                    EffectPhaseId.OnResolve, in behavior, EffectPresetType.Search, effectTagId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
+                    EffectPhaseId.OnResolve, in behavior, EffectPresetType.Search, effectCategoryId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
                 executor.ExecutePhase(world, api, sourceWithoutTeam, center, default, default,
-                    EffectPhaseId.OnApply, in behavior, EffectPresetType.Search, effectTagId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
+                    EffectPhaseId.OnApply, in behavior, EffectPresetType.Search, effectCategoryId: 0, effectTemplateId: templateId, builtinRuntime: runtime);
 
                 That(runtime.FanOutCommands, Is.Empty);
             }

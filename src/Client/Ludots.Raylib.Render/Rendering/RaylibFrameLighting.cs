@@ -348,6 +348,24 @@ namespace Ludots.Raylib.Render
             Rl.SetShaderValue(shader, locations.ViewPos, &viewPos, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
         }
 
+        public unsafe void ApplySkyIrradiance(Shader shader, int locZenith, int locGround)
+        {
+            if (locZenith < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(locZenith), locZenith, "Sky zenith uniform location must be resolved.");
+            }
+
+            if (locGround < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(locGround), locGround, "Sky ground uniform location must be resolved.");
+            }
+
+            Vector3 zenith = SkyZenithColor;
+            Vector3 ground = SkyGroundColor;
+            Rl.SetShaderValue(shader, locZenith, &zenith, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
+            Rl.SetShaderValue(shader, locGround, &ground, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
+        }
+
         public Vector3 FarLightPosition(float distance = 1000f)
         {
             if (distance <= 0f)

@@ -1,6 +1,14 @@
 [
   {
     "id": "NightRaid.KillTool.Used",
-    "description": "Fired by the hardcoded kill tool each time it zeroes an entity; graphs count tool usage."
+    "description": "Fired by the hardcoded kill tool each time it zeroes an entity; graphs count tool usage.",
+    "scope": "map",
+    "params": [
+      {
+        "name": "killTarget",
+        "type": "entity",
+        "key": "NightRaid.KillTarget"
+      }
+    ]
   }
 ]

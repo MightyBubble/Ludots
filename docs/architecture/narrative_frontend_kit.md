@@ -1,4 +1,6 @@
-# Narrative Frontend Kit
+# （已废止）Narrative Frontend Kit
+
+> **本文不再是实现 SSOT。** 故事表现路由与 profile 合同见 [Story Runtime：Dialogue / Sequencer](story_runtime_dialogue_sequencer.md)。`NarrativeFrontendMod` 本阶段仍可作屏幕 surface 组合宿主，但不再依赖 `NarrativeDirector`；视图改读 Dialogue / Sequencer / Story。下文仅作历史对照。
 
 本文定义 Ludots 当前可复用的叙事前端套件落点：Quest / Dialogue / Cinematic / Relationship 都复用同一条 `UIRoot -> ReactivePage -> NarrativeFrontendService` 投影链路，不额外引入平行 UI runtime，也不让应用层玩法逻辑反向接管 UI 状态。
 
@@ -70,8 +72,10 @@
 - `OverlayDialogue`
 - `DialogueBubble`
 - `SubtitleBubble`
-- `ChoiceList`
 - `TransmissionOverlay`
+- `StandingPortrait`
+
+选项列表不走 NarrativeFrontend surface：查询图写出 `DialogueChoiceCollection`，由 PanelHost `panel.narrative.choices` 呈现。
 
 对应代码：
 
@@ -105,7 +109,7 @@ Narrative showcase：
 
 - 读取 quest / dialogue / cinematic / variable / log
 - 根据 frontend json 决定哪些 surface 激活
-- 把 transmission、overlay dialogue、bubble、subtitle、choice 同时投影到一个 scene
+- 把 transmission、overlay dialogue、bubble、subtitle 投影到一个 scene；可回话走 PanelHost
 
 Relationship showcase：
 
@@ -137,18 +141,18 @@ Relationship showcase：
 
 因此 UI kit 可以复用到：
 
-- Persona 5 式 overlay 对话
-- 异度神剑式战斗中字幕气泡
-- 曹操传式战前/战后对话卡
-- Hades 式移动中非阻塞气泡
+- 全屏覆盖式 overlay 对话（`story.dialogue_overlay`）
+- 战斗中字幕气泡（`story.immersive_subtitle`）
+- 战前/战后对话卡
+- 移动中非阻塞世界气泡（`story.world_bubble`）
 
 ### 4.2 4X / RTS / 叙事调查扩展
 
 当前 surface 组合已经覆盖以下方向：
 
-- 红警 / 文明：`PromptRibbon + StatusPanel + ThreatBanner + FlowReview`
-- 底特律变人：`OverlayDialogue + ChoiceList + VariablesPanel/Notebook + HistoryJournal`
-- 锈湖：`DialogueBubble + SubtitleBubble + EventCard/InspectPanel + FlowReview`
+- 策略指挥：`PromptRibbon + StatusPanel + ThreatBanner + FlowReview`
+- 分支抉择调查：`OverlayDialogue` + PanelHost 选项面板 + `VariablesPanel/Notebook` + `HistoryJournal`
+- 解谜旁白：`DialogueBubble + SubtitleBubble + EventCard/InspectPanel + FlowReview`
 
 扩展原则：
 

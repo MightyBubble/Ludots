@@ -1,6 +1,12 @@
 {
   "Id": "genre_info_showcase",
   "Tags": ["showcase", "info_panels"],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "genre_info_marine_01" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "genre_info_marine_01" }
+  ],
   "Entities": [
     {
       "Template": "fourx_governor",
@@ -25,6 +31,7 @@
     },
     {
       "Template": "rts_marine",
+      "InstanceId": "genre_info_marine_01",
       "Overrides": {
         "Name": { "Value": "Marine 01" },
         "WorldPositionCm": { "Value": { "X": 3000, "Y": -420 } }

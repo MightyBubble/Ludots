@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using Ludots.Core.Components;
+using Ludots.Core.Presentation.Components;
 using Arch.Core;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics;
@@ -15,6 +18,81 @@ namespace Ludots.Core.Spatial
 
     public sealed class SpatialQueryService : ISpatialQueryService
     {
+        private World? _boundsWorld;
+        private readonly HashSet<Entity> _boundsDirty = new();
+        private readonly object _boundsLock = new();
+        private float _boundsRadiusCm;
+        public long MembershipRevision { get; private set; }
+
+        public void BindBoundsWorld(World world)
+        {
+            if (ReferenceEquals(_boundsWorld, world)) return;
+            UnbindBoundsWorld();
+            _boundsWorld = world;
+            world.EntityMaterialized += MarkBounds;
+            world.ComponentChanged += MarkBoundsChanged;
+            foreach (ref var chunk in world.Query(new QueryDescription().WithAll<SpatialBounds>()))
+                foreach (int row in chunk) _boundsDirty.Add(chunk.Entity(row));
+        }
+
+        private void MarkBounds(Entity entity)
+        {
+            lock (_boundsLock) _boundsDirty.Add(entity);
+        }
+
+        private void MarkBoundsChanged(Entity entity, ComponentType type)
+        {
+            if (type == Component<SpatialCellRef>.ComponentType || type == Component<SuspendedTag>.ComponentType ||
+                type == Component<PresentationStaticTransform>.ComponentType || type == Component<SpatialPartitionExcluded>.ComponentType ||
+                type == Component<PresentationDestroyPending>.ComponentType)
+                MembershipRevision++;
+            if (type == Component<SpatialBounds>.ComponentType || type == Component<SpatialBox3D>.ComponentType ||
+                type == Component<SpatialFootprint2D>.ComponentType) MarkBounds(entity);
+        }
+
+        public float ReadBoundsRadiusCm()
+        {
+            World world = _boundsWorld ?? throw new InvalidOperationException("SPATIAL.ERR.BoundsWorldMissing");
+            lock (_boundsLock)
+            {
+            foreach (Entity entity in _boundsDirty)
+            {
+                if (!world.IsAlive(entity) || !world.TryGet(entity, out SpatialBounds bounds)) continue;
+                float radius = MathF.Abs(bounds.LocalCenterXCm) + MathF.Abs(bounds.LocalCenterYCm) + MathF.Abs(bounds.LocalCenterZCm);
+                if (bounds.Kind == SpatialBoundsKind.Box3D)
+                {
+                    SpatialBox3D box = world.Get<SpatialBox3D>(entity);
+                    radius += MathF.Abs(box.HalfSizeXCm) + MathF.Abs(box.HalfSizeYCm) + MathF.Abs(box.HalfSizeZCm);
+                }
+                else if (bounds.Kind == SpatialBoundsKind.Footprint2D)
+                {
+                    SpatialFootprint2D footprint = world.Get<SpatialFootprint2D>(entity);
+                    float extent = 0;
+                    for (int polygon = 0; polygon < footprint.PolygonCount; polygon++)
+                        for (int vertex = 0; vertex < footprint.GetPolygonVertexCount(polygon); vertex++)
+                        {
+                            WorldCmInt2 point = footprint.GetVertex(polygon, vertex);
+                            extent = MathF.Max(extent, MathF.Abs(point.X) + MathF.Abs(point.Y));
+                        }
+                    radius += extent;
+                }
+                _boundsRadiusCm = MathF.Max(_boundsRadiusCm, radius);
+            }
+            _boundsDirty.Clear();
+            return _boundsRadiusCm;
+            }
+        }
+
+        public void UnbindBoundsWorld()
+        {
+            if (_boundsWorld == null) return;
+            _boundsWorld.EntityMaterialized -= MarkBounds;
+            _boundsWorld.ComponentChanged -= MarkBoundsChanged;
+            _boundsWorld = null;
+            _boundsDirty.Clear();
+            _boundsRadiusCm = 0;
+        }
+
         private ISpatialQueryBackend _backend;
         private EntityPositionProvider? _positionProvider;
         private ISpatialCoordinateConverter? _coordConverter;
@@ -42,6 +120,7 @@ namespace Ludots.Core.Spatial
         public void SetBackend(ISpatialQueryBackend backend)
         {
             _backend = backend ?? throw new ArgumentNullException(nameof(backend));
+            MembershipRevision++;
         }
 
         public void ClearPartition()

@@ -1,0 +1,11 @@
+flowchart TD
+    A[Load 10000 units in their final teams] --> B[Player 1 selects 5000]
+    B --> C[Switch possession to player 2]
+    C --> D[Player 2 selects 5000]
+    D --> E[Player 1 selection remains unchanged]
+    B --> F[Fast release and restart]
+    F --> G[Old preview clears and new gesture works]
+    C --> H[Old player markers hidden without clearing selection]
+    H --> K[Switch back restores the same markers]
+    A --> I[Conflicting template and request teams]
+    I --> J[Spawn rejects inconsistent configuration]

@@ -173,18 +173,25 @@ namespace Ludots.AgentBridge
                 : $"Game loop has not pumped for {(int)loopAgeMs}ms (pump #{PumpCount}, tick {_lastTick}) — stalled or paused; tools cannot execute until it resumes.";
         }
 
-        public void RecordInputEvent(string eventId, string actionId, string mode)
+        public void RecordInputEvent(string eventId, string actionId, string mode, string? seatId = null)
         {
             lock (_inputEventLock)
             {
-                _inputEvents.Enqueue(new JsonObject
+                var entry = new JsonObject
                 {
                     ["eventId"] = eventId,
                     ["actionId"] = actionId,
                     ["mode"] = mode,
                     ["pumpCount"] = PumpCount,
                     ["tick"] = _lastTick,
-                });
+                };
+
+                if (seatId != null)
+                {
+                    entry["seatId"] = seatId;
+                }
+
+                _inputEvents.Enqueue(entry);
                 while (_inputEvents.Count > InputEventLogCapacity)
                 {
                     _inputEvents.Dequeue();

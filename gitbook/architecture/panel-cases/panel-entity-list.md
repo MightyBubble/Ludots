@@ -1,59 +1,67 @@
-#### 案 13：panel.entity.list —— 实体列表（交互选中）
+#### 案 13：panel.entity.list —— 实体列表（展示名册）
 
-> 状态：🔴（配置可装载）——运行链路：G8/$payload、#1015、条目列表依赖 G12（列表型引脚）。
+> 状态：🟢（G12）——**图管圈人/排序**；**元素模板**声明 `subject` + 自有 graph；容器只透传成员并编排。点击行→选中仍属 #1015。
 
-> **高保真预期**（门户面板矩阵页可交互预览）：
+> 配置合同 SSOT：[面板视图投影](../panel-view-projection.md)。Showcase：`mods/showcases/panel_entity_list/PanelEntityListShowcaseMod`。
+
+> **高保真预期**：
 
 ```mock
-{"type": "text", "text": "▸ 3 单位"}
+{"type": "text", "text": "在编 4 · 指挥官 HP100 · 医师 HP97 · 晕眩卫士[晕眩] · 弓手 HP64"}
 ```
+
+**元素** — `panel.unit.roster`（`subject: Entity`，自带图）
+
+```jsonc
+{
+  "id": "panel.unit.roster",
+  "subject": "Entity",
+  "graph": "Graph.Unit.RosterCard",
+  "pins": [
+    { "name": "health", "key": "unit.roster.health", "mode": "realtime", "default": 0 },
+    { "name": "healthMax", "key": "unit.roster.healthMax", "mode": "realtime", "default": 0 },
+    { "name": "stunned", "key": "unit.roster.stunned", "mode": "realtime", "default": 0 }
+  ],
+  "layout": {
+    "controls": [
+      { "type": "label", "bind": "displayName" },
+      { "type": "progressBar", "current": "health", "max": "healthMax" },
+      { "type": "badge", "bind": "stunned", "text": "晕眩", "showWhen": true }
+    ]
+  }
+}
+```
+
+**List 容器** — 只编排，透传实体
 
 ```jsonc
 {
   "id": "panel.entity.list",
-  "graph": "Graph.Entity.List",               // 图内过滤+排序集合 → 行数据
-  "pins": [ { "name": "rowCount", "key": "list.rowCount", "mode": "realtime", "default": 0 } ],
-  "events": [ { "eventId": "entity.pick", "control": "list.entities", "gesture": "click", "payload": { "row": "Int" } } ],
-  "intents": [ { "event": "entity.pick", "intent": "selection.setTarget", "args": { "row": "$payload.row" },
-                 "playerSource": "seat", "actorSource": "commandSource.primary" } ]
+  "graph": "Graph.Entity.List",
+  "pins": [
+    { "name": "rowCount", "key": "panel.roster.rowCount", "mode": "realtime", "default": 0 }
+  ],
+  "collections": [
+    {
+      "name": "units",
+      "collectionKey": "panel.roster.units",
+      "template": "panel.unit.roster"
+    }
+  ],
+  "layout": {
+    "controls": [
+      { "type": "label", "prefix": "在编 ", "bind": "rowCount" },
+      {
+        "type": "list",
+        "bind": "units",
+        "viewportHeight": 120,
+        "itemExtent": 56,
+        "virtualize": true,
+        "overscan": 2
+      }
+    ]
+  }
 }
 ```
 
-```jsonc
-// 值图 Graph.Entity.List（kind: Query）
-{
-  "id": "Graph.Entity.List", "kind": "Query", "entry": "caster",
-  "nodes": [
-    { "id": "caster",  "op": "LoadCaster" },
-    { "id": "all",     "op": "QueryAllMapEntities" },
-    { "id": "team",    "op": "QueryFilterTeam", "teamId": 2147483646 },
-    { "id": "sorted",  "op": "QuerySortByAttribute", "attribute": "Health", "descending": true },
-    { "id": "rowCount", "op": "AggCount" }
-  ],
-  "controlEdges": [
-    { "from": "caster",  "fromPort": "next", "to": "all" },
-    { "from": "all",     "fromPort": "next", "to": "team" },
-    { "from": "team",    "fromPort": "next", "to": "sorted" },
-    { "from": "sorted",  "fromPort": "next", "to": "rowCount" }
-  ],
-  "valueEdges": [
-    { "from": "all",     "fromPort": "list", "to": "team",     "toPort": "list" },
-    { "from": "team",    "fromPort": "list", "to": "sorted",   "toPort": "list" },
-    { "from": "sorted",  "fromPort": "list", "to": "rowCount", "toPort": "list" }
-  ],
-  "outputs": [
-    { "id": "rowCount", "destination": "Summary", "type": "Int", "source": "rowCount", "key": "list.rowCount" }
-  ]
-}
-```
-
-```text
-screen.leftCenter ┌──────────────────────┐
-                  │ ▸ 长枪兵    HP 82%   │ 点击行→选中对应实体（行→实体映射在图内）
-                  │ ▸ 弓手      HP 64%   │
-                  │ ▸ 医师      HP 97%   │
-                  └──────────────────────┘
-                  （目标视觉——G12 列表型引脚后可达；今日 pins 仅驱动标量计数）
-```
-
-30 秒预期：点列表行对应单位被选中并高亮。依赖：G8、#1015。
+30 秒预期：名单跟容器图走；每一行以该实体为 scope 跑元素图；`viewportHeight` 可滚；`virtualize` 只画视口附近行；换 grid 可复用同一元素。千人压测见 `PanelListVirtualizationPerfTests`（窗口行数/分配量远低于全量）。

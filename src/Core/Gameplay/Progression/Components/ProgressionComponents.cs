@@ -32,6 +32,21 @@ namespace Ludots.Core.Gameplay.Progression.Components
             return 0;
         }
 
+        public int CopyProgressionIds(Span<int> destination)
+        {
+            int written = 0;
+            for (int i = 0; i < Count && written < destination.Length; i++)
+            {
+                int progressionId = ProgressionIds[i];
+                if (progressionId > 0)
+                {
+                    destination[written++] = progressionId;
+                }
+            }
+
+            return written;
+        }
+
         public bool TryComplete(int progressionId)
             => TrySetLevelAtLeast(progressionId, 1);
 

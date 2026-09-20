@@ -110,7 +110,17 @@ public sealed record LauncherLaunchResult(
     int Pid,
     string Url,
     string BootstrapPath,
-    LauncherLaunchPlan? Plan);
+    LauncherLaunchPlan? Plan)
+{
+    public IReadOnlyList<LauncherStartedProcess> Processes { get; init; } = Array.Empty<LauncherStartedProcess>();
+}
+
+public sealed record LauncherStartedProcess(
+    string Id,
+    string ProcessRole,
+    int Pid,
+    string AppAssemblyPath,
+    string BootstrapPath);
 
 public sealed record LauncherExecutableTargetRun(
     string CommandLine,

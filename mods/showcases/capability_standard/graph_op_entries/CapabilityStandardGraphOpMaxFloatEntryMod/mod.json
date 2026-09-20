@@ -2,7 +2,7 @@
   "name": "CapabilityStandardGraphOpMaxFloatEntryMod",
   "version": "1.0.0",
   "description": "Launcher entry for GraphNodeOp MaxFloat player gallery.",
-  "main": "bin/net8.0/CapabilityStandardGraphOpMaxFloatEntryMod.dll",
+  "main": "bin/net9.0/CapabilityStandardGraphOpMaxFloatEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"

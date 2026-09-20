@@ -105,8 +105,15 @@ namespace Ludots.AgentBridge
         {
             try
             {
+                ApplyCors(context.Response);
                 string path = context.Request.Url?.AbsolutePath ?? "/";
                 string method = context.Request.HttpMethod;
+
+                if (method == "OPTIONS")
+                {
+                    context.Response.StatusCode = 204;
+                    return;
+                }
 
                 if (method == "GET" && (path == "/" || path == "/index.html"))
                 {
@@ -372,8 +379,20 @@ namespace Ludots.AgentBridge
             }
         }
 
+        /// <summary>
+        /// Browser Inspector (Vite) calls the loopback bridge cross-origin.
+        /// Trust model stays loopback-only; CORS is a transport header, not auth.
+        /// </summary>
+        private static void ApplyCors(HttpListenerResponse response)
+        {
+            response.Headers["Access-Control-Allow-Origin"] = "*";
+            response.Headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS";
+            response.Headers["Access-Control-Allow-Headers"] = "Content-Type";
+        }
+
         private static void WriteJson(HttpListenerResponse response, int status, JsonObject payload)
         {
+            ApplyCors(response);
             byte[] bytes = Encoding.UTF8.GetBytes(payload.ToJsonString(SerializerOptions));
             response.StatusCode = status;
             response.ContentType = "application/json; charset=utf-8";

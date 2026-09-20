@@ -12,6 +12,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Config;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.Lifecycle;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Spawning;
@@ -49,10 +50,14 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
     private EffectTemplateRegistry _effectTemplates = null!;
     private BuiltinHandlerRegistry _builtinHandlers = null!;
     private BuiltinHandlerExecutionContext _builtinRuntime = null!;
+    private ItemDefinitionRegistry _itemDefinitions = null!;
+    private InventoryRuntimeService _inventoryRuntime = null!;
     private int _configEffectTemplateId;
 
     public World World => _world ?? throw new InvalidOperationException("Gallery host is not bootstrapped.");
     public GasGraphRuntimeApi Api { get; private set; } = null!;
+    public Ludots.Core.Gameplay.GAS.Orders.OrderQueue Orders { get; private set; } = null!;
+    public Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry OrderTypes { get; private set; } = null!;
     public MapLoadEntityIndex EntityIndex { get; private set; } = null!;
     public EntityTemplateKeyRegistry Templates { get; private set; } = null!;
     public bool OwnsSimulationWorld => _ownsWorld;
@@ -69,6 +74,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
     public OwnershipResolver? Ownership { get; private set; }
     public KnowledgeProjectionStore Knowledge { get; private set; } = null!;
     public GameplayEventBus EventBus { get; private set; } = null!;
+    public GraphCallbackService GraphCallbacks { get; private set; } = null!;
     public ISpatialCoordinateConverter Coords { get; private set; } = null!;
     public GraphOpsNodeGallerySymbolResolver Resolver { get; private set; } = null!;
 
@@ -80,7 +86,10 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         host.EntityIndex = engine.CurrentMapSession?.EntityIndex
             ?? throw new InvalidOperationException(
                 $"Node gallery map '{mapId}' is not loaded. EnsureWorld must run after MapLoaded.");
-        host.FinishResolver(Path.Combine(assetsRoot, "GraphTables"), engine.GetService(CoreServiceKeys.RngPickService));
+        host.FinishResolver(
+            Path.Combine(assetsRoot, "GraphTables"),
+            engine.GetService(CoreServiceKeys.RngPickService),
+            engine.GetService(CoreServiceKeys.PresentationTextCatalog));
         GraphOpsNodeGallerySymbolResolver.RegisterAuthoredCompileSymbols(assetsRoot);
         return host;
     }
@@ -151,6 +160,9 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         ApplyLinks(vignette, actors);
         ResolveConfigEffect(vignette);
 
+        var programRegistry = new GraphProgramRegistry();
+        GraphProgramPackage package = compiled.Package!.Value;
+        programRegistry.Register(1, package.Program, kind, GraphInstructionSourceMap.Empty, package.Symbols, package.TriggerGraphEntries);
         var ctx = new GraphOpsNodeDriverContext
         {
             AssetsRoot = assetsRoot,
@@ -160,6 +172,8 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             FeaturedDest = featuredDest,
             SimWorld = World,
             Api = Api,
+            Orders = Orders,
+            OrderTypes = OrderTypes,
             Metrics = metrics,
             Stage = stage,
             EffectRequests = EffectRequests,
@@ -167,17 +181,23 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             Collections = Collections,
             TagOps = TagOps,
             EventBus = EventBus,
+            GraphCallbacks = GraphCallbacks,
             Ownership = Ownership,
             Knowledge = Knowledge,
             Coords = Coords,
+            SpatialQueries = SpatialQueries,
             RelationshipTypes = RelationshipTypes,
             RelationshipMetrics = RelationshipMetrics,
             RelationshipFlags = RelationshipFlags,
             BuiltinHandlers = _builtinHandlers,
             EffectTemplates = _effectTemplates,
+            ItemDefinitions = _itemDefinitions,
+            InventoryRuntime = _inventoryRuntime,
             BuiltinRuntime = _builtinRuntime,
             ConfigEffectTemplateId = _configEffectTemplateId,
-            OwnsSimulationWorld = _ownsWorld
+            OwnsSimulationWorld = _ownsWorld,
+            Programs = programRegistry,
+            FeaturedGraphId = 1,
         };
         ctx.SimActors = actors;
         ctx.ActorHealth = new float[actors.Length];
@@ -214,6 +234,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
     {
         _world = engine.World;
         _ownsWorld = false;
+        _ = AbilityIdRegistry.Register("火球");
         SpatialQueries = engine.SpatialQueries
             ?? throw new InvalidOperationException("Node gallery requires engine SpatialQueries.");
         Coords = engine.SpatialCoords
@@ -227,6 +248,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         spatialQueries.SetCoordinateConverter(Coords);
         EventBus = engine.EventBus
             ?? throw new InvalidOperationException("Node gallery requires engine EventBus.");
+        GraphCallbacks = RequireEngineService(engine, CoreServiceKeys.GraphCallbackService);
         EffectRequests = RequireEngineService(engine, CoreServiceKeys.EffectRequestQueue);
         TagOps = RequireEngineService(engine, CoreServiceKeys.TagOps);
         Relationships = RequireEngineService(engine, CoreServiceKeys.RelationshipRuntime);
@@ -241,6 +263,8 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         _templateRegistry = engine.MapLoader.TemplateRegistry;
         _effectTemplates = RequireEngineService(engine, CoreServiceKeys.EffectTemplateRegistry);
         Api = RequireEngineService(engine, CoreServiceKeys.GasGraphRuntimeApi);
+        Orders = RequireEngineService(engine, CoreServiceKeys.OrderQueue);
+        OrderTypes = RequireEngineService(engine, CoreServiceKeys.OrderTypeRegistry);
         EnsureGalleryRelationshipCatalog();
         EnsureDispatchPreset();
         RegisterCollectionKeys();
@@ -248,6 +272,8 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         Ownership = new OwnershipResolver(Relationships, ownsType);
         BindLifecycleServices(RequireEngineService(engine, CoreServiceKeys.PresentationStableIdAllocator));
         EnsureHostileCasterAndEnemyTeams();
+        _itemDefinitions = RequireEngineService(engine, CoreServiceKeys.ItemDefinitionRegistry);
+        _inventoryRuntime = RequireEngineService(engine, CoreServiceKeys.InventoryRuntimeService);
     }
 
     private static void EnsureHostileCasterAndEnemyTeams()
@@ -256,7 +282,10 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         TeamManager.SetRelationship(2, 1, TeamRelationship.Hostile);
     }
 
-    private void FinishResolver(string? graphTablesDir, Ludots.Core.Gameplay.Rng.RngPickService? rngPicks = null)
+    private void FinishResolver(
+        string? graphTablesDir,
+        Ludots.Core.Gameplay.Rng.RngPickService? rngPicks = null,
+        Ludots.Core.Presentation.Hud.PresentationTextCatalog? presentationTextCatalog = null)
     {
         Resolver = new GraphOpsNodeGallerySymbolResolver(
             Templates,
@@ -266,7 +295,9 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             RelationshipReasons,
             DispatchPresets,
             graphTablesDir == null ? null : GraphOpsNodeGallerySymbolResolver.LoadLookupTables(graphTablesDir),
-            rngPicks);
+            rngPicks,
+            presentationTextCatalog,
+            OrderTypes);
     }
 
     private Entity[] BindMapActors(GraphOpsNodeVignette vignette, string mapId)
@@ -315,7 +346,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             {
                 if (World.Has<Team>(entity))
                 {
-                    World.Get<Team>(entity).Id = actor.Team;
+                    World.Set(entity, new Team { Id = actor.Team });
                 }
                 else
                 {

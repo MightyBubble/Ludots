@@ -1,7 +1,6 @@
 [
   {
     "id": "Effect.CrowdArena.Shockwave.SpawnEpicenter",
-    "tags": [ "Effect.CrowdArena.Shockwave" ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -11,11 +10,13 @@
       "offsetRadius": 0,
       "placementPattern": "Scatter",
       "linkSourceAsParent": true
-    }
+    },
+    "categories": [
+      "Effect.CrowdArena.Shockwave"
+    ]
   },
   {
     "id": "Effect.CrowdArena.Shockwave.Search",
-    "tags": [ "Effect.CrowdArena.Shockwave" ],
     "presetType": "Search",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -32,11 +33,13 @@
     },
     "targetDispatch": {
       "payloadEffect": "Effect.CrowdArena.Shockwave.Knockback"
-    }
+    },
+    "categories": [
+      "Effect.CrowdArena.Shockwave"
+    ]
   },
   {
     "id": "Effect.CrowdArena.Shockwave.Knockback",
-    "tags": [ "Effect.CrowdArena.Shockwave" ],
     "presetType": "Displacement",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -45,11 +48,13 @@
       "totalDistanceCm": 400,
       "totalDurationTicks": 24,
       "overrideNavigation": true
-    }
+    },
+    "categories": [
+      "Effect.CrowdArena.Shockwave"
+    ]
   },
   {
     "id": "Effect.CrowdArena.Boulder.Spawn",
-    "tags": [ "Effect.CrowdArena.Boulder" ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -58,6 +63,9 @@
       "count": 1,
       "offsetRadius": 0,
       "placementPattern": "Scatter"
-    }
+    },
+    "categories": [
+      "Effect.CrowdArena.Boulder"
+    ]
   }
 ]

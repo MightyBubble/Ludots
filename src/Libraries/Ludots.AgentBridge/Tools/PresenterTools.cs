@@ -857,7 +857,6 @@ namespace Ludots.AgentBridge.Tools
 
                     if (world.Has<PresenterCullState>(entity) &&
                         world.Get<PresenterCullState>(entity).OwnerCullVisible &&
-                        world.Get<PresenterCullState>(entity).LOD != LODLevel.Culled &&
                         emitDeltaCm <= epsilonCm &&
                         definitions != null && visualStableIds != null)
                     {

@@ -1,0 +1,99 @@
+#version 430
+
+// GPU 剔除（两种模式，同一 kernel）：
+//   uShadowPass == 0：主 pass——视锥剔除（球 vs 4 侧平面）→ 距离 LOD → 三级紧凑化 + indirect 计数。
+//   uShadowPass == 1：阴影投射体——相机半径球剔除（远处实例的阴影亚像素，不值得投射）→ 单级紧凑化。
+// 原子计数器直接写在 indirect 命令缓冲的 instanceCount 偏移处——绘制时零转换。
+
+layout(local_size_x = 256) in;
+
+layout(std430, binding = 0) readonly buffer SourceInstances { vec4 src[]; };
+
+// 三个 LOD 的紧凑化实例缓冲（各容量 = 总实例数，安全上界）
+layout(std430, binding = 3) writeonly buffer CompactHigh   { vec4 dstHigh[]; };
+layout(std430, binding = 4) writeonly buffer CompactMedium { vec4 dstMedium[]; };
+layout(std430, binding = 5) writeonly buffer CompactLow    { vec4 dstLow[]; };
+layout(std430, binding = 7) writeonly buffer CompactShadow { vec4 dstShadow[]; };
+layout(std430, binding = 9) writeonly buffer CompactImposter { vec4 dstImposter[]; };
+
+// Indirect 命令缓冲：5 × DrawElementsIndirectCommand（5 × uint = 20B each）
+// 字段 [count, instanceCount, firstIndex, baseVertex, baseInstance]
+// 主 pass 三条命令的 instanceCount 在 uint 下标 1/6/11，阴影命令在 uint 16，imposter 在 uint 21；
+// instanceCount 由本 shader 原子递增；其余字段 CPU 初始化。
+layout(std430, binding = 6) buffer IndirectCommands { uint indirect[]; };
+
+uniform vec4 uFrustumPlanes[4];   // 相机视锥 4 侧平面（ax+by+cz+d>0 在内）
+uniform vec3 uCameraPos;
+uniform float uLodMediumDist;
+uniform float uLodLowDist;
+uniform float uLodImposterDist;
+uniform float uInstanceRadius;
+uniform int uTotalInstances;
+uniform int uShadowPass;
+uniform vec3 uShadowCenter;
+uniform float uShadowRadius;
+uniform float uTime;
+uniform float uWanderScale;   // 0 = 模拟层写最终位置（CPU 驱动），1 = GPU 确定性游走
+
+// ludo:include crowd_wander.glsl.inc
+
+void CopyInstance(int dstSlot, vec4 d0, vec4 d1, vec4 d2, vec4 d3, int which)
+{
+    int o = dstSlot * 4;
+    if (which == 0)      { dstHigh[o]     = d0; dstHigh[o+1]     = d1; dstHigh[o+2]     = d2; dstHigh[o+3]     = d3; }
+    else if (which == 1) { dstMedium[o]   = d0; dstMedium[o+1]   = d1; dstMedium[o+2]   = d2; dstMedium[o+3]   = d3; }
+    else if (which == 2) { dstLow[o]      = d0; dstLow[o+1]      = d1; dstLow[o+2]      = d2; dstLow[o+3]      = d3; }
+    else if (which == 3) { dstImposter[o] = d0; dstImposter[o+1] = d1; dstImposter[o+2] = d2; dstImposter[o+3] = d3; }
+    else                 { dstShadow[o]   = d0; dstShadow[o+1]   = d1; dstShadow[o+2]   = d2; dstShadow[o+3]   = d3; }
+}
+
+void main()
+{
+    int id = int(gl_GlobalInvocationID.x);
+    if (id >= uTotalInstances) return;
+
+    vec4 d0 = src[id * 4 + 0];
+    vec4 d1 = src[id * 4 + 1];
+    vec4 d2 = src[id * 4 + 2];
+    vec4 d3 = src[id * 4 + 3];
+
+    // 实例位置 = 驻留点（3 列变换的 .w）+ 确定性游走（与绘制 VS 同合同，包围球不脱靶）
+    float wanderHeading;
+    vec3 pos = vec3(d0.w, d1.w, d2.w) + CrowdWanderOffset(id, uTime, wanderHeading) * uWanderScale;
+
+    if (uShadowPass == 1)
+    {
+        if (distance(pos, uShadowCenter) > uShadowRadius)
+        {
+            return;
+        }
+
+        int slot = int(atomicAdd(indirect[16], 1u));
+        CopyInstance(slot, d0, d1, d2, d3, 3);
+        return;
+    }
+
+    // 视锥剔除（保守球测试，4 侧平面）
+    for (int p = 0; p < 4; p++)
+    {
+        if (dot(uFrustumPlanes[p].xyz, pos) + uFrustumPlanes[p].w < -uInstanceRadius)
+        {
+            return; // 被剔除
+        }
+    }
+
+    // LOD 分级（距离）：high < med < low < imposter
+    float dist = distance(pos, uCameraPos);
+    int which;
+    int cmdInstanceCountOffset;
+    if (dist < uLodMediumDist)         { which = 0; cmdInstanceCountOffset = 1; }
+    else if (dist < uLodLowDist)       { which = 1; cmdInstanceCountOffset = 6; }
+    else if (dist < uLodImposterDist)  { which = 2; cmdInstanceCountOffset = 11; }
+    else                               { which = 3; cmdInstanceCountOffset = 21; }
+
+    // 原子递增 instanceCount → 返回值 = 此实例在紧凑化缓冲中的槽位号
+    int slot = int(atomicAdd(indirect[cmdInstanceCountOffset], 1u));
+
+    // 散写到对应 LOD 的紧凑化缓冲
+    CopyInstance(slot, d0, d1, d2, d3, which);
+}

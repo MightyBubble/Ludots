@@ -1,0 +1,158 @@
+{
+  "schemaVersion": 1,
+  "status": "failed",
+  "role": "replicatedClient",
+  "failure": "System.InvalidOperationException: Formal command-source selection does not contain the clicked entity set.\r\n   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.RequireSelectedSet(ReadOnlySpan\u00601 expected) in C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\\Runtime\\AcceptanceDriver.cs:line 1310\r\n   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.RequireSelectedExactly(Entity expected) in C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\\Runtime\\AcceptanceDriver.cs:line 1289\r\n   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.UpdateTraining() in C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\\Runtime\\AcceptanceDriver.cs:line 449\r\n   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.UpdateClient() in C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\\Runtime\\AcceptanceDriver.cs:line 243\r\n   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.Update(Single\u0026 dt) in C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\\Runtime\\AcceptanceDriver.cs:line 177",
+  "startedAtUtc": "2026-07-24T23:21:53.8662096Z",
+  "completedAtUtc": "2026-07-24T23:22:13.0960433Z",
+  "planFingerprint": "052c4fd97d01835f9f322c361fa7c6b852d8be14eec7ffbe999850dd27920315",
+  "contentFingerprint": "4fbb9362bad81eab88a5844f7fd3522007131ab82bd1e121c6ad620544e81819",
+  "sessionEpoch": 51184601787657774,
+  "playerId": 1,
+  "seatSlot": 0,
+  "faultCount": 0,
+  "seats": [
+    {
+      "seatSlot": 0,
+      "playerId": 1,
+      "connectionState": "Connected",
+      "readyState": "Unready"
+    },
+    {
+      "seatSlot": 1,
+      "playerId": 2,
+      "connectionState": "Connected",
+      "readyState": "Unready"
+    }
+  ],
+  "steps": [
+    {
+      "name": "Connecting",
+      "status": "passed",
+      "startedInputRevision": 0,
+      "completedInputRevision": 4,
+      "startedCommittedTick": 0,
+      "completedCommittedTick": 0,
+      "startedAtUtc": "2026-07-24T23:21:53.8704239Z",
+      "completedAtUtc": "2026-07-24T23:21:55.9864397Z",
+      "detail": "Full snapshot and local player binding are ready."
+    },
+    {
+      "name": "Ready",
+      "status": "passed",
+      "startedInputRevision": 4,
+      "completedInputRevision": 49,
+      "startedCommittedTick": 0,
+      "completedCommittedTick": 2,
+      "startedAtUtc": "2026-07-24T23:21:55.9875685Z",
+      "completedAtUtc": "2026-07-24T23:22:00.1159974Z",
+      "detail": "Both commanders readied through input and the match reached InProgress."
+    },
+    {
+      "name": "Gathering",
+      "status": "passed",
+      "startedInputRevision": 49,
+      "completedInputRevision": 405,
+      "startedCommittedTick": 2,
+      "completedCommittedTick": 389,
+      "startedAtUtc": "2026-07-24T23:22:00.1160481Z",
+      "completedAtUtc": "2026-07-24T23:22:12.9882440Z",
+      "detail": "A selected harvester gathered one configured cargo and returned it to the core."
+    },
+    {
+      "name": "Training",
+      "status": "failed",
+      "startedInputRevision": 405,
+      "completedInputRevision": 0,
+      "startedCommittedTick": 389,
+      "completedCommittedTick": 0,
+      "startedAtUtc": "2026-07-24T23:22:12.9883031Z",
+      "completedAtUtc": "2026-07-24T23:22:13.0960530Z",
+      "detail": "Formal command-source selection does not contain the clicked entity set."
+    }
+  ],
+  "commands": [
+    {
+      "action": "Gather",
+      "clientBatchSequence": 1,
+      "actorCount": 1,
+      "admissionStage": "EntityIntake",
+      "admissionResult": "Activated",
+      "actorHandles": [
+        "8:1"
+      ],
+      "admissionHistory": [
+        {
+          "stage": "NetworkIntake",
+          "result": "NetworkScheduled",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 55,
+          "observedCommittedTick": 17
+        },
+        {
+          "stage": "GlobalIntake",
+          "result": "Queued",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 55,
+          "observedCommittedTick": 17
+        },
+        {
+          "stage": "EntityIntake",
+          "result": "Activated",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 55,
+          "observedCommittedTick": 17
+        }
+      ],
+      "actorAdmissions": [
+        {
+          "batchIndex": 0,
+          "stage": "EntityIntake",
+          "result": "Activated"
+        }
+      ]
+    }
+  ],
+  "gameplay": {
+    "initialCrystals": 40,
+    "harvestedCrystals": 60,
+    "postTrainingCrystals": -1,
+    "initialInfantryCount": 2,
+    "trainedInfantryCount": -1,
+    "harvesterHandle": "8:1",
+    "harvesterStartPosition": {
+      "handle": "8:1",
+      "xCm": 8200,
+      "yCm": 15800
+    },
+    "harvesterEndPosition": {
+      "handle": "8:1",
+      "xCm": 7000,
+      "yCm": 15000
+    },
+    "selectedInfantryHandles": [],
+    "moveStartPositions": [],
+    "moveEndPositions": [],
+    "initialVisibleEnemyInfantryCount": 0,
+    "initialVisibleEnemyCoreCount": 0,
+    "enemyInfantryEnteredVision": false,
+    "enemyCoreEnteredVision": false,
+    "attackTargetHandle": "",
+    "attackTargetHealthBefore": -1,
+    "attackTargetHealthAfter": -1,
+    "observedCoreHealthBySide": [
+      1000,
+      null
+    ],
+    "observedInfantryCountBySide": [
+      2,
+      null
+    ],
+    "matchPhase": "",
+    "outcome": "",
+    "outcomeSource": "",
+    "winningSideIndex": -1,
+    "committedTick": 0,
+    "committedTickSource": ""
+  }
+}

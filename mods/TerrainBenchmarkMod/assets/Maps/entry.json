@@ -58,7 +58,7 @@
       "GridCellSizeCm": 100,
       "HexEdgeLengthCm": 400,
       "ChunkSizeCells": 64,
-      "DataFile": "terrain_bench.vtxm",
+      "DataFile": "terrain_bench.hex",
       "NavigationEnabled": false
     }
   ],

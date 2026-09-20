@@ -1,0 +1,186 @@
+[
+  {
+    "id": "panel.kit.effect.chip",
+    "subject": "EffectInstance",
+    "graph": "Graph.AuthorLayoutKit.Effect.Chip",
+    "pins": [
+      {
+        "name": "remaining",
+        "key": "kit.effect.remaining",
+        "mode": "realtime",
+        "default": 0
+      },
+      {
+        "name": "total",
+        "key": "kit.effect.total",
+        "mode": "realtime",
+        "default": 0
+      },
+      {
+        "name": "stacks",
+        "key": "kit.effect.stacks",
+        "mode": "realtime",
+        "default": 1
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "image",
+          "class": "effect-icon",
+          "bind": "imageId",
+          "width": 28,
+          "height": 28
+        },
+        {
+          "type": "label",
+          "class": "effect-name",
+          "bind": "displayName"
+        },
+        {
+          "type": "progressBar",
+          "class": "effect-time",
+          "current": "remaining",
+          "max": "total"
+        },
+        {
+          "type": "label",
+          "class": "effect-stacks",
+          "prefix": "×",
+          "bind": "stacks"
+        }
+      ]
+    }
+  },
+  {
+    "id": "panel.kit.effect.list",
+    "graph": "Graph.AuthorLayoutKit.Effect.List",
+    "pins": [
+      {
+        "name": "rowCount",
+        "key": "kit.effect.rowCount",
+        "mode": "realtime",
+        "default": 0
+      }
+    ],
+    "collections": [
+      {
+        "name": "effects",
+        "source": "selfGraph",
+        "collectionKey": "kit.effect.active",
+        "template": "panel.kit.effect.chip"
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "kit-title",
+          "text": "竖列 · list"
+        },
+        {
+          "type": "label",
+          "class": "kit-count",
+          "prefix": "在编 ",
+          "bind": "rowCount"
+        },
+        {
+          "type": "list",
+          "class": "kit-list",
+          "bind": "effects",
+          "itemExtent": 88,
+          "present": "list",
+          "viewportHeight": 200,
+          "virtualize": true,
+          "overscan": 2
+        }
+      ]
+    }
+  },
+  {
+    "id": "panel.kit.effect.grid",
+    "graph": "Graph.AuthorLayoutKit.Effect.List",
+    "pins": [
+      {
+        "name": "rowCount",
+        "key": "kit.effect.rowCount",
+        "mode": "realtime",
+        "default": 0
+      }
+    ],
+    "collections": [
+      {
+        "name": "effects",
+        "source": "selfGraph",
+        "collectionKey": "kit.effect.active",
+        "template": "panel.kit.effect.chip"
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "kit-title",
+          "text": "网格 · grid"
+        },
+        {
+          "type": "label",
+          "class": "kit-count",
+          "prefix": "在编 ",
+          "bind": "rowCount"
+        },
+        {
+          "type": "list",
+          "class": "kit-grid",
+          "bind": "effects",
+          "itemExtent": 88,
+          "present": "grid",
+          "columns": 2,
+          "viewportHeight": 200
+        }
+      ]
+    }
+  },
+  {
+    "id": "panel.kit.effect.column",
+    "graph": "Graph.AuthorLayoutKit.Effect.List",
+    "pins": [
+      {
+        "name": "rowCount",
+        "key": "kit.effect.rowCount",
+        "mode": "realtime",
+        "default": 0
+      }
+    ],
+    "collections": [
+      {
+        "name": "effects",
+        "source": "selfGraph",
+        "collectionKey": "kit.effect.active",
+        "template": "panel.kit.effect.chip"
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "kit-title",
+          "text": "横栏 · column"
+        },
+        {
+          "type": "label",
+          "class": "kit-count",
+          "prefix": "在编 ",
+          "bind": "rowCount"
+        },
+        {
+          "type": "list",
+          "class": "kit-column",
+          "bind": "effects",
+          "itemExtent": 88,
+          "present": "column"
+        }
+      ]
+    }
+  }
+]

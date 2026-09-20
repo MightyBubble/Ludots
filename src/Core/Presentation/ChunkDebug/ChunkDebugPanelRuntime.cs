@@ -46,7 +46,7 @@ namespace Ludots.Core.Presentation.ChunkDebug
             ILoadedChunks? loadedChunks = board?.LoadedChunks ?? engine.GetService(CoreServiceKeys.LoadedChunks);
             CameraCullingDebugState? cull = engine.GetService(CoreServiceKeys.CameraCullingDebugState);
             Vector2 cameraTarget = cull?.CameraTargetCm
-                ?? Client.ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State.TargetCm;
+                ?? Client.ClientLocalSeatAccess.ResolveFirstPresentBindingCamera(engine).State.TargetCm;
 
             int activeChunkCount = loadedChunks?.ActiveChunkKeys.Count ?? 0;
             int minChunkX = FloorDiv(bounds.Left, chunkSizeCm);

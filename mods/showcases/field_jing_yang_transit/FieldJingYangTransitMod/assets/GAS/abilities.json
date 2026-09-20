@@ -1,0 +1,34 @@
+[
+  {
+    "id": "Ability.FieldJingYang.JingFire",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.FieldJingYang.JingFire.Cast",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EventSignal",
+          "tick": 0,
+          "tag": "Event.FieldJingYang.JingFire.Cast"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "activationPrecondition": {
+      "validationGraph": "Graph.FieldJingYang.JingFire.CanActivate"
+    },
+    "presentation": {
+      "displayName": "荆域火计",
+      "iconGlyph": "火",
+      "accentColor": "#DC2626",
+      "hintText": "仅在 jing 区域可用；施放后更新火计次数。"
+    }
+  }
+]

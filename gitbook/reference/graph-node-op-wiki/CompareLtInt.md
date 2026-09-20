@@ -3,7 +3,7 @@
 木桩 50 血低于 80 刻线，标尺闪红，全力一击扣 18，掉到 32。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_CompareLtInt/poster.png" src="artifacts/evidence/capability_standard_graph_op_CompareLtInt/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_CompareLtInt/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_CompareLtInt/play.mp4。
 </video>
 
 ## 作者写法

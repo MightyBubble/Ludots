@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 7,
+  "status": "failed",
+  "role": "authoritativeServer",
+  "failure": "System.InvalidOperationException: Network runtime reported 1 fault(s); last=TransportClosed.\r\n   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.Update(Single\u0026 dt) in C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\\Runtime\\AcceptanceDriver.cs:line 183",
+  "startedAtUtc": "2026-07-26T08:04:31.6269652Z",
+  "completedAtUtc": "2026-07-26T08:06:32.7098979Z",
+  "planFingerprint": "052c4fd97d01835f9f322c361fa7c6b852d8be14eec7ffbe999850dd27920315",
+  "contentFingerprint": "21f8b741a84a43a5efc61883d7535303f50d794cf897020910a704c7ce9b0b05",
+  "sessionEpoch": 8819956077727371717,
+  "playerId": 0,
+  "seatSlot": -1,
+  "sideIndex": -1,
+  "faultCount": 1,
+  "seats": [
+    {
+      "seatSlot": 0,
+      "playerId": 1,
+      "connectionState": "Connected",
+      "readyState": "Ready"
+    },
+    {
+      "seatSlot": 1,
+      "playerId": 2,
+      "connectionState": "Connected",
+      "readyState": "Ready"
+    }
+  ],
+  "steps": [
+    {
+      "name": "AuthoritativeMatch",
+      "status": "failed",
+      "startedInputRevision": 0,
+      "completedInputRevision": 0,
+      "startedCommittedTick": 0,
+      "completedCommittedTick": 0,
+      "startedAtUtc": "2026-07-26T08:04:31.6284723Z",
+      "completedAtUtc": "2026-07-26T08:06:32.7099009Z",
+      "detail": "Network runtime reported 1 fault(s); last=TransportClosed."
+    }
+  ],
+  "commands": [],
+  "gameplay": {
+    "initialCrystals": -1,
+    "harvestedCrystals": -1,
+    "postTrainingCrystals": -1,
+    "initialInfantryCount": -1,
+    "trainedInfantryCount": -1,
+    "firstTrainedInfantrySpawnCommittedTickBySide": [
+      2335,
+      2336
+    ],
+    "secondTrainedInfantrySpawnCommittedTickBySide": [
+      2576,
+      2577
+    ],
+    "firstTrainedInfantryObservedCommittedTick": -1,
+    "firstTrainedInfantryObservedCount": -1,
+    "secondTrainedInfantryObservedCommittedTick": -1,
+    "secondTrainedInfantryObservedCount": -1,
+    "harvesterHandle": "",
+    "harvesterStartPosition": null,
+    "harvesterEndPosition": null,
+    "selectedInfantryHandles": [],
+    "moveStartPositions": [],
+    "moveEndPositions": [],
+    "meetingPoint": null,
+    "siegePoint": null,
+    "initialVisibleEnemyInfantryCount": -1,
+    "initialVisibleEnemyCoreCount": -1,
+    "enemyInfantryEnteredVision": false,
+    "enemyCoreEnteredVision": false,
+    "attackTargetHandle": "",
+    "attackTargetPositionBefore": null,
+    "attackTargetHealthBefore": -1,
+    "attackTargetHealthAfter": -1,
+    "defeatedCoreLastPosition": null,
+    "completedCameraTarget": null,
+    "completedLosingCoreCount": -1,
+    "completedWinnerInfantryNearDefeatedCoreCount": -1,
+    "completedWinnerInfantryNearDefeatedCorePositions": [],
+    "completedPresentationFrameId": -1,
+    "observedCoreHealthBySide": [
+      1000,
+      1000
+    ],
+    "observedInfantryCountBySide": [
+      4,
+      4
+    ],
+    "matchPhase": "",
+    "outcome": "",
+    "outcomeSource": "",
+    "winningSideIndex": -1,
+    "committedTick": 0,
+    "committedTickSource": ""
+  },
+  "networkFaultInjection": {
+    "role": "authoritativeServer",
+    "configuration": {
+      "transportIdentity": "LiteNetLib/2.1.4",
+      "profileId": "normal",
+      "seed": 70901,
+      "roundTripLatencyMilliseconds": 0,
+      "jitterMilliseconds": 0,
+      "packetLossPermille": 0,
+      "stateReorderPermille": 0,
+      "isEnabled": false
+    },
+    "delayedInboundPacketCount": 0,
+    "droppedInboundPacketCount": 0,
+    "reorderedInboundStateDatagramCount": 0
+  },
+  "runtime": {
+    "capturedAtUtc": "2026-07-26T08:06:32.7023889Z",
+    "stage": "AuthoritativeMatch",
+    "substep": 0,
+    "pendingCommandAction": "",
+    "pendingCommandSequence": 0,
+    "selectedActors": [],
+    "hasBattlePoints": false,
+    "meetingPoint": null,
+    "siegePoint": null,
+    "defeatedCorePoint": null,
+    "visibleEnemyCoreCount": -1,
+    "committedTick": 3422,
+    "matchPhase": "InProgress",
+    "outcome": "InProgress"
+  }
+}

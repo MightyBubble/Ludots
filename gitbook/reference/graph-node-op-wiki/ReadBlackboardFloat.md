@@ -3,7 +3,7 @@
 板上写 35，木桩就真掉 35。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_ReadBlackboardFloat/poster.png" src="artifacts/evidence/capability_standard_graph_op_ReadBlackboardFloat/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_ReadBlackboardFloat/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_ReadBlackboardFloat/play.mp4。
 </video>
 
 ## 作者写法
@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | Effect / Score / Validation / Derived / Script / TriggerGraph |
+| 可用图种 | Effect / Score / Validation / Derived / Script / TriggerGraph / Query |
 | 返回 | Float → 小数寄存器 |
 | 输入端口（值边 toPort） | `source`（来源实体） |
 | 特殊写法 | 结果写入 dst 寄存器；imm 填符号名（编译期解析） |
@@ -43,7 +43,7 @@ LoadContextSource → **ReadBlackboardFloat**（本篇） → NegFloat → LoadE
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Effect / Score / Validation / Derived / Script / TriggerGraph；Query 图不可用（编译期白名单拒绝）。
+- 图种边界：七种图全都能用，不必为它挑图种。
 - imm 是装载期解析的符号名：符号改名后，引用它的图要跟着改并重编译。
 - 同类用法：跨节点跨图传值、决策记忆（记住要盯的人）、按名册配置出招。
 ## 怎么进

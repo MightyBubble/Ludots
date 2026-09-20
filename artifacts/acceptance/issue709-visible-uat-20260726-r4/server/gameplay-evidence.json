@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 7,
+  "status": "running",
+  "role": "authoritativeServer",
+  "failure": null,
+  "startedAtUtc": "2026-07-26T07:22:52.1437026Z",
+  "completedAtUtc": null,
+  "planFingerprint": "052c4fd97d01835f9f322c361fa7c6b852d8be14eec7ffbe999850dd27920315",
+  "contentFingerprint": "52cd50740c6cc7eda04c4b2f6ab116915bba7f348474b25de5d131ace2dfbef8",
+  "sessionEpoch": 1748420064625325605,
+  "playerId": 0,
+  "seatSlot": -1,
+  "sideIndex": -1,
+  "faultCount": 0,
+  "seats": [
+    {
+      "seatSlot": 0,
+      "playerId": 1,
+      "connectionState": "Connected",
+      "readyState": "Ready"
+    },
+    {
+      "seatSlot": 1,
+      "playerId": 2,
+      "connectionState": "Connected",
+      "readyState": "Ready"
+    }
+  ],
+  "steps": [
+    {
+      "name": "AuthoritativeMatch",
+      "status": "running",
+      "startedInputRevision": 0,
+      "completedInputRevision": 0,
+      "startedCommittedTick": 0,
+      "completedCommittedTick": 0,
+      "startedAtUtc": "2026-07-26T07:22:52.1461322Z",
+      "completedAtUtc": null,
+      "detail": null
+    }
+  ],
+  "commands": [],
+  "gameplay": {
+    "initialCrystals": -1,
+    "harvestedCrystals": -1,
+    "postTrainingCrystals": -1,
+    "initialInfantryCount": -1,
+    "trainedInfantryCount": -1,
+    "firstTrainedInfantrySpawnCommittedTickBySide": [
+      2366,
+      2366
+    ],
+    "secondTrainedInfantrySpawnCommittedTickBySide": [
+      2607,
+      2607
+    ],
+    "firstTrainedInfantryObservedCommittedTick": -1,
+    "firstTrainedInfantryObservedCount": -1,
+    "secondTrainedInfantryObservedCommittedTick": -1,
+    "secondTrainedInfantryObservedCount": -1,
+    "harvesterHandle": "",
+    "harvesterStartPosition": null,
+    "harvesterEndPosition": null,
+    "selectedInfantryHandles": [],
+    "moveStartPositions": [],
+    "moveEndPositions": [],
+    "meetingPoint": null,
+    "siegePoint": null,
+    "initialVisibleEnemyInfantryCount": -1,
+    "initialVisibleEnemyCoreCount": -1,
+    "enemyInfantryEnteredVision": false,
+    "enemyCoreEnteredVision": false,
+    "attackTargetHandle": "",
+    "attackTargetPositionBefore": null,
+    "attackTargetHealthBefore": -1,
+    "attackTargetHealthAfter": -1,
+    "defeatedCoreLastPosition": null,
+    "completedCameraTarget": null,
+    "completedLosingCoreCount": -1,
+    "completedWinnerInfantryNearDefeatedCoreCount": -1,
+    "completedWinnerInfantryNearDefeatedCorePositions": [],
+    "completedPresentationFrameId": -1,
+    "observedCoreHealthBySide": [
+      1000,
+      1000
+    ],
+    "observedInfantryCountBySide": [
+      3,
+      4
+    ],
+    "matchPhase": "",
+    "outcome": "",
+    "outcomeSource": "",
+    "winningSideIndex": -1,
+    "committedTick": 0,
+    "committedTickSource": ""
+  },
+  "networkFaultInjection": {
+    "role": "authoritativeServer",
+    "configuration": {
+      "transportIdentity": "LiteNetLib/2.1.4",
+      "profileId": "normal",
+      "seed": 70901,
+      "roundTripLatencyMilliseconds": 0,
+      "jitterMilliseconds": 0,
+      "packetLossPermille": 0,
+      "stateReorderPermille": 0,
+      "isEnabled": false
+    },
+    "delayedInboundPacketCount": 0,
+    "droppedInboundPacketCount": 0,
+    "reorderedInboundStateDatagramCount": 0
+  },
+  "runtime": {
+    "capturedAtUtc": "2026-07-26T07:24:37.2567629Z",
+    "stage": "AuthoritativeMatch",
+    "substep": 0,
+    "pendingCommandAction": "",
+    "pendingCommandSequence": 0,
+    "selectedActors": [],
+    "hasBattlePoints": false,
+    "meetingPoint": null,
+    "siegePoint": null,
+    "defeatedCorePoint": null,
+    "visibleEnemyCoreCount": -1,
+    "committedTick": 2915,
+    "matchPhase": "InProgress",
+    "outcome": "InProgress"
+  }
+}

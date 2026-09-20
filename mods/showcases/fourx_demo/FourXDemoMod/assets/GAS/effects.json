@@ -1,9 +1,6 @@
 [
   {
     "id": "Effect.4X.BuildOutpost",
-    "tags": [
-      "Effect.4X.BuildOutpost"
-    ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -14,13 +11,13 @@
       "offsetRadius": 80,
       "copySourcePlayerOwner": true,
       "onSpawnEffect": "Effect.4X.OutpostComplete"
-    }
+    },
+    "categories": [
+      "Effect.4X.BuildOutpost"
+    ]
   },
   {
     "id": "Effect.4X.OutpostComplete",
-    "tags": [
-      "Effect.4X.OutpostComplete"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -35,13 +32,13 @@
         "op": "Add",
         "value": 5
       }
+    ],
+    "categories": [
+      "Effect.4X.OutpostComplete"
     ]
   },
   {
     "id": "Effect.4X.TechResearch",
-    "tags": [
-      "Effect.4X.Tech"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -63,13 +60,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.4X.Tech"
     ]
   },
   {
     "id": "Effect.4X.TechComplete",
-    "tags": [
-      "Effect.4X.Tech"
-    ],
     "presetType": "Buff",
     "lifetime": "Infinite",
     "participatesInResponse": false,
@@ -86,13 +83,13 @@
         "op": "Add",
         "value": 10
       }
+    ],
+    "categories": [
+      "Effect.4X.Tech"
     ]
   },
   {
     "id": "Effect.4X.DiplomacyPact",
-    "tags": [
-      "Effect.4X.Diplomacy"
-    ],
     "presetType": "Buff",
     "lifetime": "Infinite",
     "participatesInResponse": false,
@@ -102,13 +99,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.4X.Diplomacy"
     ]
   },
   {
     "id": "Effect.4X.TradeRoute",
-    "tags": [
-      "Effect.4X.Economy"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -128,13 +125,13 @@
       "limit": 5,
       "policy": "KeepDuration",
       "overflowPolicy": "RejectNew"
-    }
+    },
+    "categories": [
+      "Effect.4X.Economy"
+    ]
   },
   {
     "id": "Effect.4X.Lockout.GCD",
-    "tags": [
-      "Effect.4X.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -149,6 +146,9 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.4X.Lockout"
     ]
   }
 ]

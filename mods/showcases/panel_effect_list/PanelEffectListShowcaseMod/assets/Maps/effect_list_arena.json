@@ -1,0 +1,24 @@
+{
+  "Id": "effect_list_arena",
+  "Tags": ["showcase", "panel", "effect-list"],
+  "TriggerGraphs": [
+    { "graph": "Graph.EffectList.Panel.Open", "scopeInstanceId": "buff-hero" }
+  ],
+  "Entities": [
+    { "InstanceId": "buff-hero", "Template": "buff_hero" }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "buff-hero" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "buff-hero" }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      { "TeamA": 1, "TeamB": 1, "TypeId": "LudotsCore.Participant", "Attitude": "Friendly", "Symmetric": true }
+    ],
+    "Players": [],
+    "PlayerTeams": []
+  },
+  "DefaultCamera": { "TargetXCm": 0, "TargetYCm": 0, "Yaw": 45, "Pitch": 35, "DistanceCm": 900, "FovYDeg": 50 }
+}

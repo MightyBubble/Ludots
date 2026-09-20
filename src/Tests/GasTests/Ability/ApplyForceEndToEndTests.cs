@@ -51,7 +51,7 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Effect.Preset.ApplyForce2D",
-                        "tags": ["Effect.ApplyForce"],
+                        "categories": ["Effect.ApplyForce"],
                         "presetType": "ApplyForce2D",
                         "lifetime": "Instant",
                         "participatesInResponse": true,
@@ -173,8 +173,9 @@ namespace Ludots.Tests.GAS
                 GraphExecutor.Execute(world, caster: default, explicitTarget: target, targetPosCm: new IntVector2(0, 0), program, api);
 
                 var chainOrders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
-                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
-                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
+                Entity chainSource = world.Create();
+                chainOrders.TryEnqueue(new Order { Actor = chainSource, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
+                chainOrders.TryEnqueue(new Order { Actor = chainSource, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
 
                 var proposal = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(
                     world,

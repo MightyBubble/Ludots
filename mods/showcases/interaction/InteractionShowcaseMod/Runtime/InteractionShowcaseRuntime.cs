@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using System.Threading.Tasks;
 using Arch.Core;
@@ -28,6 +29,8 @@ namespace InteractionShowcaseMod.Runtime
     {
         private const int ShowcaseLocalPlayerId = 1;
         private static readonly QueryDescription SelectableKnowledgeQuery = new QueryDescription().WithAll<CommandSourceSelectableTag, MapEntity>();
+
+        private readonly record struct PossessedShowcaseRep(int PlayerId, Entity Rep);
 
         private readonly InteractionShowcasePanelController _panelController;
         private bool _inputContextActive;
@@ -61,9 +64,9 @@ namespace InteractionShowcaseMod.Runtime
                 ActivateInputContext(input);
                 EnsureDefaultShowcaseMode(engine);
                 SuppressNonEssentialHud(engine);
-                RequireShowcaseSolePossessedRep(engine, activeMapId!);
-                PublishShowcaseKnowledge(engine, activeMapId!);
-                EnsureShowcaseCommandSourceView(engine);
+                List<PossessedShowcaseRep> possessedReps = RequireShowcasePossessedReps(engine, activeMapId!);
+                PublishShowcaseKnowledge(engine, activeMapId!, possessedReps);
+                EnsureShowcaseCommandSourceView(engine, possessedReps);
                 if (IsUiPanelSuppressed(engine))
                 {
                     CloseEntityInfoPanels(context);
@@ -340,17 +343,48 @@ namespace InteractionShowcaseMod.Runtime
 
         internal static string ControlGroupCollectionKey(int groupIndex) => $"showcase.interaction.command.group.{groupIndex}";
 
-        private static bool TryResolveCollectionContext(GameEngine engine, out EntityCollectionStore collections, out Entity owner)
+        /// <summary>
+        /// Resolves the rep of the hero player (map playerId 1) from whichever local seat possesses
+        /// it. Sole-seat sessions possess it on their single seat, so this stays identical to the
+        /// former sole-rep lookup while split-screen sessions keep the hero roster anchored to its
+        /// owning seat instead of silently going empty.
+        /// </summary>
+        internal static bool TryGetShowcaseLocalPlayerRep(GameEngine engine, out Entity rep)
         {
-            collections = default!;
-            owner = Entity.Null;
-            if (engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore store)
+            rep = Entity.Null;
+            if (engine == null ||
+                !engine.TryGetService(CoreServiceKeys.ClientLocalSeatRegistry, out ClientLocalSeatRegistry? seats) ||
+                seats == null)
             {
                 return false;
             }
 
-            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out var localViewer) ||
-                !engine.World.IsAlive(localViewer))
+            IReadOnlyList<string> seatIds = seats.SeatIds;
+            for (int i = 0; i < seatIds.Count; i++)
+            {
+                if (!seats.TryGet(seatIds[i], out ClientLocalSeat seat) ||
+                    !seat.HasPossession ||
+                    seat.PossessedRep == Entity.Null ||
+                    !engine.World.IsAlive(seat.PossessedRep) ||
+                    !engine.World.TryGet(seat.PossessedRep, out PlayerOwner owner) ||
+                    owner.PlayerId != ShowcaseLocalPlayerId)
+                {
+                    continue;
+                }
+
+                rep = seat.PossessedRep;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool TryResolveCollectionContext(GameEngine engine, out EntityCollectionStore collections, out Entity owner)
+        {
+            collections = default!;
+            owner = Entity.Null;
+            if (engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore store ||
+                !TryGetShowcaseLocalPlayerRep(engine, out Entity localViewer))
             {
                 return false;
             }
@@ -518,7 +552,7 @@ namespace InteractionShowcaseMod.Runtime
         private static bool TryResolveCommandSourceOwner(GameEngine engine, out Arch.Core.Entity owner)
         {
             owner = Arch.Core.Entity.Null;
-            return ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out owner) &&
+            return TryGetShowcaseLocalPlayerRep(engine, out owner) &&
                    owner != Arch.Core.Entity.Null &&
                    engine.World.IsAlive(owner);
         }
@@ -693,29 +727,49 @@ namespace InteractionShowcaseMod.Runtime
             }
         }
 
-        private static Entity RequireShowcaseSolePossessedRep(GameEngine engine, string activeMapId)
+        /// <summary>
+        /// Split-screen sessions may hold several possessed local seats; the showcase contract is
+        /// that every possessed seat carries a live rep of the focused map and that the hero player
+        /// (map playerId 1, the roster this showcase narrates) is possessed by one of them.
+        /// </summary>
+        private static List<PossessedShowcaseRep> RequireShowcasePossessedReps(GameEngine engine, string activeMapId)
         {
-            Entity possessed = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
-            if (!engine.World.IsAlive(possessed) ||
-                !engine.World.TryGet(possessed, out PlayerOwner owner) ||
-                !engine.World.TryGet(possessed, out MapEntity mapEntity) ||
-                !IsShowcasePossessedPlayer(activeMapId, in owner, in mapEntity))
+            ClientLocalSeatRegistry seats = ClientLocalSeatAccess.RequireRegistry(engine);
+            var possessed = new List<PossessedShowcaseRep>(seats.Count);
+            bool heroPlayerPossessed = false;
+            IReadOnlyList<string> seatIds = seats.SeatIds;
+            for (int i = 0; i < seatIds.Count; i++)
+            {
+                if (!seats.TryGet(seatIds[i], out ClientLocalSeat seat) || !seat.HasPossession)
+                {
+                    continue;
+                }
+
+                Entity rep = seat.PossessedRep;
+                if (!engine.World.IsAlive(rep) ||
+                    !engine.World.TryGet(rep, out PlayerOwner owner) ||
+                    !engine.World.TryGet(rep, out MapEntity mapEntity) ||
+                    !string.Equals(mapEntity.MapId.Value, activeMapId, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException(
+                        $"Interaction showcase local seat '{seat.SeatId}' must possess a live player rep of map '{activeMapId}'.");
+                }
+
+                possessed.Add(new PossessedShowcaseRep(owner.PlayerId, rep));
+                heroPlayerPossessed |= owner.PlayerId == ShowcaseLocalPlayerId;
+            }
+
+            if (!heroPlayerPossessed)
             {
                 throw new InvalidOperationException(
-                    "Interaction showcase requires sole ClientLocalSeat possession of map playerId 1 from launchContext.localSeats / startupLocalSeats.");
+                    "Interaction showcase requires a local seat possessing map playerId 1 from launchContext.localSeats / startupLocalSeats.");
             }
 
             return possessed;
         }
 
-        private static void PublishShowcaseKnowledge(GameEngine engine, string activeMapId)
+        private static void PublishShowcaseKnowledge(GameEngine engine, string activeMapId, List<PossessedShowcaseRep> possessedReps)
         {
-            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out var viewer) ||
-                !engine.World.IsAlive(viewer))
-            {
-                return;
-            }
-
             KnowledgeProjectionStore knowledge = engine.GetService(CoreServiceKeys.KnowledgeProjectionStore)
                 ?? throw new InvalidOperationException("KnowledgeProjectionStore missing.");
             var empty = KnowledgeIdMask256.Empty;
@@ -727,36 +781,44 @@ namespace InteractionShowcaseMod.Runtime
                     return;
                 }
 
-                knowledge.Upsert(
-                    viewer,
-                    entity,
-                    new KnowledgeDisclosureRecord(
-                        KnowledgePresence.LiveVisible,
-                        KnowledgePositionAccess.Live,
-                        empty,
-                        empty,
-                        empty,
-                        viewer,
-                        observedTick,
-                        expiryTick: 0,
-                        confidencePermille: 1000,
-                        revision: 0));
+                for (int i = 0; i < possessedReps.Count; i++)
+                {
+                    knowledge.Upsert(
+                        possessedReps[i].Rep,
+                        entity,
+                        new KnowledgeDisclosureRecord(
+                            KnowledgePresence.LiveVisible,
+                            KnowledgePositionAccess.Live,
+                            empty,
+                            empty,
+                            empty,
+                            possessedReps[i].Rep,
+                            observedTick,
+                            expiryTick: 0,
+                            confidencePermille: 1000,
+                            revision: 0));
+                }
             });
         }
 
-        private static bool IsShowcasePossessedPlayer(string activeMapId, in PlayerOwner owner, in MapEntity mapEntity)
+        private static void EnsureShowcaseCommandSourceView(GameEngine engine, List<PossessedShowcaseRep> possessedReps)
         {
-            return owner.PlayerId == ShowcaseLocalPlayerId &&
-                   string.Equals(mapEntity.MapId.Value, activeMapId, StringComparison.OrdinalIgnoreCase);
-        }
-
-        private void EnsureShowcaseCommandSourceView(GameEngine engine)
-        {
-            if (!TryResolveCollectionContext(engine, out EntityCollectionStore collections, out Entity viewer))
+            if (engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore collections)
             {
                 return;
             }
 
+            for (int i = 0; i < possessedReps.Count; i++)
+            {
+                if (possessedReps[i].PlayerId == ShowcaseLocalPlayerId)
+                {
+                    SeedShowcaseCommandSourceView(engine, collections, possessedReps[i].Rep);
+                }
+            }
+        }
+
+        private static void SeedShowcaseCommandSourceView(GameEngine engine, EntityCollectionStore collections, Entity viewer)
+        {
             Span<Entity> initialCommandActors = stackalloc Entity[3];
             int count = 0;
             AddInitialCommandActor(engine, InteractionShowcaseIds.ArcweaverName, initialCommandActors, ref count);

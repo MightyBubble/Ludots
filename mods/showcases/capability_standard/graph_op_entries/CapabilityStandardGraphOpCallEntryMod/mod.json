@@ -2,7 +2,7 @@
   "name": "CapabilityStandardGraphOpCallEntryMod",
   "version": "1.0.0",
   "description": "Launcher entry for GraphNodeOp Call player gallery.",
-  "main": "bin/net8.0/CapabilityStandardGraphOpCallEntryMod.dll",
+  "main": "bin/net9.0/CapabilityStandardGraphOpCallEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"

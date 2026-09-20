@@ -139,7 +139,7 @@ namespace Ludots.Core.Physics2D.Systems
             uint mask = 0u;
             for (int i = 0; i < _allowedLayerNames.Count; i++)
             {
-                mask |= 1u << LayerRegistry.GetIndex(_allowedLayerNames[i]);
+                mask |= 1u << LayerRegistry.GetIndexOrRegister(_allowedLayerNames[i]);
             }
 
             _allowedEmitterCategoryMask = mask;

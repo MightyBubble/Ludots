@@ -30,7 +30,7 @@ namespace Ludots.Tests.Architecture
             var context = new NavBakeContext
             {
                 MapId = "nav_bake_contract",
-                SourceUri = "Core:Maps/nav_bake_contract.vtxm",
+                SourceUri = "Core:Maps/nav_bake_contract.hex",
                 Terrain = terrain,
                 Obstacles = new NavObstacleSet(),
                 Config = config,
@@ -84,13 +84,13 @@ namespace Ludots.Tests.Architecture
         [Test]
         public void RecastBake_OpenGridCrossTileQuery_ReturnsStraightCorePath()
         {
-            const int chunkSizeCells = 4;
+            const int chunkSizeCells = 32;
             const int tileSizeCm = chunkSizeCells * SpatialScaleDefaults.CellCm;
             var context = new NavBakeContext
             {
                 MapId = "nav_recast_open_grid_query_contract",
                 SourceUri = "Core:Maps/nav_recast_open_grid_query_contract.bin",
-                Terrain = new FlatGridLogicTerrainField(12, 4, chunkSizeCells: chunkSizeCells),
+                Terrain = new FlatGridLogicTerrainField(96, 32, chunkSizeCells: chunkSizeCells),
                 Obstacles = new NavObstacleSet(),
                 Config = CreateBakeConfig(NavBakeNames.ModeOffline, NavBakeNames.AlgorithmRecast),
                 AgentProfiles = CreateAgentProfiles(),
@@ -114,16 +114,16 @@ namespace Ludots.Tests.Architecture
                 CollectDetourTileBytes(bake),
                 layer: 0,
                 areaCosts: NavAreaCostTable.CreateDefault(),
-                startXcm: 50,
-                startZcm: 150,
-                goalXcm: 1050,
-                goalZcm: 150,
+                startXcm: 400,
+                startZcm: 1200,
+                goalXcm: 6800,
+                goalZcm: 1200,
                 maxPortals: 256);
 
             Assert.That(path.Status, Is.EqualTo(NavPathStatus.Ok));
             TestContext.WriteLine("Default baseline path: " + string.Join(" -> ", FormatPathPoints(path)));
-            Assert.That(path.PathXcm, Is.EqualTo(new[] { 50, 1050 }));
-            Assert.That(path.PathZcm, Is.EqualTo(new[] { 150, 150 }));
+            Assert.That(path.PathXcm, Is.EqualTo(new[] { 400, 6800 }));
+            Assert.That(path.PathZcm, Is.EqualTo(new[] { 1200, 1200 }));
         }
 
         [Test]
@@ -210,18 +210,18 @@ namespace Ludots.Tests.Architecture
         [Test]
         public void RecastBake_QueryPathDoesNotCutThroughBlockedGridHole()
         {
-            const int chunkSizeCells = 9;
+            const int chunkSizeCells = 64;
             const int tileSizeCm = chunkSizeCells * SpatialScaleDefaults.CellCm;
-            const int obstacleMinXcm = 300;
-            const int obstacleMinZcm = 300;
-            const int obstacleMaxXcm = 600;
-            const int obstacleMaxZcm = 600;
+            const int obstacleMinXcm = 2400;
+            const int obstacleMinZcm = 2400;
+            const int obstacleMaxXcm = 3600;
+            const int obstacleMaxZcm = 3600;
 
             var context = new NavBakeContext
             {
                 MapId = "nav_recast_blocked_hole_query_contract",
                 SourceUri = "Core:Maps/nav_recast_blocked_hole_query_contract.bin",
-                Terrain = new FlatGridLogicTerrainField(9, 9, chunkSizeCells: chunkSizeCells),
+                Terrain = new FlatGridLogicTerrainField(64, 64, chunkSizeCells: chunkSizeCells),
                 Obstacles = new NavObstacleSet
                 {
                     Obstacles =
@@ -259,10 +259,10 @@ namespace Ludots.Tests.Architecture
                 CollectDetourTileBytes(bake),
                 layer: 0,
                 areaCosts: NavAreaCostTable.CreateDefault(),
-                startXcm: 50,
-                startZcm: 50,
-                goalXcm: 750,
-                goalZcm: 750,
+                startXcm: 400,
+                startZcm: 400,
+                goalXcm: 6000,
+                goalZcm: 6000,
                 maxPortals: 256);
 
             Assert.That(path.Status, Is.EqualTo(NavPathStatus.Ok));
@@ -282,7 +282,7 @@ namespace Ludots.Tests.Architecture
             var service = new NavBakeService(new RecastNavBakeAlgorithm(), new CdtNavBakeAlgorithm());
 
             Assert.DoesNotThrow(() => _ = service.Bake(CreateRuntimeIncrementalContext(terrain, algorithm: NavBakeAlgorithmKind.Recast)),
-                "runtime-incremental + recast 是受纳组合（vhtm 起伏地形的运行时重烤口径）");
+                "runtime-incremental + recast 是受纳组合（.height 起伏地形的运行时重烤口径）");
             Assert.DoesNotThrow(() => _ = service.Bake(CreateRuntimeIncrementalContext(terrain, algorithm: NavBakeAlgorithmKind.Cdt)),
                 "runtime-incremental + cdt 是受纳组合");
 
@@ -514,7 +514,7 @@ namespace Ludots.Tests.Architecture
             var context = new NavBakeContext
             {
                 MapId = "nav_estimate_contract",
-                SourceUri = "Core:Maps/nav_estimate_contract.vtxm",
+                SourceUri = "Core:Maps/nav_estimate_contract.hex",
                 Terrain = new FlatGridLogicTerrainField(8, 4, chunkSizeCells: 4),
                 Obstacles = new NavObstacleSet
                 {
@@ -564,8 +564,8 @@ namespace Ludots.Tests.Architecture
             Assert.That(estimate.TileWorldWidthCm, Is.EqualTo(400));
             Assert.That(estimate.TileWorldHeightCm, Is.EqualTo(400));
             Assert.That(estimate.TerrainCellSampleCount, Is.EqualTo(32));
-            Assert.That(estimate.RecastColumnBudgetTotal, Is.EqualTo(7184));
-            Assert.That(estimate.BudgetWorkUnitCount, Is.EqualTo(7184));
+            Assert.That(estimate.RecastColumnBudgetTotal, Is.EqualTo(1152));
+            Assert.That(estimate.BudgetWorkUnitCount, Is.EqualTo(1152));
             Assert.That(estimate.EstimatedTileBytesLow, Is.EqualTo(8L * NavBakeEstimator.EstimatedBytesPerOperationLow));
             Assert.That(estimate.EstimatedTileBytesHigh, Is.EqualTo(8L * NavBakeEstimator.EstimatedBytesPerOperationHigh));
             Assert.That(estimate.EstimatedSerialSecondsLow, Is.EqualTo(0.64d).Within(0.0001d));
@@ -576,11 +576,11 @@ namespace Ludots.Tests.Architecture
 
             NavBakeProfileEstimate small = estimate.Profiles[0];
             Assert.That(small.ProfileId, Is.EqualTo("Small"));
-            Assert.That(small.RecastCellSizeCm, Is.EqualTo(10f).Within(0.0001f));
-            Assert.That(small.RecastCellHeightCm, Is.EqualTo(5f).Within(0.0001f));
-            Assert.That(small.RecastColumnsPerAxis, Is.EqualTo(40));
-            Assert.That(small.WalkableHeightVoxels, Is.EqualTo(36));
-            Assert.That(small.WalkableClimbVoxels, Is.EqualTo(8));
+            Assert.That(small.RecastCellSizeCm, Is.EqualTo(100f).Within(0.0001f));
+            Assert.That(small.RecastCellHeightCm, Is.EqualTo(50f).Within(0.0001f));
+            Assert.That(small.RecastColumnsPerAxis, Is.EqualTo(4));
+            Assert.That(small.WalkableHeightVoxels, Is.EqualTo(4));
+            Assert.That(small.WalkableClimbVoxels, Is.EqualTo(0));
             Assert.That(small.MinWalkableUpDot, Is.EqualTo(MathF.Cos(45f * MathF.PI / 180f)).Within(0.0001f));
         }
 
@@ -592,7 +592,7 @@ namespace Ludots.Tests.Architecture
             var context = new NavBakeContext
             {
                 MapId = "nav_estimate_invalid_slope",
-                SourceUri = "Core:Maps/nav_estimate_invalid_slope.vtxm",
+                SourceUri = "Core:Maps/nav_estimate_invalid_slope.hex",
                 Terrain = new FlatGridLogicTerrainField(4, 4, chunkSizeCells: 4),
                 Obstacles = new NavObstacleSet(),
                 Config = config,
@@ -628,12 +628,12 @@ namespace Ludots.Tests.Architecture
         [Test]
         public void NavBakeEstimator_LargeBakeRequiresExplicitApprovalAndMatchingHash()
         {
-            NavBakeContext context = CreateEstimateBudgetContext(widthCells: 128, heightCells: 128, chunkSizeCells: 4, layerCount: 2);
+            NavBakeContext context = CreateEstimateBudgetContext(widthCells: 1280, heightCells: 1280, chunkSizeCells: 4, layerCount: 2);
 
             NavBakeEstimateReport estimate = NavBakeEstimator.Estimate(context);
 
-            Assert.That(estimate.BakeOperationCount, Is.EqualTo(2048));
-            Assert.That(estimate.BudgetWorkUnitCount, Is.EqualTo(3_276_800));
+            Assert.That(estimate.BakeOperationCount, Is.EqualTo(204_800));
+            Assert.That(estimate.BudgetWorkUnitCount, Is.EqualTo(29_491_200));
             Assert.That(estimate.BudgetStatus, Is.EqualTo(NavBakeBudgetStatus.Large));
             Assert.That(estimate.RequiresExplicitLargeBakeApproval, Is.True);
             Assert.Throws<InvalidOperationException>(
@@ -647,12 +647,12 @@ namespace Ludots.Tests.Architecture
         [Test]
         public void NavBakeEstimator_RejectsOversizedBakeEvenWithApproval()
         {
-            NavBakeContext context = CreateEstimateBudgetContext(widthCells: 128, heightCells: 128, chunkSizeCells: 4, layerCount: 123);
+            NavBakeContext context = CreateEstimateBudgetContext(widthCells: 1280, heightCells: 1280, chunkSizeCells: 4, layerCount: 123);
 
             NavBakeEstimateReport estimate = NavBakeEstimator.Estimate(context);
 
-            Assert.That(estimate.BakeOperationCount, Is.EqualTo(125952));
-            Assert.That(estimate.BudgetWorkUnitCount, Is.EqualTo(201_523_200));
+            Assert.That(estimate.BakeOperationCount, Is.EqualTo(12_595_200));
+            Assert.That(estimate.BudgetWorkUnitCount, Is.EqualTo(1_813_708_800));
             Assert.That(estimate.BudgetStatus, Is.EqualTo(NavBakeBudgetStatus.Reject));
             Assert.That(estimate.RequiresExplicitLargeBakeApproval, Is.False);
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
@@ -1145,7 +1145,7 @@ namespace Ludots.Tests.Architecture
             return new NavBakeContext
             {
                 MapId = "nav_runtime_incremental_contract",
-                SourceUri = "Core:Maps/nav_runtime_incremental_contract.vtxm",
+                SourceUri = "Core:Maps/nav_runtime_incremental_contract.hex",
                 Terrain = terrain,
                 Obstacles = obstacles ?? new NavObstacleSet(),
                 Config = CreateBakeConfig(NavBakeNames.ModeRuntimeIncremental, NavBakeNames.FormatAlgorithm(algorithm)),
@@ -1185,7 +1185,7 @@ namespace Ludots.Tests.Architecture
             return new NavBakeContext
             {
                 MapId = "nav_estimate_budget_contract",
-                SourceUri = "Core:Maps/nav_estimate_budget_contract.vtxm",
+                SourceUri = "Core:Maps/nav_estimate_budget_contract.hex",
                 Terrain = terrain,
                 Obstacles = new NavObstacleSet(),
                 Config = config,
@@ -1206,7 +1206,7 @@ namespace Ludots.Tests.Architecture
             return new NavBakeContext
             {
                 MapId = "nav_estimate_hash_contract",
-                SourceUri = "Core:Maps/nav_estimate_hash_contract.vtxm",
+                SourceUri = "Core:Maps/nav_estimate_hash_contract.hex",
                 Terrain = terrain,
                 Obstacles = new NavObstacleSet(),
                 Config = CreateBakeConfig(NavBakeNames.ModeOffline, NavBakeNames.AlgorithmRecast),
@@ -1221,13 +1221,7 @@ namespace Ludots.Tests.Architecture
         }
 
         private static NavMeshBakeConfig LoadTempConfig(string root, AgentProfileRegistry profiles)
-        {
-            var vfs = new VirtualFileSystem();
-            vfs.Mount("Core", root);
-            var pipeline = new ConfigPipeline(vfs, modLoader: null!);
-            var catalog = ConfigCatalogLoader.Load(pipeline);
-            return new NavMeshBakeConfigLoader(pipeline, profiles).Load(catalog);
-        }
+            => NavBakeConfigLoaderTestHelpers.Load(root, profiles);
 
         private static IReadOnlyList<byte[]> CollectDetourTileBytes(NavBakeResult bake)
         {
@@ -1254,19 +1248,7 @@ namespace Ludots.Tests.Architecture
         }
 
         private static string CreateTempNavConfig(string navmeshJson)
-        {
-            string tempRoot = Path.Combine(Path.GetTempPath(), "ludots-nav-bake-service-" + Guid.NewGuid().ToString("N"));
-            string configs = tempRoot;
-            Directory.CreateDirectory(Path.Combine(configs, "Navigation"));
-            File.WriteAllText(Path.Combine(configs, "config_catalog.json"),
-                """
-                [
-                  { "Path": "Navigation/navmesh.json", "Policy": "DeepObject" }
-                ]
-                """);
-            File.WriteAllText(Path.Combine(configs, "Navigation", "navmesh.json"), navmeshJson);
-            return tempRoot;
-        }
+            => NavBakeConfigLoaderTestHelpers.CreateTempNavConfig(navmeshJson);
 
         private static string CreateTempRepoNavigationConfig()
         {

@@ -328,14 +328,13 @@ namespace Ludots.Tests.Presentation
 
             public PresentationVisualProxy EmitVisual(string definitionId)
             {
-                _ = Emit(definitionId);
-                PresentationRequest? last = null;
-                for (int i = 0; i < _requests.Count; i++)
+                Emit(definitionId);
+                PresentationVisualProxy? last = null;
+                foreach (ref readonly PresentationRequestOp op in _requests.Ops)
                 {
-                    PresentationRequest request = _requests.GetSpan()[i];
-                    if (request.Kind == PresentationRequestKind.VisualProxy)
+                    if (op.Channel == PresentationRequestChannel.VisualProxy)
                     {
-                        last = request;
+                        last = _requests.VisualProxyAt(op.Slot).VisualProxy;
                     }
                 }
 
@@ -344,19 +343,18 @@ namespace Ludots.Tests.Presentation
                     throw new InvalidOperationException($"{definitionId} did not emit a visual proxy.");
                 }
 
-                return last.Value.VisualProxy;
+                return last.Value;
             }
 
             public SplineRibbonRequest EmitSpline(string definitionId)
             {
-                _ = Emit(definitionId);
-                PresentationRequest? last = null;
-                for (int i = 0; i < _requests.Count; i++)
+                Emit(definitionId);
+                SplineRibbonRequest? last = null;
+                foreach (ref readonly PresentationRequestOp op in _requests.Ops)
                 {
-                    PresentationRequest request = _requests.GetSpan()[i];
-                    if (request.Kind == PresentationRequestKind.SplineRibbon)
+                    if (op.Channel == PresentationRequestChannel.SplineRibbon)
                     {
-                        last = request;
+                        last = _requests.SplineRibbonAt(op.Slot).Item;
                     }
                 }
 
@@ -365,10 +363,10 @@ namespace Ludots.Tests.Presentation
                     throw new InvalidOperationException($"{definitionId} did not emit a spline ribbon request.");
                 }
 
-                return last.Value.SplineRibbon;
+                return last.Value;
             }
 
-            private PresentationRequest Emit(string definitionId)
+            private void Emit(string definitionId)
             {
                 int defId = _definitions.GetId(definitionId);
                 Assert.That(defId, Is.GreaterThan(0), definitionId);
@@ -397,7 +395,6 @@ namespace Ludots.Tests.Presentation
                 _requests.Clear();
                 _emit.Update(0.016f);
                 Assert.That(_requests.Count, Is.GreaterThan(0), $"{definitionId} emitted nothing.");
-                return _requests.GetSpan()[0];
             }
 
             public void Dispose()

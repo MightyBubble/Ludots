@@ -146,6 +146,83 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void ParseObject_GlobalRoute_FailsClosed_PointsToFireGlobalEvent()
+        {
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+                TriggerGraphMount.ParseObject(
+                    (JsonObject)JsonNode.Parse(
+                        """{ "graph": "Graph.Probe", "route": "global" }""")!,
+                    "map probe"))!;
+
+            Assert.That(error.Message, Does.Contain("route"));
+            Assert.That(error.Message, Does.Contain("global"));
+            Assert.That(error.Message, Does.Contain("FireGlobalEvent"));
+        }
+
+        [Test]
+        public void AbilityMount_FiltersByAbilityId()
+        {
+            var mount = new TriggerGraphMountTrigger(
+                1,
+                GraphName,
+                new TriggerGraphEntry("cast", "Ability.CastStarted", 0, once: false),
+                Entity.Null,
+                TriggerGraphRefirePolicy.Ignore,
+                TriggerGraphMountDomain.Ability,
+                TriggerGraphMountRoute.Local,
+                abilityIdFilter: 42);
+
+            var matching = new ScriptContext();
+            matching.Set(MapTriggerEventPayloadKeys.AbilityId, 42);
+            Assert.That(mount.CheckConditions(matching), Is.True);
+
+            var other = new ScriptContext();
+            other.Set(MapTriggerEventPayloadKeys.AbilityId, 43);
+            Assert.That(mount.CheckConditions(other), Is.False);
+        }
+
+        [Test]
+        public void ModMount_RequiresMatchingModId()
+        {
+            var mount = new TriggerGraphMountTrigger(
+                1,
+                GraphName,
+                new TriggerGraphEntry("loaded", "ModLoaded", 0, once: false),
+                Entity.Null,
+                TriggerGraphRefirePolicy.Ignore,
+                TriggerGraphMountDomain.Mod,
+                TriggerGraphMountRoute.Local,
+                modIdFilter: "FixtureMod");
+
+            var missing = new ScriptContext();
+            Assert.That(mount.CheckConditions(missing), Is.False);
+
+            var other = new ScriptContext();
+            other.Set(MapTriggerEventPayloadKeys.ModId, "OtherMod");
+            Assert.That(mount.CheckConditions(other), Is.False);
+
+            var matching = new ScriptContext();
+            matching.Set(MapTriggerEventPayloadKeys.ModId, "FixtureMod");
+            Assert.That(mount.CheckConditions(matching), Is.True);
+        }
+
+        [Test]
+        public void GlobalMapRoute_BroadcastsAndUnregistersWithOwnerMap()
+        {
+            var manager = new TriggerManager();
+            var global = new CountingTrigger { EventKey = new EventKey("CrossMap.Probe") };
+            manager.RegisterGlobalTriggers(new MapId("map-a"), new[] { global });
+
+            manager.FireGlobalEvent(global.EventKey, new ScriptContext());
+            Assert.That(global.Count, Is.EqualTo(1));
+
+            manager.UnregisterMapTriggers(new MapId("map-a"), new ScriptContext());
+            manager.FireGlobalEvent(global.EventKey, new ScriptContext());
+            Assert.That(global.Count, Is.EqualTo(1),
+                "Unregistering the owning map must detach its global subscriptions.");
+        }
+
+        [Test]
         public void ParseList_MissingNode_YieldsNoMounts()
         {
             List<TriggerGraphMount> mounts = TriggerGraphMount.ParseList(null, MapId);
@@ -224,6 +301,33 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void BuildTriggers_AbilityDomainMount_ThrowsNoRuntimePipeline()
+        {
+            using var world = World.Create();
+            const string abilityId = "ability.mount_probe";
+            MapSession session = CreateSession(world,
+                $$"""[ { "graph": "{{GraphName}}", "scopeInstanceId": "{{ScopeInstanceId}}", "domain": "ability", "ability": "{{abilityId}}" } ]""");
+            var programs = new GraphProgramRegistry();
+            RegisterProgram(programs, GraphName, GraphKind.TriggerGraph, HaltProgram(), entries: ProbeEntries());
+
+            string? message = null;
+            try
+            {
+                TriggerGraphMounting.BuildTriggers(session, programs, entityMounts: null);
+            }
+            catch (InvalidOperationException ex)
+            {
+                message = ex.Message;
+            }
+
+            Assert.That(message, Is.Not.Null);
+            Assert.That(message, Does.Contain(MapId));
+            Assert.That(message, Does.Contain(TriggerGraphMount.FieldName));
+            Assert.That(message, Does.Contain(abilityId));
+            Assert.That(message, Does.Contain("no runtime mount pipeline"));
+        }
+
+        [Test]
         public void BuildTriggers_ValidMount_BuildsOneTriggerPerEntryWithResolvedScope()
         {
             using var world = World.Create();
@@ -251,7 +355,7 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(mounts[1].Name, Is.EqualTo($"TriggerGraph:{GraphName}:close"));
             Assert.That(mounts[1].EventKey, Is.EqualTo(GameEvents.MapUnloaded));
             Assert.That(resumes.Count, Is.EqualTo(2), "Each entry gets a think-wave resume companion.");
-            Assert.That(resumes[0].EventKey, Is.EqualTo(GameEvents.MapHeartbeat));
+            Assert.That(resumes[0].EventKey, Is.EqualTo(GameEvents.MapTriggerResume));
         }
 
         [Test]
@@ -344,6 +448,33 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void ExecuteAsync_ScopeLessMount_WithMapVariableOp_FailsClosedNamingOp()
+        {
+            using var fixture = TriggerGraphEngineFixture.Create(includeMapMount: false);
+            using GameEngine engine = fixture.CreateEngine();
+            GraphInstruction[] program =
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.WriteMapVarInt, A = 0, B = byte.MaxValue, Imm = 1 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+            };
+            int graphId = fixture.RegisterTriggerGraph(engine, program, new[]
+            {
+                new TriggerGraphEntry("probe", GameEvents.MapLoaded.Value, startPc: 0, once: false),
+            });
+            var trigger = new TriggerGraphMountTrigger(graphId, GraphName,
+                new TriggerGraphEntry("probe", GameEvents.MapLoaded.Value, startPc: 0, once: false),
+                Entity.Null);
+
+            ScriptContext context = engine.CreateContext();
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => trigger.ExecuteAsync(context));
+
+            Assert.That(ex!.Message, Does.Contain(nameof(GraphNodeOp.WriteMapVarInt)),
+                "A scope-less mount running a map-variable op must fail closed naming the op.");
+            Assert.That(ex.Message, Does.Contain("GAS.GRAPH.ERR.MapVariableScopeEntity"),
+                "The fail-closed error must identify the missing map scope instead of crashing the host.");
+        }
+
+        [Test]
         public void ExecuteAsync_NonHaltingLoop_SuspendsThenFailsAtPerRunInstructionCap()
         {
             using var fixture = TriggerGraphEngineFixture.Create(includeMapMount: false);
@@ -418,6 +549,33 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void LoadMap_WithAbilityDomainMount_FailsClosedNoRuntimePipeline()
+        {
+            const string abilityId = "ability.mount_probe";
+            using var fixture = TriggerGraphEngineFixture.Create(includeMapMount: true, abilityDomainMount: true);
+            using GameEngine engine = fixture.CreateEngine();
+            fixture.RegisterTriggerGraph(engine, HaltProgram(), ProbeEntries());
+
+            string? message = null;
+            try
+            {
+                engine.LoadMap(MapId);
+            }
+            catch (InvalidOperationException ex)
+            {
+                message = ex.Message;
+            }
+
+            Assert.That(message, Is.Not.Null, "Map load must fail closed on an ability-domain mount.");
+            Assert.That(message, Does.Contain(MapId));
+            Assert.That(message, Does.Contain(TriggerGraphMount.FieldName));
+            Assert.That(message, Does.Contain(abilityId));
+            Assert.That(message, Does.Contain("no runtime mount pipeline"));
+            Assert.That(engine.TriggerManager.Get<TriggerGraphMountTrigger>(), Is.Null,
+                "A rejected ability-domain mount must leave no partial map-domain mount behind.");
+        }
+
+        [Test]
         public void LoadMap_WithUnknownMountedGraph_Throws()
         {
             using var fixture = TriggerGraphEngineFixture.Create(includeMapMount: true, graphName: "Graph.Missing");
@@ -483,6 +641,18 @@ namespace Ludots.Tests.Gas.Graph
             programs.Register(id, program, kind, GraphInstructionSourceMap.Empty, null, entries);
         }
 
+        private sealed class CountingTrigger : Trigger, IMapTriggerRoute
+        {
+            public int Count { get; private set; }
+            public bool IsGlobalRoute => true;
+
+            public override System.Threading.Tasks.Task ExecuteAsync(ScriptContext context)
+            {
+                Count++;
+                return System.Threading.Tasks.Task.CompletedTask;
+            }
+        }
+
         private sealed class TriggerGraphEngineFixture : IDisposable
         {
             private const string ModId = "TriggerGraphMountFixtureMod";
@@ -494,7 +664,7 @@ namespace Ludots.Tests.Gas.Graph
 
             public string Root { get; }
 
-            public static TriggerGraphEngineFixture Create(bool includeMapMount, string? graphName = null)
+            public static TriggerGraphEngineFixture Create(bool includeMapMount, string? graphName = null, bool abilityDomainMount = false)
             {
                 string effectiveGraphName = graphName ?? GraphName;
                 string root = Path.Combine(Path.GetTempPath(), "Ludots_TriggerGraphMountTests", Guid.NewGuid().ToString("N"));
@@ -589,16 +759,7 @@ namespace Ludots.Tests.Gas.Graph
                     ]
                     """);
                 string mapJson = includeMapMount
-                    ? $$"""
-                      {
-                        "Id": "{{MapId}}",
-                        "Tags": [ "camera.skip_default_on_load" ],
-                        "Entities": [
-                          { "InstanceId": "{{ScopeInstanceId}}", "Template": "{{TemplateId}}" }
-                        ],
-                        "TriggerGraphs": [ { "graph": "{{effectiveGraphName}}", "scopeInstanceId": "{{ScopeInstanceId}}" } ]
-                      }
-                      """
+                    ? BuildMapJson(effectiveGraphName, abilityDomainMount)
                     : $$"""
                       {
                         "Id": "{{MapId}}",
@@ -610,6 +771,23 @@ namespace Ludots.Tests.Gas.Graph
                       """;
                 File.WriteAllText(Path.Combine(root, ModId, "assets", "Maps", $"{MapId}.json"), mapJson);
                 return new TriggerGraphEngineFixture(root);
+            }
+
+            private static string BuildMapJson(string effectiveGraphName, bool abilityDomainMount)
+            {
+                string mounts = abilityDomainMount
+                    ? $$"""[ { "graph": "{{effectiveGraphName}}", "scopeInstanceId": "{{ScopeInstanceId}}", "domain": "ability", "ability": "ability.mount_probe" } ]"""
+                    : $$"""[ { "graph": "{{effectiveGraphName}}", "scopeInstanceId": "{{ScopeInstanceId}}" } ]""";
+                return $$"""
+                    {
+                      "Id": "{{MapId}}",
+                      "Tags": [ "camera.skip_default_on_load" ],
+                      "Entities": [
+                        { "InstanceId": "{{ScopeInstanceId}}", "Template": "{{TemplateId}}" }
+                      ],
+                      "TriggerGraphs": {{mounts}}
+                    }
+                    """;
             }
 
             public GameEngine CreateEngine()

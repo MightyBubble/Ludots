@@ -152,7 +152,7 @@ Bake、runtime incremental、MassNavigationFlow avoidance 都应从 manifestatio
 
 - Grid editor 的高度、水、blocked、area id 写入逻辑地形数据。
 - Hex / VertexMap 通过 `VertexMapLogicTerrainField` 暴露同一接口。
-- VisualHeightmap 可投影到 `MutableGridLogicTerrainField`，但必须显式声明 projection 参数。
+- ContinuousHeightmap 可投影到 `MutableGridLogicTerrainField`，但必须显式声明 projection 参数。
 - `areaId` 是通行 cost / layer 的索引，不是颜色或材质名字。
 
 迁移时需要确认：

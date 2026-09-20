@@ -1,16 +1,59 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using Ludots.Core.Persistence;
 
 namespace Ludots.Core.Input.Runtime
 {
+    /// <summary>
+    /// The authoritative input snapshot, refrozen once per logic tick from
+    /// <see cref="AuthoritativeInputAccumulator"/>. Pressed/released reads here are for
+    /// this logic tick — every visual frame since the previous freeze is folded in — so
+    /// fixed-step consumers keep their presses and releases even when the pacemaker skips
+    /// logic ticks between visual frames.
+    /// </summary>
     public sealed class FrozenInputActionReader : IInputActionReader
     {
         private readonly Dictionary<string, ActionState> _states = new(StringComparer.Ordinal);
+        private IReadOnlyList<AuthoritativeAction>? _replayOverride;
+        public bool ReplayInputIsolation { get; private set; }
+
+        public void SetReplayInputIsolation(bool enabled)
+        {
+            ReplayInputIsolation = enabled;
+            if (!enabled) _replayOverride = null;
+        }
+
+        public void QueueReplayActions(IReadOnlyList<AuthoritativeAction> actions)
+        {
+            if (actions == null) throw new ArgumentNullException(nameof(actions));
+            if (_replayOverride != null) throw new SaveContextException("Replay input frame is still pending consumption.");
+            _replayOverride = actions.Count == 0 ? Array.Empty<AuthoritativeAction>() : new List<AuthoritativeAction>(actions).ToArray();
+        }
+
+        public bool TryConsumeReplayActions(out IReadOnlyList<AuthoritativeAction>? actions)
+        {
+            actions = _replayOverride;
+            _replayOverride = null;
+            return actions != null;
+        }
+
+        public void ClearReplayActions()
+        {
+            _replayOverride = null;
+        }
 
         public void Clear()
         {
             _states.Clear();
+            _replayOverride = null;
+            ReplayInputIsolation = false;
+        }
+
+        public void ClearSnapshot()
+        {
+            _states.Clear();
+            _replayOverride = null;
         }
 
         public void SetActionValue(string actionId, Vector3 value)
@@ -98,6 +141,38 @@ namespace Ludots.Core.Input.Runtime
             return !string.IsNullOrWhiteSpace(actionId) &&
                    _states.TryGetValue(actionId, out var state) &&
                    state.ReleasedThisFrame;
+        }
+
+        /// <summary>
+        /// Authoritative "pressed this tick" for logic-tick consumers: true when the action
+        /// was pressed in any visual frame folded into this frozen snapshot. Supersedes the
+        /// live handler's single-visual-frame press, which is lost whenever the pacemaker
+        /// skips the logic tick that would consume it.
+        /// </summary>
+        public bool PressedThisTick(string actionId) => PressedThisFrame(actionId);
+
+        /// <summary>
+        /// Authoritative "released this tick" for logic-tick consumers; see
+        /// <see cref="PressedThisTick"/>.
+        /// </summary>
+        public bool ReleasedThisTick(string actionId) => ReleasedThisFrame(actionId);
+
+        public void CopyAuthoritativeActions(List<AuthoritativeAction> destination)
+        {
+            if (destination == null) throw new ArgumentNullException(nameof(destination));
+            destination.Clear();
+            foreach (KeyValuePair<string, ActionState> pair in _states)
+            {
+                ActionState state = pair.Value;
+                destination.Add(new AuthoritativeAction(
+                    pair.Key,
+                    state.Value,
+                    state.IsDown,
+                    state.PressedThisFrame,
+                    state.ReleasedThisFrame));
+            }
+
+            destination.Sort(static (left, right) => string.CompareOrdinal(left.ActionId, right.ActionId));
         }
 
         private static bool IsNonZero(Vector3 value)

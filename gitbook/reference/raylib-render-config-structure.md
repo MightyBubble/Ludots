@@ -83,7 +83,7 @@ Quarks schema 的作者面（发射率、生命周期、尺寸区间、`spawnMod
 | `distance_fog.json` | `{enabled, density, start, end, color:[r,g,b]}` | `RaylibFrameLighting`（雾四参数） |
 | `ambient_day_ramp.json` | `lightColor`/`lightIntensity` + 11 站 `samples[]`（phase→rgb+intensity） | 环境光昼夜 ramp |
 | 天空/水体 MergedConfigEntry | `backendId`/`enabled`/`mapIds`/`gradientStops`（天空）或 `waterPlaneY`/`resolutionScale`/`waveStrength`/`moveSpeed`/`dudvUri`（水体） | `RaylibSkyEnvironment` / `RaylibWaterPass` |
-| `RaylibShadowConfig` | `MapSize`（默认 2048）、`ReceiverBiasWorld`（默认 0.04） | `RaylibDirectionalShadowMap` |
+| `RaylibShadowConfig` | `MapSize`（默认 2048）、`ReceiverBiasWorld`（默认 0.04）、`SceneRadiusMeters`（默认 280）、`ReceiverTexelWorld`（默认 0.16） | `RaylibDirectionalShadowMap` / 宿主组帧 |
 
 `distance_fog.json` 与 `ambient_day_ramp.json` 的默认件在 `src/Client/Ludots.Raylib.Render/Resources/`（csproj 复制到输出根，`RaylibFrameLighting.LoadFromDefaultPath` 从 `AppContext.BaseDirectory` 装载）；mod 用同结构文件覆盖。画廊里 sky_daynight / water 场景就是手工 `MergedConfigEntry` 演示这两个条目的作者写法。
 

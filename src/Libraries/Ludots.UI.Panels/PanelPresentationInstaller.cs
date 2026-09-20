@@ -12,7 +12,7 @@ namespace Ludots.UI.Panels;
 /// Single installation entry for engine-side panel presentation. Called by host
 /// composers (raylib/web) and test harnesses after UIRoot/UiSurfaceHost exist.
 /// Selection is read from merged game.json ("panelSkin"); panels appear with zero
-/// mod code — the 0-encoding promise of #858 contract four.
+/// mod code — the 0-encoding promise of contract four.
 /// </summary>
 public static class PanelPresentationInstaller
 {
@@ -33,6 +33,12 @@ public static class PanelPresentationInstaller
             ?? throw new InvalidOperationException("Panel presentation requires UIRoot engine service.");
 
         PanelTheme? theme = PanelThemeCatalog.TryLoad(engine);
+        var textMeasurer = engine.GetService(CoreServiceKeys.UiTextMeasurer) as Ludots.UI.Runtime.IUiTextMeasurer;
+        var imageSizeProvider = engine.GetService(CoreServiceKeys.UiImageSizeProvider) as Ludots.UI.Runtime.IUiImageSizeProvider;
+        var seats = engine.TryGetService(CoreServiceKeys.ClientLocalSeatRegistry, out Ludots.Core.Client.ClientLocalSeatRegistry? seatRegistry)
+            ? seatRegistry
+            : null;
+        var displayResolver = engine.GetService(CoreServiceKeys.PresentationDisplayResolver);
         engine.RegisterPresentationSystem(new PanelPresentationSystem(
             panelHost,
             templates,
@@ -40,6 +46,10 @@ public static class PanelPresentationInstaller
             surfaceHost,
             root,
             engine.MergedConfig?.PanelSkin,
-            theme?.StyleSheet));
+            theme?.StyleSheet,
+            textMeasurer,
+            imageSizeProvider,
+            displayResolver,
+            seats));
     }
 }

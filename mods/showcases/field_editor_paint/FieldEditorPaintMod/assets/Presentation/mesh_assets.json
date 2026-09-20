@@ -1,0 +1,12 @@
+[
+  {
+    "id": "field_paint.agent",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "field_paint.marker",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  }
+]

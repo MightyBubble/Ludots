@@ -311,13 +311,13 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void BlacksmithShowcase_MapLoad_BindsDeclaredVisualHeightmapTruth()
+        public void BlacksmithShowcase_MapLoad_BindsDeclaredContinuousHeightmapTruth()
         {
             using var engine = PresenterBlacksmithShowcaseTestHarness.CreateEngine();
             PresenterBlacksmithShowcaseTestHarness.LoadMap(engine, PresenterBlacksmithShowcaseIds.ShowcaseMapId, frames: 4);
 
-            IVisualHeightmap heightmap = engine.GetService(CoreServiceKeys.VisualHeightmap);
-            Assert.That(heightmap, Is.TypeOf<VisualHeightmapRuntime>());
+            IContinuousHeightmap heightmap = engine.GetService(CoreServiceKeys.ContinuousHeightmap);
+            Assert.That(heightmap, Is.TypeOf<ContinuousHeightmapRuntime>());
             Assert.That(heightmap.TrySampleHeightCm(0f, 0f, out float centerHeightCm), Is.True);
             Assert.That(centerHeightCm, Is.EqualTo(0f).Within(0.001f));
             Assert.That(heightmap.TrySampleHeightCm(240000f, 0f, out float edgeHeightCm), Is.True);

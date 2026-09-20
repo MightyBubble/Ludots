@@ -2,7 +2,7 @@
   "name": "CapabilityStandardGraphOpsNodeGalleryMod",
   "version": "1.0.0",
   "description": "Shared per-opcode GraphNodeOp gallery host. Player entries overlay startupMapId; this mod is not a launcher binding.",
-  "main": "bin/net8.0/CapabilityStandardGraphOpsNodeGalleryMod.dll",
+  "main": "bin/net9.0/CapabilityStandardGraphOpsNodeGalleryMod.dll",
   "priority": -1890,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

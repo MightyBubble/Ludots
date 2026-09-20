@@ -3,7 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Arch.Core;
+using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Attachment;
+using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Map;
 using Ludots.Core.Scripting;
@@ -13,7 +17,7 @@ namespace Ludots.Tests.Gas.Graph
 {
     /// <summary>
     /// Entity-domain TriggerGraph mounts end to end on a real engine: an entity
-    /// template declares "TriggerGraphs", the mounted graph reacts to its own
+    /// template declares "triggerGraphs", the mounted graph reacts to its own
     /// lifecycle (EntitySpawned same tick, EntityDied on the destroy tick,
     /// MapHeartbeat with self scope), reads its own attributes, writes its
     /// map's variables, goes inert after death, and is swept and cleaned up.
@@ -30,6 +34,7 @@ namespace Ludots.Tests.Gas.Graph
         private const string WatcherTemplateId = "entity_domain_watcher";
         private const string ProbeGraphName = "Graph.EntityDomain.Probe";
         private const string WatcherGraphName = "Graph.EntityDomain.Watcher";
+        private const string SettlementPulseEvent = "SettlementPulse";
         private const int HeartbeatIntervalTicks = 2;
 
         [Test]
@@ -59,23 +64,102 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void MapHeartbeatEntry_FiresWithSelfScope()
+        public void MapTriggerResumeEntry_FiresWithSelfScope()
         {
             using EntityDomainFixture fixture = EntityDomainFixture.Create();
             using GameEngine engine = fixture.CreateEngine();
             engine.Start();
             engine.LoadMap(MapId);
             MapVariableStore variables = RequireVariables(engine);
-            Assert.That(variables.ReadInt("wave_ran"), Is.EqualTo(0), "No wave may fire the entry before the interval elapses.");
+            Assert.That(variables.ReadInt("wave_ran"), Is.EqualTo(0), "No pulse may fire the entry before the resume dispatch.");
 
-            TickUntil(engine, () => variables.ReadInt("wave_ran") == 1, HeartbeatIntervalTicks * 4,
-                () => $"MapHeartbeat entry never ran (wave_ran={variables.ReadInt("wave_ran")}).");
+            // The retired MapHeartbeat think-wave cadence is replaced by the
+            // gated map continuation pulse (MapTriggerResume). An unsuspended entry still
+            // dispatches when the pulse fires — same map-bus path, same self scope.
+            engine.TriggerManager.FireMapTriggerResume(new MapId(MapId), engine.CreateContext());
+            TickUntil(engine, () => variables.ReadInt("wave_ran") == 1, 40,
+                () => $"MapTriggerResume entry never ran (wave_ran={variables.ReadInt("wave_ran")}).");
 
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
         }
 
         [Test]
-        public void EntityDestroy_RunsOwnEntityDiedEntryOnDestroyTick_ThenMountInertAndSwept()
+        public void TemplateTriggerGraphs_MultipleGraphs_MountInDeclarationOrder()
+        {
+            using EntityDomainFixture fixture = EntityDomainFixture.Create(
+                templateGraphNames: new[] { ProbeGraphName, WatcherGraphName });
+            using GameEngine engine = fixture.CreateEngine();
+            engine.Start();
+            engine.LoadMap(MapId);
+
+            IReadOnlyList<Trigger> triggers = engine.CurrentMapSession?.Triggers ?? Array.Empty<Trigger>();
+            Entity probe = RequireEntity(engine.World, "EntityDomainProbe");
+            int probeIndex = FindTriggerIndex(triggers, ProbeGraphName, "on_spawn", probe);
+            int watcherIndex = FindTriggerIndex(triggers, WatcherGraphName, "watcher_spawn", probe);
+            Assert.Multiple(() =>
+            {
+                Assert.That(probeIndex, Is.GreaterThanOrEqualTo(0));
+                Assert.That(watcherIndex, Is.GreaterThan(probeIndex));
+                Assert.That(RequireVariables(engine).ReadInt("spawned"), Is.EqualTo(1));
+                Assert.That(RequireVariables(engine).ReadInt("watcher_spawned"), Is.EqualTo(2));
+                Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
+            });
+        }
+
+        [Test]
+        public void AggregateRootGraph_ReceivesAttachedChildEvent_ButNotExternalEntityEvent()
+        {
+            using EntityDomainFixture fixture = EntityDomainFixture.Create();
+            using GameEngine engine = fixture.CreateEngine();
+            engine.Start();
+            engine.LoadMap(MapId);
+
+            Entity root = RequireEntity(engine.World, "EntityDomainProbe");
+            Entity child = engine.World.Create(
+                new WorldPositionCm { Value = new Ludots.Core.Mathematics.FixedPoint.Fix64Vec2(0, 0) },
+                new MapEntity { MapId = new MapId(MapId) });
+            AttachmentOps.Attach(engine.World, null, child, root, default);
+
+            ScriptContext childEvent = engine.CreateContext();
+            childEvent.Set(MapTriggerEventPayloadKeys.SourceEntity, child);
+            engine.TriggerManager.FireMapEvent(new MapId(MapId), new EventKey(SettlementPulseEvent), childEvent);
+            Assert.That(RequireVariables(engine).ReadInt("subworld_pulse"), Is.EqualTo(1));
+
+            Entity outsider = engine.World.Create(
+                new WorldPositionCm { Value = new Ludots.Core.Mathematics.FixedPoint.Fix64Vec2(500, 0) },
+                new MapEntity { MapId = new MapId(MapId) });
+            ScriptContext outsiderEvent = engine.CreateContext();
+            outsiderEvent.Set(MapTriggerEventPayloadKeys.SourceEntity, outsider);
+            engine.TriggerManager.FireMapEvent(new MapId(MapId), new EventKey(SettlementPulseEvent), outsiderEvent);
+            Assert.Multiple(() =>
+            {
+                Assert.That(RequireVariables(engine).ReadInt("subworld_pulse"), Is.EqualTo(1));
+                Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
+            });
+        }
+
+        [Test]
+        public void TemplateTriggerGraphs_DuplicateGraphId_FailsClosed()
+        {
+            using EntityDomainFixture fixture = EntityDomainFixture.Create(
+                templateGraphNames: new[] { ProbeGraphName, ProbeGraphName });
+            string? message = null;
+            try
+            {
+                using GameEngine _ = fixture.CreateEngine();
+            }
+            catch (InvalidOperationException ex)
+            {
+                message = ex.Message;
+            }
+
+            Assert.That(message, Is.Not.Null);
+            Assert.That(message, Does.Contain("repeats graph id"));
+            Assert.That(message, Does.Contain(ProbeGraphName));
+        }
+
+        [Test]
+        public void EntityDestroy_RunsOwnEntityDiedEntryOnDestroyTick_ThenMountReclaimedOnDestroy()
         {
             using EntityDomainFixture fixture = EntityDomainFixture.Create();
             using GameEngine engine = fixture.CreateEngine();
@@ -103,15 +187,12 @@ namespace Ludots.Tests.Gas.Graph
             Assert.Multiple(() =>
             {
                 Assert.That(variables.ReadInt("wave_ran"), Is.EqualTo(waveRuns),
-                    "A dead entity's MapHeartbeat mount must stay inert.");
+                    "A dead entity's mounts are reclaimed on the destroy tick — nothing can fire into them.");
                 Assert.That(variables.ReadInt("died"), Is.EqualTo(1),
-                    "The wave-granularity EntityDied broadcast must not re-fire the entity-domain entry.");
+                    "The EntityDied broadcast must not re-fire the entity-domain entry.");
+                Assert.That(engine.EntityTriggerGraphMounts.GetDeadMountCount(new MapId(MapId)), Is.EqualTo(0),
+                    "Destroy-time reclamation closes the dead-mount ledger immediately.");
             });
-
-            TickUntil(engine,
-                () => engine.EntityTriggerGraphMounts.GetDeadMountCount(new MapId(MapId)) == 0,
-                HeartbeatIntervalTicks * 6,
-                () => "Dead entity mounts must be swept at think waves.");
         }
 
         [Test]
@@ -211,6 +292,25 @@ namespace Ludots.Tests.Gas.Graph
             return null;
         }
 
+        private static int FindTriggerIndex(
+            IReadOnlyList<Trigger> triggers,
+            string graphName,
+            string entryLabel,
+            Entity? scope = null)
+        {
+            for (int i = 0; i < triggers.Count; i++)
+            {
+                if (triggers[i] is TriggerGraphMountTrigger mount &&
+                    string.Equals(mount.Name, $"TriggerGraph:{graphName}:{entryLabel}", StringComparison.Ordinal) &&
+                    (!scope.HasValue || mount.Scope == scope.Value))
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
         private static void TickUntil(GameEngine engine, Func<bool> condition, int maxFrames, Func<string> describeFailure)
         {
             for (int i = 0; i < maxFrames; i++)
@@ -252,6 +352,7 @@ namespace Ludots.Tests.Gas.Graph
                 Directory.CreateDirectory(Path.Combine(root, ModId, "assets", "Entities"));
                 Directory.CreateDirectory(Path.Combine(root, ModId, "assets", "Maps"));
                 Directory.CreateDirectory(Path.Combine(root, ModId, "assets", "GAS"));
+                Directory.CreateDirectory(Path.Combine(root, ModId, "assets", "Events"));
 
                 File.WriteAllText(
                     Path.Combine(root, ModId, "mod.json"),
@@ -339,9 +440,10 @@ namespace Ludots.Tests.Gas.Graph
                           "Name": { "Value": "EntityDomainProbe" },
                           "Team": { "Id": 1 },
                           "WorldPositionCm": { "Value": { "X": -300, "Y": 0 } },
-                          "AttributeBuffer": { "base": { "Health": 77 } }
+                          "AttributeBuffer": { "base": { "Health": 77 } },
+                          "EntityTriggerGraphAggregateRoot": {}
                         },
-                        "TriggerGraphs": [ {{graphList}} ]
+                        "triggerGraphs": [ {{graphList}} ]
                       },
                       {
                         "id": "{{WatcherTemplateId}}",
@@ -362,8 +464,9 @@ namespace Ludots.Tests.Gas.Graph
                         "kind": "TriggerGraph",
                         "entries": [
                           { "label": "on_spawn", "event": "EntitySpawned", "start": "spawn_begin", "once": true },
-                          { "label": "on_wave", "event": "MapHeartbeat", "start": "wave_begin" },
-                          { "label": "on_death", "event": "EntityDied", "start": "death_begin", "once": true }
+                          { "label": "on_wave", "event": "MapTriggerResume", "start": "wave_begin" },
+                          { "label": "on_death", "event": "EntityDied", "start": "death_begin", "once": true },
+                          { "label": "on_subworld_pulse", "event": "{{SettlementPulseEvent}}", "start": "pulse_begin", "once": true }
                         ],
                         "nodes": [
                           { "id": "spawn_begin", "op": "LoadExplicitTarget" },
@@ -381,7 +484,12 @@ namespace Ludots.Tests.Gas.Graph
                           { "id": "death_begin", "op": "LoadExplicitTarget" },
                           { "id": "death_one", "op": "ConstInt", "intValue": 1 },
                           { "id": "death_write", "op": "WriteMapVarInt", "var": "died" },
-                          { "id": "death_done", "op": "HaltReturnInt" }
+                          { "id": "death_done", "op": "HaltReturnInt" },
+
+                          { "id": "pulse_begin", "op": "LoadExplicitTarget" },
+                          { "id": "pulse_one", "op": "ConstInt", "intValue": 1 },
+                          { "id": "pulse_write", "op": "WriteMapVarInt", "var": "subworld_pulse" },
+                          { "id": "pulse_done", "op": "HaltReturnInt" }
                         ],
                         "controlEdges": [
                           { "from": "spawn_begin", "fromPort": "next", "to": "spawn_one" },
@@ -396,7 +504,11 @@ namespace Ludots.Tests.Gas.Graph
 
                           { "from": "death_begin", "fromPort": "next", "to": "death_one" },
                           { "from": "death_one", "fromPort": "next", "to": "death_write" },
-                          { "from": "death_write", "fromPort": "next", "to": "death_done" }
+                          { "from": "death_write", "fromPort": "next", "to": "death_done" },
+
+                          { "from": "pulse_begin", "fromPort": "next", "to": "pulse_one" },
+                          { "from": "pulse_one", "fromPort": "next", "to": "pulse_write" },
+                          { "from": "pulse_write", "fromPort": "next", "to": "pulse_done" }
                         ],
                         "valueEdges": [
                           { "from": "spawn_begin", "fromPort": "value", "to": "spawn_write", "toPort": "source" },
@@ -411,7 +523,11 @@ namespace Ludots.Tests.Gas.Graph
 
                           { "from": "death_begin", "fromPort": "value", "to": "death_write", "toPort": "source" },
                           { "from": "death_one", "fromPort": "value", "to": "death_write", "toPort": "value" },
-                          { "from": "death_one", "fromPort": "value", "to": "death_done", "toPort": "value" }
+                          { "from": "death_one", "fromPort": "value", "to": "death_done", "toPort": "value" },
+
+                          { "from": "pulse_begin", "fromPort": "value", "to": "pulse_write", "toPort": "source" },
+                          { "from": "pulse_one", "fromPort": "value", "to": "pulse_write", "toPort": "value" },
+                          { "from": "pulse_one", "fromPort": "value", "to": "pulse_done", "toPort": "value" }
                         ]
                       },
                       {
@@ -423,7 +539,9 @@ namespace Ludots.Tests.Gas.Graph
                         ],
                         "nodes": [
                           { "id": "w_spawn_begin", "op": "LoadExplicitTarget" },
+                          { "id": "w_spawn_read", "op": "ReadMapVarInt", "var": "watcher_spawned" },
                           { "id": "w_spawn_one", "op": "ConstInt", "intValue": 1 },
+                          { "id": "w_spawn_add", "op": "AddInt" },
                           { "id": "w_spawn_write", "op": "WriteMapVarInt", "var": "watcher_spawned" },
                           { "id": "w_spawn_done", "op": "HaltReturnInt" },
 
@@ -433,8 +551,10 @@ namespace Ludots.Tests.Gas.Graph
                           { "id": "w_death_done", "op": "HaltReturnInt" }
                         ],
                         "controlEdges": [
-                          { "from": "w_spawn_begin", "fromPort": "next", "to": "w_spawn_one" },
-                          { "from": "w_spawn_one", "fromPort": "next", "to": "w_spawn_write" },
+                          { "from": "w_spawn_begin", "fromPort": "next", "to": "w_spawn_read" },
+                          { "from": "w_spawn_read", "fromPort": "next", "to": "w_spawn_one" },
+                          { "from": "w_spawn_one", "fromPort": "next", "to": "w_spawn_add" },
+                          { "from": "w_spawn_add", "fromPort": "next", "to": "w_spawn_write" },
                           { "from": "w_spawn_write", "fromPort": "next", "to": "w_spawn_done" },
                           { "from": "w_death_begin", "fromPort": "next", "to": "w_death_one" },
                           { "from": "w_death_one", "fromPort": "next", "to": "w_death_write" },
@@ -442,8 +562,10 @@ namespace Ludots.Tests.Gas.Graph
                         ],
                         "valueEdges": [
                           { "from": "w_spawn_begin", "fromPort": "value", "to": "w_spawn_write", "toPort": "source" },
-                          { "from": "w_spawn_one", "fromPort": "value", "to": "w_spawn_write", "toPort": "value" },
-                          { "from": "w_spawn_one", "fromPort": "value", "to": "w_spawn_done", "toPort": "value" },
+                          { "from": "w_spawn_read", "fromPort": "value", "to": "w_spawn_add", "toPort": "a" },
+                          { "from": "w_spawn_one", "fromPort": "value", "to": "w_spawn_add", "toPort": "b" },
+                          { "from": "w_spawn_add", "fromPort": "value", "to": "w_spawn_write", "toPort": "value" },
+                          { "from": "w_spawn_add", "fromPort": "value", "to": "w_spawn_done", "toPort": "value" },
                           { "from": "w_death_begin", "fromPort": "value", "to": "w_death_write", "toPort": "source" },
                           { "from": "w_death_one", "fromPort": "value", "to": "w_death_write", "toPort": "value" },
                           { "from": "w_death_one", "fromPort": "value", "to": "w_death_done", "toPort": "value" }
@@ -451,6 +573,22 @@ namespace Ludots.Tests.Gas.Graph
                       }
                     ]
                     """);
+                File.WriteAllText(
+                    Path.Combine(root, ModId, "assets", "Events", "custom_events.json"),
+                    $$"""
+                    [
+                      { "id": "{{SettlementPulseEvent}}" }
+                    ]
+                    """
+                );
+                File.WriteAllText(
+                    Path.Combine(root, ModId, "assets", "config_catalog.json"),
+                    """
+                    [
+                      { "Path": "Events/custom_events.json", "Policy": "ArrayById", "IdField": "id" }
+                    ]
+                    """
+                );
                 File.WriteAllText(
                     Path.Combine(root, ModId, "assets", "Maps", $"{MapId}.json"),
                     $$"""
@@ -464,7 +602,8 @@ namespace Ludots.Tests.Gas.Graph
                         { "name": "died", "type": "int", "initial": 0 },
                         { "name": "spawn_health", "type": "float", "initial": 0 },
                         { "name": "watcher_spawned", "type": "int", "initial": 0 },
-                        { "name": "watcher_died", "type": "int", "initial": 0 }
+                        { "name": "watcher_died", "type": "int", "initial": 0 },
+                        { "name": "subworld_pulse", "type": "int", "initial": 0 }
                       ],
                       "TriggerGraphs": [
                         { "graph": "{{WatcherGraphName}}", "scopeInstanceId": "entity-domain-watcher", "domain": "entity" }

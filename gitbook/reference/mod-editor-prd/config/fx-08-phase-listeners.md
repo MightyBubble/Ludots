@@ -8,7 +8,7 @@ champion 演示 mod 的连招标记（真实）：W 命中挂标记，任意技�
 
 ```json
 [
-  { "id": "Effect.Champion.Ezreal.EssenceFluxHit", "tags": ["Effect.Champion.Buff"],
+  { "id": "Effect.Champion.Ezreal.EssenceFluxHit", "categories": ["Effect.Champion.Buff"],
     "presetType": "Buff", "lifetime": "After", "participatesInResponse": false,
     "duration": { "durationTicks": 240, "periodTicks": 0, "clockId": "FixedFrame" },
     "phaseListeners": [

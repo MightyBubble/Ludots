@@ -2,7 +2,7 @@
   "name": "PresenterBlacksmithScatterHudTextBenchmarkEntryMod",
   "version": "1.0.0",
   "description": "Direct launcher entry for the presenter blacksmith scatter HUD-text benchmark showcase.",
-  "main": "bin/net8.0/PresenterBlacksmithScatterHudTextBenchmarkEntryMod.dll",
+  "main": "bin/net9.0/PresenterBlacksmithScatterHudTextBenchmarkEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "PresenterBlacksmithShowcaseMod": "^1.0.0"

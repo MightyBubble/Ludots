@@ -13,7 +13,11 @@ namespace Ludots.Core.Gameplay.GAS
         public bool HasHeldPolicy;
         public HeldPolicy HeldPolicy;
         public bool HasCastModeOverride;
-        public InteractionModeType CastModeOverride;
+        public CastModeType CastModeOverride;
+        public bool HasTargetType;
+        public OrderTargetType TargetType;
+        public bool HasModifierBehavior;
+        public ModifierSubmitBehavior ModifierBehavior;
         public bool HasAutoTargetPolicy;
         public AutoTargetPolicy AutoTargetPolicy;
         public bool HasAutoTargetRangeCm;
@@ -119,6 +123,8 @@ namespace Ludots.Core.Gameplay.GAS
 
     public struct AbilityDefinition
     {
+        /// <summary>Ordered TriggerGraph names owned by this ability definition.</summary>
+        public List<string> TriggerGraphs;
         // 鈹€鈹€ Generic execution model 鈹€鈹€
         public AbilityExecSpec ExecSpec;
         public AbilityExecCallerParamsPool ExecCallerParamsPool;
@@ -148,14 +154,14 @@ namespace Ludots.Core.Gameplay.GAS
         public int ShowProgressionRequirementId;
         public bool HasShowProgressionRequirement;
 
-        // ── Catalog classification (RFC-0065 DEC-14) ──
+        // ── Category classification (RFC-0065 DEC-14) ──
         /// <summary>
-        /// Catalog tags declared on the ability (abilities.json <c>catalogTags</c>).
-        /// Pure classification data for semantic routing (e.g. CommandIntentProfile
-        /// <c>hasAbilityWithTag</c> / <c>byAbilityTag</c>); Core never interprets tag names.
+        /// Categories declared on the ability (abilities.json <c>categories</c>).
+        /// Classification for semantic routing (CommandIntentProfile / aggregation);
+        /// ids come from <see cref="Registry.AbilityCategoryRegistry"/>, not TagRegistry.
         /// </summary>
-        public GameplayTagContainer CatalogTags;
-        public bool HasCatalogTags;
+        public GameplayTagContainer Categories;
+        public bool HasCategories;
 
         // ── Interaction context binding (RFC-0065 CTX-6) ──
         /// <summary>
@@ -184,6 +190,7 @@ namespace Ludots.Core.Gameplay.GAS
             System.Array.Clear(_items, 0, _items.Length);
             System.Array.Clear(_has, 0, _has.Length);
             _registrationSource.Clear();
+            _registeredIds = null;
         }
 
         public void Register(int abilityId, in AbilityDefinition definition, string modId = null)
@@ -202,6 +209,7 @@ namespace Ludots.Core.Gameplay.GAS
             _items[abilityId] = definition;
             _has[abilityId] = true;
             _registrationSource[abilityId] = modId ?? "(core)";
+            _registeredIds = null;
         }
 
         public bool TryGet(int abilityId, out AbilityDefinition definition)
@@ -216,8 +224,35 @@ namespace Ludots.Core.Gameplay.GAS
             return true;
         }
 
-        /// <summary>In-place catalog tag probe (no definition copy); hot path for semantic routing (RFC-0065 DEC-14).</summary>
-        public bool HasCatalogTag(int abilityId, int tagId)
+        private List<int>? _registeredIds;
+
+        /// <summary>
+        /// Ascending snapshot of registered ability ids. Cached and invalidated on
+        /// <see cref="Register"/>/<see cref="Clear"/>; the returned list is a stable snapshot
+        /// and never refreshes in place, so callers must re-read after a later registration.
+        /// </summary>
+        public IReadOnlyList<int> RegisteredAbilityIds
+        {
+            get
+            {
+                List<int>? ids = _registeredIds;
+                if (ids == null)
+                {
+                    ids = new List<int>();
+                    for (int i = 1; i < _has.Length; i++)
+                    {
+                        if (_has[i]) ids.Add(i);
+                    }
+
+                    _registeredIds = ids;
+                }
+
+                return ids;
+            }
+        }
+
+        /// <summary>In-place category probe (no definition copy); hot path for semantic routing (RFC-0065 DEC-14).</summary>
+        public bool HasCategory(int abilityId, int categoryId)
         {
             if (abilityId <= 0 || abilityId >= _items.Length || !_has[abilityId])
             {
@@ -225,7 +260,7 @@ namespace Ludots.Core.Gameplay.GAS
             }
 
             ref readonly AbilityDefinition definition = ref _items[abilityId];
-            return definition.HasCatalogTags && definition.CatalogTags.HasTag(tagId);
+            return definition.HasCategories && definition.Categories.HasTag(categoryId);
         }
 
         /// <summary>
@@ -253,11 +288,11 @@ namespace Ludots.Core.Gameplay.GAS
         }
 
         /// <summary>
-        /// Lowest catalog tag id shared between the ability's <see cref="AbilityDefinition.CatalogTags"/>
-        /// and <paramref name="mask"/>; 0 when the ability is unknown, has no catalog tags, or none match.
+        /// Lowest category id shared between the ability's <see cref="AbilityDefinition.Categories"/>
+        /// and <paramref name="mask"/>; 0 when the ability is unknown, has no categories, or none match.
         /// In-place probe (no definition copy); hot path for panel aggregation (RFC-0065 DEC-10).
         /// </summary>
-        public int FirstCatalogTagIntersection(int abilityId, in GameplayTagContainer mask)
+        public int FirstCategoryIntersection(int abilityId, in GameplayTagContainer mask)
         {
             if (abilityId <= 0 || abilityId >= _items.Length || !_has[abilityId])
             {
@@ -265,7 +300,7 @@ namespace Ludots.Core.Gameplay.GAS
             }
 
             ref readonly AbilityDefinition definition = ref _items[abilityId];
-            return definition.HasCatalogTags ? definition.CatalogTags.FirstCommonTag(in mask) : 0;
+            return definition.HasCategories ? definition.Categories.FirstCommonTag(in mask) : 0;
         }
 
         public void RegisterFromEntity(World world, Entity templateEntity, int abilityId)

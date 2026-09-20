@@ -2,7 +2,7 @@
   "name": "RtsWar3TrainingShowcaseMod",
   "version": "1.0.0",
   "description": "Focused Warcraft-style training showcase.",
-  "main": "bin/net8.0/RtsWar3TrainingShowcaseMod.dll",
+  "main": "bin/net9.0/RtsWar3TrainingShowcaseMod.dll",
   "priority": 120,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

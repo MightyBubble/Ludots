@@ -2,9 +2,19 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using Ludots.Core.Config;
+using Ludots.Core.Engine;
 
 namespace Ludots.Core.Gameplay.Activities
 {
+    public sealed class ActivityRepeatCooldown
+    {
+        [JsonPropertyName("duration_ticks")]
+        public int DurationTicks { get; set; }
+
+        [JsonPropertyName("clock_domain")]
+        public ClockDomainId ClockDomain { get; set; } = ClockDomainId.Step;
+    }
+
     public sealed class ActivityConditionRef
     {
         [JsonPropertyName("condition_key")]
@@ -12,6 +22,15 @@ namespace Ludots.Core.Gameplay.Activities
 
         [JsonPropertyName("parameters")]
         public Dictionary<string, object?> Parameters { get; set; } = new(StringComparer.Ordinal);
+    }
+
+    public sealed class ActivitySourceSubscription
+    {
+        [JsonPropertyName("source_key")]
+        public string SourceKey { get; set; } = string.Empty;
+
+        [JsonPropertyName("match_condition")]
+        public ActivityConditionRef? MatchCondition { get; set; }
     }
 
     public sealed class ActivityEffectRef
@@ -67,8 +86,23 @@ namespace Ludots.Core.Gameplay.Activities
         [JsonPropertyName("source_key")]
         public string SourceKey { get; set; } = string.Empty;
 
+        [JsonPropertyName("source_subscription")]
+        public ActivitySourceSubscription? SourceSubscription { get; set; }
+
         [JsonPropertyName("dispatch_policy")]
         public ActivityDispatchPolicy DispatchPolicy { get; set; } = ActivityDispatchPolicy.Forced;
+
+        [JsonPropertyName("pool_key")]
+        public string PoolKey { get; set; } = string.Empty;
+
+        [JsonPropertyName("repeat_policy")]
+        public ActivityRepeatPolicy RepeatPolicy { get; set; } = ActivityRepeatPolicy.PendingDedupe;
+
+        [JsonPropertyName("repeat_cooldown")]
+        public ActivityRepeatCooldown? RepeatCooldown { get; set; }
+
+        [JsonPropertyName("mutex_group")]
+        public string MutexGroup { get; set; } = string.Empty;
 
         [JsonPropertyName("trigger_condition")]
         public ActivityConditionRef? TriggerCondition { get; set; }
@@ -168,6 +202,113 @@ namespace Ludots.Core.Gameplay.Activities
             {
                 throw new InvalidOperationException(
                     $"Activity '{definition.Id}' requires source_key.");
+            }
+
+            if (definition.SourceSubscription != null)
+            {
+                if (string.IsNullOrWhiteSpace(definition.SourceSubscription.SourceKey))
+                {
+                    throw new InvalidOperationException(
+                        $"Activity '{definition.Id}' source_subscription requires source_key.");
+                }
+
+                if (ActivityLifecycleKeys.IsLifecycleKey(definition.SourceSubscription.SourceKey))
+                {
+                    throw new InvalidOperationException(
+                        $"Activity '{definition.Id}' source_subscription.source_key '{definition.SourceSubscription.SourceKey}' is an activity lifecycle key, not a fact source ({ActivitySignalFailures.LifecycleKeyNotSource}).");
+                }
+
+                if (!string.Equals(
+                    definition.SourceKey,
+                    definition.SourceSubscription.SourceKey,
+                    StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Activity '{definition.Id}' source_subscription.source_key '{definition.SourceSubscription.SourceKey}' differs from source_key '{definition.SourceKey}'.");
+                }
+
+                if (definition.SourceSubscription.MatchCondition != null &&
+                    string.IsNullOrWhiteSpace(definition.SourceSubscription.MatchCondition.ConditionKey))
+                {
+                    throw new InvalidOperationException(
+                        $"Activity '{definition.Id}' source_subscription.match_condition requires condition_key.");
+                }
+            }
+
+            if (!Enum.IsDefined(typeof(ActivityRepeatPolicy), definition.RepeatPolicy))
+            {
+                throw new InvalidOperationException(
+                    $"Activity '{definition.Id}' has unknown repeat_policy value '{(int)definition.RepeatPolicy}'.");
+            }
+
+            if (definition.RepeatPolicy == ActivityRepeatPolicy.Cooldown)
+            {
+                if (definition.RepeatCooldown == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Activity '{definition.Id}' uses cooldown repeat_policy and requires repeat_cooldown.");
+                }
+
+                if (definition.RepeatCooldown.DurationTicks <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Activity '{definition.Id}' repeat_cooldown.duration_ticks must be positive.");
+                }
+
+                if (!Enum.IsDefined(typeof(ClockDomainId), definition.RepeatCooldown.ClockDomain))
+                {
+                    throw new InvalidOperationException(
+                        $"Activity '{definition.Id}' repeat_cooldown.clock_domain is unknown.");
+                }
+            }
+            else if (definition.RepeatCooldown != null)
+            {
+                throw new InvalidOperationException(
+                    $"Activity '{definition.Id}' declares repeat_cooldown but repeat_policy is not cooldown.");
+            }
+
+            if (definition.RepeatPolicy == ActivityRepeatPolicy.Mutex)
+            {
+                if (string.IsNullOrWhiteSpace(definition.MutexGroup))
+                {
+                    throw new InvalidOperationException(
+                        $"Activity '{definition.Id}' uses mutex repeat_policy and requires mutex_group.");
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(definition.MutexGroup))
+            {
+                throw new InvalidOperationException(
+                    $"Activity '{definition.Id}' declares mutex_group but repeat_policy is not mutex.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(definition.PoolKey) &&
+                definition.DispatchPolicy != ActivityDispatchPolicy.Pooled)
+            {
+                throw new InvalidOperationException(
+                    $"Activity '{definition.Id}' declares pool_key but dispatch_policy is not pooled.");
+            }
+
+            if (definition.DispatchPolicy == ActivityDispatchPolicy.Pooled)
+            {
+                if (string.IsNullOrWhiteSpace(definition.PoolKey))
+                {
+                    throw new InvalidOperationException(
+                        $"Activity '{definition.Id}' uses pooled dispatch_policy and requires pool_key.");
+                }
+
+                if (definition.Options.Count > 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Activity '{definition.Id}' is pooled and must not declare options; the drawn candidate owns options.");
+                }
+
+                if (definition.AutomaticEffects.Count > 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Activity '{definition.Id}' is pooled and must not declare automatic_effects; the drawn candidate settles itself.");
+                }
+
+                return;
             }
 
             if (definition.DispatchPolicy == ActivityDispatchPolicy.Automatic)

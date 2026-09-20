@@ -3,7 +3,7 @@
 全场先亮一圈，再只剩两个矮个子亮着。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_QueryFilterTemplate/poster.png" src="artifacts/evidence/capability_standard_graph_op_QueryFilterTemplate/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_QueryFilterTemplate/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_QueryFilterTemplate/play.mp4。
 </video>
 
 ## 作者写法
@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | 仅 Query |
+| 可用图种 | Script / TriggerGraph / Query |
 | 返回 | 无（副作用节点） |
 | 输入端口（值边 toPort） | `list`（目标名单） |
 | 特殊写法 | imm 填符号名（编译期解析） |
@@ -43,7 +43,7 @@ QueryAllMapEntities → **QueryFilterTemplate**（本篇）
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Query；Effect / Score / Validation / Derived / Script / TriggerGraph 图不可用（编译期白名单拒绝）。
+- 图种边界：可用于 Query / Script / TriggerGraph；Effect / Score / Validation / Derived 图不可用（编译期白名单拒绝）。
 - imm 是装载期解析的符号名：符号改名后，引用它的图要跟着改并重编译。
 - 同类用法：战场统计（全场均值/最值）、点名最残或最能扛的目标、按条件筛名单再排序。
 ## 怎么进

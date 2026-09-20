@@ -13,7 +13,7 @@ using Ludots.Platform.Abstractions;
 
 namespace CapabilityStandardGraphOpsNodeGalleryMod.Runtime.Drivers;
 
-public sealed class ScriptNodeDriver : IGraphOpsNodeDriver
+public sealed class ScriptNodeDriver : IGraphOpsNodeDriver, IGraphCallbackResumeTarget
 {
     public const string ConstSevenCalleeFile = "_constSevenCallee.json";
     public const string ConstSevenCalleeGraphKey = "showcase.graph_op._constSevenCallee";
@@ -38,6 +38,7 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver
     private readonly Entity[] _targets = new Entity[GraphVmLimits.MaxTargets];
     private readonly int[] _callStack = new int[GraphVmLimits.MaxCallStackDepth];
     private readonly GraphProgramRegistry _programs = new();
+    private int _featuredGraphId;
     private readonly List<ScrollRow> _scrollRows = new();
     private readonly Dictionary<string, int> _rowOfNodeId = new(StringComparer.Ordinal);
     private readonly List<ScrollArrow> _scrollArrows = new();
@@ -45,6 +46,10 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver
     private GraphExecutionCursor _cursor;
     private bool _seeded;
     private bool _sawYield;
+    private bool _sawAwaitCallback;
+    private bool _lastConfirmed;
+    private int _replyCount;
+    private GraphOpsNodeDriverContext? _activeCtx;
     private float _originX;
     private float _originY;
     private int _calleeGraphId;
@@ -83,10 +88,11 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver
             _originX = ctx.Vignette.Actors[caster].X;
             _originY = ctx.Vignette.Actors[caster].Y;
             ResetSlice();
+            RegisterFeaturedProgram(ctx);
+            ctx.Programs = _programs;
             if (IsInvokeScript(ctx))
             {
                 RegisterConstSevenCallee(ctx);
-                ctx.Programs = _programs;
             }
 
             BuildScroll(ctx);
@@ -98,14 +104,22 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver
         GraphOpsNodeActorBinding.BindHud(ctx);
     }
 
+    public bool IsCallbackResumeAlive => true;
+
     public void Tick(GraphOpsNodeDriverContext ctx)
     {
+        _activeCtx = ctx;
         if (_cursor.Status != GraphExecutionStatus.Halted)
         {
             GraphSliceResult result = ExecuteFeaturedSlice(ctx);
             if (result.Yielded)
             {
                 _sawYield = true;
+                if (IsAwaitCallbackOp(ctx))
+                {
+                    CompleteGalleryAwaitAndDrain(ctx);
+                    _sawAwaitCallback = true;
+                }
             }
             else if (result.Halted)
             {
@@ -113,6 +127,12 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver
                 {
                     throw new InvalidOperationException(
                         "Yield gallery halted without GraphExecutionStatus.Yielded; the featured Yield never ran.");
+                }
+
+                if (IsAwaitCallbackOp(ctx) && !_sawAwaitCallback)
+                {
+                    throw new InvalidOperationException(
+                        "AwaitCallback gallery halted without parking on a callback handle.");
                 }
             }
             else
@@ -126,6 +146,47 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver
 
         ApplyBeat(ctx);
         GraphOpsNodeActorBinding.SyncHud(ctx);
+    }
+
+    public void ResumeAfterGraphCallback(int handleId, bool confirmed, int resultBoolRegister)
+    {
+        if (_activeCtx == null)
+        {
+            throw new InvalidOperationException(
+                "GRAPH.CALLBACK.ERR.GalleryResumeWithoutContext: ScriptNodeDriver resume requires an active gallery tick.");
+        }
+
+        if ((uint)resultBoolRegister >= (uint)_bools.Length)
+        {
+            throw new InvalidOperationException(
+                $"GRAPH.CALLBACK.ERR.ResultRegisterOutOfRange: bool register {resultBoolRegister} is outside the gallery VM.");
+        }
+
+        _bools[resultBoolRegister] = (byte)(confirmed ? 1 : 0);
+        _lastConfirmed = confirmed;
+        _replyCount++;
+
+        GraphCallbackService callbacks = RequireCallbacks(_activeCtx);
+        callbacks.PushResumeTarget(this);
+        try
+        {
+            GraphSliceResult result = ExecuteFeaturedSliceBody(_activeCtx);
+            if (result.Yielded && callbacks.HasLiveWaiterForTarget(this))
+            {
+                throw new InvalidOperationException(
+                    "AwaitCallback gallery does not auto-chain nested awaits in one Drain; complete the next handle on a later wave.");
+            }
+
+            if (!result.Halted && !result.Yielded)
+            {
+                throw new InvalidOperationException(
+                    $"AwaitCallback gallery resume returned status {result.Status}; increase budget.");
+            }
+        }
+        finally
+        {
+            callbacks.PopResumeTarget(this);
+        }
     }
 
     public void DrawOverlay(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw)
@@ -871,6 +932,44 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver
 
     private GraphSliceResult ExecuteFeaturedSlice(GraphOpsNodeDriverContext ctx)
     {
+        if (IsAwaitCallbackOp(ctx))
+        {
+            GraphCallbackService callbacks = RequireCallbacks(ctx);
+            callbacks.PushResumeTarget(this);
+            try
+            {
+                return ExecuteFeaturedSliceBody(ctx);
+            }
+            finally
+            {
+                callbacks.PopResumeTarget(this);
+            }
+        }
+
+        return ExecuteFeaturedSliceBody(ctx);
+    }
+
+    private void CompleteGalleryAwaitAndDrain(GraphOpsNodeDriverContext ctx)
+    {
+        GraphCallbackService callbacks = RequireCallbacks(ctx);
+        if (!callbacks.TryGetLiveHandleForTarget(this, out int handleId))
+        {
+            throw new InvalidOperationException(
+                "AwaitCallback gallery yielded without a live handle bound to ScriptNodeDriver.");
+        }
+
+        // Gallery autoplay stands in for the player tapping「确认」.
+        callbacks.Complete(handleId, confirmed: true);
+        callbacks.Drain();
+    }
+
+    private static GraphCallbackService RequireCallbacks(GraphOpsNodeDriverContext ctx)
+        => ctx.GraphCallbacks
+           ?? throw new InvalidOperationException(
+               $"Gallery '{ctx.Vignette.Op}' requires engine GraphCallbackService for AwaitCallback.");
+
+    private GraphSliceResult ExecuteFeaturedSliceBody(GraphOpsNodeDriverContext ctx)
+    {
         var targetList = new GraphTargetList(_targets);
         var state = new GraphExecutionState
         {
@@ -879,6 +978,7 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver
             ExplicitTarget = ctx.Target,
             Api = ctx.Api,
             Programs = _programs,
+            CurrentGraphId = RequireFeaturedGraphId(),
             F = _floats,
             I = _ints,
             B = _bools,
@@ -935,6 +1035,8 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver
         ctx.CaptionValues["water"] = water.ToString();
         ctx.CaptionValues["limit"] = limit.ToString();
         ctx.CaptionValues["result"] = result.ToString();
+        ctx.CaptionValues["confirmed"] = _lastConfirmed ? "同意" : "还没回";
+        ctx.CaptionValues["replies"] = _replyCount.ToString();
         ctx.CaptionValues["tea"] = "茶水";
         ctx.CaptionValues["place"] = IsAway(ctx) ? "驿站" : "原点";
         ctx.CaptionValues["homeState"] = IsAway(ctx) ? "空着" : "有人";
@@ -943,6 +1045,49 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver
 
     private bool IsAway(GraphOpsNodeDriverContext ctx)
         => IsPatrolOp(ctx) && _cursor.Status == GraphExecutionStatus.Yielded;
+
+    private void RegisterFeaturedProgram(GraphOpsNodeDriverContext ctx)
+    {
+        if (!ctx.Compiled.Package.HasValue)
+        {
+            throw new InvalidOperationException(
+                $"Gallery '{ctx.Vignette.Op}' compile result is missing Package (symbols required for ConstText).");
+        }
+
+        GraphProgramPackage package = ctx.Compiled.Package.Value;
+        string graphKey = string.IsNullOrWhiteSpace(package.GraphName)
+            ? $"showcase.graph_op.{ctx.Vignette.Op}"
+            : package.GraphName;
+        int graphId = GraphIdRegistry.GetId(graphKey);
+        if (graphId <= 0)
+        {
+            graphId = GraphIdRegistry.Register(graphKey);
+        }
+
+        if (!_programs.TryGetProgram(graphId, out _))
+        {
+            _programs.Register(
+                graphId,
+                package.Program,
+                package.Kind == GraphKind.None ? GraphKind.Script : package.Kind,
+                ctx.Compiled.SourceMap,
+                package.Symbols,
+                package.TriggerGraphEntries);
+        }
+
+        _featuredGraphId = graphId;
+    }
+
+    private int RequireFeaturedGraphId()
+    {
+        if (_featuredGraphId <= 0)
+        {
+            throw new InvalidOperationException(
+                "Script gallery featured graph id was not registered before ExecuteSlice.");
+        }
+
+        return _featuredGraphId;
+    }
 
     private void RegisterConstSevenCallee(GraphOpsNodeDriverContext ctx)
     {
@@ -1022,11 +1167,17 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver
         Array.Clear(_bools, 0, _bools.Length);
         Array.Clear(_callStack, 0, _callStack.Length);
         _sawYield = false;
+        _sawAwaitCallback = false;
+        _lastConfirmed = false;
+        _replyCount = 0;
         _visitedNodeIds.Clear();
     }
 
     private static bool IsYieldOp(GraphOpsNodeDriverContext ctx)
         => string.Equals(ctx.Vignette.Op, nameof(GraphNodeOp.Yield), StringComparison.Ordinal);
+
+    private static bool IsAwaitCallbackOp(GraphOpsNodeDriverContext ctx)
+        => string.Equals(ctx.Vignette.Op, nameof(GraphNodeOp.AwaitCallback), StringComparison.Ordinal);
 
     private static bool IsInvokeScript(GraphOpsNodeDriverContext ctx)
         => string.Equals(ctx.Vignette.Op, nameof(GraphNodeOp.InvokeScript), StringComparison.Ordinal);

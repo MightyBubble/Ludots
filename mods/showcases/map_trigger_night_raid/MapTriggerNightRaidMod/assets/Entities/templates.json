@@ -18,7 +18,7 @@
           "Y": 0
         }
       },
-      "VisualHeightmapSampleState": {},
+      "ContinuousHeightmapSampleState": {},
       "FacingDirection": {
         "AngleRad": 0.0
       },
@@ -27,7 +27,32 @@
           "Health": 100
         }
       },
-      "OrderBuffer": {}
+      "OrderBuffer": {},
+      "EntityTriggerGraphAggregateRoot": {}
+    },
+    "triggerGraphs": ["Graph.NightRaid.EntitySettlement"]
+  },
+  {
+    "id": "night_raid_raid_circle",
+    "components": {
+      "Name": {
+        "Value": "NightRaidRaidCircle"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "ContinuousHeightmapSampleState": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "RegionVolumeCm": {
+        "volumeKey": "raid_circle",
+        "shape": "circle",
+        "radiusCm": 250
+      }
     }
   },
   {
@@ -49,7 +74,7 @@
           "Y": 0
         }
       },
-      "VisualHeightmapSampleState": {},
+      "ContinuousHeightmapSampleState": {},
       "FacingDirection": {
         "AngleRad": 0.0
       },
@@ -79,7 +104,7 @@
           "Y": 0
         }
       },
-      "VisualHeightmapSampleState": {},
+      "ContinuousHeightmapSampleState": {},
       "FacingDirection": {
         "AngleRad": 0.0
       },
@@ -109,7 +134,7 @@
           "Y": 0
         }
       },
-      "VisualHeightmapSampleState": {},
+      "ContinuousHeightmapSampleState": {},
       "FacingDirection": {
         "AngleRad": 0.0
       },
@@ -132,7 +157,7 @@
           "Y": 0
         }
       },
-      "VisualHeightmapSampleState": {},
+      "ContinuousHeightmapSampleState": {},
       "FacingDirection": {
         "AngleRad": 0.0
       }

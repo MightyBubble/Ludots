@@ -4,6 +4,8 @@ Ludots — 基于 Arch ECS 的高性能 C# 游戏框架。六边形架构，一�
 
 **写任何代码前必须先读 `gitbook/contributing/ai-assisted-development.md` 的“任务执行决策规范”。**
 
+**写给人看的中文文档 / showcase 说明 / PR 说明前，必须先读并执行共享 skill `shuorenhua`（`skills/governance/shuorenhua/`）。**
+
 代码注释纪律：类型、方法、字段命名到位时不写注释——注释是命名无法表达"非显然的意图、取舍、约束"时的补救，不是默认动作；禁止在代码注释里写 issue/PR 编号、修复历史等项目管理痕迹（那些属于 commit message 与 issue，代码里只留合同本身）。
 
 Entity Association Core 的计划与 ADR SSOT 在 GitHub issue #239；ADR 正本在 #244，仓库 `docs/adr/` 不新增 AAC 平行 ADR 文件。

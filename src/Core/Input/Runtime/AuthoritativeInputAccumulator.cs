@@ -17,6 +17,11 @@ namespace Ludots.Core.Input.Runtime
             _states.Clear();
         }
 
+        public void DiscardLiveInput()
+        {
+            _states.Clear();
+        }
+
         public void CaptureAction(
             string actionId,
             Vector3 value,

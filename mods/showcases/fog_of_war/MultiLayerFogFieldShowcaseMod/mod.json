@@ -2,7 +2,7 @@
   "name": "MultiLayerFogFieldShowcaseMod",
   "version": "1.0.0",
   "description": "Multi-layer fog field showcase root for independent ground and air layers.",
-  "main": "bin/net8.0/MultiLayerFogFieldShowcaseMod.dll",
+  "main": "bin/net9.0/MultiLayerFogFieldShowcaseMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0"

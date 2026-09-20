@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using Arch.Core;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Graph.Codegen;
 using Ludots.Tests.Gas.Graph.Codegen;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
@@ -138,33 +139,45 @@ namespace Ludots.Tests.Gas.Graph
 
         [Test]
         [Category("ci-gate")]
-        public void Emitter_RejectsUnsupportedOp_FailClosed()
+        public void Emitter_HandlerForward_AcceptsNonSpecializeOp()
         {
             GraphInstruction[] program =
             {
                 new() { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = 1 },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+                // QueryRadius alone would need Api; mix with Halt is enough to force handler-forward emit shape.
                 new() { Op = (ushort)GraphNodeOp.QueryRadius, Imm = 0 },
             };
 
-            var ex = Throws<InvalidOperationException>(() =>
-                LinearIntGraphCsharpEmitter.Emit(program, "bad-op"));
-            That(ex!.Message, Does.Contain("QueryRadius"));
-            That(ex.Message, Does.Contain("whitelist"));
+            // Eligibility allows HandlerForward; emit itself succeeds (does not execute).
+            string source = LinearIntGraphCsharpEmitter.Emit(program[..2], "hf-ok");
+            That(source, Does.Contain("RunToHalt").Or.Contain("state.I["));
+            GraphCodegenEmitResult mixed = GraphCsharpEmitter.Emit(
+                new GraphInstruction[]
+                {
+                    new() { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = 1 },
+                    new() { Op = (ushort)GraphNodeOp.QueryRadius, Imm = 0 },
+                    new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+                },
+                "hf-query");
+            That(mixed.UsesSpecialize, Is.False);
+            That(mixed.Source, Does.Contain("RunToHalt"));
+            That(mixed.Source, Does.Contain("QueryRadius").Or.Contain("Op = 100"));
         }
 
         [Test]
         [Category("ci-gate")]
-        public void Emitter_RejectsBackwardJump_FailClosed()
+        public void Emitter_AllowsBackwardJump_ForLoops()
         {
             GraphInstruction[] program =
             {
                 new() { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = 1 },
-                new() { Op = (ushort)GraphNodeOp.Jump, Imm = -2 },
+                new() { Op = (ushort)GraphNodeOp.Jump, Imm = -1 },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
             };
 
-            var ex = Throws<InvalidOperationException>(() =>
-                LinearIntGraphCsharpEmitter.Emit(program, "back-jump"));
-            That(ex!.Message, Does.Contain("backward"));
+            string source = LinearIntGraphCsharpEmitter.Emit(program, "back-jump");
+            That(source, Does.Contain("goto L1"));
         }
 
         [Test]

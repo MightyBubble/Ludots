@@ -2,7 +2,7 @@
   "name": "CapabilityStandardGraphOpReadMapVarFloatEntryMod",
   "version": "1.0.0",
   "description": "Launcher entry for GraphNodeOp ReadMapVarFloat player gallery.",
-  "main": "bin/net8.0/CapabilityStandardGraphOpReadMapVarFloatEntryMod.dll",
+  "main": "bin/net9.0/CapabilityStandardGraphOpReadMapVarFloatEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"

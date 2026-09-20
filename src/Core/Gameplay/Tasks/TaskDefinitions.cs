@@ -61,8 +61,14 @@ namespace Ludots.Core.Gameplay.Tasks
         [JsonPropertyName("display_name")]
         public string DisplayName { get; set; } = string.Empty;
 
+        [JsonPropertyName("display_token")]
+        public string DisplayToken { get; set; } = string.Empty;
+
         [JsonPropertyName("summary")]
         public string Summary { get; set; } = string.Empty;
+
+        [JsonPropertyName("summary_token")]
+        public string SummaryToken { get; set; } = string.Empty;
 
         [JsonPropertyName("tags")]
         public List<string> Tags { get; set; } = new();
@@ -88,8 +94,8 @@ namespace Ludots.Core.Gameplay.Tasks
         [JsonPropertyName("on_enter_dialogue_id")]
         public string OnEnterDialogueId { get; set; } = string.Empty;
 
-        [JsonPropertyName("on_enter_cinematic_id")]
-        public string OnEnterCinematicId { get; set; } = string.Empty;
+        [JsonPropertyName("on_enter_sequence_id")]
+        public string OnEnterSequenceId { get; set; } = string.Empty;
     }
 
     public sealed class TaskDefinitionRegistry

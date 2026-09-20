@@ -2,7 +2,7 @@
   "name": "CapabilityStandardGraphOpQuerySortByAttributeEntryMod",
   "version": "1.0.0",
   "description": "Launcher entry for GraphNodeOp QuerySortByAttribute player gallery.",
-  "main": "bin/net8.0/CapabilityStandardGraphOpQuerySortByAttributeEntryMod.dll",
+  "main": "bin/net9.0/CapabilityStandardGraphOpQuerySortByAttributeEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"

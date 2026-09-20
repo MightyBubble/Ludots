@@ -164,8 +164,8 @@ public sealed class WorldSnapshotOrchestrationTests
         using GameEngine source = CreateInitializedEngine();
         using GameEngine target = CreateInitializedEngine();
         int typeId = RegisterRelationshipType(source, target, "Tests.Relationship.Persistence");
-        int pressureId = EnsureAttribute("RelationshipPersistencePressure");
-        int tagId = EnsureTag("Tests.Relationship.Persistence.Tagged");
+        int pressureId = EnsureAttribute("Health");
+        int tagId = EnsureTag("Role.Core.Researcher");
         var snapshotService = new WorldSnapshotService();
         var restoreService = new WorldRestoreService();
 
@@ -259,7 +259,11 @@ public sealed class WorldSnapshotOrchestrationTests
         Assert.That(admission.TryGet(beforeRestore.OrderId, OrderAdmissionStage.EntityIntake, out _), Is.False);
         var afterRestore = new Order { OrderTypeId = 3 };
         orderQueue.EnsureOrderId(ref afterRestore);
-        Assert.That(afterRestore.OrderId, Is.GreaterThan(beforeRestore.OrderId));
+        // Post-restore ids restart from the checkpoint boundary: both orders were the first
+        // allocation after their respective restore/capture points, so they must collide — a
+        // monotonic counter would leak pre-restore tick history into persisted Order.OrderId
+        // bytes and break replay determinism.
+        Assert.That(afterRestore.OrderId, Is.EqualTo(beforeRestore.OrderId));
         Assert.DoesNotThrow(admission.BeginLogicStep);
         admission.EndEntityIntake();
         admission.EndLogicStep();
@@ -333,14 +337,16 @@ public sealed class WorldSnapshotOrchestrationTests
 
     private static int EnsureAttribute(string attribute)
     {
-        int id = AttributeRegistry.GetId(attribute);
-        return id != AttributeRegistry.InvalidId ? id : AttributeRegistry.Register(attribute);
+        // Engine init freezes the ambient registry (attribute registration is config-load time only),
+        // so tests resolve ids that the core config already registered instead of adding new ones.
+        return AttributeRegistry.RequireId(attribute);
     }
 
     private static int EnsureTag(string tag)
     {
         int id = TagRegistry.GetId(tag);
-        return id != TagRegistry.InvalidId ? id : TagRegistry.Register(tag);
+        Assert.That(id, Is.Not.EqualTo(TagRegistry.InvalidId), $"Tag '{tag}' must be registered by core config.");
+        return id;
     }
 
     private static void UseTurnBasedPacemaker(GameEngine engine)

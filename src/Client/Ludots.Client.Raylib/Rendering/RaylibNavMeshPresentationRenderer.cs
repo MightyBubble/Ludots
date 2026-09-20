@@ -5,6 +5,7 @@ using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Presentation.Navigation;
 using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
+using Ludots.Raylib.Render;
 
 namespace Ludots.Client.Raylib.Rendering
 {
@@ -200,13 +201,13 @@ namespace Ludots.Client.Raylib.Rendering
             {
                 if (_occupied[i] != 0 && _meshes[i].vertexCount > 0)
                 {
-                    Rl.UnloadMesh(_meshes[i]);
+                    RaylibNativeResources.UnloadMesh(_meshes[i]);
                 }
             }
 
             if (_materialLoaded)
             {
-                Rl.UnloadMaterial(_material);
+                RaylibNativeResources.UnloadMaterial(_material);
                 _materialLoaded = false;
             }
 
@@ -269,7 +270,7 @@ namespace Ludots.Client.Raylib.Rendering
         {
             if (_meshes[slot].vertexCount > 0)
             {
-                Rl.UnloadMesh(_meshes[slot]);
+                RaylibNativeResources.UnloadMesh(_meshes[slot]);
                 _meshes[slot] = default;
             }
 
@@ -352,7 +353,7 @@ namespace Ludots.Client.Raylib.Rendering
                 }
             }
 
-            Rl.UploadMesh(ref mesh, false);
+            RaylibNativeResources.UploadMesh(ref mesh, false);
             return mesh;
         }
 
@@ -386,7 +387,7 @@ namespace Ludots.Client.Raylib.Rendering
 
                 if (_meshes[slot].vertexCount > 0)
                 {
-                    Rl.UnloadMesh(_meshes[slot]);
+                    RaylibNativeResources.UnloadMesh(_meshes[slot]);
                     _meshes[slot] = default;
                 }
 
@@ -410,7 +411,7 @@ namespace Ludots.Client.Raylib.Rendering
                 return;
             }
 
-            _material = Rl.LoadMaterialDefault();
+            _material = RaylibNativeResources.LoadMaterialDefault();
             _materialLoaded = true;
         }
 

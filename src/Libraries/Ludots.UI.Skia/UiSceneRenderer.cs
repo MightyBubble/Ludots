@@ -457,7 +457,10 @@ public sealed class SkiaUiRenderer : IUiRenderer
 	{
 		SKRect content = ContentBox(borderBox, style);
 		float availableWidth = Math.Max(0f, content.Width);
-		UiTextLayoutResult uiTextLayoutResult = UiTextLayout.Measure(text, style, availableWidth, constrainWidth: true);
+		IReadOnlyList<UiStyledTextRun>? styledRuns = node.TextRuns;
+		UiTextLayoutResult uiTextLayoutResult = styledRuns is { Count: > 0 }
+			? UiTextLayout.Measure(styledRuns, style, availableWidth, constrainWidth: true)
+			: UiTextLayout.Measure(text, style, availableWidth, constrainWidth: true);
 		SKRect textBox = content;
 		if (UiFlexAnonymousText.ShouldAlignAsAnonymousFlexItem(node))
 		{
@@ -471,6 +474,18 @@ public sealed class SkiaUiRenderer : IUiRenderer
 		using SKPaint paint = UiTextLayout.CreatePaint(style);
 		using SKPaint sKPaint = CreateShadowPaint(style.TextShadow, style);
 		float num = textBox.Top + style.FontSize;
+		IReadOnlyList<IReadOnlyList<UiStyledTextRun>>? styledLines = null;
+		if (styledRuns is { Count: > 0 })
+		{
+			using SKPaint measurePaint = UiTextLayout.CreatePaint(style);
+			styledLines = UiTextLayout.BreakStyledLines(
+				UiStyledTextRunNormalization.NormalizeWordBoundaries(styledRuns),
+				style,
+				measurePaint,
+				availableWidth,
+				constrainWidth: true);
+		}
+
 		for (int i = 0; i < uiTextLayoutResult.Lines.Count; i++)
 		{
 			string text2 = uiTextLayoutResult.Lines[i];
@@ -479,7 +494,9 @@ public sealed class SkiaUiRenderer : IUiRenderer
 			SKTextAlign align = ResolveTextAlign(style, direction);
 			float anchorX = ResolveTextAnchor(textBox, style, align);
 			float num2 = ResolveTextStartX(text3, textBox, style, align);
-			IReadOnlyList<UiTextRun> runs = UiTextLayout.CreateRuns(text3, style);
+			IReadOnlyList<UiTextRun> runs = styledLines != null && i < styledLines.Count
+				? UiTextLayout.CreateRuns(styledLines[i], style)
+				: UiTextLayout.CreateRuns(text3, style);
 			if (sKPaint != null)
 			{
 				UiShadow? textShadow = style.TextShadow;
@@ -996,12 +1013,24 @@ public sealed class SkiaUiRenderer : IUiRenderer
 	private static void DrawTextRuns(SKCanvas canvas, IReadOnlyList<UiTextRun> runs, float startX, float baselineY, UiStyle style, SKPaint paint)
 	{
 		float num = startX;
+		SKColor baseColor = paint.Color;
 		foreach (UiTextRun run in runs)
 		{
 			using SKFont sKFont = new SKFont(run.Typeface, style.FontSize);
+			if (run.HasColor)
+			{
+				paint.Color = run.Color.ToSKColor();
+			}
+			else
+			{
+				paint.Color = baseColor;
+			}
+
 			canvas.DrawText(run.Text, num, baselineY, SKTextAlign.Left, sKFont, paint);
 			num += sKFont.MeasureText(run.Text, paint);
 		}
+
+		paint.Color = baseColor;
 	}
 
 	private static void DrawTextDecorations(SKCanvas canvas, string line, float anchorX, float baselineY, SKTextAlign align, UiStyle style)

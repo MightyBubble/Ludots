@@ -486,9 +486,9 @@ React 前端不直接拼构建细节，所有业务动作都经由这些 backend
 
 ### 7.4 Phase 4: 废弃 WPF Launcher
 
-1. `src/Tools/ModLauncher/` 标记为 deprecated。
+1. ~~`src/Tools/ModLauncher/` 标记为 deprecated。~~ **已删除**（零环境收敛收口）。
 2. `scripts/run-mod-launcher.*` 切到新 CLI 命令面，或由更通用的 `scripts/launcher.*` 包装。
-3. 当新 CLI 对递归扫描、别名绑定、依赖闭包和 ref 导出全部覆盖后，移除 WPF 主路径文档。
+3. ~~当新 CLI 对递归扫描、别名绑定、依赖闭包和 ref 导出全部覆盖后，移除 WPF 主路径文档。~~ **已完成**：产品路径为 Launcher CLI / Web Launcher。
 
 ## 8 验收标准
 

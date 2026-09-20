@@ -50,6 +50,9 @@ public sealed class RaylibNavMeshPresentationContractTests
         string composerSource = File.ReadAllText(Path.Combine(
             repoRoot,
             "src/Adapters/Raylib/Ludots.Adapter.Raylib/RaylibHostComposer.cs"));
+        string frameRendererSource = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "src/Adapters/Raylib/Ludots.Adapter.Raylib/Rendering/RaylibFrameRenderer.cs"));
         string rendererSource = File.ReadAllText(Path.Combine(
             repoRoot,
             "src/Client/Ludots.Client.Raylib/Rendering/RaylibNavMeshPresentationRenderer.cs"));
@@ -58,19 +61,19 @@ public sealed class RaylibNavMeshPresentationContractTests
         Assert.That(composerSource, Does.Contain("PresentationVisualCapabilities.Decal"));
         Assert.That(composerSource, Does.Contain("PresentationVisualCapabilities.Vfx"));
         Assert.That(composerSource, Does.Contain("PresentationVisualCapabilities.Surface"));
-        // raylib 渲染走 PrimitiveDrawItem 静态 lane，typed InstancedBatch lane 无消费者；
-        // 声明了会被 InstancedBatchCapabilityValidator 放行然后静默不画，违反 fail-loud。
-        Assert.That(composerSource, Does.Not.Contain("PresentationVisualCapabilities.InstancedStaticMeshBatch"));
+        // typed InstancedBatch lane 由 RaylibInstancedBatchLaneStore 消费，flat 位在组装期与
+        // lane source 绑定原子声明；Hierarchical 在 raylib 无真分层，保持不声明以 fail-loud。
+        Assert.That(composerSource, Does.Contain("PresentationVisualCapabilities.InstancedStaticMeshBatch"));
         Assert.That(composerSource, Does.Not.Contain("PresentationVisualCapabilities.HierarchicalInstancedStaticMeshBatch"));
         Assert.That(hostSource, Does.Contain("GetService(CoreServiceKeys.NavMeshPresentationBuffer)"));
-        Assert.That(hostSource, Does.Contain("navMeshPresentationRenderer.Draw(navMeshPresentationBuffer)"));
+        Assert.That(frameRendererSource, Does.Contain("_navMeshPresentationRenderer.Draw(_navMeshPresentationBuffer)"));
         Assert.That(rendererSource, Does.Not.Contain("NavQueryServiceRegistry"));
         Assert.That(rendererSource, Does.Not.Contain("RuntimeIncrementalNavMeshRebuildQueue"));
         Assert.That(rendererSource, Does.Not.Contain("NavTileStore"));
 
-        int terrainDraw = hostSource.IndexOf("terrainRenderer.Render(TerrainSourceFor(engine.VertexMap), activeCamera)", StringComparison.Ordinal);
-        int navMeshDraw = hostSource.IndexOf("navMeshPresentationRenderer.Draw(navMeshPresentationBuffer)", StringComparison.Ordinal);
-        int entityDraw = hostSource.IndexOf("primitiveRenderer.Draw", navMeshDraw, StringComparison.Ordinal);
+        int terrainDraw = frameRendererSource.IndexOf("_terrainRenderer.Render(TerrainSource(), frame.ActiveCamera)", StringComparison.Ordinal);
+        int navMeshDraw = frameRendererSource.IndexOf("_navMeshPresentationRenderer.Draw(_navMeshPresentationBuffer)", StringComparison.Ordinal);
+        int entityDraw = frameRendererSource.IndexOf("_primitiveRenderer.Draw", navMeshDraw, StringComparison.Ordinal);
         Assert.That(terrainDraw, Is.GreaterThanOrEqualTo(0));
         Assert.That(navMeshDraw, Is.GreaterThan(terrainDraw));
         Assert.That(entityDraw, Is.GreaterThan(navMeshDraw));

@@ -1,0 +1,17 @@
+{
+  "startupMapId": "field_editor_paint",
+  "startupInputContexts": [
+    "Default_Gameplay"
+  ],
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ],
+  "windowTitle": "Ludots - Field Editor Paint",
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "targetFps": 60,
+  "panelSkin": "markup"
+}

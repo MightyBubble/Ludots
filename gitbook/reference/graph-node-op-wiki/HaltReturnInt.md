@@ -3,7 +3,7 @@
 数落进托盘、卷轴拉下打烊条、人挪到答案旁边——这三件事同时发生，就是收工。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_HaltReturnInt/poster.png" src="artifacts/evidence/capability_standard_graph_op_HaltReturnInt/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_HaltReturnInt/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_HaltReturnInt/play.mp4。
 </video>
 
 ## 作者写法

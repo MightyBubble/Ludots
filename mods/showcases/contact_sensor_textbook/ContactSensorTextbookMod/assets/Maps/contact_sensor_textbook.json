@@ -1,0 +1,14 @@
+{
+  "Id": "contact_sensor_textbook",
+  "Variables": [
+    { "name": "press.count", "type": "int", "initial": 0 },
+    { "name": "release.count", "type": "int", "initial": 0 }
+  ],
+  "Entities": [
+    { "InstanceId": "textbook_plate", "Template": "contact.textbook.plate" },
+    { "InstanceId": "textbook_ball", "Template": "contact.textbook.ball" }
+  ],
+  "TriggerGraphs": [
+    { "graph": "Graph.Textbook.Contact" }
+  ]
+}

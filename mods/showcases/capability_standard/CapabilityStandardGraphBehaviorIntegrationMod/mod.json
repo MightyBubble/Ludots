@@ -2,7 +2,7 @@
   "name": "CapabilityStandardGraphBehaviorIntegrationMod",
   "version": "1.0.0",
   "description": "Separate integration demo composing BT + HFSM + Level + Script hooks (not a kitchen-sink of the solo arenas).",
-  "main": "bin/net8.0/CapabilityStandardGraphBehaviorIntegrationMod.dll",
+  "main": "bin/net9.0/CapabilityStandardGraphBehaviorIntegrationMod.dll",
   "priority": -1900,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

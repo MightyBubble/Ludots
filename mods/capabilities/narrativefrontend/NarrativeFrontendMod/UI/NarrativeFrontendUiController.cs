@@ -1,6 +1,10 @@
+using System;
+using System.IO;
 using Ludots.Core.Engine;
 using Ludots.Core.Scripting;
+using Ludots.Core.UI.PanelProjection;
 using Ludots.UI;
+using Ludots.UI.Panels;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
 using Ludots.UI.Surface;
@@ -13,6 +17,10 @@ internal sealed class NarrativeFrontendUiController
     private ReactivePage<NarrativeFrontendRenderState>? _page;
     private IUiSurfaceHost? _surfaceHost;
     private UiSurfaceLeaseHandle _lease;
+    private string? _mountedThemeId;
+    private PanelLayoutTemplateCatalog? _layoutCatalog;
+    private NarrativeFrontendLayoutMetrics? _layoutMetrics;
+    private readonly PanelLayoutComposer _layoutComposer = new();
 
     public void MountOrRefresh(UIRoot root, GameEngine engine, NarrativeFrontendRenderState state)
     {
@@ -22,11 +30,32 @@ internal sealed class NarrativeFrontendUiController
         }
         _surfaceHost = surfaceHost;
 
-        if (_page == null)
+        PanelTheme? theme = PanelThemeCatalog.TryLoad(engine);
+        PanelLayoutTemplateCatalog layoutCatalog = _layoutCatalog ??= LoadLayoutCatalog(engine);
+        NarrativeFrontendLayoutMetrics layoutMetrics =
+            _layoutMetrics ??= NarrativeFrontendLayoutMetrics.Load(engine);
+        string? themeId = theme?.Id;
+        bool themeChanged = !string.Equals(_mountedThemeId, themeId, StringComparison.Ordinal);
+
+        if (_page == null || themeChanged)
         {
             var textMeasurer = (IUiTextMeasurer)engine.GetService(CoreServiceKeys.UiTextMeasurer);
             var imageSizeProvider = (IUiImageSizeProvider)engine.GetService(CoreServiceKeys.UiImageSizeProvider);
-            _page = new ReactivePage<NarrativeFrontendRenderState>(textMeasurer, imageSizeProvider, state, NarrativeFrontendUiComposer.BuildRoot);
+            UiStyleSheet[] sheets = theme == null
+                ? Array.Empty<UiStyleSheet>()
+                : new[] { theme.StyleSheet };
+            _page = new ReactivePage<NarrativeFrontendRenderState>(
+                textMeasurer,
+                imageSizeProvider,
+                state,
+                context => NarrativeFrontendUiComposer.BuildRoot(
+                    context,
+                    layoutCatalog,
+                    _layoutComposer,
+                    layoutMetrics),
+                theme: null,
+                sheets);
+            _mountedThemeId = themeId;
         }
         else
         {
@@ -48,5 +77,23 @@ internal sealed class NarrativeFrontendUiController
             _lease = default;
             _surfaceHost = null;
         }
+
+        _page = null;
+        _mountedThemeId = null;
+    }
+
+    private static PanelLayoutTemplateCatalog LoadLayoutCatalog(GameEngine engine)
+    {
+        const string path = "NarrativeFrontendMod:assets/UI/layout_templates.json";
+        if (engine.VFS == null ||
+            !engine.VFS.TryResolveFullPath(path, out string resolved) ||
+            !File.Exists(resolved))
+        {
+            throw new InvalidOperationException(
+                $"Narrative frontend layout catalog '{path}' is required.");
+        }
+
+        using FileStream stream = File.OpenRead(resolved);
+        return PanelLayoutTemplateLoader.LoadCatalog(stream);
     }
 }

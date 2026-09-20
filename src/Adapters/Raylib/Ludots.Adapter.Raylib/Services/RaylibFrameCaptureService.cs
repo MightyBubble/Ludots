@@ -1,10 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Ludots.Platform.Abstractions;
-using Raylib_cs;
+using Ludots.Raylib.Render;
 
 namespace Ludots.Adapter.Raylib.Services
 {
@@ -23,7 +22,6 @@ namespace Ludots.Adapter.Raylib.Services
         }
 
         private readonly List<Pending> _pending = new();
-        private int _captureCounter;
 
         public int PendingCount => _pending.Count;
 
@@ -52,23 +50,14 @@ namespace Ludots.Adapter.Raylib.Services
             if (_pending.Count == 0) return;
 
             byte[] png;
-            // Raylib TakeScreenshot flattens any directory to the working dir
-            // (same behavior the evidence-sccreenshot path works around).
-            string fileName = $"ludots-frame-capture-{Environment.ProcessId}-{++_captureCounter}.png";
-            string workingPath = Path.Combine(Environment.CurrentDirectory, fileName);
             try
             {
-                Raylib_cs.Raylib.TakeScreenshot(fileName);
-                png = File.ReadAllBytes(workingPath);
+                png = RaylibFramebufferCapture.EncodeFramebufferPng();
             }
             catch (Exception ex)
             {
                 FailAll(new InvalidOperationException($"Frame capture failed: {ex.Message}", ex));
                 return;
-            }
-            finally
-            {
-                try { if (File.Exists(workingPath)) File.Delete(workingPath); } catch { /* best effort */ }
             }
 
             var batch = _pending.ToArray();

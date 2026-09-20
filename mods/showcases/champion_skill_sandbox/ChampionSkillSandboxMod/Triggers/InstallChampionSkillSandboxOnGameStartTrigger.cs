@@ -58,9 +58,6 @@ namespace ChampionSkillSandboxMod.Triggers
                 ordersObj is OrderQueue orders)
             {
                 engine.RegisterSystem(
-                    new ChampionSkillSandboxLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _context),
-                    SystemGroup.InputCollection);
-                engine.RegisterSystem(
                     new ChampionSkillCommandSnapshotCaptureSystem(engine, _runtime),
                     SystemGroup.InputCollection);
 
@@ -80,7 +77,7 @@ namespace ChampionSkillSandboxMod.Triggers
             engine.RegisterSystem(new ChampionSkillSandboxInputPrepareSystem(engine, _runtime), SystemGroup.InputCollection);
             engine.RegisterPresentationSystem(new ChampionSkillSandboxPresentationSystem(engine, _runtime));
 
-            _context.Log("[ChampionSkillSandboxMod] Local order source, command panel focus runtime, and cast mode toolbar registered.");
+            _context.Log("[ChampionSkillSandboxMod] Command panel focus runtime and cast mode toolbar registered.");
             return Task.CompletedTask;
         }
     }

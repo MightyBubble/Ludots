@@ -3,7 +3,7 @@
 每续一杯就停一拍：人影顿一下，杯里水涨一格，三格满就完。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_Yield/poster.png" src="artifacts/evidence/capability_standard_graph_op_Yield/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_Yield/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_Yield/play.mp4。
 </video>
 
 ## 作者写法

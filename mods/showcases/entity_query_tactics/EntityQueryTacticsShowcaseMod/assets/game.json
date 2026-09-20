@@ -16,5 +16,11 @@
       "collectionKey": "entityquery.collection.ui.box",
       "title": "UI box acquisition"
     }
-  }
+  },
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
 }

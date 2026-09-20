@@ -1,55 +1,61 @@
 [
   {
     "id": "Task.Narrative.AshenOath.Briefing",
-    "display_name": "Ashen Oath",
-    "summary": "Hear the warden, wake the shrine, defeat the beast, and return with a verdict.",
-    "tags": [ "task.narrative" ],
+    "tags": [
+      "task.narrative"
+    ],
     "start_policy": "automatic",
     "completion_rule": "all",
     "objectives": [
       {
         "id": "briefing",
         "kind": "signal",
-        "title": "Hear The Warden — speak with Warden Mirelle beside the lantern dais.",
         "signal_key": "showcase.briefing_accepted",
-        "hint": "Press E near Mirelle after the intro camera pass ends."
+        "text_token": "story.task.briefing.obj0.title",
+        "hint_token": "story.task.briefing.obj0.hint"
       }
     ],
-    "next_task_id": "Task.Narrative.AshenOath.Trial"
+    "next_task_id": "Task.Narrative.AshenOath.Trial",
+    "display_token": "story.task.briefing.display",
+    "summary_token": "story.task.briefing.summary"
   },
   {
     "id": "Task.Narrative.AshenOath.Trial",
-    "display_name": "Ashen Oath",
-    "summary": "Hear the warden, wake the shrine, defeat the beast, and return with a verdict.",
-    "tags": [ "task.narrative" ],
+    "tags": [
+      "task.narrative"
+    ],
     "start_policy": "automatic",
     "completion_rule": "all",
     "objectives": [
       {
         "id": "trial",
         "kind": "signal",
-        "title": "Wake The Shrine — inspect the Ember Shrine and defeat the Ashen Beast once it answers.",
         "signal_key": "showcase.beast_defeated",
-        "hint": "Press E near the shrine, then use Arcweaver's combat kit."
+        "text_token": "story.task.trial.obj0.title",
+        "hint_token": "story.task.trial.obj0.hint"
       }
     ],
-    "next_task_id": "Task.Narrative.AshenOath.Return"
+    "next_task_id": "Task.Narrative.AshenOath.Return",
+    "display_token": "story.task.trial.display",
+    "summary_token": "story.task.trial.summary"
   },
   {
     "id": "Task.Narrative.AshenOath.Return",
-    "display_name": "Ashen Oath",
-    "summary": "Hear the warden, wake the shrine, defeat the beast, and return with a verdict.",
-    "tags": [ "task.narrative" ],
+    "tags": [
+      "task.narrative"
+    ],
     "start_policy": "automatic",
     "completion_rule": "all",
     "objectives": [
       {
         "id": "return",
         "kind": "signal",
-        "title": "Deliver Your Verdict — return to Warden Mirelle and choose how the valley should remember the trial.",
         "signal_key": "showcase.verdict_delivered",
-        "hint": "Elder dialogue outcome applies a GAS blessing via trigger callback."
+        "text_token": "story.task.return.obj0.title",
+        "hint_token": "story.task.return.obj0.hint"
       }
-    ]
+    ],
+    "display_token": "story.task.return.display",
+    "summary_token": "story.task.return.summary"
   }
 ]

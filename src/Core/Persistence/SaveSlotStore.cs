@@ -174,6 +174,10 @@ namespace Ludots.Core.Persistence
             if (store == null) throw new ArgumentNullException(nameof(store));
 
             EnsureNextSequence(store);
+            if (_nextSequence == long.MaxValue)
+            {
+                throw new SaveContextException("Autosave sequence is exhausted.");
+            }
             SaveSlotId id = SaveSlotId.Autosave(_nextSequence.ToString("D10"));
             _nextSequence++;
             store.WriteSlot(id, snapshot);
@@ -199,6 +203,10 @@ namespace Ludots.Core.Persistence
 
             if (_nextSequence <= max)
             {
+                if (max == long.MaxValue)
+                {
+                    throw new SaveContextException("Autosave sequence is exhausted.");
+                }
                 _nextSequence = max + 1;
             }
         }
@@ -207,8 +215,8 @@ namespace Ludots.Core.Persistence
         {
             SaveSlotHeader[] autosaves = store.ListSlots()
                 .Where(header => string.Equals(header.Id.Kind, "autosave", StringComparison.Ordinal))
-                .OrderByDescending(header => header.Header.CreatedUtc)
-                .ThenByDescending(header => header.Id.Name, StringComparer.Ordinal)
+                .Where(header => long.TryParse(header.Id.Name, out _))
+                .OrderByDescending(header => long.Parse(header.Id.Name, System.Globalization.CultureInfo.InvariantCulture))
                 .ToArray();
 
             for (int i = RetentionCount; i < autosaves.Length; i++)

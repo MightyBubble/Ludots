@@ -32,6 +32,21 @@ namespace Ludots.Core.Presentation.Rendering
             _skinnedBatchBuffer?.ClearProjection();
         }
 
+        public void ClearTransientProjection()
+        {
+            _drawBuffer.ClearTransientProjection();
+            _snapshotBuffer?.ClearTransientProjection();
+            _proxyBuffer?.ClearTransientProjection();
+            _skinnedBatchBuffer?.ClearProjection();
+        }
+
+        public void MarkStaticProjectionBoundary()
+        {
+            _drawBuffer.MarkStaticProjectionBoundary();
+            _snapshotBuffer?.MarkStaticProjectionBoundary();
+            _proxyBuffer?.MarkStaticProjectionBoundary();
+        }
+
         public void ApplyStaticInstanceDelta(ReadOnlySpan<PrimitiveDrawItem> changedItems, ReadOnlySpan<int> removedStableIds)
         {
             _snapshotBuffer?.ApplyStaticMeshDelta(changedItems, removedStableIds, visibleOnly: false);

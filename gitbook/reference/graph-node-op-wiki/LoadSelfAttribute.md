@@ -3,7 +3,7 @@
 自查线绕回施法者自己，头顶浮出 62；木桩满血没人碰。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_LoadSelfAttribute/poster.png" src="artifacts/evidence/capability_standard_graph_op_LoadSelfAttribute/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_LoadSelfAttribute/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_LoadSelfAttribute/play.mp4。
 </video>
 
 ## 作者写法

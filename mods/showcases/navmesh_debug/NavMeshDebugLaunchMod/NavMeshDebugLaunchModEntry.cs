@@ -12,7 +12,7 @@ namespace NavMeshDebugLaunchMod
     {
         public void OnLoad(IModContext context)
         {
-            context.Log("[NavMeshDebugLaunchMod] Loaded - N: toggle navmesh overlay, P: spawn nav obstacle, O: clear nav obstacles");
+            context.Log("[NavMeshDebugLaunchMod] Loaded - N: toggle navmesh overlay, T: toggle nav walkability texture, P: spawn nav obstacle, O: clear nav obstacles");
 
             context.SystemFactoryRegistry.RegisterPresentation("NavMeshDebugOverlay", scriptCtx =>
             {
@@ -65,6 +65,11 @@ namespace NavMeshDebugLaunchMod
             if (!input.HasAction(NavMeshDebugInputActions.ToggleOverlay))
             {
                 throw new System.InvalidOperationException($"Missing input action: {NavMeshDebugInputActions.ToggleOverlay}");
+            }
+
+            if (!input.HasAction(NavMeshDebugInputActions.ToggleNavWalkabilityTexture))
+            {
+                throw new System.InvalidOperationException($"Missing input action: {NavMeshDebugInputActions.ToggleNavWalkabilityTexture}");
             }
 
             if (!input.HasAction(NavMeshDebugInputActions.SpawnObstacle))

@@ -69,5 +69,25 @@
     "zoomCmPerWheel": 900,
     "followMode": "None",
     "allowUserInput": true
+  },
+  {
+    "id": "Camera.Profile.FixedArena",
+    "displayName": "Fixed Arena",
+    "priority": 100,
+    "rigKind": "Orbit",
+    "distanceCm": 2600,
+    "pitch": 75,
+    "fovYDeg": 50,
+    "yaw": 180,
+    "minDistanceCm": 2600,
+    "maxDistanceCm": 2600,
+    "minPitchDeg": 75,
+    "maxPitchDeg": 75,
+    "panMode": "None",
+    "enableGrabDrag": false,
+    "rotateMode": "None",
+    "enableZoom": false,
+    "followMode": "None",
+    "allowUserInput": false
   }
 ]

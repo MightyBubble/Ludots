@@ -1,9 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>Ludots.AgentBridge.Mcp</AssemblyName>
   </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Libraries\Ludots.AgentBridge\Ludots.AgentBridge.csproj" />
+  </ItemGroup>
 </Project>

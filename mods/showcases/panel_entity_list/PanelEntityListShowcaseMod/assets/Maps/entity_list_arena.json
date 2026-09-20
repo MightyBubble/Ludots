@@ -1,0 +1,32 @@
+{
+  "Id": "entity_list_arena",
+  "Tags": ["showcase", "panel", "entity-list"],
+  "TriggerGraphs": [
+    { "graph": "Graph.EntityList.Panel.Open", "scopeInstanceId": "roster-commander" }
+  ],
+  "Entities": [
+    { "InstanceId": "roster-commander", "Template": "roster_commander" },
+    { "InstanceId": "roster-medic", "Template": "roster_medic" },
+    { "InstanceId": "roster-archer", "Template": "roster_archer" },
+    { "InstanceId": "roster-stunned-guard", "Template": "roster_stunned_guard" },
+    { "InstanceId": "roster-fallen", "Template": "roster_fallen" },
+    { "InstanceId": "roster-enemy", "Template": "roster_enemy" }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "roster-commander" },
+    { "TeamId": 2, "RepresentativeInstanceId": "roster-enemy" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "roster-commander" }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      { "TeamA": 1, "TeamB": 1, "TypeId": "LudotsCore.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 2, "TeamB": 2, "TypeId": "LudotsCore.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 1, "TeamB": 2, "TypeId": "LudotsCore.Participant", "Attitude": "Hostile", "Symmetric": true }
+    ],
+    "Players": [],
+    "PlayerTeams": []
+  },
+  "DefaultCamera": { "TargetXCm": 0, "TargetYCm": 0, "Yaw": 45, "Pitch": 35, "DistanceCm": 900, "FovYDeg": 50 }
+}

@@ -1,0 +1,10 @@
+{
+  "name": "RegionVolumeTextbookMod",
+  "version": "1.0.0",
+  "description": "区域触发教科书：实体模板声明 RegionVolume 体积（polygon + entityTags 部队过滤）、地图 Entities[] 摆放（PositionXCm 兜底锚点）、TriggerGraph 监听 RegionEntered + filters.region、图体 map-variable 链表达一次性刷怪（每支经过的部队只触发一次）；全程零 showcase 代码",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0"
+  }
+}

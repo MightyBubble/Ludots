@@ -4,8 +4,8 @@
       "id": "intent.command.default",
       "groupPolicy": { "kind": "independent" },
       "rules": [
-        { "priority": 10, "target": { "hasEntity": false }, "route": { "orderTypeKey": "massNavigationMove" } },
-        { "priority": 9, "target": { "hasEntity": true }, "route": { "orderTypeKey": "massNavigationMove" } }
+        { "priority": 10, "target": { "hasEntity": false }, "route": { "orderTypeKey": "massNavigationMove", "targetShape": "WorldPositionCm" } },
+        { "priority": 9, "target": { "hasEntity": true }, "route": { "orderTypeKey": "massNavigationMove", "targetShape": "WorldPositionAndEntity" } }
       ]
     }
   ]

@@ -362,6 +362,31 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void ParticipantBindingResolver_PublishFocused_SoleSeatControlSchemeId_LeavesPreferenceStoreUntouched()
+        {
+            using var world = World.Create();
+            Entity player = world.Create(new PlayerIdentity { PlayerId = 7 }, new PlayerOwner { PlayerId = 7 });
+            var players = new PlayerEntityLookup();
+            players.Register(7, player);
+            ClientCastPreferenceStore preferences = CreateSeatPreferenceStore();
+            preferences.SetActiveScheme("scheme.seat.first");
+            ControlSchemeRuntime schemes = CreateInstalledControlSchemeRuntime(
+                world, "scheme.seat.first", "scheme.seat.declared", preferences: preferences);
+            var globals = CreateSeatPublishGlobals(players, schemes);
+            var result = SoleSeatResult(players, 7, player, controlSchemeId: "scheme.seat.declared");
+            uint preferenceRevision = preferences.Revision;
+
+            ParticipantBindingResolver.PublishFocused(globals, result);
+
+            Assert.That(schemes.ActiveSchemeId, Is.EqualTo(schemes.SchemeIdRegistry.GetId("scheme.seat.declared")),
+                "the declared scheme is the per-entry launch truth and must activate for this map entry.");
+            Assert.That(preferences.ActiveSchemeId, Is.EqualTo("scheme.seat.first"),
+                "the seat declaration is runtime-only activation; the player's persisted preference must survive it.");
+            Assert.That(preferences.Revision, Is.EqualTo(preferenceRevision),
+                "activation must not mutate the preference store at all.");
+        }
+
+        [Test]
         public void ParticipantBindingResolver_PublishFocused_SoleSeatWithoutScheme_LeavesRuntimeActivationUnchanged()
         {
             using var world = World.Create();
@@ -415,7 +440,102 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void ParticipantBindingResolver_PublishFocused_DualSeatsWithSchemes_DoNotActivateSeatControlSchemes()
+        public void ParticipantBindingResolver_PublishFocused_DualSeatsWithSchemes_ActivatePerSeatChannels()
+        {
+            using var world = World.Create();
+            Entity playerSeven = world.Create(new PlayerIdentity { PlayerId = 7 }, new PlayerOwner { PlayerId = 7 });
+            Entity playerEight = world.Create(new PlayerIdentity { PlayerId = 8 }, new PlayerOwner { PlayerId = 8 });
+            var players = new PlayerEntityLookup();
+            players.Register(7, playerSeven);
+            players.Register(8, playerEight);
+            ControlSchemeRuntime schemes = CreateInstalledControlSchemeRuntime(world, "scheme.seat.first", "scheme.seat.declared");
+            var globals = CreateSeatPublishGlobals(players, schemes);
+            ClientLocalSeatInputRuntime seatInput = CreateSeatInputRuntime(globals, schemes);
+            globals[CoreServiceKeys.ClientLocalSeatInputRuntime.Name] = seatInput;
+            var result = new ParticipantBindingResult(
+                new TeamEntityLookup(),
+                players,
+                localSeats: new[]
+                {
+                    new ResolvedLocalSeatPossession("seat.0", 7, playerSeven, ControlSchemeId: "scheme.seat.declared"),
+                    new ResolvedLocalSeatPossession("seat.1", 8, playerEight, ControlSchemeId: "scheme.seat.first"),
+                });
+
+            ParticipantBindingResolver.PublishFocused(globals, result);
+
+            Assert.That(schemes.ActiveSchemeId, Is.EqualTo(schemes.SchemeIdRegistry.GetId("scheme.seat.first")),
+                "multi-seat activation is per seat; the global runtime keeps its own active scheme untouched.");
+            Assert.That(seatInput.ChannelCount, Is.EqualTo(2));
+            Assert.That(seatInput.TryGetChannel("seat.0", out ClientLocalSeatInputChannel channelZero), Is.True);
+            Assert.That(seatInput.TryGetChannel("seat.1", out ClientLocalSeatInputChannel channelOne), Is.True);
+            Assert.That(channelZero.ActiveSchemeId, Is.EqualTo(schemes.SchemeIdRegistry.GetId("scheme.seat.declared")),
+                "seat.0's declared scheme activates on its own channel.");
+            Assert.That(channelOne.ActiveSchemeId, Is.EqualTo(schemes.SchemeIdRegistry.GetId("scheme.seat.first")),
+                "seat.1's declared scheme activates on its own channel.");
+        }
+
+        [Test]
+        public void ParticipantBindingResolver_PublishFocused_DualSeatsSameScheme_BothChannelsActivateWithoutConflict()
+        {
+            using var world = World.Create();
+            Entity playerSeven = world.Create(new PlayerIdentity { PlayerId = 7 }, new PlayerOwner { PlayerId = 7 });
+            Entity playerEight = world.Create(new PlayerIdentity { PlayerId = 8 }, new PlayerOwner { PlayerId = 8 });
+            var players = new PlayerEntityLookup();
+            players.Register(7, playerSeven);
+            players.Register(8, playerEight);
+            ControlSchemeRuntime schemes = CreateInstalledControlSchemeRuntime(world, "scheme.seat.first", "scheme.seat.declared");
+            var globals = CreateSeatPublishGlobals(players, schemes);
+            var seatInput = CreateSeatInputRuntime(globals, schemes);
+            globals[CoreServiceKeys.ClientLocalSeatInputRuntime.Name] = seatInput;
+            var result = new ParticipantBindingResult(
+                new TeamEntityLookup(),
+                players,
+                localSeats: new[]
+                {
+                    new ResolvedLocalSeatPossession("seat.0", 7, playerSeven, ControlSchemeId: "scheme.seat.declared"),
+                    new ResolvedLocalSeatPossession("seat.1", 8, playerEight, ControlSchemeId: "scheme.seat.declared"),
+                });
+
+            ParticipantBindingResolver.PublishFocused(globals, result);
+
+            int declaredId = schemes.SchemeIdRegistry.GetId("scheme.seat.declared");
+            Assert.That(seatInput.TryGetChannel("seat.0", out ClientLocalSeatInputChannel channelZero), Is.True);
+            Assert.That(seatInput.TryGetChannel("seat.1", out ClientLocalSeatInputChannel channelOne), Is.True);
+            Assert.That(channelZero.ActiveSchemeId, Is.EqualTo(declaredId));
+            Assert.That(channelOne.ActiveSchemeId, Is.EqualTo(declaredId));
+        }
+
+        [Test]
+        public void ParticipantBindingResolver_PublishFocused_DualSeatsWithSchemes_FailsFastWhenSchemeNotInstalled()
+        {
+            using var world = World.Create();
+            Entity playerSeven = world.Create(new PlayerIdentity { PlayerId = 7 }, new PlayerOwner { PlayerId = 7 });
+            Entity playerEight = world.Create(new PlayerIdentity { PlayerId = 8 }, new PlayerOwner { PlayerId = 8 });
+            var players = new PlayerEntityLookup();
+            players.Register(7, playerSeven);
+            players.Register(8, playerEight);
+            ControlSchemeRuntime schemes = CreateInstalledControlSchemeRuntime(world, "scheme.seat.first", "scheme.seat.declared");
+            var globals = CreateSeatPublishGlobals(players, schemes);
+            globals[CoreServiceKeys.ClientLocalSeatInputRuntime.Name] = CreateSeatInputRuntime(globals, schemes);
+            var result = new ParticipantBindingResult(
+                new TeamEntityLookup(),
+                players,
+                localSeats: new[]
+                {
+                    new ResolvedLocalSeatPossession("seat.0", 7, playerSeven, ControlSchemeId: "scheme.seat.declared"),
+                    new ResolvedLocalSeatPossession("seat.1", 8, playerEight, ControlSchemeId: "scheme.seat.missing"),
+                });
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+                () => ParticipantBindingResolver.PublishFocused(globals, result));
+
+            Assert.That(error!.Message, Does.Contain("seat.1"));
+            Assert.That(error.Message, Does.Contain("scheme.seat.missing"));
+            Assert.That(error.Message, Does.Contain("not installed"));
+        }
+
+        [Test]
+        public void ParticipantBindingResolver_PublishFocused_DualSeatsWithSchemes_FailsFastWhenSeatInputRuntimeNotRegistered()
         {
             using var world = World.Create();
             Entity playerSeven = world.Create(new PlayerIdentity { PlayerId = 7 }, new PlayerOwner { PlayerId = 7 });
@@ -434,10 +554,10 @@ namespace Ludots.Tests.GAS
                     new ResolvedLocalSeatPossession("seat.1", 8, playerEight, ControlSchemeId: "scheme.seat.first"),
                 });
 
-            ParticipantBindingResolver.PublishFocused(globals, result);
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+                () => ParticipantBindingResolver.PublishFocused(globals, result));
 
-            Assert.That(schemes.ActiveSchemeId, Is.EqualTo(schemes.SchemeIdRegistry.GetId("scheme.seat.first")),
-                "multi-seat scheme routing is P3; publishing multiple seats must not activate any declared scheme.");
+            Assert.That(error!.Message, Does.Contain("ClientLocalSeatInputRuntime"));
         }
 
         [Test]
@@ -461,6 +581,103 @@ namespace Ludots.Tests.GAS
 
             Assert.That(error!.Message, Does.Contain("scheme.seat.declared"));
             Assert.That(error.Message, Does.Contain("ControlSchemeRuntime"));
+        }
+
+        [Test]
+        public void ParticipantBindingResolver_PublishFocused_DeclaredHorizontalEqualSplit_LaysOutSeatRectsInSeatOrder()
+        {
+            using var world = World.Create();
+            ClientLocalSeatRegistry seats = PublishDualSeatsWithLayout(world, PresentBinding.HorizontalEqualSplitLayoutId);
+
+            Assert.That(seats.Require("seat.0").PresentBinding!.Value.NormalizedScreenRect, Is.EqualTo(new Vector4(0f, 0f, 0.5f, 1f)));
+            Assert.That(seats.Require("seat.1").PresentBinding!.Value.NormalizedScreenRect, Is.EqualTo(new Vector4(0.5f, 0f, 0.5f, 1f)));
+            Assert.That(seats.Require("seat.0").PresentBinding!.Value.PresentResolutionPx, Is.EqualTo(new Vector2(960f, 1080f)));
+            Assert.That(seats.Require("seat.1").PresentBinding!.Value.PresentResolutionPx, Is.EqualTo(new Vector2(960f, 1080f)));
+        }
+
+        [Test]
+        public void ParticipantBindingResolver_PublishFocused_DeclaredVerticalEqualSplit_LaysOutSeatRectsInSeatOrder()
+        {
+            using var world = World.Create();
+            ClientLocalSeatRegistry seats = PublishDualSeatsWithLayout(world, PresentBinding.VerticalEqualSplitLayoutId);
+
+            Assert.That(seats.Require("seat.0").PresentBinding!.Value.NormalizedScreenRect, Is.EqualTo(new Vector4(0f, 0f, 1f, 0.5f)));
+            Assert.That(seats.Require("seat.1").PresentBinding!.Value.NormalizedScreenRect, Is.EqualTo(new Vector4(0f, 0.5f, 1f, 0.5f)));
+            Assert.That(seats.Require("seat.0").PresentBinding!.Value.PresentResolutionPx, Is.EqualTo(new Vector2(1920f, 540f)));
+            Assert.That(seats.Require("seat.1").PresentBinding!.Value.PresentResolutionPx, Is.EqualTo(new Vector2(1920f, 540f)));
+        }
+
+        [Test]
+        public void ParticipantBindingResolver_PublishFocused_NoDeclaredLayout_KeepsFullScreenPerSeat()
+        {
+            using var world = World.Create();
+            ClientLocalSeatRegistry seats = PublishDualSeatsWithLayout(world, layoutId: null);
+
+            Assert.That(seats.Require("seat.0").PresentBinding!.Value.NormalizedScreenRect, Is.EqualTo(new Vector4(0f, 0f, 1f, 1f)));
+            Assert.That(seats.Require("seat.1").PresentBinding!.Value.NormalizedScreenRect, Is.EqualTo(new Vector4(0f, 0f, 1f, 1f)));
+            Assert.That(seats.Require("seat.0").PresentBinding!.Value.PresentResolutionPx, Is.EqualTo(new Vector2(1920f, 1080f)));
+        }
+
+        [Test]
+        public void ParticipantBindingResolver_PublishFocused_UnknownDeclaredLayout_FailsFastNamingLayout()
+        {
+            using var world = World.Create();
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+                PublishDualSeatsWithLayout(world, "diagonal-split"))!;
+
+            Assert.That(error.Message, Does.Contain("diagonal-split"));
+            Assert.That(error.Message, Does.Contain("horizontal-equal-split"));
+        }
+
+        [Test]
+        public void GameConfig_StartupPresentLayout_MapsFromCamelCaseGameJson()
+        {
+            var options = StrictJsonOptions.CreateCamelCase();
+            var config = System.Text.Json.JsonSerializer.Deserialize<GameConfig>(
+                "{\"startupPresentLayout\": \"vertical-equal-split\"}", options)!;
+
+            Assert.That(config.StartupPresentLayout, Is.EqualTo("vertical-equal-split"));
+        }
+
+        private static ClientLocalSeatRegistry PublishDualSeatsWithLayout(World world, string? layoutId)
+        {
+            Entity playerSeven = world.Create(new PlayerIdentity { PlayerId = 7 }, new PlayerOwner { PlayerId = 7 });
+            Entity playerEight = world.Create(new PlayerIdentity { PlayerId = 8 }, new PlayerOwner { PlayerId = 8 });
+            var players = new PlayerEntityLookup();
+            players.Register(7, playerSeven);
+            players.Register(8, playerEight);
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.TeamEntityLookup.Name] = new TeamEntityLookup(),
+                [CoreServiceKeys.PlayerEntityLookup.Name] = players,
+                [CoreServiceKeys.ClientLocalSeatRegistry.Name] = new ClientLocalSeatRegistry(),
+                [CoreServiceKeys.LogicViewRegistry.Name] = new LogicViewRegistry(),
+                [CoreServiceKeys.ViewController.Name] = new FixedPresentSurface(1920f, 1080f),
+                [CoreServiceKeys.GameConfig.Name] = new GameConfig { StartupPresentLayout = layoutId },
+            };
+            var result = new ParticipantBindingResult(
+                new TeamEntityLookup(),
+                players,
+                localSeats: new[]
+                {
+                    new ResolvedLocalSeatPossession("seat.0", 7, playerSeven, ControlSchemeId: null),
+                    new ResolvedLocalSeatPossession("seat.1", 8, playerEight, ControlSchemeId: null),
+                });
+
+            ParticipantBindingResolver.PublishFocused(globals, result);
+            return (ClientLocalSeatRegistry)globals[CoreServiceKeys.ClientLocalSeatRegistry.Name];
+        }
+
+        private sealed class FixedPresentSurface : Ludots.Core.Presentation.Camera.IViewController
+        {
+            public FixedPresentSurface(float width, float height)
+            {
+                Resolution = new Vector2(width, height);
+            }
+
+            public Vector2 Resolution { get; }
+            public float Fov => 60f;
+            public float AspectRatio => Resolution.X / Resolution.Y;
         }
 
         private static ParticipantBindingResult SoleSeatResult(
@@ -487,48 +704,30 @@ namespace Ludots.Tests.GAS
             };
         }
 
+        private static ClientLocalSeatInputRuntime CreateSeatInputRuntime(
+            Dictionary<string, object> globals,
+            ControlSchemeRuntime schemes)
+        {
+            return new ClientLocalSeatInputRuntime(
+                globals,
+                schemes,
+                new Ludots.Core.Input.Config.InputConfigRoot());
+        }
+
         private static ControlSchemeRuntime CreateInstalledControlSchemeRuntime(
             World world,
             string initialScheme,
             string alternateScheme,
-            List<string> allowedSchemes = null)
+            List<string> allowedSchemes = null,
+            ClientCastPreferenceStore preferences = null)
         {
-            CommandIntentProfileTests.Harness intents = CommandIntentProfileTests.Harness.Create(world);
-            InstallSeatGroundIntent(intents, "intent.seat.default");
-            InstallSeatGroundIntent(intents, "intent.seat.alt");
-
-            var collectionKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var stack = new InteractionContextStack(collectionKeys);
-            stack.Push(InteractionContextFrameDescriptor.Create(
-                InteractionContextIds.Default,
-                "collection.seat.command_source",
-                "view.seat.default"));
-
             var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
-            var dispatch = new CastDispatchProfileRegistry(
-                new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
-            dispatch.Install(CastDispatchProfileTests.Harness.Config(
-                new CastDispatchProfileDefinition
-                {
-                    Id = "dispatch.seat.default",
-                    Selector = new CastDispatchSelectorDefinition { Kind = "all" },
-                    Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
-                },
-                new CastDispatchProfileDefinition
-                {
-                    Id = "dispatch.seat.alt",
-                    Selector = new CastDispatchSelectorDefinition { Kind = "cycle", AdvanceOn = "orderAccepted" },
-                    Router = new CastDispatchRouterDefinition { Kind = "sequential" },
-                }));
 
             var runtime = new ControlSchemeRuntime(
                 new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                stack,
-                intents.Intents,
-                dispatch,
-                orderTypes);
+                orderTypes,
+                preferences: preferences);
             runtime.Install(new ControlSchemesConfig
             {
                 Schemes = new List<ControlSchemeDefinition>
@@ -537,21 +736,11 @@ namespace Ludots.Tests.GAS
                     {
                         Id = initialScheme,
                         InputContexts = new List<string>(),
-                        Defaults = new ControlSchemeDefaults
-                        {
-                            CommandIntentId = "intent.seat.default",
-                            CastDispatchProfileId = "dispatch.seat.default",
-                        },
                     },
                     new()
                     {
                         Id = alternateScheme,
                         InputContexts = new List<string>(),
-                        Defaults = new ControlSchemeDefaults
-                        {
-                            CommandIntentId = "intent.seat.alt",
-                            CastDispatchProfileId = "dispatch.seat.alt",
-                        },
                     },
                 },
                 AllowedSchemes = allowedSchemes,
@@ -559,17 +748,22 @@ namespace Ludots.Tests.GAS
             return runtime;
         }
 
-        private static void InstallSeatGroundIntent(CommandIntentProfileTests.Harness intents, string profileId)
+        private static ClientCastPreferenceStore CreateSeatPreferenceStore()
         {
-            intents.Intents.Install(CommandIntentProfileTests.Harness.Config(new CommandIntentProfileDefinition
-            {
-                Id = profileId,
-                GroupPolicy = new CommandIntentGroupPolicyDefinition { Kind = "independent" },
-                Rules = new List<CommandIntentRuleDefinition>
-                {
-                    CommandIntentProfileTests.Harness.GroundRule(priority: 10, orderTypeKey: "moveTo"),
-                },
-            }));
+            var castCommitIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var castCommitActionIds = new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var contextProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var templateKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var formSetKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            return new ClientCastPreferenceStore(
+                new CastCommitProfileRegistry(
+                    castCommitIds,
+                    castCommitActionIds,
+                    new InteractionContextProfileRegistry(contextProfileIds)),
+                templateKeys.Register,
+                templateKeys.GetName,
+                formSetKeys.Register,
+                formSetKeys.GetName);
         }
 
         [Test]

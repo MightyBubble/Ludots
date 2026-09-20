@@ -1,7 +1,6 @@
 [
   {
     "id": "Effect.Showcase.TeamResearch.SignalRelayComplete",
-    "tags": ["Effect.Showcase.Progression"],
     "presetType": "CompleteProgression",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -9,6 +8,9 @@
       "id": "Progression.Showcase.TeamResearch.SignalRelay",
       "scope": "explicit",
       "level": 1
-    }
+    },
+    "categories": [
+      "Effect.Showcase.Progression"
+    ]
   }
 ]

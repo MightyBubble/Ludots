@@ -192,6 +192,7 @@ def write_map(
     camera: dict | None = None,
     template_teams: dict[str, int] | None = None,
     variables: list[dict] | None = None,
+    regions: list | None = None,
 ) -> None:
     if not actors:
         raise SystemExit(f"Map {map_id} has no actors; per-op galleries must spawn people through MapLoader.")
@@ -212,6 +213,31 @@ def write_map(
     }
     if variables:
         payload["Variables"] = variables
+    if regions:
+        if not isinstance(regions, list):
+            raise SystemExit(f"Map {map_id} regions must be an array.")
+        # Region volumes are placed entities (#1461): each vignette region becomes an
+        # Entities[] placement whose RegionVolumeCm override carries key and shape.
+        for region in regions:
+            region_id = region.get("id")
+            if not region_id:
+                raise SystemExit(f"Map {map_id} region entry requires an id.")
+            volume = {"volumeKey": region_id, "shape": region.get("shape", "circle")}
+            for field in ("radiusCm", "halfWidthCm", "halfHeightCm"):
+                if field in region:
+                    volume[field] = region[field]
+            if "points" in region:
+                volume["points"] = region["points"]
+            for field in ("ax", "ay", "bx", "by", "halfThicknessCm"):
+                if field in region:
+                    volume[field] = region[field]
+            payload["Entities"].append({
+                "InstanceId": f"{region_id}_region",
+                "Template": "GraphOps.RegionVolumeAnchor",
+                "PositionXCm": int(region.get("x", 0)),
+                "PositionYCm": int(region.get("y", 0)),
+                "Overrides": {"RegionVolumeCm": volume},
+            })
     teams = collect_team_bindings(actors, template_teams or {})
     if teams:
         payload["Teams"] = teams
@@ -219,7 +245,7 @@ def write_map(
 
 ENTRY_CSPROJ = """<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>{ns}</RootNamespace>
@@ -245,7 +271,7 @@ ENTRY_MOD_JSON = """{{
   "name": "{ns}",
   "version": "1.0.0",
   "description": "Launcher entry for GraphNodeOp {op} player gallery.",
-  "main": "bin/net8.0/{ns}.dll",
+  "main": "bin/net9.0/{ns}.dll",
   "priority": 0,
   "dependencies": {{
     "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"
@@ -480,6 +506,7 @@ def main() -> int:
             scene.get("camera"),
             template_teams,
             map_variables_from_vignette(op, scene),
+            scene.get("regions"),
         )
         write_entry_mod(repo, op, title)
 

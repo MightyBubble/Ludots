@@ -39,6 +39,16 @@ public sealed class SaveContainerStoreTests
     }
 
     [Test]
+    public void ContainerCodecRejectsReservedFlags()
+    {
+        var codec = new SaveContainerCodec();
+        byte[] bytes = codec.Encode(CreateSnapshot("entry", tick: 1));
+        bytes[6] = 1;
+
+        Assert.That(Assert.Throws<SaveContextException>(() => codec.Decode(bytes))!.Message, Does.Contain("reserved flags"));
+    }
+
+    [Test]
     public void SlotStoreKeepsExistingSaveWhenAtomicCommitFails()
     {
         var storage = new MemorySaveStorage();
@@ -96,6 +106,24 @@ public sealed class SaveContainerStoreTests
                 SaveSlotId.Manual("checkpoint")
             }));
         Assert.That(store.ReadSlot(SaveSlotId.Manual("checkpoint")).Header.Tick, Is.EqualTo(100));
+    }
+
+    [Test]
+    public void AutosaveRingUsesSequenceInsteadOfWallClock()
+    {
+        var storage = new MemorySaveStorage();
+        var store = new SaveSlotStore(storage);
+        var autosaves = new AutosaveSlotPolicy(retentionCount: 1);
+
+        WorldSaveSnapshot olderSequenceWithNewerClock = CreateSnapshot("entry", tick: 1) with
+        {
+            Header = CreateSnapshot("entry", tick: 1).Header with { CreatedUtc = new DateTimeOffset(2030, 1, 1, 0, 0, 0, TimeSpan.Zero) }
+        };
+        store.WriteSlot(SaveSlotId.Autosave("0000000001"), olderSequenceWithNewerClock);
+        store.WriteSlot(SaveSlotId.Autosave("0000000002"), CreateSnapshot("entry", tick: 2));
+        autosaves.WriteAutosave(store, CreateSnapshot("entry", tick: 3));
+
+        Assert.That(store.ListSlots().Select(slot => slot.Id), Is.EqualTo(new[] { SaveSlotId.Autosave("0000000003") }));
     }
 
     private static WorldSaveSnapshot CreateSnapshot(string mapId, int tick)

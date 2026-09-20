@@ -27,11 +27,11 @@
 | 字段 | 这样配会产生什么效果 |
 |---|---|
 | `id` | 档案标识；能力 exec 声明 `interactionContextProfile` 时引用 |
-| `activeCollectionKey` | 压栈期间生效的实体集合键 |
-| `activeEntityViewKey` | 压栈期间生效的实体视图键 |
+| `activeCollectionKey` | 上下文激活期间生效的实体集合键 |
+| `activeEntityViewKey` | 上下文激活期间生效的实体视图键（声明数据，运行期暂无 id 消费方） |
 | `filterProfileId` | 过滤档案（input-05）；可空 = 不过滤直通 |
-| `inputContextId` | 压栈期间切换的输入上下文（default_input 的 contexts，input-05） |
-| `commandIntentId` | 栈帧携带的命令意图；仲裁时优先于控制方案默认 |
+| `inputContextId` | 上下文激活期间该座位应激活的输入上下文（default_input 的 contexts，input-05）；由 `InputContextProjectionSystem` 每 tick 按座位 diff 派生 push/pop，上下文回收后下一 tick 弹出 |
+| `commandIntentId` | 挂载上下文携带的命令意图；仲裁时优先于玩家默认（DEC-14） |
 
 ## 3. 文件结构
 
@@ -39,15 +39,16 @@
 
 ## 4. 运行时加载效果
 
-档案注册后，能力加载仅校验声明非空串；运行期声明档案的 exec 开始时解析档案并压帧（档案缺失此时报错）、结束回收，期间集合/视图/过滤/意图生效。
+档案注册后，能力加载仅校验声明非空串；档案的全部 id 字段在安装期解析（未知引用启动期失败）；声明档案的 exec 开始时把档案挂载为实体交互状态（档案缺失此时报错）、exec 结束回收，期间集合/过滤/意图生效。
 
 ## 5. 异常处理
 
 | 异常情形 | 系统响应 |
 |---|---|
 | 能力声明的档案名未注册 | 该能力执行开始时报错（非启动期） |
+| 档案声明的过滤/意图名未安装 | 档案安装期失败（启动期） |
 | `interactionContextProfile` 为空串 | 能力加载失败 |
-| exec 结束 | 帧按上下文实体回收（系统负责） |
+| exec 结束 | 挂载上下文随下一次系统更新回收（系统负责） |
 
 ## 6. 实例
 

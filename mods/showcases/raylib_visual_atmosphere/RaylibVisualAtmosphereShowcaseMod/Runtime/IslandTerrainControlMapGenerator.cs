@@ -10,7 +10,7 @@ namespace RaylibVisualAtmosphereShowcaseMod.Runtime;
 /// Bakes RGBA8 control weights for the showcase island.
 /// Channels: R=sand, G=grass, B=dirt, A=rock (normalized per pixel).
 /// UV: world XZ → (worldXcm - Bounds.X) / Bounds.Width, (worldYcm - Bounds.Y) / Bounds.Height
-/// matching VisualHeightmap sample UV / shader uControlBounds meters.
+/// matching ContinuousHeightmap sample UV / shader uControlBounds meters.
 /// </summary>
 internal static class IslandTerrainControlMapGenerator
 {

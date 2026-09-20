@@ -116,9 +116,13 @@ public sealed record UiStyle
 
 	public float FontSize { get; init; } = 16f;
 
+	public float LineHeight { get; init; } = 1.4f;
+
 	public string? FontFamily { get; init; }
 
 	public bool Bold { get; init; }
+
+	public bool Italic { get; init; }
 
 	public UiTextDirection Direction { get; init; } = UiTextDirection.Ltr;
 
@@ -207,6 +211,7 @@ public sealed record UiStyle
 		Color = original.Color;
 		TextShadow = original.TextShadow;
 		FontSize = original.FontSize;
+		LineHeight = original.LineHeight;
 		FontFamily = original.FontFamily;
 		Bold = original.Bold;
 		Direction = original.Direction;

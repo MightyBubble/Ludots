@@ -19,6 +19,9 @@ namespace Ludots.Core.Map
         private readonly ModLoader _modLoader;
         private ConfigPipeline _configPipeline;
 
+        /// <summary>最近一次 LoadMap 的跨 mod 片段合并报告（纯记录型；每次 LoadMap 重置）。</summary>
+        public MapMergeReport LastMergeReport { get; } = new MapMergeReport();
+
         // Registry for Map Definitions (Code-First)
         private readonly Dictionary<MapId, MapDefinition> _definitions = new Dictionary<MapId, MapDefinition>();
         private readonly Dictionary<Type, MapDefinition> _typeToDefinition = new Dictionary<Type, MapDefinition>();
@@ -65,9 +68,16 @@ namespace Ludots.Core.Map
 
         public MapConfig LoadMap(MapId mapId)
         {
+            LastMergeReport.Clear();
             var visiting = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var chain = new List<string>(8);
-            return LoadMapInternal(mapId, visiting, chain);
+            MapConfig? config = LoadMapInternal(mapId, visiting, chain);
+            if (config != null)
+            {
+                ResolvePendingTombstones(mapId.Value, config);
+            }
+
+            return config;
         }
 
         private MapConfig LoadMapInternal(MapId mapId, HashSet<string> visiting, List<string> chain)
@@ -105,24 +115,28 @@ namespace Ludots.Core.Map
                 if (_configPipeline == null)
                     throw new InvalidOperationException("MapManager requires ConfigPipeline. Call SetConfigPipeline before LoadMap.");
 
-                var fragments = _configPipeline.CollectFragments(jsonPath);
+                var fragments = _configPipeline.CollectFragmentsWithSources(jsonPath);
                 var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
                 for (int fi = 0; fi < fragments.Count; fi++)
                 {
                     try
                     {
-                        var jsonStr = fragments[fi].ToJsonString();
-                        RejectLegacyWorldExtentKeys(fragments[fi], jsonPath);
-                        RejectLegacyTriggerGraphMountKey(fragments[fi], jsonPath);
-                        ValidateHeartbeatIntervalTicks(fragments[fi], jsonPath);
+                        var jsonStr = fragments[fi].Node.ToJsonString();
+                        RejectLegacyWorldExtentKeys(fragments[fi].Node, jsonPath);
+                        RejectLegacyTriggerGraphMountKey(fragments[fi].Node, jsonPath);
+                        ValidateHeartbeatIntervalTicks(fragments[fi].Node, jsonPath);
                         _ = MapVariableDeclarations.Parse(
-                            fragments[fi] is JsonObject fragmentRoot &&
+                            fragments[fi].Node is JsonObject fragmentRoot &&
                             TryGetPropertyCaseInsensitive(fragmentRoot, "Variables", out JsonNode variablesNode)
                                 ? variablesNode
                                 : null,
                             mapId.Value);
                         var config = JsonSerializer.Deserialize<MapConfig>(jsonStr, jsonOptions);
-                        if (config != null) configs.Add(config);
+                        if (config != null)
+                        {
+                            config.MergeSourceUri = fragments[fi].SourceUri;
+                            configs.Add(config);
+                        }
                     }
                     catch (JsonException ex)
                     {
@@ -182,6 +196,7 @@ namespace Ludots.Core.Map
                     if (parentConfig != null)
                     {
                         var childConfig = finalConfig;
+                        childConfig.MergeSourceUri ??= $"map:{mapIdValue}";
                         finalConfig = parentConfig; 
                         MergeMapConfig(finalConfig, childConfig); 
                     }
@@ -203,24 +218,25 @@ namespace Ludots.Core.Map
         private void MergeMapConfig(MapConfig target, MapConfig source)
         {
             if (!string.IsNullOrEmpty(source.ParentId)) target.ParentId = source.ParentId;
-            if (!string.IsNullOrWhiteSpace(source.VisualHeightmapAsset))
+            if (!string.IsNullOrWhiteSpace(source.ContinuousHeightmapAsset))
             {
-                target.VisualHeightmapAsset = source.VisualHeightmapAsset;
-                if (target.VisualHeightmap != null && source.VisualHeightmap == null)
+                target.ContinuousHeightmapAsset = source.ContinuousHeightmapAsset;
+                if (target.ContinuousHeightmap != null && source.ContinuousHeightmap == null)
                 {
-                    target.VisualHeightmap.Asset = string.Empty;
+                    target.ContinuousHeightmap.Asset = string.Empty;
                 }
             }
 
-            if (source.VisualHeightmap != null)
+            if (source.ContinuousHeightmap != null)
             {
-                target.VisualHeightmap = source.VisualHeightmap.Clone();
-                if (!string.IsNullOrWhiteSpace(target.VisualHeightmap.Asset))
+                target.ContinuousHeightmap = source.ContinuousHeightmap.Clone();
+                if (!string.IsNullOrWhiteSpace(target.ContinuousHeightmap.Asset))
                 {
-                    target.VisualHeightmapAsset = target.VisualHeightmap.Asset;
+                    target.ContinuousHeightmapAsset = target.ContinuousHeightmap.Asset;
                 }
             }
 
+            if (source.TerrainPresentation != null) target.TerrainPresentation = source.TerrainPresentation.Clone();
             if (!string.IsNullOrWhiteSpace(source.StructureCollisionAsset)) target.StructureCollisionAsset = source.StructureCollisionAsset;
             if (source.StructureAwareGrounding) target.StructureAwareGrounding = true;
             if (source.StructureAwareNavigation) target.StructureAwareNavigation = true;
@@ -232,7 +248,13 @@ namespace Ludots.Core.Map
                     target.Dependencies[kvp.Key] = kvp.Value;
                 }
             }
-            if (source.Entities != null) target.Entities.AddRange(source.Entities);
+            if (source.Entities != null) MergeEntityFragments(target, source);
+
+            if (source.PendingEntityTombstones != null && source.PendingEntityTombstones.Count > 0)
+            {
+                target.PendingEntityTombstones ??= new List<(string, string)>();
+                target.PendingEntityTombstones.AddRange(source.PendingEntityTombstones);
+            }
             if (source.Teams != null) target.Teams.AddRange(source.Teams);
             if (source.Players != null) target.Players.AddRange(source.Players);
             if (source.ParticipantRelationships != null)
@@ -326,24 +348,11 @@ namespace Ludots.Core.Map
                 }
             }
 
-            // Merge Regions (append region objects)
-            if (source.Regions != null)
-            {
-                if (target.Regions is JsonArray targetRegionArray && source.Regions is JsonArray sourceRegionArray)
-                {
-                    for (int i = 0; i < sourceRegionArray.Count; i++)
-                    {
-                        targetRegionArray.Add(sourceRegionArray[i]?.DeepClone());
-                    }
-                }
-                else
-                {
-                    target.Regions = source.Regions.DeepClone();
-                }
-            }
-
             // Merge DefaultCamera (source wins)
             if (source.DefaultCamera != null) target.DefaultCamera = source.DefaultCamera;
+
+            // Merge Fields (source wins; the enabled-layer list replaces as a whole)
+            if (source.Fields != null) target.Fields = source.Fields;
 
             // Merge DeathRule (source wins)
             if (source.DeathRule != null)
@@ -360,18 +369,294 @@ namespace Ludots.Core.Map
             // Merge Variables (later fragment / child map replaces same-name declaration)
             if (source.Variables != null && source.Variables.Count > 0)
             {
+                string varSourceLabel = MapMergeReport.DescribeSource(source.MergeSourceUri, "<unknown-fragment>");
                 foreach (var sourceVariable in source.Variables)
                 {
-                    string name = (sourceVariable.Name ?? string.Empty).Trim();
+                    if (sourceVariable == null)
+                    {
+                        continue;
+                    }
+
+                    string name = sourceVariable.Name ?? string.Empty;
+                    if (!string.Equals(name, name.Trim(), StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException(
+                            $"Map {target.Id} fragment {varSourceLabel} variable name {name} must be trimmed.");
+                    }
+
+                    if (sourceVariable.Delete == true)
+                    {
+                        target.PendingVariableTombstones ??= new List<(string, string)>();
+                        target.PendingVariableTombstones.Add((name, varSourceLabel));
+                        continue;
+                    }
+
+                    // 同名重新声明撤销先前变量墓碑（复活）；墓碑标记过的 stale 条目允许改型替换
+                    // （delete-then-redeclare 的 redeclare 半边），未墓碑的活条目改型仍 fail-fast。
+                    bool wasTombstoned = (target.PendingVariableTombstones?.RemoveAll(
+                        t => string.Equals(t.Name, name, StringComparison.Ordinal)) ?? 0) > 0;
                     int existing = target.Variables.FindIndex(v =>
-                        string.Equals((v.Name ?? string.Empty).Trim(), name, StringComparison.Ordinal));
+                        string.Equals(v.Name ?? string.Empty, name, StringComparison.Ordinal));
                     if (existing >= 0)
                     {
+                        if (target.Variables[existing].Type != sourceVariable.Type && !wasTombstoned)
+                        {
+                            throw new InvalidOperationException(
+                                $"Map {target.Id} fragment {varSourceLabel} redeclares variable {name} with type {sourceVariable.Type} (was {target.Variables[existing].Type}); live variables cannot change type, __delete first then redeclare.");
+                        }
+
                         target.Variables[existing] = sourceVariable;
                     }
                     else
                     {
                         target.Variables.Add(sourceVariable);
+                    }
+                }
+            }
+
+            if (source.PendingVariableTombstones != null && source.PendingVariableTombstones.Count > 0)
+            {
+                target.PendingVariableTombstones ??= new List<(string, string)>();
+                target.PendingVariableTombstones.AddRange(source.PendingVariableTombstones);
+            }
+        }
+
+        /// <summary>
+        /// 墓碑在继承链展开后才消化：TryRemove 命中记 Deleted、未命中记 DeletionsNotFound。
+        /// 此时父图实体已合入，子图墓碑可正确命中父图实例（继承方向的删除语义）。
+        /// </summary>
+        private void ResolvePendingTombstones(string requestedMapId, MapConfig config)
+        {
+            if (config.PendingEntityTombstones != null && config.PendingEntityTombstones.Count > 0)
+            {
+                foreach (var (instanceId, sourceLabel) in config.PendingEntityTombstones)
+                {
+                    if (TryRemoveEntityById(config, instanceId))
+                    {
+                        LastMergeReport.RecordDeletion(requestedMapId, instanceId, sourceLabel);
+                    }
+                    else
+                    {
+                        LastMergeReport.RecordDeletionNotFound(requestedMapId, instanceId, sourceLabel);
+                    }
+                }
+
+                config.PendingEntityTombstones.Clear();
+            }
+
+            if (config.PendingVariableTombstones != null && config.PendingVariableTombstones.Count > 0)
+            {
+                foreach (var (name, sourceLabel) in config.PendingVariableTombstones)
+                {
+                    int index = config.Variables.FindIndex(v =>
+                        string.Equals(v.Name ?? string.Empty, name, StringComparison.Ordinal));
+                    if (index >= 0)
+                    {
+                        config.Variables.RemoveAt(index);
+                        LastMergeReport.RecordVariableDeletion(requestedMapId, name, sourceLabel);
+                    }
+                    else
+                    {
+                        LastMergeReport.RecordVariableDeletionNotFound(requestedMapId, name, sourceLabel);
+                    }
+                }
+
+                config.PendingVariableTombstones.Clear();
+            }
+        }
+
+        /// <summary>
+        /// 地图实体跨片段合并：键 = instanceId（ordinal 精确匹配，不 trim——未 trim 的写法由
+        /// 装载期 Register 的 trim 校验 fail-fast，合并层不做静默归一）。同 id 字段级深合并、
+        /// 后写赢；__delete 墓碑删实例（与资产层 ConfigMerger 同键，更晚片段可复活）；匿名
+        /// 实体纯追加，非首片段的匿名实体记入合并报告。继承链与跨 mod 片段共用本语义。
+        /// </summary>
+        private void MergeEntityFragments(MapConfig target, MapConfig source)
+        {
+            string sourceLabel = MapMergeReport.DescribeSource(source.MergeSourceUri, "<unknown-fragment>");
+            bool isBaseFragment = target.Entities.Count == 0;
+            var seenInFragment = new HashSet<string>(StringComparer.Ordinal);
+
+            for (int i = 0; i < source.Entities.Count; i++)
+            {
+                EntitySpawnData incoming = source.Entities[i];
+                if (incoming == null)
+                {
+                    continue;
+                }
+
+                if (!string.IsNullOrWhiteSpace(incoming.InstanceId))
+                {
+                    if (!seenInFragment.Add(incoming.InstanceId))
+                    {
+                        throw new InvalidOperationException(
+                            $"Map '{target.Id}' fragment '{sourceLabel}' declares duplicate InstanceId '{incoming.InstanceId}' within the same fragment; intra-fragment duplicates are authoring errors.");
+                    }
+                }
+
+                if (incoming.Delete == true)
+                {
+                    if (string.IsNullOrWhiteSpace(incoming.InstanceId))
+                    {
+                        throw new InvalidOperationException(
+                            $"Map '{target.Id}' fragment '{sourceLabel}' authors __delete on an entity without InstanceId; tombstones must target an addressable instance.");
+                    }
+
+                    if (!string.Equals(incoming.InstanceId, incoming.InstanceId.Trim(), StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException(
+                            $"Map '{target.Id}' fragment '{sourceLabel}' tombstone InstanceId '{incoming.InstanceId}' must be trimmed.");
+                    }
+
+                    target.PendingEntityTombstones ??= new List<(string, string)>();
+                    target.PendingEntityTombstones.Add((incoming.InstanceId, sourceLabel));
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(incoming.InstanceId))
+                {
+                    if (!isBaseFragment)
+                    {
+                        LastMergeReport.RecordAnonymousNonBaseFragment(target.Id, i, sourceLabel);
+                    }
+
+                    target.Entities.Add(incoming);
+                    continue;
+                }
+
+                // 同 id 重新声明即撤销先前墓碑（复活）；跨片段同 id = 深合并。
+                target.PendingEntityTombstones?.RemoveAll(t => string.Equals(t.InstanceId, incoming.InstanceId, StringComparison.Ordinal));
+
+                int existingIndex = FindEntityIndex(target, incoming.InstanceId);
+                if (existingIndex < 0)
+                {
+                    target.Entities.Add(incoming);
+                    LastMergeReport.RecordWinner(target.Id, incoming.InstanceId, sourceLabel);
+                    continue;
+                }
+
+                MergeEntityData(target.Entities[existingIndex], incoming);
+                LastMergeReport.RecordWinner(target.Id, incoming.InstanceId, sourceLabel);
+            }
+        }
+
+        private static bool TryRemoveEntityById(MapConfig target, string instanceId)
+        {
+            for (int i = 0; i < target.Entities.Count; i++)
+            {
+                if (string.Equals(target.Entities[i]?.InstanceId, instanceId, StringComparison.Ordinal))
+                {
+                    target.Entities.RemoveAt(i);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static int FindEntityIndex(MapConfig target, string instanceId)
+        {
+            for (int i = 0; i < target.Entities.Count; i++)
+            {
+                if (string.Equals(target.Entities[i]?.InstanceId, instanceId, StringComparison.Ordinal))
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private static void MergeEntityData(EntitySpawnData target, EntitySpawnData source)
+        {
+            if (!string.IsNullOrWhiteSpace(source.Template))
+            {
+                target.Template = source.Template;
+            }
+
+            if (source.PositionXCm.HasValue)
+            {
+                target.PositionXCm = source.PositionXCm;
+            }
+
+            if (source.PositionYCm.HasValue)
+            {
+                target.PositionYCm = source.PositionYCm;
+            }
+
+            if (source.Overrides != null)
+            {
+                target.Overrides ??= new Dictionary<string, JsonNode>();
+                foreach (var kvp in source.Overrides)
+                {
+                    if (target.Overrides.TryGetValue(kvp.Key, out JsonNode? existing) &&
+                        existing is JsonObject existingObject &&
+                        kvp.Value is JsonObject incomingObject)
+                    {
+                        ConfigMerger.MergeObject(existingObject, incomingObject, Array.Empty<string>());
+                        continue;
+                    }
+
+                    target.Overrides[kvp.Key] = kvp.Value?.DeepClone();
+                }
+            }
+
+            if (source.PresenterParamOverrides != null)
+            {
+                foreach (var incoming in source.PresenterParamOverrides)
+                {
+                    int index = target.PresenterParamOverrides.FindIndex(p =>
+                        string.Equals(p.ParamKey, incoming.ParamKey, StringComparison.Ordinal) &&
+                        p.Lane == incoming.Lane);
+                    if (index >= 0)
+                    {
+                        target.PresenterParamOverrides[index] = incoming;
+                    }
+                    else
+                    {
+                        target.PresenterParamOverrides.Add(incoming);
+                    }
+                }
+            }
+
+            if (source.Relations != null)
+            {
+                target.Relations ??= new List<EntityRelationAuthoring>();
+                foreach (var relation in source.Relations)
+                {
+                    if (relation == null)
+                    {
+                        continue;
+                    }
+
+                    int index = target.Relations.FindIndex(r =>
+                        string.Equals(r?.To, relation.To, StringComparison.Ordinal) &&
+                        string.Equals(r?.Type, relation.Type, StringComparison.Ordinal));
+                    if (relation.Delete == true)
+                    {
+                        if (index >= 0)
+                        {
+                            target.Relations.RemoveAt(index);
+                        }
+
+                        continue;
+                    }
+
+                    if (index >= 0)
+                    {
+                        EntityRelationAuthoring existing = target.Relations[index];
+                        if (relation.Metric != null)
+                        {
+                            existing.Metric ??= new Dictionary<string, int>();
+                            foreach (var metricKvp in relation.Metric)
+                            {
+                                existing.Metric[metricKvp.Key] = metricKvp.Value;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        target.Relations.Add(relation);
                     }
                 }
             }

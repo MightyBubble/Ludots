@@ -126,6 +126,12 @@ namespace Ludots.Core.Persistence
                     $"Save container formatVersion mismatch: expected {FormatVersion}, actual {version}.");
             }
 
+            ushort reserved = BinaryPrimitives.ReadUInt16LittleEndian(source.Slice(6, 2));
+            if (reserved != 0)
+            {
+                throw new SaveContextException("Save container reserved flags are not supported.");
+            }
+
             int headerLength = BinaryPrimitives.ReadInt32LittleEndian(source.Slice(8, 4));
             int domainLength = BinaryPrimitives.ReadInt32LittleEndian(source.Slice(12, 4));
             int worldLength = BinaryPrimitives.ReadInt32LittleEndian(source.Slice(16, 4));

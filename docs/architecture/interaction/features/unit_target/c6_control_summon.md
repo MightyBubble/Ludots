@@ -43,7 +43,7 @@ InputOrderMapping:
 | 组件 | 状态 |
 |------|------|
 | InputOrderMapping.Entity | ✅ 已有 |
-| InteractionModeType (4种) | ✅ 已有 |
+| CastModeType (4种) | ✅ 已有 |
 | Entity Tag System | ✅ 已有 |
 | Blackboard System | ✅ 已有 |
 | FilterProfileRegistry / target filter profiles | ✅ 已有 |

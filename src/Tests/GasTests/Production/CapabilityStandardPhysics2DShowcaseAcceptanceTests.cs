@@ -174,7 +174,7 @@ namespace Ludots.Tests.GAS.Production
             {
                 playerInput.InjectAction(AuthoritativeGroundPointerHelper.ActionId, new System.Numerics.Vector3(worldCm.X, 0f, worldCm.Y));
                 playerInput.InjectAction(bindings.PointerPositionActionId, new System.Numerics.Vector3(worldCm.X, worldCm.Y, 0f));
-                playerInput.Update();
+                playerInput.Update(1f / 60f);
             }
             else
             {

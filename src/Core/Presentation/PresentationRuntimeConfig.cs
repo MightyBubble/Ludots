@@ -19,6 +19,7 @@ namespace Ludots.Core.Presentation
         private int? _visualSnapshotBufferCapacity;
         private int? _visualProxyBufferCapacity;
         private int? _skinnedVisualBatchCapacity;
+        private GpuSkinnedRuntimeConfig? _gpuSkinned;
         private int? _presentationRequestCapacity;
         private int? _clearTransientVisualProjectionCapacity;
         private int? _instancedBatchRequestCapacity;
@@ -32,6 +33,7 @@ namespace Ludots.Core.Presentation
         private int? _screenHudCapacity;
         private int? _minimapMarkerCapacity;
         private int? _navMeshTileCapacity;
+        private int? _trailMeshCapacity;
         private int? _runtimeEntitySpawnQueueCapacity;
         private int? _runtimeEntitySpawnReceiptQueueCapacity;
         private int? _runtimeEntityLifecycleQueueCapacity;
@@ -49,6 +51,11 @@ namespace Ludots.Core.Presentation
         public int VisualSnapshotBufferCapacity { get => _visualSnapshotBufferCapacity ?? 0; set => _visualSnapshotBufferCapacity = value; }
         public int VisualProxyBufferCapacity { get => _visualProxyBufferCapacity ?? 0; set => _visualProxyBufferCapacity = value; }
         public int SkinnedVisualBatchCapacity { get => _skinnedVisualBatchCapacity ?? 0; set => _skinnedVisualBatchCapacity = value; }
+        public GpuSkinnedRuntimeConfig GpuSkinned
+        {
+            get => _gpuSkinned ?? throw new InvalidOperationException("presentation.gpuSkinned must be explicitly configured.");
+            set => _gpuSkinned = value;
+        }
         public int PresentationRequestCapacity { get => _presentationRequestCapacity ?? 0; set => _presentationRequestCapacity = value; }
         public int ClearTransientVisualProjectionCapacity { get => _clearTransientVisualProjectionCapacity ?? 0; set => _clearTransientVisualProjectionCapacity = value; }
         public int InstancedBatchRequestCapacity { get => _instancedBatchRequestCapacity ?? 0; set => _instancedBatchRequestCapacity = value; }
@@ -62,6 +69,7 @@ namespace Ludots.Core.Presentation
         public int ScreenHudCapacity { get => _screenHudCapacity ?? 0; set => _screenHudCapacity = value; }
         public int MinimapMarkerCapacity { get => _minimapMarkerCapacity ?? 0; set => _minimapMarkerCapacity = value; }
         public int NavMeshTileCapacity { get => _navMeshTileCapacity ?? 4096; set => _navMeshTileCapacity = value; }
+        public int TrailMeshCapacity { get => _trailMeshCapacity ?? 0; set => _trailMeshCapacity = value; }
         public int RuntimeEntitySpawnQueueCapacity { get => _runtimeEntitySpawnQueueCapacity ?? 0; set => _runtimeEntitySpawnQueueCapacity = value; }
         public int RuntimeEntitySpawnReceiptQueueCapacity { get => _runtimeEntitySpawnReceiptQueueCapacity ?? 0; set => _runtimeEntitySpawnReceiptQueueCapacity = value; }
         public int RuntimeEntityLifecycleQueueCapacity { get => _runtimeEntityLifecycleQueueCapacity ?? 0; set => _runtimeEntityLifecycleQueueCapacity = value; }
@@ -91,6 +99,12 @@ namespace Ludots.Core.Presentation
             RequirePositive(_visualSnapshotBufferCapacity, "presentation.visualSnapshotBufferCapacity");
             RequirePositive(_visualProxyBufferCapacity, "presentation.visualProxyBufferCapacity");
             RequirePositive(_skinnedVisualBatchCapacity, "presentation.skinnedVisualBatchCapacity");
+            if (_gpuSkinned == null)
+            {
+                throw new InvalidOperationException("presentation.gpuSkinned must be explicitly configured.");
+            }
+
+            _gpuSkinned.Validate();
             RequirePositive(_presentationRequestCapacity, "presentation.presentationRequestCapacity");
             RequirePositive(_clearTransientVisualProjectionCapacity, "presentation.clearTransientVisualProjectionCapacity");
             RequirePositive(_instancedBatchRequestCapacity, "presentation.instancedBatchRequestCapacity");
@@ -103,6 +117,7 @@ namespace Ludots.Core.Presentation
             RequirePositive(_worldHudCapacity, "presentation.worldHudCapacity");
             RequirePositive(_screenHudCapacity, "presentation.screenHudCapacity");
             RequirePositive(_minimapMarkerCapacity, "presentation.minimapMarkerCapacity");
+            RequirePositive(_trailMeshCapacity, "presentation.trailMeshCapacity");
             RequirePositive(_runtimeEntitySpawnQueueCapacity, "presentation.runtimeEntitySpawnQueueCapacity");
             RequirePositive(_runtimeEntitySpawnReceiptQueueCapacity, "presentation.runtimeEntitySpawnReceiptQueueCapacity");
             RequirePositive(_runtimeEntityLifecycleQueueCapacity, "presentation.runtimeEntityLifecycleQueueCapacity");
@@ -150,6 +165,42 @@ namespace Ludots.Core.Presentation
             }
 
             return value.Value;
+        }
+    }
+
+    public sealed class GpuSkinnedRuntimeConfig
+    {
+        private int? _maxBatches;
+        private int? _maxUniquePoses;
+        private int? _maxBoneSlots;
+        private int? _posePhaseBuckets;
+
+        public int MaxBatches { get => _maxBatches ?? 0; set => _maxBatches = value; }
+
+        public int MaxUniquePoses { get => _maxUniquePoses ?? 0; set => _maxUniquePoses = value; }
+
+        public int MaxBoneSlots { get => _maxBoneSlots ?? 0; set => _maxBoneSlots = value; }
+
+        public int PosePhaseBuckets { get => _posePhaseBuckets ?? 0; set => _posePhaseBuckets = value; }
+
+        public void Validate()
+        {
+            PresentationRuntimeConfig.RequirePositive(_maxBatches, "presentation.gpuSkinned.maxBatches");
+            PresentationRuntimeConfig.RequirePositive(_maxUniquePoses, "presentation.gpuSkinned.maxUniquePoses");
+            int maxBoneSlots = PresentationRuntimeConfig.RequirePositive(_maxBoneSlots, "presentation.gpuSkinned.maxBoneSlots");
+            if (maxBoneSlots > 2048)
+            {
+                throw new InvalidOperationException("presentation.gpuSkinned.maxBoneSlots must be <= 2048.");
+            }
+
+            int posePhaseBuckets = PresentationRuntimeConfig.RequirePositive(
+                _posePhaseBuckets,
+                "presentation.gpuSkinned.posePhaseBuckets");
+            if (posePhaseBuckets > _maxUniquePoses!.Value)
+            {
+                throw new InvalidOperationException(
+                    "presentation.gpuSkinned.posePhaseBuckets must be <= maxUniquePoses.");
+            }
         }
     }
 

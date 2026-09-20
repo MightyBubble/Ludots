@@ -1,11 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AssemblyName>Ludots.Adapter.Raylib.Tests</AssemblyName>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsTestProject>true</IsTestProject>
     <SkiaNativeRid Condition="'$(SkiaNativeRid)' == '' and '$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</SkiaNativeRid>
     <SkiaNativeRid Condition="'$(SkiaNativeRid)' == '' and '$(OS)' == 'Windows_NT'">win-x64</SkiaNativeRid>
     <SkiaNativeRid Condition="'$(SkiaNativeRid)' == '' and '$([MSBuild]::IsOSPlatform(`Linux`))' == 'true'">linux-x64</SkiaNativeRid>
@@ -20,7 +21,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj" />
-    <ProjectReference Include="..\..\Apps\Raylib\Ludots.App.RaylibEngineGallery\Ludots.App.RaylibEngineGallery.csproj" />
+    <ProjectReference Include="..\..\..\mods\fixtures\instanced_batch\InstancedBatchDemoMod\InstancedBatchDemoMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\LudotsCoreMod\LudotsCoreMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\CoreInputMod\CoreInputMod.csproj" />
+    <ProjectReference Include="..\..\Client\Ludots.Raylib.SceneKit\Ludots.Raylib.SceneKit.csproj" />
+    <ProjectReference Include="..\..\Content\Ludots.Content.EngineGallery\Ludots.Content.EngineGallery.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Browser\Ludots.UI.Browser.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI\Ludots.UI.csproj" />
   </ItemGroup>

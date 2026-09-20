@@ -20,7 +20,7 @@ namespace Ludots.Tests.Gas.Graph
 {
     [TestFixture]
     [NonParallelizable]
-    public sealed class TriggerGraphResumeTests
+    public sealed partial class TriggerGraphResumeTests
     {
         private const string MapId = "map_trigger_resume_probe";
         private const string GraphName = "Graph.TriggerGraph.ResumeProbe";
@@ -58,10 +58,10 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(mount.LastSliceResult.BudgetSuspended, Is.True);
             Assert.That(mount.DroppedCount, Is.EqualTo(0));
 
-            engine.TriggerManager.FireMapEvent(
-                new MapId(MapId), GameEvents.MapHeartbeat, engine.CreateContext());
+            var resumeContext = engine.CreateContext();
+            engine.TriggerManager.FireMapTriggerResume(new MapId(MapId), resumeContext);
 
-            Assert.That(mount.IsSuspended, Is.False, "The think wave must resume the suspended run.");
+            Assert.That(mount.IsSuspended, Is.False, "The resume pulse must continue the suspended run.");
             Assert.That(mount.LastSliceResult.Halted, Is.True);
             Assert.That(mount.LastSliceResult.ReturnInt, Is.EqualTo(4242),
                 "Registers seeded at entry dispatch must survive the suspension and feed the halt value.");
@@ -101,6 +101,52 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(mount.LastSliceResult.Halted, Is.True);
             Assert.That(mount.LastSliceResult.ReturnInt, Is.EqualTo(4242),
                 "Registers seeded at entry dispatch must survive the yield and feed the halt value.");
+        }
+
+        [Test]
+        public void ModSuspension_ResumesOnEngineModPulse()
+        {
+            using var fixture = TriggerGraphResumeFixture.Create(includeMapMount: false);
+            using GameEngine engine = fixture.CreateEngine();
+            GraphInstruction[] program =
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.Yield },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 1 },
+            };
+            int graphId = fixture.RegisterTriggerGraph(engine, program, new[]
+            {
+                new TriggerGraphEntry("modWait", EntryEventName, startPc: 0, once: false),
+            });
+            var mount = new TriggerGraphMountTrigger(
+                graphId,
+                GraphName,
+                new TriggerGraphEntry("modWait", EntryEventName, startPc: 0, once: false),
+                Entity.Null,
+                domain: TriggerGraphMountDomain.Mod,
+                modIdFilter: "FixtureMod");
+            var resume = new TriggerGraphResumeTrigger(mount);
+
+            engine.TriggerManager.RegisterModTriggers("FixtureMod", new Trigger[] { mount, resume });
+            ScriptContext entryContext = engine.CreateContext();
+            entryContext.Set(MapTriggerEventPayloadKeys.ModId, "FixtureMod");
+            entryContext.Set(MapTriggerEventPayloadKeys.Count, 4242);
+            engine.TriggerManager.FireEventAsync(new EventKey(EntryEventName), entryContext)
+                .GetAwaiter()
+                .GetResult();
+
+            Assert.That(mount.IsSuspended, Is.True);
+            Assert.That(engine.TriggerManager.HasSuspendedModTriggers, Is.True);
+            Assert.That(resume.EventKey, Is.EqualTo(GameEvents.ModTriggerResume));
+
+            var resumeClock = new ModTriggerResumeClockSystem(engine.TriggerManager, engine.CreateContext);
+            float dt = 1f / 60f;
+            resumeClock.Update(in dt);
+
+            Assert.That(mount.IsSuspended, Is.False,
+                "The engine-level ModTriggerResume pulse must continue a suspended Mod graph.");
+            Assert.That(mount.LastSliceResult.Halted, Is.True);
+            Assert.That(mount.LastSliceResult.ReturnInt, Is.EqualTo(4242));
+            Assert.That(engine.TriggerManager.HasSuspendedModTriggers, Is.False);
         }
 
         [Test]
@@ -226,10 +272,11 @@ namespace Ludots.Tests.Gas.Graph
 
             engine.TriggerManager.FireMapEvent(new MapId(MapId), new EventKey(EntryEventName), engine.CreateContext());
 
-            var waveKey = GameEvents.MapHeartbeat;
+            var waveKey = GameEvents.MapTriggerResume;
             for (int wave = 0; wave < 200 && engine.TriggerManager.Errors.Count == 0; wave++)
             {
-                engine.TriggerManager.FireMapEvent(new MapId(MapId), waveKey, engine.CreateContext());
+                var waveContext = engine.CreateContext();
+                engine.TriggerManager.FireMapTriggerResume(new MapId(MapId), waveContext);
             }
 
             Assert.That(engine.TriggerManager.Errors.Count, Is.GreaterThan(0),
@@ -283,10 +330,10 @@ namespace Ludots.Tests.Gas.Graph
             using GameEngine engine = fixture.CreateEngine();
             int graphId = fixture.RegisterTriggerGraph(engine, BudgetSuspensionProgram(haltRegister: 1), new[]
             {
-                new TriggerGraphEntry("wave", GameEvents.MapHeartbeat.Value, startPc: 0, once: false),
+                new TriggerGraphEntry("wave", GameEvents.MapTriggerResume.Value, startPc: 0, once: false),
             });
             var mount = new TriggerGraphMountTrigger(graphId, GraphName,
-                new TriggerGraphEntry("wave", GameEvents.MapHeartbeat.Value, startPc: 0, once: false),
+                new TriggerGraphEntry("wave", GameEvents.MapTriggerResume.Value, startPc: 0, once: false),
                 Entity.Null);
 
             Assert.That(mount.EntryIsResumeEvent, Is.True);

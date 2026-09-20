@@ -1,0 +1,15 @@
+{
+  "startupMapId": "east_asia_visual_heightmap",
+  "windowTitle": "Ludots Engine - East Asia Borders Land & Sea",
+  "commandSource": {
+    "movePathPreviewOrderTypeKeys": [
+      "massNavigationMove"
+    ]
+  },
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
+}

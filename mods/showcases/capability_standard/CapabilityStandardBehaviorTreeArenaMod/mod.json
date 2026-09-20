@@ -2,7 +2,7 @@
   "name": "CapabilityStandardBehaviorTreeArenaMod",
   "version": "1.0.0",
   "description": "Standalone 10k Behavior Tree think-wave arena (BT only).",
-  "main": "bin/net8.0/CapabilityStandardBehaviorTreeArenaMod.dll",
+  "main": "bin/net9.0/CapabilityStandardBehaviorTreeArenaMod.dll",
   "priority": -1900,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

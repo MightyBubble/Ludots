@@ -11,6 +11,11 @@
       "type": "Button"
     },
     {
+      "id": "ModifierSubtract",
+      "name": "Gameplay_ModifierSubtract",
+      "type": "Button"
+    },
+    {
       "id": "AlternateModifier",
       "name": "Gameplay_AlternateModifier",
       "type": "Button"
@@ -131,6 +136,7 @@
         { "actionId": "QueueModifier", "path": "<Keyboard>/rightShift" },
         { "actionId": "PrecisionModifier", "path": "<Keyboard>/leftCtrl" },
         { "actionId": "PrecisionModifier", "path": "<Keyboard>/rightCtrl" },
+        { "actionId": "ModifierSubtract", "path": "<Keyboard>/leftCtrl" },
         { "actionId": "AlternateModifier", "path": "<Keyboard>/leftAlt" },
         { "actionId": "AlternateModifier", "path": "<Keyboard>/rightAlt" },
         {

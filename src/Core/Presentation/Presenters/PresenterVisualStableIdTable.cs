@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Ludots.Core.Presentation;
 using Ludots.Platform.Abstractions;
@@ -13,6 +14,9 @@ namespace Ludots.Core.Presentation.Presenters
         private readonly PresenterVisualStableKey[] _keys;
         private readonly int[] _stableIds;
         private readonly byte[] _occupied;
+        private readonly Dictionary<int, int> _headByPresenter;
+        private readonly int[] _nextByPresenter;
+        private readonly int[] _previousByPresenter;
         private readonly int _mask;
         private readonly int _maxEntries;
         private int _count;
@@ -35,6 +39,9 @@ namespace Ludots.Core.Presentation.Presenters
             _occupied = new byte[size];
             _mask = size - 1;
             _maxEntries = Math.Max(1, (int)(size * MaxLoadFactor));
+            _headByPresenter = new Dictionary<int, int>(_maxEntries);
+            _nextByPresenter = new int[size];
+            _previousByPresenter = new int[size];
         }
 
         public int GetOrAllocate(in PresenterVisualStableKey key)
@@ -57,6 +64,7 @@ namespace Ludots.Core.Presentation.Presenters
             _stableIds[slot] = _allocator.Allocate();
             _occupied[slot] = 1;
             _count++;
+            LinkToPresenter(slot);
             return _stableIds[slot];
         }
 
@@ -106,16 +114,10 @@ namespace Ludots.Core.Presentation.Presenters
             }
 
             int released = 0;
-            for (int slot = 0; slot < _occupied.Length;)
+            while (_headByPresenter.TryGetValue(presenterStableId, out int head))
             {
-                if (_occupied[slot] != 0 && _keys[slot].PresenterStableId == presenterStableId)
-                {
-                    RemoveAt(slot, out _);
-                    released++;
-                    continue;
-                }
-
-                slot++;
+                RemoveAt(head - 1, out _);
+                released++;
             }
 
             return released;
@@ -146,6 +148,7 @@ namespace Ludots.Core.Presentation.Presenters
         private void RemoveAt(int slot, out int stableId)
         {
             stableId = _stableIds[slot];
+            UnlinkFromPresenter(slot);
             ClearSlot(slot);
             _count--;
 
@@ -154,6 +157,7 @@ namespace Ludots.Core.Presentation.Presenters
             {
                 PresenterVisualStableKey movedKey = _keys[next];
                 int movedStableId = _stableIds[next];
+                UnlinkFromPresenter(next);
                 ClearSlot(next);
                 _count--;
                 InsertExisting(in movedKey, movedStableId);
@@ -173,6 +177,44 @@ namespace Ludots.Core.Presentation.Presenters
             _stableIds[slot] = stableId;
             _occupied[slot] = 1;
             _count++;
+            LinkToPresenter(slot);
+        }
+
+        private void LinkToPresenter(int slot)
+        {
+            int presenterId = _keys[slot].PresenterStableId;
+            _headByPresenter.TryGetValue(presenterId, out int head);
+            _nextByPresenter[slot] = head;
+            _previousByPresenter[slot] = 0;
+            if (head != 0)
+            {
+                _previousByPresenter[head - 1] = slot + 1;
+            }
+            _headByPresenter[presenterId] = slot + 1;
+        }
+
+        private void UnlinkFromPresenter(int slot)
+        {
+            int next = _nextByPresenter[slot];
+            int previous = _previousByPresenter[slot];
+            if (previous != 0)
+            {
+                _nextByPresenter[previous - 1] = next;
+            }
+            else if (next != 0)
+            {
+                _headByPresenter[_keys[slot].PresenterStableId] = next;
+            }
+            else
+            {
+                _headByPresenter.Remove(_keys[slot].PresenterStableId);
+            }
+            if (next != 0)
+            {
+                _previousByPresenter[next - 1] = previous;
+            }
+            _nextByPresenter[slot] = 0;
+            _previousByPresenter[slot] = 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -93,8 +93,9 @@ namespace Ludots.Tests.GAS
                 requests.Publish(req);
 
                 var chainOrders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
-                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
-                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
+                Entity chainSource = world.Create();
+                chainOrders.TryEnqueue(new Order { Actor = chainSource, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
+                chainOrders.TryEnqueue(new Order { Actor = chainSource, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
 
                 var proposalSys = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(
                     world, requests, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, new Ludots.Core.Engine.DiscreteClock(), budget: new GasBudget(), templates: templates,
@@ -212,8 +213,9 @@ namespace Ludots.Tests.GAS
                 requests.Publish(req);
 
                 var chainOrders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
-                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
-                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
+                Entity chainSource = world.Create();
+                chainOrders.TryEnqueue(new Order { Actor = chainSource, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
+                chainOrders.TryEnqueue(new Order { Actor = chainSource, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
 
                 var proposalSys = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(
                     world, requests, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, new Ludots.Core.Engine.DiscreteClock(), budget: new GasBudget(), templates: templates,
@@ -243,6 +245,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var requests = new EffectRequestQueue();
             var api = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null, effectRequests: requests);
+            api.AggregateDirty = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
 
             var target = world.Create();
 
@@ -529,6 +532,7 @@ namespace Ludots.Tests.GAS
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                 tagOps: tagOps);
             var graphApi = new GasGraphRuntimeApi(world, tagOps: tagOps);
+            graphApi.AggregateDirty = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
             var phaseExecutor = new EffectPhaseExecutor(
                 programs,
                 presetTypes,
@@ -553,6 +557,7 @@ namespace Ludots.Tests.GAS
                 effectRequests: requests,
                 templates: templates,
                 phaseExecutor: phaseExecutor,
+                aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry(),
                 graphApi: graphApi,
                 tagOps: tagOps,
                 presentationEvents: new Ludots.Core.Gameplay.GAS.Presentation.GasPresentationEventBuffer(16));
@@ -610,7 +615,7 @@ namespace Ludots.Tests.GAS
                 [
                   {
                     "id": "Effect.Preset.ApplyForce2D",
-                    "tags": ["Effect.ApplyForce"],
+                    "categories": ["Effect.ApplyForce"],
                     "presetType": "ApplyForce2D",
                     "lifetime": "Instant",
                     "participatesInResponse": true,
@@ -652,7 +657,7 @@ namespace Ludots.Tests.GAS
                 [
                   {
                     "id": "Effect.Preset.ApplyForce2D",
-                    "tags": ["Effect.ApplyForce"],
+                    "categories": ["Effect.ApplyForce"],
                     "presetType": "ApplyForce2D",
                     "lifetime": "Instant",
                     "participatesInResponse": true,

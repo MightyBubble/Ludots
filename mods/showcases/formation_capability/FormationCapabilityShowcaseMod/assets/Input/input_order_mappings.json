@@ -3,7 +3,7 @@
   "mappings": [
     {
       "actionId": "Command",
-      "actorCollectionKey": "collection.command.source",
+      "actorCollectionKey": "selected",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "massNavigationMove",
       "argsTemplate": {},
@@ -15,6 +15,7 @@
   ],
   "groupMoveTargetLayout": {
     "mode": "Grid",
+    "assignment": "ActorOrder",
     "spacingCm": 1800,
     "orderTypeKeys": [ "massNavigationMove" ]
   },

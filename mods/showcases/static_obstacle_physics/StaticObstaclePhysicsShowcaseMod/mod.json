@@ -2,7 +2,7 @@
   "name": "StaticObstaclePhysicsShowcaseMod",
   "version": "1.0.0",
   "description": "Playable multi-region static obstacle physics showcase driven by ConfigPipeline and runtime entity spawning.",
-  "main": "bin/net8.0/StaticObstaclePhysicsShowcaseMod.dll",
+  "main": "bin/net9.0/StaticObstaclePhysicsShowcaseMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

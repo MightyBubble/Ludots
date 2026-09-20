@@ -18,6 +18,8 @@ public sealed class GraphOpsNodeVignette
     public GraphOpsNodeLinearOptions? Linear { get; set; }
     /// <summary>Map variable declarations copied verbatim into the generated gallery map JSON (map-var ops).</summary>
     public GraphOpsNodeVignetteVariable[] Variables { get; set; } = Array.Empty<GraphOpsNodeVignetteVariable>();
+    /// <summary>Authored map Regions copied into the generated gallery map JSON (#1108 LoadPlacedRegion).</summary>
+    public GraphOpsNodeVignetteRegion[] Regions { get; set; } = Array.Empty<GraphOpsNodeVignetteRegion>();
 }
 
 public sealed class GraphOpsNodeVignetteVariable
@@ -26,6 +28,17 @@ public sealed class GraphOpsNodeVignetteVariable
     public string Type { get; set; } = "int";
     public double Initial { get; set; }
     public bool Phase { get; set; }
+}
+
+public sealed class GraphOpsNodeVignetteRegion
+{
+    public string Id { get; set; } = "";
+    public string Shape { get; set; } = "";
+    public float X { get; set; }
+    public float Y { get; set; }
+    public float RadiusCm { get; set; }
+    public float HalfWidthCm { get; set; }
+    public float HalfHeightCm { get; set; }
 }
 
 public sealed class GraphOpsNodeActor

@@ -4,14 +4,13 @@
     "showcase",
     "night-raid"
   ],
-  "VisualHeightmapAsset": "assets/terrain/night_raid_flat.vhtm",
+  "ContinuousHeightmapAsset": "assets/terrain/night_raid_flat.height",
   "HeartbeatIntervalTicks": 6,
   "Variables": [
     {
       "name": "stage",
       "type": "int",
-      "initial": 0,
-      "phase": true
+      "initial": 0
     },
     {
       "name": "kill_count",
@@ -22,6 +21,11 @@
       "name": "kill_threshold",
       "type": "int",
       "initial": 5
+    },
+    {
+      "name": "entity_ready",
+      "type": "int",
+      "initial": 0
     },
     {
       "name": "tool_uses",
@@ -39,15 +43,6 @@
       "initial": 0
     }
   ],
-  "Regions": [
-    {
-      "id": "raid_circle",
-      "shape": "circle",
-      "x": 0,
-      "y": 0,
-      "radiusCm": 250
-    }
-  ],
   "TriggerGraphs": [
     {
       "graph": "Graph.NightRaid.Flow",
@@ -58,6 +53,10 @@
     {
       "InstanceId": "night_raid_hero",
       "Template": "night_raid_hero"
+    },
+    {
+      "InstanceId": "night_raid_raid_circle",
+      "Template": "night_raid_raid_circle"
     },
     {
       "InstanceId": "night_raid_gate",

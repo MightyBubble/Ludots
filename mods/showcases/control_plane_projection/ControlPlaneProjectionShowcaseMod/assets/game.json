@@ -7,7 +7,7 @@
   "browserRuntime": {
     "enabled": true,
     "required": true,
-    "provider": "cef"
+    "provider": "ultralight"
   },
   "startupInputContexts": [
     "Default_Gameplay",

@@ -1,0 +1,17 @@
+{
+  "startupMapId": "field_layer_table",
+  "startupInputContexts": [
+    "Default_Gameplay"
+  ],
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ],
+  "windowTitle": "Ludots - Field Layer Table",
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "targetFps": 60,
+  "panelSkin": "markup"
+}

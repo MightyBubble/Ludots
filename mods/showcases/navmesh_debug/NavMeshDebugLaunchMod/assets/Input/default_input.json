@@ -6,6 +6,11 @@
       "type": "Button"
     },
     {
+      "id": "ToggleNavWalkabilityTexture",
+      "name": "ToggleNavWalkabilityTexture",
+      "type": "Button"
+    },
+    {
       "id": "NavMeshDebug_SpawnNavObstacle",
       "name": "NavMeshDebug_SpawnNavObstacle",
       "type": "Button"
@@ -25,6 +30,10 @@
         {
           "actionId": "NavMeshDebug_ToggleOverlay",
           "path": "<Keyboard>/n"
+        },
+        {
+          "actionId": "ToggleNavWalkabilityTexture",
+          "path": "<Keyboard>/t"
         },
         {
           "actionId": "NavMeshDebug_SpawnNavObstacle",

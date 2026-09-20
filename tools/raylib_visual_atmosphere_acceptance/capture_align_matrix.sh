@@ -16,7 +16,7 @@ export LUDOTS_TAKE_SCREENSHOT_FRAME=180
 export LUDOTS_AUTO_EXIT_FRAME=200
 export LUDOTS_MIN_RUNTIME_MS_BEFORE_SCREENSHOT=2500
 
-LAUNCHER="$REPO_ROOT/src/Tools/Ludots.Launcher.Cli/bin/Release/net8.0/Ludots.Launcher.Cli.dll"
+LAUNCHER="$REPO_ROOT/src/Tools/Ludots.Launcher.Cli/bin/Release/net9.0/Ludots.Launcher.Cli.dll"
 dotnet build "$REPO_ROOT/mods/showcases/raylib_visual_atmosphere/RaylibVisualAtmosphereShowcaseMod/RaylibVisualAtmosphereShowcaseMod.csproj" -c Release --nologo
 [[ -f "$LAUNCHER" ]] || dotnet build "$REPO_ROOT/src/Tools/Ludots.Launcher.Cli/Ludots.Launcher.Cli.csproj" -c Release --nologo
 

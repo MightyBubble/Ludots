@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Ludots.Core.Diagnostics;
+using Ludots.Core.Hosting;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 
@@ -17,13 +18,18 @@ namespace Ludots.Adapter.Raylib
         public const string AdapterId = "raylib";
 
         private readonly string? _gameConfigFile;
+        private readonly Action<GameBootstrapResult>? _configure;
         private readonly AppHostLifecycle _lifecycle;
         private RaylibHostSetup? _setup;
         private volatile bool _shutdownRequested;
 
-        public RaylibAppHost(string? gameConfigFile = null, string appId = DefaultAppId)
+        public RaylibAppHost(
+            string? gameConfigFile = null,
+            string appId = DefaultAppId,
+            Action<GameBootstrapResult>? configure = null)
         {
             _gameConfigFile = gameConfigFile;
+            _configure = configure;
             Descriptor = new AppDescriptor(
                 appId,
                 HostKind,
@@ -52,7 +58,7 @@ namespace Ludots.Adapter.Raylib
             ArgumentNullException.ThrowIfNull(context);
 
             _lifecycle.TransitionTo(AppLifecyclePhase.Configuring);
-            _setup = RaylibHostComposer.Compose(context.BaseDirectory, _gameConfigFile);
+            _setup = RaylibHostComposer.Compose(context.BaseDirectory, _gameConfigFile, _configure);
             var registry = _setup.Engine.GetService(CoreServiceKeys.AppHostRegistry);
             if (registry == null)
             {

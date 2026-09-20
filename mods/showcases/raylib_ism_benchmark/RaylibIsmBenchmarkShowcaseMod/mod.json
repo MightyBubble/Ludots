@@ -2,7 +2,7 @@
   "name": "RaylibIsmBenchmarkShowcaseMod",
   "version": "1.0.0",
   "description": "Raylib adapter-side 30K ISM benchmark showcase that bypasses presenter/entity pipelines and measures platform rendering overhead directly.",
-  "main": "bin/net8.0/RaylibIsmBenchmarkShowcaseMod.dll",
+  "main": "bin/net9.0/RaylibIsmBenchmarkShowcaseMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

@@ -1,0 +1,31 @@
+{
+  "Id": "eg_camp_site",
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 24,
+      "HeightInMacroTiles": 16,
+      "GridCellSizeCm": 200
+    }
+  ],
+  "Entities": [
+    {
+      "InstanceId": "mule.harbor",
+      "Template": "eg.camp",
+      "PositionXCm": 1200,
+      "PositionYCm": -800,
+      "Overrides": {
+        "Name": {
+          "Value": "Mule Harbor Camp"
+        }
+      }
+    },
+    {
+      "InstanceId": "mule.alpine",
+      "Template": "eg.camp",
+      "PositionXCm": 500,
+      "PositionYCm": 2400
+    }
+  ]
+}

@@ -43,7 +43,15 @@ namespace NavMeshDebugLaunchMod.Systems
 
             ResolveInput();
             if (_input == null) return;
-            if (!_input.PressedThisFrame(NavMeshDebugInputActions.ToggleOverlay)) return;
+            if (_input.PressedThisFrame(NavMeshDebugInputActions.ToggleNavWalkabilityTexture))
+            {
+                ToggleNavWalkabilityTexture();
+            }
+
+            if (!_input.PressedThisFrame(NavMeshDebugInputActions.ToggleOverlay))
+            {
+                return;
+            }
 
             if (!_engine.TryGetService(CoreServiceKeys.NavMeshPresentationState, out NavMeshPresentationState? state) || state == null)
             {
@@ -52,6 +60,20 @@ namespace NavMeshDebugLaunchMod.Systems
             }
 
             SetOverlay(state, enable: !state.Enabled, reason: "toggle");
+        }
+
+        private void ToggleNavWalkabilityTexture()
+        {
+            if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.RenderDebugState.Name, out object? debugObject) ||
+                debugObject is not RenderDebugState renderDebugState)
+            {
+                throw new InvalidOperationException(
+                    $"{CoreServiceKeys.RenderDebugState.Name} is required to toggle the nav walkability texture.");
+            }
+
+            renderDebugState.DrawNavWalkabilityTexture = !renderDebugState.DrawNavWalkabilityTexture;
+            Console.WriteLine(
+                $"[NavMeshDebugOverlay] nav walkability texture {(renderDebugState.DrawNavWalkabilityTexture ? "enabled" : "disabled")}");
         }
 
         private void SetOverlay(NavMeshPresentationState state, bool enable, string reason)

@@ -1,0 +1,13 @@
+{
+  "op": "QueryCollectActiveTasks",
+  "driver": "query",
+  "title": "点出进行中的差事",
+  "beat": "进行中的差事被点名线牵住。",
+  "detailTemplate": "点到{count}件差事。",
+  "assertDetailContains": [
+    "差事"
+  ],
+  "featuredNodeId": "collect",
+  "graphKind": "Query",
+  "field": "query"
+}

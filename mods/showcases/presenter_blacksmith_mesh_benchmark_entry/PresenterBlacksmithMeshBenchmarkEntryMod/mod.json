@@ -2,7 +2,7 @@
   "name": "PresenterBlacksmithMeshBenchmarkEntryMod",
   "version": "1.0.0",
   "description": "Direct launcher entry for the presenter blacksmith mesh ISM benchmark showcase.",
-  "main": "bin/net8.0/PresenterBlacksmithMeshBenchmarkEntryMod.dll",
+  "main": "bin/net9.0/PresenterBlacksmithMeshBenchmarkEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "PresenterBlacksmithShowcaseMod": "^1.0.0"

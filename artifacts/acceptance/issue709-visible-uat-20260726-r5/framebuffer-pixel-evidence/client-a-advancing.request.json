@@ -1,0 +1,54 @@
+{
+    "schemaVersion":  1,
+    "imagePath":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\issue709-visible-uat-20260726-r5\\screens\\client-a\\frontline_002_advancing.png",
+    "expectedWidth":  1280,
+    "expectedHeight":  720,
+    "requirements":  [
+                         {
+                             "role":  "infantryBody",
+                             "presentationTemplate":  "rts.frontline.infantry.body",
+                             "maximumChannelDifference":  48,
+                             "minimumPixelsPerRegion":  5,
+                             "minimumPassingRegions":  1,
+                             "acceptedColors":  [
+                                                    {
+                                                        "red":  209,
+                                                        "green":  224,
+                                                        "blue":  230
+                                                    }
+                                                ],
+                             "regions":  [
+                                             {
+                                                 "id":  "50:27976713",
+                                                 "x":  921,
+                                                 "y":  304,
+                                                 "width":  38,
+                                                 "height":  33
+                                             }
+                                         ]
+                         },
+                         {
+                             "role":  "crystalField",
+                             "presentationTemplate":  "rts.frontline.crystal.center",
+                             "maximumChannelDifference":  52,
+                             "minimumPixelsPerRegion":  5,
+                             "minimumPassingRegions":  1,
+                             "acceptedColors":  [
+                                                    {
+                                                        "red":  20,
+                                                        "green":  224,
+                                                        "blue":  255
+                                                    }
+                                                ],
+                             "regions":  [
+                                             {
+                                                 "id":  "54:11953003",
+                                                 "x":  28,
+                                                 "y":  322,
+                                                 "width":  56,
+                                                 "height":  48
+                                             }
+                                         ]
+                         }
+                     ]
+}

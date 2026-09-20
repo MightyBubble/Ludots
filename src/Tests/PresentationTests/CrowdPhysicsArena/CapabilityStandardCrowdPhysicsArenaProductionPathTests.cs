@@ -54,6 +54,7 @@ namespace Ludots.Tests.Presentation
         {
             "LudotsCoreMod",
             "CoreInputMod",
+            "SelectionInteractionMod",
             "MassNavigationMod",
             "CapabilityStandardCrowdPhysicsArenaMod"
         };
@@ -89,8 +90,13 @@ namespace Ludots.Tests.Presentation
             WaitForScenarioAgents(engine, simulation, expectedAgents);
 
             // Every squad agent must be a kinematic physics participant driven by the massnav bridge.
+            // NavigationAgentCount 只证明 solver 配置规模，spawn 队列排空并绑定到 kinematic 桥才算物化完成。
             var feedSystem = RequireService(engine, MovementPhysics2DBridgeKeys.KinematicPoseFeedSystem);
-            TickFrames(engine, 2);
+            WaitUntil(
+                engine,
+                MaxWarmupFrames,
+                () => feedSystem.LastFedParticipantCount == expectedAgents,
+                () => $"Kinematic pose feed did not reach {expectedAgents} participants within {MaxWarmupFrames} frames (last fed: {feedSystem.LastFedParticipantCount}).");
             Assert.That(feedSystem.LastFedParticipantCount, Is.EqualTo(expectedAgents),
                 "All arena squad agents must be fed into the kinematic pose buffer every fixed step.");
 
@@ -795,7 +801,7 @@ namespace Ludots.Tests.Presentation
         {
             // The relief heightmap sits hundreds of meters above y=0; projecting the ground point at
             // its sampled terrain height keeps it in front of the camera (finite screen coordinates).
-            var heightmap = RequireService(engine, CoreServiceKeys.VisualHeightmap);
+            var heightmap = RequireService(engine, CoreServiceKeys.ContinuousHeightmap);
             Assert.That(heightmap.TrySampleHeightCm(worldCm.X, worldCm.Y, out float groundHeightCm), Is.True,
                 $"Visual heightmap does not cover ground point {worldCm}.");
             var projector = RequireService(engine, CoreServiceKeys.ScreenProjector);

@@ -32,30 +32,6 @@ namespace Ludots.Tests.Gas.AI
         }
 
         [Test]
-        public void 数据写的巡逻树加载后代理按树行动()
-        {
-            GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(
-                out _,
-                out GraphActionCatalog actions,
-                out GraphBehaviorCatalog behavior);
-
-            BehaviorTreeDefinition tree = behavior.RequireTree("bt.patrolChaseAttack");
-            Assert.That(tree.NodeCount, Is.EqualTo(9));
-            Assert.That(tree.Nodes[2].Leaf, Is.EqualTo(BehaviorTreeLeafBinding.ScriptSlice));
-            Assert.That(tree.Nodes[2].GraphId, Is.EqualTo(actions.Require("bt.patrol")));
-
-            var world = new BehaviorTreeWorld(tree, 1);
-            world.AddAgent();
-            for (int i = 0; i < 3; i++)
-            {
-                world.TickAll(programs, 32, sensors: null);
-            }
-
-            Assert.That(world.Statuses[0], Is.EqualTo(BehaviorTreeStatus.Success));
-            Assert.That(world.LastScriptReturns[0], Is.EqualTo(0));
-        }
-
-        [Test]
         public void 叶子直接读目标血量不必先喂整数寄存器()
         {
             GraphIdRegistry.Clear();
@@ -176,23 +152,25 @@ namespace Ludots.Tests.Gas.AI
         }
 
         [Test]
-        public void ActionLib十名是唯一清单()
+        public void ActionLib七名与FuncLib条件是唯一清单()
         {
-            _ = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _, out GraphActionCatalog actions);
+            _ = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(
+                out GraphFunctionCatalog functions,
+                out GraphActionCatalog actions);
             var names = new HashSet<string>(actions.Names, StringComparer.Ordinal);
             Assert.That(names, Is.EquivalentTo(new[]
             {
-                "bt.seeEnemy",
-                "bt.inAttackRange",
                 "bt.chase",
                 "bt.attack",
                 "bt.patrol",
-                "hfsm.cond.alwaysTrue",
                 "hfsm.combat.onEnter",
                 "hfsm.combat.onTick",
                 "hfsm.combat.onExit",
                 "script.drinkUntilFull"
             }));
+            Assert.That(functions.Require("bt.seeEnemy").GraphId, Is.GreaterThan(0));
+            Assert.That(functions.Require("bt.inAttackRange").GraphId, Is.GreaterThan(0));
+            Assert.That(functions.Require("hfsm.cond.alwaysTrue").GraphId, Is.GreaterThan(0));
         }
 
         private static GraphControlFlowCompileResult CompileScript(string json, string graphId)

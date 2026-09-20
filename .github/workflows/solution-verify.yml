@@ -49,6 +49,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          lfs: true
 
       - name: Check graph-op gallery generator has no drift
         shell: pwsh
@@ -75,7 +78,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            8.0.x
             9.0.x
 
       - name: Build maintained test project graphs
@@ -93,6 +95,13 @@ jobs:
 
           # ModdingSmoke is a manual smoke tool (OutputType=Exe) that lives outside src/Tests.
           dotnet build src/Tools/ModdingSmoke/ModdingTest.csproj -c Debug -v minimal
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+          # Bench instruments are manual (never run in CI) but must still compile, or API
+          # drift rots them silently between runs.
+          dotnet build src/Benchmarks/NavBake64Bench/NavBake64Bench.csproj -c Debug -v minimal
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }
@@ -152,7 +161,9 @@ jobs:
             'FullyQualifiedName~FormationCapabilityMoveBatch_SharedOrderIdPreservesRelativeLayout',
             'FullyQualifiedName~FormationCapabilityOrderBatch_',
             'FullyQualifiedName~OrderIngestion_RouteEnabledWithoutConfiguredAgentType',
-            'FullyQualifiedName~FormationCapabilityOrders_RejectRetiredOrCrossOrderPayloadFields'
+            'FullyQualifiedName~FormationCapabilityOrders_RejectRetiredOrCrossOrderPayloadFields',
+            'FullyQualifiedName~PresentationRequestChannelTests',
+            'FullyQualifiedName~PresentationRequestFlushIncrementalStaticTests'
           ) -join '|'
 
           dotnet test src/Tests/PresentationTests/PresentationTests.csproj -c Debug --no-build --filter $presentationFilter -v minimal
@@ -177,6 +188,15 @@ jobs:
         shell: pwsh
         run: |
           dotnet test src/Tests/RngCoreTests/RngCoreTests.csproj -c Debug --no-build --filter "TestCategory=ci-gate" -v minimal
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+      # Full persistence suite gates save/restore fidelity and determinism.
+      - name: Test persistence suite
+        shell: pwsh
+        run: |
+          dotnet test src/Tests/PersistenceTests/PersistenceTests.csproj -c Debug --no-build -v minimal
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }

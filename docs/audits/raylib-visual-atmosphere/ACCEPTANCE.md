@@ -31,7 +31,7 @@ Playable showcase binding `raylib_visual_atmosphere` (category `demo` in `showca
 export LD_LIBRARY_PATH=src/Platforms/Desktop:$LD_LIBRARY_PATH
 export LUDOTS_RAYLIB_DISABLE_SKIA_GPU_UNDERLAY=1
 export LUDOTS_RAYLIB_DISABLE_SKIA_FRAMEBUFFER_UNDERLAY=1
-dotnet exec src/Tools/Ludots.Launcher.Cli/bin/Release/net8.0/Ludots.Launcher.Cli.dll \
+dotnet exec src/Tools/Ludots.Launcher.Cli/bin/Release/net9.0/Ludots.Launcher.Cli.dll \
   launch raylib_visual_atmosphere --adapter raylib --build auto
 ```
 
@@ -62,6 +62,6 @@ The script:
 ## Notes
 
 - Linux cloud: keep Skia GPU + framebuffer underlays disabled (same as Raylib parity showcase).
-- Reflective water uses VisualHeightmap terrain into reflection/refraction FBOs plus a Host ocean plane (`tropical_island.vhtm`); do not capture `06` if the water FBO pass is inactive.
+- Reflective water uses ContinuousHeightmap terrain into reflection/refraction FBOs plus a Host ocean plane (`tropical_island.height`); do not capture `06` if the water FBO pass is inactive.
 - Assets are procedural CC0 / in-repo Ludots content — no copy from `/tmp/RaylibErosionStandalone`.
 - P3 projected Decal contract is proven by `ProjectedDecalContractTests` (author scale → `VisualProxy` → `ProjectedDecalVolume` → fail-loud projector). Camera `08` field-contrast player shot is **not taken** on this branch; tropical-island field gallery belongs to the gallery PR.

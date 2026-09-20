@@ -55,6 +55,30 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CompileAbility_TriggerGraphs_PreservesOrder()
+        {
+            var definition = AbilityExecLoader.CompileAbility(
+                (JsonObject)JsonNode.Parse(
+                    """{ "exec": { "clockId": "FixedFrame", "items": [{ "kind": "End", "tick": 0 }] }, "triggerGraphs": ["Graph.Ability.Start", "Graph.Ability.Finish"] }""")!,
+                "Ability.Test.TriggerGraphs",
+                "GAS/abilities.json");
+
+            That(definition.TriggerGraphs, Is.EqualTo(new[] { "Graph.Ability.Start", "Graph.Ability.Finish" }));
+        }
+
+        [Test]
+        public void CompileAbility_TriggerGraphs_DuplicateRejected()
+        {
+            var ex = Throws<InvalidOperationException>(() => AbilityExecLoader.CompileAbility(
+                (JsonObject)JsonNode.Parse(
+                    """{ "exec": { "clockId": "FixedFrame", "items": [{ "kind": "End", "tick": 0 }] }, "triggerGraphs": ["Graph.Ability.Start", "Graph.Ability.Start"] }""")!,
+                "Ability.Test.TriggerGraphs",
+                "GAS/abilities.json"));
+
+            That(ex!.Message, Does.Contain("repeats graph id"));
+        }
+
+        [Test]
         public void Load_RemovedOnActivateEffectsField_IsRejected()
         {
             string root = CreateTempRoot();

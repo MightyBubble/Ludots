@@ -1,0 +1,41 @@
+[
+  {
+    "id": "Graph.FormalText.SubtitleBeat",
+    "kind": "TriggerGraph",
+    "entries": [
+      { "label": "on_map_loaded", "event": "MapLoaded", "start": "guard", "once": true }
+    ],
+    "nodes": [
+      { "id": "guard", "op": "ConstText", "text": "守卫" },
+      { "id": "fell", "op": "ConstText", "text": "倒下了" },
+      { "id": "join", "op": "ConcatText" },
+      { "id": "sinkFixed", "op": "SinkPresentationText", "presentationSurface": "Subtitle" },
+      { "id": "count", "op": "ConstInt", "intValue": 1 },
+      { "id": "countText", "op": "IntToText" },
+      { "id": "fmt", "op": "FormatText", "text": "击杀 {0}" },
+      { "id": "sinkCount", "op": "SinkPresentationText", "presentationSurface": "Subtitle" },
+      { "id": "ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "guard", "fromPort": "next", "to": "fell" },
+      { "from": "fell", "fromPort": "next", "to": "join" },
+      { "from": "join", "fromPort": "next", "to": "sinkFixed" },
+      { "from": "sinkFixed", "fromPort": "next", "to": "count" },
+      { "from": "count", "fromPort": "next", "to": "countText" },
+      { "from": "countText", "fromPort": "next", "to": "fmt" },
+      { "from": "fmt", "fromPort": "next", "to": "sinkCount" },
+      { "from": "sinkCount", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "guard", "fromPort": "value", "to": "join", "toPort": "a" },
+      { "from": "fell", "fromPort": "value", "to": "join", "toPort": "b" },
+      { "from": "join", "fromPort": "value", "to": "sinkFixed", "toPort": "a" },
+      { "from": "count", "fromPort": "value", "to": "countText", "toPort": "a" },
+      { "from": "countText", "fromPort": "value", "to": "fmt", "toPort": "arg:0" },
+      { "from": "fmt", "fromPort": "value", "to": "sinkCount", "toPort": "a" },
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  }
+]

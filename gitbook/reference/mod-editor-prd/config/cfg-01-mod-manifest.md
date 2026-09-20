@@ -11,7 +11,7 @@
   "name": "RtsRedAlertLikeShowcaseMod",
   "version": "1.0.0",
   "description": "Thin root mod for the Red Alert / C&C style RTS production browser showcase.",
-  "main": "bin/net8.0/RtsRedAlertLikeShowcaseMod.dll",
+  "main": "bin/net9.0/RtsRedAlertLikeShowcaseMod.dll",
   "priority": 220,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

@@ -36,7 +36,7 @@ namespace Ludots.Core.Layers
                         $"{diagnosticLabel} EntityLayer.{propertyName}[{i}] must be a non-empty layer name.");
                 }
 
-                int index = LayerRegistry.GetIndex(layerName);
+                int index = LayerRegistry.GetIndexOrRegister(layerName);
                 mask |= 1u << index;
             }
 

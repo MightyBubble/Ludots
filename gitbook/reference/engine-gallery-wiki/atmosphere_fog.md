@@ -12,7 +12,7 @@
 |----|----|
 | scene id | `atmosphere_fog` |
 | preset | `engine_raylib_atmosphere_fog` |
-| 场景源码 | `src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Scenes/AtmosphereFogScene.cs` |
+| 场景源码 | `src/Content/Ludots.Content.EngineGallery/Scenes/AtmosphereFogScene.cs` |
 | 承接渲染器 | `RaylibRenderEnvironmentRenderer`（组帧）+ 雾参数来自 `RaylibFrameLighting` |
 | 注册表条目 | `engine_raylib_atmosphere_fog`（`showcase.registry.json`，tier T1） |
 

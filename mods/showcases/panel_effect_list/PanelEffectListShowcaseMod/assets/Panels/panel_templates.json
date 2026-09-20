@@ -1,0 +1,75 @@
+[
+  {
+    "id": "panel.effect.chip",
+    "subject": "EffectInstance",
+    "graph": "Graph.Effect.Chip",
+    "pins": [
+      {
+        "name": "remaining",
+        "key": "effect.chip.remaining",
+        "mode": "realtime",
+        "default": 0
+      },
+      {
+        "name": "total",
+        "key": "effect.chip.total",
+        "mode": "realtime",
+        "default": 0
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "effect-name",
+          "bind": "displayName"
+        },
+        {
+          "type": "progressBar",
+          "class": "effect-time",
+          "current": "remaining",
+          "max": "total"
+        }
+      ]
+    }
+  },
+  {
+    "id": "panel.effect.list",
+    "graph": "Graph.Effect.List",
+    "pins": [
+      {
+        "name": "rowCount",
+        "key": "panel.effect.rowCount",
+        "mode": "realtime",
+        "default": 0
+      }
+    ],
+    "collections": [
+      {
+        "name": "effects",
+        "source": "selfGraph",
+        "collectionKey": "panel.effect.active",
+        "template": "panel.effect.chip"
+      }
+    ],
+    "layout": {
+      "controls": [
+        {
+          "type": "label",
+          "class": "effect-title",
+          "prefix": "生效 ",
+          "bind": "rowCount"
+        },
+        {
+          "type": "list",
+          "class": "effect-list",
+          "bind": "effects",
+          "viewportHeight": 160,
+          "itemExtent": 48,
+          "virtualize": true,
+          "overscan": 2
+        }
+      ]
+    }
+  }
+]

@@ -32,7 +32,7 @@ public sealed class CapabilityStandardSoundShowcaseSystem : ISystem<float>
 
     private readonly GameEngine _engine;
     private readonly World _world;
-    private readonly PlayerInputHandler _input;
+    private readonly IInputActionReader _input;
     private readonly PresenterCommandBuffer _presenterCommands;
     private readonly int _emitterDefinitionId;
     private readonly int _beaconDefinitionId;
@@ -51,8 +51,11 @@ public sealed class CapabilityStandardSoundShowcaseSystem : ISystem<float>
     {
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         _world = engine.World;
-        _input = engine.GetService(CoreServiceKeys.InputHandler)
-            ?? throw new InvalidOperationException("Sound showcase requires InputHandler.");
+        // This system runs in the fixed-step InputCollection group, so it reads the
+        // per-tick frozen snapshot: the live handler's PressedThisFrame edge only spans one
+        // visual frame and is lost whenever the pacemaker skips the logic tick.
+        _input = engine.GetService(CoreServiceKeys.AuthoritativeInput)
+            ?? throw new InvalidOperationException("Sound showcase requires the authoritative input snapshot.");
         _presenterCommands = engine.GetService(CoreServiceKeys.PresenterCommandBuffer)
             ?? throw new InvalidOperationException("Sound showcase requires PresenterCommandBuffer.");
         var definitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)

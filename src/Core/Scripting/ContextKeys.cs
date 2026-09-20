@@ -25,7 +25,7 @@ namespace Ludots.Core.Scripting
         public const string ViewController = "ViewController";
         public const string ScreenProjector = "ScreenProjector";
         public const string ScreenRayProvider = "ScreenRayProvider";
-        public const string VisualHeightmap = "VisualHeightmap";
+        public const string ContinuousHeightmap = "ContinuousHeightmap";
         public const string DebugDrawCommandBuffer = "DebugDrawCommandBuffer";
         public const string ExtensionAttributeRegistry = "ExtensionAttributeRegistry";
         public const string AttributeSchemaUpdateQueue = "AttributeSchemaUpdateQueue";

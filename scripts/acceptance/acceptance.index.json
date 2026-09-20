@@ -6,9 +6,9 @@
     "status": "active"
   },
   "counts": {
-    "runnable": 45,
+    "runnable": 52,
     "testOnly": 0,
-    "total": 45
+    "total": 52
   },
   "runnable": [
     {
@@ -92,6 +92,14 @@
       "hasScreenshotEvidence": false
     },
     {
+      "id": "capability_standard_sound_showcase",
+      "preset": "capability_standard_sound_showcase_raylib",
+      "binding": "capability_standard_sound_showcase",
+      "testFilter": "SoundShowcaseAcceptanceTests",
+      "artifactDir": null,
+      "hasScreenshotEvidence": false
+    },
+    {
       "id": "capability_standard_time_flow_showcase",
       "preset": "capability_standard_time_flow_showcase_raylib",
       "binding": "capability_standard_time_flow_showcase",
@@ -108,6 +116,14 @@
       "hasScreenshotEvidence": false
     },
     {
+      "id": "case_e_selection",
+      "preset": "case_e_selection_raylib",
+      "binding": "case_e_selection",
+      "testFilter": "CaseESelectionShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/case-e-selection",
+      "hasScreenshotEvidence": false
+    },
+    {
       "id": "control_plane_projection",
       "preset": "control_plane_projection_raylib",
       "binding": "control_plane_projection_showcase",
@@ -121,6 +137,14 @@
       "binding": "engine_gallery",
       "testFilter": "RaylibEngineGalleryTests",
       "artifactDir": "artifacts/acceptance/engine_raylib_atmosphere_fog",
+      "hasScreenshotEvidence": true
+    },
+    {
+      "id": "engine_raylib_composition",
+      "preset": "engine_raylib_composition",
+      "binding": "engine_gallery",
+      "testFilter": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_composition",
       "hasScreenshotEvidence": true
     },
     {
@@ -153,6 +177,22 @@
       "binding": "engine_gallery",
       "testFilter": "RaylibEngineGalleryTests",
       "artifactDir": "artifacts/acceptance/engine_raylib_frame_lighting",
+      "hasScreenshotEvidence": true
+    },
+    {
+      "id": "engine_raylib_gpu_crowd",
+      "preset": "gpu_crowd",
+      "binding": "engine_gallery",
+      "testFilter": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_gpu_crowd",
+      "hasScreenshotEvidence": true
+    },
+    {
+      "id": "engine_raylib_gpu_crowd_sim",
+      "preset": "gpu_crowd_sim",
+      "binding": "engine_gallery",
+      "testFilter": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_gpu_crowd_sim",
       "hasScreenshotEvidence": true
     },
     {
@@ -244,6 +284,14 @@
       "hasScreenshotEvidence": true
     },
     {
+      "id": "engine_raylib_slash_trail",
+      "preset": "engine_raylib_slash_trail",
+      "binding": "engine_gallery",
+      "testFilter": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_slash_trail",
+      "hasScreenshotEvidence": false
+    },
+    {
       "id": "engine_raylib_terrain_heightmap",
       "preset": "engine_raylib_terrain_heightmap",
       "binding": "engine_gallery",
@@ -305,6 +353,14 @@
       "binding": "forge_socket",
       "testFilter": "ItemSystemShowcasePlayableAcceptanceTests",
       "artifactDir": null,
+      "hasScreenshotEvidence": false
+    },
+    {
+      "id": "instanced_batch_demo",
+      "preset": "instanced_batch_demo_raylib",
+      "binding": "instanced_batch_demo",
+      "testFilter": "RaylibInstancedBatchDemoIntegrationTests",
+      "artifactDir": "artifacts/acceptance/instanced-batch-demo",
       "hasScreenshotEvidence": false
     },
     {

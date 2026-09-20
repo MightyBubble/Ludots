@@ -1,14 +1,16 @@
 # Logic Terrain and Topology
 
+> **Canonical SSOT:** [NavMesh 导航体系 SSOT](../navmesh-ssot.md)。本页是 LogicTerrain 当前实现与历史拓扑材料；它不定义未来 NavBakeSource 及 LogicTerrain 退役后的产品合同。
+
 Parent: [Epic #281](https://github.com/MightyBubble/Ludots/issues/281). Subissue: [NAV-4 #286](https://github.com/MightyBubble/Ludots/issues/286). Scale vocabulary: [NAV-0 #282](https://github.com/MightyBubble/Ludots/issues/282).
 
 ## Background
 
-Before NAV-4, navmesh bake read logical terrain through `VertexMap` only. `WalkMaskBuilder`, `NavTileBuilder`, `BakePipeline`, and Recast all assumed hex vertex coordinates and `VertexChunk` storage. Grid maps such as `mass_navigation` could own a grid board and visual `.vhtm`, but had no logical terrain field for bake.
+Before NAV-4, navmesh bake read logical terrain through `VertexMap` only. `WalkMaskBuilder`, `NavTileBuilder`, `BakePipeline`, and Recast all assumed hex vertex coordinates and `VertexChunk` storage. Grid maps such as `mass_navigation` could own a grid board and visual `.height`, but had no logical terrain field for bake.
 
 Logical terrain and visual terrain remain separate:
 
-- Logical terrain is gameplay truth: height level, water, ramp, blocked, area id, and cost.
+- Terrain classification owns height, water, ramp, blocked and area keys. Per-agent traversal cost belongs to pathing (`agentTypes[].navMesh.areaCosts`), as specified by #372. The current `LogicTerrainCell.Cost` field is a remaining implementation debt, not the target authoring contract.
 - Visual terrain is rendering truth: continuous centimeter height, used by presentation and grounding.
 - Visual height never changes walkability unless a caller explicitly runs the projection adapter.
 
@@ -23,7 +25,7 @@ In scope:
 
 - Grid and hex both build `TriWalkMask` and `NavTile`.
 - Recast and CDT entry points can consume `LogicTerrainField`.
-- Runtime map load creates flat grid logic terrain when a grid board has no `.vtxm`.
+- Runtime map load creates flat grid logic terrain when a grid board has no `.hex`.
 - A visual-height projection adapter exists and is explicit.
 
 Out of scope:
@@ -65,7 +67,7 @@ Command:
 `BoardConfig.SpatialType` chooses board topology:
 
 - `Grid`: uses square-grid logic terrain.
-- `HexGrid` / `Hex`: uses `VertexMapLogicTerrainField` when `DataFile` points to `.vtxm`.
+- `HexGrid` / `Hex`: uses `VertexMapLogicTerrainField` when `DataFile` points to `.hex`.
 - `NodeGraph`: graph routing board, not a logic terrain owner.
 
 `BoardConfig.DataFile` is optional for grid logic terrain. If absent, grid boards create a flat logic terrain sized by:
@@ -92,7 +94,7 @@ Contract tests:
 
 - `LogicTerrainFieldContractTests.VertexMapAdapter_PreservesWalkMaskSemantics`
 - `LogicTerrainFieldContractTests.FlatGridLogicTerrainField_BuildsNavTile`
-- `LogicTerrainFieldContractTests.VisualHeightmap_DoesNotChangeLogicWalkabilityUnlessExplicitlyProjected`
+- `LogicTerrainFieldContractTests.ContinuousHeightmap_DoesNotChangeLogicWalkabilityUnlessExplicitlyProjected`
 
 Changing logical terrain flags changes the walk mask and resulting tile. Changing only visual height does not.
 

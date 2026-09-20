@@ -12,10 +12,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
     /// </summary>
     public static class GraphProgramAuthoringFrontDoor
     {
-        private static readonly string[] RequiredTriggerGraphEntryFields = { "label", "event", "start" };
+        private static readonly string[] RequiredTriggerGraphEntryFields = { "label", "start" };
+        private static readonly string[] HookEntryFields = { "hookAnchor", "hookNodeBefore", "hookNodeAfter" };
 
         public static (GraphProgramPackage? Package, GraphOutputSchema OutputSchema, List<GraphDiagnostic> Diagnostics)
-            CompileJsonObject(JsonObject obj, string graphId, JsonSerializerOptions options)
+        CompileJsonObject(JsonObject obj, string graphId, JsonSerializerOptions options)
         {
             GraphControlFlowCompileResult result = CompileJsonObjectFull(obj, graphId, options);
             return (result.Package, result.OutputSchema, result.Diagnostics);
@@ -24,7 +25,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public static GraphControlFlowCompileResult CompileJsonObjectFull(
             JsonObject obj,
             string graphId,
-            JsonSerializerOptions options)
+            JsonSerializerOptions options,
+            Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas = null,
+            Ludots.Core.Scripting.EnumCatalog? enums = null,
+            GasGraphOpRegistry? opRegistry = null)
         {
             if (obj == null) throw new ArgumentNullException(nameof(obj));
             if (string.IsNullOrWhiteSpace(graphId)) throw new ArgumentException("graphId is required.", nameof(graphId));
@@ -66,7 +70,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 doc.Kind = kind.ToString();
             }
 
-            return GraphControlFlowCompiler.Compile(doc);
+            return GraphControlFlowCompiler.Compile(doc, eventSchemas, enums, opRegistry);
         }
 
         public static GraphKind RequireKind(JsonObject obj, string graphId)
@@ -170,11 +174,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     {
                         case "label":
                         case "event":
+                        case "action":
                         case "start":
                             if (field.Value is not JsonValue value || !value.TryGetValue<string>(out _))
                             {
                                 throw new InvalidOperationException(
                                     $"TriggerGraph graph '{graphId}' entries[{i}] field '{field.Key}' must be a string.");
+                            }
+
+                            break;
+                        case "priority":
+                            if (field.Value is not JsonValue priorityValue || !priorityValue.TryGetValue<int>(out _))
+                            {
+                                throw new InvalidOperationException(
+                                    $"TriggerGraph graph '{graphId}' entries[{i}] field 'priority' must be an integer.");
                             }
 
                             break;
@@ -197,9 +210,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         case "filters":
                             RequireTriggerGraphEntryFiltersShape(obj, graphId, i, field.Value);
                             break;
+                        case "hookAnchor":
+                        case "hookNodeBefore":
+                        case "hookNodeAfter":
+                            RequireTriggerGraphEntryHookShape(obj, graphId, i, field.Key, field.Value);
+                            break;
                         default:
                             throw new InvalidOperationException(
-                                $"TriggerGraph graph '{graphId}' entries[{i}] has unknown field '{field.Key}'; allowed fields are label, event, start, once, refire, filters.");
+                                $"TriggerGraph graph '{graphId}' entries[{i}] has unknown field '{field.Key}'; allowed fields are label, event, action, start, once, refire, priority, filters, hookAnchor, hookNodeBefore, hookNodeAfter.");
                     }
                 }
 
@@ -211,6 +229,97 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                             $"TriggerGraph graph '{graphId}' entries[{i}] is missing required field '{required}'.");
                     }
                 }
+
+                bool hasEvent = entry.ContainsKey("event");
+                bool hasAction = entry.ContainsKey("action");
+                if (hasEvent == hasAction)
+                {
+                    throw new InvalidOperationException(
+                        $"TriggerGraph graph '{graphId}' entries[{i}] must declare exactly one of 'event' or 'action' (got event={hasEvent}, action={hasAction}).");
+                }
+
+                if (hasAction &&
+                    entry["filters"] is JsonObject filtersObj &&
+                    filtersObj.ContainsKey("action"))
+                {
+                    throw new InvalidOperationException(
+                        $"TriggerGraph graph '{graphId}' entries[{i}] binds top-level 'action' and must not also declare filters.action.");
+                }
+            }
+        }
+
+
+        /// <summary>
+        /// Strict shape of the #1124 hook blocks: hookAnchor needs string graphId /
+        /// anchor and position "before"|"after"; hookNodeBefore/After need string
+        /// graphId / nodeId. At most one hook block per entry.
+        /// </summary>
+        private static void RequireTriggerGraphEntryHookShape(JsonObject obj, string graphId, int entryIndex, string fieldKey, JsonNode? hookNode)
+        {
+            int hookBlockCount = 0;
+            foreach (string hookField in HookEntryFields)
+            {
+                if (obj.ContainsKey(hookField))
+                {
+                    hookBlockCount++;
+                }
+            }
+
+            if (hookBlockCount > 1)
+            {
+                throw new InvalidOperationException(
+                    $"TriggerGraph graph '{graphId}' entries[{entryIndex}] declares more than one hook block; " +
+                    "combine exactly one of hookAnchor / hookNodeBefore / hookNodeAfter.");
+            }
+
+            if (hookNode is not JsonObject hook)
+            {
+                throw new InvalidOperationException(
+                    $"TriggerGraph graph '{graphId}' entries[{entryIndex}] field '{fieldKey}' must be an object.");
+            }
+
+            foreach (KeyValuePair<string, JsonNode?> field in hook)
+            {
+                switch (field.Key)
+                {
+                    case "graphId":
+                    case "anchor":
+                    case "nodeId":
+                        if (field.Value is not JsonValue value || !value.TryGetValue<string>(out string? text) ||
+                            string.IsNullOrWhiteSpace(text))
+                        {
+                            throw new InvalidOperationException(
+                                $"TriggerGraph graph '{graphId}' entries[{entryIndex}] {fieldKey} field '{field.Key}' must be a non-empty string.");
+                        }
+
+                        break;
+                    case "position":
+                        if (field.Value is not JsonValue positionValue || !positionValue.TryGetValue<string>(out string? position) ||
+                            (position != "before" && position != "after"))
+                        {
+                            throw new InvalidOperationException(
+                                $"TriggerGraph graph '{graphId}' entries[{entryIndex}] {fieldKey} field 'position' must be \"before\" or \"after\".");
+                        }
+
+                        break;
+                    default:
+                        throw new InvalidOperationException(
+                            $"TriggerGraph graph '{graphId}' entries[{entryIndex}] {fieldKey} has unknown field '{field.Key}'.");
+                }
+            }
+
+            if (!hook.ContainsKey("graphId"))
+            {
+                throw new InvalidOperationException(
+                    $"TriggerGraph graph '{graphId}' entries[{entryIndex}] {fieldKey} is missing required field 'graphId'.");
+            }
+
+            bool anchorShape = fieldKey == "hookAnchor";
+            string requiredIdField = anchorShape ? "anchor" : "nodeId";
+            if (!hook.ContainsKey(requiredIdField))
+            {
+                throw new InvalidOperationException(
+                    $"TriggerGraph graph '{graphId}' entries[{entryIndex}] {fieldKey} is missing required field '{requiredIdField}'.");
             }
         }
 
@@ -261,9 +370,27 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         }
 
                         break;
+                    case "instanceId":
+                        if (field.Value is not JsonValue instanceValue || !instanceValue.TryGetValue<string>(out _) ||
+                            string.IsNullOrWhiteSpace(field.Value.GetValue<string>()))
+                        {
+                            throw new InvalidOperationException(
+                                $"TriggerGraph graph '{graphId}' entries[{entryIndex}] filters field 'instanceId' must be a non-empty placed instance id.");
+                        }
+
+                        break;
+                    case "varName":
+                        if (field.Value is not JsonValue varNameValue || !varNameValue.TryGetValue<string>(out _) ||
+                            string.IsNullOrWhiteSpace(field.Value.GetValue<string>()))
+                        {
+                            throw new InvalidOperationException(
+                                $"TriggerGraph graph '{graphId}' entries[{entryIndex}] filters field 'varName' must be a non-empty map variable name.");
+                        }
+
+                        break;
                     default:
                         throw new InvalidOperationException(
-                            $"TriggerGraph graph '{graphId}' entries[{entryIndex}] filters has unknown field '{field.Key}'; allowed fields are region, tag, team, threshold, direction, action.");
+                            $"TriggerGraph graph '{graphId}' entries[{entryIndex}] filters has unknown field '{field.Key}'; allowed fields are region, tag, team, threshold, direction, action, instanceId, varName.");
                 }
             }
         }

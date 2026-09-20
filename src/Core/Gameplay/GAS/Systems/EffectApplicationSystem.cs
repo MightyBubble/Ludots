@@ -75,8 +75,23 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly Entity[] _resolverBuffer = new Entity[256];
         private readonly BuiltinHandlerExecutionContext _builtinRuntime = new BuiltinHandlerExecutionContext();
         private readonly EffectPhaseSideEffectTransaction _persistentPhaseTransaction;
+        private EffectDueWheel? _dueWheel;
         private int _activeEffectAttachDropped;
         private int _listenerRegistrationDropped;
+
+        /// <summary>
+        /// 共享到期时间轮（由 EffectProcessingLoopSystem 注入）：效果提交成功后入轮；
+        /// 未注入时提交钩子不注册，效果由 EffectLifetimeSystem 首个 slice 的 Rebuild 兜底入轮。
+        /// </summary>
+        internal EffectDueWheel? DueWheel
+        {
+            get => _dueWheel;
+            set
+            {
+                _dueWheel = value;
+                _persistentPhaseTransaction.DueWheel = value;
+            }
+        }
 
         public int MaxWorkUnitsPerSlice { get; set; } = int.MaxValue;
         public int LastSliceProcessed { get; private set; }
@@ -108,6 +123,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly EffectTemplateRegistry _templates;
         private readonly ISpatialQueryService _spatialQueries;
         private readonly TagOps _tagOps;
+        private readonly AttributeAggregateDirtyRegistry? _aggregateDirty;
 
         // ── Phase Graph execution (optional) ──
         private readonly EffectPhaseExecutor _phaseExecutor;
@@ -118,7 +134,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly IClock _clock;
         private readonly int _stepRateHz;
 
-        public EffectApplicationSystem(World world, int fanOutCommandCapacity, IClock clock, EffectRequestQueue effectRequests = null, GasBudget budget = null, GasPresentationEventBuffer presentationEvents = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null, OrderQueue orderIntake = null, RootBudgetTable fanOutBudget = null, Ludots.Core.Movement.PoseAuthorityArbiter poseAuthorityArbiter = null) : base(world)
+        public EffectApplicationSystem(World world, int fanOutCommandCapacity, IClock clock, EffectRequestQueue effectRequests = null, GasBudget budget = null, GasPresentationEventBuffer presentationEvents = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null, OrderQueue orderIntake = null, RootBudgetTable fanOutBudget = null, Ludots.Core.Movement.PoseAuthorityArbiter poseAuthorityArbiter = null, AttributeAggregateDirtyRegistry aggregateDirty = null) : base(world)
         {
             _fanOutCommands = new FanOutCommandBuffer(fanOutCommandCapacity);
             _fanOutBudget = fanOutBudget ?? new RootBudgetTable(fanOutCommandCapacity);
@@ -140,6 +156,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _phaseExecutor = phaseExecutor;
             _graphApiHost = graphApi;
             _graphApi = graphApi;
+            _aggregateDirty = aggregateDirty;
             _builtinRuntime.SpatialQueries = spatialQueries;
             _builtinRuntime.FanOutBudget = _fanOutBudget;
             _builtinRuntime.FanOutCommands = _fanOutCommands;
@@ -165,7 +182,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 presentationEvents,
                 _resolverBuffer.Length,
                 _fanOutBudget,
-                poseAuthorityArbiter);
+                poseAuthorityArbiter,
+                aggregateDirty);
         }
 
         private void RefreshBuiltinOrderContext()
@@ -464,6 +482,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             {
                                 ref GameplayEffect effectForActivate = ref World.Get<GameplayEffect>(e);
                                 effectForActivate.State = EffectState.Committed;
+                                _dueWheel?.RegisterCommitted(e, World);
                             }
 
                         }
@@ -550,9 +569,18 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             {
                 _persistentPhaseTransaction.StageAggregateDirty(target);
             }
-            else if (!World.Has<AttributeAggregateDirty>(target))
+            else
             {
-                World.Add(target, new AttributeAggregateDirty());
+                RequireAggregateDirtyRegistry();
+                _aggregateDirty!.MarkDirty(target);
+            }
+        }
+
+        private void RequireAggregateDirtyRegistry()
+        {
+            if (_aggregateDirty == null)
+            {
+                throw new InvalidOperationException(AttributeAggregateDirtyRegistry.MissingRegistryError);
             }
         }
 
@@ -727,7 +755,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         /// <summary>
         /// Execute a phase graph for an effect entity, reading its template for behavior and config.
-        /// Passes effectTagId and effectTemplateId for Phase Listener matching.
+        /// Passes effectCategoryId and effectTemplateId for Phase Listener matching.
         /// </summary>
         private void ExecutePhaseForEffect(Entity effectEntity, in EffectContext context, in EffectTemplateData tpl, EffectPhaseId phase, BuiltinHandlerExecutionContext? builtinRuntime = null)
         {
@@ -749,7 +777,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 phase,
                 in tpl.PhaseGraphBindings,
                 tpl.PresetTypeId,
-                tpl.TagId,
+                tpl.CategoryId,
                 templateId,
                 in mergedConfig,
                 builtinRuntime,
@@ -843,7 +871,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 ref var buf = ref World.Get<EffectPhaseListenerBuffer>(entity);
                 if (!buf.TryAdd(
-                    setup.ListenTagIds[i],
+                    setup.ListenCategoryIds[i],
                     setup.ListenEffectIds[i],
                     (EffectPhaseId)setup.Phases[i],
                     scope,

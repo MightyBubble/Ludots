@@ -27,7 +27,7 @@ namespace Ludots.Tests.GAS
     public class AuditCoverageTests
     {
         // ════════════════════════════════════════════════════════════════════
-        //  Section 1: EffectPhaseExecutor �?Builtin Handler Path
+        //  Section 1: EffectPhaseExecutor �?Builtin Handler Path
         //  (Previously zero coverage: all existing tests used empty PresetTypeRegistry)
         // ════════════════════════════════════════════════════════════════════
 
@@ -57,7 +57,7 @@ namespace Ludots.Tests.GAS
             mods.Add(hpAttrId, ModifierOp.Add, -25f);
             templates.Register(1, new EffectTemplateData
             {
-                TagId = 1,
+                CategoryId = 1,
                 LifetimeKind = EffectLifetimeKind.Instant,
                 Modifiers = mods,
             });
@@ -80,10 +80,17 @@ namespace Ludots.Tests.GAS
             world.Get<AttributeBuffer>(target).SetBase(hpAttrId, 100f);
 
             var behavior = new EffectPhaseGraphBindings();
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = target,
+                TargetContext = default,
+            };
 
-            executor.ExecutePhase(world, api, caster, target, default, default,
+            executor.ExecutePhase(world, api, context.Source, context.Target, context.TargetContext, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.InstantDamage,
-                effectTagId: 1, effectTemplateId: 1,
+                effectCategoryId: 1, effectTemplateId: 1,
                 builtinRuntime: new BuiltinHandlerExecutionContext { TagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()) });
 
             float hp = world.Get<AttributeBuffer>(target).GetCurrent(hpAttrId);
@@ -109,7 +116,7 @@ namespace Ludots.Tests.GAS
             var builtinHandlers = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(builtinHandlers);
 
-            // Empty template registry �?template ID 999 does not exist
+            // Empty template registry �?template ID 999 does not exist
             var templates = new EffectTemplateRegistry();
             var programs = new GraphProgramRegistry();
             GasTestEffectExecutionPlanFinalizer.FinalizeAll(
@@ -129,12 +136,19 @@ namespace Ludots.Tests.GAS
             world.Get<AttributeBuffer>(target).SetBase(hpAttrId, 100f);
 
             var behavior = new EffectPhaseGraphBindings();
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = target,
+                TargetContext = default,
+            };
 
             // fail-fast: missing template must throw, not silently skip
             Assert.Throws<InvalidOperationException>(() =>
-                executor.ExecutePhase(world, api, caster, target, default, default,
+                executor.ExecutePhase(world, api, context.Source, context.Target, context.TargetContext, default,
                     EffectPhaseId.OnApply, in behavior, EffectPresetType.InstantDamage,
-                    effectTagId: 1, effectTemplateId: 999));
+                    effectCategoryId: 1, effectTemplateId: 999));
 
             // HP unchanged — exception prevented the handler from running
             float hp = world.Get<AttributeBuffer>(target).GetCurrent(hpAttrId);
@@ -142,7 +156,7 @@ namespace Ludots.Tests.GAS
         }
 
         // ════════════════════════════════════════════════════════════════════
-        //  Section 2: EffectProposalProcessingSystem �?ResetSlice
+        //  Section 2: EffectProposalProcessingSystem �?ResetSlice
         //  (Previously: only behavior test that happened to pass even with no-op)
         // ════════════════════════════════════════════════════════════════════
 
@@ -156,7 +170,7 @@ namespace Ludots.Tests.GAS
                 var templates = new EffectTemplateRegistry();
                 templates.Register(tplInstant, new EffectTemplateData
                 {
-                    TagId = 1,
+                    CategoryId = 1,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.Step,
                     ParticipatesInResponse = false,
@@ -200,7 +214,7 @@ namespace Ludots.Tests.GAS
                     MaxWorkUnitsPerSlice = 1 // Force partial processing
                 };
 
-                // Begin processing �?should enter active state
+                // Begin processing �?should enter active state
                 sys.UpdateSlice(dt: 1f, timeBudgetMs: int.MaxValue);
 
                 // DebugWindowPhase > 0 means the system is in an active window phase
@@ -282,7 +296,7 @@ namespace Ludots.Tests.GAS
             }
             That(container.Count, Is.EqualTo(ActiveEffectContainer.CAPACITY));
 
-            // One more �?should return false
+            // One more �?should return false
             var overflow = world.Create();
             bool overflowResult = container.Add(overflow);
             That(overflowResult, Is.False, "Overflow add must return false");
@@ -344,7 +358,7 @@ namespace Ludots.Tests.GAS
         }
 
         // ════════════════════════════════════════════════════════════════════
-        //  Section 4: EffectPhaseExecutor �?PresetType integration
+        //  Section 4: EffectPhaseExecutor �?PresetType integration
         //  (Previously: all tests used the retired preset behavior registry constructor)
         // ════════════════════════════════════════════════════════════════════
 
@@ -379,7 +393,7 @@ namespace Ludots.Tests.GAS
             var templates = new EffectTemplateRegistry();
             templates.Register(1, new EffectTemplateData
             {
-                TagId = 1,
+                CategoryId = 1,
                 LifetimeKind = EffectLifetimeKind.Instant,
                 PresetType = EffectPresetType.ApplyForce2D,
                 PresetAttribute0 = forceXAttrId,
@@ -403,10 +417,17 @@ namespace Ludots.Tests.GAS
             var target = world.Create(new AttributeBuffer(), new DirtyFlags());
 
             var behavior = new EffectPhaseGraphBindings();
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = target,
+                TargetContext = default,
+            };
 
-            executor.ExecutePhase(world, api, caster, target, default, default,
+            executor.ExecutePhase(world, api, context.Source, context.Target, context.TargetContext, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.ApplyForce2D,
-                effectTagId: 1, effectTemplateId: 1,
+                effectCategoryId: 1, effectTemplateId: 1,
                 builtinRuntime: new BuiltinHandlerExecutionContext { TagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()) });
 
             ref var buf = ref world.Get<AttributeBuffer>(target);

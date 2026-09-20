@@ -1,0 +1,10 @@
+{
+  "name": "NarrativeThemeSanguoMod",
+  "version": "1.0.0",
+  "description": "Narrative story theme shell (0 C#): 三国朱砂",
+  "priority": 0,
+  "dependencies": {
+    "NarrativeShowcaseMod": "^1.0.0",
+    "NarrativeFrontendMod": "^1.0.0"
+  }
+}

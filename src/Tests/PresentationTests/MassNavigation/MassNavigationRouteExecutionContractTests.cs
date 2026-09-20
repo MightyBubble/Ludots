@@ -256,6 +256,90 @@ namespace Ludots.Tests.Presentation
             Assert.That(new Vector2(secondX, secondY), Is.EqualTo(new Vector2(6_200, 5_200)));
         }
 
+        [Test]
+        public void RouteSink_SettledOutsideAdvanceCircle_AdvancesAndRecoversToDestination()
+        {
+            using var world = World.Create();
+            MassNavigationSimulationRuntime runtime = CreateRuntimeWithBlockerOnMidwayWaypoint(world, out Entity mover);
+            var store = new PathStore(maxPaths: 4, maxPointsPerPath: 8);
+            Vector2 midwayWaypoint = new(5_300, 5_000);
+            Vector2 destination = new(5_900, 4_400);
+            var pathService = new FakePathService(store, new Vector2(5_050, 5_000), midwayWaypoint, destination);
+            var sink = new MassNavigationRouteExecutionSink(pathService, store, CreatePathingConfig());
+
+            sink.BeginSync();
+            sink.TrackRouteTarget(runtime, world, mover, agentIndex: 0, destinationWorldCm: destination, requestId: 134, maxExpanded: 128, maxPoints: 8);
+            sink.EndSync();
+
+            float advanceThresholdCm = MathF.Max(
+                runtime.GetRuntimeGroupSemantics().UnitTargetStopThresholdCm * runtime.GetRuntimeRouteSemantics().WaypointAdvanceStopThresholdScale,
+                runtime.GetAgentBodyRadiusCm(0) * runtime.GetRuntimeRouteSemantics().WaypointAdvanceBodyRadiusScale);
+            bool settledOutsideAdvanceCircle = false;
+            Vector2 targetWhenSettledOutside = default;
+            Vector2 finalPosition = runtime.GetAgentWorldPositionCm(0);
+            for (int i = 0; i < 600; i++)
+            {
+                sink.TryApplyTrackedRouteTargets(runtime, world);
+                runtime.StepNavigationForTests(world, 0.05f, runHardResolve: true);
+                finalPosition = runtime.GetAgentWorldPositionCm(0);
+                if (!settledOutsideAdvanceCircle &&
+                    runtime.GetFlowSolverForTests().IsUnitSettled(0) &&
+                    runtime.TryGetAgentNavigationTargetWorldCm(0, out float settledTargetX, out float settledTargetY))
+                {
+                    targetWhenSettledOutside = new Vector2(settledTargetX, settledTargetY);
+                    settledOutsideAdvanceCircle = Vector2.Distance(finalPosition, midwayWaypoint) > advanceThresholdCm;
+                }
+
+                if (Vector2.Distance(finalPosition, destination) <= 50f)
+                {
+                    break;
+                }
+            }
+
+            Assert.That(settledOutsideAdvanceCircle, Is.True,
+                $"Scenario must park the yielding agent outside the advance circle ({advanceThresholdCm:0}cm) with the cursor still on the blocked waypoint. Final=({finalPosition.X:0},{finalPosition.Y:0}).");
+            Assert.That(targetWhenSettledOutside, Is.EqualTo(midwayWaypoint),
+                "The deadlock precondition is the cursor holding an unreachable waypoint while the agent is settled outside the advance circle.");
+            Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(0, out float finalTargetX, out float finalTargetY), Is.True);
+            Assert.That(new Vector2(finalTargetX, finalTargetY), Is.EqualTo(destination),
+                $"A settled agent outside the advance circle must re-target the next waypoint instead of parking forever. Final=({finalPosition.X:0},{finalPosition.Y:0}).");
+            Assert.That(Vector2.Distance(finalPosition, destination), Is.LessThanOrEqualTo(50f),
+                $"Recovery must end at the destination within the stop threshold, not at a yield standoff. Final=({finalPosition.X:0},{finalPosition.Y:0}).");
+
+            bool arrivalSettled = false;
+            for (int i = 0; i < 60 && !arrivalSettled; i++)
+            {
+                sink.TryApplyTrackedRouteTargets(runtime, world);
+                runtime.StepNavigationForTests(world, 0.05f, runHardResolve: true);
+                arrivalSettled = runtime.GetFlowSolverForTests().IsUnitSettled(0);
+            }
+
+            Assert.That(arrivalSettled, Is.True,
+                "Completion is only claimable together with the arrival determination: the agent must settle at the destination.");
+            Assert.That(Vector2.Distance(runtime.GetAgentWorldPositionCm(0), destination), Is.LessThanOrEqualTo(50f));
+            Assert.That(sink.ActiveRouteCount, Is.EqualTo(1),
+                "The route contract must stay active until the order side releases it; recovery may not silently drain the route.");
+        }
+
+        [Test]
+        public void RouteSemantics_AdvanceCircleMustContainUnitStopCircle()
+        {
+            var belowStopCircle = new MassNavigationRouteSemantics
+            {
+                WaypointAdvanceStopThresholdScale = 0.9f,
+                WaypointAdvanceBodyRadiusScale = 1.5f,
+            };
+            Assert.That(() => belowStopCircle.Validate(), Throws.InvalidOperationException,
+                "An advance circle smaller than the solver's stop circle re-creates the settle-outside-advance-circle deadlock by configuration.");
+
+            var matchingStopCircle = new MassNavigationRouteSemantics
+            {
+                WaypointAdvanceStopThresholdScale = 1f,
+                WaypointAdvanceBodyRadiusScale = 1.5f,
+            };
+            Assert.That(() => matchingStopCircle.Validate(), Throws.Nothing);
+        }
+
         private static MassNavigationSimulationRuntime CreateRuntime(
             World world,
             out Entity routed,
@@ -306,6 +390,32 @@ namespace Ludots.Tests.Presentation
                 {
                     new MassNavigationAgentSeed(1, 5_000, 5_000, false, 1f, 1f, 20f, 800f, layer),
                     new MassNavigationAgentSeed(1, 5_000, 5_200, false, 1f, 1f, 20f, 800f, layer),
+                },
+                new[] { true, true });
+            return runtime;
+        }
+
+        private static MassNavigationSimulationRuntime CreateRuntimeWithBlockerOnMidwayWaypoint(
+            World world,
+            out Entity mover)
+        {
+            int routedProfile = MassNavigationProfileRegistry.Register("routed");
+            mover = world.Create(new MassNavigationAgent { ProfileId = routedProfile }, OrderBuffer.CreateEmpty());
+            Entity blocker = world.Create(new MassNavigationAgent { ProfileId = routedProfile }, OrderBuffer.CreateEmpty());
+
+            MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
+            var runtime = new MassNavigationSimulationRuntime(config);
+            runtime.BindBoardWorld(
+                new WorldSizeSpec(new WorldAabbCm(0, 0, 10_000, 10_000), 100),
+                MassNavigationOrderChainTests.CreateLoadedChunksForTests(runtime));
+            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+            runtime.RebuildFromAuthoredAgents(
+                world,
+                new[] { mover, blocker },
+                new[]
+                {
+                    new MassNavigationAgentSeed(1, 5_050, 5_000, false, 1f, 1f, 20f, 800f, layer),
+                    new MassNavigationAgentSeed(2, 5_300, 5_000, true, 5_000f, 1f, 150f, 800f, layer),
                 },
                 new[] { true, true });
             return runtime;

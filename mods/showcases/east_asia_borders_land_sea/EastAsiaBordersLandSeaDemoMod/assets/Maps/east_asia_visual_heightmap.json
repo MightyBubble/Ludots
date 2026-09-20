@@ -1,0 +1,140 @@
+{
+  "Id": "east_asia_visual_heightmap",
+  "Tags": [
+    "borders",
+    "land-sea",
+    "transport-waterways"
+  ],
+  "TriggerGraphs": [
+    {
+      "graph": "Graph.EastAsiaBorders.Boot",
+      "scopeInstanceId": "army.1"
+    },
+    {
+      "graph": "Graph.EastAsiaBorders.Enter.china",
+      "scopeInstanceId": "army.1"
+    },
+    {
+      "graph": "Graph.EastAsiaBorders.Enter.japan",
+      "scopeInstanceId": "army.1"
+    },
+    {
+      "graph": "Graph.EastAsiaBorders.Enter.south_korea",
+      "scopeInstanceId": "army.1"
+    },
+    {
+      "graph": "Graph.EastAsiaBorders.Enter.north_korea",
+      "scopeInstanceId": "army.1"
+    },
+    {
+      "graph": "Graph.EastAsiaBorders.Enter.vietnam",
+      "scopeInstanceId": "army.1"
+    },
+    {
+      "graph": "Graph.EastAsiaBorders.Enter.russia",
+      "scopeInstanceId": "army.1"
+    },
+    {
+      "graph": "Graph.EastAsiaBorders.Enter.mongolia",
+      "scopeInstanceId": "army.1"
+    },
+    {
+      "graph": "Graph.EastAsiaBorders.Enter.taiwan",
+      "scopeInstanceId": "army.1"
+    },
+    {
+      "graph": "Graph.EastAsiaBorders.Enter.china",
+      "scopeInstanceId": "ship.1"
+    },
+    {
+      "graph": "Graph.EastAsiaBorders.Enter.japan",
+      "scopeInstanceId": "ship.1"
+    },
+    {
+      "graph": "Graph.EastAsiaBorders.Enter.south_korea",
+      "scopeInstanceId": "ship.1"
+    },
+    {
+      "graph": "Graph.EastAsiaBorders.Enter.north_korea",
+      "scopeInstanceId": "ship.1"
+    },
+    {
+      "graph": "Graph.EastAsiaBorders.Enter.vietnam",
+      "scopeInstanceId": "ship.1"
+    },
+    {
+      "graph": "Graph.EastAsiaBorders.Enter.russia",
+      "scopeInstanceId": "ship.1"
+    },
+    {
+      "graph": "Graph.EastAsiaBorders.Enter.mongolia",
+      "scopeInstanceId": "ship.1"
+    },
+    {
+      "graph": "Graph.EastAsiaBorders.Enter.taiwan",
+      "scopeInstanceId": "ship.1"
+    }
+  ],
+  "Entities": [
+    {
+      "InstanceId": "player_team",
+      "Template": "east_asia_player_team"
+    },
+    {
+      "InstanceId": "local_player",
+      "Template": "east_asia_local_player"
+    },
+    {
+      "InstanceId": "army.1",
+      "Template": "east_asia_army",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 200000,
+            "Y": 100000
+          }
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "ship.1",
+      "Template": "east_asia_ship",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 855397,
+            "Y": 58235
+          }
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "player_team"
+    }
+  ],
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "local_player"
+    }
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "EastAsia.Camera.PlayableTerrain",
+    "TargetXCm": 500000,
+    "TargetYCm": 80000,
+    "Yaw": 210,
+    "Pitch": 55,
+    "DistanceCm": 1800000,
+    "FovYDeg": 55
+  }
+}

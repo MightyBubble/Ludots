@@ -18,6 +18,17 @@ public sealed class CapabilityStandardBehaviorTreeArenaModEntry : IMod
     {
         context.Log("[CapabilityStandardBehaviorTreeArenaMod] Loaded (BT-only showcase)");
         var runtime = new BehaviorTreeArenaRuntime();
+        var panel = new GraphShowcasePanelController(
+            runtime.BuildControlState,
+            runtime.TogglePaused,
+            runtime.Step,
+            runtime.ToggleL2,
+            runtime.ToggleStimulus,
+            runtime.IncreaseSightRadius,
+            runtime.DecreaseSightRadius,
+            runtime.IncreaseThinkPeriod,
+            runtime.DecreaseThinkPeriod,
+            runtime.ResetScenario);
         context.OnEvent(GameEvents.GameStart, ctx =>
         {
             GameEngine? engine = ctx.GetEngine();
@@ -30,12 +41,17 @@ public sealed class CapabilityStandardBehaviorTreeArenaModEntry : IMod
             var debugDraw = new DebugDrawCommandBuffer();
             engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);
             engine.RegisterSystem(new BehaviorTreeArenaSimulationSystem(engine, runtime), SystemGroup.PostMovement);
-            engine.RegisterPresentationSystem(new BehaviorTreeArenaPresentationSystem(runtime, debugDraw));
+            engine.RegisterPresentationSystem(new BehaviorTreeArenaPresentationSystem(engine, runtime, debugDraw, panel));
             return Task.CompletedTask;
         });
         context.OnEvent(GameEvents.MapLoaded, _ =>
         {
             runtime.EnsureWorld();
+            return Task.CompletedTask;
+        });
+        context.OnEvent(GameEvents.MapUnloaded, _ =>
+        {
+            panel.Clear();
             return Task.CompletedTask;
         });
     }

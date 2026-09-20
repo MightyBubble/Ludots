@@ -3,7 +3,7 @@
 一刀 -25 写进血条，木桩 100 掉到 75，头顶浮出 -25。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_ModifyAttributeAdd/poster.png" src="artifacts/evidence/capability_standard_graph_op_ModifyAttributeAdd/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_ModifyAttributeAdd/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_ModifyAttributeAdd/play.mp4。
 </video>
 
 ## 作者写法
@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | 仅 Effect |
+| 可用图种 | Effect / Script / TriggerGraph |
 | 返回 | 无（副作用节点） |
 | 输入端口（值边 toPort） | `target`（目标实体）、`value`（数值） |
 | 特殊写法 | imm 填符号名（编译期解析） |
@@ -44,7 +44,7 @@ LoadExplicitTarget → ConstFloat → **ModifyAttributeAdd**（本篇）
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Effect；Score / Validation / Derived / Query / Script / TriggerGraph 图不可用（编译期白名单拒绝）。
+- 图种边界：可用于 Effect / Script / TriggerGraph；Score / Validation / Derived / Query 图不可用（编译期白名单拒绝）。
 - imm 是装载期解析的符号名：符号改名后，引用它的图要跟着改并重编译。
 - 同类用法：按属性读写与直写、层数叠加引爆、先查对方状态再决定出手。
 ## 怎么进

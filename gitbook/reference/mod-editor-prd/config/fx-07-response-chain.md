@@ -8,7 +8,7 @@
 
 ```json
 [
-  { "id": "Effect.Champion.Garen.Judgment", "tags": ["Effect.Champion.Damage"],
+  { "id": "Effect.Champion.Garen.Judgment", "categories": ["Effect.Champion.Damage"],
     "presetType": "Search", "lifetime": "Instant", "participatesInResponse": true,
     "targetQuery": { "kind": "BuiltinSpatial", "shape": "Circle", "radius": 260 } }
 ]

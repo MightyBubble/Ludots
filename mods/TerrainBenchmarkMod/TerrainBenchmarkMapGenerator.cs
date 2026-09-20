@@ -7,7 +7,7 @@ namespace TerrainBenchmarkMod
 {
     public static class TerrainBenchmarkMapGenerator
     {
-        private const string FileName = "terrain_bench.vtxm";
+        private const string FileName = "terrain_bench.hex";
         private const int Version = 2;
         private const int ChunkSize = 64;
         private const int WidthChunks = 64;
@@ -36,7 +36,7 @@ namespace TerrainBenchmarkMod
             using var fs = File.Create(fullPath);
             using var bw = new BinaryWriter(fs, Encoding.UTF8, leaveOpen: true);
 
-            bw.Write(Encoding.ASCII.GetBytes("VTXM"));
+            bw.Write(Encoding.ASCII.GetBytes("HEXM"));
             bw.Write(Version);
             bw.Write(WidthChunks);
             bw.Write(HeightChunks);

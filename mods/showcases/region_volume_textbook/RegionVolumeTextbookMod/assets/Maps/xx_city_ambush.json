@@ -1,0 +1,56 @@
+{
+  "Id": "xx_city_ambush",
+  "HeartbeatIntervalTicks": 6,
+  "Variables": [
+    {
+      "name": "ambush.fired",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "ambush.raiders",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "ambush.blocked",
+      "type": "int",
+      "initial": 0
+    }
+  ],
+  "Entities": [
+    {
+      "InstanceId": "textbook_army",
+      "Template": "textbook.army"
+    },
+    {
+      "InstanceId": "textbook_scout",
+      "Template": "textbook.scout"
+    },
+    {
+      "InstanceId": "xx_city_region",
+      "Template": "textbook.region_xx_city",
+      "PositionXCm": 2800,
+      "PositionYCm": 1400
+    },
+    {
+      "InstanceId": "goblin_camp",
+      "Template": "textbook.goblin_camp"
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "textbook_army"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "goblin_camp"
+    }
+  ],
+  "TriggerGraphs": [
+    {
+      "graph": "Graph.Textbook.Ambush"
+    }
+  ]
+}

@@ -36,7 +36,13 @@ public static class GraphOpsNodeGraphCompiler
         JsonSerializerOptions options = StrictJsonOptions.CreateCamelCase(includeFields: true);
         JsonObject obj = ParseSingleGraphShard(path);
         string graphId = GraphOpsNodeIds.GraphId(opName);
-        GraphControlFlowCompileResult compiled = GraphProgramAuthoringFrontDoor.CompileJsonObjectFull(obj, graphId, options);
+        // Builtin event schemas cover the DispatchMapEvent vignette (MapHeartbeat);
+        // every other op never consults the registry.
+        GraphControlFlowCompileResult compiled = GraphProgramAuthoringFrontDoor.CompileJsonObjectFull(
+            obj,
+            graphId,
+            options,
+            new Ludots.Core.Scripting.EventSchemaRegistry());
         if (!compiled.Succeeded)
         {
             string message = string.Join("; ", compiled.Diagnostics.Select(d => d.Message));
@@ -49,6 +55,8 @@ public static class GraphOpsNodeGraphCompiler
         }
 
         GraphProgramPackage package = compiled.Package.Value;
+        if (GraphIdRegistry.GetId(GraphOpsNodeIds.GraphId(nameof(GraphNodeOp.QueryFilterTeam))) <= 0)
+            _ = GraphIdRegistry.Register(GraphOpsNodeIds.GraphId(nameof(GraphNodeOp.QueryFilterTeam)));
         IGraphSymbolResolver resolver = symbolResolver ?? GraphOpsNodeGallerySymbolResolver.CreateStandalone(assetsRoot);
         var builtinHandlers = new Ludots.Core.Gameplay.GAS.BuiltinHandlerRegistry();
         Ludots.Core.Gameplay.GAS.BuiltinHandlers.RegisterAll(builtinHandlers);

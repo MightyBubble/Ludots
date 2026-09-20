@@ -195,6 +195,34 @@
       "produces_hooks": []
     },
     {
+      "name": "shuorenhua",
+      "description": "Chinese-first de-AI rewrite: remove template tone while preserving facts, terms, and accountability; use for docs, status, chat, and public writing.",
+      "layer": "governance",
+      "path": "skills/governance/shuorenhua",
+      "install_name": "shuorenhua",
+      "agents": {
+        "openai": "skills/governance/shuorenhua/agents/openai.yaml",
+        "claude": "skills/governance/shuorenhua/agents/claude.md"
+      },
+      "references": [
+        "skills/governance/shuorenhua/references/protected-spans.md",
+        "skills/governance/shuorenhua/references/positive-style.md",
+        "skills/governance/shuorenhua/references/operation-manual.md",
+        "skills/governance/shuorenhua/references/structures.md",
+        "skills/governance/shuorenhua/references/phrases-zh.md",
+        "skills/governance/shuorenhua/references/phrases-en.md",
+        "skills/governance/shuorenhua/references/severity.md",
+        "skills/governance/shuorenhua/references/scene-guardrails.md",
+        "skills/governance/shuorenhua/references/scene-packs.md",
+        "skills/governance/shuorenhua/references/boundary-cases.md",
+        "skills/governance/shuorenhua/references/examples.md",
+        "skills/governance/shuorenhua/evals/real-samples.md",
+        "skills/governance/shuorenhua/evals/benchmark-tiers.md"
+      ],
+      "consumes_hooks": [],
+      "produces_hooks": []
+    },
+    {
       "name": "ludots-gas-composition-gate",
       "description": "Mandatory self-review before GAS entity lifecycle, effect preset, or graph op work; blocks profile DSL expansion.",
       "layer": "governance",

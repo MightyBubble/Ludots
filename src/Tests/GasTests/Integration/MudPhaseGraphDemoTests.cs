@@ -31,6 +31,14 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public class MudPhaseGraphDemoTests
     {
+        [SetUp]
+        public void ResetRegistries()
+        {
+            // Engine-booting fixtures freeze the shared ambient; these demos register
+            // their own attributes lazily, so start from a fresh unfrozen table.
+            AttributeRegistry.Clear();
+        }
+
         // Attribute & BB key constants
         private const string AttrHealthName = "tests.mud.phase.health";
         private const int BbKeyActualDamage = 2;    // float: 实际伤害值
@@ -150,7 +158,7 @@ namespace Ludots.Tests.GAS
                 bool accepted = executor.ExecutePhaseWithValidationResult(
                     world, api, caster, target, default, default,
                     EffectPhaseId.OnPropose, in behavior, EffectPresetType.None,
-                    effectTagId: 0, effectTemplateId: 0, mergedParams: default);
+                    effectCategoryId: 0, effectTemplateId: 0, mergedParams: default);
                 That(accepted, Is.True, "Impact proposal should be accepted");
                 sb.AppendLine("[MUD][PHASE]    提案通过 ✓");
 

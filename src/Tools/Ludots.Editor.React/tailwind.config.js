@@ -7,7 +7,23 @@ export default {
     container: {
       center: true,
     },
-    extend: {},
+    extend: {
+      colors: {
+        studio: {
+          bg: 'var(--studio-bg)',
+          surface: 'var(--studio-surface)',
+          elevated: 'var(--studio-elevated)',
+          fill: 'var(--studio-fill)',
+          label: 'var(--studio-label)',
+          secondary: 'var(--studio-secondary)',
+          muted: 'var(--studio-muted)',
+          silver: 'var(--studio-muted)',
+          red: 'var(--studio-red)',
+          yellow: 'var(--studio-yellow)',
+          blue: 'var(--studio-blue)',
+        },
+      },
+    },
   },
   plugins: [],
 };

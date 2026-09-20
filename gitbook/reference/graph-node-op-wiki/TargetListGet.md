@@ -3,7 +3,7 @@
 名单按序编号，红线只连 1 号。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_TargetListGet/poster.png" src="artifacts/evidence/capability_standard_graph_op_TargetListGet/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_TargetListGet/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_TargetListGet/play.mp4。
 </video>
 
 ## 作者写法

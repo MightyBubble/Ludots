@@ -2,7 +2,7 @@
   "name": "CapabilityStandardAbilityGraphSandboxMod",
   "version": "1.0.0",
   "description": "Standalone GAS ability/effect graph sandbox (ability graphs only; not BT/HFSM/Level).",
-  "main": "bin/net8.0/CapabilityStandardAbilityGraphSandboxMod.dll",
+  "main": "bin/net9.0/CapabilityStandardAbilityGraphSandboxMod.dll",
   "priority": -1900,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

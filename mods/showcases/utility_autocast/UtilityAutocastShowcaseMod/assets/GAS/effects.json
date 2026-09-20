@@ -1,27 +1,38 @@
 [
   {
     "id": "Effect.UtilityAutocast.AttackHit",
-    "tags": ["Effect.UtilityAutocast.Damage"],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -12 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -12
+      }
+    ],
+    "categories": [
+      "Effect.UtilityAutocast.Damage"
     ]
   },
   {
     "id": "Effect.UtilityAutocast.CurseHit",
-    "tags": ["Effect.UtilityAutocast.Damage"],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -8 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -8
+      }
+    ],
+    "categories": [
+      "Effect.UtilityAutocast.Damage"
     ]
   },
   {
     "id": "Effect.UtilityAutocast.HealBurst",
-    "tags": ["Effect.UtilityAutocast.Heal"],
     "presetType": "Search",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -38,23 +49,29 @@
     "targetDispatch": {
       "payloadEffect": "Effect.UtilityAutocast.HealBurstTick",
       "preset": "SourceToResolved"
-    }
+    },
+    "categories": [
+      "Effect.UtilityAutocast.Heal"
+    ]
   },
   {
     "id": "Effect.UtilityAutocast.HealBurstTick",
-    "tags": ["Effect.UtilityAutocast.Heal"],
     "presetType": "Heal",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": 18 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": 18
+      }
+    ],
+    "categories": [
+      "Effect.UtilityAutocast.Heal"
     ]
   },
   {
     "id": "Effect.UtilityAutocast.Lockout.GCD",
-    "tags": [
-      "Effect.UtilityAutocast.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -69,6 +86,9 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.UtilityAutocast.Lockout"
     ]
   }
 ]

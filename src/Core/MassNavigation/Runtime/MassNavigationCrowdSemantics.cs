@@ -199,6 +199,12 @@ public sealed class MassNavigationRouteSemantics
 
     public void Validate()
     {
+        if (WaypointAdvanceStopThresholdScale < 1f)
+        {
+            throw new System.InvalidOperationException(
+                "MassNavigation route semantics requires waypointAdvanceStopThresholdScale >= 1 so the advance circle contains the solver's unit stop circle.");
+        }
+
         RequirePositive(WaypointAdvanceStopThresholdScale, nameof(WaypointAdvanceStopThresholdScale));
         RequirePositive(WaypointAdvanceBodyRadiusScale, nameof(WaypointAdvanceBodyRadiusScale));
     }
@@ -283,6 +289,9 @@ public sealed class MassNavigationSolverSemantics
     public int CoincidentPairHashPrimeA { get; set; }
     public int CoincidentPairHashPrimeB { get; set; }
 
+    /// <summary>每 agent 每 hard-resolve pass 最多执行的分离次数；0 = 不设上限。</summary>
+    public int HardResolveMaxSeparatesPerAgentPass { get; set; }
+
     public void CopyFrom(MassNavigationSolverSemantics source)
     {
         System.ArgumentNullException.ThrowIfNull(source);
@@ -307,6 +316,7 @@ public sealed class MassNavigationSolverSemantics
         CoincidentPairHashBucketCount = source.CoincidentPairHashBucketCount;
         CoincidentPairHashPrimeA = source.CoincidentPairHashPrimeA;
         CoincidentPairHashPrimeB = source.CoincidentPairHashPrimeB;
+        HardResolveMaxSeparatesPerAgentPass = source.HardResolveMaxSeparatesPerAgentPass;
     }
 
     public void Validate()
@@ -337,6 +347,11 @@ public sealed class MassNavigationSolverSemantics
         RequirePowerOfTwo(CoincidentPairHashBucketCount, nameof(CoincidentPairHashBucketCount));
         RequirePositive(CoincidentPairHashPrimeA, nameof(CoincidentPairHashPrimeA));
         RequirePositive(CoincidentPairHashPrimeB, nameof(CoincidentPairHashPrimeB));
+        if (HardResolveMaxSeparatesPerAgentPass < 0)
+        {
+            throw new System.InvalidOperationException(
+                "MassNavigation solver semantics requires HardResolveMaxSeparatesPerAgentPass >= 0 (0 = unbounded).");
+        }
     }
 
     private static void RequirePositive(float value, string name)

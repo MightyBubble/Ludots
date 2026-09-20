@@ -196,7 +196,8 @@ namespace Ludots.Core.Navigation.NavMesh
         SerializationFailed = 4,
         ContourFailed = 5,
         PolygonFailed = 6,
-        TriangulateFailed = 7
+        TriangulateFailed = 7,
+        VoxelBudgetExceeded = 8
     }
 
     public readonly struct NavBakeArtifact

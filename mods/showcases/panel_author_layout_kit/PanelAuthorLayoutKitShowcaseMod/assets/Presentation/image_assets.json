@@ -1,0 +1,22 @@
+[
+  {
+    "id": "effect.icon.祝福",
+    "kind": "icon",
+    "glyphFallback": "祝"
+  },
+  {
+    "id": "effect.icon.迅捷",
+    "kind": "icon",
+    "glyphFallback": "迅"
+  },
+  {
+    "id": "effect.icon.护盾",
+    "kind": "icon",
+    "glyphFallback": "盾"
+  },
+  {
+    "id": "effect.icon.洞察",
+    "kind": "icon",
+    "glyphFallback": "察"
+  }
+]

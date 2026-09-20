@@ -26,12 +26,34 @@ namespace Ludots.Core.Input.CommandSources
             Vector2 pointer,
             float radiusPixels)
         {
+            if (globals == null) throw new ArgumentNullException(nameof(globals));
+            if (!globals.TryGetValue(CoreServiceKeys.ScreenProjector.Name, out var projectorObj) ||
+                projectorObj is not IScreenProjector projector)
+            {
+                return Entity.Null;
+            }
+
+            return FindNearestInspectableEntity(world, globals, owner, pointer, radiusPixels, projector);
+        }
+
+        /// <summary>
+        /// Explicit-projector variant for consumers that answer under one seat's PresentBinding
+        /// (split-screen pick): the pointer/radius are binding-local, the projector must carry that
+        /// binding's camera and surface metrics. Knowledge gating semantics are identical.
+        /// </summary>
+        public static Entity FindNearestInspectableEntity(
+            World world,
+            Dictionary<string, object> globals,
+            Entity owner,
+            Vector2 pointer,
+            float radiusPixels,
+            IScreenProjector projector)
+        {
             if (world == null) throw new ArgumentNullException(nameof(world));
             if (globals == null) throw new ArgumentNullException(nameof(globals));
+            if (projector == null) throw new ArgumentNullException(nameof(projector));
 
-            if (owner == Entity.Null ||
-                !globals.TryGetValue(CoreServiceKeys.ScreenProjector.Name, out var projectorObj) ||
-                projectorObj is not IScreenProjector projector)
+            if (owner == Entity.Null)
             {
                 return Entity.Null;
             }
@@ -39,42 +61,101 @@ namespace Ludots.Core.Input.CommandSources
             Entity best = Entity.Null;
             ScreenRect bestBounds = default;
             bool hasBestBounds = false;
+            ScreenProjectionPoseContext projectionPose = ScreenProjectionGrounding.Resolve(world, globals);
 
             world.Query(in SelectableQuery, (Entity entity, ref CommandSourceSelectableTag selectable) =>
             {
-                if (!CommandSourceEligibility.CanInspectLive(world, globals, owner, entity))
-                {
-                    return;
-                }
-
-                if (!SpatialBoundsUtility.PointerHitsEntity(world, entity, projector, pointer, radiusPixels))
-                {
-                    return;
-                }
-
-                if (!SpatialBoundsUtility.TryProjectScreenBounds(world, entity, projector, out ScreenRect candidateBounds))
-                {
-                    return;
-                }
-
-                if (!hasBestBounds)
-                {
-                    best = entity;
-                    bestBounds = candidateBounds;
-                    hasBestBounds = true;
-                    return;
-                }
-
-                int boundsComparison = CompareProjectedBounds(candidateBounds, bestBounds, pointer);
-                if (boundsComparison < 0 ||
-                    (boundsComparison == 0 && (best == Entity.Null || Compare(entity, best) < 0)))
-                {
-                    best = entity;
-                    bestBounds = candidateBounds;
-                }
+                ConsiderCandidate(world, globals, owner, projector, pointer, radiusPixels, entity, in projectionPose, ref best, ref bestBounds, ref hasBestBounds);
             });
 
             return best;
+        }
+
+        /// <summary>
+        /// Candidate-restricted variant for explicit candidate sets (aim-graph pick): the
+        /// same inspectability / pointer-hit / projected-bounds chain, but only the given
+        /// candidates are considered — no world scan. Candidate order breaks ties.
+        /// </summary>
+        public static Entity FindNearestInspectableEntity(
+            World world,
+            Dictionary<string, object> globals,
+            Entity owner,
+            ReadOnlySpan<Entity> candidates,
+            Vector2 pointer,
+            float radiusPixels,
+            IScreenProjector projector)
+        {
+            if (world == null) throw new ArgumentNullException(nameof(world));
+            if (globals == null) throw new ArgumentNullException(nameof(globals));
+            if (projector == null) throw new ArgumentNullException(nameof(projector));
+
+            if (owner == Entity.Null)
+            {
+                return Entity.Null;
+            }
+
+            Entity best = Entity.Null;
+            ScreenRect bestBounds = default;
+            bool hasBestBounds = false;
+            ScreenProjectionPoseContext projectionPose = ScreenProjectionGrounding.Resolve(world, globals);
+
+            for (int i = 0; i < candidates.Length; i++)
+            {
+                Entity entity = candidates[i];
+                if (!world.IsAlive(entity))
+                {
+                    continue;
+                }
+
+                ConsiderCandidate(world, globals, owner, projector, pointer, radiusPixels, entity, in projectionPose, ref best, ref bestBounds, ref hasBestBounds);
+            }
+
+            return best;
+        }
+
+        private static void ConsiderCandidate(
+            World world,
+            Dictionary<string, object> globals,
+            Entity owner,
+            IScreenProjector projector,
+            Vector2 pointer,
+            float radiusPixels,
+            Entity entity,
+            in ScreenProjectionPoseContext projectionPose,
+            ref Entity best,
+            ref ScreenRect bestBounds,
+            ref bool hasBestBounds)
+        {
+            if (!CommandSourceEligibility.CanInspectLive(world, globals, owner, entity))
+            {
+                return;
+            }
+
+            if (!SpatialBoundsUtility.PointerHitsEntity(world, entity, projector, pointer, radiusPixels, in projectionPose))
+            {
+                return;
+            }
+
+            if (!SpatialBoundsUtility.TryProjectScreenBounds(world, entity, projector, out ScreenRect candidateBounds, in projectionPose))
+            {
+                return;
+            }
+
+            if (!hasBestBounds)
+            {
+                best = entity;
+                bestBounds = candidateBounds;
+                hasBestBounds = true;
+                return;
+            }
+
+            int boundsComparison = CompareProjectedBounds(candidateBounds, bestBounds, pointer);
+            if (boundsComparison < 0 ||
+                (boundsComparison == 0 && (best == Entity.Null || Compare(entity, best) < 0)))
+            {
+                best = entity;
+                bestBounds = candidateBounds;
+            }
         }
 
         private static int CompareProjectedBounds(in ScreenRect candidate, in ScreenRect best, Vector2 pointer)

@@ -42,8 +42,8 @@ namespace Ludots.Tests.GAS
                   "sampleStepCm": 500,
                   "defaultVisualWidthMeters": 2.5,
                   "nodes": [
-                    { "id": "harbor_a", "xcm": 0, "ycm": 0, "kind": "Port", "tags": ["Transport.Hub"] },
-                    { "id": "harbor_b", "xcm": 1000, "ycm": 0, "kind": "Embark", "tags": [] }
+                    { "id": "harbor_a", "xcm": 0, "ycm": 0, "kind": "Port", "categories": ["Transport.Hub"] },
+                    { "id": "harbor_b", "xcm": 1000, "ycm": 0, "kind": "Embark", "categories": [] }
                   ],
                   "segments": [
                     {
@@ -53,7 +53,7 @@ namespace Ludots.Tests.GAS
                       "direction": "Bidirectional",
                       "flowDirection": "Forward",
                       "areaId": "Transport.Area.Canal",
-                      "tags": ["Transport.Area.Water"],
+                      "categories": ["Transport.Area.Water"],
                       "depthCm": 400,
                       "widthCm": 1200,
                       "laneCount": 0,

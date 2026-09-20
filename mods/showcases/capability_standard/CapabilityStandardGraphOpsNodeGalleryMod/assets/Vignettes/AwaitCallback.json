@@ -1,0 +1,25 @@
+{
+  "op": "AwaitCallback",
+  "driver": "script",
+  "title": "等回话再往下走",
+  "beat": "图停在门口等确认；回话一到，下一拍接着演。",
+  "detailTemplate": "确认了：{confirmed}。回话次数 {replies}，回程结果 {result}。",
+  "assertDetailContains": [
+    "确认",
+    "回话"
+  ],
+  "featuredNodeId": "askConfirm",
+  "graphKind": "Script",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "问话人",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

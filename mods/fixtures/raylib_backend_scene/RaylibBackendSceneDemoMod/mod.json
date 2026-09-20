@@ -1,0 +1,11 @@
+{
+  "name": "RaylibBackendSceneDemoMod",
+  "version": "1.0.0",
+  "description": "Raylib-owned scene fixture layered over the typed instanced batch map without adding Core entities.",
+  "priority": 0,
+  "dependencies": {
+    "InstancedBatchDemoMod": "^1.0.0",
+    "RaylibPlatformMeshesMod": "^1.0.0"
+  },
+  "tags": ["fixture", "raylib", "backend-scene", "instanced-batch"]
+}

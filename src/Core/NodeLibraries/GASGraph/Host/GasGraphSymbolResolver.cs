@@ -3,6 +3,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Presentation.Hud;
 
 namespace Ludots.Core.NodeLibraries.GASGraph.Host
 {
@@ -20,6 +21,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly EntityTemplateKeyRegistry? _entityTemplateKeys;
         private readonly GraphLookupTableRegistry? _lookupTables;
         private readonly Gameplay.Rng.RngPickService? _rngPicks;
+        private readonly PresentationTextCatalog? _presentationTextCatalog;
+        private readonly Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry? _orderTypes;
 
         public GasGraphSymbolResolver(
             RelationshipTypeRegistry types,
@@ -29,7 +32,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             TargetDispatchPresetRegistry targetDispatchPresets,
             EntityTemplateKeyRegistry? entityTemplateKeys = null,
             GraphLookupTableRegistry? lookupTables = null,
-            Gameplay.Rng.RngPickService? rngPicks = null)
+            Gameplay.Rng.RngPickService? rngPicks = null,
+            PresentationTextCatalog? presentationTextCatalog = null,
+            Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry? orderTypes = null)
         {
             _types = types ?? throw new ArgumentNullException(nameof(types));
             _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
@@ -39,6 +44,25 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _entityTemplateKeys = entityTemplateKeys;
             _lookupTables = lookupTables;
             _rngPicks = rngPicks;
+            _presentationTextCatalog = presentationTextCatalog;
+            _orderTypes = orderTypes;
+        }
+
+        public int ResolveOrderType(string name)
+        {
+            if (_orderTypes == null)
+            {
+                throw new InvalidOperationException(
+                    $"Graph references order type '{name}', but no OrderTypeRegistry was provided.");
+            }
+
+            if (!_orderTypes.TryGetId(name, out int orderTypeId) || orderTypeId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Graph references unknown order type '{name}'. Register order types before loading graph programs.");
+            }
+
+            return orderTypeId;
         }
 
         public int ResolveRngDistribution(string name)
@@ -85,6 +109,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return id;
         }
 
+        public int ResolveTextToken(string name)
+        {
+            if (_presentationTextCatalog == null)
+            {
+                throw new InvalidOperationException(
+                    $"Graph references text token '{name}', but no PresentationTextCatalog was provided.");
+            }
+
+            int id = _presentationTextCatalog.GetTokenId(name);
+            if (id <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Graph references unknown text token '{name}'. Register Presentation/text_tokens.json before loading graph programs.");
+            }
+
+            return id;
+        }
+
         public int ResolveAttribute(string name)
         {
             int id = AttributeRegistry.GetId(name);
@@ -103,6 +145,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             {
                 throw new InvalidOperationException(
                     $"Graph references unknown effect template '{name}'.");
+            }
+            return id;
+        }
+
+        public int ResolveAbility(string name)
+        {
+            int id = AbilityIdRegistry.GetId(name);
+            if (id <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Graph references unknown ability '{name}'.");
             }
             return id;
         }

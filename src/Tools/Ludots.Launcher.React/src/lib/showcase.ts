@@ -58,12 +58,12 @@ export function launchHint(entry: ShowcaseEntry): string | null {
     return null;
   }
 
-  if (entry.binding) {
-    return `ludots launch $${entry.binding} --adapter raylib`;
-  }
-
   if (entry.preset) {
     return `ludots launch preset:${entry.preset}`;
+  }
+
+  if (entry.binding) {
+    return `ludots launch $${entry.binding} --adapter raylib`;
   }
 
   return null;

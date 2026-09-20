@@ -16,10 +16,13 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation;
+using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Instancing;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Spatial;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Systems
 {
@@ -31,11 +34,14 @@ namespace Ludots.Core.Systems
         private readonly WorldMap _worldMap;
         private EffectRequestQueue _effectRequests;
         private EntityTriggerGraphMounts? _entityTriggerGraphMounts;
+        private Ludots.Core.Input.Interaction.InteractionContextProfileRegistry? _initialInteractionContexts;
         private TemplateEntityBatchSpawner _templateBatchSpawner;
         private PresentationStableIdAllocator _stableIds;
         private PresenterEntityRuntime _presenterRuntime;
         private PresenterDefinitionRegistry _presenterDefinitions;
         private CompiledPresenterBootstrapRegistry _presenterBootstrap;
+        private MeshAssetRegistry _meshAssets;
+        private InstancedBatchAssetRegistry _instancedBatchAssets;
         private readonly Entity[] _presenterBatchOwners = new Entity[TemplateBatchScratchCapacity];
         private readonly int[] _presenterBatchScopeIds = new int[TemplateBatchScratchCapacity];
         private readonly int[] _presenterBatchStableIds = new int[TemplateBatchScratchCapacity];
@@ -71,9 +77,30 @@ namespace Ludots.Core.Systems
             _entityTriggerGraphMounts = entityTriggerGraphMounts ?? throw new ArgumentNullException(nameof(entityTriggerGraphMounts));
         }
 
+        /// <summary>
+        /// Binds the installed interaction context profiles so map-load spawns mount their
+        /// template's initialInteractionContext; unbound registries fail the
+        /// first template declaring one.
+        /// </summary>
+        public void SetInitialInteractionContexts(Ludots.Core.Input.Interaction.InteractionContextProfileRegistry profiles)
+        {
+            _initialInteractionContexts = profiles ?? throw new ArgumentNullException(nameof(profiles));
+        }
+
         public void SetComponentAuthoringContext(ComponentAuthoringContext authoringContext)
         {
             _authoringContext = authoringContext ?? ComponentAuthoringContext.Empty;
+        }
+
+        public ComponentAuthoringContext RequireComponentAuthoringContext()
+        {
+            if (ReferenceEquals(_authoringContext, ComponentAuthoringContext.Empty))
+            {
+                throw new InvalidOperationException(
+                    "MapLoader ComponentAuthoringContext has not been configured by the engine.");
+            }
+
+            return _authoringContext;
         }
 
         public void SetPresentationRuntime(
@@ -81,12 +108,16 @@ namespace Ludots.Core.Systems
             PresenterEntityRuntime presenterRuntime,
             PresenterDefinitionRegistry presenterDefinitions,
             ISpatialPartitionWorld spatialPartition,
-            WorldSizeSpec worldSizeSpec)
+            WorldSizeSpec worldSizeSpec,
+            MeshAssetRegistry meshAssets = null,
+            InstancedBatchAssetRegistry instancedBatchAssets = null)
         {
             _stableIds = stableIds;
             _presenterRuntime = presenterRuntime;
             _presenterDefinitions = presenterDefinitions;
             _presenterBootstrap = presenterDefinitions?.BootstrapRegistry;
+            _meshAssets = meshAssets;
+            _instancedBatchAssets = instancedBatchAssets;
             _templateBatchSpawner = new TemplateEntityBatchSpawner(
                 _world,
                 EntityTemplateKeys,
@@ -96,17 +127,313 @@ namespace Ludots.Core.Systems
                 TemplateBatchScratchCapacity);
         }
 
+        /// <summary>
+        /// Builds the deterministic set of map-owned presentation assets before entities are
+        /// materialized. Only assets reachable from map templates, bootstrap presenter roots,
+        /// compiled presenter child plans, and authored asset-swap entries are included;
+        /// transient runtime VFX are intentionally outside this contract.
+        /// </summary>
+        public MapPresentationAssetManifest BuildPresentationAssetManifest(MapConfig mapConfig)
+        {
+            if (mapConfig == null)
+            {
+                throw new ArgumentNullException(nameof(mapConfig));
+            }
+
+            var manifest = new MapPresentationAssetManifest();
+            if (_meshAssets == null || _presenterDefinitions == null || _presenterBootstrap == null || mapConfig.Entities == null)
+            {
+                manifest.SealManifest();
+                return manifest;
+            }
+
+            var visitedTemplates = new HashSet<string>(StringComparer.Ordinal);
+            var visitedDefinitions = new HashSet<int>();
+            var reachableDefinitionIds = new List<int>();
+            var instanceAssetIds = new Dictionary<int, HashSet<int>>();
+
+            for (int i = 0; i < mapConfig.Entities.Count; i++)
+            {
+                EntitySpawnData? entity = mapConfig.Entities[i];
+                if (entity?.PresenterParamOverrides == null)
+                {
+                    continue;
+                }
+
+                for (int overrideIndex = 0; overrideIndex < entity.PresenterParamOverrides.Count; overrideIndex++)
+                {
+                    ParamOverrideData? item = entity.PresenterParamOverrides[overrideIndex];
+                    if (item == null || item.Lane != ParamLane.Int || string.IsNullOrWhiteSpace(item.ParamKey))
+                    {
+                        continue;
+                    }
+
+                    AddInstanceAssetOverride(PresenterParamKeyRegistry.Register(item.ParamKey), item.IntValue);
+                }
+            }
+
+            for (int i = 0; i < mapConfig.Entities.Count; i++)
+            {
+                EntitySpawnData? entity = mapConfig.Entities[i];
+                if (entity == null || string.IsNullOrWhiteSpace(entity.Template))
+                {
+                    continue;
+                }
+
+                AddTemplate(entity.Template);
+            }
+
+            for (int i = 0; i < reachableDefinitionIds.Count; i++)
+            {
+                int definitionId = reachableDefinitionIds[i];
+                if (!_presenterDefinitions.TryGet(definitionId, out PresenterDefinition definition))
+                {
+                    continue;
+                }
+
+                AddBehaviors(definition.Behaviors);
+                PresenterCreatePlan plan = _presenterDefinitions.GetOrCreateCreatePlan(definitionId);
+                PresenterCreatePlanNode[] nodes = plan.Nodes ?? Array.Empty<PresenterCreatePlanNode>();
+                for (int nodeIndex = 0; nodeIndex < nodes.Length; nodeIndex++)
+                {
+                    AddBehaviors(nodes[nodeIndex].InstanceOverride?.InstanceBehaviors);
+                }
+            }
+
+            manifest.SealManifest();
+            return manifest;
+
+            void AddTemplate(string templateId)
+            {
+                if (!visitedTemplates.Add(templateId))
+                {
+                    return;
+                }
+
+                EntityTemplate? template = TemplateRegistry.Get(templateId);
+                if (template == null)
+                {
+                    return;
+                }
+
+                int templateKeyId = EntityTemplateKeys.GetId(templateId);
+                if (templateKeyId > 0 &&
+                    _presenterBootstrap.TryGetEntitySpawnCreates(
+                        templateKeyId,
+                        out CompiledPresenterBootstrapRegistry.BootstrapCreateRule[] rules))
+                {
+                    for (int i = 0; i < rules.Length; i++)
+                    {
+                        CollectDefinition(rules[i].PresenterDefinitionId);
+                    }
+                }
+
+                if (template.Children == null)
+                {
+                    return;
+                }
+
+                for (int i = 0; i < template.Children.Count; i++)
+                {
+                    EntityTemplateChild? child = template.Children[i];
+                    if (child != null && !string.IsNullOrWhiteSpace(child.Template))
+                    {
+                        AddTemplate(child.Template);
+                    }
+                }
+            }
+
+            void CollectDefinition(int definitionId)
+            {
+                if (definitionId <= 0 || !visitedDefinitions.Add(definitionId) ||
+                    !_presenterDefinitions.TryGet(definitionId, out PresenterDefinition definition))
+                {
+                    return;
+                }
+
+                reachableDefinitionIds.Add(definitionId);
+                PresenterCreatePlan plan = _presenterDefinitions.GetOrCreateCreatePlan(definitionId);
+                PresenterCreatePlanNode[] nodes = plan.Nodes ?? Array.Empty<PresenterCreatePlanNode>();
+                for (int i = 0; i < nodes.Length; i++)
+                {
+                    AddParamOverrides(nodes[i].ParamOverrides);
+                }
+
+                AddParamOverrides(definition.ParamDefaults);
+                for (int i = 0; i < nodes.Length; i++)
+                {
+                    CollectDefinition(nodes[i].DefinitionId);
+                }
+            }
+
+            void AddBehaviors(BehaviorSlot[]? behaviors)
+            {
+                if (behaviors == null)
+                {
+                    return;
+                }
+
+                for (int i = 0; i < behaviors.Length; i++)
+                {
+                    ref readonly BehaviorSlot behavior = ref behaviors[i];
+                    if (behavior.Kind == BehaviorKind.AssetBinding)
+                    {
+                        AddAsset(in behavior.AssetBinding);
+                    }
+                    else if (behavior.Kind == BehaviorKind.InstancedBatch)
+                    {
+                        AddInstancedBatch(behavior.InstancedBatch.BatchAssetId);
+                    }
+                }
+            }
+
+            void AddParamOverrides(ParamDefault[]? overrides)
+            {
+                if (overrides == null)
+                {
+                    return;
+                }
+
+                for (int i = 0; i < overrides.Length; i++)
+                {
+                    ref readonly ParamDefault item = ref overrides[i];
+                    if (item.Lane == ParamLane.Int)
+                    {
+                        AddInstanceAssetOverride(item.ParamKey, item.IntValue);
+                    }
+                }
+            }
+
+            void AddInstanceAssetOverride(int paramKey, int assetId)
+            {
+                if (paramKey < 0 || assetId <= 0)
+                {
+                    return;
+                }
+
+                if (!instanceAssetIds.TryGetValue(paramKey, out HashSet<int>? values))
+                {
+                    values = new HashSet<int>();
+                    instanceAssetIds.Add(paramKey, values);
+                }
+
+                values.Add(assetId);
+            }
+
+            void AddAsset(in AssetBindingConfig binding)
+            {
+                AddAssetId(binding.AssetKind, binding.AssetId, binding.RenderPath);
+                AssetSwapEntry[] swaps = binding.AssetSwapTable ?? Array.Empty<AssetSwapEntry>();
+                for (int i = 0; i < swaps.Length; i++)
+                {
+                    AddAssetId(binding.AssetKind, swaps[i].AssetId, binding.RenderPath);
+                }
+
+                if (binding.AssetIdParamKey >= 0 &&
+                    instanceAssetIds.TryGetValue(binding.AssetIdParamKey, out HashSet<int>? overrides))
+                {
+                    foreach (int assetId in overrides)
+                    {
+                        AddAssetId(binding.AssetKind, assetId, binding.RenderPath);
+                    }
+                }
+            }
+
+            void AddInstancedBatch(int batchAssetId)
+            {
+                if (batchAssetId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapConfig.Id}' reached an InstancedBatch presenter with an invalid batch asset id {batchAssetId}.");
+                }
+
+                if (_instancedBatchAssets == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapConfig.Id}' requires instanced batch asset id {batchAssetId}, but the InstancedBatchAssetRegistry is not installed.");
+                }
+
+                if (!_instancedBatchAssets.TryGet(batchAssetId, out InstancedBatchAsset batch))
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapConfig.Id}' references unknown instanced batch asset id {batchAssetId}.");
+                }
+
+                InstancedBatchGroup[] groups = batch.Groups ?? Array.Empty<InstancedBatchGroup>();
+                for (int i = 0; i < groups.Length; i++)
+                {
+                    AddAssetId(AssetKind.Mesh, groups[i].MeshAssetId, batch.RenderPath);
+                }
+            }
+
+            void AddAssetId(AssetKind assetKind, int assetId, VisualRenderPath renderPath)
+            {
+                if (assetKind is not (AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.Decal or AssetKind.VFX or AssetKind.Surface) ||
+                    assetId <= 0 || !_meshAssets.TryGetDescriptor(assetId, out MeshAssetDescriptor descriptor))
+                {
+                    return;
+                }
+
+                if (renderPath == VisualRenderPath.GpuSkinnedInstance && descriptor.GpuSkinnedLod.IsConfigured)
+                {
+                    AddRequiredGpuSkinnedAsset(assetKind, assetId, renderPath);
+                    AddGpuSkinnedLodPass(assetKind, descriptor.GpuSkinnedLod.Main, renderPath);
+                    AddGpuSkinnedLodPass(assetKind, descriptor.GpuSkinnedLod.Shadow, renderPath);
+                    return;
+                }
+
+                if (descriptor.SourceUris == null || descriptor.SourceUris.Length == 0)
+                {
+                    return;
+                }
+
+                manifest.Add(MapPresentationAsset.Create(assetKind, assetId, renderPath, descriptor.SourceUris));
+            }
+
+            void AddGpuSkinnedLodPass(AssetKind assetKind, MeshLodAssetIds lods, VisualRenderPath renderPath)
+            {
+                AddRequiredGpuSkinnedAsset(assetKind, lods.High, renderPath);
+                AddRequiredGpuSkinnedAsset(assetKind, lods.Medium, renderPath);
+                AddRequiredGpuSkinnedAsset(assetKind, lods.Low, renderPath);
+            }
+
+            void AddRequiredGpuSkinnedAsset(AssetKind assetKind, int assetId, VisualRenderPath renderPath)
+            {
+                if (assetId <= 0 || !_meshAssets.TryGetDescriptor(assetId, out MeshAssetDescriptor descriptor))
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapConfig.Id}' GPU-skinned LOD references unknown mesh asset id {assetId}.");
+                }
+
+                if (descriptor.Type != MeshAssetType.Model)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapConfig.Id}' GPU-skinned LOD mesh asset '{_meshAssets.GetName(assetId)}' must be a Model, but has type '{descriptor.Type}'.");
+                }
+
+                if (descriptor.SourceUris == null || descriptor.SourceUris.Length == 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapConfig.Id}' GPU-skinned LOD mesh asset '{_meshAssets.GetName(assetId)}' has no host sourceUris.");
+                }
+
+                manifest.Add(MapPresentationAsset.Create(assetKind, assetId, renderPath, descriptor.SourceUris));
+            }
+        }
+
         public void LoadTemplates(ConfigCatalog catalog, ConfigConflictReport report = null)
         {
             // This loads "Entities/templates.json" from Core and all Mods
             // Merging them with priority
             TemplateRegistry.Load("Entities/templates.json", catalog, report);
+            ExpandTemplateInheritance(report);
             EntityTemplateKeys.Clear();
             _templateSources.Clear();
             var templateIds = new HashSet<string>(StringComparer.Ordinal);
             foreach (var template in TemplateRegistry.GetAll())
             {
                 ValidateTemplateTriggerGraphs(template);
+                ValidateTemplateInitialInteractionContext(template);
                 templateIds.Add(template.Id);
             }
             ValidateTemplateChildrenGraph(templateIds);
@@ -121,47 +448,88 @@ namespace Ludots.Core.Systems
         }
 
         /// <summary>
-        /// 模板 children 引用图装载期校验：子模板引用必须可解析、图无环、
-        /// 被用作 child 的模板禁止声明 MovementParticipation（spawn 管线不授予写权，
-        /// 会自由移动的单位必须经 AttachOp 挂接）。
+        /// extends/uses 展开插在跨 mod 同 id 合并之后、装载校验之前：子模板可以引用
+        /// 任意 mod 贡献的父模板/块，而 children/TriggerGraphs 校验看到的是展开后的
+        /// 完整组合。原地展开保证所有消费方（spawn/batch/lifecycle/离线烘焙）
+        /// 经由同一注册表读到同一份结果；report 接住 uses 折叠的组件覆盖链。
+        /// </summary>
+        private void ExpandTemplateInheritance(ConfigConflictReport report)
+        {
+            var byId = new Dictionary<string, EntityTemplate>(StringComparer.Ordinal);
+            foreach (var template in TemplateRegistry.GetAll())
+            {
+                byId[template.Id] = template;
+            }
+
+            EntityTemplateInheritance.ExpandAll(byId, report);
+        }
+
+        /// <summary>
+        /// 模板 children 引用图装载期校验：子模板引用必须可解析、内联 children 递归展开、
+        /// 同层 localId 唯一、localPose 严格解析、图无环；被用作 child 的模板默认禁止声明
+        /// MovementParticipation（spawn 管线不授予写权）——attach:false 的可动成员豁免。
         /// </summary>
         private void ValidateTemplateChildrenGraph(HashSet<string> templateIds)
         {
             foreach (var template in TemplateRegistry.GetAll())
             {
-                if (template.Children == null)
-                {
-                    continue;
-                }
-
-                for (int i = 0; i < template.Children.Count; i++)
-                {
-                    EntityTemplateChild child = template.Children[i];
-                    string context = $"Entity template '{template.Id}' children[{i}]";
-                    if (child == null || string.IsNullOrWhiteSpace(child.Template))
-                    {
-                        throw new InvalidOperationException($"{context}: template 引用缺失。");
-                    }
-                    if (!templateIds.Contains(child.Template))
-                    {
-                        throw new InvalidOperationException(
-                            $"{context}: 引用未知子模板 '{child.Template}'。");
-                    }
-
-                    EntityTemplate childTemplate = TemplateRegistry.Get(child.Template);
-                    if (childTemplate.Components != null &&
-                        childTemplate.Components.ContainsKey("MovementParticipation"))
-                    {
-                        throw new InvalidOperationException(
-                            $"{context}: 子模板 '{child.Template}' 声明了 MovementParticipation——模板 children 是结构件，会自由移动的单位必须经 AttachOp 挂接。");
-                    }
-                    Ludots.Core.Gameplay.Attachment.AttachedLocalPoseAuthoring.Parse(child.LocalPose, context);
-                }
+                ValidateChildNodes(template.Id, template.Children, templateIds);
             }
 
             foreach (var template in TemplateRegistry.GetAll())
             {
                 DetectTemplateChildrenCycle(template.Id, new HashSet<string>(StringComparer.Ordinal), "root");
+            }
+        }
+
+        private void ValidateChildNodes(string ownerTemplateId, System.Collections.Generic.List<EntityTemplateChild>? children, HashSet<string> templateIds)
+        {
+            if (children == null)
+            {
+                return;
+            }
+
+            var seenLocalIds = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < children.Count; i++)
+            {
+                EntityTemplateChild child = children[i];
+                string context = $"Entity template '{ownerTemplateId}' children[{i}]";
+                if (child == null || string.IsNullOrWhiteSpace(child.Template))
+                {
+                    throw new InvalidOperationException($"{context}: template 引用缺失。");
+                }
+                if (!templateIds.Contains(child.Template))
+                {
+                    throw new InvalidOperationException(
+                        $"{context}: 引用未知子模板 '{child.Template}'。");
+                }
+
+                if (child.LocalId != null)
+                {
+                    if (string.IsNullOrWhiteSpace(child.LocalId) ||
+                        !string.Equals(child.LocalId, child.LocalId.Trim(), StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException(
+                            $"{context}: localId 必须是非空且首尾无空白的字符串。");
+                    }
+                    if (!seenLocalIds.Add(child.LocalId))
+                    {
+                        throw new InvalidOperationException(
+                            $"{context}: 同级 localId '{child.LocalId}' 重复——同一父 children 内 localId 必须唯一。");
+                    }
+                }
+
+                EntityTemplate childTemplate = TemplateRegistry.Get(child.Template);
+                if (child.Attach != false &&
+                    childTemplate.Components != null &&
+                    childTemplate.Components.ContainsKey("MovementParticipation"))
+                {
+                    throw new InvalidOperationException(
+                        $"{context}: 子模板 '{child.Template}' 声明了 MovementParticipation——attach:true 的模板 children 是结构件，会自由移动的单位必须 attach:false 或经 AttachOp 挂接。");
+                }
+                Ludots.Core.Gameplay.Attachment.AttachedLocalPoseAuthoring.Parse(child.LocalPose, context);
+
+                ValidateChildNodes(ownerTemplateId, child.Children, templateIds);
             }
         }
 
@@ -174,15 +542,23 @@ namespace Ludots.Core.Systems
             }
 
             EntityTemplate template = TemplateRegistry.Get(templateId);
-            if (template?.Children != null)
+            DetectInlineChildrenCycle(template?.Children, visiting, chain, templateId);
+            visiting.Remove(templateId);
+        }
+
+        private void DetectInlineChildrenCycle(System.Collections.Generic.List<EntityTemplateChild>? children, HashSet<string> visiting, string chain, string ownerTemplateId)
+        {
+            if (children == null)
             {
-                for (int i = 0; i < template.Children.Count; i++)
-                {
-                    DetectTemplateChildrenCycle(template.Children[i].Template, visiting, $"{chain} -> {templateId}[{i}]");
-                }
+                return;
             }
 
-            visiting.Remove(templateId);
+            for (int i = 0; i < children.Count; i++)
+            {
+                EntityTemplateChild child = children[i];
+                DetectTemplateChildrenCycle(child.Template, visiting, $"{chain} -> {ownerTemplateId}[{i}]");
+                DetectInlineChildrenCycle(child.Children, visiting, $"{chain} -> {ownerTemplateId}[{i}]", ownerTemplateId);
+            }
         }
 
         private static void ValidateTemplateTriggerGraphs(EntityTemplate template)
@@ -193,6 +569,7 @@ namespace Ludots.Core.Systems
                 return;
             }
 
+            var seen = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < graphs.Count; i++)
             {
                 string? name = graphs[i];
@@ -201,6 +578,27 @@ namespace Ludots.Core.Systems
                     throw new InvalidOperationException(
                         $"Entity template '{template.Id}' TriggerGraphs[{i}] must be a trimmed non-empty graph id string.");
                 }
+
+                if (!seen.Add(name))
+                {
+                    throw new InvalidOperationException(
+                        $"Entity template '{template.Id}' TriggerGraphs[{i}] repeats graph id '{name}'; each graph may be mounted only once per entity.");
+                }
+            }
+        }
+
+        private static void ValidateTemplateInitialInteractionContext(EntityTemplate template)
+        {
+            string? profileName = template.InitialInteractionContext;
+            if (profileName == null)
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(profileName) || !string.Equals(profileName, profileName.Trim(), StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Entity template '{template.Id}' initialInteractionContext must be a trimmed non-empty context profile id.");
             }
         }
 
@@ -208,6 +606,7 @@ namespace Ludots.Core.Systems
         {
             LoadEntitiesAndIndex(mapConfig);
         }
+
 
         public MapLoadEntityIndex LoadEntitiesAndIndex(MapConfig mapConfig)
         {
@@ -220,6 +619,7 @@ namespace Ludots.Core.Systems
             {
                 throw new InvalidOperationException($"Map '{mapConfig.Id}' requires an explicit entities list.");
             }
+
 
             // We need to extract the dictionary from the registry to pass to EntityBuilder
             // Or better, update EntityBuilder to accept DataRegistry or just the Interface.
@@ -309,7 +709,11 @@ namespace Ludots.Core.Systems
                 {
                     entityIndex.Register(mapConfig.Id, pendingBatchEntityData[i].InstanceId, created[i]);
                     PublishTemplateOnSpawnEffect(created[i], activeBatchTemplateId);
+                    MountInitialInteractionContext(created[i], activeBatchTemplateId, activeBatchTemplate);
                     BufferEntityTriggerGraphs(created[i], activeBatchTemplateId, activeBatchTemplate);
+                    // 注意：batch lane 不展开 children——TemplateSpawnDescriptor.Create 按合同
+                    // 把带 children 的模板判为 Incompatible（逐子挂接只能走单实体 lane），
+                    // 因此能进本 flush 的模板必无 children，无需在此展开。
                 }
 
                 if (hasDirectBootstrap)
@@ -360,6 +764,16 @@ namespace Ludots.Core.Systems
                         $"Map '{mapConfig.Id}' references unknown entity template '{entityData.Template}'.");
                 }
 
+                // 可寻址路径 = 摆放实例根 instanceId + localId 链；缺 instanceId 的后代会
+                // 落进根名字空间与兄弟撞名。此门必须盖住 batch 与非 batch 两条路径（S3-a）。
+                if (string.IsNullOrWhiteSpace(entityData.InstanceId) &&
+                    EntityTemplate.HasAddressableDescendant(templates[entityData.Template].Children, TemplateRegistry))
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapConfig.Id}' entity template '{entityData.Template}' has addressable descendants (localId) but no InstanceId; " +
+                        "the placed instance root must declare a non-empty, trimmed InstanceId to prefix addressable paths.");
+                }
+
                 bool isBatchCompatible = _templateBatchSpawner.IsBatchCompatible(entityData.Template, templates[entityData.Template]);
                 if (isBatchCompatible && TryBuildBatchRequest(mapConfig.Id, entityData, mapEntityTag, out var batchRequest))
                 {
@@ -394,19 +808,48 @@ namespace Ludots.Core.Systems
                         builder.WithOverride(kvp.Key, kvp.Value);
                     }
                 }
-                
+
+                // Placement position is the anchor of last resort: it lands only when
+                // neither the template nor an explicit override supplies WorldPositionCm.
+                if (entityData.PositionXCm.HasValue != entityData.PositionYCm.HasValue)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapConfig.Id}' entity '{ResolveMapEntityContextId(entityData)}' authors PositionXCm/PositionYCm partially; set both or neither.");
+                }
+
+                bool hasAuthoredWorldPosition =
+                    templates[entityData.Template].Components.ContainsKey("WorldPositionCm") ||
+                    (entityData.Overrides != null && entityData.Overrides.ContainsKey("WorldPositionCm"));
+                if (entityData.PositionXCm.HasValue && !hasAuthoredWorldPosition)
+                {
+                    builder.WithOverride(
+                        "WorldPositionCm",
+                        new JsonObject
+                        {
+                            ["Value"] = new JsonObject
+                            {
+                                ["X"] = entityData.PositionXCm.Value,
+                                ["Y"] = entityData.PositionYCm.Value,
+                            },
+                        });
+                }
+
                 var entity = builder.Build();
                 TryApplyTemplateKey(entity, entityData.Template);
                 _world.Add(entity, mapEntityTag);
                 entityIndex.Register(mapConfig.Id, entityData.InstanceId, entity);
                 PublishTemplateOnSpawnEffect(entity, entityData.Template);
+                MountInitialInteractionContext(entity, entityData.Template, templates[entityData.Template]);
                 BufferEntityTriggerGraphs(entity, entityData.Template, templates[entityData.Template]);
                 SpawnTemplateChildrenAtMapLoad(
                     builder,
                     templates,
+                    mapConfig.Id,
                     entityData.Template,
                     entity,
-                    mapEntityTag);
+                    mapEntityTag,
+                    entityIndex,
+                    string.IsNullOrWhiteSpace(entityData.InstanceId) ? null : entityData.InstanceId);
             }
 
             FlushPendingTemplateBatch();
@@ -423,28 +866,73 @@ namespace Ludots.Core.Systems
             _entityTriggerGraphMounts.BufferMapLoadSpawn(entity, templateId, template.TriggerGraphs);
         }
 
-        /// <summary>
-        /// map 装载 lane 的模板 children 物化：与 runtime spawn 队列同一 EntityBuilder 物化路径、
-        /// 同一 AttachedPoseMath 落位数学，仅时序不同（map 装载是同步 lane）。
-        /// 装载期已校验引用与无环，此处递归必然终止。
-        /// </summary>
-        private void SpawnTemplateChildrenAtMapLoad(
-            EntityBuilder builder,
-            System.Collections.Generic.Dictionary<string, EntityTemplate> templates,
-            string parentTemplateId,
-            Entity parent,
-            MapEntity mapEntityTag)
+        private void MountInitialInteractionContext(Entity entity, string templateId, EntityTemplate template)
         {
-            EntityTemplate parentTemplate = templates[parentTemplateId];
-            if (parentTemplate.Children is not { Count: > 0 })
+            if (string.IsNullOrWhiteSpace(template.InitialInteractionContext))
             {
                 return;
             }
 
-            for (int i = 0; i < parentTemplate.Children.Count; i++)
+            Ludots.Core.Input.Interaction.InteractionContextProfileRegistry? profiles = _initialInteractionContexts
+                ?? throw new InvalidOperationException(
+                    $"Entity template '{templateId}' declares initialInteractionContext '{template.InitialInteractionContext}' but no interaction context profile registry is bound to the map loader.");
+            Ludots.Core.Input.Interaction.TemplateInteractionContextMounting.MountInitialContext(
+                _world,
+                profiles,
+                entity,
+                templateId,
+                template.InitialInteractionContext);
+        }
+
+        /// <summary>
+        /// map 装载 lane 的模板 children 物化：与 runtime spawn 队列同一 EntityBuilder 物化路径、
+        /// 同一 AttachedPoseMath 落位数学，仅时序不同（map 装载是同步 lane）。
+        /// 装载期已校验引用与无环，此处递归必然终止。带 localId 的节点以摆放实例根路径
+        /// 前缀累积成可寻址路径，登记进 entityIndex（切A 只留形状，供切D/切F 消费）。
+        /// </summary>
+        private void SpawnTemplateChildrenAtMapLoad(
+            EntityBuilder builder,
+            System.Collections.Generic.Dictionary<string, EntityTemplate> templates,
+            string mapId,
+            string parentTemplateId,
+            Entity parent,
+            MapEntity mapEntityTag,
+            MapLoadEntityIndex entityIndex,
+            string? parentLocalPath)
+        {
+            EntityTemplate parentTemplate = templates[parentTemplateId];
+            SpawnTemplateChildNodes(
+                builder,
+                templates,
+                mapId,
+                parentTemplateId,
+                parentTemplate.Children,
+                parent,
+                mapEntityTag,
+                entityIndex,
+                parentLocalPath);
+        }
+
+        private void SpawnTemplateChildNodes(
+            EntityBuilder builder,
+            System.Collections.Generic.Dictionary<string, EntityTemplate> templates,
+            string mapId,
+            string ownerTemplateId,
+            System.Collections.Generic.List<EntityTemplateChild>? children,
+            Entity parent,
+            MapEntity mapEntityTag,
+            MapLoadEntityIndex entityIndex,
+            string? parentLocalPath)
+        {
+            if (children is not { Count: > 0 })
             {
-                EntityTemplateChild child = parentTemplate.Children[i];
-                string context = $"Map template children '{parentTemplateId}'[{i}] '{child.Template}'";
+                return;
+            }
+
+            for (int i = 0; i < children.Count; i++)
+            {
+                EntityTemplateChild child = children[i];
+                string context = $"Map template children '{ownerTemplateId}'[{i}] '{child.Template}'";
                 builder
                     .UseTemplate(child.Template)
                     .WithEntityContext(context);
@@ -462,18 +950,43 @@ namespace Ludots.Core.Systems
                 PublishTemplateOnSpawnEffect(childEntity, child.Template);
                 BufferEntityTriggerGraphs(childEntity, child.Template, templates[child.Template]);
 
+                string? childLocalPath = null;
+                if (!string.IsNullOrWhiteSpace(child.LocalId))
+                {
+                    childLocalPath = string.IsNullOrEmpty(parentLocalPath)
+                        ? child.LocalId
+                        : parentLocalPath + "." + child.LocalId;
+                    entityIndex.RegisterLocalPath(mapId, childLocalPath, childEntity);
+                }
+
+                // attach:false 的独立出生属切E；本切仍走结构挂接，保留标记与禁令豁免。
                 Ludots.Core.Gameplay.Attachment.AttachmentOps.Attach(
                     _world,
                     arbiter: null,
                     childEntity,
                     parent,
                     Ludots.Core.Gameplay.Attachment.AttachedLocalPoseAuthoring.Parse(child.LocalPose, context));
+
+                // 先展开被引用模板自身的 children（main 既有先例），再展开本节点的内联 children。
                 SpawnTemplateChildrenAtMapLoad(
                     builder,
                     templates,
+                    mapId,
                     child.Template,
                     childEntity,
-                    mapEntityTag);
+                    mapEntityTag,
+                    entityIndex,
+                    childLocalPath);
+                SpawnTemplateChildNodes(
+                    builder,
+                    templates,
+                    mapId,
+                    ownerTemplateId,
+                    child.Children,
+                    childEntity,
+                    mapEntityTag,
+                    entityIndex,
+                    childLocalPath);
             }
         }
 

@@ -28,6 +28,7 @@
 | Skill | 层级 | 用途 |
 |------|------|------|
 | `ludots-doc-governance` | governance | 文档 SSOT、链接与证据治理 |
+| `shuorenhua` | governance | 说人话：去 AI 味改写（保事实、分场景；gitbook/门户/PR 面向人的中文默认过一遍） |
 | `ludots-gas-composition-gate` | governance | GAS/生命周期开工前组合自审（禁止 profile DSL 膨胀） |
 | `ludots-feature-delivery` | delivery | 基建优先的功能交付、showcase/UI 验收与证据 |
 | `ludots-tech-debt-fuse` | audit | 跨层技术债升级与熔断 |

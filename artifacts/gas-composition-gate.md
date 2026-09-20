@@ -1,68 +1,56 @@
-## GAS Composition Gate — Self Review
+# GAS Composition Gate — Self Review
 
-- **Task / Issue**: Graph editor and live TriggerGraph debug stream (issue #1030, item 7 follow-up)
-- **Date**: 2026-08-24
-- **Agent / Author**: Codex
+- **Task / Issue**: 实体模板组件组 uses 组装范式（#1574）
+- **Date**: 2026-09-20
+- **Agent / Author**: ZCode（分支 feat/entity-template-uses，基于 #1573 的 60eca2e3af）
 
-### 1. Core judgment
+## 1. Core judgment
 
-新变体主要交付物是（A/B/C/D）: **A**
+新变体主要交付物是（A/B/C/D）: 均不是——交付物是**加载期配置组合语义**（模板表 `uses` 字段的装载期折叠：extends 父打底 → uses 块按序覆盖 → 自身最后）与**冲突可见性**（组件覆盖链记入既有 `ConfigConflictReport`）。不新增任何运行时行为变体、enum、preset 开关或平行管线。
 
-结论: **PASS**
+结论: PASS
 
-一句话理由: 本次交付是对现有 GraphControlFlowDocument、Graph op 描述表和 TriggerGraph 执行的编辑/观测组合，不新增 profile enum、preset 开关或第二套 VM。
+一句话理由: 能力拼装仍落在数据（templates.json 块条目 + uses 列表增行）上，折叠复用 #1573 同一展开器与 MergeIntoChild/JsonMerger 函数族，物化 SSOT 仍是 EntityBuilder 单轨，运行时行为面零变化。
 
-### 2. Layer assignment
+## 2. Layer assignment
 
 | 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
 |-----------|-----------------|----------|
-| Graph 作者数据读取、编译诊断、保存 | 2 | 现有 `GraphProgramAuthoringFrontDoor` 与 `Ludots.Editor.Bridge` |
-| 节点布局 sidecar | 2 | 编辑器工具侧独立 sidecar JSON |
-| TriggerGraph 节点/寄存器变化 trace | 0/1 观测旁路 | 固定容量 `GraphDebugTrace`，不参与 gameplay 语义 |
-| AgentBridge 增量 drain | 2 | 现有 `AgentToolRegistry` 与游戏线程 pump |
+| uses 装载期折叠 | 3（authoring/config 组合） | `EntityTemplateInheritance`（既有展开器上的正交增量，两处加载终点共用） |
+| 折叠优先级（后声明胜、自身最高） | 3 | 一次性私有克隆链 `FoldSources`（注册表共享的父/块对象全程只读） |
+| 冲突可见性（覆盖链留痕） | 3 | `ConfigConflictReport.RecordComponentOverrideChain`（既有报告体系内新增最小方法） |
 
-### 3. Reuse list
+## 3. Reuse list
 
-- Handlers: 现有 `GasGraphOpHandlerTable`，不新增 op handler。
-- Queues / Systems: 现有 AgentBridge game-thread pump、TriggerGraph slice/resume 管线。
-- Resolvers / Registries: `GraphProgramRegistry` source map、`MapSession.Triggers`、`GraphOpDescriptorTable`。
-- Existing presets / graphs: `GraphControlFlowDocument`、真实 `graphs.json`。
+- Handlers: N/A（不触 effect handler）
+- Queues / Systems: RuntimeEntitySpawnQueue / TemplateEntityBatchSpawner / MapLoader 原样消费折叠后模板对象，不改
+- Resolvers / Registries: `DataRegistry<EntityTemplate>` + ConfigPipeline ArrayById 合并原样；`EntityTemplateKeys` 不变
+- 折叠原语全复用 #1573: `MergeIntoChild`（components 字段级深合并 / children、TriggerGraphs 追加 / 标量非空才覆盖）、`TryConsumeReplaceMarker`（`__replace` 整替）、`CloneChild`
+- Existing presets / graphs: 图侧 SpawnTemplate(op 447) 与 TriggerGraphs 挂载不动
+- 环检测：既有 `expanding` 集合扩展为 extends+uses 混合图共用
 
-### 4. New Layer 0 ops (if any)
+## 4. New Layer 0 ops (if any)
 
-N/A — trace 不是执行 op，不改变 Graph program。
+N/A——无需新 atomic op；本任务是静态配置组合，不产生运行时事务。
 
-### 5. Transaction boundary
+## 5. Transaction boundary
 
-无 gameplay 事务变化；trace 记录失败时只报告 ring overflow/dropped count，不影响执行结果。
+N/A——折叠发生在装载期，失败即启动失败（fail fast），无运行时回滚面。
 
-### 6. Config SSOT
+## 6. Config SSOT
 
-行为配置落在: 现有 graph JSON；编辑器布局落在独立 sidecar。是否新增 JSON schema: **NO**。
+行为配置落在: `Entities/templates.json`（既有目录登记表，ArrayById/id）；块是普通模板条目，被 uses 引用即为块，不建新表、不加 abstract 开关。
 
-### 7. Red flag scan
+是否新增 JSON schema: NO——只给既有 EntityTemplate schema 增加一个可选字段 `uses`；不新建表、不新建 loader、不新建 profile。
 
-- [x] 未新增 profile inherit/placement enum
-- [x] 未新建与 spawn 平行的物化管线
+## 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum（`uses` 是模板表 authoring 字段，非 runtime 声明式开关；运行时行为面零变化）
+- [x] 未新建与 spawn 平行的物化管线（EntityBuilder 仍是唯一物化路径；批量快速路径消费折叠后对象）
 - [x] 未把 placement 校验塞进 lifecycle op
-- [x] 未添加「说不清的」默认 fallback
+- [x] 未添加「说不清的」默认 fallback（未知块、uses+extends 混合环 → 启动失败，错误指明双方 id）
+- [x] 未掩盖扁平组合的冲突（同一组件多源写入记入 ConfigConflictReport 覆盖链，`block.a -> block.b -> self`）
 
-### 8. Next variant test
+## 8. Next variant test
 
-「下一个 Mod 变体」将修改: **graph 连线 / effect 步骤**。
-
-## Issues #714-#719 AI/GAS Order Boundary — Pre-Implementation Gate — 2026-07-31
-
-- **Task / Issue**: Implement issues #714-#719 after PR #713, keeping ability lockout as duration Effect data, keeping Utility AI out of GAS ability eligibility, and converging AI output on typed Order contracts and read-only scoring.
-- **Date**: 2026-07-31
-- **Agent / Author**: Codex
-- **Baseline**: `origin/main` cached at `74513182ab420dc950844d26882000ec54e030a7` (`Merge pull request #713 from MightyBubble/codex/gas-graph-effect-ssot`). Network fetch retried but GitHub reset the connection; the cached remote head already includes the confirmed merged PR #713.
-- **Status**: PRE-IMPLEMENTATION PASS.
-
-### 1. Core judgment
-
-新变体主要交付物是（A/B/C/D）: A.
-
-结论: PASS.
-
-一句话理由: Temporary ability lockout is authored as duration Effects that grant tags; abilities read `blockTags`, AI submits typed Orders, and scoring stays read-only.
+「下一个 Mod 变体」（新单位 = 可移动 + 可选中 + 有血条）将修改: **新增块条目与一行 uses 列表（纯数据）**——不改 Core enum、不改 handler、不加 preset 开关。

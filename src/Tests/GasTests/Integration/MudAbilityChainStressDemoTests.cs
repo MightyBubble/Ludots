@@ -18,6 +18,14 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public class MudAbilityChainStressDemoTests
     {
+        [SetUp]
+        public void ResetRegistries()
+        {
+            // Engine-booting fixtures freeze the shared ambient; these demos register
+            // their own attributes lazily, so start from a fresh unfrozen table.
+            AttributeRegistry.Clear();
+        }
+
         private const string ChainHealthAttributeName = "tests.mud.ability-chain.health";
         private const string StressHealthAttributeName = "tests.mud.ability-stress.health";
 
@@ -50,7 +58,7 @@ namespace Ludots.Tests.GAS
                 fireboltMods.Add(attrId: attrHealth, ModifierOp.Add, -10f);
                 templates.Register(tplFirebolt, new EffectTemplateData
                 {
-                    TagId = tagFireboltHit,
+                    CategoryId = tagFireboltHit,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.FixedFrame,
                     DurationTicks = 0,
@@ -62,7 +70,7 @@ namespace Ludots.Tests.GAS
 
                 templates.Register(tplBurning, new EffectTemplateData
                 {
-                    TagId = tagBurning,
+                    CategoryId = tagBurning,
                     LifetimeKind = EffectLifetimeKind.After,
                     ClockId = GasClockId.FixedFrame,
                     DurationTicks = 5,
@@ -77,7 +85,7 @@ namespace Ludots.Tests.GAS
                 burnTickMods.Add(attrId: attrHealth, ModifierOp.Add, -2f);
                 templates.Register(tplBurnTick, new EffectTemplateData
                 {
-                    TagId = tagBurnTick,
+                    CategoryId = tagBurnTick,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.FixedFrame,
                     DurationTicks = 0,
@@ -91,7 +99,7 @@ namespace Ludots.Tests.GAS
                 healMods.Add(attrId: attrHealth, ModifierOp.Add, 8f);
                 templates.Register(tplHeal, new EffectTemplateData
                 {
-                    TagId = tagHeal,
+                    CategoryId = tagHeal,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.FixedFrame,
                     DurationTicks = 0,
@@ -251,7 +259,7 @@ namespace Ludots.Tests.GAS
                 volleyMods.Add(attrId: attrHealth, ModifierOp.Add, -3f);
                 templates.Register(tplVolleyHit, new EffectTemplateData
                 {
-                    TagId = tagVolleyHit,
+                    CategoryId = tagVolleyHit,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.FixedFrame,
                     DurationTicks = 0,
@@ -263,7 +271,7 @@ namespace Ludots.Tests.GAS
 
                 templates.Register(tplBurning, new EffectTemplateData
                 {
-                    TagId = tagBurning,
+                    CategoryId = tagBurning,
                     LifetimeKind = EffectLifetimeKind.After,
                     ClockId = GasClockId.FixedFrame,
                     DurationTicks = 3,
@@ -278,7 +286,7 @@ namespace Ludots.Tests.GAS
                 burnTickMods.Add(attrId: attrHealth, ModifierOp.Add, -1f);
                 templates.Register(tplBurnTick, new EffectTemplateData
                 {
-                    TagId = tagBurnTick,
+                    CategoryId = tagBurnTick,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.FixedFrame,
                     DurationTicks = 0,

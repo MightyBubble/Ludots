@@ -342,3 +342,22 @@ BehaviorKind 回答"这个槽位上的行为怎么驱动可视输出"。作者�
 ```
 
 来源：字段白名单 `src/Core/Presentation/Config/PresenterDefinitionConfigLoader.cs:753-757`；装载合同测试 `src/Tests/PresentationTests/Rendering/InstancedBatchContractTests.cs`。
+
+### Extension — 扩展行为
+
+- **是什么**：Mod 在 `IMod.OnLoad` 注册行为 handler——作者面在 behaviors[].kind 写 **Mod 限定 behavior key**（非 13 种内建名），loader 编译为 `BehaviorKind.Extension` + 动态 KindId（≥1024），运行时按 lane 分发给 Mod 注册的 handler。
+- **怎么写**：`kind: "<ModId>.<Key>"` + `execution.lane`（必填，必须与注册 descriptor 的 lane 一致，不一致装载 fail-loud）。放行 lane 只有四条：Bootstrap / ContinuousTick / OwnerAttributeDirty / OwnerTagDirty；后两条还必须带 `execution.trigger`（`attributeId` 或 `tagId`，解析不到正 id 即失败）。挂在 child instance 上的扩展行为只认 Bootstrap / ContinuousTick 两条 lane。槽位白名单是通用字段（slot / kind / activeByDefault / activationCondition / execution / style / motion），没有内建行为那种同名载荷对象；handler 里读写自定义数据走参数黑板（`IPresenterBehaviorOps` 的参数读写）。
+- **跑/证据**：preset `capability_standard_presenter_behavior_extension_showcase_raylib`；headless 验收 `PresenterBehaviorExtension_PlayerSeesCloudDriftTickFromModBehavior`；架构文档 [Presenter Behavior Extension](../../architecture/mod-extensible-runtime-showcases/presenter-behavior-extension.md)。
+
+配置形态（进入地图后 CloudDrift 持续 tick 的最小生产形态）：
+
+```jsonc
+{
+  "slot": "body",
+  "kind": "CapabilityStandardPresenterBehaviorExtensionShowcaseMod.CloudDrift",
+  "execution": { "lane": "ContinuousTick" },
+  "activeByDefault": true
+}
+```
+
+来源：`mods/showcases/capability_standard/CapabilityStandardPresenterBehaviorExtensionShowcaseMod/assets/Presentation/presenters/capability_standard.presenter_behavior_extension.cloud_banner.json`；lane 与 trigger 校验 `src/Core/Presentation/Config/PresenterDefinitionConfigLoader.cs:3042` 起（`ParseExtensionBehaviorExecution`）；运行时分发 `src/Core/Presentation/Systems/PresenterBehaviorSystem.cs` 的 `ProcessExtensionBehaviors`。

@@ -3,7 +3,7 @@
 从这一击自带单据里取出目标，取到木桩，扣 12 血。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_LoadContextTarget/poster.png" src="artifacts/evidence/capability_standard_graph_op_LoadContextTarget/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_LoadContextTarget/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_LoadContextTarget/play.mp4。
 </video>
 
 ## 作者写法

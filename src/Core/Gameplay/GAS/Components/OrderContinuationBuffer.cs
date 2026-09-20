@@ -55,6 +55,18 @@ namespace Ludots.Core.Gameplay.GAS.Components
 
         public readonly bool HasEntries => Count > 0;
 
+        internal readonly OrderContinuationEntry GetEntry(int index)
+        {
+            if ((uint)index >= (uint)Count) throw new ArgumentOutOfRangeException(nameof(index));
+            return _entries[index];
+        }
+
+        internal void SetEntry(int index, in OrderContinuationEntry entry)
+        {
+            if ((uint)index >= (uint)Count) throw new ArgumentOutOfRangeException(nameof(index));
+            _entries[index] = entry;
+        }
+
         public bool TryAdd(int triggerOrderId, in Order order)
         {
             if (triggerOrderId <= 0 || Count >= MAX_CONTINUATIONS)

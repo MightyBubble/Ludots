@@ -15,7 +15,7 @@
 │   ┌─────┐                    │  名称    [RtsRedAlertLikeShowcaseMod] ✓│
 │   │Core ├─┬─► InputMod       │  版本    [1.0.0]                       │
 │   └──┬──┘ │   └─► EntityPanel│  依赖    [Core ^1.0.0 ×] [＋添加依赖]  │
-│      ▼    ▼                   │  代码入口 [bin/net8.0/….dll] [清除]   │
+│      ▼    ▼                   │  代码入口 [bin/net9.0/….dll] [清除]   │
 │   [本 mod]                    │  排序值  [220]  ⓘ不影响启动顺序        │
 │   环/缺失在此标红             │  ── 元信息（折叠）──                   │
 │                               │  [保存 Ctrl+S]  状态：已保存           │

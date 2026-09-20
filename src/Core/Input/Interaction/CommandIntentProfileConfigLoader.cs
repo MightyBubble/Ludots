@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using Ludots.Core.Config;
 
 namespace Ludots.Core.Input.Interaction
@@ -16,12 +18,19 @@ namespace Ludots.Core.Input.Interaction
     {
         private readonly ConfigPipeline _pipeline;
 
-        private static readonly JsonSerializerOptions JsonOptions = new()
+        private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
+
+        private static JsonSerializerOptions CreateJsonOptions()
         {
-            PropertyNameCaseInsensitive = true,
-            ReadCommentHandling = JsonCommentHandling.Skip,
-            AllowTrailingCommas = true
-        };
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                ReadCommentHandling = JsonCommentHandling.Skip,
+                AllowTrailingCommas = true,
+            };
+            options.Converters.Add(new JsonStringEnumConverter(namingPolicy: null, allowIntegerValues: false));
+            return options;
+        }
 
         public CommandIntentProfileConfigLoader(ConfigPipeline pipeline)
         {
@@ -41,12 +50,58 @@ namespace Ludots.Core.Input.Interaction
                 throw new InvalidOperationException($"Missing required config '{relativePath}'.");
             }
 
+            RejectRenamedAuthoringFields(mergedObject, relativePath);
+
             var config = mergedObject.Deserialize<CommandIntentProfilesConfig>(JsonOptions)
                 ?? throw new InvalidOperationException($"Failed to deserialize '{relativePath}'.");
             Validate(config, relativePath);
             return config;
         }
 
+        private static void RejectRenamedAuthoringFields(JsonObject root, string relativePath)
+        {
+            if (root["profiles"] is not JsonArray profiles)
+            {
+                return;
+            }
+
+            for (int i = 0; i < profiles.Count; i++)
+            {
+                if (profiles[i] is not JsonObject profile)
+                {
+                    continue;
+                }
+
+                if (profile["rules"] is not JsonArray rules)
+                {
+                    continue;
+                }
+
+                for (int r = 0; r < rules.Count; r++)
+                {
+                    if (rules[r] is not JsonObject rule)
+                    {
+                        continue;
+                    }
+
+                    string rulePath = $"{relativePath}.profiles[{i}].rules[{r}]";
+                    if (rule["actor"] is JsonObject actor && actor.ContainsKey("hasAbilityWithTag"))
+                    {
+                        throw new InvalidOperationException(
+                            $"{rulePath}.actor field 'hasAbilityWithTag' was renamed to 'hasAbilityWithCategory' (ability classification, not gameplay tags).");
+                    }
+
+                    if (rule["route"] is JsonObject route &&
+                        route["slot"] is JsonValue slotValue &&
+                        slotValue.TryGetValue(out string slot) &&
+                        slot.StartsWith("byAbilityTag:", StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException(
+                            $"{rulePath}.route.slot '{slot}' uses removed prefix 'byAbilityTag:'; rename to 'byAbilityCategory:'.");
+                    }
+                }
+            }
+        }
         /// <summary>Structural fail-fast validation; id resolution happens at registry install.</summary>
         public static void Validate(CommandIntentProfilesConfig config, string source)
         {
@@ -97,6 +152,11 @@ namespace Ludots.Core.Input.Interaction
                     CommandIntentRouteDefinition route = rule.Route
                         ?? throw new InvalidOperationException($"{rulePath}.route must be an object.");
                     RequireTrimmedNonEmpty(route.OrderTypeKey, $"{rulePath}.route.orderTypeKey");
+                    if (!route.TargetShape.HasValue || !Enum.IsDefined(route.TargetShape.Value))
+                    {
+                        throw new InvalidOperationException(
+                            $"{rulePath}.route.targetShape must explicitly declare a supported command target shape.");
+                    }
 
                     ValidatePredicateStrings(rule.Actor?.AllTags, $"{rulePath}.actor.allTags");
                     ValidatePredicateStrings(rule.Actor?.AnyTags, $"{rulePath}.actor.anyTags");

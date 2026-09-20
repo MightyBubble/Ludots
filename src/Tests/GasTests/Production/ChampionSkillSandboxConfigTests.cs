@@ -315,7 +315,7 @@ namespace Ludots.Tests.GAS.Production
                 ?? throw new InvalidOperationException("Toolbar provider missing.");
             var mapping = WaitForActiveInputOrderMapping(engine);
             Assert.That(toolbar.IsVisible, Is.True);
-            Assert.That(mapping.InteractionMode, Is.EqualTo(InteractionModeType.SmartCast));
+            Assert.That(mapping.InteractionMode, Is.EqualTo(CastModeType.SmartCast));
 
             var buttons = new EntityCommandPanelToolbarButtonView[5];
             int buttonCount = toolbar.CopyButtons(buttons);
@@ -348,7 +348,7 @@ namespace Ludots.Tests.GAS.Production
 
             toolbar.Activate("ChampionSkillSandbox.Mode.Indicator");
             Tick(engine, 1);
-            Assert.That(mapping.InteractionMode, Is.EqualTo(InteractionModeType.SmartCastWithIndicator));
+            Assert.That(mapping.InteractionMode, Is.EqualTo(CastModeType.SmartCastWithIndicator));
             toolbar.CopyButtons(buttons);
             Assert.That(buttons[1].Active, Is.True);
 
@@ -359,7 +359,7 @@ namespace Ludots.Tests.GAS.Production
 
             toolbar.Activate("ChampionSkillSandbox.Mode.PressReleaseAim");
             Tick(engine, 1);
-            Assert.That(mapping.InteractionMode, Is.EqualTo(InteractionModeType.PressReleaseAimCast));
+            Assert.That(mapping.InteractionMode, Is.EqualTo(CastModeType.PressReleaseAimCast));
             toolbar.CopyButtons(buttons);
             Assert.That(buttons[2].Active, Is.True);
 
@@ -897,7 +897,7 @@ namespace Ludots.Tests.GAS.Production
                   "name": "Epic322InitFailMod",
                   "version": "1.0.0",
                   "description": "temp failure mod",
-                  "main": "bin/net8.0/Epic322InitFailMod.dll",
+                  "main": "bin/net9.0/Epic322InitFailMod.dll",
                   "priority": 0,
                   "dependencies": {
                     "LudotsCoreMod": "^1.0.0"
@@ -907,7 +907,7 @@ namespace Ludots.Tests.GAS.Production
                 File.WriteAllText(Path.Combine(modDir, "Epic322InitFailMod.csproj"), $$"""
                 <Project Sdk="Microsoft.NET.Sdk">
                   <PropertyGroup>
-                    <TargetFramework>net8.0</TargetFramework>
+                    <TargetFramework>net9.0</TargetFramework>
                     <ImplicitUsings>enable</ImplicitUsings>
                     <Nullable>enable</Nullable>
                     <BaseOutputPath>bin\</BaseOutputPath>

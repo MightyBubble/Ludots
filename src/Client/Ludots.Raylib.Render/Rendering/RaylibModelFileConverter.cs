@@ -119,7 +119,7 @@ namespace Ludots.Raylib.Render
 
         public static Model LoadModel(string fullPath)
         {
-            return Rl.LoadModel(PrepareNativeLoadable(fullPath));
+            return RaylibNativeResources.LoadModel(PrepareNativeLoadable(fullPath));
         }
     }
 }

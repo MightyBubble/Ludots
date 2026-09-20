@@ -18,6 +18,7 @@
 | `panel_kit_tooltip_showcase` | 提示 | 悬停看到作用说明 |
 | `browser_minimap_composited_overlay` | 小地图 Web 外壳 | 拖动/聚焦小地图控件，marker 仍由原生路径承载 |
 | `panel_kit_techtree_progression_showcase` | 科技/进度树 | 看可推进节点与阻塞原因 |
+| `activity_dispatch` | 活动事件面板 | 三条派发路径（forced/pooled/automatic）各触发一次：forced 弹层拍板、pooled 看确定性抽签、automatic 只留通报；选项的锁定原因与 Gate 隐藏当场可验 |
 
 语义全部来自各 mod 的 `Assets/PanelKit/profile.rts.json` / `profile.fourx.json`；通用 Panel Kit 代码不硬编码资源名、单位名、科技名。
 

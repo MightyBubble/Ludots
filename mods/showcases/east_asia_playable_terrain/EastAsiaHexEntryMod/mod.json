@@ -1,0 +1,12 @@
+{
+  "name": "EastAsiaHexEntryMod",
+  "version": "1.0.0",
+  "description": "Direct launcher entry for the playable editable East Asia HexGrid terrain map.",
+  "priority": 0,
+  "dependencies": {
+    "EastAsiaPlayableTerrainMod": "^1.0.0",
+    "VisualTerrainEditorMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["east_asia", "terrain", "hex", "entry"]
+}

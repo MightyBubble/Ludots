@@ -2,6 +2,37 @@
   "schemaVersion": 1,
   "presets": [
     {
+      "id": "save_load_showcase_raylib",
+      "name": "Save Load Raylib",
+      "selectors": [
+        "$save_load_showcase",
+        "$save_panel",
+        "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "deterministic_replay_showcase_raylib",
+      "name": "Deterministic Replay Raylib",
+      "selectors": [
+        "$deterministic_replay_showcase",
+        "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "reconnect_recovery_showcase_raylib",
+      "name": "Reconnect Recovery Raylib",
+      "selectors": [
+        "$reconnect_recovery_showcase",
+        "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "camera_acceptance_raylib",
       "name": "Camera Acceptance Raylib",
       "selectors": [
@@ -128,6 +159,149 @@
       "buildMode": "auto"
     },
     {
+      "id": "rts_multiplayer_frontline_raylib",
+      "name": "RTS Frontline Standalone Practice",
+      "selectors": [
+        "$rts_multiplayer_frontline"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "rts_multiplayer_frontline_networked_raylib",
+      "name": "RTS Frontline Two Player Match",
+      "selectors": [
+        "$rts_multiplayer_frontline_networked"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "processGroup": {
+        "topology": "localAuthoritative",
+        "artifactDirectory": "artifacts/launcher/process-groups/rts-multiplayer-frontline",
+        "host": "127.0.0.1",
+        "port": 27777,
+        "connectionKey": "rts-frontline-local",
+        "clientCount": 2,
+        "readiness": {
+          "timeoutMilliseconds": 45000,
+          "pollIntervalMilliseconds": 100
+        },
+        "applications": [
+          {
+            "id": "dedicated-server",
+            "hostKind": "dedicatedServer",
+            "projectPath": "src/Apps/DedicatedServer/Ludots.App.DedicatedServer/Ludots.App.DedicatedServer.csproj",
+            "assemblyPath": "src/Apps/DedicatedServer/Ludots.App.DedicatedServer/bin/Release/net9.0/Ludots.App.DedicatedServer.dll"
+          },
+          {
+            "id": "raylib-client",
+            "hostKind": "raylib",
+            "projectPath": "src/Apps/Raylib/Ludots.App.Raylib/Ludots.App.Raylib.csproj",
+            "assemblyPath": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0/Ludots.App.Raylib.dll"
+          }
+        ],
+        "processes": [
+          {
+            "id": "authoritative-server",
+            "applicationId": "dedicated-server",
+            "processRole": "authoritativeServer",
+            "clientInstanceId": 0,
+            "credentialPath": "",
+            "faultProfile": "normal",
+            "faultSeed": 70901,
+            "readiness": {
+              "artifactFileName": "launcher.readiness.json",
+              "minimumReplicatedMirrorCount": 0,
+              "minimumRenderableMirrorCount": 0
+            }
+          },
+          {
+            "id": "client-one",
+            "applicationId": "raylib-client",
+            "processRole": "replicatedClient",
+            "clientInstanceId": 1,
+            "credentialPath": "credentials/client-one.session",
+            "faultProfile": "normal",
+            "faultSeed": 70902,
+            "readiness": {
+              "artifactFileName": "launcher.readiness.json",
+              "minimumReplicatedMirrorCount": 8,
+              "minimumRenderableMirrorCount": 7
+            }
+          },
+          {
+            "id": "client-two",
+            "applicationId": "raylib-client",
+            "processRole": "replicatedClient",
+            "clientInstanceId": 2,
+            "credentialPath": "credentials/client-two.session",
+            "faultProfile": "normal",
+            "faultSeed": 70903,
+            "readiness": {
+              "artifactFileName": "launcher.readiness.json",
+              "minimumReplicatedMirrorCount": 8,
+              "minimumRenderableMirrorCount": 7
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "rts_multiplayer_frontline_client_join_raylib",
+      "name": "RTS Frontline Join Existing Server (Debug)",
+      "selectors": [
+        "$rts_multiplayer_frontline_networked"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "processGroup": {
+        "topology": "externalJoin",
+        "artifactDirectory": "artifacts/launcher/process-groups/rts-multiplayer-frontline-client-join",
+        "host": "127.0.0.1",
+        "port": 27777,
+        "connectionKey": "rts-frontline-local",
+        "clientCount": 1,
+        "readiness": {
+          "timeoutMilliseconds": 45000,
+          "pollIntervalMilliseconds": 100
+        },
+        "applications": [
+          {
+            "id": "raylib-client",
+            "hostKind": "raylib",
+            "projectPath": "src/Apps/Raylib/Ludots.App.Raylib/Ludots.App.Raylib.csproj",
+            "assemblyPath": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0/Ludots.App.Raylib.dll"
+          }
+        ],
+        "processes": [
+          {
+            "id": "debug-client",
+            "applicationId": "raylib-client",
+            "processRole": "replicatedClient",
+            "clientInstanceId": 9001,
+            "credentialPath": "credentials/debug-client.session",
+            "faultProfile": "normal",
+            "faultSeed": 70990,
+            "readiness": {
+              "artifactFileName": "launcher.readiness.json",
+              "minimumReplicatedMirrorCount": 1,
+              "minimumRenderableMirrorCount": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "rts_multiplayer_frontline_three_process_uat_raylib",
+      "name": "RTS Frontline Three Process UAT",
+      "selectors": [
+        "$rts_multiplayer_frontline_networked",
+        "$rts_multiplayer_frontline_three_process_uat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_participant_views_raylib",
       "name": "Capability Standard Participant Views Raylib",
       "selectors": [
@@ -225,6 +399,49 @@
       }
     },
     {
+      "id": "browser_ui_ultralight_raylib",
+      "name": "Browser UI Ultralight Raylib",
+      "selectors": [
+        "$browser_ui_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "ultralight"
+      }
+    },
+    {
+      "id": "browser_react_flow_ultralight_raylib",
+      "name": "Browser React Flow Ultralight Raylib",
+      "selectors": [
+        "$browser_react_flow_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "ultralight"
+      }
+    },
+    {
+      "id": "browser_minimap_composited_overlay_ultralight_raylib",
+      "name": "Browser Minimap Composited Overlay Ultralight Raylib",
+      "selectors": [
+        "$presenter_blacksmith_large_world_nohud",
+        "$browser_minimap_composited_overlay_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "ultralight"
+      }
+    },
+    {
       "id": "ui_player_aggregate_graph_mvp_raylib",
       "name": "Player Aggregate Graph MVP Raylib",
       "selectors": [
@@ -283,6 +500,15 @@
       "name": "Capability Standard Effect Preset Type Code Raylib",
       "selectors": [
         "$capability_standard_effect_preset_type_code_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_mod_graph_op_extension_showcase_raylib",
+      "name": "Capability Standard Graph Op Extension Raylib",
+      "selectors": [
+        "$capability_standard_mod_graph_op_extension_showcase"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
@@ -355,6 +581,15 @@
       "name": "Blacksmith Test Raylib",
       "selectors": [
         "$blacksmith_test"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "instanced_batch_demo_raylib",
+      "name": "Instanced Batch Demo Raylib",
+      "selectors": [
+        "$instanced_batch_demo"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
@@ -488,6 +723,85 @@
       "buildMode": "auto"
     },
     {
+      "id": "east_asia_navmesh_debug_raylib",
+      "name": "East Asia NavMesh Debug Raylib",
+      "selectors": [
+        "mod:EastAsiaVisualHeightmapRuntimeEntryMod",
+        "mod:NavMeshDebugLaunchMod",
+        "$east_asia_navmesh_debug",
+        "$field_east_asia_country"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "east_asia_borders_land_sea_raylib",
+      "name": "East Asia Borders Land Sea Raylib",
+      "selectors": [
+        "mod:EastAsiaVisualHeightmapRuntimeEntryMod",
+        "mod:NavMeshDebugLaunchMod",
+        "$east_asia_borders_land_sea"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "field_east_asia_country_raylib",
+      "name": "Field East Asia Country Raylib",
+      "selectors": [
+        "mod:EastAsiaVisualHeightmapRuntimeEntryMod",
+        "$field_east_asia_country"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "field_east_asia_admin_raylib",
+      "name": "Field East Asia Admin Raylib",
+      "selectors": [
+        "mod:EastAsiaVisualHeightmapRuntimeEntryMod",
+        "$field_east_asia_admin"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "field_jing_yang_transit_raylib",
+      "name": "Field Jing Yang Transit Raylib",
+      "selectors": [
+        "$field_jing_yang_transit"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "field_layer_table_raylib",
+      "name": "Field Layer Table Raylib",
+      "selectors": [
+        "$field_layer_table"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "field_editor_paint_raylib",
+      "name": "Field Editor Paint Raylib",
+      "selectors": [
+        "$field_editor_paint"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "field_hierarchy_query_raylib",
+      "name": "Field Hierarchy Query Raylib",
+      "selectors": [
+        "$field_hierarchy_query"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_ability_graph_sandbox_raylib",
       "name": "Capability Standard Ability Graph Sandbox Raylib",
       "selectors": [
@@ -528,6 +842,15 @@
       "name": "残血的分更高",
       "selectors": [
         "$capability_standard_graph_score"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_formal_text_raylib",
+      "name": "拼一句上字幕",
+      "selectors": [
+        "$capability_standard_graph_formal_text"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
@@ -1655,7 +1978,11 @@
         "$engine_gallery"
       ],
       "adapterId": "raylib",
-      "buildMode": "auto"
+      "buildMode": "auto",
+      "args": [
+        "--project",
+        "projects/engine_gallery"
+      ]
     },
     {
       "id": "engine_raylib_skybox",
@@ -1665,6 +1992,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "skybox",
         "--frames",
@@ -1683,6 +2012,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "sky_daynight",
         "--frames",
@@ -1701,6 +2032,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "water",
         "--frames",
@@ -1719,6 +2052,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "terrain_surface",
         "--frames",
@@ -1737,6 +2072,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "terrain_heightmap",
         "--frames",
@@ -1755,6 +2092,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "atmosphere_fog",
         "--frames",
@@ -1773,6 +2112,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "frame_lighting",
         "--frames",
@@ -1791,6 +2132,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "postprocess",
         "--frames",
@@ -1809,6 +2152,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "gpu_skinning",
         "--frames",
@@ -1827,6 +2172,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "instancing",
         "--frames",
@@ -1845,6 +2192,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "particles",
         "--frames",
@@ -1863,6 +2212,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "decal_projection",
         "--frames",
@@ -1881,6 +2232,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "vegetation_cutout",
         "--frames",
@@ -1899,6 +2252,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "material_binding",
         "--frames",
@@ -1917,6 +2272,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "ribbon_overlay",
         "--frames",
@@ -1935,6 +2292,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "skia_overlay",
         "--frames",
@@ -1953,6 +2312,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "debug_draw",
         "--frames",
@@ -1971,6 +2332,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "primitives",
         "--frames",
@@ -2037,6 +2400,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "lighting",
         "--frames",
@@ -2055,6 +2420,8 @@
       ],
       "adapterId": "raylib",
       "args": [
+        "--project",
+        "projects/engine_gallery",
         "--scene",
         "crowd_anim",
         "--frames",
@@ -2063,6 +2430,26 @@
         "artifacts/acceptance/engine_raylib_crowd_anim/screen.png",
         "--json",
         "artifacts/acceptance/engine_raylib_crowd_anim/stats.json"
+      ]
+    },
+    {
+      "id": "engine_raylib_slash_trail",
+      "name": "引擎画廊·刀光轨迹",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--project",
+        "projects/engine_gallery",
+        "--scene",
+        "slash_trail",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_slash_trail/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_slash_trail/stats.json"
       ]
     },
     {
@@ -2097,6 +2484,24 @@
       "name": "Graph Op DestroyPanel Raylib",
       "selectors": [
         "$capability_standard_graph_op_DestroyPanel"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_entity_list_raylib",
+      "name": "Panel Entity List Raylib",
+      "selectors": [
+        "$panel_entity_list"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "dual_seat_panels_raylib",
+      "name": "Dual Seat Panels Raylib",
+      "selectors": [
+        "$dual_seat_panels_showcase"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
@@ -2262,6 +2667,731 @@
       "name": "Graph Op WeightedPick Raylib",
       "selectors": [
         "$capability_standard_graph_op_WeightedPick"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadEntryPayloadEntity_raylib",
+      "name": "Graph Op LoadEntryPayloadEntity Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadEntryPayloadEntity"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadEntryPayloadFloat_raylib",
+      "name": "Graph Op LoadEntryPayloadFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadEntryPayloadFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadEntryPayloadInt_raylib",
+      "name": "Graph Op LoadEntryPayloadInt Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadEntryPayloadInt"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_DispatchMapEvent_raylib",
+      "name": "Graph Op DispatchMapEvent Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_DispatchMapEvent"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_InvokeGraph_raylib",
+      "name": "Graph Op InvokeGraph Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_InvokeGraph"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_StoreArgEntity_raylib",
+      "name": "Graph Op StoreArgEntity Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_StoreArgEntity"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_StoreArgFloat_raylib",
+      "name": "Graph Op StoreArgFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_StoreArgFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_StoreArgInt_raylib",
+      "name": "Graph Op StoreArgInt Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_StoreArgInt"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadPlacedEntity_raylib",
+      "name": "Graph Op LoadPlacedEntity Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadPlacedEntity"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_AwaitCallback_raylib",
+      "name": "Graph Op AwaitCallback Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_AwaitCallback"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "narrative_raylib",
+      "name": "Narrative Showcase Raylib",
+      "selectors": [
+        "$narrative"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "dialogue_author_kit_raylib",
+      "name": "Dialogue Author Kit Raylib",
+      "selectors": [
+        "$dialogue_author_kit"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "dialogue_author_kit_theme_ink_raylib",
+      "name": "Dialogue Author Kit Ink Theme Raylib",
+      "selectors": [
+        "$dialogue_author_kit_theme_ink"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "narrative_theme_sanguo_raylib",
+      "name": "Narrative Theme 三国 Raylib",
+      "selectors": [
+        "$narrative_theme_sanguo"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "narrative_theme_fantasy_raylib",
+      "name": "Narrative Theme 奇幻 Raylib",
+      "selectors": [
+        "$narrative_theme_fantasy"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "narrative_theme_acnh_raylib",
+      "name": "Narrative Theme 动森 Raylib",
+      "selectors": [
+        "$narrative_theme_acnh"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadPlacedAnchor_raylib",
+      "name": "Graph Op LoadPlacedAnchor Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadPlacedAnchor"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadPlacedRegion_raylib",
+      "name": "Graph Op LoadPlacedRegion Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadPlacedRegion"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ConcatText_raylib",
+      "name": "Graph Op ConcatText Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ConcatText"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ConstText_raylib",
+      "name": "Graph Op ConstText Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ConstText"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_FloatToText_raylib",
+      "name": "Graph Op FloatToText Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_FloatToText"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_IntToText_raylib",
+      "name": "Graph Op IntToText Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_IntToText"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SinkPresentationText_raylib",
+      "name": "Graph Op SinkPresentationText Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SinkPresentationText"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadTextKey_raylib",
+      "name": "Graph Op LoadTextKey Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadTextKey"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_StartDialogue_raylib",
+      "name": "Graph Op StartDialogue Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_StartDialogue"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SetInteractionMode_raylib",
+      "name": "Graph Op SetInteractionMode Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SetInteractionMode"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SetPanelAudience_raylib",
+      "name": "Graph Op SetPanelAudience Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SetPanelAudience"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ModifyAttributeSet_raylib",
+      "name": "Graph Op ModifyAttributeSet Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ModifyAttributeSet"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_effect_list_raylib",
+      "name": "Panel Effect List Raylib",
+      "selectors": [
+        "$panel_effect_list"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadEffectTiming_raylib",
+      "name": "Graph Op LoadEffectTiming Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadEffectTiming"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectActiveEffects_raylib",
+      "name": "Graph Op QueryCollectActiveEffects Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectActiveEffects"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectAbilityHolders_raylib",
+      "name": "Graph Op QueryCollectAbilityHolders Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectAbilityHolders"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectAbilitySlots_raylib",
+      "name": "Graph Op QueryCollectAbilitySlots Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectAbilitySlots"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectActiveTasks_raylib",
+      "name": "Graph Op QueryCollectActiveTasks Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectActiveTasks"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectEffectTemplates_raylib",
+      "name": "Graph Op QueryCollectEffectTemplates Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectEffectTemplates"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectInventoryItems_raylib",
+      "name": "Graph Op QueryCollectInventoryItems Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectInventoryItems"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectItemDefinitions_raylib",
+      "name": "Graph Op QueryCollectItemDefinitions Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectItemDefinitions"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectPresentTags_raylib",
+      "name": "Graph Op QueryCollectPresentTags Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectPresentTags"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectProgressionNodes_raylib",
+      "name": "Graph Op QueryCollectProgressionNodes Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectProgressionNodes"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectActiveActivities_raylib",
+      "name": "Graph Op QueryCollectActiveActivities Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectActiveActivities"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_author_layout_kit_raylib",
+      "name": "Panel Author Layout Kit Raylib",
+      "selectors": [
+        "$panel_author_layout_kit"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadEffectStack_raylib",
+      "name": "Graph Op LoadEffectStack Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadEffectStack"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_OfferActivity_raylib",
+      "name": "Graph Op OfferActivity Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_OfferActivity"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_OfferTask_raylib",
+      "name": "Graph Op OfferTask Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_OfferTask"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_effect_templates_raylib",
+      "name": "Panel 效果图鉴 Raylib",
+      "selectors": [
+        "$panel_effect_templates"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_roster_nested_raylib",
+      "name": "Panel 编队档案 Raylib",
+      "selectors": [
+        "$panel_roster_nested"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_present_tags_raylib",
+      "name": "Panel 身上的印记 Raylib",
+      "selectors": [
+        "$panel_present_tags"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_inventory_aggregate_raylib",
+      "name": "Panel 背包堆叠 Raylib",
+      "selectors": [
+        "$panel_inventory_aggregate"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_item_definitions_raylib",
+      "name": "Panel 物品图鉴 Raylib",
+      "selectors": [
+        "$panel_item_definitions"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_active_tasks_raylib",
+      "name": "Panel 进行中的差事 Raylib",
+      "selectors": [
+        "$panel_active_tasks"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_active_activities_raylib",
+      "name": "Panel 进行中的活动 Raylib",
+      "selectors": [
+        "$panel_active_activities"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_ability_holders_raylib",
+      "name": "Panel 谁会火球 Raylib",
+      "selectors": [
+        "$panel_ability_holders"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_progression_nodes_raylib",
+      "name": "Panel 修行进度 Raylib",
+      "selectors": [
+        "$panel_progression_nodes"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCollectActiveDialogueChoices_raylib",
+      "name": "Graph Op QueryCollectActiveDialogueChoices Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCollectActiveDialogueChoices"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_PointToDirection_raylib",
+      "name": "Graph Op PointToDirection Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_PointToDirection"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ScreenPointToEntity_raylib",
+      "name": "Graph Op ScreenPointToEntity Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ScreenPointToEntity"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ScreenPointToGround_raylib",
+      "name": "Graph Op ScreenPointToGround Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ScreenPointToGround"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ScreenRegionToEntities_raylib",
+      "name": "Graph Op ScreenRegionToEntities Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ScreenRegionToEntities"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_StickToDirection_raylib",
+      "name": "Graph Op StickToDirection Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_StickToDirection"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ActivateContext_raylib",
+      "name": "Graph Op ActivateContext Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ActivateContext"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_DeactivateContext_raylib",
+      "name": "Graph Op DeactivateContext Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_DeactivateContext"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_WriteCollection_raylib",
+      "name": "Graph Op WriteCollection Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_WriteCollection"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "engine_raylib_composition",
+      "name": "引擎画廊·composition",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "args": [
+        "--project",
+        "projects/engine_gallery",
+        "--scene",
+        "composition",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_composition/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_composition/stats.json"
+      ]
+    },
+    {
+      "id": "capability_standard_graph_op_LoadPointerScreenX_raylib",
+      "name": "Graph Op LoadPointerScreenX Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadPointerScreenX"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadPointerScreenY_raylib",
+      "name": "Graph Op LoadPointerScreenY Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadPointerScreenY"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_BindQueryCollection_raylib",
+      "name": "Graph Op BindQueryCollection Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_BindQueryCollection"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryScreenRegionCollection_raylib",
+      "name": "Graph Op QueryScreenRegionCollection Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryScreenRegionCollection"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "region_volume_textbook_raylib",
+      "name": "Region Volume Textbook Raylib",
+      "selectors": [
+        "$region_volume_textbook",
+        "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "contact_sensor_textbook_raylib",
+      "name": "Contact Sensor Textbook Raylib",
+      "selectors": [
+        "$contact_sensor_textbook",
+        "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryFilterControllable_raylib",
+      "name": "Graph Op QueryFilterControllable Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryFilterControllable"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_CompleteActiveOrder_raylib",
+      "name": "Graph Op CompleteActiveOrder Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_CompleteActiveOrder"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_FloatToInt_raylib",
+      "name": "Graph Op FloatToInt Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_FloatToInt"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_IntToFloat_raylib",
+      "name": "Graph Op IntToFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_IntToFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadEntityPosValid_raylib",
+      "name": "Graph Op LoadEntityPosValid Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadEntityPosValid"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadEntityPosX_raylib",
+      "name": "Graph Op LoadEntityPosX Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadEntityPosX"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadEntityPosY_raylib",
+      "name": "Graph Op LoadEntityPosY Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadEntityPosY"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadOrderTypeId_raylib",
+      "name": "Graph Op LoadOrderTypeId Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadOrderTypeId"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SqrtFloat_raylib",
+      "name": "Graph Op SqrtFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SqrtFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SubmitAssignedOrder_raylib",
+      "name": "Graph Op SubmitAssignedOrder Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SubmitAssignedOrder"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

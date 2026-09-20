@@ -45,7 +45,7 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
             mods.Add(healthId, ModifierOp.Add, 5.0f);
             effectTemplates.Register(1, new EffectTemplateData
             {
-                TagId = 0,
+                CategoryId = 0,
                 LifetimeKind = EffectLifetimeKind.Instant,
                 ClockId = GasClockId.FixedFrame,
                 DurationTicks = 0,

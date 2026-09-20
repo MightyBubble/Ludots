@@ -8,7 +8,7 @@
 
 新变体主要交付物是（A/B/C/D）: **A**
 
-结论: **PASS**
+结论: **PASS（控制流/黑板/trace 现状；文本能力未开放）**
 
 一句话理由: 节点联想、Break 和组合入口复用运行时 descriptor/compiler；字符串模板与 Concat 只有在正式 graph value/runtime 合同存在后才能成为可保存节点，本次不以编辑器假能力绕过该边界。
 
@@ -61,3 +61,9 @@ Behavior configuration remains in graph JSON (`assets/GAS/graphs.json`) and the 
 - Blackboard capability now installs and batch-materializes `BlackboardFloatBuffer` together with the existing order blackboard buffers; `RequireInstalled` checks the complete set.
 - Trigger graph debug trace carries the last instruction PC through the execution cursor. Live pin/watch records therefore resolve to the instruction that actually ran, and missing source-map entries fail closed in AgentBridge.
 - Editor graph descriptors are mandatory, layout entries are schema-checked, and node deletion removes connected edges before validation/save.
+
+- The descriptor projection now includes the runtime-authoritative control output ports for ordinary nodes (`Jump.target`, `Call.call/next`, and the normal `next` continuation); the React canvas consumes this projection instead of inventing an op list.
+- Authoring sugars exposed by the Bridge are `BranchBool`, `SwitchInt`, `Wait`, `While`, `Until`, and `Break`, with their compiler-required control/value ports. `SwitchInt` case ports remain explicit `case:<int>` edges and are added to the node only when authored.
+- Live trace source-map lookup is fail-closed for root and nested graph ids; nested `InvokeScript` execution shares the fixed trace ring and carries its child graph id. Blackboard entity events use `keyId` consistently with int/float events.
+- Trace currently records executed instruction/node attribution, pin and blackboard changes, Yield/budget suspension, and Halt. It does not manufacture `NodeExit`; the earlier wording that claimed a complete enter/exit lifecycle is intentionally removed.
+- Blackboard buffers are runtime capabilities and are still installed through the existing order-blackboard capability path. Authoring-time entity capability declarations are a remaining contract slice; missing buffers continue to fail explicitly at execution.

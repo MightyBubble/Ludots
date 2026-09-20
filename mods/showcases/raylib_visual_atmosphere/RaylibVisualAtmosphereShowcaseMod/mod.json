@@ -2,7 +2,7 @@
   "name": "RaylibVisualAtmosphereShowcaseMod",
   "version": "1.0.0",
   "description": "Player-facing tropical-island Raylib atmosphere plus beach field contrast for decals, ribbons, and hit flashes.",
-  "main": "bin/net8.0/RaylibVisualAtmosphereShowcaseMod.dll",
+  "main": "bin/net9.0/RaylibVisualAtmosphereShowcaseMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0"

@@ -147,13 +147,14 @@ namespace Ludots.Tests.Presentation
 
             system.Update(0.016f);
 
-            ReadOnlySpan<PresentationRequest> span = requests.GetSpan();
-            Assert.That(span.Length, Is.EqualTo(1));
-            Assert.That(span[0].Kind, Is.EqualTo(PresentationRequestKind.VisualProxy));
-            Assert.That(span[0].VisualProxy.AssetKind, Is.EqualTo(AssetKind.Decal));
-            Assert.That(span[0].VisualProxy.Scale, Is.EqualTo(authored));
+            ReadOnlySpan<PresentationRequestOp> ops = requests.Ops;
+            Assert.That(ops.Length, Is.EqualTo(1));
+            Assert.That(ops[0].Channel, Is.EqualTo(PresentationRequestChannel.VisualProxy));
+            ref readonly VisualProxyChannelItem item = ref requests.VisualProxyAt(ops[0].Slot);
+            Assert.That(item.VisualProxy.AssetKind, Is.EqualTo(AssetKind.Decal));
+            Assert.That(item.VisualProxy.Scale, Is.EqualTo(authored));
 
-            var volume = ProjectedDecalVolume.FromVisualScale(span[0].VisualProxy.Scale);
+            var volume = ProjectedDecalVolume.FromVisualScale(item.VisualProxy.Scale);
             Assert.That(volume.StampSizeMeters, Is.EqualTo(new Vector2(authored.X, authored.Z)));
             Assert.That(volume.StampSizeMeters, Is.Not.EqualTo(Vector2.One));
             Assert.That(volume.ProjectionThicknessMeters, Is.EqualTo(authored.Y));
@@ -234,8 +235,16 @@ namespace Ludots.Tests.Presentation
                 Visibility = VisualVisibility.Visible,
             }), Is.True);
 
+            var camera = new Camera3D
+            {
+                position = new Vector3(0f, 500f, 500f),
+                target = Vector3.Zero,
+                up = Vector3.UnitY,
+                fovy = 60f,
+                projection = CameraProjection.CAMERA_PERSPECTIVE,
+            };
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
-                () => renderer.Draw(draw, default(Camera3D), new MeshAssetRegistry()))!;
+                () => renderer.Draw(draw, camera, new MeshAssetRegistry()))!;
             Assert.That(ex.Message, Does.Contain(nameof(RaylibPrimitiveRenderer.BindReceiverMeshProjector)));
             Assert.That(ex.Message, Does.Not.Contain("terrain-only"));
         }
@@ -308,9 +317,9 @@ namespace Ludots.Tests.Presentation
             Assert.That(next, Is.GreaterThan(method));
             string body = source[method..next];
             Assert.That(body, Does.Contain("FitYawedStampProjectorCenter"));
-            Assert.That(body, Does.Not.Contain("_frameVisualHeightmap"));
+            Assert.That(body, Does.Not.Contain("_frameContinuousHeightmap"));
             Assert.That(source, Does.Not.Contain("FitDecalProjectorVolume"));
-            Assert.That(source, Does.Not.Contain("if (_frameVisualHeightmap == null)"));
+            Assert.That(source, Does.Not.Contain("if (_frameContinuousHeightmap == null)"));
         }
 
         [Test]
@@ -334,21 +343,21 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void HeightmapProjector_FitWithoutSampleSourceThrows()
         {
-            using var projector = new RaylibVisualHeightmapRenderer();
+            using var projector = new RaylibContinuousHeightmapRenderer();
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
                 () => projector.FitYawedStampProjectorCenter(
                     new Vector3(1f, 9f, 2f),
                     0f,
                     new Vector2(3.8f, 3.8f),
                     44))!;
-            Assert.That(ex.Message, Does.Contain(nameof(RaylibVisualHeightmapRenderer.BindStampHeightSampleSource)));
+            Assert.That(ex.Message, Does.Contain(nameof(RaylibContinuousHeightmapRenderer.BindStampHeightSampleSource)));
         }
 
         [Test]
         public void HeightmapProjector_FitCentersOnSampledReceiverHeight()
         {
-            using var projector = new RaylibVisualHeightmapRenderer();
-            projector.BindStampHeightSampleSource(new FlatVisualHeightmap());
+            using var projector = new RaylibContinuousHeightmapRenderer();
+            projector.BindStampHeightSampleSource(new FlatContinuousHeightmap());
             Vector3 center = projector.FitYawedStampProjectorCenter(
                 new Vector3(4f, 99f, 6f),
                 0.3f,
@@ -362,7 +371,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void HeightmapProjector_FitMissingOverlapThrowsInsteadOfSkipping()
         {
-            using var projector = new RaylibVisualHeightmapRenderer();
+            using var projector = new RaylibContinuousHeightmapRenderer();
             projector.BindStampHeightSampleSource(new MissingOverlapHeightmap());
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
                 () => projector.FitYawedStampProjectorCenter(
@@ -483,7 +492,7 @@ namespace Ludots.Tests.Presentation
             }
 
             using var projector = new RaylibTerrainRenderer();
-            projector.BindStampHeightSampleSource(new VertexMapVisualHeightmap(() => map));
+            projector.BindStampHeightSampleSource(new VertexMapContinuousHeightmap(() => map));
 
             // 贴花横跨 31/32 列高度阶地边界：左侧 level2(4m)、右侧 level4(8m)，中心应落在两阶中点
             float boundaryX = HexCoordinates.HexWidth * 31.5f;
@@ -496,7 +505,7 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(center.X, Is.EqualTo(boundaryX).Within(1e-4f));
             Assert.That(center.Z, Is.EqualTo(rowZ).Within(1e-4f));
-            Assert.That(center.Y, Is.EqualTo(((2f + 4f) * VertexMapVisualHeightmap.DefaultHeightScaleMeters) * 0.5f).Within(0.02f));
+            Assert.That(center.Y, Is.EqualTo(((2f + 4f) * VertexMapContinuousHeightmap.DefaultHeightScaleMeters) * 0.5f).Within(0.02f));
         }
 
         [Test]
@@ -505,7 +514,7 @@ namespace Ludots.Tests.Presentation
             var map = new Ludots.Core.Map.Hex.VertexMap();
             map.Initialize(widthInChunks: 1, heightInChunks: 1);
             using var projector = new RaylibTerrainRenderer();
-            projector.BindStampHeightSampleSource(new VertexMapVisualHeightmap(() => map));
+            projector.BindStampHeightSampleSource(new VertexMapContinuousHeightmap(() => map));
 
             float outOfLatticeXCm = HexCoordinates.HexWidth * 64f * WorldUnits.CmPerMeter;
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
@@ -591,7 +600,7 @@ namespace Ludots.Tests.Presentation
             }
         }
 
-        private sealed class MissingOverlapHeightmap : IVisualHeightmap
+        private sealed class MissingOverlapHeightmap : IContinuousHeightmap
         {
             public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = -1)
             {

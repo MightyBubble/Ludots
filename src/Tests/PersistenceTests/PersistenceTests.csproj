@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -17,6 +17,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
+    <ProjectReference Include="..\..\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj" />
+    <ProjectReference Include="..\..\Platform\Ludots.Platform.Desktop\Ludots.Platform.Desktop.csproj" />
     <ProjectReference Include="..\..\..\mods\LudotsCoreMod\LudotsCoreMod.csproj" />
     <ProjectReference Include="..\..\..\mods\CoreInputMod\CoreInputMod.csproj" />
     <ProjectReference Include="..\..\..\mods\EntityCommandPanelMod\EntityCommandPanelMod.csproj" />

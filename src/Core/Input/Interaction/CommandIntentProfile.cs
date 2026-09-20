@@ -4,6 +4,14 @@ using Arch.Core;
 
 namespace Ludots.Core.Input.Interaction
 {
+    public enum CommandIntentTargetShape : byte
+    {
+        None = 0,
+        WorldPositionCm = 1,
+        Entity = 2,
+        WorldPositionAndEntity = 3,
+    }
+
     /// <summary>Built-in group policy kinds (RFC-0065 DEC-14). Registry keys, not a closed enum.</summary>
     public static class CommandIntentGroupPolicyKinds
     {
@@ -13,7 +21,7 @@ namespace Ludots.Core.Input.Interaction
 
     /// <summary>
     /// Route slot selector kinds compiled from the <c>route.slot</c> selector expression
-    /// (RFC-0065 DEC-14). Semantic routing only ever uses <see cref="ByAbilityTag"/> or
+    /// (RFC-0065 DEC-14). Semantic routing only ever uses <see cref="ByAbilityCategory"/> or
     /// <see cref="ContextGroup"/>; bare slot indices are rejected at load time.
     /// </summary>
     public static class CommandIntentRouteKinds
@@ -21,8 +29,8 @@ namespace Ludots.Core.Input.Interaction
         /// <summary>No slot selector; the route carries only the order type.</summary>
         public const int None = 0;
 
-        /// <summary>Slot located by ability catalog tag; <c>RouteParamId</c> is the tag id.</summary>
-        public const int ByAbilityTag = 1;
+        /// <summary>Slot located by ability category; <c>RouteParamId</c> is the category id.</summary>
+        public const int ByAbilityCategory = 1;
 
         /// <summary>Slot delegated to ContextScored evaluation; <c>RouteParamId</c> is the context group id.</summary>
         public const int ContextGroup = 2;
@@ -41,10 +49,20 @@ namespace Ludots.Core.Input.Interaction
     /// the order type id, and the slot selector as (kind, param id). Slot landing (resolving the
     /// param to a concrete ability slot) is downstream dispatch work, not evaluation work.
     /// </summary>
-    public readonly record struct CommandIntentRoute(int RuleIndex, int OrderTypeId, int RouteKind, int RouteParamId)
+    public readonly record struct CommandIntentRoute(
+        int RuleIndex,
+        int OrderTypeId,
+        int RouteKind,
+        int RouteParamId,
+        CommandIntentTargetShape TargetShape)
     {
         /// <summary>Sentinel for "no rule matched" in group results.</summary>
-        public static readonly CommandIntentRoute None = new(-1, 0, CommandIntentRouteKinds.None, 0);
+        public static readonly CommandIntentRoute None = new(
+            -1,
+            0,
+            CommandIntentRouteKinds.None,
+            0,
+            CommandIntentTargetShape.None);
 
         /// <summary>True when a rule won for this actor.</summary>
         public bool HasRoute => RuleIndex >= 0;
@@ -104,7 +122,7 @@ namespace Ludots.Core.Input.Interaction
     /// </summary>
     public sealed class CommandIntentActorPredicateDefinition
     {
-        public string HasAbilityWithTag { get; set; }
+        public string HasAbilityWithCategory { get; set; }
         public List<string> AllTags { get; set; }
         public List<string> AnyTags { get; set; }
     }
@@ -123,11 +141,12 @@ namespace Ludots.Core.Input.Interaction
 
     /// <summary>
     /// Route declaration: an order type key (validated against OrderTypeRegistry at install) and an
-    /// optional slot selector expression (<c>byAbilityTag:&lt;tag&gt;</c> or <c>contextGroup:&lt;id&gt;</c>).
+    /// optional slot selector expression (<c>byAbilityCategory:&lt;category&gt;</c> or <c>contextGroup:&lt;id&gt;</c>).
     /// </summary>
     public sealed class CommandIntentRouteDefinition
     {
         public string OrderTypeKey { get; set; } = string.Empty;
         public string Slot { get; set; }
+        public CommandIntentTargetShape? TargetShape { get; set; }
     }
 }

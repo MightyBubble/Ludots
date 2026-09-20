@@ -27,9 +27,16 @@
     "DistanceCm": 5600,
     "FovYDeg": 55
   },
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "vfx_forge_anchor_01" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "vfx_forge_anchor_01" }
+  ],
   "Entities": [
     {
       "Template": "vfx_forge_anchor",
+      "InstanceId": "vfx_forge_anchor_01",
       "Overrides": {
         "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
         "FacingDirection": { "AngleRad": 0.0 }

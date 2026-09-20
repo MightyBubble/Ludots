@@ -548,7 +548,7 @@ namespace Ludots.Tests.GasTests.UI
         {
             public int Calls { get; private set; }
 
-            public void Evaluate(int graphId, Entity owner)
+            public void Evaluate(int graphId, Entity owner, int subjectIntId = 0)
             {
                 Calls++;
                 throw new InvalidOperationException($"panel graph '{graphId}' evaluation failed for test");

@@ -2,7 +2,7 @@
   "name": "CapabilityStandardHfsmSentryArenaMod",
   "version": "1.0.0",
   "description": "Standalone 10k hierarchical FSM sentry arena (HFSM only).",
-  "main": "bin/net8.0/CapabilityStandardHfsmSentryArenaMod.dll",
+  "main": "bin/net9.0/CapabilityStandardHfsmSentryArenaMod.dll",
   "priority": -1900,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

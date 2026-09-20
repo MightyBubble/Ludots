@@ -2,7 +2,7 @@
   "name": "CapabilityStandardGraphOpLoadContextTargetContextEntryMod",
   "version": "1.0.0",
   "description": "Launcher entry for GraphNodeOp LoadContextTargetContext player gallery.",
-  "main": "bin/net8.0/CapabilityStandardGraphOpLoadContextTargetContextEntryMod.dll",
+  "main": "bin/net9.0/CapabilityStandardGraphOpLoadContextTargetContextEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"

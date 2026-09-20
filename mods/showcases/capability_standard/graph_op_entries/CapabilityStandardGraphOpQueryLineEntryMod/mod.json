@@ -2,7 +2,7 @@
   "name": "CapabilityStandardGraphOpQueryLineEntryMod",
   "version": "1.0.0",
   "description": "Launcher entry for GraphNodeOp QueryLine player gallery.",
-  "main": "bin/net8.0/CapabilityStandardGraphOpQueryLineEntryMod.dll",
+  "main": "bin/net9.0/CapabilityStandardGraphOpQueryLineEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"

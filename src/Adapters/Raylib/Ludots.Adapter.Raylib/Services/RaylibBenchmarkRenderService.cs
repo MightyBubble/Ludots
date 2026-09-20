@@ -73,6 +73,11 @@ namespace Ludots.Adapter.Raylib.Services
             return _renderer.Draw(baseCamera);
         }
 
+        public void DrawShadow(Camera3D baseCamera, Ludots.Raylib.Render.RaylibDirectionalShadowMap shadow)
+        {
+            _renderer.DrawShadow(baseCamera, shadow);
+        }
+
         public bool SetActiveInstanceCount(int count)
         {
             RaylibBenchmarkScene scene = _renderer.CurrentScene;

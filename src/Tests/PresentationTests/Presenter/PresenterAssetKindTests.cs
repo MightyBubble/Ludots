@@ -226,14 +226,106 @@ namespace Ludots.Tests.Presentation
 
             system.Update(0.016f);
 
-            ReadOnlySpan<PresentationRequest> span = requests.GetSpan();
-            Assert.That(span.Length, Is.EqualTo(1));
-            Assert.That(span[0].Kind, Is.EqualTo(PresentationRequestKind.VisualProxy));
-            Assert.That(span[0].VisualProxy.MeshAssetId, Is.EqualTo(assetId));
-            Assert.That(span[0].VisualProxy.MaterialId, Is.EqualTo(materialId));
-            Assert.That(span[0].VisualProxy.RenderPath, Is.EqualTo(renderPath));
-            Assert.That(span[0].VisualProxy.Position, Is.EqualTo(new Vector3(4f, 5f, 6f)));
-            Assert.That(span[0].VisualProxy.Scale, Is.EqualTo(new Vector3(1.5f, 2f, 2.5f)));
+            Assert.That(requests.Count, Is.EqualTo(1));
+            Assert.That(requests.Ops[0].Channel, Is.EqualTo(PresentationRequestChannel.VisualProxy));
+            ref readonly VisualProxyChannelItem item = ref requests.VisualProxyAt(0);
+            Assert.That(item.VisualProxy.MeshAssetId, Is.EqualTo(assetId));
+            Assert.That(item.VisualProxy.MaterialId, Is.EqualTo(materialId));
+            Assert.That(item.VisualProxy.RenderPath, Is.EqualTo(renderPath));
+            Assert.That(item.VisualProxy.Position, Is.EqualTo(new Vector3(4f, 5f, 6f)));
+            Assert.That(item.VisualProxy.Scale, Is.EqualTo(new Vector3(1.5f, 2f, 2.5f)));
+            Assert.That(item.VisualProxy.OwnerStableId, Is.EqualTo(7001));
+            Assert.That(item.VisualProxy.OwnerStableId, Is.Not.EqualTo(9100 + (int)assetKind));
+            Assert.That(item.VisualProxy.StableId, Is.Not.EqualTo(item.VisualProxy.OwnerStableId));
+        }
+
+        [Test]
+        public void ChildVisual_UsesGameplayOwnerIdentity_NotRootOrChildPerformerIdentity()
+        {
+            const int gameplayOwnerStableId = 7301;
+            const int rootPerformerStableId = 9301;
+            const int childPerformerStableId = 9302;
+            using var world = World.Create();
+            Entity owner = world.Create(
+                new PresentationStableId { Value = gameplayOwnerStableId },
+                VisualTransform.Default,
+                new CullState { IsVisible = true, LOD = LODLevel.High });
+            var instances = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+            var requests = new PresentationRequestBuffer();
+
+            int childDefId = definitions.Register("owner.identity.child", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 1001,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            Mobility = VisualMobility.Movable,
+                            LocalScale = Vector3.One,
+                            AssetIdParamKey = -1,
+                            AssetSwapParamKey = -1,
+                        },
+                    },
+                ],
+            });
+            int rootDefId = definitions.Register("owner.identity.root", new PresenterDefinition
+            {
+                Children =
+                [
+                    new ChildPresenterRef { DefinitionId = childDefId, ScopeTag = 1 },
+                ],
+            });
+            instances.BindDefinitions(definitions);
+
+            Entity root = instances.CreateHierarchy(
+                definitions,
+                rootDefId,
+                owner,
+                scopeId: 0,
+                PresentationAnchorKind.Entity,
+                Vector3.Zero,
+                rootPerformerStableId,
+                Entity.Null,
+                definitions.Get(rootDefId),
+                () => childPerformerStableId);
+            Entity child = world.Get<PresenterChildren>(root).Get(0);
+
+            using var system = new PresenterEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                new Dictionary<string, object>(),
+                animatorStates: null!,
+                soundRequests: null!);
+            system.Update(0.016f);
+
+            PresenterState rootState = world.Get<PresenterState>(root);
+            PresenterState childState = world.Get<PresenterState>(child);
+            Assert.That(requests.Count, Is.EqualTo(1));
+            Assert.That(requests.Ops[0].Channel, Is.EqualTo(PresentationRequestChannel.VisualProxy));
+            PresentationVisualProxy proxy = requests.VisualProxyAt(0).VisualProxy;
+            Assert.Multiple(() =>
+            {
+                Assert.That(rootState.OwnerStableId, Is.EqualTo(gameplayOwnerStableId));
+                Assert.That(rootState.StableId, Is.EqualTo(rootPerformerStableId));
+                Assert.That(childState.OwnerStableId, Is.EqualTo(gameplayOwnerStableId));
+                Assert.That(childState.StableId, Is.EqualTo(childPerformerStableId));
+                Assert.That(proxy.OwnerStableId, Is.EqualTo(gameplayOwnerStableId));
+                Assert.That(proxy.OwnerStableId, Is.Not.EqualTo(rootPerformerStableId));
+                Assert.That(proxy.OwnerStableId, Is.Not.EqualTo(childPerformerStableId));
+                Assert.That(proxy.StableId, Is.Not.EqualTo(gameplayOwnerStableId));
+                Assert.That(proxy.StableId, Is.Not.EqualTo(rootPerformerStableId));
+                Assert.That(proxy.StableId, Is.Not.EqualTo(childPerformerStableId));
+            });
         }
 
         [Test]
@@ -315,10 +407,9 @@ namespace Ludots.Tests.Presentation
 
             system.Update(0.016f);
 
-            ReadOnlySpan<PresentationRequest> span = requests.GetSpan();
-            Assert.That(span.Length, Is.EqualTo(1));
-            Assert.That(span[0].Kind, Is.EqualTo(PresentationRequestKind.VisualProxy));
-            PresentationVisualProxy proxy = span[0].VisualProxy;
+            Assert.That(requests.Count, Is.EqualTo(1));
+            Assert.That(requests.Ops[0].Channel, Is.EqualTo(PresentationRequestChannel.VisualProxy));
+            PresentationVisualProxy proxy = requests.VisualProxyAt(0).VisualProxy;
             Assert.That(proxy.AssetKind, Is.EqualTo(AssetKind.Surface));
             Assert.That(proxy.RenderPath, Is.EqualTo(VisualRenderPath.Surface));
             Assert.That(proxy.SurfaceLayerKey, Is.EqualTo("terrain.rvt"));
@@ -382,12 +473,12 @@ namespace Ludots.Tests.Presentation
 
             system.Update(0.016f);
 
-            ReadOnlySpan<PresentationRequest> span = requests.GetSpan();
-            Assert.That(span.Length, Is.EqualTo(1));
-            Assert.That(span[0].Kind, Is.EqualTo(PresentationRequestKind.SplineRibbon));
-            Assert.That(span[0].SplineRibbon.StableId, Is.GreaterThan(0));
-            Assert.That(span[0].SplineRibbon.Width, Is.EqualTo(2.25f).Within(0.001f));
-            Assert.That(span[0].SplineRibbon.P0, Is.EqualTo(new Vector3(2f, 3f, 4f)));
+            Assert.That(requests.Count, Is.EqualTo(1));
+            Assert.That(requests.Ops[0].Channel, Is.EqualTo(PresentationRequestChannel.SplineRibbon));
+            ref readonly SplineRibbonChannelItem spline = ref requests.SplineRibbonAt(0);
+            Assert.That(spline.Item.StableId, Is.GreaterThan(0));
+            Assert.That(spline.Item.Width, Is.EqualTo(2.25f).Within(0.001f));
+            Assert.That(spline.Item.P0, Is.EqualTo(new Vector3(2f, 3f, 4f)));
         }
 
         [Test]
@@ -519,14 +610,14 @@ namespace Ludots.Tests.Presentation
 
             system.Update(0.016f);
 
-            ReadOnlySpan<PresentationRequest> span = requests.GetSpan();
-            Assert.That(span.Length, Is.EqualTo(1));
-            Assert.That(span[0].Kind, Is.EqualTo(PresentationRequestKind.WorldHud));
-            Assert.That(span[0].WorldHud.Kind, Is.EqualTo(WorldHudItemKind.Bar));
-            Assert.That(span[0].WorldHud.WorldPosition, Is.EqualTo(new Vector3(7f, 8f, 9f)));
-            Assert.That(span[0].WorldHud.Value0, Is.EqualTo(0.65f).Within(0.001f));
-            Assert.That(span[0].WorldHud.Width, Is.EqualTo(60f).Within(0.001f));
-            Assert.That(span[0].WorldHud.Height, Is.EqualTo(8f).Within(0.001f));
+            Assert.That(requests.Count, Is.EqualTo(1));
+            Assert.That(requests.Ops[0].Channel, Is.EqualTo(PresentationRequestChannel.WorldHud));
+            ref readonly WorldHudChannelItem hud = ref requests.WorldHudAt(0);
+            Assert.That(hud.Item.Kind, Is.EqualTo(WorldHudItemKind.Bar));
+            Assert.That(hud.Item.WorldPosition, Is.EqualTo(new Vector3(7f, 8f, 9f)));
+            Assert.That(hud.Item.Value0, Is.EqualTo(0.65f).Within(0.001f));
+            Assert.That(hud.Item.Width, Is.EqualTo(60f).Within(0.001f));
+            Assert.That(hud.Item.Height, Is.EqualTo(8f).Within(0.001f));
         }
 
         [Test]
@@ -584,14 +675,14 @@ namespace Ludots.Tests.Presentation
 
             system.Update(0.016f);
 
-            ReadOnlySpan<PresentationRequest> span = requests.GetSpan();
-            Assert.That(span.Length, Is.EqualTo(1));
-            Assert.That(span[0].Kind, Is.EqualTo(PresentationRequestKind.WorldHud));
-            Assert.That(span[0].WorldHud.Kind, Is.EqualTo(WorldHudItemKind.Text));
-            Assert.That(span[0].WorldHud.WorldPosition, Is.EqualTo(new Vector3(10f, 11f, 12f)));
-            Assert.That(span[0].WorldHud.FontSize, Is.EqualTo(18));
-            Assert.That(span[0].WorldHud.Text.TokenId, Is.EqualTo(4001));
-            Assert.That(span[0].WorldHud.Text.ArgCount, Is.EqualTo(2));
+            Assert.That(requests.Count, Is.EqualTo(1));
+            Assert.That(requests.Ops[0].Channel, Is.EqualTo(PresentationRequestChannel.WorldHud));
+            ref readonly WorldHudChannelItem hud = ref requests.WorldHudAt(0);
+            Assert.That(hud.Item.Kind, Is.EqualTo(WorldHudItemKind.Text));
+            Assert.That(hud.Item.WorldPosition, Is.EqualTo(new Vector3(10f, 11f, 12f)));
+            Assert.That(hud.Item.FontSize, Is.EqualTo(18));
+            Assert.That(hud.Item.Text.TokenId, Is.EqualTo(4001));
+            Assert.That(hud.Item.Text.ArgCount, Is.EqualTo(2));
         }
 
         [Test]
@@ -681,19 +772,18 @@ namespace Ludots.Tests.Presentation
 
             system.Update(1f);
 
-            ReadOnlySpan<PresentationRequest> span = requests.GetSpan();
-            Assert.That(span.Length, Is.EqualTo(2));
-            Assert.That(span[0].Kind, Is.EqualTo(PresentationRequestKind.VisualProxy));
-            Assert.That(span[0].VisualProxy.MeshAssetId, Is.EqualTo(1));
-            Assert.That(span[0].VisualProxy.Position.Y, Is.EqualTo(11.5f).Within(0.001f));
-            Assert.That(span[0].VisualProxy.Color.X, Is.EqualTo(1f).Within(0.001f));
-            Assert.That(span[0].VisualProxy.Color.W, Is.EqualTo(1f).Within(0.001f));
+            Assert.That(requests.Count, Is.EqualTo(2));
+            Assert.That(requests.Ops[0].Channel, Is.EqualTo(PresentationRequestChannel.VisualProxy));
+            Assert.That(requests.VisualProxyAt(0).VisualProxy.MeshAssetId, Is.EqualTo(1));
+            Assert.That(requests.VisualProxyAt(0).VisualProxy.Position.Y, Is.EqualTo(11.5f).Within(0.001f));
+            Assert.That(requests.VisualProxyAt(0).VisualProxy.Color.X, Is.EqualTo(1f).Within(0.001f));
+            Assert.That(requests.VisualProxyAt(0).VisualProxy.Color.W, Is.EqualTo(1f).Within(0.001f));
 
-            Assert.That(span[1].Kind, Is.EqualTo(PresentationRequestKind.VisualProxy));
-            Assert.That(span[1].VisualProxy.MeshAssetId, Is.EqualTo(2));
-            Assert.That(span[1].VisualProxy.Position.Y, Is.EqualTo(13f).Within(0.001f));
-            Assert.That(span[1].VisualProxy.Color.X, Is.EqualTo(0.1f).Within(0.001f));
-            Assert.That(span[1].VisualProxy.Color.W, Is.EqualTo(0.5f).Within(0.001f));
+            Assert.That(requests.Ops[1].Channel, Is.EqualTo(PresentationRequestChannel.VisualProxy));
+            Assert.That(requests.VisualProxyAt(1).VisualProxy.MeshAssetId, Is.EqualTo(2));
+            Assert.That(requests.VisualProxyAt(1).VisualProxy.Position.Y, Is.EqualTo(13f).Within(0.001f));
+            Assert.That(requests.VisualProxyAt(1).VisualProxy.Color.X, Is.EqualTo(0.1f).Within(0.001f));
+            Assert.That(requests.VisualProxyAt(1).VisualProxy.Color.W, Is.EqualTo(0.5f).Within(0.001f));
         }
 
         [Test]
@@ -751,14 +841,14 @@ namespace Ludots.Tests.Presentation
 
             system.Update(0.016f);
 
-            ReadOnlySpan<PresentationRequest> span = requests.GetSpan();
-            Assert.That(span.Length, Is.EqualTo(1));
-            Assert.That(span[0].Kind, Is.EqualTo(PresentationRequestKind.GroundOverlay));
-            Assert.That(span[0].GroundOverlay.Shape, Is.EqualTo(GroundOverlayShape.Ring));
-            Assert.That(span[0].GroundOverlay.Center, Is.EqualTo(new Vector3(3f, 0.1f, 4f)));
-            Assert.That(span[0].GroundOverlay.Radius, Is.EqualTo(2.5f).Within(0.001f));
-            Assert.That(span[0].GroundOverlay.InnerRadius, Is.EqualTo(1.25f).Within(0.001f));
-            Assert.That(span[0].GroundOverlay.BorderWidth, Is.EqualTo(0.08f).Within(0.001f));
+            Assert.That(requests.Count, Is.EqualTo(1));
+            Assert.That(requests.Ops[0].Channel, Is.EqualTo(PresentationRequestChannel.GroundOverlay));
+            ref readonly GroundOverlayChannelItem overlay = ref requests.GroundOverlayAt(0);
+            Assert.That(overlay.Item.Shape, Is.EqualTo(GroundOverlayShape.Ring));
+            Assert.That(overlay.Item.Center, Is.EqualTo(new Vector3(3f, 0.1f, 4f)));
+            Assert.That(overlay.Item.Radius, Is.EqualTo(2.5f).Within(0.001f));
+            Assert.That(overlay.Item.InnerRadius, Is.EqualTo(1.25f).Within(0.001f));
+            Assert.That(overlay.Item.BorderWidth, Is.EqualTo(0.08f).Within(0.001f));
         }
 
         [Test]
@@ -867,7 +957,7 @@ namespace Ludots.Tests.Presentation
 
             system.Update(0.016f);
             Assert.That(requests.Count, Is.EqualTo(1));
-            Assert.That(requests.GetSpan()[0].Kind, Is.EqualTo(expectedKind));
+            Assert.That(requests.Ops[0].Channel, Is.EqualTo(ChannelOfKind(expectedKind)));
 
             requests.Clear();
             system.Update(0.016f);
@@ -876,7 +966,7 @@ namespace Ludots.Tests.Presentation
             instances.SetParam(presenter, scaleKey, ParamLane.Float, 2.0f, 0, default);
             system.Update(0.016f);
             Assert.That(requests.Count, Is.EqualTo(1));
-            Assert.That(requests.GetSpan()[0].Kind, Is.EqualTo(expectedKind));
+            Assert.That(requests.Ops[0].Channel, Is.EqualTo(ChannelOfKind(expectedKind)));
         }
 
         [TestCase(AssetKind.WorldHud, PresentationRequestKind.RemoveWorldHud)]
@@ -939,7 +1029,8 @@ namespace Ludots.Tests.Presentation
             system.Update(0.016f);
 
             Assert.That(requests.Count, Is.EqualTo(1));
-            Assert.That(requests.GetSpan()[0].Kind, Is.EqualTo(removeKind));
+            Assert.That(requests.Ops[0].Channel, Is.EqualTo(PresentationRequestChannel.Removal));
+            Assert.That(requests.RemovalAt(0).Kind, Is.EqualTo(removeKind));
             Assert.That(world.IsAlive(presenter), Is.False);
         }
 
@@ -1022,7 +1113,8 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(world.IsAlive(presenter), Is.False);
             Assert.That(requests.Count, Is.EqualTo(1), "Runtime destroy runs before emit in production order, so it must queue retained adapter cleanup itself.");
-            Assert.That(requests.GetSpan()[0].Kind, Is.EqualTo(removeKind));
+            Assert.That(requests.Ops[0].Channel, Is.EqualTo(PresentationRequestChannel.Removal));
+            Assert.That(requests.RemovalAt(0).Kind, Is.EqualTo(removeKind));
         }
 
         [Test]
@@ -1093,8 +1185,9 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(world.IsAlive(presenter), Is.False);
             Assert.That(requests.Count, Is.EqualTo(1));
-            Assert.That(requests.GetSpan()[0].Kind, Is.EqualTo(PresentationRequestKind.RemoveSurfaceSource));
-            Assert.That(requests.GetSpan()[0].StableId, Is.EqualTo(9702));
+            Assert.That(requests.Ops[0].Channel, Is.EqualTo(PresentationRequestChannel.Removal));
+            Assert.That(requests.RemovalAt(0).Kind, Is.EqualTo(PresentationRequestKind.RemoveSurfaceSource));
+            Assert.That(requests.RemovalAt(0).StableId, Is.EqualTo(9702));
         }
 
         [TestCase(AssetKind.Mesh)]
@@ -1104,7 +1197,9 @@ namespace Ludots.Tests.Presentation
         public void StaticStableVisual_CacheableSubtype_EmitsOnlyWhenDirty_AndRemovesWhenDeactivated(AssetKind assetKind)
         {
             using var world = World.Create();
-            Entity owner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
+            Entity owner = world.Create(
+                new PresentationStableId { Value = 7002 },
+                new CullState { IsVisible = true, LOD = LODLevel.High });
             var instances = new PresenterEntityRuntime(world);
             var definitions = new PresenterDefinitionRegistry();
             var requests = new PresentationRequestBuffer();
@@ -1161,6 +1256,12 @@ namespace Ludots.Tests.Presentation
                 PresenterBehaviorRuntimeUtility.ComposeVisualStableKey(9801, 0, assetKind, defId),
                 out int stableId), Is.True);
             Assert.That(cache.Contains(stableId), Is.True);
+            var projected = new PrimitiveDrawBuffer(capacity: 4);
+            cache.Project(new PresentationVisualProxyEmitter(projected), evictUntouched: false);
+            Assert.That(projected.Count, Is.EqualTo(1));
+            Assert.That(projected.GetSpan()[0].OwnerStableId, Is.EqualTo(7002));
+            Assert.That(projected.GetSpan()[0].OwnerStableId, Is.Not.EqualTo(9801));
+            Assert.That(projected.GetSpan()[0].StableId, Is.EqualTo(stableId));
             Assert.That(requests.Count, Is.EqualTo(0), "Static stable visual subtypes must write directly into StableDrawCache, not spam PresentationRequest.");
             int revisionAfterFirstEmit = cache.ContentRevision;
 
@@ -1213,6 +1314,96 @@ namespace Ludots.Tests.Presentation
             Assert.That(visualStableIds.TryGet(
                 PresenterBehaviorRuntimeUtility.ComposeVisualStableKey(9801, 0, assetKind, defId),
                 out _), Is.False, "Presenter destroy releases semantic visual keys; adapter handles remain non-reused by the allocator.");
+        }
+
+        [Test]
+        public void StaticStableVisual_MultiSlot_DeactivateAttachmentRemovesOnlyThatCacheEntry()
+        {
+            using var world = World.Create();
+            Entity owner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
+            var instances = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+            var requests = new PresentationRequestBuffer();
+            var cache = new StableDrawCache(8);
+            var stableIds = new PresentationStableIdAllocator();
+            var visualStableIds = new PresenterVisualStableIdTable(stableIds, capacity: 8);
+
+            int defId = definitions.Register("asset.mesh.dual_static", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 1100,
+                            MaterialId = 2100,
+                            Mobility = VisualMobility.Static,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            LocalScale = Vector3.One,
+                            MaterialParamKey = -1,
+                            AssetIdParamKey = -1,
+                            AssetSwapParamKey = -1,
+                        },
+                    },
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 1,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = false,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 1101,
+                            MaterialId = 2101,
+                            Mobility = VisualMobility.Static,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            LocalScale = Vector3.One,
+                            MaterialParamKey = -1,
+                            AssetIdParamKey = -1,
+                            AssetSwapParamKey = -1,
+                        },
+                    },
+                ],
+            });
+
+            PresenterDefinition definition = definitions.Get(defId);
+            Entity presenter = instances.Create(
+                defId, owner, 0, PresentationAnchorKind.WorldPosition, Vector3.Zero, 9901, Entity.Null, definition);
+            // body + attachment both active (Case E select-ring pattern)
+            world.Get<PresenterState>(presenter).BehaviorActiveMask = 3u;
+
+            using var system = new PresenterEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                new Dictionary<string, object>(),
+                animatorStates: null!,
+                soundRequests: null!,
+                stableDrawCache: cache,
+                visualStableIds: visualStableIds);
+
+            system.Update(0.016f);
+            Assert.That(visualStableIds.TryGet(
+                PresenterBehaviorRuntimeUtility.ComposeVisualStableKey(9901, 0, AssetKind.Mesh, defId),
+                out int bodyStableId), Is.True);
+            Assert.That(visualStableIds.TryGet(
+                PresenterBehaviorRuntimeUtility.ComposeVisualStableKey(9901, 1, AssetKind.Mesh, defId),
+                out int ringStableId), Is.True);
+            Assert.That(cache.Contains(bodyStableId), Is.True);
+            Assert.That(cache.Contains(ringStableId), Is.True);
+
+            instances.SetBehaviorActive(presenter, definition, 1, active: false);
+            system.Update(0.016f);
+
+            Assert.That(cache.Contains(bodyStableId), Is.True, "Sibling body slot must stay retained.");
+            Assert.That(cache.Contains(ringStableId), Is.False,
+                "Deactivating one StaticMesh slot must Remove its retained entry even when siblings still emit.");
         }
 
         [Test]
@@ -1284,7 +1475,7 @@ namespace Ludots.Tests.Presentation
 
             system.Update(0.016f);
             Assert.That(requests.Count, Is.EqualTo(1));
-            Assert.That(requests.GetSpan()[0].VisualProxy.AnimationOverlay.BaseClip.NormalizedTime01, Is.EqualTo(0.25f).Within(0.001f));
+            Assert.That(requests.VisualProxyAt(0).VisualProxy.AnimationOverlay.BaseClip.NormalizedTime01, Is.EqualTo(0.25f).Within(0.001f));
             Assert.That(cache.Count, Is.EqualTo(0), "Movable skinned animator output must not enter static stable cache.");
 
             requests.Clear();
@@ -1295,8 +1486,8 @@ namespace Ludots.Tests.Presentation
             system.Update(0.016f);
 
             Assert.That(requests.Count, Is.EqualTo(1));
-            Assert.That(requests.GetSpan()[0].VisualProxy.AnimationOverlay.BaseClip.NormalizedTime01, Is.EqualTo(0.75f).Within(0.001f));
-            Assert.That(requests.GetSpan()[0].VisualProxy.AnimationOverlay.BaseClip.Weight01, Is.EqualTo(1f).Within(0.001f));
+            Assert.That(requests.VisualProxyAt(0).VisualProxy.AnimationOverlay.BaseClip.NormalizedTime01, Is.EqualTo(0.75f).Within(0.001f));
+            Assert.That(requests.VisualProxyAt(0).VisualProxy.AnimationOverlay.BaseClip.Weight01, Is.EqualTo(1f).Within(0.001f));
             Assert.That(cache.Count, Is.EqualTo(0));
         }
 
@@ -1349,7 +1540,7 @@ namespace Ludots.Tests.Presentation
 
             system.Update(0.016f);
             Assert.That(requests.Count, Is.EqualTo(1));
-            Assert.That(requests.GetSpan()[0].VisualProxy.Position, Is.EqualTo(Vector3.Zero));
+            Assert.That(requests.VisualProxyAt(0).VisualProxy.Position, Is.EqualTo(Vector3.Zero));
             Assert.That(cache.Count, Is.EqualTo(0), "Movable ISM visuals must not be treated as stable static cache entries.");
 
             requests.Clear();
@@ -1358,7 +1549,7 @@ namespace Ludots.Tests.Presentation
             system.Update(0.016f);
 
             Assert.That(requests.Count, Is.EqualTo(1));
-            Assert.That(requests.GetSpan()[0].VisualProxy.Position, Is.EqualTo(new Vector3(12f, 0f, 34f)));
+            Assert.That(requests.VisualProxyAt(0).VisualProxy.Position, Is.EqualTo(new Vector3(12f, 0f, 34f)));
             Assert.That(cache.Count, Is.EqualTo(0));
         }
 
@@ -1817,8 +2008,8 @@ namespace Ludots.Tests.Presentation
 
             system.Update(0.016f);
             Assert.That(requests.Count, Is.EqualTo(1));
-            Assert.That(requests.GetSpan()[0].Kind, Is.EqualTo(PresentationRequestKind.SurfaceSource));
-            Assert.That(requests.GetSpan()[0].SurfaceSource.ScopeId, Is.EqualTo(scopeId));
+            Assert.That(requests.Ops[0].Channel, Is.EqualTo(PresentationRequestChannel.SurfaceSource));
+            Assert.That(requests.SurfaceSourceAt(0).Item.ScopeId, Is.EqualTo(scopeId));
 
             requests.Clear();
             system.Update(0.016f);
@@ -1826,7 +2017,7 @@ namespace Ludots.Tests.Presentation
 
             ref CullState ownerCull = ref world.Get<CullState>(owner);
             ownerCull.IsVisible = false;
-            ownerCull.LOD = LODLevel.Culled;
+            ownerCull.LOD = LODLevel.Low;
             instances.SyncCullVisibility();
 
             system.Update(0.016f);
@@ -1838,8 +2029,8 @@ namespace Ludots.Tests.Presentation
 
             system.Update(0.016f);
             Assert.That(requests.Count, Is.EqualTo(1));
-            Assert.That(requests.GetSpan()[0].Kind, Is.EqualTo(PresentationRequestKind.SurfaceSource));
-            Assert.That(requests.GetSpan()[0].StableId, Is.EqualTo(9701));
+            Assert.That(requests.Ops[0].Channel, Is.EqualTo(PresentationRequestChannel.SurfaceSource));
+            Assert.That(requests.SurfaceSourceAt(0).Item.StableId, Is.EqualTo(9701));
             requests.Clear();
 
             system.Update(0.016f);
@@ -1848,8 +2039,26 @@ namespace Ludots.Tests.Presentation
             world.Destroy(owner);
             system.Update(0.016f);
             Assert.That(requests.Count, Is.EqualTo(1));
-            Assert.That(requests.GetSpan()[0].Kind, Is.EqualTo(PresentationRequestKind.RemoveSurfaceSource));
-            Assert.That(requests.GetSpan()[0].StableId, Is.EqualTo(9701));
+            Assert.That(requests.Ops[0].Channel, Is.EqualTo(PresentationRequestChannel.Removal));
+            Assert.That(requests.RemovalAt(0).Kind, Is.EqualTo(PresentationRequestKind.RemoveSurfaceSource));
+            Assert.That(requests.RemovalAt(0).StableId, Is.EqualTo(9701));
+        }
+
+        private static PresentationRequestChannel ChannelOfKind(PresentationRequestKind kind)
+        {
+            return kind switch
+            {
+                PresentationRequestKind.VisualProxy => PresentationRequestChannel.VisualProxy,
+                PresentationRequestKind.GroundOverlay => PresentationRequestChannel.GroundOverlay,
+                PresentationRequestKind.WorldHud => PresentationRequestChannel.WorldHud,
+                PresentationRequestKind.SplineRibbon => PresentationRequestChannel.SplineRibbon,
+                PresentationRequestKind.SurfaceSource => PresentationRequestChannel.SurfaceSource,
+                PresentationRequestKind.RemoveGroundOverlay or PresentationRequestKind.RemoveWorldHud
+                    or PresentationRequestKind.RemoveSplineRibbon or PresentationRequestKind.RemoveSurfaceSource
+                    => PresentationRequestChannel.Removal,
+                PresentationRequestKind.ClearTransientVisualProjection => PresentationRequestChannel.ClearTransient,
+                _ => throw new ArgumentOutOfRangeException(nameof(kind)),
+            };
         }
 
         private static int ResolveRetainedAssetId(AssetKind assetKind)

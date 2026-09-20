@@ -89,6 +89,21 @@ namespace Ludots.Core.Gameplay.GAS.Components
             }
             return 0;
         }
+
+        public int CopyTagIds(Span<int> destination)
+        {
+            int written = 0;
+            for (int i = 0; i < Count && written < destination.Length; i++)
+            {
+                int tagId = TagIds[i];
+                if (tagId > 0)
+                {
+                    destination[written++] = tagId;
+                }
+            }
+
+            return written;
+        }
         
         /// <summary>
         /// 检查Tag是否有层数记录

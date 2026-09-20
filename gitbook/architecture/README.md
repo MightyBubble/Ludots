@@ -5,6 +5,7 @@
 ## 核心主题
 
 - [运行时总览](runtime-overview.md)
+- [服务器权威联机运行时](authoritative-multiplayer-runtime.md)
 - [UI 渲染控制与 Surface 所有权](ui-rendering-and-surface-ownership.md)
 - [面板目录设计：配置形状与线框](panel-catalog-designs.md) — 总合同（graph-pinned panels）
 - [Mod 架构](mod-architecture.md)
@@ -14,6 +15,8 @@
 - [属性写入权威](attribute-write-authority.md) — **current 直写存活；聚合器只算有效上限；裸写由 IL 守卫收口**；装载期定容是提案 RFC-0067，接受前仍以本页 64 槽为准
 - [图分层：Flow / Script 与行为调度](graph-layering-flow-and-behavior.md)
 - [图能力唯一入口](graph-capability-status.md) — **进度、还开着的活、不该合的 PR，只认这里**
+- [作者工作室：蓝图 / 行为树 / 状态机 / 对话 / 时间轴](authoring-studio.md) — **五件作者工具的一键正门**
+- [可调用函数远景（Case E 驱动）](graph-callable-function-vision.md) — **下一任先出方案：入参表、存活期挂函数、Invoke 与 FuncLib**
 - [图复用库合同：FuncLib / ActionLib](graph-funclib-actionlib-contract.md) — **纯函数库 vs 可挂起动作库；Effect 时间轴与阶段表达力补丁**
 - [（已废止）TagDisplay 专线查表](tag-display-lookup.md)
 - [通用图查表（ResolveTableRow + TableRead）](graph-table-lookup.md) — **查表 SSOT**
@@ -67,8 +70,8 @@
 
 - Entity Association Core 的计划与 ADR SSOT 是 GitHub issue #239；ADR 正本是 #244（AAC-1）。不要在 `docs/adr/` 为 AAC 新增平行 ADR 文件；AAC-2~AAC-12 必须引用 #244 的存储策略、ScopeKey、组合契约、红线与 2.5 UAT showcase capability mod 标准。需要玩家可见 showcase 的子单是 #245、#246、#247、#248、#249、#250、#251、#253；meta/卫生/护栏例外是 #244、#252、#254、#255。
 - launcher 已进入 graph-backed SSOT 阶段，运行时由 launcher graph artifact 驱动
-- Core 现已包含 `TimeFlow`、`EntityLocalClock`、`Items`、`Exchange`、`Quest`、`Narrative`、`Relationships` 等正式运行时能力
-- 输入、选择、实体信息面板、路网移动与 narrative frontend 都已有主线实现和 showcase 入口
+- Core 现已包含 `TimeFlow`、`EntityLocalClock`、`Items`、`Exchange`、`Quest`、`Dialogue`、`Sequencer`、`Relationships` 等正式运行时能力（Story Runtime SSOT：`docs/architecture/story_runtime_dialogue_sequencer.md`）
+- 输入、选择、实体信息面板、路网移动与故事 frontend surface 都已有主线实现和 showcase 入口
 - 大规模实体场景的下一阶段主线，是把 `Authority` 与 `Budgeted` 仿真车道、碰撞层过滤、AOI/LOD 调度和 mass crowd 展示收敛成同一套正式组件规范
 - Raylib 侧已补充一个“脱离 presenter/entity 行为”的直接 ISM benchmark，用于隔离最终绘制瓶颈；当前证据表明 30K 黑铁匠铺 mesh 的平台层 instanced draw 已能稳定跑通，优先暴露出的风险点在 Skia final overlay，而不是平台层 mesh draw
 - Retained presentation 的 content revision 与 adapter target/projection generation 是两条独立真相：content revision 只表示表现内容变化；adapter target unavailable -> ready 或 target 替换必须通过 Core-owned generation 触发 retained projection replay

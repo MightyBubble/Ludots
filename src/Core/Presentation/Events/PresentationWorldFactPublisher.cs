@@ -217,7 +217,7 @@ namespace Ludots.Core.Presentation.Events
             {
                 LogicTickStamp = _session?.CurrentTick ?? 0,
                 Kind = kind,
-                KeyId = TagRegistry.Register(key),
+                KeyId = PresentationEventKeyRegistry.Register(key),
                 Source = normalizedOwner,
                 Target = normalizedTarget,
                 Viewer = viewer,

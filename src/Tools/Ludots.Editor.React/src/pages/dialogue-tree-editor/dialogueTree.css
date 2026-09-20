@@ -1,0 +1,129 @@
+.dialogue-nc-node {
+  overflow: visible;
+  border: 1px solid var(--studio-elevated);
+  border-radius: 4px;
+  background: var(--studio-surface);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--studio-bg) 70%, transparent);
+  color: var(--studio-label);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.dialogue-nc-node.selected {
+  border-color: var(--studio-blue);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--studio-blue) 70%, transparent),
+    0 8px 18px color-mix(in srgb, var(--studio-bg) 70%, transparent);
+}
+
+.dialogue-nc-node.missing {
+  border-color: var(--studio-red);
+}
+
+.dialogue-nc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 22px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+.dialogue-nc-say .dialogue-nc-head {
+  background: var(--studio-blue);
+  color: var(--studio-label);
+}
+
+.dialogue-nc-choice .dialogue-nc-head {
+  background: var(--studio-yellow);
+  color: var(--studio-bg);
+}
+
+.dialogue-nc-say.finish .dialogue-nc-head {
+  background: var(--studio-red);
+  color: var(--studio-label);
+}
+
+.dialogue-nc-badge {
+  padding: 0 5px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--studio-bg) 22%, transparent);
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+}
+
+.dialogue-nc-body {
+  padding: 8px 8px 10px;
+}
+
+.dialogue-nc-id {
+  color: var(--studio-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+}
+
+.dialogue-nc-speaker {
+  margin-top: 2px;
+  color: var(--studio-blue);
+  font-size: 11px;
+}
+
+.dialogue-nc-line {
+  display: -webkit-box;
+  margin-top: 4px;
+  overflow: hidden;
+  color: var(--studio-secondary);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.dialogue-nc-choice-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  border-top: 1px solid var(--studio-elevated);
+}
+
+.dialogue-nc-choice-cell {
+  min-width: 0;
+  padding: 8px 6px 14px;
+  border-right: 1px solid var(--studio-elevated);
+  text-align: center;
+}
+
+.dialogue-nc-choice-cell:last-child {
+  border-right: none;
+}
+
+.dialogue-nc-choice-label {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--studio-label);
+  font-size: 11px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.dialogue-nc-choice-meta {
+  margin-top: 4px;
+  color: var(--studio-yellow);
+  font-size: 9px;
+}
+
+.dialogue-nc-node .react-flow__handle {
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--studio-bg);
+}
+
+.react-flow__edge-path {
+  stroke-linecap: round;
+}
+
+.react-flow__connection-line {
+  stroke: var(--studio-muted);
+  stroke-width: 2;
+}

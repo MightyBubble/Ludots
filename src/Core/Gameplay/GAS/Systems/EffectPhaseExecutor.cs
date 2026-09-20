@@ -28,6 +28,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
     /// </summary>
     public sealed class EffectPhaseExecutor
     {
+        private bool _graphExecuting;
         public const string PhaseListenerDispatchCapacityExceededError = "GAS.PHASE_LISTENER.ERR.DispatchCapacityExceeded";
         public const string ExternalAtomicListenerConflictError = "GAS.EFFECT_PLAN.ERR.ExternalAtomicListenerConflict";
         public const string GraphProgramScratchCapacityExceededError = "GAS.EFFECT_PHASE.ERR.GraphProgramScratchCapacityExceeded";
@@ -106,7 +107,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             BuiltinHandlerExecutionContext? builtinRuntime = null)
         {
             EffectConfigParams mergedParams = default;
-            ExecutePhase(world, api, caster, target, targetContext, targetPos, phase, behavior, (byte)presetType, effectTagId: 0, effectTemplateId: 0, in mergedParams, builtinRuntime);
+            ExecutePhase(world, api, caster, target, targetContext, targetPos, phase, behavior, (byte)presetType, effectCategoryId: 0, effectTemplateId: 0, in mergedParams, builtinRuntime);
         }
 
         /// <summary>
@@ -122,12 +123,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             EffectPhaseId phase,
             in EffectPhaseGraphBindings behavior,
             EffectPresetType presetType,
-            int effectTagId,
+            int effectCategoryId,
             int effectTemplateId,
             BuiltinHandlerExecutionContext? builtinRuntime = null)
         {
             EffectConfigParams mergedParams = default;
-            ExecutePhase(world, api, caster, target, targetContext, targetPos, phase, behavior, (byte)presetType, effectTagId, effectTemplateId, in mergedParams, builtinRuntime);
+            ExecutePhase(world, api, caster, target, targetContext, targetPos, phase, behavior, (byte)presetType, effectCategoryId, effectTemplateId, in mergedParams, builtinRuntime);
         }
 
         public void ExecutePhase(
@@ -140,7 +141,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             EffectPhaseId phase,
             in EffectPhaseGraphBindings behavior,
             EffectPresetType presetType,
-            int effectTagId,
+            int effectCategoryId,
             int effectTemplateId,
             in EffectConfigParams mergedParams,
             BuiltinHandlerExecutionContext? builtinRuntime = null,
@@ -157,7 +158,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 phase,
                 in behavior,
                 (byte)presetType,
-                effectTagId,
+                effectCategoryId,
                 effectTemplateId,
                 in mergedParams,
                 builtinRuntime,
@@ -175,7 +176,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             EffectPhaseId phase,
             in EffectPhaseGraphBindings behavior,
             int presetTypeId,
-            int effectTagId,
+            int effectCategoryId,
             int effectTemplateId,
             in EffectConfigParams mergedParams,
             BuiltinHandlerExecutionContext? builtinRuntime = null,
@@ -193,7 +194,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 phase,
                 in behavior,
                 presetTypeId,
-                effectTagId,
+                effectCategoryId,
                 effectTemplateId,
                 in mergedParams,
                 builtinRuntime,
@@ -213,7 +214,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             EffectPhaseId phase,
             in EffectPhaseGraphBindings behavior,
             int presetTypeId,
-            int effectTagId,
+            int effectCategoryId,
             int effectTemplateId,
             in EffectConfigParams mergedParams,
             BuiltinHandlerExecutionContext? builtinRuntime,
@@ -237,7 +238,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     phase,
                     in behavior,
                     presetTypeId,
-                    effectTagId,
+                    effectCategoryId,
                     effectTemplateId,
                     in mergedParams,
                     builtinRuntime,
@@ -262,7 +263,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             EffectPhaseId phase,
             in EffectPhaseGraphBindings behavior,
             int presetTypeId,
-            int effectTagId,
+            int effectCategoryId,
             int effectTemplateId,
             in EffectConfigParams mergedParams,
             BuiltinHandlerExecutionContext? builtinRuntime,
@@ -272,8 +273,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             ref byte validationResult)
         {
             // ① Pre graph (user-defined)
-            int listenerActionCount = effectTagId != 0 || effectTemplateId != 0
-                ? CollectAndPreflightListeners(world, api, caster, target, phase, effectTagId, effectTemplateId)
+            int listenerActionCount = effectCategoryId != 0 || effectTemplateId != 0
+                ? CollectAndPreflightListeners(world, api, caster, target, phase, effectCategoryId, effectTemplateId)
                 : 0;
 
             int preGraphId = behavior.GetGraphId(phase, PhaseSlot.Pre);
@@ -337,7 +338,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             EffectPhaseId phase,
             in EffectPhaseGraphBindings behavior,
             EffectPresetType presetType,
-            int effectTagId,
+            int effectCategoryId,
             int effectTemplateId,
             in EffectConfigParams mergedParams,
             BuiltinHandlerExecutionContext? builtinRuntime = null,
@@ -354,7 +355,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 phase,
                 in behavior,
                 (byte)presetType,
-                effectTagId,
+                effectCategoryId,
                 effectTemplateId,
                 in mergedParams,
                 builtinRuntime,
@@ -372,7 +373,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             EffectPhaseId phase,
             in EffectPhaseGraphBindings behavior,
             int presetTypeId,
-            int effectTagId,
+            int effectCategoryId,
             int effectTemplateId,
             in EffectConfigParams mergedParams,
             BuiltinHandlerExecutionContext? builtinRuntime = null,
@@ -390,7 +391,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 phase,
                 in behavior,
                 presetTypeId,
-                effectTagId,
+                effectCategoryId,
                 effectTemplateId,
                 in mergedParams,
                 builtinRuntime,
@@ -471,7 +472,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             Entity caster,
             Entity target,
             EffectPhaseId phase,
-            int effectTagId,
+            int effectCategoryId,
             int effectTemplateId)
         {
             Span<PhaseListenerCollectedAction> scratch = _collectedActions;
@@ -482,7 +483,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (world.IsAlive(target) && world.Has<EffectPhaseListenerBuffer>(target))
             {
                 ref var buf = ref world.Get<EffectPhaseListenerBuffer>(target);
-                int n = buf.Collect(effectTagId, effectTemplateId, phase, PhaseListenerScope.Target, scratch.Slice(totalCollected), out int dropped);
+                int n = buf.Collect(effectCategoryId, effectTemplateId, phase, PhaseListenerScope.Target, scratch.Slice(totalCollected), out int dropped);
                 totalCollected += n;
                 totalDropped += dropped;
             }
@@ -491,7 +492,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (world.IsAlive(caster) && world.Has<EffectPhaseListenerBuffer>(caster))
             {
                 ref var buf = ref world.Get<EffectPhaseListenerBuffer>(caster);
-                int n = buf.Collect(effectTagId, effectTemplateId, phase, PhaseListenerScope.Source, scratch.Slice(totalCollected), out int dropped);
+                int n = buf.Collect(effectCategoryId, effectTemplateId, phase, PhaseListenerScope.Source, scratch.Slice(totalCollected), out int dropped);
                 totalCollected += n;
                 totalDropped += dropped;
             }
@@ -499,7 +500,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             // c. Global listeners
             if (_globalListeners != null)
             {
-                int n = _globalListeners.Collect(phase, effectTagId, effectTemplateId, scratch.Slice(totalCollected), out int dropped);
+                int n = _globalListeners.Collect(phase, effectCategoryId, effectTemplateId, scratch.Slice(totalCollected), out int dropped);
                 totalCollected += n;
                 totalDropped += dropped;
             }
@@ -512,7 +513,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (totalDropped > 0)
             {
                 throw new InvalidOperationException(
-                    $"{PhaseListenerDispatchCapacityExceededError}: capacity={scratch.Length}, dropped={totalDropped}, phase={(int)phase}, effectTagId={effectTagId}, effectTemplateId={effectTemplateId}.");
+                    $"{PhaseListenerDispatchCapacityExceededError}: capacity={scratch.Length}, dropped={totalDropped}, phase={(int)phase}, effectCategoryId={effectCategoryId}, effectTemplateId={effectTemplateId}.");
             }
 
             if (totalCollected == 0) return 0;
@@ -677,13 +678,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             Entity caster,
             Entity target,
             EffectPhaseId phase,
-            int effectTagId,
+            int effectCategoryId,
             int effectTemplateId)
         {
             if (world.IsAlive(target) &&
                 world.Has<EffectPhaseListenerBuffer>(target) &&
                 world.Get<EffectPhaseListenerBuffer>(target).HasMatch(
-                    effectTagId, effectTemplateId, phase, PhaseListenerScope.Target))
+                    effectCategoryId, effectTemplateId, phase, PhaseListenerScope.Target))
             {
                 return true;
             }
@@ -691,12 +692,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (world.IsAlive(caster) &&
                 world.Has<EffectPhaseListenerBuffer>(caster) &&
                 world.Get<EffectPhaseListenerBuffer>(caster).HasMatch(
-                    effectTagId, effectTemplateId, phase, PhaseListenerScope.Source))
+                    effectCategoryId, effectTemplateId, phase, PhaseListenerScope.Source))
             {
                 return true;
             }
 
-            return _globalListeners?.HasMatch(phase, effectTagId, effectTemplateId) == true;
+            return _globalListeners?.HasMatch(phase, effectCategoryId, effectTemplateId) == true;
         }
 
         private static void SortByPriorityDescending(Span<PhaseListenerCollectedAction> actions)
@@ -728,7 +729,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             Entity targetContext,
             IntVector2 targetPos,
             EffectPhaseId phase,
-            int effectTagId,
+            int effectCategoryId,
             int effectTemplateId)
         {
             RequireExecutionMode(phase, trackValidationResult: false);
@@ -739,7 +740,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 caster,
                 target,
                 phase,
-                effectTagId,
+                effectCategoryId,
                 effectTemplateId);
             ExecuteCollectedListeners(
                 world,
@@ -791,7 +792,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             ref byte validationResult,
             bool requireListenerCompatibility = false)
         {
+            if (_graphExecuting)
+            {
+                throw new InvalidOperationException(
+                    "EffectPhaseExecutor does not support reentrant execution; a nested synchronous ExecuteGraph from inside a graph handler is rejected before nested execution.");
+            }
+
             if (graphProgramId <= 0) return;
+
             if (!_programs.TryGetProgram(graphProgramId, out var program))
             {
                 throw new InvalidOperationException(
@@ -842,6 +850,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _entityRegs[2] = targetContext;
 
             Array.Clear(_callStack, 0, _callStack.Length);
+            Span<int> intIds = stackalloc int[GraphVmLimits.MaxIntIds];
             GraphFrame frame = GraphFrame.Bind(
                 expectedKind,
                 GraphEntityPreset.TargetContext(targetContext),
@@ -856,6 +865,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 _boolRegs,
                 _entityRegs,
                 _targets,
+                intIds,
                 _callStack,
                 randomSeed: BuildRandomSeed(caster, target, targetContext, graphProgramId, effectTemplateId, phase, randomSeed));
 
@@ -873,12 +883,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     _builtinHandlers,
                     _templates,
                     builtinRuntime,
+                    Entity.Null,
                     effectTemplateId,
                     new EffectContext { RootId = rootId, Source = caster, Target = target, TargetContext = targetContext },
                     in builtinParams);
                 ownsBuiltinInvocation = true;
             }
 
+            _graphExecuting = true;
             try
             {
                 GraphExecutor.Execute(ref frame, program, programAlreadyValidated: true);
@@ -890,6 +902,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
             finally
             {
+                _graphExecuting = false;
                 if (ownsBuiltinInvocation)
                 {
                     graphHost!.EndBuiltinInvocation();
@@ -931,6 +944,26 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             hash = Ludots.Core.Engine.Randomization.RngSeed.Mix(hash, effectTemplateId);
             hash = Ludots.Core.Engine.Randomization.RngSeed.Mix(hash, (int)phase);
             return Ludots.Core.Engine.Randomization.RngSeed.Finalize(hash);
+        }
+
+        /// <summary>周期内核与解释 VM 的 RNG 种子链共享点：同输入必得同种子。</summary>
+        internal static uint BuildRandomSeedForKernel(
+            Entity caster,
+            Entity target,
+            Entity targetContext,
+            int graphProgramId,
+            int effectTemplateId,
+            EffectPhaseId phase,
+            uint executionSeed)
+        {
+            return BuildRandomSeed(caster, target, targetContext, graphProgramId, effectTemplateId, phase, executionSeed);
+        }
+
+        /// <summary>全局 Phase Listener 匹配查询，供周期内核路由判定干涉。</summary>
+        internal bool HasGlobalPhaseListener(EffectPhaseId phase, int effectCategoryId, int effectTemplateId)
+        {
+            return _globalListeners != null &&
+                _globalListeners.HasMatch(phase, effectCategoryId, effectTemplateId);
         }
 
         private ScratchUsage GetScratchUsage(int graphProgramId, ReadOnlySpan<GraphInstruction> program)

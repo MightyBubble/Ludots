@@ -203,7 +203,7 @@
           "enum": [
             "AssetBinding", "AttributeBinding", "TagBinding", "Animator",
             "Attachment", "Sound", "Material", "Spline",
-            "Grounding", "MinimapMarker", "SurfaceSource", "WorldText", "InstancedBatch"
+            "Grounding", "MinimapMarker", "SurfaceSource", "WorldText", "InstancedBatch", "TrailMesh", "ScreenRect"
           ]
         },
         "activeByDefault": { "type": "boolean" },
@@ -443,6 +443,36 @@
           "required": ["batchAssetId"],
           "properties": {
             "batchAssetId": { "type": "string", "minLength": 1 }
+          }
+        },
+        "trailMesh": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tipOffset"],
+          "properties": {
+            "baseOffset": { "$ref": "#/$defs/vec3" },
+            "tipOffset": { "$ref": "#/$defs/vec3" },
+            "maxSamples": { "type": "integer", "minimum": 2, "maximum": 32 },
+            "sampleIntervalSeconds": { "type": "number", "minimum": 0 },
+            "sampleLifetimeSeconds": { "type": "number", "exclusiveMinimum": 0 },
+            "headColor": { "$ref": "#/$defs/color4" },
+            "tailColor": { "$ref": "#/$defs/color4" }
+          }
+        },
+        "screenRect": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["corner0XParamKey", "corner0YParamKey", "corner1XParamKey", "corner1YParamKey"],
+          "properties": {
+            "fill": { "$ref": "#/$defs/color4" },
+            "border": { "$ref": "#/$defs/color4" },
+            "corner0XParamKey": { "type": "string", "minLength": 1 },
+            "corner0YParamKey": { "type": "string", "minLength": 1 },
+            "corner1XParamKey": { "type": "string", "minLength": 1 },
+            "corner1YParamKey": { "type": "string", "minLength": 1 },
+            "fillParamKey": { "type": "string", "minLength": 1 },
+            "borderParamKey": { "type": "string", "minLength": 1 },
+            "visibilityParamKey": { "type": "string", "minLength": 1 }
           }
         },
         "worldText": {

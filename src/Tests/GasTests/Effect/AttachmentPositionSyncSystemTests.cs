@@ -272,5 +272,63 @@ namespace Ludots.Tests.GAS
 
             Assert.That(error.Message, Does.StartWith(AttachmentPositionSyncSystem.PoseAuthorityConflictError));
         }
+
+        [Test]
+        public void ScratchCapacityExceeded_FailsClosedWithoutDroppingSilently()
+        {
+            using World world = World.Create();
+            Entity parent = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                new PreviousWorldPositionCm { Value = Fix64Vec2.Zero });
+            const int capacity = 2;
+            for (int i = 0; i < capacity + 1; i++)
+            {
+                Entity child = world.Create(
+                    WorldPositionCm.FromCm(0, 0),
+                    new PreviousWorldPositionCm { Value = Fix64Vec2.Zero });
+                AttachmentOps.Attach(world, null, child, parent, Pose(i * 10, 0));
+            }
+
+            using var sink = new AttachmentPositionSyncSystem(world, scratchCapacity: capacity);
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => sink.Update(1f / 60f))!;
+            Assert.That(error.Message, Does.StartWith(AttachmentPositionSyncSystem.CapacityExceededError));
+            Assert.That(error.Message, Does.Contain($"capacity={capacity}"));
+        }
+
+        [Test]
+        public void DeepAttachmentTree_UpdatesInDepthOrder_ParentBeforeChild()
+        {
+            using World world = World.Create();
+            Entity root = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                new PreviousWorldPositionCm { Value = Fix64Vec2.Zero },
+                new FacingDirection { AngleRad = 0f });
+            Entity mid = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                new PreviousWorldPositionCm { Value = Fix64Vec2.Zero },
+                new FacingDirection { AngleRad = 0f });
+            Entity leaf = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                new PreviousWorldPositionCm { Value = Fix64Vec2.Zero },
+                new FacingDirection { AngleRad = 0f });
+            AttachmentOps.Attach(world, null, mid, root, Pose(100, 0, inheritFacing: true));
+            AttachmentOps.Attach(world, null, leaf, mid, Pose(50, 0, inheritFacing: true, rotation: AttachedOffsetRotation.ParentFacing));
+            using var sink = new AttachmentPositionSyncSystem(world);
+
+            world.Get<WorldPositionCm>(root) = WorldPositionCm.FromCm(1000, 0);
+            world.Get<FacingDirection>(root).AngleRad = (float)(Math.PI / 2);
+            sink.Update(1f / 60f);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(sink.LastMaxDepth, Is.EqualTo(1));
+                Assert.That(sink.LastAppliedCount, Is.EqualTo(2));
+                Assert.That(world.Get<WorldPositionCm>(mid).Value.X.ToFloat(), Is.EqualTo(1100f).Within(1f));
+                Assert.That(world.Get<WorldPositionCm>(mid).Value.Y.ToFloat(), Is.EqualTo(0f).Within(1f));
+                // leaf offset (50,0) 随 mid 朝向 π/2 旋转 → 相对 mid 为 (0,50)
+                Assert.That(world.Get<WorldPositionCm>(leaf).Value.X.ToFloat(), Is.EqualTo(1100f).Within(1f));
+                Assert.That(world.Get<WorldPositionCm>(leaf).Value.Y.ToFloat(), Is.EqualTo(50f).Within(1f));
+            });
+        }
     }
 }

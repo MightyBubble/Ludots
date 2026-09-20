@@ -1,0 +1,80 @@
+{
+    "schemaVersion":  1,
+    "imagePath":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260824T_kimi_final5\\screens\\client-a\\frontline_003_engaging.png",
+    "expectedWidth":  1280,
+    "expectedHeight":  720,
+    "requirements":  [
+                         {
+                             "role":  "battleInfantryBodies",
+                             "presentationTemplate":  "rts.frontline.infantry.body",
+                             "maximumChannelDifference":  48,
+                             "minimumPixelsPerRegion":  5,
+                             "minimumPassingRegions":  2,
+                             "acceptedColors":  [
+                                                    {
+                                                        "red":  209,
+                                                        "green":  224,
+                                                        "blue":  230
+                                                    }
+                                                ],
+                             "regions":  [
+                                             {
+                                                 "id":  "51:16147765",
+                                                 "x":  627,
+                                                 "y":  320,
+                                                 "width":  26,
+                                                 "height":  33
+                                             },
+                                             {
+                                                 "id":  "51:17673833",
+                                                 "x":  674,
+                                                 "y":  245,
+                                                 "width":  27,
+                                                 "height":  32
+                                             },
+                                             {
+                                                 "id":  "51:31791884",
+                                                 "x":  926,
+                                                 "y":  306,
+                                                 "width":  38,
+                                                 "height":  34
+                                             },
+                                             {
+                                                 "id":  "51:34844020",
+                                                 "x":  887,
+                                                 "y":  309,
+                                                 "width":  37,
+                                                 "height":  33
+                                             },
+                                             {
+                                                 "id":  "51:38275751",
+                                                 "x":  535,
+                                                 "y":  329,
+                                                 "width":  29,
+                                                 "height":  34
+                                             },
+                                             {
+                                                 "id":  "51:41327887",
+                                                 "x":  536,
+                                                 "y":  310,
+                                                 "width":  30,
+                                                 "height":  33
+                                             },
+                                             {
+                                                 "id":  "51:44380023",
+                                                 "x":  509,
+                                                 "y":  329,
+                                                 "width":  33,
+                                                 "height":  34
+                                             },
+                                             {
+                                                 "id":  "51:47432159",
+                                                 "x":  484,
+                                                 "y":  309,
+                                                 "width":  32,
+                                                 "height":  33
+                                             }
+                                         ]
+                         }
+                     ]
+}

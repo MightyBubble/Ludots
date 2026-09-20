@@ -97,7 +97,7 @@ public sealed class PersistenceModTypeResolverTests
         string projectXml = $$"""
         <Project Sdk="Microsoft.NET.Sdk">
           <PropertyGroup>
-            <TargetFramework>net8.0</TargetFramework>
+            <TargetFramework>net9.0</TargetFramework>
             <ImplicitUsings>enable</ImplicitUsings>
             <Nullable>enable</Nullable>
             <BaseOutputPath>bin\</BaseOutputPath>
@@ -144,7 +144,7 @@ public sealed class PersistenceModTypeResolverTests
           "name": "{{modName}}",
           "version": "1.0.0",
           "description": "Issue 611 persistence type resolver regression mod",
-          "main": "bin/net8.0/{{modName}}.dll",
+          "main": "bin/net9.0/{{modName}}.dll",
           "priority": 0,
           "dependencies": {}
         }

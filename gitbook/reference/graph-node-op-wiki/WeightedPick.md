@@ -2,7 +2,7 @@
 
 掌心探进命运袋，掏出第几件全看权重，木桩照数挨一下。
 
-运行时证据由画廊验收测试提供；该页面不引用未提交的录像资产。
+本页演示录像尚未录制，可用下方启动命令运行场景。
 
 ## 作者写法
 
@@ -10,7 +10,7 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | Effect / Score / Validation / Derived / Script |
+| 可用图种 | Effect / Score / Validation / Derived / Script / TriggerGraph |
 | 返回 | Int → 整数寄存器 |
 | 输入端口（值边 toPort） | `value`（数值） |
 | 特殊写法 | 结果写入 dst 寄存器；imm 填符号名（编译期解析） |
@@ -31,7 +31,7 @@
 
 ## 这场是怎么搭出来的
 
-上面的录像不是特效，是画廊里一张真实可跑的图（作者图 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/WeightedPick.json`，共 5 个节点）。照抄这张图，你就能在自家 mod 里得到同样的效果：
+这场演示使用画廊里的作者图 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/WeightedPick.json`，共 5 个节点。下列调用顺序可供编写自己的图时参考：
 
 ConstInt → **WeightedPick**（本篇） → ConstFloat → LoadExplicitTarget → ModifyAttributeAdd
 
@@ -41,7 +41,7 @@ ConstInt → **WeightedPick**（本篇） → ConstFloat → LoadExplicitTarget 
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Effect / Score / Validation / Derived / Script；Query 图不可用（编译期白名单拒绝）。
+- 图种边界：可用于 Effect / Score / Validation / Derived / Script / TriggerGraph；Query 图不可用（编译期白名单拒绝）。
 - imm 是装载期解析的符号名：符号改名后，引用它的图要跟着改并重编译。
 - 同类用法：伤害公式的缩放与浮动、斩杀线/格挡线这类阈值判断、把读数换算成另一个数。
 ## 怎么进

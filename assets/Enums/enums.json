@@ -1,0 +1,6 @@
+[
+  {
+    "id": "Ludots.SentryPhase",
+    "members": [ "Idle", "Alert", "Combat", "Retreat" ]
+  }
+]

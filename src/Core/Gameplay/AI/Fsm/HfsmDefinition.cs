@@ -94,6 +94,18 @@ namespace Ludots.Core.Gameplay.AI.Fsm
             for (int i = 0; i < states.Length; i++)
             {
                 HfsmState s = states[i];
+                if (i != rootIndex)
+                {
+                    // Packing places parents strictly before children; a parent at or
+                    // after the child (self-parent included) would cycle the ancestor
+                    // walks in LCA/transition code, so it fails closed here.
+                    if (s.ParentIndex < 0 || s.ParentIndex >= i)
+                    {
+                        throw new InvalidOperationException(
+                            $"HFSM '{id}' state[{i}] parent must be an earlier state (got {s.ParentIndex}).");
+                    }
+                }
+
                 if (s.Kind == HfsmStateKind.Compound)
                 {
                     if (s.ChildCount <= 0)

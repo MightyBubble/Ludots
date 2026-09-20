@@ -37,6 +37,34 @@ namespace Ludots.Tool
             return LoadMergedMap(root, mods, loadOrder, mapId);
         }
 
+        public static string ResolveModRoot(string repoRoot, string modId)
+        {
+            if (string.IsNullOrWhiteSpace(repoRoot))
+            {
+                throw new InvalidOperationException("Mod root resolution requires a repo root.");
+            }
+
+            if (string.IsNullOrWhiteSpace(modId))
+            {
+                throw new InvalidOperationException("Mod root resolution requires a mod id.");
+            }
+
+            List<ModInfo> matches = DiscoverMods(Path.GetFullPath(repoRoot))
+                .Where(mod => string.Equals(mod.Id, modId, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            if (matches.Count == 0)
+            {
+                throw new InvalidOperationException($"Unknown mod '{modId}'.");
+            }
+
+            if (matches.Count > 1)
+            {
+                throw new InvalidOperationException($"Mod id '{modId}' resolves to multiple roots.");
+            }
+
+            return matches[0].RootPath;
+        }
+
         public static BoardConfig ResolvePrimaryNavigationBoard(MapConfig map)
         {
             if (map == null) throw new ArgumentNullException(nameof(map));
@@ -76,6 +104,7 @@ namespace Ludots.Tool
             }
 
             return Directory.GetFiles(modsRoot, "mod.json", SearchOption.AllDirectories)
+                .Where(path => !IsBuildOutputPath(path))
                 .Select(path =>
                 {
                     using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(path));
@@ -103,6 +132,22 @@ namespace Ludots.Tool
                 .OrderBy(mod => mod.Priority)
                 .ThenBy(mod => mod.Id, StringComparer.OrdinalIgnoreCase)
                 .ToList();
+        }
+
+        private static bool IsBuildOutputPath(string path)
+        {
+            foreach (string segment in path.Split(
+                new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
+                StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (string.Equals(segment, "bin", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(segment, "obj", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static List<string> ResolveUniqueMapLoadOrder(string repoRoot, IReadOnlyList<ModInfo> mods, string mapId)
@@ -254,7 +299,8 @@ namespace Ludots.Tool
         {
             if (!string.IsNullOrWhiteSpace(source.Id)) target.Id = source.Id;
             if (!string.IsNullOrWhiteSpace(source.ParentId)) target.ParentId = source.ParentId;
-            if (!string.IsNullOrWhiteSpace(source.VisualHeightmapAsset)) target.VisualHeightmapAsset = source.VisualHeightmapAsset;
+            if (!string.IsNullOrWhiteSpace(source.ContinuousHeightmapAsset)) target.ContinuousHeightmapAsset = source.ContinuousHeightmapAsset;
+            if (source.TerrainPresentation != null) target.TerrainPresentation = source.TerrainPresentation.Clone();
 
             if (source.Dependencies != null)
             {
@@ -317,7 +363,7 @@ namespace Ludots.Tool
             }
 
             if (source.DefaultCamera != null) target.DefaultCamera = source.DefaultCamera;
-            if (source.VisualHeightmap != null) target.VisualHeightmap = source.VisualHeightmap;
+            if (source.ContinuousHeightmap != null) target.ContinuousHeightmap = source.ContinuousHeightmap;
             if (source.ParticipantRelationships != null) target.ParticipantRelationships = source.ParticipantRelationships;
         }
 

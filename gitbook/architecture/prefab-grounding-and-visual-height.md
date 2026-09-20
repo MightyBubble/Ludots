@@ -48,7 +48,7 @@ Ludots 的正式答案应该只有一个：
 
 这是视觉层用来回答“这个世界点的地面高度是多少”“地面法线是什么”的真相。
 
-在当前设计里，这个真相应该统一收口到 `IVisualHeightmap`，并通过 `CoreServiceKeys.VisualHeightmap` 暴露。
+在当前设计里，这个真相应该统一收口到 `IContinuousHeightmap`，并通过 `CoreServiceKeys.ContinuousHeightmap` 暴露。
 
 这意味着：
 
@@ -124,7 +124,7 @@ Prefab 的正式含义应该是：
 人话就是：
 
 - 地图加载时，必须能正式声明“这张地图用哪个 visual height asset”
-- Core 必须在正常 map load 流程里把这个 asset 绑定成 `IVisualHeightmap`
+- Core 必须在正常 map load 流程里把这个 asset 绑定成 `IContinuousHeightmap`
 - 不是靠 showcase runtime 临时注入
 - 不是靠 adapter 自己猜
 
@@ -199,7 +199,7 @@ Core 仓库只保留 shared contract 和平台无关测试；UE5 render bridge �
 ### Core 负责什么
 
 - map load 时绑定 visual height asset
-- 提供统一的 `IVisualHeightmap`
+- 提供统一的 `IContinuousHeightmap`
 - 负责 prefab finalization
 - 负责 grounded part 的统一 lowering
 - 负责 shared validation
@@ -256,5 +256,5 @@ Core 仓库只保留 shared contract 和平台无关测试；UE5 render bridge �
 - `src/Core/Presentation/Presenters/PresenterGroundingUtility.cs`
 - `src/Core/Presentation/Systems/PresenterBehaviorSystem.cs`
 - 开发者仓库中的商业引擎 adapter render bridge
-- `src/Tests/PresentationTests/Rendering/VisualHeightmapRuntimeTruthTests.cs`
+- `src/Tests/PresentationTests/Rendering/ContinuousHeightmapRuntimeTruthTests.cs`
 - `src/Tests/PresentationTests/Core/PresentationFoundationTests.cs`

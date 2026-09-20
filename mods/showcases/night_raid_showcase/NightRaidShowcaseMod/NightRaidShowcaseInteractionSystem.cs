@@ -15,7 +15,7 @@ namespace NightRaidShowcaseMod;
 
 /// <summary>
 /// Transitional kill-tool residue. Teleport and the hero ring are already pure
-/// data (InputActionFired bridge + SetWorldPosition graph op; presenter GroundOverlay
+/// data (action-bound TriggerGraph + SetWorldPosition graph op; presenter GroundOverlay
 /// slot). What remains here is the right-click execution tool and the raid-circle
 /// ground ring, both scheduled for removal by their engine slices:
 /// kill via the order→ability→effect damage pipeline, the circle via a
@@ -106,7 +106,7 @@ internal sealed class NightRaidShowcaseInteractionSystem : ISystem<float>
         var context = _engine.CreateContext();
         context.Set(CoreServiceKeys.MapId, _engine.CurrentMapSession.MapId);
         context.Set(CoreServiceKeys.MapSession, _engine.CurrentMapSession);
-        context.Set(MapTriggerEventPayloadKeys.SourceEntity, target);
+        context.Set("NightRaid.KillTarget", target);
         _engine.TriggerManager.FireMapCustomEvent(
             _engine.CurrentMapSession.MapId,
             "NightRaid.KillTool.Used",

@@ -12,7 +12,7 @@
 |----|----|
 | scene id | `terrain_surface` |
 | preset | `engine_raylib_terrain_surface` |
-| 场景源码 | `src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Scenes/TerrainSurfaceScene.cs` |
+| 场景源码 | `src/Content/Ludots.Content.EngineGallery/Scenes/TerrainSurfaceScene.cs` |
 | 承接渲染器 | `RaylibTerrainRenderer`（`terrain.fs`）+ chunk 网格源 `ITerrainChunkMeshSource` 合同 |
 | 注册表条目 | `engine_raylib_terrain_surface`（`showcase.registry.json`，tier T1） |
 

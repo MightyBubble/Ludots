@@ -1,0 +1,7 @@
+CSC : error CS2012: 无法打开“C:\001_AI\LudotsProd_issue709\src\Core\obj\Release\net8.0\Ludots.Core.dll”以进行写入 - The process cannot access the file 'C:\001_AI\LudotsProd_issue709\src\Core\obj\Release\net8.0\Ludots.Core.dll' because it is being used by another process. [C:\001_AI\LudotsProd_issue709\src\Core\Ludots.Core.csproj]
+
+生成失败。
+    845 个警告
+    1 个错误
+
+已用时间 00:00:36.94

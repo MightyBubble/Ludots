@@ -20,7 +20,7 @@ from pathlib import Path
 
 PREFIX = "capability_standard_graph_op_"
 CLI_PROJECT = "src/Tools/Ludots.Launcher.Cli/Ludots.Launcher.Cli.csproj"
-CLI_DLL = "src/Tools/Ludots.Launcher.Cli/bin/Release/net8.0/Ludots.Launcher.Cli.dll"
+CLI_DLL = "src/Tools/Ludots.Launcher.Cli/bin/Release/net9.0/Ludots.Launcher.Cli.dll"
 # Expressive-beat timeline (Epic #990): setup -> action waves -> result hold.
 # One think wave = 0.35s @ 60fps = 21 frames; wave k settles at frame 21k.
 WAVE_FRAMES = 21

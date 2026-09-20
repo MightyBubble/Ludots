@@ -1,15 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 
 namespace Ludots.Core.Input.Interaction
 {
     /// <summary>
-    /// Loader for <c>Input/interaction_context_profiles.json</c> (RFC-0065 CTX-6, §5.3). Follows the
-    /// <c>FilterProfileConfigLoader</c> mounting pattern: catalog-declared DeepObject merge through
-    /// the shared <see cref="ConfigPipeline"/>, structural validation fails fast. Referenced
-    /// filter/intent/input-context ids resolve at frame push, not here.
+    /// Loader for <c>Input/interaction_context_profiles.json</c> (RFC-0065 CTX-6, §5.3). Catalog-
+    /// declared DeepObject merge through the shared <see cref="ConfigPipeline"/> (a mod fragment's
+    /// profiles array replaces the root's, matching the filter profile family); structural
+    /// validation fails fast. Referenced filter/intent ids resolve at registry install, not here.
+    /// The engine-reserved steady-state profile installs programmatically in GameEngine, not here.
     /// </summary>
     public sealed class InteractionContextProfileConfigLoader
     {
@@ -40,13 +42,52 @@ namespace Ludots.Core.Input.Interaction
                 throw new InvalidOperationException($"Missing required config '{relativePath}'.");
             }
 
+            RejectRetiredPeriodFields(mergedObject, relativePath);
+
             var config = mergedObject.Deserialize<InteractionContextProfilesConfig>(JsonOptions)
                 ?? throw new InvalidOperationException($"Failed to deserialize '{relativePath}'.");
             Validate(config, relativePath);
             return config;
         }
 
-        /// <summary>Structural fail-fast validation; id resolution happens at frame push.</summary>
+        /// <summary>
+        /// Case E retired <c>continuousQuery</c> / <c>whileActive</c>; profiles use
+        /// <c>onActivated</c> / <c>onDeactivated</c> graph slots instead. Unknown properties
+        /// are otherwise ignored by the deserializer — fail closed instead.
+        /// </summary>
+        private static void RejectRetiredPeriodFields(JsonObject root, string relativePath)
+        {
+            if (!root.TryGetPropertyValue("profiles", out JsonNode? profilesNode) ||
+                profilesNode is not JsonArray profiles)
+            {
+                return;
+            }
+
+            for (int index = 0; index < profiles.Count; index++)
+            {
+                if (profiles[index] is not JsonObject profile)
+                {
+                    continue;
+                }
+
+                foreach (KeyValuePair<string, JsonNode?> property in profile)
+                {
+                    if (string.Equals(property.Key, "continuousQuery", StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new InvalidOperationException(
+                            $"{relativePath}.profiles[{index}] declares retired field '{property.Key}'; use onActivated/onDeactivated graph slots.");
+                    }
+
+                    if (string.Equals(property.Key, "whileActive", StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new InvalidOperationException(
+                            $"{relativePath}.profiles[{index}] declares retired field '{property.Key}'; use onActivated/onDeactivated graph slots (whileActive was a per-tick period field; the slots are instant window-boundary hooks).");
+                    }
+                }
+            }
+        }
+
+        /// <summary>Structural fail-fast validation; id resolution happens at profile registry install time.</summary>
         public static void Validate(InteractionContextProfilesConfig config, string source)
         {
             if (config == null)
@@ -71,22 +112,88 @@ namespace Ludots.Core.Input.Interaction
                     throw new InvalidOperationException($"{path}.id duplicates interaction context profile '{profile.Id}'.");
                 }
 
-                RequireTrimmedNonEmpty(profile.ActiveCollectionKey, $"{path}.activeCollectionKey");
-                RequireTrimmedNonEmpty(profile.ActiveEntityViewKey, $"{path}.activeEntityViewKey");
+                // Collection/view keys are optional: cast/command routing contexts declare
+                // activeCollectionKey; entity-mounted play contexts (Case E battle/boxing) omit both.
+                // activeEntityViewKey has no runtime consumer (input-03 stack retirement).
+                RequireTrimmedWhenPresent(profile.ActiveCollectionKey, $"{path}.activeCollectionKey");
                 RequireTrimmedWhenPresent(profile.FilterProfileId, $"{path}.filterProfileId");
                 RequireTrimmedWhenPresent(profile.InputContextId, $"{path}.inputContextId");
                 RequireTrimmedWhenPresent(profile.CommandIntentId, $"{path}.commandIntentId");
+                ValidateBindings(profile.Bindings, path);
+                ValidateTriggers(profile.Triggers, path);
+                ValidateLifecycleGraphSlots(profile.OnActivated, $"{path}.onActivated");
+                ValidateLifecycleGraphSlots(profile.OnDeactivated, $"{path}.onDeactivated");
+            }
+        }
+
+        private static void ValidateBindings(List<string>? bindings, string path)
+        {
+            if (bindings == null)
+            {
+                return;
+            }
+
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < bindings.Count; i++)
+            {
+                string binding = bindings[i]
+                    ?? throw new InvalidOperationException($"{path}.bindings[{i}] must be a string.");
+                RequireTrimmedNonEmpty(binding, $"{path}.bindings[{i}]");
+                if (!seen.Add(binding))
+                {
+                    throw new InvalidOperationException($"{path}.bindings[{i}] duplicates semantic action '{binding}'.");
+                }
+            }
+        }
+
+        private static void ValidateTriggers(List<InteractionContextTriggerMount>? triggers, string path)
+        {
+            if (triggers == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < triggers.Count; i++)
+            {
+                InteractionContextTriggerMount mount = triggers[i]
+                    ?? throw new InvalidOperationException($"{path}.triggers[{i}] must be an object.");
+                string mountPath = $"{path}.triggers[{i}]";
+                RequireTrimmedNonEmpty(mount.Trigger, $"{mountPath}.trigger");
+                RequireTrimmedWhenPresent(mount.Event, $"{mountPath}.event");
+                if (mount.Filters?.InstanceId != null)
+                {
+                    RequireTrimmedWhenPresent(mount.Filters.InstanceId, $"{mountPath}.filters.instanceId");
+                }
+            }
+        }
+
+        private static void ValidateLifecycleGraphSlots(List<string>? graphs, string path)
+        {
+            if (graphs == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < graphs.Count; i++)
+            {
+                string graph = graphs[i]
+                    ?? throw new InvalidOperationException($"{path}[{i}] must be a string.");
+                RequireTrimmedNonEmpty(graph, $"{path}[{i}]");
             }
         }
 
         private static void RequireTrimmedWhenPresent(string value, string path)
         {
-            if (value == null)
+            // Omitted JSON fields deserialize to "" via property defaults; treat blank as absent.
+            if (string.IsNullOrWhiteSpace(value))
             {
                 return;
             }
 
-            RequireTrimmedNonEmpty(value, path);
+            if (!string.Equals(value, value.Trim(), StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"{path} must not contain leading or trailing whitespace.");
+            }
         }
 
         private static void RequireTrimmedNonEmpty(string value, string path)

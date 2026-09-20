@@ -1,0 +1,47 @@
+{
+    "schemaVersion":  1,
+    "imagePath":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\issue709-visible-uat-20260726-r5\\screens\\client-a\\frontline_003_engaging.png",
+    "width":  1280,
+    "height":  720,
+    "passed":  true,
+    "requirements":  [
+                         {
+                             "role":  "infantryBody",
+                             "presentationTemplate":  "rts.frontline.infantry.body",
+                             "minimumPixelsPerRegion":  5,
+                             "minimumPassingRegions":  1,
+                             "passingRegions":  3,
+                             "matchingPixels":  1740,
+                             "passed":  true,
+                             "regions":  [
+                                             {
+                                                 "id":  "50:30265815",
+                                                 "x":  696,
+                                                 "y":  376,
+                                                 "width":  30,
+                                                 "height":  34,
+                                                 "matchingPixels":  97,
+                                                 "passed":  true
+                                             },
+                                             {
+                                                 "id":  "50:34460580",
+                                                 "x":  1049,
+                                                 "y":  311,
+                                                 "width":  43,
+                                                 "height":  33,
+                                                 "matchingPixels":  784,
+                                                 "passed":  true
+                                             },
+                                             {
+                                                 "id":  "50:36749682",
+                                                 "x":  1089,
+                                                 "y":  342,
+                                                 "width":  47,
+                                                 "height":  34,
+                                                 "matchingPixels":  859,
+                                                 "passed":  true
+                                             }
+                                         ]
+                         }
+                     ]
+}

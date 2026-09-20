@@ -2,7 +2,7 @@
   "name": "RaylibClientParityShowcaseMod",
   "version": "1.0.0",
   "description": "Raylib client parity acceptance scene: static ISM buildings, GpuSkinnedInstance crowd (animated GLB), host albedo material bind, and vfx_unlit_tint baseline.",
-  "main": "bin/net8.0/RaylibClientParityShowcaseMod.dll",
+  "main": "bin/net9.0/RaylibClientParityShowcaseMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

@@ -184,7 +184,7 @@ namespace CameraAcceptanceMod.UI
                 if (TryResolveReturnMapId(out string returnMapId))
                 {
                     children.Add(Ui.Text("Return").FontSize(12f).Bold().Color("#F4C77D"));
-                    children.Add(BuildReturnToMenuButton("Back To X28 Menu", () => LoadReturnMap(returnMapId)));
+                    children.Add(BuildReturnToMenuButton("Back To Main Menu", () => LoadReturnMap(returnMapId)));
                 }
                 else if (!string.IsNullOrWhiteSpace(state.ReturnButtonLabel))
                 {

@@ -27,7 +27,8 @@ namespace Ludots.Core.Map
         public MapConfig MapConfig { get; }
         public MapSessionState State { get; set; }
         public MapContext Context { get; }
-        public IVisualHeightmap? VisualHeightmap { get; set; }
+        public IContinuousHeightmap? ContinuousHeightmap { get; set; }
+        public ResolvedTerrainPresentation? TerrainPresentation { get; set; }
         public StructureCollisionAsset? StructureCollisionAsset { get; set; }
         public StructureCollisionRuntimeState? StructureCollisionRuntimeState { get; set; }
         public IGroundSurfaceSampler? GroundSurfaceSampler { get; set; }
@@ -43,6 +44,38 @@ namespace Ludots.Core.Map
         /// session is constructed; null after Cleanup/Dispose (map unload).
         /// </summary>
         public MapVariableStore? Variables { get; private set; }
+
+        /// <summary>
+        /// Field layers hosted by this map (catalog ∩ <see cref="MapConfig.Fields"/>),
+        /// created by the engine at map load; null after Cleanup/Dispose.
+        /// </summary>
+        public Ludots.Core.Fields.FieldSessionStore? Fields { get; internal set; }
+
+        /// <summary>
+        /// (layer, regionId) → materialized region entity, filled at map load;
+        /// null after Cleanup/Dispose.
+        /// </summary>
+        public Ludots.Core.Gameplay.FieldRegions.RegionEntityIndex? RegionIndex { get; internal set; }
+
+        /// <summary>
+        /// Hierarchy group entities by key, wired at map load from Fields/hierarchies.json;
+        /// null after Cleanup/Dispose.
+        /// </summary>
+        public Ludots.Core.Gameplay.FieldRegions.RegionHierarchyRuntime? RegionGroups { get; internal set; }
+
+        /// <summary>
+        /// Region volume keys materialized from map JSON "Regions" at map load; backs
+        /// placed-region addressing (LoadPlacedRegion) and TriggerGraph mount
+        /// validation. Null after Cleanup/Dispose.
+        /// </summary>
+        public IReadOnlySet<string>? RegionVolumeKeys { get; internal set; }
+
+        /// <summary>
+        /// Field region emission contracts keyed by region key, loaded from
+        /// Fields/region_emissions.json at map load (#1468); region entities carry
+        /// the matching RegionVolumeEmissionCm. Null after Cleanup/Dispose.
+        /// </summary>
+        public IReadOnlyDictionary<string, Ludots.Core.Gameplay.MapTriggers.RegionVolumeEmissionCm>? FieldRegionEmissions { get; internal set; }
 
         private readonly Dictionary<string, IBoard> _boards = new Dictionary<string, IBoard>(StringComparer.OrdinalIgnoreCase);
         private readonly List<Trigger> _triggers = new List<Trigger>();
@@ -163,6 +196,11 @@ namespace Ludots.Core.Map
             }
             _boards.Clear();
             Variables = null;
+            Fields = null;
+            RegionIndex = null;
+            RegionGroups = null;
+            RegionVolumeKeys = null;
+            FieldRegionEmissions = null;
 
             State = MapSessionState.Disposed;
         }
@@ -177,6 +215,11 @@ namespace Ludots.Core.Map
                 }
                 _boards.Clear();
                 Variables = null;
+                Fields = null;
+                RegionIndex = null;
+                RegionGroups = null;
+                RegionVolumeKeys = null;
+                FieldRegionEmissions = null;
                 State = MapSessionState.Disposed;
             }
         }

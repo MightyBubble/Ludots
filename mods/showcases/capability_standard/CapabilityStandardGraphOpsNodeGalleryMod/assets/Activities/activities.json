@@ -1,0 +1,13 @@
+[
+  {
+    "id": "gallery.op.offer_activity",
+    "display_name": "点名派发待办活动",
+    "summary": "图节点点名活动 id；跑完，活动已上桌。",
+    "source_key": "task.state_changed",
+    "dispatch_policy": "forced",
+    "repeat_policy": "Repeatable",
+    "options": [
+      { "id": "hold", "title": "按兵不动", "is_baseline": true }
+    ]
+  }
+]

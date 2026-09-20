@@ -2,7 +2,7 @@
   "name": "ItemLoadoutShowcaseMod",
   "version": "1.0.0",
   "description": "Focused loadout showcase entry mod for the shared Ludots item architecture demo.",
-  "main": "bin/net8.0/ItemLoadoutShowcaseMod.dll",
+  "main": "bin/net9.0/ItemLoadoutShowcaseMod.dll",
   "priority": 10,
   "dependencies": {
     "ItemSystemShowcaseMod": "^1.0.0"

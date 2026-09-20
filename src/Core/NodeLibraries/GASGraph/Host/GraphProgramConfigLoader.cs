@@ -8,6 +8,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Registry;
+using Ludots.Core.TypedCollections;
 
 namespace Ludots.Core.NodeLibraries.GASGraph.Host
 {
@@ -19,10 +20,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly GraphOutputSchemaRegistry? _outputSchemas;
         private readonly StringIntRegistry? _outputValueKeys;
         private readonly EntityCollectionStore? _entityCollections;
+        private readonly IntIdCollectionStore? _intIdCollections;
         private readonly GasGraphOpRegistry? _opRegistry;
+        private readonly GasGraphOpHandlerTable _operationHandlers;
         private readonly BuiltinHandlerRegistry? _builtinHandlers;
+        private readonly Ludots.Core.Scripting.EventSchemaRegistry? _eventSchemas;
+        private readonly Ludots.Core.Scripting.EnumCatalog? _enums;
         private readonly Dictionary<string, GraphOutputSchema> _pendingOutputSchemas = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, GraphInstructionSourceMap> _pendingSourceMaps = new(StringComparer.OrdinalIgnoreCase);
+        // Hook weaving source: the authored documents in compile order, consumed by
+        // the weave pass after registration (WeaveHooks) and cleared afterwards.
+        private readonly List<KeyValuePair<string, GraphControlFlowDocument>> _pendingDocuments = new();
 
         public GraphProgramConfigLoader(
             ConfigPipeline pipeline,
@@ -32,7 +40,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             StringIntRegistry? outputValueKeys = null,
             EntityCollectionStore? entityCollections = null,
             GasGraphOpRegistry? opRegistry = null,
-            BuiltinHandlerRegistry? builtinHandlers = null)
+            BuiltinHandlerRegistry? builtinHandlers = null,
+            Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas = null,
+            Ludots.Core.Scripting.EnumCatalog? enums = null,
+            IntIdCollectionStore? intIdCollections = null,
+            GasGraphOpHandlerTable? operationHandlers = null)
         {
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
@@ -40,8 +52,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _outputSchemas = outputSchemas;
             _outputValueKeys = outputValueKeys;
             _entityCollections = entityCollections;
+            _intIdCollections = intIdCollections;
             _opRegistry = opRegistry;
+            _operationHandlers = operationHandlers ?? GasGraphOpHandlerTable.Instance;
             _builtinHandlers = builtinHandlers;
+            _eventSchemas = eventSchemas;
+            _enums = enums;
         }
 
         public List<GraphProgramPackage> LoadIdsAndCompile(
@@ -53,6 +69,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             ModRegistryAmbient.Current.RequireGraphIdsEmptyAndUnfrozen();
             _pendingOutputSchemas.Clear();
             _pendingSourceMaps.Clear();
+            _pendingDocuments.Clear();
             _outputSchemas?.Clear();
 
             var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
@@ -66,6 +83,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             JsonSerializerOptions options = StrictJsonOptions.CreateCamelCase(includeFields: true);
             var packages = new List<GraphProgramPackage>(sorted.Count);
             var errors = new List<string>();
+            var documents = new Dictionary<string, GraphControlFlowDocument>(StringComparer.OrdinalIgnoreCase);
 
             for (int i = 0; i < sorted.Count; i++)
             {
@@ -73,8 +91,64 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 try
                 {
                     GraphIdRegistry.Register(id);
+                    GraphKind kind = GraphProgramAuthoringFrontDoor.RequireKind(obj, id);
+                    GraphProgramAuthoringFrontDoor.RequireControlFlowAuthoringShape(obj, id, kind);
+                    GraphProgramAuthoringFrontDoor.RequireTriggerGraphEntryShape(obj, id, kind);
+                    GraphControlFlowDocument? doc = obj.Deserialize<GraphControlFlowDocument>(options);
+                    if (doc == null)
+                    {
+                        throw new InvalidOperationException($"Failed to deserialize ControlFlow graph '{id}'.");
+                    }
+
+                    if (string.IsNullOrWhiteSpace(doc.Id))
+                    {
+                        doc.Id = id;
+                    }
+
+                    if (!string.Equals(doc.Id, id, StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new InvalidOperationException($"Graph id mismatch: '{id}' vs '{doc.Id}'.");
+                    }
+
+                    if (string.IsNullOrWhiteSpace(doc.Kind))
+                    {
+                        doc.Kind = kind.ToString();
+                    }
+
+                    documents[id] = doc;
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"Graph '{id}' in '{relativePath}': {ex.Message}");
+                }
+            }
+
+            if (errors.Count > 0)
+            {
+                throw new AggregateException(
+                    $"[GraphProgramConfigLoader] {errors.Count} graph deserialization error(s) in '{relativePath}'.",
+                    errors.ConvertAll(e => (Exception)new InvalidOperationException(e)));
+            }
+
+            try
+            {
+                TriggerGraphInlineWeaver.ExpandDocuments(documents);
+                BehaviorGraphLeafWeaver.ExpandDocuments(documents);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(
+                    $"[GraphProgramConfigLoader] leaf/Inline expand failed in '{relativePath}': {ex.Message}",
+                    ex);
+            }
+
+            foreach (KeyValuePair<string, GraphControlFlowDocument> pair in documents)
+            {
+                string id = pair.Key;
+                try
+                {
                     GraphControlFlowCompileResult compiled =
-                        GraphProgramAuthoringFrontDoor.CompileJsonObjectFull(obj, id, options);
+                        GraphControlFlowCompiler.Compile(pair.Value, _eventSchemas, _enums, _opRegistry);
                     GraphProgramPackage? pkg = compiled.Package;
                     GraphOutputSchema outputSchema = compiled.OutputSchema;
                     List<GraphDiagnostic> diags = compiled.Diagnostics;
@@ -90,6 +164,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         packages.Add(pkg.Value);
                         _pendingOutputSchemas[id] = outputSchema;
                         _pendingSourceMaps[id] = compiled.SourceMap;
+                        _pendingDocuments.Add(new KeyValuePair<string, GraphControlFlowDocument>(id, pair.Value));
                     }
                 }
                 catch (Exception ex)
@@ -125,7 +200,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 GraphKindOperationPolicy.RequireAllowed(
                     kind,
                     program,
-                    GasGraphOpHandlerTable.Instance,
+                    _operationHandlers,
                     id,
                     nameof(GraphProgramConfigLoader));
 
@@ -143,6 +218,27 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             GraphIdRegistry.Freeze();
+            WeaveHooks();
+        }
+
+        /// <summary>
+        /// Route A weave pass: runs once every graph is registered (and ids are
+        /// frozen), before any map mounts. Hook-bearing TriggerGraph entries are spliced
+        /// into their targets and the merged programs land via ReplaceProgram, which
+        /// re-validates op policy, invoke targets, and cycles with rollback on failure.
+        /// </summary>
+        private void WeaveHooks()
+        {
+            TriggerGraphHookWeaver.Weave(
+                _registry,
+                _pendingDocuments,
+                _symbolResolver,
+                _eventSchemas,
+                _entityCollections,
+                _builtinHandlers,
+                _enums,
+                _opRegistry);
+            _pendingDocuments.Clear();
         }
 
         /// <summary>
@@ -174,10 +270,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             for (int i = 0; i < source.Length; i++)
             {
                 GraphOutputBinding binding = source[i];
-                if (binding.Destination == GraphOutputDestinationKind.EntityCollection)
+                if (GraphOutputDestinationKinds.IsEntityBagDestination(binding.Destination))
                 {
                     resolved[i] = _entityCollections != null && !string.IsNullOrWhiteSpace(binding.CollectionKey)
                         ? binding.WithResolvedCollectionKeyId(_entityCollections.KeyRegistry.Register(binding.CollectionKey))
+                        : binding;
+                    continue;
+                }
+
+                if (GraphOutputDestinationKinds.IsIntIdBagDestination(binding.Destination))
+                {
+                    if (_intIdCollections == null)
+                    {
+                        throw new InvalidOperationException(
+                            $"Graph int-id collection output '{binding.Id}' requires an IntIdCollectionStore.");
+                    }
+
+                    resolved[i] = !string.IsNullOrWhiteSpace(binding.CollectionKey)
+                        ? binding.WithResolvedCollectionKeyId(_intIdCollections.KeyRegistry.Register(binding.CollectionKey))
                         : binding;
                     continue;
                 }

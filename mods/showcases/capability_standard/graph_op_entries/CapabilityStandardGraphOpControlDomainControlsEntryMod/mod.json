@@ -2,7 +2,7 @@
   "name": "CapabilityStandardGraphOpControlDomainControlsEntryMod",
   "version": "1.0.0",
   "description": "Launcher entry for GraphNodeOp ControlDomainControls player gallery.",
-  "main": "bin/net8.0/CapabilityStandardGraphOpControlDomainControlsEntryMod.dll",
+  "main": "bin/net9.0/CapabilityStandardGraphOpControlDomainControlsEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"

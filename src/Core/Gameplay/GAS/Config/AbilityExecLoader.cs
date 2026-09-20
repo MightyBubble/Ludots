@@ -27,7 +27,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             "id",
             "exec",
             "blockTags",
-            "catalogTags",
+            "categories",
             "interactionContextProfile",
             "activationPrecondition",
             "toggleSpec",
@@ -36,6 +36,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             "input",
             "useRequirement",
             "showRequirement",
+            "triggerGraphs",
         };
 
         private static readonly string[] RemovedAimVisualFieldNames =
@@ -183,26 +184,32 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 def.ActivationBlockTags = blockTags;
             }
 
-            // ── catalogTags (RFC-0065 DEC-14) ──
-            if (obj["catalogTags"] is JsonArray catalogArr)
+            // ── categories (ability classification; not gameplay tags) ──
+            if (obj["catalogTags"] != null)
             {
-                var catalogTags = default(GameplayTagContainer);
-                bool hasCatalogTags = false;
-                foreach (var t in catalogArr)
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'catalogTags' was renamed to 'categories'.");
+            }
+
+            if (obj["categories"] is JsonArray catalogArr)
+            {
+                var categories = default(GameplayTagContainer);
+                bool hasCategories = false;
+                foreach (var entry in catalogArr)
                 {
-                    string? tag = t?.GetValue<string>();
-                    if (string.IsNullOrWhiteSpace(tag))
+                    string? categoryName = entry?.GetValue<string>();
+                    if (string.IsNullOrWhiteSpace(categoryName))
                     {
                         throw new InvalidOperationException(
-                            $"Ability '{id}' in '{path}' catalogTags entries must be non-empty strings.");
+                            $"Ability '{id}' in '{path}' categories entries must be non-empty strings.");
                     }
 
-                    catalogTags.AddTag(TagRegistry.Register(tag));
-                    hasCatalogTags = true;
+                    categories.AddTag(AbilityCategoryRegistry.Register(categoryName));
+                    hasCategories = true;
                 }
 
-                def.CatalogTags = catalogTags;
-                def.HasCatalogTags = hasCatalogTags;
+                def.Categories = categories;
+                def.HasCategories = hasCategories;
             }
 
             // ── interactionContextProfile (RFC-0065 CTX-6) ──
@@ -255,6 +262,34 @@ namespace Ludots.Core.Gameplay.GAS.Config
             def.HasUseProgressionRequirement = def.UseProgressionRequirementId > 0;
             def.ShowProgressionRequirementId = ResolveProgressionRequirement(obj, "showRequirement", id, path);
             def.HasShowProgressionRequirement = def.ShowProgressionRequirementId > 0;
+
+            if (obj["triggerGraphs"] is JsonArray triggerGraphs)
+            {
+                def.TriggerGraphs = new List<string>(triggerGraphs.Count);
+                var seen = new HashSet<string>(StringComparer.Ordinal);
+                for (int i = 0; i < triggerGraphs.Count; i++)
+                {
+                    if (triggerGraphs[i] is not JsonValue value || !value.TryGetValue<string>(out string? graph))
+                    {
+                        throw new InvalidOperationException(
+                            $"Ability '{id}' in '{path}' field 'triggerGraphs' entries must be strings.");
+                    }
+
+                    if (string.IsNullOrWhiteSpace(graph) || !string.Equals(graph, graph.Trim(), StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException(
+                            $"Ability '{id}' in '{path}' field 'triggerGraphs' entries must be trimmed non-empty strings.");
+                    }
+
+                    if (!seen.Add(graph))
+                    {
+                        throw new InvalidOperationException(
+                            $"Ability '{id}' in '{path}' field 'triggerGraphs' repeats graph id '{graph}'.");
+                    }
+
+                    def.TriggerGraphs.Add(graph);
+                }
+            }
 
             return def;
         }
@@ -945,7 +980,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     $"Ability '{id}' in '{path}' field '{fieldPath}' must use a non-empty interaction mode key.");
             }
 
-            if (!Enum.TryParse(modeKey, ignoreCase: true, out InteractionModeType parsed))
+            if (!Enum.TryParse(modeKey, ignoreCase: true, out CastModeType parsed))
             {
                 throw new InvalidOperationException(
                     $"Ability '{id}' in '{path}' field '{fieldPath}' uses unknown interaction mode '{modeKey}'.");
@@ -990,7 +1025,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             if (inputObj["castModeOverride"] is JsonValue castModeNode)
             {
                 string rawCastMode = castModeNode.GetValue<string>();
-                if (!Enum.TryParse(rawCastMode, ignoreCase: true, out InteractionModeType castMode))
+                if (!Enum.TryParse(rawCastMode, ignoreCase: true, out CastModeType castMode))
                 {
                     throw new InvalidOperationException(
                         $"Ability '{id}' in '{path}' input.castModeOverride uses unknown value '{rawCastMode}'.");
@@ -998,6 +1033,35 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
                 result.CastModeOverride = castMode;
                 result.HasCastModeOverride = true;
+                hasAny = true;
+            }
+
+            if (inputObj["targetType"] is JsonValue targetTypeNode)
+            {
+                string rawTargetType = targetTypeNode.GetValue<string>();
+                if (!Enum.TryParse(rawTargetType, ignoreCase: true, out OrderTargetType targetType))
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' in '{path}' input.targetType uses unsupported value '{rawTargetType}'.");
+                }
+
+                result.TargetType = targetType;
+                result.HasTargetType = true;
+                hasAny = true;
+            }
+
+            if (inputObj["modifierBehavior"] is JsonValue modifierBehaviorNode)
+            {
+                string rawModifierBehavior = modifierBehaviorNode.GetValue<string>();
+                if (!Enum.TryParse(rawModifierBehavior, ignoreCase: true, out ModifierSubmitBehavior modifierBehavior) ||
+                    !Enum.IsDefined(modifierBehavior))
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' in '{path}' input.modifierBehavior uses unsupported value '{rawModifierBehavior}'.");
+                }
+
+                result.ModifierBehavior = modifierBehavior;
+                result.HasModifierBehavior = true;
                 hasAny = true;
             }
 

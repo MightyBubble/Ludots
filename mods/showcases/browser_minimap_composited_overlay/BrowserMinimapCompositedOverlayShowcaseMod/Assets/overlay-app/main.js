@@ -7,7 +7,11 @@ const SCHEMA_VERSION = 1;
 const DEFAULT_PANEL_ID = 'panel.minimap.web-shell';
 const FOCUS_MINIMAP_COMMAND = 'focusMinimap';
 const NATIVE_CLIP_KIND = 'circle';
-const routeParams = new URLSearchParams(window.location.search);
+const routeParams = new URLSearchParams(
+  (window.location.search && window.location.search.length > 1)
+    ? window.location.search
+    : (window.__LUDOTS_NAV_QUERY__ || '')
+);
 const panelId = routeParams.get('panelId') || DEFAULT_PANEL_ID;
 const dataPlaneTopic = routeParams.get('topic');
 const dataPlaneSessionId = `minimap-shell-${Date.now().toString(16)}`;

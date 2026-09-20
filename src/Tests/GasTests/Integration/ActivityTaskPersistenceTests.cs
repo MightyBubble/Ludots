@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Arch.Core;
+using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Activities;
 using Ludots.Core.Gameplay.Providers;
 using Ludots.Core.Gameplay.Providers.FixtureProviders;
@@ -132,6 +133,58 @@ namespace Ludots.Tests.GAS.Integration
 
             Entity reoffered = runtime.OfferOrActivate("activity.muster", scope);
             Assert.That(reoffered, Is.EqualTo(existing));
+        }
+
+        [Test]
+        public void ActivityParticipant_RestorePreservesCooldownWindow()
+        {
+            var definitions = new ActivityDefinitionRegistry();
+            definitions.Register("activity.supply", new ActivityDefinition
+            {
+                Id = "activity.supply",
+                SourceKey = "fixture.signal_ping",
+                DispatchPolicy = ActivityDispatchPolicy.Forced,
+                RepeatPolicy = ActivityRepeatPolicy.Cooldown,
+                RepeatCooldown = new ActivityRepeatCooldown { DurationTicks = 3 },
+                Options =
+                {
+                    new ActivityOptionDefinition { Id = "ok", IsBaseline = true },
+                },
+            });
+
+            using World world = World.Create();
+            var clock = new DiscreteClock();
+            var runtime = new ActivityRuntimeService(
+                world,
+                definitions,
+                CreateServices(),
+                new ActivityPresentationBuffer(),
+                clock);
+            Entity scope = world.Create();
+            Entity dispatched = runtime.OfferOrActivate("activity.supply", scope);
+            Assert.That(world.Get<ActivityInstanceCm>(dispatched).DispatchTick, Is.EqualTo(0));
+
+            // The activity participant only owns nextInstanceId; instance timestamps live on
+            // ActivityInstanceCm in the world, so a save round-trip must not lose them.
+            JsonNode captured = CoreSaveParticipants.CreateActivityParticipant(runtime).CaptureState();
+            clock.Advance(ClockDomainId.Step, ticks: 1);
+
+            var restored = new ActivityRuntimeService(
+                world,
+                definitions,
+                CreateServices(),
+                new ActivityPresentationBuffer(),
+                clock);
+            CoreSaveParticipants.CreateActivityParticipant(restored).RestoreState(captured);
+
+            ActivityAdmissionResult within = restored.OfferOrActivateChecked("activity.supply", scope);
+            Assert.That(within.Accepted, Is.False);
+            Assert.That(within.RejectionCode, Is.EqualTo(ActivityAdmissionRejections.CooldownActive));
+
+            clock.Advance(ClockDomainId.Step, ticks: 2);
+            Entity second = restored.OfferOrActivate("activity.supply", scope);
+            Assert.That(second, Is.Not.EqualTo(Entity.Null));
+            Assert.That(world.Get<ActivityInstanceCm>(second).DispatchTick, Is.EqualTo(3));
         }
 
         [Test]

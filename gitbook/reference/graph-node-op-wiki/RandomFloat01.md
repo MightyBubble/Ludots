@@ -3,7 +3,7 @@
 每一拍重掷一次骰子，掷出多长这一刀就多长，一列掷点史里没有两根一样长。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_RandomFloat01/poster.png" src="artifacts/evidence/capability_standard_graph_op_RandomFloat01/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_RandomFloat01/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_RandomFloat01/play.mp4。
 </video>
 
 ## 作者写法

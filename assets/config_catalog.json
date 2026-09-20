@@ -45,6 +45,13 @@
     "IdField": "id"
   },
   {
+    "Path": "Enums/enums.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "ArrayAppendFields": [ "members" ],
+    "AllowEmpty": true
+  },
+  {
     "Path": "AI/target_filters.json",
     "Policy": "ArrayById",
     "IdField": "id",
@@ -205,6 +212,16 @@
     "IdField": "id"
   },
   {
+    "Path": "Fields/layers.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Fields/hierarchies.json",
+    "Policy": "ArrayById",
+    "IdField": "parent"
+  },
+  {
     "Path": "Progression/scopes.json",
     "Policy": "ArrayById",
     "IdField": "id"
@@ -302,6 +319,12 @@
     "IdField": "id"
   },
   {
+    "Path": "Presentation/raylib_scenes.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
     "Path": "Presentation/instanced_batches.json",
     "Policy": "ArrayById",
     "IdField": "id",
@@ -334,6 +357,18 @@
   {
     "Path": "Presentation/text_locales.json",
     "Policy": "DeepObject",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "Presentation/semantic_maps.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "Presentation/image_assets.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
     "AllowEmpty": true
   },
   {
@@ -410,7 +445,15 @@
     "Policy": "DeepObject"
   },
   {
+    "Path": "Input/interaction_modes.json",
+    "Policy": "DeepObject"
+  },
+  {
     "Path": "Input/control_schemes.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Input/interaction_prefs.json",
     "Policy": "DeepObject"
   },
   {
@@ -432,22 +475,37 @@
     "IdField": "id"
   },
   {
-    "Path": "Narrative/variables.json",
+    "Path": "Story/lines.json",
     "Policy": "ArrayById",
-    "IdField": "id"
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "Story/presentation_profiles.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "Story/speakers.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "Dialogue/dialogues.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "Sequencer/sequences.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
   },
   {
     "Path": "Quests/quests.json",
-    "Policy": "ArrayById",
-    "IdField": "id"
-  },
-  {
-    "Path": "Narrative/dialogues.json",
-    "Policy": "ArrayById",
-    "IdField": "id"
-  },
-  {
-    "Path": "Narrative/cinematics.json",
     "Policy": "ArrayById",
     "IdField": "id"
   },

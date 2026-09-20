@@ -48,8 +48,8 @@ namespace GasTests
                 ChunkSizeCells = 32,
                 LoadedChunkCapacity = 96,
                 NavigationEnabled = true,
-                DataFile = "Data/Maps/battle.vtxm",
-                VisualHeightmapAsset = "Data/Maps/battle.vhtm"
+                DataFile = "Data/Maps/battle.hex",
+                ContinuousHeightmapAsset = "Data/Maps/battle.height"
             };
 
             Assert.That(config.Name, Is.EqualTo("battle"));
@@ -61,8 +61,8 @@ namespace GasTests
             Assert.That(config.ChunkSizeCells, Is.EqualTo(32));
             Assert.That(config.LoadedChunkCapacity, Is.EqualTo(96));
             Assert.That(config.NavigationEnabled, Is.True);
-            Assert.That(config.DataFile, Is.EqualTo("Data/Maps/battle.vtxm"));
-            Assert.That(config.VisualHeightmapAsset, Is.EqualTo("Data/Maps/battle.vhtm"));
+            Assert.That(config.DataFile, Is.EqualTo("Data/Maps/battle.hex"));
+            Assert.That(config.ContinuousHeightmapAsset, Is.EqualTo("Data/Maps/battle.height"));
         }
 
         [Test]
@@ -74,8 +74,8 @@ namespace GasTests
                 SpatialType = "Hex",
                 WidthInMacroTiles = 256,
                 LoadedChunkCapacity = 128,
-                DataFile = "terrain.vtxm",
-                VisualHeightmapAsset = "terrain.vhtm"
+                DataFile = "terrain.hex",
+                ContinuousHeightmapAsset = "terrain.height"
             };
 
             var clone = original.Clone();
@@ -83,14 +83,14 @@ namespace GasTests
             Assert.That(clone.SpatialType, Is.EqualTo("Hex"));
             Assert.That(clone.WidthInMacroTiles, Is.EqualTo(256));
             Assert.That(clone.LoadedChunkCapacity, Is.EqualTo(128));
-            Assert.That(clone.DataFile, Is.EqualTo("terrain.vtxm"));
-            Assert.That(clone.VisualHeightmapAsset, Is.EqualTo("terrain.vhtm"));
+            Assert.That(clone.DataFile, Is.EqualTo("terrain.hex"));
+            Assert.That(clone.ContinuousHeightmapAsset, Is.EqualTo("terrain.height"));
 
             // Modify clone, original unchanged
             clone.WidthInMacroTiles = 512;
-            clone.VisualHeightmapAsset = "other.vhtm";
+            clone.ContinuousHeightmapAsset = "other.height";
             Assert.That(original.WidthInMacroTiles, Is.EqualTo(256));
-            Assert.That(original.VisualHeightmapAsset, Is.EqualTo("terrain.vhtm"));
+            Assert.That(original.ContinuousHeightmapAsset, Is.EqualTo("terrain.height"));
         }
 
         [Test]
@@ -105,7 +105,7 @@ namespace GasTests
                 "hexEdgeLengthCm": 600,
                 "chunkSizeCells": 32,
                 "navigationEnabled": true,
-                "visualHeightmapAsset": "Data/Maps/strategic.vhtm"
+                "continuousHeightmapAsset": "Data/Maps/strategic.height"
             }
             """;
 
@@ -118,7 +118,7 @@ namespace GasTests
             Assert.That(config.HexEdgeLengthCm, Is.EqualTo(600));
             Assert.That(config.ChunkSizeCells, Is.EqualTo(32));
             Assert.That(config.NavigationEnabled, Is.True);
-            Assert.That(config.VisualHeightmapAsset, Is.EqualTo("Data/Maps/strategic.vhtm"));
+            Assert.That(config.ContinuousHeightmapAsset, Is.EqualTo("Data/Maps/strategic.height"));
         }
 
         [Test]

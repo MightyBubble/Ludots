@@ -1,0 +1,13 @@
+{
+  "op": "QueryCollectActiveDialogueChoices",
+  "driver": "query",
+  "title": "点出当前对话选项",
+  "beat": "能回的话被点名线牵住。",
+  "detailTemplate": "点到{count}条可回的话。",
+  "assertDetailContains": [
+    "可回的话"
+  ],
+  "featuredNodeId": "collect",
+  "graphKind": "Query",
+  "field": "query"
+}

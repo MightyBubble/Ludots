@@ -1,6 +1,7 @@
 using System;
 using Arch.Core;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Platform.Abstractions;
 
@@ -31,6 +32,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public Entity Caster;
         public Entity ExplicitTarget;
         /// <summary>
+        /// Map binding declared by map-bound hosts at bind time. Map variable ops
+        /// resolve against it authoritatively; event casters may be destroyed
+        /// entities (EntityDied) and must never be the map scope source.
+        /// </summary>
+        public MapId? MapScope;
+        /// <summary>
         /// Additional context entity (e.g. AOE center, original target for chained effects).
         /// Set from EffectContext.TargetContext when executing phase graphs.
         /// </summary>
@@ -42,6 +49,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public Entity Viewer;
         /// <summary>Event payload slots read by LoadEventPayloadInt/Float ops.</summary>
         public GraphEventPayload EventPayload;
+        /// <summary>Named payload values captured at TriggerGraph entry start; read by LoadEntryPayload* ops.</summary>
+        public GraphEntryPayloadTable? EntryPayload;
+        /// <summary>
+        /// Per-run StoreArg* staging written ahead of InvokeGraph/DispatchMapEvent and consumed
+        /// (cleared) by them. InvokeGraph passes this table to the child frame as its
+        /// EntryPayload so subgraphs read arguments with the existing LoadEntryPayload* ops.
+        /// </summary>
+        public GraphEntryPayloadTable? InvokeArgs;
         /// <summary>Target position in world centimeters.</summary>
         public IntVector2 TargetPosCm;
         public uint RandomSeed;
@@ -53,7 +68,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public Span<Entity> E;
         public Span<Entity> Targets;
         public GraphTargetList TargetList;
+        public Span<int> IntIds;
+        public GraphIntIdList IntIdList;
+        public int SubjectIntId;
         public Span<int> CallStack;
+        public GraphTextHeap Text;
         public int CallStackCount;
         public int ReturnInt;
         public GraphExecutionStatus Status;
@@ -62,6 +81,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public int InvokeDepth;
         public int TreeSteps;
         public int CurrentInstructionPc;
+        public int CurrentGraphId;
         public GraphDebugTrace? DebugTrace;
     }
 }

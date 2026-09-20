@@ -1,0 +1,12 @@
+{
+  "startupMapId": "instanced_batch_demo",
+  "startupInputContexts": [
+    "Default_Gameplay"
+  ],
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
+}

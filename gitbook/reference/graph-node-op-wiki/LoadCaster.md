@@ -3,7 +3,7 @@
 白光柱落在施法者头顶，亮出出手人徽章，攻击线才从这亮起。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_LoadCaster/poster.png" src="artifacts/evidence/capability_standard_graph_op_LoadCaster/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_LoadCaster/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_LoadCaster/play.mp4。
 </video>
 
 ## 作者写法

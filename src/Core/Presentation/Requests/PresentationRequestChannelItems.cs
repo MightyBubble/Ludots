@@ -69,4 +69,17 @@ namespace Ludots.Core.Presentation.Requests
         public Entity Owner;
         public int StableId;
     }
+
+    public struct PresentationRequestReplay
+    {
+        public PresentationRequestKind Kind;
+        public Entity Owner;
+        public LODLevel LOD;
+        public int StableId;
+        public PresentationVisualProxy VisualProxy;
+        public GroundOverlayItem GroundOverlay;
+        public WorldHudItem WorldHud;
+        public SplineRibbonRequest SplineRibbon;
+        public SurfaceSourceRequest SurfaceSource;
+    }
 }

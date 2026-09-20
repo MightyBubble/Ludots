@@ -10,6 +10,54 @@
   ],
   "bindings": [
     {
+      "name": "agent_bridge",
+      "target": {
+        "type": "path",
+        "value": "mods/AgentBridgeMod",
+        "projectPath": "AgentBridgeMod.csproj"
+      }
+    },
+    {
+      "name": "case_e_selection",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/case_e_selection/CaseESelectionMod",
+        "projectPath": "CaseESelectionMod.csproj"
+      }
+    },
+    {
+      "name": "save_panel",
+      "target": {
+        "type": "path",
+        "value": "mods/SavePanelMod",
+        "projectPath": "SavePanelMod.csproj"
+      }
+    },
+    {
+      "name": "save_load_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/save_load/SaveLoadShowcaseMod",
+        "projectPath": "SaveLoadShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "deterministic_replay_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/deterministic_replay/DeterministicReplayShowcaseMod",
+        "projectPath": "DeterministicReplayShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "reconnect_recovery_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/reconnect_recovery/ReconnectRecoveryShowcaseMod",
+        "projectPath": "ReconnectRecoveryShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "camera_acceptance",
       "target": {
         "type": "path",
@@ -101,8 +149,7 @@
       "name": "mass_navigation",
       "target": {
         "type": "path",
-        "value": "mods/capabilities/navigation/MassNavigationMod",
-        "projectPath": "MassNavigationMod.csproj"
+        "value": "mods/capabilities/navigation/MassNavigationMod"
       }
     },
     {
@@ -135,6 +182,30 @@
         "type": "path",
         "value": "mods/showcases/formation_capability/FormationCapabilityShowcaseMod",
         "projectPath": "FormationCapabilityShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "rts_multiplayer_frontline",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/rts_multiplayer_frontline/RtsMultiplayerFrontlineMod",
+        "projectPath": "RtsMultiplayerFrontlineMod.csproj"
+      }
+    },
+    {
+      "name": "rts_multiplayer_frontline_networked",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/rts_multiplayer_frontline/RtsMultiplayerFrontlineNetworkedMod",
+        "projectPath": "RtsMultiplayerFrontlineNetworkedMod.csproj"
+      }
+    },
+    {
+      "name": "rts_multiplayer_frontline_three_process_uat",
+      "target": {
+        "type": "path",
+        "value": "mods/fixtures/rts_multiplayer_frontline_three_process/RtsMultiplayerFrontlineThreeProcessAcceptanceMod",
+        "projectPath": "RtsMultiplayerFrontlineThreeProcessAcceptanceMod.csproj"
       }
     },
     {
@@ -305,6 +376,22 @@
       }
     },
     {
+      "name": "capability_standard_mod_graph_op_extension_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardGraphOpExtensionShowcaseMod",
+        "projectPath": "CapabilityStandardGraphOpExtensionShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_provider",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardGraphOpProviderMod",
+        "projectPath": "CapabilityStandardGraphOpProviderMod.csproj"
+      }
+    },
+    {
       "name": "capability_standard_presenter_behavior_extension_showcase",
       "target": {
         "type": "path",
@@ -365,6 +452,14 @@
         "type": "path",
         "value": "mods/showcases/fog_of_war/FogOfWarShowcaseMod",
         "projectPath": "FogOfWarShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "instanced_batch_demo",
+      "target": {
+        "type": "path",
+        "value": "mods/fixtures/instanced_batch/InstancedBatchDemoMod",
+        "projectPath": "InstancedBatchDemoMod.csproj"
       }
     },
     {
@@ -439,6 +534,76 @@
       }
     },
     {
+      "name": "east_asia_playable_terrain",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/east_asia_playable_terrain/EastAsiaPlayableTerrainMod"
+      }
+    },
+    {
+      "name": "east_asia_visual_heightmap_runtime",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/east_asia_playable_terrain/EastAsiaVisualHeightmapRuntimeEntryMod"
+      }
+    },
+    {
+      "name": "east_asia_navmesh_debug",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/east_asia_navmesh_debug/EastAsiaNavMeshDebugMod"
+      }
+    },
+    {
+      "name": "field_east_asia_admin",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/field_east_asia_admin/FieldEastAsiaAdminMod"
+      }
+    },
+    {
+      "name": "east_asia_borders_land_sea",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/east_asia_borders_land_sea/EastAsiaBordersLandSeaDemoMod"
+      }
+    },
+    {
+      "name": "field_east_asia_country",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/field_east_asia_country/FieldEastAsiaCountryMod"
+      }
+    },
+    {
+      "name": "field_jing_yang_transit",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/field_jing_yang_transit/FieldJingYangTransitMod"
+      }
+    },
+    {
+      "name": "field_layer_table",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/field_layer_table/FieldLayerTableMod"
+      }
+    },
+    {
+      "name": "field_editor_paint",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/field_editor_paint/FieldEditorPaintMod"
+      }
+    },
+    {
+      "name": "field_hierarchy_query",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/field_hierarchy_query/FieldHierarchyQueryMod"
+      }
+    },
+    {
       "name": "capability_standard_ability_graph_sandbox",
       "target": {
         "type": "path",
@@ -476,6 +641,14 @@
         "type": "path",
         "value": "mods/showcases/capability_standard/CapabilityStandardGraphScoreShowcaseMod",
         "projectPath": "CapabilityStandardGraphScoreShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_formal_text",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardGraphFormalTextShowcaseMod",
+        "projectPath": "CapabilityStandardGraphFormalTextShowcaseMod.csproj"
       }
     },
     {
@@ -1466,7 +1639,7 @@
       "name": "engine_gallery",
       "target": {
         "type": "project",
-        "value": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Ludots.App.RaylibEngineGallery.csproj"
+        "value": "src/Apps/Raylib/Ludots.App.RaylibPlayer/Ludots.App.RaylibPlayer.csproj"
       }
     },
     {
@@ -1534,6 +1707,22 @@
         "type": "path",
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpDestroyPanelEntryMod",
         "projectPath": "CapabilityStandardGraphOpDestroyPanelEntryMod.csproj"
+      }
+    },
+    {
+      "name": "panel_entity_list",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_entity_list/PanelEntityListShowcaseMod",
+        "projectPath": "PanelEntityListShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "dual_seat_panels_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/dual_seat_panels/DualSeatPanelsShowcaseMod",
+        "projectPath": "DualSeatPanelsShowcaseMod.csproj"
       }
     },
     {
@@ -1609,14 +1798,6 @@
       "target": {
         "type": "path",
         "value": "mods/showcases/map_trigger_night_raid_override/NightRaidOverrideMod"
-      }
-    },
-    {
-      "name": "agent_bridge",
-      "target": {
-        "type": "path",
-        "value": "mods/AgentBridgeMod",
-        "projectPath": "AgentBridgeMod.csproj"
       }
     },
     {
@@ -1699,6 +1880,615 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpWeightedPickEntryMod",
         "projectPath": "CapabilityStandardGraphOpWeightedPickEntryMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadEntryPayloadEntity",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEntryPayloadEntityEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadEntryPayloadEntityEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadEntryPayloadFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEntryPayloadFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadEntryPayloadFloatEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadEntryPayloadInt",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEntryPayloadIntEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadEntryPayloadIntEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_DispatchMapEvent",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpDispatchMapEventEntryMod",
+        "projectPath": "CapabilityStandardGraphOpDispatchMapEventEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_InvokeGraph",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpInvokeGraphEntryMod",
+        "projectPath": "CapabilityStandardGraphOpInvokeGraphEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_StoreArgEntity",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpStoreArgEntityEntryMod",
+        "projectPath": "CapabilityStandardGraphOpStoreArgEntityEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_StoreArgFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpStoreArgFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpStoreArgFloatEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_StoreArgInt",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpStoreArgIntEntryMod",
+        "projectPath": "CapabilityStandardGraphOpStoreArgIntEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadPlacedEntity",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadPlacedEntityEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadPlacedEntityEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_AwaitCallback",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpAwaitCallbackEntryMod",
+        "projectPath": "CapabilityStandardGraphOpAwaitCallbackEntryMod.csproj"
+      }
+    },
+    {
+      "name": "narrative",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/narrative/NarrativeShowcaseMod"
+      }
+    },
+    {
+      "name": "dialogue_author_kit",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/dialogue_author_kit/DialogueAuthorKitShowcaseMod"
+      }
+    },
+    {
+      "name": "dialogue_author_kit_theme_ink",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/dialogue_author_kit_theme_ink/DialogueAuthorKitThemeInkMod"
+      }
+    },
+    {
+      "name": "narrative_theme_sanguo",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/narrative_theme_sanguo/NarrativeThemeSanguoMod"
+      }
+    },
+    {
+      "name": "narrative_theme_fantasy",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/narrative_theme_fantasy/NarrativeThemeFantasyMod"
+      }
+    },
+    {
+      "name": "narrative_theme_acnh",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/narrative_theme_acnh/NarrativeThemeAcnhMod"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadPlacedAnchor",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadPlacedAnchorEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadPlacedAnchorEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadPlacedRegion",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadPlacedRegionEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadPlacedRegionEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ConcatText",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpConcatTextEntryMod",
+        "projectPath": "CapabilityStandardGraphOpConcatTextEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ConstText",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpConstTextEntryMod",
+        "projectPath": "CapabilityStandardGraphOpConstTextEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_FloatToText",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpFloatToTextEntryMod",
+        "projectPath": "CapabilityStandardGraphOpFloatToTextEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_IntToText",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpIntToTextEntryMod",
+        "projectPath": "CapabilityStandardGraphOpIntToTextEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_SinkPresentationText",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSinkPresentationTextEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSinkPresentationTextEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadTextKey",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadTextKeyEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadTextKeyEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_StartDialogue",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpStartDialogueEntryMod",
+        "projectPath": "CapabilityStandardGraphOpStartDialogueEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_SetInteractionMode",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSetInteractionModeEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSetInteractionModeEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_SetPanelAudience",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSetPanelAudienceEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSetPanelAudienceEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ModifyAttributeSet",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpModifyAttributeSetEntryMod",
+        "projectPath": "CapabilityStandardGraphOpModifyAttributeSetEntryMod.csproj"
+      }
+    },
+    {
+      "name": "panel_effect_list",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_effect_list/PanelEffectListShowcaseMod",
+        "projectPath": null
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadEffectTiming",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEffectTimingEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadEffectTimingEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryCollectActiveEffects",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryCollectActiveEffectsEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryCollectActiveEffectsEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryCollectAbilityHolders",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryCollectAbilityHoldersEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryCollectAbilityHoldersEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryCollectAbilitySlots",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryCollectAbilitySlotsEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryCollectAbilitySlotsEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryCollectActiveTasks",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryCollectActiveTasksEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryCollectActiveTasksEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryCollectEffectTemplates",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryCollectEffectTemplatesEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryCollectEffectTemplatesEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryCollectInventoryItems",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryCollectInventoryItemsEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryCollectInventoryItemsEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryCollectItemDefinitions",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryCollectItemDefinitionsEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryCollectItemDefinitionsEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryCollectPresentTags",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryCollectPresentTagsEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryCollectPresentTagsEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryCollectProgressionNodes",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryCollectProgressionNodesEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryCollectProgressionNodesEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryCollectActiveActivities",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryCollectActiveActivitiesEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryCollectActiveActivitiesEntryMod.csproj"
+      }
+    },
+    {
+      "name": "panel_author_layout_kit",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_author_layout_kit/PanelAuthorLayoutKitShowcaseMod",
+        "projectPath": null
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadEffectStack",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEffectStackEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadEffectStackEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_OfferActivity",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpOfferActivityEntryMod",
+        "projectPath": "CapabilityStandardGraphOpOfferActivityEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_OfferTask",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpOfferTaskEntryMod",
+        "projectPath": "CapabilityStandardGraphOpOfferTaskEntryMod.csproj"
+      }
+    },
+    {
+      "name": "panel_effect_templates",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_collection_bags/entries/PanelEffectTemplatesEntryMod"
+      }
+    },
+    {
+      "name": "panel_roster_nested",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_collection_bags/entries/PanelRosterNestedEntryMod"
+      }
+    },
+    {
+      "name": "panel_present_tags",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_collection_bags/entries/PanelPresentTagsEntryMod"
+      }
+    },
+    {
+      "name": "panel_inventory_aggregate",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_collection_bags/entries/PanelInventoryAggregateEntryMod"
+      }
+    },
+    {
+      "name": "panel_item_definitions",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_collection_bags/entries/PanelItemDefinitionsEntryMod"
+      }
+    },
+    {
+      "name": "panel_active_tasks",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_collection_bags/entries/PanelActiveTasksEntryMod"
+      }
+    },
+    {
+      "name": "panel_active_activities",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_collection_bags/entries/PanelActiveActivitiesEntryMod"
+      }
+    },
+    {
+      "name": "panel_ability_holders",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_collection_bags/entries/PanelAbilityHoldersEntryMod"
+      }
+    },
+    {
+      "name": "panel_progression_nodes",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_collection_bags/entries/PanelProgressionNodesEntryMod"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryCollectActiveDialogueChoices",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryCollectActiveDialogueChoicesEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryCollectActiveDialogueChoicesEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_PointToDirection",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpPointToDirectionEntryMod",
+        "projectPath": "CapabilityStandardGraphOpPointToDirectionEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ScreenPointToEntity",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpScreenPointToEntityEntryMod",
+        "projectPath": "CapabilityStandardGraphOpScreenPointToEntityEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ScreenPointToGround",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpScreenPointToGroundEntryMod",
+        "projectPath": "CapabilityStandardGraphOpScreenPointToGroundEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ScreenRegionToEntities",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpScreenRegionToEntitiesEntryMod",
+        "projectPath": "CapabilityStandardGraphOpScreenRegionToEntitiesEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_StickToDirection",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpStickToDirectionEntryMod",
+        "projectPath": "CapabilityStandardGraphOpStickToDirectionEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ActivateContext",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpActivateContextEntryMod",
+        "projectPath": "CapabilityStandardGraphOpActivateContextEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_DeactivateContext",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpDeactivateContextEntryMod",
+        "projectPath": "CapabilityStandardGraphOpDeactivateContextEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_WriteCollection",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpWriteCollectionEntryMod",
+        "projectPath": "CapabilityStandardGraphOpWriteCollectionEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadPointerScreenX",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadPointerScreenXEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadPointerScreenXEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadPointerScreenY",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadPointerScreenYEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadPointerScreenYEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_BindQueryCollection",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpBindQueryCollectionEntryMod",
+        "projectPath": "CapabilityStandardGraphOpBindQueryCollectionEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryScreenRegionCollection",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryScreenRegionCollectionEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryScreenRegionCollectionEntryMod.csproj"
+      }
+    },
+    {
+      "name": "region_volume_textbook",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/region_volume_textbook/RegionVolumeTextbookMod",
+        "projectPath": "RegionVolumeTextbookMod.csproj"
+      }
+    },
+    {
+      "name": "contact_sensor_textbook",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/contact_sensor_textbook/ContactSensorTextbookMod",
+        "projectPath": "ContactSensorTextbookMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryFilterControllable",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryFilterControllableEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryFilterControllableEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_CompleteActiveOrder",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpCompleteActiveOrderEntryMod",
+        "projectPath": "CapabilityStandardGraphOpCompleteActiveOrderEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_FloatToInt",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpFloatToIntEntryMod",
+        "projectPath": "CapabilityStandardGraphOpFloatToIntEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_IntToFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpIntToFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpIntToFloatEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadEntityPosValid",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEntityPosValidEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadEntityPosValidEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadEntityPosX",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEntityPosXEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadEntityPosXEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadEntityPosY",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEntityPosYEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadEntityPosYEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadOrderTypeId",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadOrderTypeIdEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadOrderTypeIdEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_SqrtFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSqrtFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSqrtFloatEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_SubmitAssignedOrder",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSubmitAssignedOrderEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSubmitAssignedOrderEntryMod.csproj"
+      }
     }
   ],
   "adapters": {
@@ -1715,6 +2505,15 @@
       "processSharedAssemblyNamePrefixes": [
         "CefSharp"
       ]
+    },
+    {
+      "id": "ultralight",
+      "projectPath": "src/Libraries/Ludots.UI.Browser.Ultralight/Ludots.UI.Browser.Ultralight.csproj",
+      "packageRootPath": "BrowserRuntime/ultralight",
+      "assemblyPath": "BrowserRuntime/ultralight/Ludots.UI.Browser.Ultralight.dll",
+      "hostTypeName": "Ludots.UI.Browser.Ultralight.UltralightBrowserRuntimeHost",
+      "useCollectibleLoadContext": true,
+      "processSharedAssemblyNamePrefixes": []
     }
   ],
   "projectHints": []

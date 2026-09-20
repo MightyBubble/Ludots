@@ -42,6 +42,8 @@ namespace Ludots.Core.Presentation.Assets
 
         public int GetId(string key) => _ids.GetId(key);
 
+        public int GetOrRegisterId(string key) => _ids.Register(key);
+
         public string GetName(int id) => _ids.GetName(id);
 
         public bool TryGetDescriptor(int meshAssetId, out MeshAssetDescriptor descriptor)

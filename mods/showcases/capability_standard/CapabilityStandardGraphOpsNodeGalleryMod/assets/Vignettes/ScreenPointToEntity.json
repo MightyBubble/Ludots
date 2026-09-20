@@ -1,0 +1,13 @@
+{
+  "op": "ScreenPointToEntity",
+  "driver": "aimsource",
+  "title": "光标点到谁",
+  "beat": "光标压在人群一侧，点名线牵住被点到的那人。",
+  "detailTemplate": "点名线落在{name}身上。",
+  "assertDetailContains": [
+    "点名线"
+  ],
+  "featuredNodeId": "pick",
+  "graphKind": "Query",
+  "field": "aim"
+}

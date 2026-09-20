@@ -3,7 +3,7 @@
 木桩头顶紫色标记先挂着，白弧扫过，标记碎掉消失，血条不动。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_RemoveEffectTemplate/poster.png" src="artifacts/evidence/capability_standard_graph_op_RemoveEffectTemplate/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_RemoveEffectTemplate/play.mp4`。
+你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_RemoveEffectTemplate/play.mp4。
 </video>
 
 ## 作者写法

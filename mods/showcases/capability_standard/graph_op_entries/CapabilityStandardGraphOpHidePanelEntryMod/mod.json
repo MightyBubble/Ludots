@@ -2,7 +2,7 @@
   "name": "CapabilityStandardGraphOpHidePanelEntryMod",
   "version": "1.0.0",
   "description": "Launcher entry for GraphNodeOp HidePanel player gallery.",
-  "main": "bin/net8.0/CapabilityStandardGraphOpHidePanelEntryMod.dll",
+  "main": "bin/net9.0/CapabilityStandardGraphOpHidePanelEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"

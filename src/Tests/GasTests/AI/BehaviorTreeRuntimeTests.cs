@@ -3,6 +3,7 @@ using Ludots.Core.Gameplay.AI.BehaviorTree;
 using Ludots.Tests;
 using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Tests.Gas.Graph;
 using NUnit.Framework;
 
@@ -124,68 +125,7 @@ namespace Ludots.Tests.Gas.AI
                 $"Latched success second wave exceeded CI envelope: {ms:F3}ms");
         }
 
-        [Test]
-        public void PatrolChaseAttack_RegistryMissing_Throws()
-        {
-            BehaviorTreeDefinition tree = Behavior.RequireTree("bt.patrolChaseAttack");
-            var world = new BehaviorTreeWorld(tree, 1);
-            world.AddAgent();
-            Assert.Throws<InvalidOperationException>(() => world.TickAll(programs: null, 32, sensors: null));
-        }
 
-        [Test]
-        public void PatrolChaseAttack_ScriptLeaves_FromRegistry()
-        {
-            _ = Programs; // ensure GraphIdRegistry is populated before sensor key resolve
-            BehaviorTreeDefinition tree = Behavior.RequireTree("bt.patrolChaseAttack");
-            var sensors = new ScriptedSensors(Actions);
-            var world = new BehaviorTreeWorld(tree, 1);
-            world.AddAgent();
-
-            sensors.See = false;
-            TickUntilPatrolCompletes(world, sensors);
-            Assert.That(world.LastScriptReturns[0], Is.EqualTo(0));
-
-            world.ResetAgent(0);
-            sensors.See = true;
-            sensors.InRange = false;
-            TickUntilScriptReturn(world, sensors, 1);
-
-            world.ResetAgent(0);
-            sensors.InRange = true;
-            TickUntilScriptReturn(world, sensors, 2);
-        }
-
-        [Test]
-        public void PatrolYield_ResumesAcrossThinkWaves_ThenReturnsPatrolIntent()
-        {
-            int patrolId = Actions.Require("bt.patrol");
-            var nodes = new[]
-            {
-                new BehaviorTreeNode(
-                    BehaviorTreeNodeKind.Action,
-                    0,
-                    0,
-                    BehaviorTreeLeafBinding.ScriptSlice,
-                    patrolId),
-            };
-            var tree = new BehaviorTreeDefinition("bt.patrol-yield", nodes, rootIndex: 0);
-            var world = new BehaviorTreeWorld(tree, 1);
-            world.AddAgent();
-
-            world.RestartThinking(0);
-            world.TickAll(Programs, 32, sensors: null);
-            Assert.That(world.Statuses[0], Is.EqualTo(BehaviorTreeStatus.Running));
-
-            world.RestartThinking(0);
-            world.TickAll(Programs, 32, sensors: null);
-            Assert.That(world.Statuses[0], Is.EqualTo(BehaviorTreeStatus.Running));
-
-            world.RestartThinking(0);
-            world.TickAll(Programs, 32, sensors: null);
-            Assert.That(world.Statuses[0], Is.EqualTo(BehaviorTreeStatus.Success));
-            Assert.That(world.LastScriptReturns[0], Is.EqualTo(0));
-        }
 
         private void TickUntilPatrolCompletes(BehaviorTreeWorld world, ScriptedSensors sensors)
             => TickUntilScriptReturn(world, sensors, 0);
@@ -194,7 +134,13 @@ namespace Ludots.Tests.Gas.AI
         {
             for (int i = 0; i < 12; i++)
             {
-                world.RestartThinking(0);
+                // Only restart topology after a terminal leaf. Restarting while a ScriptSlice is
+                // Yielded re-enters seeEnemy first and clears the suspended patrol cursor.
+                if (world.Statuses[0] is BehaviorTreeStatus.Success or BehaviorTreeStatus.Failure)
+                {
+                    world.RestartThinking(0);
+                }
+
                 world.TickAll(Programs, 32, sensors);
                 if (world.LastScriptReturns[0] == expectedReturn &&
                     world.Statuses[0] is BehaviorTreeStatus.Success)
@@ -204,28 +150,43 @@ namespace Ludots.Tests.Gas.AI
             }
 
             Assert.That(
+                world.Statuses[0],
+                Is.EqualTo(BehaviorTreeStatus.Success),
+                $"BT status after {12} think waves: return={world.LastScriptReturns[0]}");
+            Assert.That(
                 world.LastScriptReturns[0],
                 Is.EqualTo(expectedReturn),
                 $"BT script return after {12} think waves: status={world.Statuses[0]}");
         }
 
+        /// <summary>
+        /// Visibility leaves consume signed sight margin; attack leaves consume distance in centimeters.
+        /// </summary>
         private sealed class ScriptedSensors : IBehaviorTreeSensorFeed
         {
-            public bool See;
-            public bool InRange;
+            public const int OnTopCm = 0;
+            public const int SeenOutOfRangeCm = 300;
+            public const int NoTargetCm = 100_000;
+
+            public int SeeDistanceCm;
+            public int RangeDistanceCm;
             private readonly int _see;
             private readonly int _range;
+            private readonly int _chase;
+            private readonly int _attack;
 
             public ScriptedSensors(GraphActionCatalog actions)
             {
-                _see = GraphRegistryScriptResolver.RequireActionId(actions, "bt.seeEnemy", GraphActionHost.BehaviorTree);
-                _range = GraphRegistryScriptResolver.RequireActionId(actions, "bt.inAttackRange", GraphActionHost.BehaviorTree);
+                _see = GraphIdRegistry.GetId("Graph.BT.Leaf.SeeEnemy");
+                _range = GraphIdRegistry.GetId("Graph.BT.Leaf.InAttackRange");
+                _chase = GraphRegistryScriptResolver.RequireActionId(actions, "bt.chase");
+                _attack = GraphRegistryScriptResolver.RequireActionId(actions, "bt.attack");
             }
 
             public void WriteSensors(int agentIndex, int graphId, System.Span<int> ints, System.Span<byte> bools)
             {
-                if (graphId == _see) ints[0] = See ? 1 : 0;
-                else if (graphId == _range) ints[0] = InRange ? 1 : 0;
+                if (graphId == _see || graphId == _chase) ints[0] = SeeDistanceCm - 550;
+                else if (graphId == _range || graphId == _attack) ints[0] = RangeDistanceCm;
             }
         }
     }

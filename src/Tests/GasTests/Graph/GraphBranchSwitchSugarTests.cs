@@ -198,6 +198,216 @@ namespace Ludots.Tests.Gas.Graph
                 d.Code == GraphDiagnosticCodes.MissingControlEdge && d.NodeId == "break"));
         }
 
+        private static Ludots.Core.Scripting.EnumCatalog CombatStateCatalog()
+        {
+            var builder = new Ludots.Core.Scripting.EnumCatalog.Builder();
+            builder.AddOrAppend(
+                (System.Text.Json.Nodes.JsonObject)System.Text.Json.Nodes.JsonNode.Parse(
+                    @"{ ""id"": ""Mod.CombatState"", ""members"": [""Idle"", ""Combat"", ""Retreat""] }")!,
+                "test enum");
+            return builder.ToCatalog();
+        }
+
+        private static GraphControlFlowDocument CreateSwitchOnEnumGraph(int selectorValue, bool bindEnum)
+        {
+            GraphControlFlowDocument graph = CreateSwitchIntGraph(selectorValue);
+            GraphControlFlowNode sw = graph.Nodes.First(n => n.Id == "sw");
+            if (bindEnum)
+            {
+                sw.EnumType = "Mod.CombatState";
+                graph.ControlEdges.RemoveAll(e => e.From == "sw" && e.FromPort.StartsWith("case:", StringComparison.Ordinal));
+                graph.ControlEdges.AddRange(new List<GraphControlFlowEdge>
+                {
+                    new("sw", "case:Idle", "ret0"),
+                    new("sw", "case:Combat", "ret1"),
+                    new("sw", "case:Retreat", "ret2"),
+                });
+            }
+
+            return graph;
+        }
+
+        [Test]
+        public void SwitchOnEnum_CompilesIdenticalToHandwrittenSwitchInt()
+        {
+            GraphControlFlowDocument enumGraph = CreateSwitchOnEnumGraph(selectorValue: 1, bindEnum: true);
+            GraphControlFlowDocument literalGraph = CreateSwitchOnEnumGraph(selectorValue: 1, bindEnum: false);
+            Ludots.Core.Scripting.EnumCatalog enums = CombatStateCatalog();
+
+            GraphControlFlowCompileResult enumCompiled = GraphControlFlowCompiler.Compile(enumGraph, null, enums);
+            GraphControlFlowCompileResult literalCompiled = GraphControlFlowCompiler.Compile(literalGraph, null, enums);
+
+            Assert.That(enumCompiled.Succeeded, Is.True, GraphScriptTestGraphs.FormatDiagnostics(enumCompiled.Diagnostics));
+            Assert.That(literalCompiled.Succeeded, Is.True, GraphScriptTestGraphs.FormatDiagnostics(literalCompiled.Diagnostics));
+            Assert.That(enumCompiled.Program.Length, Is.EqualTo(literalCompiled.Program.Length));
+            for (int i = 0; i < enumCompiled.Program.Length; i++)
+            {
+                GraphInstruction a = enumCompiled.Program[i];
+                GraphInstruction b = literalCompiled.Program[i];
+                Assert.That(
+                    (a.Op, a.Dst, a.A, a.B, a.C, a.Flags, a.Imm, a.ImmF),
+                    Is.EqualTo((b.Op, b.Dst, b.A, b.B, b.C, b.Flags, b.Imm, b.ImmF)),
+                    $"instruction {i} must match between case:Combat and case:1 lowering");
+            }
+
+            // Runtime behavior is the same program: selector 1 = Combat hits the case:1 arm.
+            Assert.That(ExecuteHaltReturn(enumCompiled.Program), Is.EqualTo(101));
+
+            // Metadata keeps the authored member spelling for reverse lookup (diagnostics channel).
+            string[] enumSwitchPorts = Enumerable.Range(0, enumCompiled.Program.Length)
+                .Where(i => enumCompiled.SourceMap.TryGetSource(i, out GraphInstructionSource src) && src.NodeId == "sw")
+                .Select(i => enumCompiled.SourceMap.Sources[i].ControlPort)
+                .ToArray();
+            Assert.That(enumSwitchPorts, Does.Contain("case:Combat"));
+            Assert.That(enumSwitchPorts, Does.Contain("case:Idle"));
+            Assert.That(enumSwitchPorts, Does.Contain("case:Retreat"));
+            Assert.That(enumSwitchPorts, Does.Contain(GraphControlFlowPorts.Default));
+        }
+
+        [Test]
+        public void SwitchOnEnum_UnregisteredEnumType_FailsClosed()
+        {
+            GraphControlFlowDocument graph = CreateSwitchOnEnumGraph(selectorValue: 1, bindEnum: true);
+            graph.Nodes.First(n => n.Id == "sw").EnumType = "Mod.NoSuchEnum";
+
+            GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(graph, null, CombatStateCatalog());
+            Assert.That(compiled.Succeeded, Is.False);
+            Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.Code == GraphDiagnosticCodes.TypeMismatch &&
+                d.NodeId == "sw" &&
+                d.Message.Contains("Mod.NoSuchEnum", StringComparison.Ordinal)));
+        }
+
+        [Test]
+        public void SwitchOnEnum_WithoutCatalog_FailsClosed()
+        {
+            GraphControlFlowDocument graph = CreateSwitchOnEnumGraph(selectorValue: 1, bindEnum: true);
+
+            GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(graph, null, null);
+            Assert.That(compiled.Succeeded, Is.False, "authored enumType with no catalog in scope must fail closed");
+            Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.NodeId == "sw" && d.Message.Contains("not registered", StringComparison.Ordinal)));
+        }
+
+        [Test]
+        public void SwitchOnEnum_CaseNameNotAMember_FailsClosed()
+        {
+            GraphControlFlowDocument graph = CreateSwitchOnEnumGraph(selectorValue: 1, bindEnum: true);
+            GraphControlFlowEdge bad = graph.ControlEdges.First(e => e.From == "sw" && e.FromPort == "case:Retreat");
+            bad.FromPort = "case:Flank";
+
+            GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(graph, null, CombatStateCatalog());
+            Assert.That(compiled.Succeeded, Is.False);
+            Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.NodeId == "sw" &&
+                d.Message.Contains("'Flank'", StringComparison.Ordinal) &&
+                d.Message.Contains("Mod.CombatState", StringComparison.Ordinal)));
+        }
+
+        [Test]
+        public void SwitchOnEnum_RawIntCasePort_FailsClosed()
+        {
+            GraphControlFlowDocument graph = CreateSwitchOnEnumGraph(selectorValue: 1, bindEnum: true);
+            GraphControlFlowEdge bad = graph.ControlEdges.First(e => e.From == "sw" && e.FromPort == "case:Retreat");
+            bad.FromPort = "case:2";
+
+            GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(graph, null, CombatStateCatalog());
+            Assert.That(compiled.Succeeded, Is.False);
+            Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.NodeId == "sw" &&
+                d.Message.Contains("must name members", StringComparison.Ordinal)));
+        }
+
+        private static GraphControlFlowDocument CreateSelectByEnumGraph(int selectorValue, bool withDefault)
+        {
+            var graph = new GraphControlFlowDocument
+            {
+                Id = "tests.script.select-by-enum",
+                Kind = "Script",
+                Entry = "sel",
+                Nodes = new List<GraphControlFlowNode>
+                {
+                    new() { Id = "sel", Op = nameof(GraphNodeOp.ConstInt), IntValue = selectorValue },
+                    new() { Id = "redValue", Op = nameof(GraphNodeOp.ConstInt), IntValue = 100 },
+                    new() { Id = "blueValue", Op = nameof(GraphNodeOp.ConstInt), IntValue = 200 },
+                    new() { Id = "defValue", Op = nameof(GraphNodeOp.ConstInt), IntValue = 7 },
+                    new() { Id = "pick", Op = GraphAuthoringSugar.SelectByEnum, EnumType = "Mod.CombatState" },
+                    new() { Id = "halt", Op = nameof(GraphNodeOp.HaltReturnInt) }
+                },
+                ControlEdges = new List<GraphControlFlowEdge>
+                {
+                    new("sel", GraphControlFlowPorts.Next, "redValue"),
+                    new("redValue", GraphControlFlowPorts.Next, "blueValue"),
+                    new("blueValue", GraphControlFlowPorts.Next, "defValue"),
+                    new("defValue", GraphControlFlowPorts.Next, "pick"),
+                    new("pick", GraphControlFlowPorts.Next, "halt")
+                },
+                ValueEdges = new List<GraphControlFlowValueEdge>
+                {
+                    new("sel", GraphControlFlowPorts.Value, "pick", GraphControlFlowPorts.Selector),
+                    new("redValue", GraphControlFlowPorts.Value, "pick", "case:Idle"),
+                    new("blueValue", GraphControlFlowPorts.Value, "pick", "case:Combat"),
+                    new("pick", GraphControlFlowPorts.Value, "halt", GraphControlFlowPorts.Value)
+                }
+            };
+
+            if (withDefault)
+            {
+                graph.ValueEdges.Add(new GraphControlFlowValueEdge("defValue", GraphControlFlowPorts.Value, "pick", GraphControlFlowPorts.Default));
+            }
+
+            return graph;
+        }
+
+        [Test]
+        public void SelectByEnum_MatchingMember_PicksCandidateValue()
+        {
+            GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(
+                CreateSelectByEnumGraph(selectorValue: 1, withDefault: true), null, CombatStateCatalog());
+            Assert.That(compiled.Succeeded, Is.True, GraphScriptTestGraphs.FormatDiagnostics(compiled.Diagnostics));
+            Assert.That(compiled.Program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.MoveInt));
+            Assert.That(compiled.Program.Select(i => (GraphNodeOp)i.Op), Does.Not.Contains(GraphNodeOp.SelectEntity),
+                "no SelectInt executor exists; the chain is ConstInt/CompareEqInt/JumpIfFalse/MoveInt/Jump only");
+
+            Assert.That(ExecuteHaltReturn(compiled.Program), Is.EqualTo(200), "team=Combat picks the case:Combat candidate");
+        }
+
+        [Test]
+        public void SelectByEnum_NoCandidateMatches_FallsToDefault()
+        {
+            GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(
+                CreateSelectByEnumGraph(selectorValue: 2, withDefault: true), null, CombatStateCatalog());
+            Assert.That(compiled.Succeeded, Is.True, GraphScriptTestGraphs.FormatDiagnostics(compiled.Diagnostics));
+
+            Assert.That(ExecuteHaltReturn(compiled.Program), Is.EqualTo(7), "selector 2 (Retreat, unbound) falls to default");
+        }
+
+        [Test]
+        public void SelectByEnum_WithoutEnumType_FailsClosed()
+        {
+            GraphControlFlowDocument graph = CreateSelectByEnumGraph(selectorValue: 1, withDefault: true);
+            graph.Nodes.First(n => n.Id == "pick").EnumType = null;
+
+            GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(graph, null, CombatStateCatalog());
+            Assert.That(compiled.Succeeded, Is.False);
+            Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.NodeId == "pick" && d.Message.Contains("enumType", StringComparison.Ordinal)));
+        }
+
+        [Test]
+        public void SelectByEnum_QueryKind_RejectsSugar()
+        {
+            GraphControlFlowDocument graph = CreateSelectByEnumGraph(selectorValue: 1, withDefault: true);
+            graph.Kind = "Query";
+
+            GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(graph, null, CombatStateCatalog());
+            Assert.That(compiled.Succeeded, Is.False);
+            Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.Code == GraphDiagnosticCodes.UnknownNodeOp &&
+                d.NodeId == "pick" &&
+                d.Message.Contains(GraphAuthoringSugar.SelectByEnum, StringComparison.Ordinal)));
+        }
+
         private static GraphControlFlowDocument CreateBranchBoolGraph(int left, int right)
         {
             return new GraphControlFlowDocument

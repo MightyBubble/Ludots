@@ -65,6 +65,7 @@ namespace Ludots.Core.Gameplay.Spawning
         private readonly RelationshipRuntime? _relationships;
         private readonly int _memberOfTypeId;
         private readonly EntityTriggerGraphMounts? _entityTriggerGraphMounts;
+        private readonly Ludots.Core.Input.Interaction.InteractionContextProfileRegistry? _initialInteractionContexts;
 
         private readonly struct SpawnRelationshipPlan
         {
@@ -106,7 +107,8 @@ namespace Ludots.Core.Gameplay.Spawning
             TeamEntityLookup? teamLookup = null,
             RelationshipRuntime? relationships = null,
             int memberOfTypeId = -1,
-            EntityTriggerGraphMounts? entityTriggerGraphMounts = null)
+            EntityTriggerGraphMounts? entityTriggerGraphMounts = null,
+            Ludots.Core.Input.Interaction.InteractionContextProfileRegistry? initialInteractionContexts = null)
             : base(world)
         {
             _requests = requests ?? throw new ArgumentNullException(nameof(requests));
@@ -137,6 +139,7 @@ namespace Ludots.Core.Gameplay.Spawning
             _relationships = relationships;
             _memberOfTypeId = memberOfTypeId;
             _entityTriggerGraphMounts = entityTriggerGraphMounts;
+            _initialInteractionContexts = initialInteractionContexts;
         }
 
         public override void Update(in float dt)
@@ -149,41 +152,45 @@ namespace Ludots.Core.Gameplay.Spawning
                     TryGetTemplate(peek.TemplateId, out EntityTemplate template) &&
                     _templateBatchSpawner.IsBatchCompatible(peek.TemplateId, template))
                 {
-                    if (!TryCopyTemplateBatch(peek.TemplateId, out int batchCount))
+                    if (TryCopyTemplateBatch(peek.TemplateId, out int batchCount) && batchCount > 0)
                     {
-                        break;
-                    }
+                        if (batchCount > 1)
+                        {
+                            PreflightTemplateBatchBeforeDrain(peek.TemplateId, template, batchCount);
+                            if (!TryDrainCopiedTemplateBatch(peek.TemplateId, batchCount))
+                            {
+                                break;
+                            }
 
-                    if (batchCount > 1)
-                    {
-                        PreflightTemplateBatchBeforeDrain(peek.TemplateId, template, batchCount);
+                            if (!TrySpawnTemplateBatch(peek.TemplateId, template, batchCount))
+                            {
+                                throw new InvalidOperationException(
+                                    $"Runtime template batch spawn failed after template '{peek.TemplateId}' was classified as batch-compatible. " +
+                                    "The production path must stay on the validated bulk lane.");
+                            }
+
+                            continue;
+                        }
+
+                        SpawnRelationshipPlan singleRelationshipPlan = PreflightSingleSpawnBeforeDrain(in peek);
                         if (!TryDrainCopiedTemplateBatch(peek.TemplateId, batchCount))
                         {
                             break;
                         }
 
-                        if (!TrySpawnTemplateBatch(peek.TemplateId, template, batchCount))
-                        {
-                            throw new InvalidOperationException(
-                                $"Runtime template batch spawn failed after template '{peek.TemplateId}' was classified as batch-compatible. " +
-                                "The production path must stay on the validated bulk lane.");
-                        }
-
+                        var singleRequest = _batchRequests[0];
+                        var spawnedSingle = SpawnTemplate(singleRequest, in singleRelationshipPlan);
+                        PublishSpawnReceipt(in singleRequest, spawnedSingle);
+                        PublishOnSpawnEffect(in singleRequest, spawnedSingle);
+                        MountTemplateTriggerGraphs(spawnedSingle, peek.TemplateId, template);
+                        MountTemplateInitialInteractionContext(spawnedSingle, peek.TemplateId, template);
                         continue;
                     }
 
-                    SpawnRelationshipPlan singleRelationshipPlan = PreflightSingleSpawnBeforeDrain(in peek);
-                    if (!TryDrainCopiedTemplateBatch(peek.TemplateId, batchCount))
-                    {
-                        break;
-                    }
-
-                    var singleRequest = _batchRequests[0];
-                    var spawnedSingle = SpawnTemplate(singleRequest, in singleRelationshipPlan);
-                    PublishSpawnReceipt(in singleRequest, spawnedSingle);
-                    PublishOnSpawnEffect(in singleRequest, spawnedSingle);
-                    MountTemplateTriggerGraphs(spawnedSingle, peek.TemplateId, template);
-                    continue;
+                    // 队头的模板请求虽 "batch-compatible"，但它是带父链接/attachment 的子件
+                    // （Parent 或 HasAttachedLocalPose 已设置），进不了批（IsTemplateBatchMember 为 false），
+                    // TryCopyTemplateBatch 于是返回 0。此时必须落到单实体 lane，否则 break 会让
+                    // 队列头永远卡死、并连带饿死排在其后的所有 spawn。S2-1 / S2-14 命中的正是这里。
                 }
 
                 SpawnRelationshipPlan relationshipPlan = PreflightSingleSpawnBeforeDrain(in peek);
@@ -206,6 +213,7 @@ namespace Ludots.Core.Gameplay.Spawning
                     TryGetTemplate(request.TemplateId, out EntityTemplate spawnedTemplate))
                 {
                     MountTemplateTriggerGraphs(spawned, request.TemplateId, spawnedTemplate);
+                    MountTemplateInitialInteractionContext(spawned, request.TemplateId, spawnedTemplate);
                 }
             }
         }
@@ -218,6 +226,24 @@ namespace Ludots.Core.Gameplay.Spawning
             }
 
             _entityTriggerGraphMounts.MountRuntimeSpawned(spawned, templateId, template.TriggerGraphs);
+        }
+
+        private void MountTemplateInitialInteractionContext(Entity spawned, string templateId, EntityTemplate template)
+        {
+            if (string.IsNullOrWhiteSpace(template.InitialInteractionContext))
+            {
+                return;
+            }
+
+            Ludots.Core.Input.Interaction.InteractionContextProfileRegistry? profiles = _initialInteractionContexts
+                ?? throw new InvalidOperationException(
+                    $"Entity template '{templateId}' declares initialInteractionContext '{template.InitialInteractionContext}' but the spawn system has no interaction context profile registry.");
+            Ludots.Core.Input.Interaction.TemplateInteractionContextMounting.MountInitialContext(
+                World,
+                profiles,
+                spawned,
+                templateId,
+                template.InitialInteractionContext);
         }
 
         private Entity SpawnUnitType(in RuntimeEntitySpawnRequest request, in SpawnRelationshipPlan relationshipPlan)
@@ -295,11 +321,15 @@ namespace Ludots.Core.Gameplay.Spawning
         /// 模板 children 预置组合：以刚落位的父实体为原点，把每个 child 作为一个普通
         /// Template spawn 请求（Parent + 派生世界位姿 + overrides 补丁）enqueue 进同一队列——
         /// 复用既有 spawn 管线，不建第二条物化路径。本 Update 的 drain 循环会继续消费它们。
+        /// 节点自身的内联 children 随请求携带，待该子实体落地后由本方法再次展开；
+        /// 被引用模板自身的 children 亦在此展开。装载期已验证引用可解析且 children 图无环。
         /// </summary>
         private void EnqueueTemplateChildren(in RuntimeEntitySpawnRequest request, Entity parent)
         {
-            if (!TryGetTemplate(request.TemplateId, out EntityTemplate template) ||
-                template.Children is not { Count: > 0 })
+            EntityTemplate? template = TryGetTemplate(request.TemplateId, out EntityTemplate resolved) ? resolved : null;
+            List<EntityTemplateChild>? templateChildren = template?.Children is { Count: > 0 } ? template.Children : null;
+            List<EntityTemplateChild>? inlineChildren = request.InlineChildren is { Count: > 0 } ? request.InlineChildren : null;
+            if (templateChildren == null && inlineChildren == null)
             {
                 return;
             }
@@ -310,15 +340,176 @@ namespace Ludots.Core.Gameplay.Spawning
                     $"SPAWN.RUNTIME.ERR.TemplateChildrenParentPositionMissing: template='{request.TemplateId}', parent={parent.Id}.");
             }
 
+            // 可寻址路径 = 实例根 + localId 链；无实例根的子树会落进根名字空间与兄弟撞名。
+            // 实例根须"非空、首尾无空白"（与装载 lane MapLoadEntityIndex.Register 的 trim 约束同口径）。
+            if (EntityTemplate.HasAddressableDescendant(templateChildren, _templateRegistry) ||
+                EntityTemplate.HasAddressableDescendant(inlineChildren, _templateRegistry))
+            {
+                if (string.IsNullOrWhiteSpace(request.InstanceId))
+                {
+                    throw new InvalidOperationException(
+                        $"SPAWN.RUNTIME.ERR.AddressableDescendantMissingInstanceId: template='{request.TemplateId}', " +
+                        $"path='{request.AddressablePath ?? "<root>"}'——带可寻址（localId）后代的实体必须显式声明非空、首尾无空白的 InstanceId 作为全局命名空间根。");
+                }
+
+                if (!string.Equals(request.InstanceId, request.InstanceId.Trim(), StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"SPAWN.RUNTIME.ERR.AddressableInstanceIdUntrimmed: template='{request.TemplateId}', " +
+                        $"path='{request.AddressablePath ?? "<root>"}'——InstanceId 首尾不能有空白（默认是全局命名空间根，须可寻址路径的首段合法）。");
+                }
+            }
+
             Fix64Vec2 parentPosition = World.Get<WorldPositionCm>(parent).Value;
             float parentFacing = World.Has<FacingDirection>(parent) ? World.Get<FacingDirection>(parent).AngleRad : 0f;
-            for (int i = 0; i < template.Children.Count; i++)
+
+            // 运行时不能把"装载期已验证无环"当唯一防线：直接装配的 registry
+            // （mod / 工具 / 运行时 harness）不经 MapLoader.LoadTemplates 的图校验。
+            // 在此对可达模板 children 图做有向环检测，命中即 fail-fast，而不是让 spawn
+            // 队列无限增长到 TemplateChildrenQueueFull 再崩。
+            EnsureRuntimeChildrenAcyclic(request.TemplateId, templateChildren, inlineChildren, _templateRegistry);
+
+            // 展开序 = 声明序：先被引用模板自身的 children，再本节点的内联 children（对齐 MapLoader）。
+            if (templateChildren != null)
             {
-                EntityTemplateChild child = template.Children[i];
+                EnqueueChildNodes(templateChildren, in request, parent, parentPosition, parentFacing);
+            }
+
+            if (inlineChildren != null)
+            {
+                EnqueueChildNodes(inlineChildren, in request, parent, parentPosition, parentFacing);
+            }
+        }
+
+        /// <summary>
+        /// 对可引用的模板 children 有向图做环检测。被引用子模板可再引用其它模板（含其祖先），
+        /// 直接装配的 registry 不保证图无环；在此收到环就 fail-fast，消息指明循环路径。
+        /// 判定只沿模板引用边走（child.Template → 目标模板自己的 children）；内联 children 的
+        /// 模板引用同样要查（S3-c），否则经由内联引用的环要到下一步 drain 才现形。
+        /// </summary>
+        private void EnsureRuntimeChildrenAcyclic(
+            string rootTemplateId,
+            List<EntityTemplateChild>? rootChildren,
+            List<EntityTemplateChild>? inlineChildren,
+            DataRegistry<EntityTemplate> registry)
+        {
+            if (rootChildren is not { Count: > 0 } && inlineChildren is not { Count: > 0 })
+            {
+                return;
+            }
+
+            var visiting = new HashSet<string>(StringComparer.Ordinal);
+            if (rootChildren is { Count: > 0 })
+            {
+                DetectTemplateChildCycle(
+                    rootTemplateId,
+                    rootChildren,
+                    registry,
+                    visiting,
+                    $"template '{rootTemplateId}'");
+            }
+
+            if (inlineChildren is { Count: > 0 })
+            {
+                DetectTemplateChildCycle(
+                    rootTemplateId,
+                    inlineChildren,
+                    registry,
+                    visiting,
+                    $"template '{rootTemplateId}' (inline children)");
+            }
+        }
+
+        private void DetectTemplateChildCycle(
+            string templateId,
+            List<EntityTemplateChild>? children,
+            DataRegistry<EntityTemplate> registry,
+            HashSet<string> visiting,
+            string chain)
+        {
+            if (!visiting.Add(templateId))
+            {
+                throw new InvalidOperationException(
+                    $"SPAWN.RUNTIME.ERR.TemplateChildrenCycle: {chain} -> {templateId}——模板 children 引用图存在环；" +
+                    "直接装配的 registry 必须fail-fast，不能等到队列溢出。");
+            }
+
+            WalkChildNodes(templateId, children, registry, visiting, chain);
+            visiting.Remove(templateId);
+        }
+
+        /// <summary>不加键的内部遍历：模板展开边走 DetectTemplateChildCycle（加键），内联延伸走本方法（键已在栈上）。</summary>
+        private void WalkChildNodes(
+            string templateId,
+            List<EntityTemplateChild>? children,
+            DataRegistry<EntityTemplate> registry,
+            HashSet<string> visiting,
+            string chain)
+        {
+            if (children != null)
+            {
+                for (int i = 0; i < children.Count; i++)
+                {
+                    EntityTemplateChild child = children[i];
+                    if (child == null || string.IsNullOrWhiteSpace(child.Template))
+                    {
+                        continue;
+                    }
+
+                    EntityTemplate? referenced = registry?.Get(child.Template);
+                    if (referenced?.Children is { Count: > 0 })
+                    {
+                        DetectTemplateChildCycle(
+                            child.Template,
+                            referenced.Children,
+                            registry,
+                            visiting,
+                            $"{chain} -> '{child.Template}'");
+                    }
+
+                    // 嵌套内联边同样要查：child 自身声明的 children 里可能藏着指回祖先的引用，
+                    // 只走被引用模板的 children 会漏（A→[B+inline[A]] 型环即从此逃逸）。
+                    // 内联子树是当前模板展开的延伸，不引入新的 visiting 键——兄弟复用同一
+                    // 模板不是环，只有"被引用模板展开"的递归才会加键。
+                    if (child.Children is { Count: > 0 })
+                    {
+                        WalkChildNodes(
+                            templateId,
+                            child.Children,
+                            registry,
+                            visiting,
+                            $"{chain} (inline)");
+                    }
+                }
+            }
+
+        }
+
+        private void EnqueueChildNodes(
+            List<EntityTemplateChild> children,
+            in RuntimeEntitySpawnRequest request,
+            Entity parent,
+            Fix64Vec2 parentPosition,
+            float parentFacing)
+        {
+            string? parentPath = string.IsNullOrWhiteSpace(request.AddressablePath)
+                ? request.InstanceId
+                : request.AddressablePath;
+            for (int i = 0; i < children.Count; i++)
+            {
+                EntityTemplateChild child = children[i];
                 if (child == null || string.IsNullOrWhiteSpace(child.Template))
                 {
                     throw new InvalidOperationException(
                         $"SPAWN.RUNTIME.ERR.TemplateChildInvalid: template='{request.TemplateId}', index={i}.");
+                }
+
+                string? childPath = CombineAddressablePath(parentPath, child.LocalId);
+                if (child.Attach == false)
+                {
+                    throw new InvalidOperationException(
+                        $"SPAWN.RUNTIME.ERR.AttachFalseUnsupported: template='{request.TemplateId}', child='{child.Template}', " +
+                        $"path='{DescribeChildPath(parentPath, child.LocalId, i)}'——attach:false 的可动成员独立出生属切片E，出生前不支持（not yet, slice E）。");
                 }
 
                 Ludots.Core.Components.AttachedLocalPose localPose = Ludots.Core.Gameplay.Attachment
@@ -373,6 +564,9 @@ namespace Ludots.Core.Gameplay.Spawning
                     ComponentPatches = patches,
                     AttachedLocalPose = localPose,
                     HasAttachedLocalPose = 1,
+                    InlineChildren = child.Children is { Count: > 0 } ? child.Children : null,
+                    InstanceId = request.InstanceId,
+                    AddressablePath = childPath,
                 };
                 if (!_requests.TryEnqueue(in childRequest))
                 {
@@ -380,6 +574,25 @@ namespace Ludots.Core.Gameplay.Spawning
                         $"SPAWN.RUNTIME.ERR.TemplateChildrenQueueFull: template='{request.TemplateId}', child='{child.Template}'.");
                 }
             }
+        }
+
+        private static string? CombineAddressablePath(string? parentPath, string? localId)
+        {
+            string? prefix = string.IsNullOrWhiteSpace(parentPath) ? null : parentPath;
+            if (string.IsNullOrWhiteSpace(localId))
+            {
+                return prefix;
+            }
+
+            return prefix == null ? localId : prefix + "." + localId;
+        }
+
+        private static string DescribeChildPath(string? parentPath, string? localId, int index)
+        {
+            string? combined = CombineAddressablePath(parentPath, localId);
+            return string.IsNullOrWhiteSpace(combined)
+                ? "#" + index.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                : combined;
         }
 
         private bool TryCopyTemplateBatch(string templateId, out int count)
@@ -432,6 +645,7 @@ namespace Ludots.Core.Gameplay.Spawning
                    (request.Parent == Entity.Null || request.Parent == default) &&
                    request.LinkSourceAsParent == 0 &&
                    request.HasAttachedLocalPose == 0 &&
+                   request.InlineChildren is not { Count: > 0 } &&
                    !string.IsNullOrWhiteSpace(request.TemplateId) &&
                    string.Equals(request.TemplateId, templateId, StringComparison.Ordinal);
         }
@@ -620,6 +834,7 @@ namespace Ludots.Core.Gameplay.Spawning
                 hasReceiptWork ||
                 onSpawnEffectTemplateId > 0 ||
                 template.TriggerGraphs is { Count: > 0 } ||
+                !string.IsNullOrWhiteSpace(template.InitialInteractionContext) ||
                 !allHaveMapEntity;
             if (requiresPostSpawnLoop)
             {
@@ -664,10 +879,15 @@ namespace Ludots.Core.Gameplay.Spawning
                     }
 
                     MountTemplateTriggerGraphs(entity, templateId, template);
+                    MountTemplateInitialInteractionContext(entity, templateId, template);
                 }
 
                 postSpawnMs = ElapsedMs(postSpawnStart);
             }
+
+            // 注意：batch lane 不展开模板 children——IsBatchCompatible 按合同（TemplateSpawnDescriptor.Create）
+            // 把带 children 的模板判为 Incompatible，能进入批量 lane 的模板必无 children；
+            // 带 children 的请求一律由单实体 lane 的 EnqueueTemplateChildren 展开。
 
             double presenterBatchMs = 0d;
             double presenterCreateMs = 0d;
@@ -1525,7 +1745,7 @@ namespace Ludots.Core.Gameplay.Spawning
 
             _effectRequests.Publish(new EffectRequest
             {
-                RootId = 0,
+                RootId = request.RootId,
                 Source = useSpawnedAsSource ? spawned : request.Source,
                 Target = spawned,
                 TargetContext = useSpawnedAsSource ? spawned : request.TargetContext,

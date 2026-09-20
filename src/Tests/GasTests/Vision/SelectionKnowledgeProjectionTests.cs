@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Tests.TestCommon;
@@ -32,6 +33,65 @@ namespace Ludots.Tests.GAS;
 [Category("ci-gate")]
 public sealed class SelectionKnowledgeProjectionTests
 {
+    [TestCase(1_000)]
+    [TestCase(5_000)]
+    [TestCase(10_000)]
+    public void PointerHitResolver_ScalesWithoutAllocatingKnowledgeChecksForOffPointerEntities(int entityCount)
+    {
+        using var world = World.Create();
+        Entity viewer = world.Create();
+        var store = new KnowledgeProjectionStore(entityCount);
+        Entity expected = Entity.Null;
+        for (int i = 0; i < entityCount; i++)
+        {
+            int xCm = i == 0 ? 1_000 : 10_000 + i * 100;
+            Entity candidate = CreateSelectable(world, xCm, zCm: 1_000);
+            store.Upsert(
+                viewer,
+                candidate,
+                CreateRecord(KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live, viewer));
+            if (i == 0)
+            {
+                expected = candidate;
+            }
+        }
+
+        var globals = new Dictionary<string, object>
+        {
+            [CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(store),
+        };
+        var projector = new WorldMappedScreenProjector();
+        var pointer = new Vector2(1_000f, 1_000f);
+        const int warmupCount = 8;
+        const int sampleCount = 17;
+        var samples = new double[sampleCount];
+
+        for (int i = 0; i < warmupCount; i++)
+        {
+            Assert.That(
+                CommandSourcePointerHitResolver.FindNearestInspectableEntity(
+                    world, globals, viewer, pointer, radiusPixels: 16f, projector),
+                Is.EqualTo(expected));
+        }
+
+        long allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+        Entity lastActual = Entity.Null;
+        for (int i = 0; i < sampleCount; i++)
+        {
+            long started = Stopwatch.GetTimestamp();
+            lastActual = CommandSourcePointerHitResolver.FindNearestInspectableEntity(
+                world, globals, viewer, pointer, radiusPixels: 16f, projector);
+            samples[i] = Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+        }
+
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
+        Assert.That(lastActual, Is.EqualTo(expected));
+        Array.Sort(samples);
+        TestContext.Out.WriteLine(
+            $"Pointer hit entities={entityCount} median={samples[sampleCount / 2]:F3}ms p95={samples[^1]:F3}ms allocated={allocated / sampleCount} B/call");
+        Assert.That(allocated, Is.Zero);
+    }
+
     [Test]
     public void Issue197_ClickAndBoxCommandSourceGateCameraVisibleCandidatesThroughKnowledgeProjection()
     {
@@ -171,7 +231,7 @@ public sealed class SelectionKnowledgeProjectionTests
         var system = new TabTargetCycleSystem(world, globals, searchRadiusCm: 3000);
 
         input.InjectButtonPress(TabTargetCycleSystem.TabTargetActionId);
-        input.Update();
+        input.Update(1f / 60f);
         system.Update(0f);
 
         Assert.That(globals.TryGetValue(CoreServiceKeys.TabTargetEntity.Name, out object? targetObj), Is.True);
@@ -337,13 +397,13 @@ public sealed class SelectionKnowledgeProjectionTests
         SetActionSnapshot(globals, "Select", pointer, pressedThisFrame: true, isDown: true);
         SetAuthoritativeGroundPoint(input, new WorldCmInt2((int)pointer.X, (int)pointer.Y));
         input.InjectAction("PointerPos", new Vector3(pointer.X, pointer.Y, 0f));
-        input.Update();
+        input.Update(1f / 60f);
         system.Update(0f);
 
         SetActionSnapshot(globals, "Select", pointer, pressedThisFrame: false, isDown: false, releasedThisFrame: true);
         SetAuthoritativeGroundPoint(input, new WorldCmInt2((int)pointer.X, (int)pointer.Y));
         input.InjectAction("PointerPos", new Vector3(pointer.X, pointer.Y, 0f));
-        input.Update();
+        input.Update(1f / 60f);
         system.Update(0f);
     }
 
@@ -352,6 +412,9 @@ public sealed class SelectionKnowledgeProjectionTests
         Dictionary<string, object> globals,
         Entity owner)
     {
+        world.Create(
+            new PresentationFrameState { Enabled = true, InterpolationAlpha = 1f },
+            new PresentationFrameStateTag());
         return new CommandSourceAcquisitionSystem(
             world,
             globals,
@@ -371,17 +434,17 @@ public sealed class SelectionKnowledgeProjectionTests
     {
         SetActionSnapshot(globals, "Select", from, pressedThisFrame: true, isDown: true);
         input.InjectAction("PointerPos", new Vector3(from.X, from.Y, 0f));
-        input.Update();
+        input.Update(1f / 60f);
         system.Update(0f);
 
         SetActionSnapshot(globals, "Select", to, pressedThisFrame: false, isDown: true);
         input.InjectAction("PointerPos", new Vector3(to.X, to.Y, 0f));
-        input.Update();
+        input.Update(1f / 60f);
         system.Update(0f);
 
         SetActionSnapshot(globals, "Select", to, pressedThisFrame: false, isDown: false, releasedThisFrame: true);
         input.InjectAction("PointerPos", new Vector3(to.X, to.Y, 0f));
-        input.Update();
+        input.Update(1f / 60f);
         system.Update(0f);
     }
 

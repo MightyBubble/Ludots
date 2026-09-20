@@ -2,7 +2,7 @@
   "name": "CapabilityStandardGraphOpQueryFromCollectionEntryMod",
   "version": "1.0.0",
   "description": "Launcher entry for GraphNodeOp QueryFromCollection player gallery.",
-  "main": "bin/net8.0/CapabilityStandardGraphOpQueryFromCollectionEntryMod.dll",
+  "main": "bin/net9.0/CapabilityStandardGraphOpQueryFromCollectionEntryMod.dll",
   "priority": 0,
   "dependencies": {
     "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"

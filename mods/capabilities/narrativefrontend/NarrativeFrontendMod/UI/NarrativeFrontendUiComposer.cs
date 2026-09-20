@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.Presentation.Hud;
+using Ludots.Core.UI.PanelProjection;
 using Ludots.UI.Compose;
+using Ludots.UI.Panels;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
 using NarrativeFrontendMod.Runtime;
@@ -9,15 +12,15 @@ namespace NarrativeFrontendMod.UI;
 
 internal static class NarrativeFrontendUiComposer
 {
-    private const float CanvasWidth = 1920f;
-    private const float CanvasHeight = 1080f;
-    private const float Margin = 24f;
-
-    public static UiElementBuilder BuildRoot(ReactiveContext<NarrativeFrontendRenderState> context)
+    public static UiElementBuilder BuildRoot(
+        ReactiveContext<NarrativeFrontendRenderState> context,
+        PanelLayoutTemplateCatalog layouts,
+        PanelLayoutComposer layoutComposer,
+        NarrativeFrontendLayoutMetrics metrics)
     {
         NarrativeFrontendRenderState state = context.State;
         var children = new List<UiElementBuilder>(state.Surfaces.Count + 1);
-
+        var bottomLane = new List<(UiElementBuilder Content, NarrativeFrontendSurfaceModel Surface)>();
         if (!string.IsNullOrWhiteSpace(state.BackdropHex))
         {
             children.Add(Ui.Text(" ")
@@ -28,385 +31,372 @@ internal static class NarrativeFrontendUiComposer
                 .ZIndex(5));
         }
 
-        foreach (NarrativeFrontendSurfaceModel surface in state.Surfaces)
+        for (int i = 0; i < state.Surfaces.Count; i++)
         {
-            children.Add(BuildSurface(surface));
+            NarrativeFrontendSurfaceModel surface = state.Surfaces[i];
+            if (string.IsNullOrWhiteSpace(surface.LayoutId))
+            {
+                throw new InvalidOperationException(
+                    $"Narrative surface '{surface.SurfaceId}' requires layoutId.");
+            }
+
+            PanelLayoutTemplate template = layouts.Require(surface.LayoutId);
+            UiElementBuilder content = layoutComposer.Compose(
+                template.Root,
+                new NarrativeSurfaceBindingScope(surface, metrics),
+                static resolvedSource => resolvedSource);
+            if (surface.Anchor is NarrativeFrontendAnchor.BottomLeft
+                or NarrativeFrontendAnchor.BottomCenter
+                or NarrativeFrontendAnchor.BottomRight)
+            {
+                bottomLane.Add((content, surface));
+            }
+            else
+            {
+                children.Add(BuildSurface(content, surface, metrics));
+            }
+        }
+
+        if (bottomLane.Count == 1)
+        {
+            children.Add(BuildSurface(bottomLane[0].Content, bottomLane[0].Surface, metrics));
+        }
+        else if (bottomLane.Count > 1)
+        {
+            children.Add(BuildBottomLane(bottomLane, metrics));
         }
 
         return Ui.Column(children.ToArray())
+            .Class("story-root")
             .WidthPercent(100f)
             .HeightPercent(100f)
             .Absolute(0f, 0f)
             .ZIndex(10);
     }
 
-    private static UiElementBuilder BuildSurface(NarrativeFrontendSurfaceModel surface)
+    private static UiElementBuilder BuildSurface(
+        UiElementBuilder content,
+        NarrativeFrontendSurfaceModel surface,
+        NarrativeFrontendLayoutMetrics metrics)
     {
-        UiElementBuilder builder = surface.Kind switch
+        UiElementBuilder builder = PrepareSurface(content, surface);
+
+        UiAlignItems horizontal = surface.Anchor switch
         {
-            NarrativeFrontendSurfaceKind.DialogueBubble => BuildBubble(surface, tailRight: false),
-            NarrativeFrontendSurfaceKind.SubtitleBubble => BuildBubble(surface, tailRight: true),
-            NarrativeFrontendSurfaceKind.OverlayDialogue => BuildOverlayDialogue(surface),
-            NarrativeFrontendSurfaceKind.ObjectiveTracker => BuildCard(surface, "#74D7FF"),
-            NarrativeFrontendSurfaceKind.ChoiceList => BuildChoiceList(surface),
-            NarrativeFrontendSurfaceKind.NotificationStack => BuildNotificationStack(surface),
-            NarrativeFrontendSurfaceKind.HistoryJournal => BuildCard(surface, "#8BE9FD"),
-            NarrativeFrontendSurfaceKind.EventCard => BuildEventCard(surface),
-            NarrativeFrontendSurfaceKind.StatusPanel => BuildCard(surface, "#78E3B1"),
-            NarrativeFrontendSurfaceKind.PromptRibbon => BuildPromptRibbon(surface),
-            NarrativeFrontendSurfaceKind.ThreatBanner => BuildThreatBanner(surface),
-            NarrativeFrontendSurfaceKind.RelationshipNotebook => BuildCard(surface, "#F6C56B"),
-            NarrativeFrontendSurfaceKind.InspectPanel => BuildCard(surface, "#D9F99D"),
-            NarrativeFrontendSurfaceKind.FlowReview => BuildCard(surface, "#C4B5FD"),
-            NarrativeFrontendSurfaceKind.TransmissionOverlay => BuildTransmission(surface),
-            _ => BuildCard(surface, "#78E3B1"),
+            NarrativeFrontendAnchor.TopLeft
+                or NarrativeFrontendAnchor.LeftCenter
+                or NarrativeFrontendAnchor.BottomLeft => UiAlignItems.Start,
+            NarrativeFrontendAnchor.TopCenter
+                or NarrativeFrontendAnchor.Center
+                or NarrativeFrontendAnchor.BottomCenter => UiAlignItems.Center,
+            NarrativeFrontendAnchor.TopRight
+                or NarrativeFrontendAnchor.RightCenter
+                or NarrativeFrontendAnchor.BottomRight => UiAlignItems.End,
+            _ => throw new InvalidOperationException(
+                $"Narrative surface '{surface.SurfaceId}' has unsupported anchor '{surface.Anchor}'.")
+        };
+        UiJustifyContent vertical = surface.Anchor switch
+        {
+            NarrativeFrontendAnchor.TopLeft
+                or NarrativeFrontendAnchor.TopCenter
+                or NarrativeFrontendAnchor.TopRight => UiJustifyContent.Start,
+            NarrativeFrontendAnchor.LeftCenter
+                or NarrativeFrontendAnchor.Center
+                or NarrativeFrontendAnchor.RightCenter => UiJustifyContent.Center,
+            NarrativeFrontendAnchor.BottomLeft
+                or NarrativeFrontendAnchor.BottomCenter
+                or NarrativeFrontendAnchor.BottomRight => UiJustifyContent.End,
+            _ => throw new InvalidOperationException(
+                $"Narrative surface '{surface.SurfaceId}' has unsupported anchor '{surface.Anchor}'.")
         };
 
-        (float left, float top) = ResolvePosition(surface);
-        return builder
-            .Width(surface.Width)
-            .Absolute(left, top)
+        bool leftAnchor = horizontal == UiAlignItems.Start;
+        bool rightAnchor = horizontal == UiAlignItems.End;
+        bool topAnchor = vertical == UiJustifyContent.Start;
+        bool bottomAnchor = vertical == UiJustifyContent.End;
+        float leftPadding = leftAnchor ? Math.Max(0f, metrics.SafeAreaMargin + surface.OffsetX) : metrics.SafeAreaMargin;
+        float rightPadding = rightAnchor ? Math.Max(0f, metrics.SafeAreaMargin + surface.OffsetX) : metrics.SafeAreaMargin;
+        float topPadding = topAnchor ? Math.Max(0f, metrics.SafeAreaMargin + surface.OffsetY) : 0f;
+        float bottomPadding = bottomAnchor ? Math.Max(0f, metrics.SafeAreaMargin + surface.OffsetY) : 0f;
+        if (!leftAnchor && !rightAnchor && Math.Abs(surface.OffsetX) > 0.01f)
+        {
+            builder = builder.Translate(surface.OffsetX);
+        }
+
+        if (!topAnchor && !bottomAnchor && Math.Abs(surface.OffsetY) > 0.01f)
+        {
+            builder = builder.Translate(0f, surface.OffsetY);
+        }
+
+        return Ui.Column(builder)
+            .Class("story-surface-dock")
+            .WidthPercent(100f)
+            .HeightPercent(100f)
+            .Padding(leftPadding, topPadding, rightPadding, bottomPadding)
+            .Justify(vertical)
+            .Align(horizontal)
+            .Absolute(0f, 0f)
             .ZIndex(surface.ZIndex);
     }
 
-    private static UiElementBuilder BuildBubble(NarrativeFrontendSurfaceModel surface, bool tailRight)
+    private static UiElementBuilder BuildBottomLane(
+        List<(UiElementBuilder Content, NarrativeFrontendSurfaceModel Surface)> surfaces,
+        NarrativeFrontendLayoutMetrics metrics)
     {
-        string background = ColorOrDefault(surface.BackgroundHex, "#0C1622E8");
-        string foreground = ColorOrDefault(surface.ForegroundHex, "#F5F7FA");
-        string muted = ColorOrDefault(surface.MutedHex, "#A9B9C9");
-        string accent = ColorOrDefault(surface.AccentHex, "#F0C36B");
+        surfaces.Sort(static (left, right) =>
+        {
+            int byAnchor = left.Surface.Anchor.CompareTo(right.Surface.Anchor);
+            return byAnchor != 0 ? byAnchor : left.Surface.ZIndex.CompareTo(right.Surface.ZIndex);
+        });
+
+        var children = new UiElementBuilder[surfaces.Count];
+        int maxZIndex = 0;
+        for (int i = 0; i < surfaces.Count; i++)
+        {
+            NarrativeFrontendSurfaceModel surface = surfaces[i].Surface;
+            float leftInset = surface.Anchor == NarrativeFrontendAnchor.BottomRight
+                ? 0f
+                : Math.Max(0f, surface.OffsetX);
+            float rightInset = surface.Anchor == NarrativeFrontendAnchor.BottomRight
+                ? Math.Max(0f, surface.OffsetX)
+                : Math.Max(0f, -surface.OffsetX);
+            children[i] = Ui.Column(PrepareSurface(surfaces[i].Content, surface))
+                .Padding(leftInset, 0f, rightInset, Math.Max(0f, surface.OffsetY))
+                .Justify(UiJustifyContent.End);
+            maxZIndex = Math.Max(maxZIndex, surface.ZIndex);
+        }
 
         return Ui.Column(
-                BuildBubbleTail(background, tailRight),
-                Ui.Card(
-                        BuildEyebrow(surface.Subtitle, accent),
-                        Ui.Text(surface.Title).FontSize(18f).Bold().Color(foreground),
-                        Ui.Text(surface.Body).FontSize(13f).Color(foreground).WhiteSpace(UiWhiteSpace.Normal),
-                        BuildMetaRow(surface, muted, accent))
-                    .Gap(8f)
-                    .Padding(18f)
-                    .Radius(26f)
-                    .Background(background)
-                    .Border(1f, Color(ColorOrDefault(surface.BorderHex, "#49FFFFFF")))
-                    .BoxShadow(0f, 18f, 36f, Color("#44000000"))
-                    .BackdropBlur(10f))
-            .Gap(0f)
-            .Align(tailRight ? UiAlignItems.End : UiAlignItems.Start);
-    }
-
-    private static UiElementBuilder BuildOverlayDialogue(NarrativeFrontendSurfaceModel surface)
-    {
-        string foreground = ColorOrDefault(surface.ForegroundHex, "#F8FAFC");
-        string muted = ColorOrDefault(surface.MutedHex, "#C4D1DD");
-        string accent = ColorOrDefault(surface.AccentHex, "#F6C56B");
-        return Ui.Card(
-                BuildEyebrow(surface.Subtitle, accent),
-                Ui.Text(surface.Title).FontSize(22f).Bold().Color(foreground),
-                Ui.Text(surface.Body).FontSize(14f).Color(foreground).WhiteSpace(UiWhiteSpace.Normal),
-                BuildItemsColumn(surface, accent, foreground, muted),
-                BuildMetaRow(surface, muted, accent))
-            .Gap(10f)
-            .Padding(22f)
-            .Radius(28f)
-            .Background(ColorOrDefault(surface.BackgroundHex, "#0A1220EE"))
-            .Border(1f, Color(ColorOrDefault(surface.BorderHex, "#5AD7E9FF")))
-            .BoxShadow(0f, 24f, 48f, Color("#55000000"))
-            .BackdropBlur(12f);
-    }
-
-    private static UiElementBuilder BuildCard(NarrativeFrontendSurfaceModel surface, string defaultAccent)
-    {
-        string foreground = ColorOrDefault(surface.ForegroundHex, "#F5F7FA");
-        string muted = ColorOrDefault(surface.MutedHex, "#B7C5D2");
-        string accent = ColorOrDefault(surface.AccentHex, defaultAccent);
-        return Ui.Card(
-                BuildEyebrow(surface.Subtitle, accent),
-                Ui.Text(surface.Title).FontSize(16f).Bold().Color(foreground),
-                string.IsNullOrWhiteSpace(surface.Body)
-                    ? Ui.Column()
-                    : Ui.Text(surface.Body).FontSize(12f).Color(foreground).WhiteSpace(UiWhiteSpace.Normal),
-                BuildItemsColumn(surface, accent, foreground, muted),
-                BuildFooter(surface.Footer, muted))
-            .Gap(8f)
-            .Padding(16f)
-            .Radius(22f)
-            .Background(ColorOrDefault(surface.BackgroundHex, "#0D1722E6"))
-            .Border(1f, Color(ColorOrDefault(surface.BorderHex, "#25465C")))
-            .BackdropBlur(8f);
-    }
-
-    private static UiElementBuilder BuildChoiceList(NarrativeFrontendSurfaceModel surface)
-    {
-        string foreground = ColorOrDefault(surface.ForegroundHex, "#F8FAFC");
-        string muted = ColorOrDefault(surface.MutedHex, "#B7C5D2");
-        string accent = ColorOrDefault(surface.AccentHex, "#F6C56B");
-        var items = new List<UiElementBuilder>
-        {
-            BuildEyebrow(surface.Subtitle, accent),
-            Ui.Text(surface.Title).FontSize(16f).Bold().Color(foreground)
-        };
-
-        foreach (NarrativeFrontendSurfaceItem item in surface.Items ?? Array.Empty<NarrativeFrontendSurfaceItem>())
-        {
-            items.Add(Ui.Row(
-                    Ui.Text(string.IsNullOrWhiteSpace(item.Shortcut) ? "?" : item.Shortcut)
-                        .FontSize(12f).Bold().Color("#08111A").Background(accent).Padding(8f, 6f).Radius(999f),
-                    Ui.Column(
-                            Ui.Text(item.Label).FontSize(13f).Bold().Color(foreground).WhiteSpace(UiWhiteSpace.Normal),
-                            string.IsNullOrWhiteSpace(item.Caption)
-                                ? Ui.Column()
-                                : Ui.Text(item.Caption).FontSize(11f).Color(muted).WhiteSpace(UiWhiteSpace.Normal))
-                        .Gap(4f))
-                .Gap(10f)
-                .Padding(12f)
-                .Radius(18f)
-                .Background(item.Active ? "#1A2734" : "#101926")
-                .Border(1f, Color(item.Active ? accent : "#233241")));
-        }
-
-        items.Add(BuildMetaRow(surface, muted, accent));
-
-        return Ui.Card(items.ToArray())
-            .Gap(8f)
-            .Padding(18f)
-            .Radius(24f)
-            .Background(ColorOrDefault(surface.BackgroundHex, "#0A1220E8"))
-            .Border(1f, Color(ColorOrDefault(surface.BorderHex, "#2F4358")))
-            .BackdropBlur(10f);
-    }
-
-    private static UiElementBuilder BuildNotificationStack(NarrativeFrontendSurfaceModel surface)
-    {
-        string accent = ColorOrDefault(surface.AccentHex, "#F6C56B");
-        string foreground = ColorOrDefault(surface.ForegroundHex, "#F5F7FA");
-        string muted = ColorOrDefault(surface.MutedHex, "#B7C6D5");
-        var items = new List<UiElementBuilder>();
-        foreach (NarrativeFrontendSurfaceItem item in surface.Items ?? Array.Empty<NarrativeFrontendSurfaceItem>())
-        {
-            string itemAccent = ColorOrDefault(item.AccentHex, accent);
-            items.Add(Ui.Row(
-                    Ui.Text(item.Label).FontSize(11f).Bold().Color("#08111A").Background(itemAccent).Padding(8f, 6f).Radius(999f),
-                    Ui.Column(
-                            Ui.Text(item.Value).FontSize(12f).Bold().Color(foreground).WhiteSpace(UiWhiteSpace.Normal),
-                            string.IsNullOrWhiteSpace(item.Caption)
-                                ? Ui.Column()
-                                : Ui.Text(item.Caption).FontSize(11f).Color(muted).WhiteSpace(UiWhiteSpace.Normal))
-                        .Gap(2f))
-                .Gap(8f)
-                .Padding(12f)
-                .Radius(18f)
-                .Background(ColorOrDefault(surface.BackgroundHex, "#0C1622E6"))
-                .Border(1f, Color(ColorOrDefault(surface.BorderHex, "#2E455B")))
-                .BackdropBlur(8f));
-        }
-
-        return Ui.Column(items.ToArray()).Gap(8f).Align(UiAlignItems.Stretch);
-    }
-
-    private static UiElementBuilder BuildEventCard(NarrativeFrontendSurfaceModel surface)
-    {
-        string foreground = ColorOrDefault(surface.ForegroundHex, "#08111A");
-        string accent = ColorOrDefault(surface.AccentHex, "#F6C56B");
-        string muted = ColorOrDefault(surface.MutedHex, "#364A5D");
-        return Ui.Card(
-                BuildEyebrow(surface.Subtitle, "#253341"),
-                Ui.Text(surface.Title).FontSize(18f).Bold().Color(foreground),
-                Ui.Text(surface.Body).FontSize(13f).Color(foreground).WhiteSpace(UiWhiteSpace.Normal),
-                BuildItemsColumn(surface, "#253341", foreground, muted),
-                BuildMetaRow(surface, muted, "#253341"))
-            .Gap(8f)
-            .Padding(18f)
-            .Radius(24f)
-            .Background(ColorOrDefault(surface.BackgroundHex, accent))
-            .Border(1f, Color(ColorOrDefault(surface.BorderHex, "#FFF6D0")))
-            .BoxShadow(0f, 20f, 40f, Color("#44000000"));
-    }
-
-    private static UiElementBuilder BuildPromptRibbon(NarrativeFrontendSurfaceModel surface)
-    {
-        string foreground = ColorOrDefault(surface.ForegroundHex, "#F5F7FA");
-        string accent = ColorOrDefault(surface.AccentHex, "#F6C56B");
-        return Ui.Row(
-                Ui.Text(surface.Title).FontSize(11f).Bold().Color("#08111A").Background(accent).Padding(10f, 7f).Radius(999f),
-                Ui.Text(surface.Body).FontSize(12f).Color(foreground).WhiteSpace(UiWhiteSpace.Normal))
-            .Gap(10f)
-            .Padding(12f)
-            .Radius(999f)
-            .Background(ColorOrDefault(surface.BackgroundHex, "#071019E8"))
-            .Border(1f, Color(ColorOrDefault(surface.BorderHex, "#365875")))
-            .BackdropBlur(8f);
-    }
-
-    private static UiElementBuilder BuildThreatBanner(NarrativeFrontendSurfaceModel surface)
-    {
-        return Ui.Card(
-                BuildEyebrow(surface.Subtitle, ColorOrDefault(surface.AccentHex, "#FFAA55")),
-                Ui.Text(surface.Title).FontSize(18f).Bold().Color(ColorOrDefault(surface.ForegroundHex, "#FFF7F0")),
-                Ui.Text(surface.Body).FontSize(13f).Color(ColorOrDefault(surface.ForegroundHex, "#FFF7F0")).WhiteSpace(UiWhiteSpace.Normal),
-                BuildFooter(surface.Footer, ColorOrDefault(surface.MutedHex, "#FADBC1")))
-            .Gap(6f)
-            .Padding(16f)
-            .Radius(22f)
-            .Background(ColorOrDefault(surface.BackgroundHex, "#4E1610E8"))
-            .Border(1f, Color(ColorOrDefault(surface.BorderHex, "#FFB88A")))
-            .BoxShadow(0f, 18f, 36f, Color("#55000000"));
-    }
-
-    private static UiElementBuilder BuildTransmission(NarrativeFrontendSurfaceModel surface)
-    {
-        string accent = ColorOrDefault(surface.AccentHex, "#7DD3FC");
-        string foreground = ColorOrDefault(surface.ForegroundHex, "#E7F5FF");
-        string muted = ColorOrDefault(surface.MutedHex, "#A7C6D8");
-        return Ui.Card(
-                BuildEyebrow(surface.Subtitle, accent),
-                Ui.Text(surface.Title).FontSize(15f).Bold().Color(foreground),
-                Ui.Text(surface.Body).FontSize(12f).Color(foreground).WhiteSpace(UiWhiteSpace.Normal),
-                BuildFooter(surface.Footer, muted))
-            .Gap(6f)
-            .Padding(14f)
-            .Radius(18f)
-            .Background(ColorOrDefault(surface.BackgroundHex, "#08121CE0"))
-            .Border(1f, Color(ColorOrDefault(surface.BorderHex, "#2A536B")))
-            .BackdropBlur(10f);
-    }
-
-    private static UiElementBuilder BuildItemsColumn(
-        NarrativeFrontendSurfaceModel surface,
-        string accent,
-        string foreground,
-        string muted)
-    {
-        IReadOnlyList<NarrativeFrontendSurfaceItem> items = surface.Items ?? Array.Empty<NarrativeFrontendSurfaceItem>();
-        if (items.Count == 0)
-        {
-            return Ui.Column();
-        }
-
-        var rows = new List<UiElementBuilder>(items.Count);
-        foreach (NarrativeFrontendSurfaceItem item in items)
-        {
-            rows.Add(Ui.Column(
-                    Ui.Row(
-                            string.IsNullOrWhiteSpace(item.Shortcut)
-                                ? Ui.Column()
-                                : Ui.Text(item.Shortcut).FontSize(10f).Bold().Color("#08111A").Background(ColorOrDefault(item.AccentHex, accent)).Padding(6f, 4f).Radius(999f),
-                            Ui.Text(item.Label).FontSize(12f).Bold().Color(foreground).WhiteSpace(UiWhiteSpace.Normal),
-                            string.IsNullOrWhiteSpace(item.Value)
-                                ? Ui.Column()
-                                : Ui.Text(item.Value).FontSize(12f).Color(item.Muted ? muted : foreground).WhiteSpace(UiWhiteSpace.Normal))
-                        .Gap(8f)
-                        .Justify(UiJustifyContent.SpaceBetween),
-                    string.IsNullOrWhiteSpace(item.Caption)
-                        ? Ui.Column()
-                        : Ui.Text(item.Caption).FontSize(11f).Color(muted).WhiteSpace(UiWhiteSpace.Normal),
-                    item.Progress01 >= 0f
-                        ? BuildProgressBar(item.Progress01, ColorOrDefault(item.AccentHex, accent))
-                        : Ui.Column())
-                .Gap(4f)
-                .Padding(10f)
-                .Radius(16f)
-                .Background(item.Active ? "#162434" : "#0E1823"));
-        }
-
-        return Ui.Column(rows.ToArray()).Gap(6f);
-    }
-
-    private static UiElementBuilder BuildProgressBar(float progress01, string accent)
-    {
-        float clamped = Math.Clamp(progress01, 0f, 1f);
-        return Ui.Column(Ui.Text(" ")
-                .Height(6f)
-                .WidthPercent(Math.Max(4f, clamped * 100f))
-                .Background(accent)
-                .Radius(999f))
-            .Height(6f)
+                Ui.Row(children)
+                    .Class("story-bottom-lane-row")
+                    .WidthPercent(100f)
+                    .Wrap()
+                    .Gap(metrics.BottomLaneGap)
+                    .Justify(UiJustifyContent.Center)
+                    .Align(UiAlignItems.End))
+            .Class("story-surface-dock")
             .WidthPercent(100f)
-            .Background("#1E2A35")
-            .Radius(999f)
-            .Overflow(UiOverflow.Hidden);
+            .HeightPercent(100f)
+            .Padding(metrics.SafeAreaMargin)
+            .Justify(UiJustifyContent.End)
+            .Align(UiAlignItems.Stretch)
+            .Absolute(0f, 0f)
+            .ZIndex(maxZIndex);
     }
 
-    private static UiElementBuilder BuildBubbleTail(string background, bool rightAligned)
+    private static UiElementBuilder PrepareSurface(
+        UiElementBuilder content,
+        NarrativeFrontendSurfaceModel surface)
     {
-        return Ui.Text(" ")
-            .Width(18f)
-            .Height(18f)
-            .Background(background)
-            .Rotate(45f)
-            .Margin(24f, -8f)
-            .Border(1f, Color("#00000000"))
-            .Align(rightAligned ? UiAlignItems.End : UiAlignItems.Start);
+        return ApplyAuthorChrome(content, surface)
+            .Class("story-surface")
+            .Attribute("data-surface-kind", surface.Kind.ToString())
+            .Width(surface.Width)
+            .ZIndex(surface.ZIndex);
     }
 
-    private static UiElementBuilder BuildMetaRow(NarrativeFrontendSurfaceModel surface, string muted, string accent)
+    private static UiElementBuilder ApplyAuthorChrome(
+        UiElementBuilder builder,
+        NarrativeFrontendSurfaceModel surface)
     {
-        var parts = new List<UiElementBuilder>();
-        if (surface.Progress01 >= 0f)
+        if (string.IsNullOrWhiteSpace(surface.FrameImageSrc))
         {
-            parts.Add(BuildProgressBar(surface.Progress01, accent));
+            return builder;
         }
 
-        if (surface.CountdownSeconds > 0f)
+        return Ui.Panel(
+                builder.Classes("story-framed-body", "story-panel-framed-body"),
+                Ui.Image(surface.FrameImageSrc)
+                    .Class("story-frame")
+                    .Absolute(0f, 0f)
+                    .WidthPercent(100f)
+                    .HeightPercent(100f)
+                    .ZIndex(40))
+            .Class("story-framed");
+    }
+
+    private sealed class NarrativeSurfaceBindingScope : IPanelLayoutBindingScope
+    {
+        private readonly NarrativeFrontendSurfaceModel _surface;
+        private readonly NarrativeFrontendLayoutMetrics _metrics;
+
+        public NarrativeSurfaceBindingScope(
+            NarrativeFrontendSurfaceModel surface,
+            NarrativeFrontendLayoutMetrics metrics)
         {
-            parts.Add(Ui.Text($"{surface.CountdownSeconds:0.0}s").FontSize(11f).Color(muted));
+            _surface = surface;
+            _metrics = metrics;
         }
 
-        if (!string.IsNullOrWhiteSpace(surface.Footer))
+        public string ReadText(string bind)
         {
-            parts.Add(Ui.Text(surface.Footer).FontSize(11f).Color(muted).WhiteSpace(UiWhiteSpace.Normal));
+            return bind switch
+            {
+                "title" => _surface.Title,
+                "subtitle" => _surface.Subtitle,
+                "body" => _surface.Body,
+                "footer" => _surface.Footer,
+                "portraitSrc" => _surface.PortraitSrc,
+                "foregroundHex" => _surface.ForegroundHex,
+                "mutedHex" => _surface.MutedHex,
+                "accentHex" => _surface.AccentHex,
+                "surfaceClass" => _surface.StyleClass,
+                _ => throw new InvalidOperationException(
+                    $"Narrative surface binding '{bind}' is not a text binding.")
+            };
         }
 
-        return Ui.Row(parts.ToArray()).Gap(10f).Align(UiAlignItems.Center);
-    }
-
-    private static UiElementBuilder BuildFooter(string footer, string muted)
-    {
-        return string.IsNullOrWhiteSpace(footer)
-            ? Ui.Column()
-            : Ui.Text(footer).FontSize(11f).Color(muted).WhiteSpace(UiWhiteSpace.Normal);
-    }
-
-    private static UiElementBuilder BuildEyebrow(string text, string accent)
-    {
-        return string.IsNullOrWhiteSpace(text)
-            ? Ui.Column()
-            : Ui.Text(text)
-                .FontSize(10f)
-                .Bold()
-                .Color("#08111A")
-                .Background(accent)
-                .Padding(8f, 6f)
-                .Radius(999f);
-    }
-
-    private static (float Left, float Top) ResolvePosition(NarrativeFrontendSurfaceModel surface)
-    {
-        float left = surface.Anchor switch
+        public float ReadFloat(string bind)
         {
-            NarrativeFrontendAnchor.TopLeft or NarrativeFrontendAnchor.LeftCenter or NarrativeFrontendAnchor.BottomLeft => Margin,
-            NarrativeFrontendAnchor.TopCenter or NarrativeFrontendAnchor.Center or NarrativeFrontendAnchor.BottomCenter => (CanvasWidth - surface.Width) * 0.5f,
-            _ => CanvasWidth - surface.Width - Margin,
-        };
+            return bind switch
+            {
+                "portraitSize" => _surface.PortraitSize,
+                "standingWidth" => _surface.PortraitSize * _metrics.StandingImageAspect,
+                "standingCardWidth" => Math.Max(
+                    _metrics.StandingCardMinWidth,
+                    _surface.Width - (_surface.PortraitSize * _metrics.StandingImageAspect) - _metrics.StandingCardGap),
+                "progress01" => _surface.Progress01,
+                "countdownSeconds" => _surface.CountdownSeconds,
+                _ => throw new InvalidOperationException(
+                    $"Narrative surface binding '{bind}' is not a numeric binding.")
+            };
+        }
 
-        float top = surface.Anchor switch
+        public bool ReadBool(string bind)
         {
-            NarrativeFrontendAnchor.TopLeft or NarrativeFrontendAnchor.TopCenter or NarrativeFrontendAnchor.TopRight => Margin,
-            NarrativeFrontendAnchor.LeftCenter or NarrativeFrontendAnchor.Center or NarrativeFrontendAnchor.RightCenter => (CanvasHeight * 0.5f) - 170f,
-            _ => CanvasHeight - 280f,
-        };
+            throw new InvalidOperationException(
+                $"Narrative surface binding '{bind}' is not a bool binding.");
+        }
 
-        return (left + surface.OffsetX, top + surface.OffsetY);
+        public IReadOnlyList<PresentationTextRun> ReadTextRuns(string bind)
+        {
+            if (!string.Equals(bind, "bodyRuns", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Narrative surface binding '{bind}' is not a styled-text binding.");
+            }
+
+            return _surface.BodyRuns ?? Array.Empty<PresentationTextRun>();
+        }
+
+        public IReadOnlyList<IPanelLayoutBindingScope> ReadList(string bind)
+        {
+            if (!string.Equals(bind, "items", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Narrative surface binding '{bind}' is not a list binding.");
+            }
+
+            IReadOnlyList<NarrativeFrontendSurfaceItem> items =
+                _surface.Items ?? Array.Empty<NarrativeFrontendSurfaceItem>();
+            var scopes = new IPanelLayoutBindingScope[items.Count];
+            for (int i = 0; i < items.Count; i++)
+            {
+                scopes[i] = new NarrativeItemBindingScope(
+                    items[i],
+                    _surface.ForegroundHex,
+                    _surface.MutedHex);
+            }
+
+            return scopes;
+        }
+
+        public bool IsPresent(string bind)
+        {
+            return bind switch
+            {
+                "title" => !string.IsNullOrWhiteSpace(_surface.Title),
+                "subtitle" => !string.IsNullOrWhiteSpace(_surface.Subtitle),
+                "body" => !string.IsNullOrWhiteSpace(_surface.Body),
+                "footer" => !string.IsNullOrWhiteSpace(_surface.Footer),
+                "portraitSrc" => !string.IsNullOrWhiteSpace(_surface.PortraitSrc),
+                "items" => _surface.Items is { Count: > 0 },
+                "progressPresent" => _surface.Progress01 >= 0f,
+                "countdownPresent" => _surface.CountdownSeconds > 0f,
+                _ => throw new InvalidOperationException(
+                    $"Narrative surface binding '{bind}' cannot be used as a presence condition.")
+            };
+        }
     }
 
-    private static string ColorOrDefault(string value, string fallback)
+    private sealed class NarrativeItemBindingScope : IPanelLayoutBindingScope
     {
-        return string.IsNullOrWhiteSpace(value) ? fallback : value;
-    }
+        private readonly NarrativeFrontendSurfaceItem _item;
+        private readonly string _foregroundHex;
+        private readonly string _mutedHex;
 
-    private static UiColor Color(string value)
-    {
-        return UiColor.TryParse(value, out UiColor color)
-            ? color
-            : UiColor.White;
+        public NarrativeItemBindingScope(
+            NarrativeFrontendSurfaceItem item,
+            string foregroundHex,
+            string mutedHex)
+        {
+            _item = item;
+            _foregroundHex = foregroundHex;
+            _mutedHex = mutedHex;
+        }
+
+        public string ReadText(string bind)
+        {
+            return bind switch
+            {
+                "label" => _item.Label,
+                "value" => _item.Value,
+                "caption" => _item.Caption,
+                "shortcut" => _item.Shortcut,
+                "itemClass" => _item.Active ? "story-item-row-active" : "story-item-row",
+                "itemColor" => _item.AccentHex,
+                "foregroundHex" => _foregroundHex,
+                "mutedHex" => _mutedHex,
+                _ => throw new InvalidOperationException(
+                    $"Narrative item binding '{bind}' is not a text binding.")
+            };
+        }
+
+        public float ReadFloat(string bind)
+        {
+            return bind switch
+            {
+                "itemProgress" => _item.Progress01,
+                _ => throw new InvalidOperationException(
+                    $"Narrative item binding '{bind}' is not a numeric binding.")
+            };
+        }
+
+        public bool ReadBool(string bind)
+        {
+            return bind switch
+            {
+                "active" => _item.Active,
+                "muted" => _item.Muted,
+                _ => throw new InvalidOperationException(
+                    $"Narrative item binding '{bind}' is not a bool binding.")
+            };
+        }
+
+        public IReadOnlyList<PresentationTextRun> ReadTextRuns(string bind)
+        {
+            throw new InvalidOperationException(
+                $"Narrative item binding '{bind}' is not a styled-text binding.");
+        }
+
+        public IReadOnlyList<IPanelLayoutBindingScope> ReadList(string bind)
+        {
+            throw new InvalidOperationException(
+                $"Narrative item binding '{bind}' is not a list binding.");
+        }
+
+        public bool IsPresent(string bind)
+        {
+            return bind switch
+            {
+                "label" => !string.IsNullOrWhiteSpace(_item.Label),
+                "value" => !string.IsNullOrWhiteSpace(_item.Value),
+                "caption" => !string.IsNullOrWhiteSpace(_item.Caption),
+                "shortcut" => !string.IsNullOrWhiteSpace(_item.Shortcut),
+                "itemProgressPresent" => _item.Progress01 >= 0f,
+                _ => throw new InvalidOperationException(
+                    $"Narrative item binding '{bind}' cannot be used as a presence condition.")
+            };
+        }
     }
 }

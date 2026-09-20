@@ -35,8 +35,8 @@ namespace Ludots.AgentBridge.Tools
             IReadOnlyList<TriggerGraphMountTrigger> mounts = FindMounts(context);
             return action switch
             {
-                "list" => ListMounts(mounts),
-                "configure" => Configure(args, mounts),
+                "list" => ListMounts(mounts, context),
+                "configure" => Configure(args, mounts, context),
                 "drain" => Drain(args, context, mounts),
                 _ => throw new AgentToolException(
                     AgentBridgeErrorCodes.InvalidParams,
@@ -66,18 +66,31 @@ namespace Ludots.AgentBridge.Tools
             return list;
         }
 
-        private static JsonObject ListMounts(IReadOnlyList<TriggerGraphMountTrigger> mounts)
+        private static JsonObject ListMounts(IReadOnlyList<TriggerGraphMountTrigger> mounts, AgentToolContext context)
         {
+            GraphProgramRegistry? programs = TryGetPrograms(context);
             var entries = new JsonArray();
             for (int i = 0; i < mounts.Count; i++)
             {
-                entries.Add(MountSnapshot(mounts[i]));
+                entries.Add(MountSnapshot(mounts[i], programs));
             }
 
-            return new JsonObject { ["mounts"] = entries, ["count"] = mounts.Count };
+            TriggerGraphExecutionSlotStore slots = context.Engine.GetService(CoreServiceKeys.TriggerGraphExecutionSlots)
+                ?? throw new AgentToolException(AgentBridgeErrorCodes.ServiceUnavailable, "TriggerGraph execution slots are unavailable.");
+            return new JsonObject
+            {
+                ["mounts"] = entries,
+                ["count"] = mounts.Count,
+                ["executionSlots"] = new JsonObject
+                {
+                    ["capacity"] = slots.Capacity,
+                    ["inUseCount"] = slots.InUseCount,
+                    ["highWaterMark"] = slots.HighWaterMark,
+                },
+            };
         }
 
-        private static JsonObject Configure(JsonObject? args, IReadOnlyList<TriggerGraphMountTrigger> mounts)
+        private static JsonObject Configure(JsonObject? args, IReadOnlyList<TriggerGraphMountTrigger> mounts, AgentToolContext context)
         {
             TriggerGraphMountTrigger mount = RequireMount(args, mounts);
             string modeText = AgentToolContext.RequireString(args, "mode");
@@ -93,7 +106,7 @@ namespace Ludots.AgentBridge.Tools
 
             mount.DebugTrace.Configure(mode);
             mount.DebugTrace.Clear();
-            return new JsonObject { ["ok"] = true, ["mount"] = MountSnapshot(mount) };
+            return new JsonObject { ["ok"] = true, ["mount"] = MountSnapshot(mount, TryGetPrograms(context)) };
         }
 
         private static JsonObject Drain(
@@ -120,11 +133,14 @@ namespace Ludots.AgentBridge.Tools
             {
                 GraphDebugTraceRecord record = buffer[i];
                 int sourcePc = record.SourcePc >= 0 ? record.SourcePc : record.CursorPc;
-                if (!sourceMap.TryGetSource(sourcePc, out GraphInstructionSource source))
+                int sourceGraphId = record.GraphId > 0 ? record.GraphId : mount.GraphId;
+                if (!programs.TryGetSourceMap(sourceGraphId, out sourceMap) ||
+                    !sourceMap.HasSources ||
+                    !sourceMap.TryGetSource(sourcePc, out GraphInstructionSource source))
                 {
                     throw new AgentToolException(
                         AgentBridgeErrorCodes.ServiceUnavailable,
-                        $"Graph debug source map has no instruction source for graph '{mount.GraphName}', pc={sourcePc}.");
+                        $"Graph debug source map is unavailable for graph id {sourceGraphId} (mount '{mount.GraphName}'), pc={sourcePc}.");
                 }
                 events.Add(ToJson(record, source));
             }
@@ -133,7 +149,7 @@ namespace Ludots.AgentBridge.Tools
             bool gap = oldestSequence <= latest && oldestSequence > since + 1;
             return new JsonObject
             {
-                ["mount"] = MountSnapshot(mount),
+                ["mount"] = MountSnapshot(mount, programs),
                 ["events"] = events,
                 ["oldestSequence"] = oldestSequence,
                 ["latestSequence"] = latest,
@@ -142,9 +158,23 @@ namespace Ludots.AgentBridge.Tools
             };
         }
 
-        private static JsonObject MountSnapshot(TriggerGraphMountTrigger mount)
+        private static GraphProgramRegistry? TryGetPrograms(AgentToolContext context)
+        {
+            return context.Engine.TryGetService(Ludots.Core.Scripting.CoreServiceKeys.GraphProgramRegistry, out GraphProgramRegistry? programs)
+                ? programs
+                : null;
+        }
+
+        private static JsonObject MountSnapshot(TriggerGraphMountTrigger mount, GraphProgramRegistry? programs)
         {
             GraphExecutionCursor cursor = mount.Cursor;
+            string executionBackend = "Interpret";
+            if (programs != null &&
+                programs.TryGetRegistration(mount.GraphId, out GraphProgramRegistration registration))
+            {
+                executionBackend = registration.ExecutionBackend.ToString();
+            }
+
             return new JsonObject
             {
                 ["graphId"] = mount.GraphId,
@@ -153,8 +183,10 @@ namespace Ludots.AgentBridge.Tools
                 ["event"] = mount.EventKey.Value,
                 ["domain"] = mount.Domain.ToString(),
                 ["scopeEntityId"] = mount.Scope.Id,
+                ["executionBackend"] = executionBackend,
                 ["mode"] = mount.DebugTrace.Mode.ToString(),
                 ["capacity"] = mount.DebugTrace.Capacity,
+                ["allocatedCapacity"] = mount.DebugTrace.AllocatedCapacity,
                 ["latestSequence"] = mount.DebugTrace.LatestSequence,
                 ["droppedCount"] = mount.DebugTrace.DroppedCount,
                 ["cursor"] = new JsonObject
@@ -173,12 +205,14 @@ namespace Ludots.AgentBridge.Tools
             var result = new JsonObject
             {
                 ["sequence"] = record.Sequence,
+                ["graphId"] = record.GraphId,
                 ["event"] = record.EventKind.ToString(),
                 ["sourcePc"] = record.SourcePc,
                 ["cursorPc"] = record.CursorPc,
                 ["steps"] = record.Steps,
                 ["nodeId"] = string.IsNullOrWhiteSpace(source.NodeId) ? null : source.NodeId,
                 ["op"] = string.IsNullOrWhiteSpace(source.Op) ? null : source.Op,
+                ["controlPort"] = string.IsNullOrWhiteSpace(source.ControlPort) ? null : source.ControlPort,
             };
 
             if (record.EventKind == GraphDebugTraceEvent.PinInt || record.EventKind == GraphDebugTraceEvent.PinBool)
@@ -191,9 +225,14 @@ namespace Ludots.AgentBridge.Tools
                 result["pinIndex"] = record.RegisterIndex;
                 result["value"] = record.FloatValue;
             }
-            else if (record.EventKind == GraphDebugTraceEvent.PinEntity || record.EventKind == GraphDebugTraceEvent.BlackboardEntity)
+            else if (record.EventKind == GraphDebugTraceEvent.PinEntity)
             {
                 result["pinIndex"] = record.RegisterIndex;
+                result["value"] = record.EntityValue.Id;
+            }
+            else if (record.EventKind == GraphDebugTraceEvent.BlackboardEntity)
+            {
+                result["keyId"] = record.RegisterIndex;
                 result["value"] = record.EntityValue.Id;
             }
             else if (record.EventKind is GraphDebugTraceEvent.BlackboardInt or GraphDebugTraceEvent.BlackboardFloat)

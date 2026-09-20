@@ -67,7 +67,7 @@ namespace Ludots.Tests.Presentation
             }
 
             float alpha = runtime.PresentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
-            if (!PresentBindingPresentation.TrySyncSolePresentPipeline(
+            if (!PresentBindingPresentation.TrySyncPresentPipelines(
                     engine,
                     runtime.CameraPresenter,
                     runtime.ScreenProjector,
@@ -85,7 +85,7 @@ namespace Ludots.Tests.Presentation
                         "ClientLocalSeatRegistry is published but headless PresentBinding pipeline failed to sync.");
                 }
 
-                runtime.CameraPresenter.Update(ClientLocalSeatAccess.ResolveAuthorityCamera(engine), alpha);
+                runtime.CameraPresenter.Update(ClientLocalSeatAccess.ResolveFirstPresentBindingCamera(engine), alpha);
             }
         }
 

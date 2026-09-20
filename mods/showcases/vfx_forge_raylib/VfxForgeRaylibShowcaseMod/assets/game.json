@@ -1,6 +1,12 @@
 {
   "startupMapId": "vfx_forge_raylib_showcase",
   "targetFps": 0,
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ],
   "presentation": {
     "presenterInstanceCapacity": 4096,
     "presentationEventStreamCapacity": 8192,

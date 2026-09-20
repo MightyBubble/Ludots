@@ -1,4 +1,5 @@
 using System;
+using Ludots.Core.Hosting;
 using Ludots.Platform.Abstractions;
 using Ludots.UI.Browser;
 
@@ -8,11 +9,16 @@ namespace Ludots.Adapter.Raylib
     {
         private readonly string _baseDir;
         private readonly string? _gameConfigFile;
+        private readonly Action<GameBootstrapResult>? _configure;
 
-        public RaylibGameHost(string baseDir, string? gameConfigFile = null)
+        public RaylibGameHost(
+            string baseDir,
+            string? gameConfigFile = null,
+            Action<GameBootstrapResult>? configure = null)
         {
             _baseDir = baseDir;
             _gameConfigFile = gameConfigFile;
+            _configure = configure;
         }
 
         public void Run()
@@ -20,7 +26,7 @@ namespace Ludots.Adapter.Raylib
             RaylibHostSetup? setup = null;
             try
             {
-                setup = RaylibHostComposer.Compose(_baseDir, _gameConfigFile);
+                setup = RaylibHostComposer.Compose(_baseDir, _gameConfigFile, _configure);
                 RaylibHostLoop.Run(setup);
             }
             finally

@@ -1,0 +1,158 @@
+{
+  "schemaVersion": 1,
+  "status": "failed",
+  "role": "replicatedClient",
+  "failure": "System.InvalidOperationException: Input action \u0027TrainInfantry\u0027 did not produce exactly one submitted network command batch; revision=2, result=TargetShapeMismatch, sequence=0.\r\n   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.AdvanceGesture() in C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\\Runtime\\AcceptanceDriver.cs:line 1022\r\n   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.UpdateTraining() in C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\\Runtime\\AcceptanceDriver.cs:line 456\r\n   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.UpdateClient() in C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\\Runtime\\AcceptanceDriver.cs:line 243\r\n   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.Update(Single\u0026 dt) in C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\\Runtime\\AcceptanceDriver.cs:line 177",
+  "startedAtUtc": "2026-07-25T00:43:31.2964840Z",
+  "completedAtUtc": "2026-07-25T00:43:52.7345682Z",
+  "planFingerprint": "052c4fd97d01835f9f322c361fa7c6b852d8be14eec7ffbe999850dd27920315",
+  "contentFingerprint": "6019ea5fa06c25494a407896f48757212d19873dbe90fcb2f364e0e4faf07463",
+  "sessionEpoch": 9333566149361790873,
+  "playerId": 1,
+  "seatSlot": 0,
+  "faultCount": 0,
+  "seats": [
+    {
+      "seatSlot": 0,
+      "playerId": 1,
+      "connectionState": "Connected",
+      "readyState": "Unready"
+    },
+    {
+      "seatSlot": 1,
+      "playerId": 2,
+      "connectionState": "Connected",
+      "readyState": "Unready"
+    }
+  ],
+  "steps": [
+    {
+      "name": "Connecting",
+      "status": "passed",
+      "startedInputRevision": 0,
+      "completedInputRevision": 6,
+      "startedCommittedTick": 0,
+      "completedCommittedTick": 0,
+      "startedAtUtc": "2026-07-25T00:43:31.3001912Z",
+      "completedAtUtc": "2026-07-25T00:43:34.3263669Z",
+      "detail": "Full snapshot and local player binding are ready."
+    },
+    {
+      "name": "Ready",
+      "status": "passed",
+      "startedInputRevision": 6,
+      "completedInputRevision": 47,
+      "startedCommittedTick": 0,
+      "completedCommittedTick": 2,
+      "startedAtUtc": "2026-07-25T00:43:34.3271401Z",
+      "completedAtUtc": "2026-07-25T00:43:38.4357532Z",
+      "detail": "Both commanders readied through input and the match reached InProgress."
+    },
+    {
+      "name": "Gathering",
+      "status": "passed",
+      "startedInputRevision": 47,
+      "completedInputRevision": 305,
+      "startedCommittedTick": 2,
+      "completedCommittedTick": 425,
+      "startedAtUtc": "2026-07-25T00:43:38.4358398Z",
+      "completedAtUtc": "2026-07-25T00:43:52.5324791Z",
+      "detail": "A selected harvester gathered one configured cargo and returned it to the core."
+    },
+    {
+      "name": "Training",
+      "status": "failed",
+      "startedInputRevision": 305,
+      "completedInputRevision": 0,
+      "startedCommittedTick": 425,
+      "completedCommittedTick": 0,
+      "startedAtUtc": "2026-07-25T00:43:52.5325668Z",
+      "completedAtUtc": "2026-07-25T00:43:52.7345895Z",
+      "detail": "Input action \u0027TrainInfantry\u0027 did not produce exactly one submitted network command batch; revision=2, result=TargetShapeMismatch, sequence=0."
+    }
+  ],
+  "commands": [
+    {
+      "action": "Gather",
+      "clientBatchSequence": 1,
+      "actorCount": 1,
+      "admissionStage": "EntityIntake",
+      "admissionResult": "Activated",
+      "actorHandles": [
+        "8:1"
+      ],
+      "admissionHistory": [
+        {
+          "stage": "NetworkIntake",
+          "result": "NetworkScheduled",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 52,
+          "observedCommittedTick": 17
+        },
+        {
+          "stage": "GlobalIntake",
+          "result": "Queued",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 52,
+          "observedCommittedTick": 17
+        },
+        {
+          "stage": "EntityIntake",
+          "result": "Activated",
+          "admissionBatchIndex": 0,
+          "observedInputRevision": 53,
+          "observedCommittedTick": 20
+        }
+      ],
+      "actorAdmissions": [
+        {
+          "batchIndex": 0,
+          "stage": "EntityIntake",
+          "result": "Activated"
+        }
+      ]
+    }
+  ],
+  "gameplay": {
+    "initialCrystals": 40,
+    "harvestedCrystals": 60,
+    "postTrainingCrystals": -1,
+    "initialInfantryCount": 2,
+    "trainedInfantryCount": -1,
+    "harvesterHandle": "8:1",
+    "harvesterStartPosition": {
+      "handle": "8:1",
+      "xCm": 8200,
+      "yCm": 15800
+    },
+    "harvesterEndPosition": {
+      "handle": "8:1",
+      "xCm": 6200,
+      "yCm": 15000
+    },
+    "selectedInfantryHandles": [],
+    "moveStartPositions": [],
+    "moveEndPositions": [],
+    "initialVisibleEnemyInfantryCount": 0,
+    "initialVisibleEnemyCoreCount": 0,
+    "enemyInfantryEnteredVision": false,
+    "enemyCoreEnteredVision": false,
+    "attackTargetHandle": "",
+    "attackTargetHealthBefore": -1,
+    "attackTargetHealthAfter": -1,
+    "observedCoreHealthBySide": [
+      1000,
+      null
+    ],
+    "observedInfantryCountBySide": [
+      2,
+      null
+    ],
+    "matchPhase": "",
+    "outcome": "",
+    "outcomeSource": "",
+    "winningSideIndex": -1,
+    "committedTick": 0,
+    "committedTickSource": ""
+  }
+}

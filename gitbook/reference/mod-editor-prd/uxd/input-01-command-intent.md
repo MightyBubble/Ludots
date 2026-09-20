@@ -11,7 +11,7 @@
 ```text
 ┌─ 命令意图编辑器：intent.command.combat ──────────────────────────────┐
 ├─ 左：档案清单 ────────┬─ 中：规则梯 ─────────────────────────────────┤
-│ ▸ …command.default ⚡2│ #30 ▸ actor[hasAbilityWithTag: Attack]       │
+│ ▸ …command.default ⚡2│ #30 ▸ actor[hasAbilityWithCategory: Attack]       │
 │ ▸ …command.combat ●  │      target[stance: Aggressive]              │
 │                      │      → route[orderTypeKey: attackTarget]  ↕ │
 │ ▸ ＋新建档案         │ #20 → route[slot: contextGroup:…] ]  ↕      │
@@ -28,13 +28,13 @@
 | 档案清单 | 档案表 | 徽标=规则数；默认档案标 ⚓ |
 | 规则梯 | rules 数组 | 拖拽排序即改 priority；层间互斥提示 |
 | 条件行 | 演员三式 / 目标四式（tag 总账、姿态枚举、三态） | 条件可组合，空侧=不限 |
-| 路由行 | 订单类型注册表 / `byAbilityTag:` / `contextGroup:` 补全 | 二选一 |
+| 路由行 | 订单类型注册表 / `byAbilityCategory:` / `contextGroup:` 补全 | 二选一 |
 | 模拟面板 | 意图解析干跑 | 输入演员+目标组合 → 逐演员路由结果 |
 
 ## 4. 关键交互流：让带攻击能力的单位右键敌目标时攻击
 
 1. 打开默认档案，规则梯顶部＋一层，priority 30。
-2. 演员条件选 `hasAbilityWithTag: Ability.Attack`；目标条件 `stance: Aggressive`。
+2. 演员条件选 `hasAbilityWithCategory: Ability.Attack`；目标条件 `stance: Aggressive`。
 3. 路由落 `attackTarget`。
 4. 模拟面板选"坦克×敌实体"▶ → 显示坦克→attackTarget；兵营落入下层兜底。
 5. 保存 → 档案表落盘。

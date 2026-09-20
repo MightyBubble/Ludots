@@ -143,6 +143,16 @@ namespace Ludots.Tests.GasTests.Production
                 "knowledge section is explicit about record count even when zero (fail-visible)");
         }
 
+        [Test]
+        public void AgentBridgeModEntry_RegistersToolsThroughBuiltinCatalog()
+        {
+            string entryPath = Path.Combine(FindRepoRoot(), "mods", "AgentBridgeMod", "AgentBridgeModEntry.cs");
+            string source = File.ReadAllText(entryPath);
+            Assert.That(source, Does.Contain("BuiltinAgentTools.RegisterAll"),
+                "the mod entry must wire the shared builtin catalog; hand-rolling a partial tool list here would " +
+                "silently drop tools (presenter observability included) from GET /tools while catalog tests stay green");
+        }
+
         private static GameEngine CreateEngine()
         {
             string repoRoot = FindRepoRoot();

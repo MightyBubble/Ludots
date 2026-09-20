@@ -5,6 +5,7 @@ using Arch.Core;
 using EntityInfoPanelsMod.Insight;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 
@@ -25,6 +26,7 @@ public sealed partial class EntityInfoPanelService
     private readonly EntityInsightProfileCatalog _insightCatalog;
     private readonly EntityInsightTextResolver _insightTextResolver;
     private readonly EntityInsightIconFactory _insightIconFactory = new();
+    private readonly PresentationDisplayResolver? _displayResolver;
     private readonly IEntityInfoPanelTemplateCatalog _templates;
     private readonly AbilityDefinitionRegistry? _abilityDefinitions;
 
@@ -95,7 +97,8 @@ public sealed partial class EntityInfoPanelService
         PresentationTextCatalog? presentationTextCatalog = null,
         PresentationTextLocaleSelection? localeSelection = null,
         AbilityDefinitionRegistry? abilityDefinitions = null,
-        IEntityInfoPanelTemplateCatalog? templates = null)
+        IEntityInfoPanelTemplateCatalog? templates = null,
+        PresentationDisplayResolver? displayResolver = null)
     {
         PresentationTextCatalog effectiveCatalog = presentationTextCatalog ?? PresentationTextCatalog.Empty;
         PresentationTextLocaleSelection effectiveLocaleSelection = localeSelection ?? new PresentationTextLocaleSelection(effectiveCatalog);
@@ -104,6 +107,7 @@ public sealed partial class EntityInfoPanelService
         _insightTextResolver = new EntityInsightTextResolver(effectiveCatalog, effectiveLocaleSelection);
         _templates = templates ?? new EntityInfoPanelTemplateCatalog();
         _abilityDefinitions = abilityDefinitions;
+        _displayResolver = displayResolver;
         _lastLocaleId = effectiveLocaleSelection.ActiveLocaleId;
     }
 
