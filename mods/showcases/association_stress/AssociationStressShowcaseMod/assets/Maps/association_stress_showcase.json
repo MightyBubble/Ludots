@@ -1,6 +1,17 @@
 {
   "Id": "association_stress_showcase",
-  "Tags": ["association_stress_showcase", "showcase", "association", "knowledge", "entity_collection"],
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  },
+  "Tags": [
+    "association_stress_showcase",
+    "showcase",
+    "association",
+    "knowledge",
+    "entity_collection"
+  ],
   "DefaultCamera": {
     "VirtualCameraId": "Tactical",
     "TargetXCm": 0,

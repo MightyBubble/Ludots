@@ -153,7 +153,7 @@ public sealed partial class MassNavigationFlowSolverState
 
         int offset = index << 1;
         float deltaXCm = (worldXCm - _worldOriginXCm) - _positionsCm[offset];
-        float deltaYCm = (worldYCm - _worldOriginYCm) - _positionsCm[offset + 1];
+        float deltaYCm = (worldYCm - _worldOriginYcm) - _positionsCm[offset + 1];
         if (deltaXCm == 0f && deltaYCm == 0f)
         {
             return;

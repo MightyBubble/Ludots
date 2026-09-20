@@ -114,7 +114,7 @@ public sealed partial class MassNavigationFlowSolverState
     private int _flowRefreshCursor = int.MaxValue;
     private int _staticCostRevision;
     private float _worldOriginXCm;
-    private float _worldOriginYCm;
+    private float _worldOriginYcm;
     private float _worldMinXCm = float.NegativeInfinity;
     private float _worldMaxXCm = float.PositiveInfinity;
     private float _worldMinYCm = float.NegativeInfinity;
@@ -187,7 +187,7 @@ public sealed partial class MassNavigationFlowSolverState
     public ReadOnlySpan<float> PositionsCm => _positionsCm.AsSpan(0, UnitCount * 2);
     public ReadOnlySpan<int> Teams => _teams.AsSpan(0, UnitCount);
     public float WorldOriginXCm => _worldOriginXCm;
-    public float WorldOriginYCm => _worldOriginYCm;
+    public float WorldOriginYcm => _worldOriginYcm;
 
     public MassNavigationFlowSolverState(MassNavigationFlowSolverConfig solver)
     {
@@ -273,12 +273,12 @@ public sealed partial class MassNavigationFlowSolverState
 
     public Vector2 WorldToLocalCm(Vector2 worldCm)
     {
-        return new Vector2(worldCm.X - _worldOriginXCm, worldCm.Y - _worldOriginYCm);
+        return new Vector2(worldCm.X - _worldOriginXCm, worldCm.Y - _worldOriginYcm);
     }
 
     public Vector2 LocalToWorldCm(Vector2 localCm)
     {
-        return new Vector2(localCm.X + _worldOriginXCm, localCm.Y + _worldOriginYCm);
+        return new Vector2(localCm.X + _worldOriginXCm, localCm.Y + _worldOriginYcm);
     }
 
     public float GetPositionX(int index) => _positionsCm[index << 1];
@@ -324,7 +324,7 @@ public sealed partial class MassNavigationFlowSolverState
     public void SetWorldOrigin(float originXCm, float originYCm)
     {
         _worldOriginXCm = originXCm;
-        _worldOriginYCm = originYCm;
+        _worldOriginYcm = originYCm;
         RefreshObstacleLocalFrame();
     }
 
@@ -747,7 +747,7 @@ public sealed partial class MassNavigationFlowSolverState
         Span<MassNavigationArrivalEvent> destination,
         MassNavigationAgentState agentState,
         float worldOriginXCm,
-        float worldOriginYCm)
+        float worldOriginYcm)
     {
         ArgumentNullException.ThrowIfNull(agentState);
         int count = Math.Min(destination.Length, _arrivalEventCount);
@@ -764,7 +764,7 @@ public sealed partial class MassNavigationFlowSolverState
                 localX,
                 localY,
                 worldOriginXCm + localX,
-                worldOriginYCm + localY);
+                worldOriginYcm + localY);
         }
 
         if (count == _arrivalEventCount)
@@ -1545,7 +1545,7 @@ public sealed partial class MassNavigationFlowSolverState
     private void CacheObstacle(int index, float xCm, float yCm, float radiusCm)
     {
         _obsWorldX[index] = _worldOriginXCm + xCm;
-        _obsWorldY[index] = _worldOriginYCm + yCm;
+        _obsWorldY[index] = _worldOriginYcm + yCm;
         _obsX[index] = xCm;
         _obsY[index] = yCm;
         _obsRadius[index] = radiusCm;
@@ -1578,7 +1578,7 @@ public sealed partial class MassNavigationFlowSolverState
         for (int i = 0; i < ObstacleCount; i++)
         {
             _obsX[i] = _obsWorldX[i] - _worldOriginXCm;
-            _obsY[i] = _obsWorldY[i] - _worldOriginYCm;
+            _obsY[i] = _obsWorldY[i] - _worldOriginYcm;
         }
     }
 
@@ -3120,7 +3120,7 @@ public sealed partial class MassNavigationFlowSolverState
             throw new InvalidOperationException("MassNavigationFlow world-bound clamp requires insetCm >= 0.");
         }
 
-        float worldY = _worldOriginYCm + yCm;
+        float worldY = _worldOriginYcm + yCm;
         float min = _worldMinYCm + insetCm;
         float max = _worldMaxYCm - insetCm;
         if (min > max)
@@ -3135,7 +3135,7 @@ public sealed partial class MassNavigationFlowSolverState
             return false;
         }
 
-        yCm = clampedWorldY - _worldOriginYCm;
+        yCm = clampedWorldY - _worldOriginYcm;
         return true;
     }
 

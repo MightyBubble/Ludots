@@ -1,5 +1,5 @@
 {
-  "Id": "entry",
+  "Id": "terrain_benchmark_entry",
   "ParentId": null,
   "Dependencies": {},
   "Tags": [
@@ -53,13 +53,11 @@
     {
       "Name": "default",
       "SpatialType": "HexGrid",
-      "WidthInMacroTiles": 64,
-      "HeightInMacroTiles": 64,
+      "WidthCells": 16384,
+      "HeightCells": 16384,
       "GridCellSizeCm": 100,
       "HexEdgeLengthCm": 400,
-      "ChunkSizeCells": 64,
-      "DataFile": "terrain_bench.hex",
-      "NavigationEnabled": false
+      "DataFile": "terrain_bench.hex"
     }
   ],
   "TriggerTypes": []

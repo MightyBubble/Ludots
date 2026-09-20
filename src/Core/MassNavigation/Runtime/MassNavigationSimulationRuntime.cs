@@ -1388,7 +1388,7 @@ public sealed class MassNavigationSimulationRuntime
         }
 
         float previousOriginX = MassNavigationFlow.WorldOriginXCm;
-        float previousOriginY = MassNavigationFlow.WorldOriginYCm;
+        float previousOriginY = MassNavigationFlow.WorldOriginYcm;
         _simWindowCenterXCm = nextCenterX;
         _simWindowCenterYCm = nextCenterY;
         float nextOriginX = SolverWindowMinXCm;

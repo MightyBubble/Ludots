@@ -75,8 +75,10 @@ namespace Ludots.Core.Map
             if (config != null)
             {
                 ResolvePendingTombstones(mapId.Value, config);
+                // Backfill runs once at the top level only: parent configs must stay
+                // un-backfilled so child conflict checks compare authored values (#1567).
+                ApplyWorldTuningToBoards(config);
             }
-
             return config;
         }
 
@@ -202,6 +204,7 @@ namespace Ludots.Core.Map
                     }
                 }
                 
+                ValidateSpatialDeclaration(finalConfig, mapId);
                 Log.Info(in LogChannels.Map, $"Map '{mapId}' loaded.");
                 return finalConfig;
             }
@@ -234,6 +237,21 @@ namespace Ludots.Core.Map
                 {
                     target.ContinuousHeightmapAsset = target.ContinuousHeightmap.Asset;
                 }
+            }
+
+            if (!string.IsNullOrWhiteSpace(source.RootBoard))
+            {
+                target.RootBoard = source.RootBoard;
+            }
+
+            if (source.World is { } srcWorld && (srcWorld.WidthCm > 0 || srcWorld.HeightCm > 0))
+            {
+                target.World = srcWorld.Clone();
+            }
+
+            if (source.Tuning is { } srcTuning && srcTuning.IsAuthored)
+            {
+                target.Tuning = srcTuning.Clone();
             }
 
             if (source.TerrainPresentation != null) target.TerrainPresentation = source.TerrainPresentation.Clone();
@@ -696,6 +714,218 @@ namespace Ludots.Core.Map
             }
         }
 
+        public static void ValidateSpatialDeclaration(MapConfig config, MapId mapId)
+        {
+            ValidateTuningValues(config.Tuning, mapId);
+
+            if (config.Boards is not { Count: > 0 })
+            {
+                // Boardless maps are first-class; they may declare the host world directly
+                // (nothing else anchors it) but are not required to (non-spatial maps).
+                var boardless = config.World;
+                if (boardless is { } bw && (bw.WidthCm > 0 || bw.HeightCm > 0 || bw.CellSizeCm != Ludots.Core.Spatial.SpatialScaleDefaults.CellCm))
+                {
+                    if (bw.WidthCm <= 0 || bw.HeightCm <= 0 || bw.CellSizeCm <= 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Map '{mapId}' declares a partial World; WidthCm/HeightCm/CellSizeCm must all be positive or all omitted (#1567).");
+                    }
+                }
+
+                return;
+            }
+
+            if (config.World is { } declared && (declared.WidthCm > 0 || declared.HeightCm > 0))
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' has boards and a World declaration; board-bearing maps root the host world on RootBoard, World is boardless-only (#1567).");
+            }
+
+            foreach (var board in config.Boards)
+            {
+                string spatialType = (board.SpatialType ?? "Grid").Trim();
+                if (!spatialType.Equals("Grid", StringComparison.OrdinalIgnoreCase) &&
+                    !spatialType.Equals("HexGrid", StringComparison.OrdinalIgnoreCase) &&
+                    !spatialType.Equals("Hex", StringComparison.OrdinalIgnoreCase) &&
+                    !spatialType.Equals("Hybrid", StringComparison.OrdinalIgnoreCase) &&
+                    !spatialType.Equals("NodeGraph", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapId}' board '{board.Name}' has unknown SpatialType '{spatialType}'; use Grid/HexGrid/NodeGraph.");
+                }
+            }
+
+            BoardConfig root = ResolveRootBoard(config, mapId);
+
+            foreach (var board in config.Boards)
+            {
+                ValidateBoardPlacement(board, root, mapId);
+                ValidateBoardAgainstWorldTuning(board, config.Tuning, mapId);
+            }
+        }
+
+        public static BoardConfig ResolveRootBoardFor(MapConfig config, string mapId)
+        {
+            return ResolveRootBoard(config, new MapId(mapId));
+        }
+
+        internal static BoardConfig ResolveRootBoard(MapConfig config, MapId mapId)
+        {
+            string rootDesignation = config.RootBoard?.Trim();
+            if (!string.IsNullOrWhiteSpace(rootDesignation))
+            {
+                foreach (var board in config.Boards)
+                {
+                    if (string.Equals(board.Name, rootDesignation, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return board;
+                    }
+                }
+
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' RootBoard '{rootDesignation}' matches no board; fix the designation or omit it to root the first board (#1567).");
+            }
+
+            return config.Boards[0];
+        }
+
+        private static void ValidateTuningValues(Ludots.Core.Config.WorldTuningConfig tuning, MapId mapId)
+        {
+            if (tuning is null || !tuning.IsAuthored)
+            {
+                return;
+            }
+
+            if (tuning.PartitionChunkCells is int partition &&
+                (partition <= 0 || (partition & (partition - 1)) != 0))
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' Tuning.PartitionChunkCells must be positive and a power of two; got {partition}.");
+            }
+
+            if (tuning.LoadedChunkCapacity is int capacity && capacity <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' Tuning.LoadedChunkCapacity must be positive; got {capacity}.");
+            }
+        }
+
+        public static void ApplyWorldTuningToBoards(MapConfig config)
+        {
+            if (config?.Boards is not { Count: > 0 })
+            {
+                return;
+            }
+
+            var tuning = config.Tuning;
+            int partition = tuning?.PartitionChunkCells
+                ?? Ludots.Core.Spatial.SpatialScaleDefaults.PartitionChunkCells;
+            int capacity = tuning?.LoadedChunkCapacity
+                ?? Ludots.Core.Spatial.SpatialScaleDefaults.DefaultLoadedChunkCapacity;
+
+            foreach (var board in config.Boards)
+            {
+                board.ChunkSizeCells = partition;
+                board.LoadedChunkCapacity = capacity;
+            }
+        }
+
+        private static void ValidateBoardAgainstWorldTuning(BoardConfig board, Ludots.Core.Config.WorldTuningConfig tuning, MapId mapId)
+        {
+            if (tuning is null || !tuning.IsAuthored)
+            {
+                return;
+            }
+
+            if (tuning.PartitionChunkCells is int partitionValue &&
+                board.ChunkSizeCells != Ludots.Core.Spatial.SpatialScaleDefaults.PartitionChunkCells &&
+                board.ChunkSizeCells != partitionValue)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' board '{board.Name}' declares ChunkSizeCells={board.ChunkSizeCells}, conflicting with Tuning.PartitionChunkCells={partitionValue}; remove the board-level field or align it (single world budget, #1567).");
+            }
+
+            if (tuning.LoadedChunkCapacity is int capacityValue &&
+                board.LoadedChunkCapacity > 0 &&
+                board.LoadedChunkCapacity != capacityValue)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' board '{board.Name}' declares LoadedChunkCapacity={board.LoadedChunkCapacity}, conflicting with Tuning.LoadedChunkCapacity={capacityValue}; remove the board-level field or align it (single world budget, #1567).");
+            }
+        }
+
+        private static string spatialTypeOf(BoardConfig board) =>
+            (board.SpatialType ?? "Grid").Trim();
+
+        private static void ValidateBoardPlacement(BoardConfig board, BoardConfig root, MapId mapId)
+        {
+            bool hasX = board.OriginXCm.HasValue;
+            bool hasY = board.OriginYcm.HasValue;
+            if (hasX != hasY)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' board '{board.Name}' must author OriginXCm and OriginYcm together.");
+            }
+
+            if (hasX && ReferenceEquals(board, root))
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' root board '{board.Name}' anchors the centered world and cannot declare OriginXCm/OriginYcm; placement is satellite-board-only (#1567 slice 2b).");
+            }
+
+            if (board.WidthCells <= 0 || board.HeightCells <= 0 || board.GridCellSizeCm <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' board '{board.Name}' requires positive WidthCells/HeightCells/GridCellSizeCm.");
+            }
+
+            bool hasHexes = board.WidthHexes.HasValue || board.HeightHexes.HasValue;
+            if (hasHexes)
+            {
+                bool isHex = spatialTypeOf(board) is "HexGrid" or "Hex";
+                if (!isHex)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapId}' board '{board.Name}' declares WidthHexes/HeightHexes but SpatialType is '{board.SpatialType}'; hex metrics are HexGrid-only (#1567 slice 2).");
+                }
+                if (board.WidthHexes is not > 0 || board.HeightHexes is not > 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapId}' board '{board.Name}' must author positive WidthHexes/HeightHexes together; hexes take precedence over WidthCells when authored (#1567 slice 2).");
+                }
+            }
+
+            if (ReferenceEquals(board, root))
+            {
+                return;
+            }
+
+            long boardWidthCm = board.ResolveExtent().WidthCm;
+            long boardHeightCm = board.ResolveExtent().HeightCm;
+            long rootWidthCm = root.ResolveExtent().WidthCm;
+            long rootHeightCm = root.ResolveExtent().HeightCm;
+            if (boardWidthCm > rootWidthCm || boardHeightCm > rootHeightCm)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' board '{board.Name}' extent {boardWidthCm}x{boardHeightCm}cm exceeds root board '{root.Name}' extent {rootWidthCm}x{rootHeightCm}cm; enlarge the root board or shrink the satellite (#1567).");
+            }
+
+            if (hasX)
+            {
+                long minX = board.OriginXCm!.Value;
+                long minY = board.OriginYcm!.Value;
+                long rootMinX = -rootWidthCm / 2;
+                long rootMinY = -rootHeightCm / 2;
+                if (minX < rootMinX || minY < rootMinY ||
+                    minX + boardWidthCm > rootMinX + rootWidthCm ||
+                    minY + boardHeightCm > rootMinY + rootHeightCm)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapId}' board '{board.Name}' anchored AABB ({minX},{minY})+{boardWidthCm}x{boardHeightCm}cm exits the root board frame ({rootMinX},{rootMinY})+{rootWidthCm}x{rootHeightCm}cm; place the satellite fully inside the world (#1567 slice 2b).");
+                }
+            }
+        }
+
         private static void RejectLegacyWorldExtentKeys(JsonNode fragment, string jsonPath)
         {
             if (fragment is not JsonObject root)
@@ -703,8 +933,10 @@ namespace Ludots.Core.Map
                 return;
             }
 
-            RejectLegacyKey(root, "WidthInTiles", "widthInMacroTiles", jsonPath);
-            RejectLegacyKey(root, "HeightInTiles", "heightInMacroTiles", jsonPath);
+            RejectLegacyKey(root, "WidthInTiles", "Boards[].WidthCells", jsonPath);
+            RejectLegacyKey(root, "HeightInTiles", "Boards[].HeightCells", jsonPath);
+            RejectLegacyKey(root, "WidthInMacroTiles", "Boards[].WidthCells", jsonPath);
+            RejectLegacyKey(root, "HeightInMacroTiles", "Boards[].HeightCells", jsonPath);
 
             if (!TryGetPropertyCaseInsensitive(root, "boards", out JsonNode boardsNode) ||
                 boardsNode is not JsonArray boards)
@@ -719,8 +951,13 @@ namespace Ludots.Core.Map
                     continue;
                 }
 
-                RejectLegacyKey(board, "WidthInTiles", "widthInMacroTiles", $"{jsonPath}.boards[{i}]");
-                RejectLegacyKey(board, "HeightInTiles", "heightInMacroTiles", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "WidthInTiles", "Boards[].WidthCells", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "HeightInTiles", "Boards[].HeightCells", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "WidthInMacroTiles", "Boards[].WidthCells", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "HeightInMacroTiles", "Boards[].HeightCells", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "ChunkSizeCells", "Tuning.PartitionChunkCells", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "LoadedChunkCapacity", "Tuning.LoadedChunkCapacity", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "NavTileGrid", "Navigation/navmesh.json maps.<mapId>.boards.<name>", $"{jsonPath}.boards[{i}]");
             }
         }
 

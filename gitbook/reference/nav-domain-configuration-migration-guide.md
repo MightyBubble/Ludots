@@ -15,7 +15,7 @@
 |---|---|---|
 | `WidthInTiles` / `HeightInTiles` | `Boards[].WidthInMacroTiles` / `HeightInMacroTiles` | 单位是 256-cell MacroTile 数量；旧键出现即 fail-fast。 |
 | 创建地图时手填 chunk 数 | 输入目标米数 + `GridCellSizeCm`，自动派生 MacroTiles / cells / Terrain/NavTiles | 编辑器 New / Add Board 已按这个模型工作。 |
-| 代码里 inline `256` / `64` / `100` | `SpatialScaleDefaults.MacroTileCells` / `TerrainChunkCells` / `CellCm` 等命名常量 | `NavigationSpatialScaleMagicNumberContractTests` 会扫 board/bake/MassNavigationFlow 代码。 |
+| 代码里 inline `256` / `64` / `100` | `SpatialScaleDefaults.TerrainPageCells` / `TerrainChunkCells` / `CellCm` 等命名常量 | `NavigationSpatialScaleMagicNumberContractTests` 会扫 board/bake/MassNavigationFlow 代码。 |
 | 用 `NavTile` 命名地形块尺度 | `TerrainChunk` footprint | NavTile 是 bake 产物用途，不是新的尺度 owner。 |
 | 私有 obstacle json / loader | `ManifestationObstacleIntent2D` + `ShapeDataStorage2D` + `CompoundObstacle2DState` | bake 与 MassNavigationFlow 执行消费同一障碍数据。 |
 | `ObstacleGeometryProfile2D` | 不创建 | 主线不存在这个 owner。 |
@@ -68,7 +68,7 @@
 ```text
 targetWidthMeters = 1000
 GridCellSizeCm    = 100
-MacroTileCells    = 256
+TerrainPageCells    = 256
 
 requestedCells      = ceil(1000m * 100 / 100cm) = 1000 cells
 WidthInMacroTiles   = ceil(1000 / 256) = 4

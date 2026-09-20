@@ -72,8 +72,8 @@ Command:
 
 `BoardConfig.DataFile` is optional for grid logic terrain. If absent, grid boards create a flat logic terrain sized by:
 
-- `WidthInMacroTiles * SpatialScaleDefaults.MacroTileCells`
-- `HeightInMacroTiles * SpatialScaleDefaults.MacroTileCells`
+- `WidthInMacroTiles * SpatialScaleDefaults.TerrainPageCells`
+- `HeightInMacroTiles * SpatialScaleDefaults.TerrainPageCells`
 - `GridCellSizeCm`
 - `ChunkSizeCells`
 

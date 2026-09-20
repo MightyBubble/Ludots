@@ -333,10 +333,8 @@ export const Toolbar: React.FC = () => {
     const [newBoardHeightMeters, setNewBoardHeightMeters] = React.useState(defaultMacroTileMeters);
     const [newBoardCellSizeCm, setNewBoardCellSizeCm] = React.useState(String(CellCm));
     const [newBoardHexEdgeLengthCm, setNewBoardHexEdgeLengthCm] = React.useState(String(DefaultHexEdgeLengthCm));
-    const [newBoardNavigationEnabled, setNewBoardNavigationEnabled] = React.useState(true);
     const [editBoardCellSizeCm, setEditBoardCellSizeCm] = React.useState(CellCm);
     const [editBoardHexEdgeLengthCm, setEditBoardHexEdgeLengthCm] = React.useState(DefaultHexEdgeLengthCm);
-    const [editBoardNavigationEnabled, setEditBoardNavigationEnabled] = React.useState(true);
     const [mapId, setMapId] = React.useState('');
     const [navScope, setNavScope] = React.useState<'dirty' | 'full'>('dirty');
     const [navIncludeNeighbors, setNavIncludeNeighbors] = React.useState(true);
@@ -446,8 +444,7 @@ export const Toolbar: React.FC = () => {
     const boardScalePreviewChunkCm = boardPropertyChunkSizeCells * boardScalePreviewCellSizeCm;
     const boardScaleCellChanged = boardScalePreviewCellSizeCm !== boardPropertyCellSizeCm;
     const boardScaleHexChanged = boardPropertyTopology === 'HexGrid' && boardScalePreviewHexEdgeLengthCm !== boardPropertyHexEdgeLengthCm;
-    const boardScaleNavChanged = editBoardNavigationEnabled !== (selectedBoardInfo?.navigationEnabled ?? selectedMapInfo?.navigationEnabled ?? true);
-    const boardScaleHasChanges = boardScaleCellChanged || boardScaleHexChanged || boardScaleNavChanged;
+    const boardScaleHasChanges = boardScaleCellChanged || boardScaleHexChanged;
     const newMapWidthMetersValue = parseDraftNumber(newMapWidthMeters);
     const newMapHeightMetersValue = parseDraftNumber(newMapHeightMeters);
     const newMapCellSizeCmValue = parseDraftNumber(newMapCellSizeCm);
@@ -534,7 +531,6 @@ export const Toolbar: React.FC = () => {
         const source = selectedBoardInfo ?? selectedMapInfo;
         setEditBoardCellSizeCm(source?.cellSizeCm ?? CellCm);
         setEditBoardHexEdgeLengthCm(source?.hexEdgeLengthCm ?? DefaultHexEdgeLengthCm);
-        setEditBoardNavigationEnabled(source?.navigationEnabled ?? true);
     }, [selectedBoardInfo, selectedMapInfo, selectedMapId, selectedBoardName]);
 
     React.useEffect(() => {
@@ -594,7 +590,6 @@ export const Toolbar: React.FC = () => {
             topology: newTopology,
             cellSizeCm: Math.max(1, Math.floor(newMapCellSizeCmValue)),
             hexEdgeLengthCm: Math.max(1, Math.floor(newTopology === 'HexGrid' ? newMapHexEdgeLengthCmValue : DefaultHexEdgeLengthCm)),
-            chunkSizeCells: TerrainChunkCells,
         });
         setShowNewMap(false);
     };
@@ -607,10 +602,9 @@ export const Toolbar: React.FC = () => {
         const request: BoardCreateRequest = {
             name: newBoardName.trim(),
             spatialType: newBoardTopology,
-            widthInMacroTiles: newBoardAllocation.widthMacroTiles,
-            heightInMacroTiles: newBoardAllocation.heightMacroTiles,
+            widthCells: newBoardAllocation.allocatedWidthCells,
+            heightCells: newBoardAllocation.allocatedHeightCells,
             cellSizeCm: Math.max(1, Math.floor(newBoardCellSizeCmValue)),
-            navigationEnabled: newBoardNavigationEnabled,
         };
         if (newBoardTopology === 'HexGrid') {
             request.hexEdgeLengthCm = Math.max(1, Math.floor(newBoardHexEdgeLengthCmValue));
@@ -632,9 +626,6 @@ export const Toolbar: React.FC = () => {
         }
         if (boardScaleHexChanged) {
             request.hexEdgeLengthCm = boardScalePreviewHexEdgeLengthCm;
-        }
-        if (boardScaleNavChanged) {
-            request.navigationEnabled = editBoardNavigationEnabled;
         }
         try {
             await updateSelectedBoard(request);
@@ -1990,8 +1981,6 @@ export const Toolbar: React.FC = () => {
                             <label className="flex items-center gap-2 text-sm text-slate-300">
                                 <input
                                     type="checkbox"
-                                    checked={editBoardNavigationEnabled}
-                                    onChange={(e) => setEditBoardNavigationEnabled(e.target.checked)}
                                 />
                                 <span>Navigation enabled</span>
                             </label>
@@ -2111,7 +2100,6 @@ export const Toolbar: React.FC = () => {
                                                 <span>{board.widthChunks}x{board.heightChunks}</span>
                                                 <span>{board.cellSizeCm}cm</span>
                                                 <span>{board.hexEdgeLengthCm}cm hex</span>
-                                                <span>{board.navigationEnabled ? 'nav' : 'no-nav'}</span>
                                                 <span>{board.canEditTerrain ? 'edit' : 'view'}</span>
                                                 <span>{board.dataFileExists ? 'data' : 'no-data'}</span>
                                             </div>
@@ -2982,8 +2970,6 @@ export const Toolbar: React.FC = () => {
                             <label className="flex items-center gap-2 text-sm text-slate-300">
                                 <input
                                     type="checkbox"
-                                    checked={newBoardNavigationEnabled}
-                                    onChange={(e) => setNewBoardNavigationEnabled(e.target.checked)}
                                 />
                                 <span>Navigation enabled</span>
                             </label>

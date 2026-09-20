@@ -1,111 +1,113 @@
-﻿{
-    "Id":  "camera_acceptance_hotpath",
-    "Tags":  [
-                 "camera.acceptance",
-                 "camera.acceptance.hotpath"
-             ],
-    "Boards":  [
-                   {
-                       "Name":  "default",
-                       "SpatialType":  "Grid",
-                       "WidthInMacroTiles":  2,
-                       "HeightInMacroTiles":  2,
-                       "GridCellSizeCm":  100,
-                       "LoadedChunkCapacity":  64
-                   }
-               ],
-    "DefaultCamera":  {
-                          "VirtualCameraId":  "Camera.Acceptance.Profile.HotpathOverview",
-                          "TargetXCm":  3200,
-                          "TargetYCm":  2000
-                      },
-    "Entities":  [
-                     {
-                         "Template":  "moba_hero",
-                         "Overrides":  {
-                                           "Name":  {
-                                                        "Value":  "CameraAcceptanceHero"
-                                                    },
-                                           "WorldPositionCm":  {
-                                                                   "Value":  {
-                                                                                 "X":  2400,
-                                                                                 "Y":  1600
-                                                                             }
-                                                               }
-                                       },
-                         "InstanceId":  "camera-acceptance-local-player"
-                     },
-                     {
-                         "Template":  "moba_dummy",
-                         "Overrides":  {
-                                           "Name":  {
-                                                        "Value":  "CameraAcceptanceScout"
-                                                    },
-                                           "WorldPositionCm":  {
-                                                                   "Value":  {
-                                                                                 "X":  3200,
-                                                                                 "Y":  2000
-                                                                             }
-                                                               },
-                                           "PlayerOwner":  {
-                                                               "PlayerId":  1
-                                                           },
-                                           "Team":  {
-                                                        "Id":  1
-                                                    }
-                                       }
-                     },
-                     {
-                         "Template":  "moba_dummy",
-                         "Overrides":  {
-                                           "Name":  {
-                                                        "Value":  "CameraAcceptanceCaptain"
-                                                    },
-                                           "WorldPositionCm":  {
-                                                                   "Value":  {
-                                                                                 "X":  3920,
-                                                                                 "Y":  2440
-                                                                             }
-                                                               },
-                                           "PlayerOwner":  {
-                                                               "PlayerId":  1
-                                                           },
-                                           "Team":  {
-                                                        "Id":  1
-                                            }
-                                       }
-                     },
-                     {
-                         "Template":  "moba_dummy",
-                         "InstanceId":  "camera-acceptance-crowd-team-rep",
-                         "Overrides":  {
-                                           "Name":  {
-                                                        "Value":  "CameraAcceptanceCrowdTeamRep"
-                                                    },
-                                           "WorldPositionCm":  {
-                                                                  "Value":  {
-                                                                                "X":  24000,
-                                                                                "Y":  24000
-                                                                            }
-                                                              }
-                                       }
-                     }
-                 ],
-    "Teams":  [
-                  {
-                      "TeamId":  1,
-                      "RepresentativeInstanceId":  "camera-acceptance-local-player"
-                  },
-                  {
-                      "TeamId":  2,
-                      "RepresentativeInstanceId":  "camera-acceptance-crowd-team-rep"
-                  }
-              ],
-    "Players":  [
-                    {
-                        "PlayerId":  1,
-                        "TeamId":  1,
-                        "RepresentativeInstanceId":  "camera-acceptance-local-player"
-                    }
-                ]
+{
+  "Id": "camera_acceptance_hotpath",
+  "Tuning": {
+    "LoadedChunkCapacity": 64
+  },
+  "Tags": [
+    "camera.acceptance",
+    "camera.acceptance.hotpath"
+  ],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthCells": 512,
+      "HeightCells": 512,
+      "GridCellSizeCm": 100
+    }
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Acceptance.Profile.HotpathOverview",
+    "TargetXCm": 3200,
+    "TargetYCm": 2000
+  },
+  "Entities": [
+    {
+      "Template": "moba_hero",
+      "Overrides": {
+        "Name": {
+          "Value": "CameraAcceptanceHero"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2400,
+            "Y": 1600
+          }
+        }
+      },
+      "InstanceId": "camera-acceptance-local-player"
+    },
+    {
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": {
+          "Value": "CameraAcceptanceScout"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 3200,
+            "Y": 2000
+          }
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": {
+          "Value": "CameraAcceptanceCaptain"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 3920,
+            "Y": 2440
+          }
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "Template": "moba_dummy",
+      "InstanceId": "camera-acceptance-crowd-team-rep",
+      "Overrides": {
+        "Name": {
+          "Value": "CameraAcceptanceCrowdTeamRep"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 24000,
+            "Y": 24000
+          }
+        }
+      }
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "camera-acceptance-local-player"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "camera-acceptance-crowd-team-rep"
+    }
+  ],
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "camera-acceptance-local-player"
+    }
+  ]
 }

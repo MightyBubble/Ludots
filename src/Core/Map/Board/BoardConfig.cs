@@ -15,11 +15,17 @@ namespace Ludots.Core.Map.Board
         /// <summary>Spatial type: "Grid", "HexGrid", or "NodeGraph".</summary>
         public string SpatialType { get; set; } = "Grid";
 
-        /// <summary>Board width in 256-cell macro tiles.</summary>
-        public int WidthInMacroTiles { get; set; } = SpatialScaleDefaults.DefaultWorldWidthMacroTiles;
+        /// <summary>Board width in topology cells (#1567: authored directly; the root board anchors the host world.</summary>
+        public int WidthCells { get; set; } = SpatialScaleDefaults.DefaultBoardWidthPages * SpatialScaleDefaults.TerrainPageCells;
 
-        /// <summary>Board height in 256-cell macro tiles.</summary>
-        public int HeightInMacroTiles { get; set; } = SpatialScaleDefaults.DefaultWorldHeightMacroTiles;
+        /// <summary>Board height in topology cells (#1567: authored directly; the root board anchors the host world.</summary>
+        public int HeightCells { get; set; } = SpatialScaleDefaults.DefaultBoardHeightPages * SpatialScaleDefaults.TerrainPageCells;
+
+        /// <summary>Board AABB min-corner anchor in world coordinates, X axis; null = centered on the world (#1567 slice 2). Same anchor semantics as NavTileGridConfig.OriginXcm.</summary>
+        public int? OriginXCm { get; set; }
+
+        /// <summary>Board AABB min-corner anchor in world coordinates, Y axis; null = centered on the world. Both axes must be authored together.</summary>
+        public int? OriginYcm { get; set; }
 
         /// <summary>Grid cell size in centimeters.</summary>
         public int GridCellSizeCm { get; set; } = SpatialScaleDefaults.CellCm;
@@ -27,11 +33,23 @@ namespace Ludots.Core.Map.Board
         /// <summary>Hex edge length in centimeters. Applies to HexGrid boards.</summary>
         public int HexEdgeLengthCm { get; set; } = SpatialScaleDefaults.DefaultHexEdgeLengthCm;
 
-        /// <summary>Spatial partition chunk size in cells per side. Must be a power of two.</summary>
+        /// <summary>Board width in hexes; HexGrid-only authoring, takes precedence over
+        /// WidthCells when authored on both axes (#1567 slice 2 hex metric). Non-square with
+        /// HeightHexes is fine; the world AABB is the conservative hex footprint.</summary>
+        public int? WidthHexes { get; set; }
+
+        /// <summary>Board height in hexes; must be authored together with WidthHexes.</summary>
+        public int? HeightHexes { get; set; }
+
+        /// <summary>Spatial partition chunk size in cells per side. Runtime only: populated from
+        /// the map's Tuning (#1567); JSON authoring lives on map Tuning.PartitionChunkCells.</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
         public int ChunkSizeCells { get; set; } = SpatialScaleDefaults.PartitionChunkCells;
 
-        /// <summary>Maximum simultaneously loaded chunks. Must be positive for every board kind; Grid boards construct their chunk window eagerly on load.</summary>
-        public int LoadedChunkCapacity { get; set; }
+        /// <summary>Maximum simultaneously loaded chunks. Runtime only: populated from the map's
+        /// Tuning (#1567); JSON authoring lives on map Tuning.LoadedChunkCapacity.</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public int LoadedChunkCapacity { get; set;}
 
         /// <summary>Path to binary data file (.hex, .graph) — optional.</summary>
         public string DataFile { get; set; }
@@ -44,9 +62,6 @@ namespace Ludots.Core.Map.Board
 
         public bool StructureAwareNavigation { get; set; }
 
-        /// <summary>Whether navigation is enabled for this board.</summary>
-        public bool NavigationEnabled { get; set; }
-
         /// <summary>
         /// ContinuousHeightmap → LogicTerrain 投影的高度量化步长（cm）。0 = 引擎默认
         /// （SpatialScaleDefaults.CellCm）。起伏地图用细步长（如 25）可避免
@@ -57,9 +72,25 @@ namespace Ludots.Core.Map.Board
 
         public int? TerrainBlockedAtOrBelowHeightCm { get; set; }
 
-        /// <summary>Explicit nav tile grid for this board (authored with the bake).
-        /// Required when the board participates in navmesh; runtime reads this declaration only.</summary>
-        public NavTileGridConfig NavTileGrid { get; set; }
+
+        /// <summary>
+        /// The board's effective world extent — hex footprint when WidthHexes/HeightHexes
+        /// are authored (HexGrid-only, take precedence), cell grid otherwise. Single
+        /// source for placement validation, board construction, and world/nav derivation.
+        /// </summary>
+        public Ludots.Core.Spatial.BoardExtentSpec ResolveExtent()
+        {
+            if (WidthHexes is int widthHexes && HeightHexes is int heightHexes)
+            {
+                var metrics = new Ludots.Core.Map.Hex.HexMetrics(HexEdgeLengthCm);
+                (int widthCm, int heightCm) = metrics.FootprintWorldCm(widthHexes, heightHexes);
+                return Ludots.Core.Spatial.BoardExtentSpec.FromConservativeCm(
+                    widthCm, heightCm, GridCellSizeCm, OriginXCm, OriginYcm);
+            }
+
+            return new Ludots.Core.Spatial.BoardExtentSpec(
+                WidthCells, HeightCells, GridCellSizeCm, OriginXCm, OriginYcm);
+        }
 
         /// <summary>
         /// Clone this config to prevent aliasing during merge operations.
@@ -70,21 +101,22 @@ namespace Ludots.Core.Map.Board
             {
                 Name = Name,
                 SpatialType = SpatialType,
-                WidthInMacroTiles = WidthInMacroTiles,
-                HeightInMacroTiles = HeightInMacroTiles,
+                WidthCells = WidthCells,
+                HeightCells = HeightCells,
+                OriginXCm = OriginXCm,
+                OriginYcm = OriginYcm,
                 GridCellSizeCm = GridCellSizeCm,
                 HexEdgeLengthCm = HexEdgeLengthCm,
+                WidthHexes = WidthHexes,
+                HeightHexes = HeightHexes,
                 ChunkSizeCells = ChunkSizeCells,
                 LoadedChunkCapacity = LoadedChunkCapacity,
                 DataFile = DataFile,
                 ContinuousHeightmapAsset = ContinuousHeightmapAsset,
                 StructureCollisionAsset = StructureCollisionAsset,
                 StructureAwareGrounding = StructureAwareGrounding,
-                StructureAwareNavigation = StructureAwareNavigation,
-                NavigationEnabled = NavigationEnabled,
                 TerrainHeightStepCm = TerrainHeightStepCm,
-                TerrainBlockedAtOrBelowHeightCm = TerrainBlockedAtOrBelowHeightCm,
-                NavTileGrid = NavTileGrid?.Clone()
+                TerrainBlockedAtOrBelowHeightCm = TerrainBlockedAtOrBelowHeightCm
             };
         }
     }

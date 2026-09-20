@@ -51,6 +51,27 @@ namespace Ludots.Core.Config
         public bool StructureAwareNavigation { get; set; }
         public List<string> Tags { get; set; } = new List<string>();
         public Dictionary<string, JsonNode> Metadata { get; set; } = new Dictionary<string, JsonNode>();
+
+        /// <summary>
+        /// Root board designation (#1567): the root board's extent anchors the host
+        /// world frame and its services become the engine-level spatial services.
+        /// Empty/omitted = first board. Boardless maps have no root; the engine boot
+        /// world (game.json world) remains their host world.
+        /// </summary>
+        public string RootBoard { get; set; }
+
+        /// <summary>
+        /// Host world declaration for boardless maps (#1567): no board exists to anchor
+        /// the world, so the map declares it directly. Mutually exclusive with Boards.
+        /// </summary>
+        public WorldConfig World { get; set; } = new WorldConfig();
+
+        /// <summary>
+        /// Map-level spatial budget (#1567): partition granularity and streaming
+        /// capacity for the whole map. Authored values are the single budget every
+        /// board runs on; board-level fields retire in slice 4b.
+        /// </summary>
+        public WorldTuningConfig Tuning { get; set; } = new WorldTuningConfig();
         public List<EntitySpawnData> Entities { get; set; } = new List<EntitySpawnData>();
         public List<TeamBindingData> Teams { get; set; } = new List<TeamBindingData>();
         public List<PlayerBindingData> Players { get; set; } = new List<PlayerBindingData>();
