@@ -1441,7 +1441,7 @@ namespace Ludots.Core.Input.Orders
         /// </summary>
         private bool TryBuildVectorOrder(InputOrderMapping mapping, Vector3 origin, Vector3 endpoint, out Order order)
         {
-            order = default;
+            order = new Order();
             if (!HasExplicitSolePossessedActor()) return false;
 
             int orderTypeId = RequireOrderTypeId(mapping);
@@ -2304,8 +2304,9 @@ namespace Ludots.Core.Input.Orders
                 return _aimingContext.Actor;
             }
 
-            if (_actorProvider != null && _actorProvider(out var actor) && actor != default)
+            if (_actorProvider != null && _actorProvider(out var actor))
             {
+                OrderEntityReferenceContract.RequireRequired(actor, nameof(actor), "Input actor provider");
                 return actor;
             }
 
@@ -2764,11 +2765,20 @@ namespace Ludots.Core.Input.Orders
         private bool TryResolveAutoTarget(Entity actor, InputOrderMapping mapping, out Entity target)
         {
             target = default;
-            return mapping.AutoTargetPolicy != AutoTargetPolicy.None &&
-                   mapping.AutoTargetRangeCm > 0 &&
-                   _autoTargetProvider != null &&
-                   _autoTargetProvider(actor, mapping.AutoTargetPolicy, mapping.AutoTargetRangeCm, out target) &&
-                   target != Entity.Null;
+            if (mapping.AutoTargetPolicy == AutoTargetPolicy.None ||
+                mapping.AutoTargetRangeCm <= 0 ||
+                _autoTargetProvider == null ||
+                !_autoTargetProvider(actor, mapping.AutoTargetPolicy, mapping.AutoTargetRangeCm, out target))
+            {
+                target = default;
+                return false;
+            }
+
+            OrderEntityReferenceContract.RequireRequired(
+                target,
+                nameof(target),
+                $"Auto-target provider for input mapping '{mapping.ActionId}'");
+            return true;
         }
 
         private static void RequireValidConfiguredTargetResolver(InputOrderMapping mapping, OrderTargetType targetType)

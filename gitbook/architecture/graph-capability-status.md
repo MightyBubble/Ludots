@@ -77,7 +77,8 @@ Query 纯读、显式 subject、缺 subject 失败关闭、精确输出、无 St
 显式 subject + pins、目标必须已登记 GraphKind.Query、typed Bool/Int/Float/Entity/EntitySet、缺失/类型不符失败关闭、禁止 Query 动作/事件/Store/continuation、不新增第二 VM 的统一 Query 网关合同已由主干 GraphReturnWriter/操作策略/编译器与回归测试覆盖（TriggerGraph 程序走同一 GraphExecutor，不经 Query 网关），本页只记关单。
 → https://github.com/MightyBubble/Ludots/issues/1099
 
-这五张票都已经进主干；本页只记关单，不再派实现票。
+这五张票都已经进主干；本页只记关单，不再派实现票。  
+关单评语文稿在 [`docs/rfcs/issue-hygiene-2026-08-25.md`](../../docs/rfcs/issue-hygiene-2026-08-25.md)。
 
 ### 3.3 真正还在做的
 
@@ -103,6 +104,10 @@ TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面�
 
 作者面状态：执行线结束合同票 https://github.com/MightyBubble/Ludots/issues/1107 已关闭，不再列为开放任务；当前显式 Halt 合同以编译器和回归为准。蓝图变量面板 MapVariable 作者面已随 Narrative PR #1222 / Bridge 进主干，#1109 已关单。#1108 要对齐的是「地图上具体 InstanceId（单位/区域）当变量拖取」——单实体 `LoadPlacedEntity` + 区域 `LoadPlacedRegion` + 锚点 `LoadPlacedAnchor`（InstanceId 含 `anchor`）+ Placed 栏 / Bridge `kind` 已落地；不是数组/映射集合类型。事件入口露出本次载荷（#1106）、放置实体读、地图变量变更事件（#1113）、图互调/跨图派发/全局订阅与 hook（#1115/#1116/#1123/#1124）、纯数据枚举（#1125）、图↔代码 AwaitCallback 续跑（#1126）已随 night-raid 大包进主干（PR #1239）；对应票（#1106/#1113/#1115/#1116/#1123/#1124/#1125/#1126，连同随 #1222 落地的 #1109、随 TriggerGraph core 线落地的 #1114）已于 2026-08-28 做关单卫生关闭，不要再派实现票。#1126 落地范围：`AwaitCallback=455` + `GraphCallbackService` + `SystemGroup.Continuation` 按注册序 Drain；TriggerGraph 挂载可直接挂起；嵌套 `InvokeScript`/`InvokeGraph` 仍禁 Yield/AwaitCallback（同步函数）。可等待复用走编译期糖 `InlineGraph`（`TriggerGraphInlineWeaver`，虚幻 Macro 风格，Await 落在宿主程序）。Dialogue 宿主 Completer 已接线：玩家确认选项/推进台词时 `TryCompleteByCallbackType(DialogConfirm)`，不另造第二套等待。进图开聊的正式入口已落地：`StartDialogue=462`（PR #1289，对话作者关口入门包）——`MapLoaded` TriggerGraph 起聊，`dialogue_author_kit` 展厅纯配置可玩；per-op 画廊真机证据（poster/play.mp4）已补录。未完成前，编辑器不得画出保存后引擎不认的假针脚或假集合。
 
+**订单驱动图脑（issue #1536，已落地）。** Core 的具体行为循环（DirectAttackSystem / ResourceTransportSystem，PR #711 混入的 RTS 玩法）已删除：行为改成 mod 侧 Script 图数据，由通用 `GraphActionBrainHostSystem`（实体查询、订单黑板胶水 `Order.*` 固定键、常驻帧）驱动。配套新 op：`LoadEntityPosX/Y(500/501)`、`IntToFloat(502)`、`FloatToInt(503)`、`SqrtFloat(504)`、`SubmitAssignedOrder(505)`、`CompleteActiveOrder(506)`、`LoadOrderTypeId(507)`、`LoadEntityPosValid(508)`（484-499 留给输入线重编号）；浮点算术族与 `WriteBlackboardEntity`/`ApplyEffectTemplate`/`ModifyAttributeAdd` 按 ActionLib 合同扩到 Script 方言（kind 策略 carve-out 有名单）。订单引用一律语义键，patch 期 `ResolveOrderType` 走运行时 OrderTypeRegistry。敌我关系判定不在行为图里重做——门在输入侧 `command_intent_profiles.json` 的 stance 过滤（下单时已限定敌对目标；`order_types.json` 的 validationGraph 仍为 none，可作后续收紧点）。前线 `rts.frontline.attack`（standoff 环槽数学在图内可见）与 `rts.frontline.transport` 对拍等价；ArchitectureGuard 禁止 Core/Gameplay 再出现 ActionLoop。→ https://github.com/MightyBubble/Ludots/issues/1536
+
+**已顶寄存器预算的图（issue #1536 对抗审核笔记）**：`rts.frontline.transport`（运矿）已用满 GraphVmLimits 的 32 寄存器预算，今后加分支必爆预算——把寄存器预算当作显式硬线；若需新分支，先删再增或重构成跨拍分派。attack 图同理接近上限。
+
 **分层：架子有了，墙没有。**  
 工程里多了两份薄的契约，核心工程还是一大坨。展厅大多还能一把抓住整台引擎。把空间、输入、画面、结算真正拆开，以及不许再抓整台引擎，这两步没做。要做就单独开活，对照 `docs/audits/s14_layering_physicalization_design.md`，别和修演示、修构建捆在一起。没拆完之前，总规矩继续写「修复中」。
 
@@ -117,7 +122,7 @@ TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面�
 
 又开了一条线：行为树「真图化」（BT-1）与 HFSM「真图化」（FSM-1）。设计冻结本在 `artifacts/showcases/graph-fsm-bt-refactor-design.md`（L2 身份已纠偏，见下）。
 
-**BT / FSM 作者合同（已纠偏）：** 外层是 L2 拓扑，不是 Script 糖文档。BT SSOT = `AI/behavior_trees.json` → `BehaviorTreeWorld`；FSM SSOT = `AI/hfsm.json` → `HfsmWorld` + `GraphProgramHfsmHost`；叶子 = `action_lib.json` + `GAS/graphs.json` Script。编辑器正门：[作者工作室](authoring-studio.md)（`/blueprint` / `/bt-editor` / `/fsm-editor`）。双击叶子进 `/blueprint`（旧址 `/gas-graphs` 仍认）。
+**BT / FSM 作者合同（#1542 起组件式驱动）：** 外层是 L2 拓扑，不是 Script 糖文档。BT SSOT = `AI/behavior_trees.json`，FSM SSOT = `AI/hfsm.json`；驱动 = `GraphActionBrain{BtId|HfsmId}` + `BtState`/`HfsmState` 组件 + `BtBrainHostSystem`/`HfsmBrainHostSystem`（照 Animator 范式，每实体自持状态，无池无索引无释放）。动作叶 = `action_lib.json`（资产中性，无 host 字段）+ `GAS/graphs.json` Script；转移条件与 BT Condition 叶 = `func_lib.json` 纯函数。`BehaviorTreeWorld` 已退出演武场驱动（遗留消费者：`GraphBehaviorIntegrationMod`，迁移债）；`HfsmWorld` 遗留消费者：HFSM 哨兵 arena（待迁）。编辑器正门：[作者工作室](authoring-studio.md)（`/blueprint` / `/bt-editor` / `/fsm-editor`），保存走生产校验器（action_lib + func_lib 双目录）。双击叶子进 `/blueprint`（旧址 `/gas-graphs` 仍认）。
 
 **糖 / 降级宿主（回归，非作者 SSOT）：** `BtSequence` / `BtSelector` / `BtDecorator` / `FsmState` 与 `GraphBehaviorTreeHost` / `GraphFsmHost` 仍保留作编译降级与单元回归；**禁止**再把整树 / 整机 Script 糖当作演武场或编辑器正门。生产资产已删除 `Graph.BT.Tree.PatrolChaseAttack` / `Graph.FSM.Sentry` 外壳。
 

@@ -42,6 +42,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.LoadTextKey:
                         ins.Imm = symbolResolver.ResolveTextToken(ResolveSymbol(symbols, ins.Imm));
                         break;
+                    case GraphNodeOp.SubmitAssignedOrder:
+                    case GraphNodeOp.LoadOrderTypeId:
+                        ins.Imm = symbolResolver.ResolveOrderType(ResolveSymbol(symbols, ins.Imm));
+                        break;
                     case GraphNodeOp.StartDialogue:
                         ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
                         break;
@@ -228,7 +232,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         if ((op == GraphNodeOp.RelationshipSetMetric || op == GraphNodeOp.RelationshipAddMetric) &&
                             ins.Dst != byte.MaxValue)
                         {
-                            ins.Dst = checked((byte)symbolResolver.ResolveRelationshipReason(ResolveSymbol(symbols, ins.Dst)));
                         }
 
                         if (ins.Flags != byte.MaxValue)
@@ -258,7 +261,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
                         if (op == GraphNodeOp.RelationshipSetFlag && ins.Dst != byte.MaxValue)
                         {
-                            ins.Dst = checked((byte)symbolResolver.ResolveRelationshipReason(ResolveSymbol(symbols, ins.Dst)));
                         }
 
                         if (op == GraphNodeOp.RelationshipSetFlag || op == GraphNodeOp.RelationshipHasFlag)

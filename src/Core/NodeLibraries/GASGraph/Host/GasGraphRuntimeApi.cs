@@ -48,7 +48,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             RelationshipTypeRegistry typeRegistry,
             RelationshipMetricRegistry metricRegistry,
             RelationshipFlagRegistry flagRegistry,
-            RelationshipReasonRegistry reasonRegistry,
             TargetDispatchPresetRegistry targetDispatchPresets,
             EntityCollectionStore entityCollections,
             EntitySetQueryRuntime entityQueries,
@@ -69,7 +68,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             TypeRegistry = typeRegistry ?? throw new ArgumentNullException(nameof(typeRegistry));
             MetricRegistry = metricRegistry ?? throw new ArgumentNullException(nameof(metricRegistry));
             FlagRegistry = flagRegistry ?? throw new ArgumentNullException(nameof(flagRegistry));
-            ReasonRegistry = reasonRegistry ?? throw new ArgumentNullException(nameof(reasonRegistry));
             TargetDispatchPresets = targetDispatchPresets ?? throw new ArgumentNullException(nameof(targetDispatchPresets));
             EntityCollections = entityCollections ?? throw new ArgumentNullException(nameof(entityCollections));
             EntityQueries = entityQueries ?? throw new ArgumentNullException(nameof(entityQueries));
@@ -91,7 +89,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public RelationshipTypeRegistry TypeRegistry { get; }
         public RelationshipMetricRegistry MetricRegistry { get; }
         public RelationshipFlagRegistry FlagRegistry { get; }
-        public RelationshipReasonRegistry ReasonRegistry { get; }
         public TargetDispatchPresetRegistry TargetDispatchPresets { get; }
         public EntityCollectionStore EntityCollections { get; }
         public GraphLookupTableRegistry? LookupTables { get; }
@@ -115,6 +112,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly ISpatialCoordinateConverter? _coords;
         private readonly GameplayEventBus? _eventBus;
         private readonly EffectRequestQueue? _effectRequests;
+        private Ludots.Core.Gameplay.GAS.Orders.OrderQueue? _orderQueue;
+        private Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry? _orderTypes;
         private readonly TagOps? _tagOps;
         private readonly RelationshipRuntime? _relationshipRuntime;
         private readonly TargetDispatchPresetRegistry? _targetDispatchPresets;
@@ -195,7 +194,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 RequireService(services, CoreServiceKeys.RelationshipTypeRegistry),
                 RequireService(services, CoreServiceKeys.RelationshipMetricRegistry),
                 RequireService(services, CoreServiceKeys.RelationshipFlagRegistry),
-                RequireService(services, CoreServiceKeys.RelationshipReasonRegistry),
                 RequireService(services, CoreServiceKeys.TargetDispatchPresetRegistry),
                 RequireService(services, CoreServiceKeys.EntityCollectionStore),
                 RequireService(services, CoreServiceKeys.EntitySetQueryRuntime),
@@ -224,7 +222,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 services.TypeRegistry,
                 services.MetricRegistry,
                 services.FlagRegistry,
-                services.ReasonRegistry,
                 services.TargetDispatchPresets,
                 services.EntityCollections,
                 services.EntityQueries,
@@ -366,7 +363,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             RelationshipTypeRegistry? typeRegistry = null,
             RelationshipMetricRegistry? metricRegistry = null,
             RelationshipFlagRegistry? flagRegistry = null,
-            RelationshipReasonRegistry? reasonRegistry = null,
             TargetDispatchPresetRegistry? targetDispatchPresets = null,
             EntityCollectionStore? entityCollections = null,
             EntitySetQueryRuntime? entityQueries = null,
@@ -390,7 +386,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _ = typeRegistry;
             _ = metricRegistry;
             _ = flagRegistry;
-            _ = reasonRegistry;
         }
 
         private TagOps RequireTagOps()
@@ -1933,27 +1928,27 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             RejectNonTransactionalEffectSideEffect(nameof(RemoveRelationshipLink));
             RequireRelationshipRuntime().RemoveLink(source, target, typeId);
         }
-        public short SetRelationshipMetric(Entity source, Entity target, int metricId, int value, int reasonId, int typeId)
+        public short SetRelationshipMetric(Entity source, Entity target, int metricId, int value, int typeId)
         {
             RejectDerivedAttributeSideEffect(nameof(SetRelationshipMetric));
             RejectNonTransactionalEffectSideEffect(nameof(SetRelationshipMetric));
-            return RequireRelationshipRuntime().SetMetric(source, target, typeId, metricId, value, reasonId);
+            return RequireRelationshipRuntime().SetMetric(source, target, typeId, metricId, value);
         }
-        public short AddRelationshipMetric(Entity source, Entity target, int metricId, int delta, int reasonId, int typeId)
+        public short AddRelationshipMetric(Entity source, Entity target, int metricId, int delta, int typeId)
         {
             RejectDerivedAttributeSideEffect(nameof(AddRelationshipMetric));
             RejectNonTransactionalEffectSideEffect(nameof(AddRelationshipMetric));
-            return RequireRelationshipRuntime().AddMetric(source, target, typeId, metricId, delta, reasonId);
+            return RequireRelationshipRuntime().AddMetric(source, target, typeId, metricId, delta);
         }
         public short GetRelationshipMetric(Entity source, Entity target, int metricId, int typeId)
             => RequireRelationshipRuntime().GetMetric(source, target, typeId, metricId);
         public bool HasRelationshipFlag(Entity source, Entity target, int flagId, int typeId)
             => RequireRelationshipRuntime().HasFlag(source, target, typeId, flagId);
-        public void SetRelationshipFlag(Entity source, Entity target, int flagId, bool enabled, int reasonId, int typeId)
+        public void SetRelationshipFlag(Entity source, Entity target, int flagId, bool enabled, int typeId)
         {
             RejectDerivedAttributeSideEffect(nameof(SetRelationshipFlag));
             RejectNonTransactionalEffectSideEffect(nameof(SetRelationshipFlag));
-            RequireRelationshipRuntime().SetFlag(source, target, typeId, flagId, enabled, reasonId);
+            RequireRelationshipRuntime().SetFlag(source, target, typeId, flagId, enabled);
         }
         public RelationshipQueryResult CollectOutgoing(Entity source, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
         {
@@ -2021,6 +2016,68 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private int CurrentStepTick()
         {
             return _clock?.Now(ClockDomainId.Step) ?? 0;
+        }
+
+        /// <summary>
+        /// Binds the order pipeline for behavior-side order ops (SubmitAssignedOrder /
+        /// CompleteActiveOrder). Order submission stays fail-closed until this is bound.
+        /// </summary>
+        public void BindOrderPipeline(
+            Ludots.Core.Gameplay.GAS.Orders.OrderQueue orders,
+            Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry orderTypes)
+        {
+            _orderQueue = orders ?? throw new ArgumentNullException(nameof(orders));
+            _orderTypes = orderTypes ?? throw new ArgumentNullException(nameof(orderTypes));
+        }
+
+        public void SubmitAssignedOrder(Entity actor, Entity target, int orderTypeId, int xCm, int yCm)
+        {
+            if (_orderQueue == null || _orderTypes == null)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.MissingOrderPipeline");
+            }
+
+            if (!_orderTypes.IsRegistered(orderTypeId))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.UnknownOrderType: SubmitAssignedOrder references unregistered order type {orderTypeId}.");
+            }
+
+            if (!_world.Has<PlayerOwner>(actor))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.SubmitAssignedOrderActorMissingOwner: acting entity {actor} has no PlayerOwner.");
+            }
+
+            var order = new Ludots.Core.Gameplay.GAS.Orders.Order
+            {
+                OrderTypeId = orderTypeId,
+                PlayerId = _world.Get<PlayerOwner>(actor).PlayerId,
+                Actor = actor,
+                Target = target,
+                Args = Ludots.Core.Gameplay.GAS.Orders.OrderArgs.CreateSingleWorldCm(
+                    new System.Numerics.Vector3(xCm, 0f, yCm)),
+                SubmitMode = Ludots.Core.Gameplay.GAS.Orders.OrderSubmitMode.Immediate,
+            };
+            if (!_orderQueue.TryEnqueueAssigned(ref order))
+            {
+                throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.OrderQueueFull: SubmitAssignedOrder could not enqueue the pursuit order.");
+            }
+        }
+
+        public void CompleteActiveOrder(Entity actor)
+        {
+            if (_orderTypes == null)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.MissingOrderPipeline");
+            }
+
+            if (!Ludots.Core.Gameplay.GAS.Orders.OrderSubmitter.NotifyOrderComplete(_world, actor, _orderTypes))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.NoActiveOrderToComplete: acting entity {actor} has no active order to complete.");
+            }
         }
 
         public void ApplyEffectTemplate(Entity caster, Entity target, int templateId)

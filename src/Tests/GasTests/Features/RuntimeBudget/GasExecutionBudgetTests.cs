@@ -481,7 +481,8 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 clock,
                 new GasConditionRegistry(),
                 snapshotCapacity: 32,
-                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)
+                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry())
             {
                 MaxWorkUnitsPerSlice = 3,
             };
@@ -526,7 +527,8 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 new DiscreteClock(),
                 new GasConditionRegistry(),
                 snapshotCapacity: 4,
-                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)
+                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry())
             {
                 MaxWorkUnitsPerSlice = 1,
             };
@@ -719,7 +721,8 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 new DiscreteClock(),
                 new GasConditionRegistry(),
                 snapshotCapacity: 4,
-                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)
+                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry())
             {
                 MaxWorkUnitsPerSlice = 2,
             };
@@ -884,7 +887,8 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 new DiscreteClock(),
                 new GasConditionRegistry(),
                 snapshotCapacity: 5,
-                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME);
+                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry());
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
                 system.UpdateSlice(0f, int.MaxValue))!;

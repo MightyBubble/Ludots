@@ -14,8 +14,6 @@ namespace Ludots.Core.Gameplay.Relationships
     {
         private readonly GameEngine _engine;
         private readonly RelationshipChangeBuffer _changeBuffer;
-        private readonly RelationshipCallbackProcessor _callbackProcessor;
-        private readonly RelationshipSynergyProcessor _synergyProcessor;
 
         public RelationshipProcessingSystem(
             GameEngine engine,
@@ -25,8 +23,6 @@ namespace Ludots.Core.Gameplay.Relationships
         {
             _engine = engine;
             _changeBuffer = changeBuffer;
-            _callbackProcessor = new RelationshipCallbackProcessor(engine.World, tagOps, teamLookup);
-            _synergyProcessor = new RelationshipSynergyProcessor(engine.World, tagOps, teamLookup);
         }
 
         public void Initialize()
@@ -55,7 +51,6 @@ namespace Ludots.Core.Gameplay.Relationships
                 while (processed < _changeBuffer.Count)
                 {
                     ReadOnlySpan<RelationshipChangeRecord> batch = _changeBuffer.GetSpan().Slice(processed);
-                    _callbackProcessor.Process(_engine, catalogRuntime, batch);
                     PublishChangeEvents(batch);
                     processed = _changeBuffer.Count;
                     if (processed > guard)
@@ -72,10 +67,6 @@ namespace Ludots.Core.Gameplay.Relationships
                 _changeBuffer.Clear();
             }
 
-            if (catalogRuntime.Synergies.Count > 0)
-            {
-                _synergyProcessor.Evaluate(_engine, catalogRuntime);
-            }
         }
 
         public void AfterUpdate(in float dt)

@@ -1,11 +1,11 @@
 {
   "types": [
-    { "id": "LudotsCore.Participant", "isSymmetric": false }
+    {
+      "id": "LudotsCore.Participant",
+      "isSymmetric": false
+    }
   ],
   "metrics": [],
   "flags": [],
-  "bands": [],
-  "reasons": [],
-  "callbacks": [],
-  "synergies": []
+  "reasons": []
 }

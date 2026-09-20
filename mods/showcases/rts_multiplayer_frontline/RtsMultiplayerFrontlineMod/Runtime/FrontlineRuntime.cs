@@ -5,7 +5,7 @@ using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
-using Ludots.Core.Gameplay.ActionLoops;
+using Ludots.Core.Gameplay.GraphBrains;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
@@ -48,7 +48,7 @@ public readonly record struct FrontlineOpeningViewSnapshot(
     bool IsReady,
     int ReadyVisibilityRevision);
 
-public sealed class FrontlineRuntime : IGameplayActionLoopGate
+public sealed class FrontlineRuntime : IGameplayAdvanceGate
 {
     private readonly IModContext _context;
     private readonly bool[] _connected = { true, true };
@@ -561,13 +561,17 @@ public sealed class FrontlineRuntime : IGameplayActionLoopGate
         _tagBinder = new FrontlineTagBinder(Config, tagOps);
         // capabilityId: rts-frontline.tag-binding
         engine.RegisterSystem(new FrontlineTagBindingSystem(engine.World, this, _tagBinder), SystemGroup.RuntimeEntityBinding);
-        // capabilityId: rts-frontline.resource-transport
+        // capabilityId: rts-frontline.graph-brains (issue #1536): attack + transport
+        // behavior now live as HFSM definitions (hfsm.rts.attack / hfsm.rts.transport) whose
+        // states/transitions bind ActionLib graphs, driven per entity by the generic
+        // HfsmWorld + GraphProgramHfsmHost adapter.
         engine.RegisterSystem(
-            new ResourceTransportSystem(engine.World, orderQueue, orderTypes, this, tagOps),
-            SystemGroup.AbilityActivation);
-        // capabilityId: rts-frontline.direct-attack
-        engine.RegisterSystem(
-            new DirectAttackSystem(engine.World, orderQueue, orderTypes, effectRequests, this),
+            new HfsmBrainHostSystem(
+                engine.World,
+                engine.GetService(CoreServiceKeys.GraphProgramRegistry),
+                engine.GetService(CoreServiceKeys.GasGraphRuntimeApi),
+                this,
+                engine.AiRuntime.Behavior),
             SystemGroup.AbilityActivation);
         // capabilityId: rts-frontline.death-and-match
         engine.RegisterSystem(

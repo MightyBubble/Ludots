@@ -4,7 +4,9 @@ using System.Collections.Generic;
 namespace Ludots.Core.GraphRuntime
 {
     /// <summary>
-    /// ActionLib: yieldable Script actions for L2 / Script slice hosts. Not callable from Effect transactions.
+    /// ActionLib: name → Script graph registrations. Assets are consumer-neutral:
+    /// entries carry no host/consumer metadata. Consumers validate their own
+    /// constraints (Yield purity, kind) at bind time via Require(name).
     /// </summary>
     public sealed class GraphActionCatalog
     {
@@ -12,7 +14,7 @@ namespace Ludots.Core.GraphRuntime
 
         public void Clear() => _byName.Clear();
 
-        public void Register(string name, int graphId, GraphKind kind, GraphActionHost host)
+        public void Register(string name, int graphId, GraphKind kind)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -32,16 +34,8 @@ namespace Ludots.Core.GraphRuntime
                     "Action catalog accepts Script only.");
             }
 
-            if (host == GraphActionHost.None || !Enum.IsDefined(typeof(GraphActionHost), host))
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(host),
-                    host,
-                    "Action catalog requires an explicit supported host.");
-            }
-
             string key = name.Trim();
-            var entry = new GraphActionEntry(key, graphId, kind, host);
+            var entry = new GraphActionEntry(key, graphId, kind);
             if (!_byName.TryAdd(key, entry))
             {
                 throw new InvalidOperationException($"Graph action '{key}' is already registered.");
@@ -75,46 +69,20 @@ namespace Ludots.Core.GraphRuntime
             return entry.GraphId;
         }
 
-        public int Require(string name, GraphActionHost expectedHost)
-        {
-            if (!TryGetEntry(name, out GraphActionEntry entry))
-            {
-                throw new InvalidOperationException($"Graph action '{name}' is not registered.");
-            }
-
-            if (expectedHost == GraphActionHost.None || !Enum.IsDefined(typeof(GraphActionHost), expectedHost))
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(expectedHost),
-                    expectedHost,
-                    "Action lookup requires an explicit supported host.");
-            }
-
-            if (entry.Host != expectedHost)
-            {
-                throw new InvalidOperationException(
-                    $"Graph action '{name}' is registered for host '{entry.Host}', but '{expectedHost}' is required.");
-            }
-
-            return entry.GraphId;
-        }
-
         public int Count => _byName.Count;
     }
 
     public readonly struct GraphActionEntry
     {
-        public GraphActionEntry(string name, int graphId, GraphKind kind, GraphActionHost host)
+        public GraphActionEntry(string name, int graphId, GraphKind kind)
         {
             Name = name;
             GraphId = graphId;
             Kind = kind;
-            Host = host;
         }
 
         public string Name { get; }
         public int GraphId { get; }
         public GraphKind Kind { get; }
-        public GraphActionHost Host { get; }
     }
 }

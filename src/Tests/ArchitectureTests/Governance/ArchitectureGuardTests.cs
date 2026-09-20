@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using Ludots.Core.Gameplay.Relationships;
 using Arch.Core;
 using Arch.System;
 using CoreInputMod.Systems;
@@ -52,6 +53,29 @@ namespace Ludots.Tests.Architecture.Governance
             nameof(SystemGroup.EventDispatch),
             nameof(SystemGroup.ClearPresentationFlags)
         };
+
+
+        [Test]
+        public void Core_MustNotContainConcreteGameplayActionLoops()
+        {
+            // issue #1536: behavior loops live as mod graph data on the generic
+            // GraphActionBrainHostSystem; a Core resurrection of a named behavior
+            // loop (attack/transport/...) is an architecture regression.
+            string coreRoot = Path.Combine(FindRepoRootForGuards(), "src", "Core", "Gameplay");
+            Assert.That(Directory.Exists(coreRoot), Is.True);
+            string[] resurrected = Directory.GetFiles(coreRoot, "*.cs", SearchOption.AllDirectories)
+                .Where(file => file.Contains("ActionLoop", StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            Assert.That(resurrected, Is.Empty,
+                "Core/Gameplay must not reintroduce ActionLoop systems; author behavior as Script graphs driven by GraphActionBrainHostSystem (issue #1536).");
+
+            string[] bannedTypes = { "DirectAttackSystem", "ResourceTransportSystem", "DirectAttackProfile", "ResourceTransportProfile" };
+            string[] typeResurrections = Directory.GetFiles(coreRoot, "*.cs", SearchOption.AllDirectories)
+                .Where(file => bannedTypes.Any(banned => File.ReadAllText(file).Contains($"class {banned}", StringComparison.Ordinal)))
+                .ToArray();
+            Assert.That(typeResurrections, Is.Empty,
+                "Core/Gameplay must not resurrect the deleted behavior-loop types by class declaration (issue #1536).");
+        }
 
         [Test]
         public void LODLevel_DoesNotEncodeCameraVisibility()
@@ -1274,6 +1298,7 @@ namespace Ludots.Tests.Architecture.Governance
                 typeof(AttributeBuffer),
                 typeof(AttributeMutationOps),
                 typeof(AttributeAggregatorSystem),
+                typeof(RelationshipRuntime),
                 typeof(EffectPhaseSideEffectTransaction),
                 typeof(EffectModifierOps),
                 typeof(GasGraphRuntimeApi),
@@ -1778,7 +1803,20 @@ namespace Ludots.Tests.Architecture.Governance
                 Assert.That(showcaseInstaller, Does.Not.Contain("InstallGrants"));
                 Assert.That(showcaseInstaller, Does.Not.Contain("KnowledgeGrantSpec"));
                 Assert.That(showcaseMap, Does.Not.Contain("\"Grants\""));
-                Assert.That(showcaseCatalog, Does.Contain("\"knowledgeGrants\""));
+                // #1570 切6：knowledgeGrants/stance 从 catalog.json 拆至 projection.json
+                string showcaseProjectionPath = Path.Combine(
+                    repoRoot,
+                    "mods",
+                    "showcases",
+                    "capability_standard",
+                    "CapabilityStandardParticipantViewsMod",
+                    "assets",
+                    "Relationships",
+                    "projection.json");
+                Assert.That(File.Exists(showcaseProjectionPath), Is.True, $"Missing {showcaseProjectionPath}");
+                string showcaseProjection = File.ReadAllText(showcaseProjectionPath);
+                Assert.That(showcaseProjection, Does.Contain("\"knowledgeGrants\""));
+                Assert.That(showcaseCatalog, Does.Not.Contain("\"knowledgeGrants\""));
             });
         }
 
@@ -2765,7 +2803,18 @@ namespace Ludots.Tests.Architecture.Governance
                 {
                     twoByteOpCodes[value & 0xFF] = opCode;
                 }
+             }
+        }
+
+        private static string FindRepoRootForGuards()
+        {
+            string dir = AppContext.BaseDirectory;
+            while (dir != null && !File.Exists(Path.Combine(dir, "showcase.registry.json")))
+            {
+                dir = Path.GetDirectoryName(dir);
             }
+
+            return dir ?? throw new InvalidOperationException("Repo root not found.");
         }
     }
 }

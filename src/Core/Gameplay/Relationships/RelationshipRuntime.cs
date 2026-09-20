@@ -20,6 +20,7 @@ namespace Ludots.Core.Gameplay.Relationships
         private readonly RelationshipBandRegistry _bands;
         private readonly RelationshipChangeBuffer _changes;
         private readonly RelationshipReverseIndex _reverseIndex;
+        private Ludots.Core.Gameplay.GAS.TagOps? _tagOps;
         private readonly Dictionary<RelationshipEntityKey, Entity> _entityIndex = new();
         private RelationshipTypeTemplate?[] _typeTemplates = Array.Empty<RelationshipTypeTemplate?>();
 
@@ -41,6 +42,12 @@ namespace Ludots.Core.Gameplay.Relationships
             _reverseIndex = reverseIndex ?? throw new ArgumentNullException(nameof(reverseIndex));
             _reverseIndex.RebuildFromWorld();
             RebuildEntityIndexFromWorld();
+        }
+
+        /// <summary>#1570：引擎装配期注入（tagOps 在 runtime 之后构造）；metric 写穿前必须已装。</summary>
+        public void InstallTagOps(Ludots.Core.Gameplay.GAS.TagOps tagOps)
+        {
+            _tagOps = tagOps ?? throw new ArgumentNullException(nameof(tagOps));
         }
 
         public RelationshipTypeRegistry TypeRegistry => _types;
@@ -212,10 +219,11 @@ namespace Ludots.Core.Gameplay.Relationships
             }
 
             _reverseIndex.OnLinkAdded(source, target, validatedTypeId);
-            MaterializeRelationshipEntity(source, target, validatedTypeId);
+            Entity relationshipEntity = MaterializeRelationshipEntity(source, target, validatedTypeId);
+            SeedMetricDefaults(relationshipEntity);
             _changes.TryAdd(new RelationshipChangeRecord(
                 source, target, validatedTypeId, RelationshipChangeKind.LinkAdded,
-                metricId: -1, reasonId: 0, oldValue: 0, newValue: 0, oldFlags: 0, newFlags: 0));
+                metricId: -1, oldValue: 0, newValue: 0, oldFlags: 0, newFlags: 0));
         }
 
         public void RemoveLink(Entity source, Entity target, int typeId)
@@ -250,7 +258,7 @@ namespace Ludots.Core.Gameplay.Relationships
             _reverseIndex.OnLinkRemoved(source, target, validatedTypeId);
             _changes.TryAdd(new RelationshipChangeRecord(
                 source, target, validatedTypeId, RelationshipChangeKind.LinkRemoved,
-                metricId: -1, reasonId: 0, oldValue: 0, newValue: 0, oldFlags: 0, newFlags: 0));
+                metricId: -1, oldValue: 0, newValue: 0, oldFlags: 0, newFlags: 0));
         }
 
         public bool TryGetMetric(Entity source, Entity target, int typeId, int metricId, out short value)
@@ -277,7 +285,7 @@ namespace Ludots.Core.Gameplay.Relationships
                 : _metrics.Get(metricId).DefaultValue;
         }
 
-        public short SetMetric(Entity source, Entity target, int typeId, int metricId, int value, int reasonId = 0)
+        public short SetMetric(Entity source, Entity target, int typeId, int metricId, int value)
         {
             EnsureLink(source, target, typeId);
             _metrics.Get(metricId);
@@ -297,24 +305,38 @@ namespace Ludots.Core.Gameplay.Relationships
                     _world.SetRelationship(source, target, set);
                 }
 
+                SyncBufferIfDrifted(relationshipEntity, metricId, clamped);
                 return clamped;
             }
 
             BumpMaterializedRelationshipRevision(relationshipEntity);
             uint oldFlags = edge.Flags;
+
+            // #1570 单轨化第一步：真相写穿边实体的 AttributeBuffer（AttributeMutationOps 带
+            // 钳制/差分位/聚合/deferred trigger 全链）；RelationshipEdge 的 SoA 值降级为
+            // 写后同步缓存，供热查询路径与既有图 op 读取。变更记录与事件面保持不变。
+            if (_metrics.TryGetAttributeId(metricId, out int attributeId))
+            {
+                _tagOps ??= new Ludots.Core.Gameplay.GAS.TagOps(
+                    new Ludots.Core.Gameplay.GAS.DirtyEntityQueue(1 << 22),
+                    new Ludots.Core.Gameplay.GAS.TagRuleRegistry(),
+                    new Ludots.Core.Gameplay.GAS.GasBudget(),
+                    new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry());
+                Ludots.Core.Gameplay.GAS.AttributeMutationOps.SetBase(_world, relationshipEntity, attributeId, clamped, _tagOps);
+            }
+
             edge.SetMetric(metricId, clamped);
-            edge.Flags = ApplyBands(validatedTypeId, metricId, edge.Flags, clamped);
             edge.Version++;
             set.Set(validatedTypeId, edge);
             _world.SetRelationship(source, target, set);
-            _changes.TryAdd(new RelationshipChangeRecord(source, target, validatedTypeId, RelationshipChangeKind.MetricChanged, metricId, reasonId, oldValue, clamped, oldFlags, edge.Flags));
+            _changes.TryAdd(new RelationshipChangeRecord(source, target, validatedTypeId, RelationshipChangeKind.MetricChanged, metricId, oldValue, clamped, oldFlags, edge.Flags));
             return clamped;
         }
 
-        public short AddMetric(Entity source, Entity target, int typeId, int metricId, int delta, int reasonId = 0)
+        public short AddMetric(Entity source, Entity target, int typeId, int metricId, int delta)
         {
             short current = GetMetric(source, target, typeId, metricId);
-            return SetMetric(source, target, typeId, metricId, current + delta, reasonId);
+            return SetMetric(source, target, typeId, metricId, current + delta);
         }
 
         public bool HasFlag(Entity source, Entity target, int typeId, int flagId)
@@ -334,7 +356,7 @@ namespace Ludots.Core.Gameplay.Relationships
             return true;
         }
 
-        public void SetFlag(Entity source, Entity target, int typeId, int flagId, bool enabled, int reasonId = 0)
+        public void SetFlag(Entity source, Entity target, int typeId, int flagId, bool enabled)
         {
             EnsureLink(source, target, typeId);
 
@@ -362,7 +384,7 @@ namespace Ludots.Core.Gameplay.Relationships
             edge.Version++;
             set.Set(validatedTypeId, edge);
             _world.SetRelationship(source, target, set);
-            _changes.TryAdd(new RelationshipChangeRecord(source, target, validatedTypeId, RelationshipChangeKind.FlagChanged, metricId: -1, reasonId, oldValue: 0, newValue: 0, oldFlags, newFlags));
+            _changes.TryAdd(new RelationshipChangeRecord(source, target, validatedTypeId, RelationshipChangeKind.FlagChanged, metricId: -1, oldValue: 0, newValue: 0, oldFlags, newFlags));
         }
 
         public bool TryGetHighestMetricTarget(Entity source, ReadOnlySpan<Entity> candidates, int typeId, int metricId, out Entity target, out short value)
@@ -688,6 +710,44 @@ namespace Ludots.Core.Gameplay.Relationships
                 : set.HasType(typeId);
         }
 
+
+        /// <summary>#1570：SoA 默认值在首建边时播种进边实体 AttributeBuffer（base 侧，raw 写
+        /// 不触发 GAS 管线——出生播种不是变更）；早退路径防御性同步，消除真相/缓存漂移面。</summary>
+        private void SeedMetricDefaults(Entity relationshipEntity)
+        {
+            if (!_world.Has<Ludots.Core.Gameplay.GAS.Components.AttributeBuffer>(relationshipEntity))
+            {
+                return;
+            }
+
+            for (int metricId = 0; metricId < _metrics.Count; metricId++)
+            {
+                if (!_metrics.TryGetAttributeId(metricId, out int attributeId))
+                {
+                    continue;
+                }
+
+                short defaultValue = _metrics.Get(metricId).DefaultValue;
+                if (defaultValue != 0)
+                {
+                    _world.Get<Ludots.Core.Gameplay.GAS.Components.AttributeBuffer>(relationshipEntity).SetBase(attributeId, defaultValue);
+                }
+            }
+        }
+
+        private void SyncBufferIfDrifted(Entity relationshipEntity, int metricId, short value)
+        {
+            if (_metrics.TryGetAttributeId(metricId, out int attributeId) &&
+                _world.Has<Ludots.Core.Gameplay.GAS.Components.AttributeBuffer>(relationshipEntity))
+            {
+                ref Ludots.Core.Gameplay.GAS.Components.AttributeBuffer buffer = ref _world.Get<Ludots.Core.Gameplay.GAS.Components.AttributeBuffer>(relationshipEntity);
+                if (buffer.GetBase(attributeId) != value)
+                {
+                    buffer.SetBase(attributeId, value);
+                }
+            }
+        }
+
         private short ClampToDefinition(int metricId, int value)
         {
             ref readonly RelationshipMetricDefinition definition = ref _metrics.Get(metricId);
@@ -702,31 +762,6 @@ namespace Ludots.Core.Gameplay.Relationships
             }
 
             return (short)value;
-        }
-
-        private uint ApplyBands(int typeId, int metricId, uint flags, short value)
-        {
-            var bands = _bands.Bands;
-            for (int i = 0; i < bands.Count; i++)
-            {
-                RelationshipBandDefinition band = bands[i];
-                if (band.TypeId != typeId || band.MetricId != metricId)
-                {
-                    continue;
-                }
-
-                uint mask = _flags.GetMask(band.FlagId);
-                bool isActive = band.Comparison switch
-                {
-                    RelationshipBandComparison.GreaterOrEqual => value >= band.Threshold,
-                    RelationshipBandComparison.LessOrEqual => value <= band.Threshold,
-                    _ => false,
-                };
-
-                flags = isActive ? flags | mask : flags & ~mask;
-            }
-
-            return flags;
         }
 
         private readonly struct RelationshipEntityKey : IEquatable<RelationshipEntityKey>

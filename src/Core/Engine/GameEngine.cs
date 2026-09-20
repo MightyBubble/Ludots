@@ -399,6 +399,7 @@ namespace Ludots.Core.Engine
         public Ludots.Core.Config.ConfigConflictReport ConfigConflictReport { get; private set; }
         public Ludots.Core.Config.ConfigCatalog ConfigCatalog { get; private set; }
         public Ludots.Core.Gameplay.AI.Config.AiCompiledRuntime AiRuntime { get; private set; }
+        private Ludots.Core.GraphRuntime.GraphFunctionCatalog? _graphFunctionCatalog;
 
         public void InitializeWithConfigPipeline(List<string> modPaths, string assetsRoot)
         {
@@ -609,7 +610,7 @@ namespace Ludots.Core.Engine
             }
 
             TryGetService(CoreServiceKeys.GraphActionCatalog, out GraphActionCatalog? actions);
-            var loader = new Ludots.Core.Gameplay.AI.Config.AiConfigLoader(ConfigPipeline, atoms, validation, actions);
+            var loader = new Ludots.Core.Gameplay.AI.Config.AiConfigLoader(ConfigPipeline, atoms, validation, actions, _graphFunctionCatalog);
             var catalog = ConfigCatalog ?? Ludots.Core.Gameplay.AI.Config.AiConfigCatalog.CreateDefault();
             AiRuntime = loader.LoadAndCompile(catalog, ConfigConflictReport);
             Ludots.Core.Config.ComponentRegistry.SetUtilityAiAuthoringCatalog(AiRuntime.UtilityRuntime.Authoring);
@@ -861,7 +862,6 @@ namespace Ludots.Core.Engine
             var relationshipMetricRegistry = new RelationshipMetricRegistry();
             var relationshipFlagRegistry = new RelationshipFlagRegistry();
             var relationshipBandRegistry = new RelationshipBandRegistry();
-            var relationshipReasonRegistry = new RelationshipReasonRegistry();
             var relationshipChangeBuffer = new RelationshipChangeBuffer();
             var relationshipRuntime = new RelationshipRuntime(World, relationshipTypeRegistry, relationshipMetricRegistry, relationshipFlagRegistry, relationshipBandRegistry, relationshipChangeBuffer, new RelationshipReverseIndex(World));
             var gasRuntimeCapacity = config.GasRuntimeCapacity
@@ -888,7 +888,6 @@ namespace Ludots.Core.Engine
                 relationshipMetricRegistry,
                 relationshipFlagRegistry,
                 relationshipBandRegistry,
-                relationshipReasonRegistry,
                 entityCollectionStore);
             relationshipRuntime.InstallTypeTemplates(relationshipCatalog);
             // Control-plane relationship types must ship in the default relationship catalog (RFC-0065 DEC-1/DEC-3); GetId fails fast when missing.
@@ -921,6 +920,7 @@ namespace Ludots.Core.Engine
                 relationshipTypeRegistry,
                 associationControlProfileCatalog,
                 grantedRelationshipFlagId);
+            relationshipRuntime.InstallTagOps(tagOps);
             var relationshipProcessingSystem = new RelationshipProcessingSystem(this, relationshipChangeBuffer, tagOps, teamEntityLookup);
             var entitySetQueryRuntime = new EntitySetQueryRuntime(World, tagOps, relationshipRuntime);
             var effectTemplateRegistry = new EffectTemplateRegistry();
@@ -1003,12 +1003,12 @@ namespace Ludots.Core.Engine
                 relationshipTypeRegistry,
                 relationshipMetricRegistry,
                 relationshipFlagRegistry,
-                relationshipReasonRegistry,
                 targetDispatchPresetRegistry,
                 MapLoader.EntityTemplateKeys,
                 lookupTables: graphLookupTables,
                 rngPicks: rngPickService,
-                presentationTextCatalog: presentationTextCatalog);
+                presentationTextCatalog: presentationTextCatalog,
+                orderTypes: orderTypeRegistry);
             var graphConfigLoader = new GraphProgramConfigLoader(
                 ConfigPipeline,
                 graphProgramRegistry,
@@ -1091,6 +1091,7 @@ namespace Ludots.Core.Engine
             var graphFunctionCatalog = new GraphFunctionCatalog();
             new GraphFunctionCatalogLoader(ConfigPipeline, graphFunctionCatalog, graphProgramRegistry)
                 .Load(ConfigCatalog, ConfigConflictReport);
+            _graphFunctionCatalog = graphFunctionCatalog;
             graphConfigLoader.ResolveFuncLibInvokes(graphPackages, graphFunctionCatalog);
             BindGraphCodegenBackend(graphProgramRegistry, config);
             var graphActionCatalog = new GraphActionCatalog();
@@ -1132,7 +1133,6 @@ namespace Ludots.Core.Engine
                 relationshipTypeRegistry,
                 relationshipMetricRegistry,
                 relationshipFlagRegistry,
-                relationshipReasonRegistry,
                 targetDispatchPresetRegistry,
                 entityCollectionStore,
                 entitySetQueryRuntime,
@@ -1264,6 +1264,7 @@ namespace Ludots.Core.Engine
             var orderQueue = new OrderQueue(
                 gasRuntimeCapacity.OrderQueueCapacity,
                 orderAdmissionResults);
+            _gasGraphRuntimeApi.BindOrderPipeline(orderQueue, orderTypeRegistry);
             var chainOrderQueue = new OrderQueue(
                 gasRuntimeCapacity.ResponseChainOrderQueueCapacity,
                 orderAdmissionResults);
@@ -2023,7 +2024,6 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.RelationshipMetricRegistry, relationshipMetricRegistry);
             SetService(CoreServiceKeys.RelationshipFlagRegistry, relationshipFlagRegistry);
             SetService(CoreServiceKeys.RelationshipBandRegistry, relationshipBandRegistry);
-            SetService(CoreServiceKeys.RelationshipReasonRegistry, relationshipReasonRegistry);
             SetService(CoreServiceKeys.RelationshipChangeBuffer, relationshipChangeBuffer);
             SetService(CoreServiceKeys.RelationshipRuntime, relationshipRuntime);
             SetService(CoreServiceKeys.RelationshipCatalogConfig, relationshipCatalog);
@@ -2383,6 +2383,7 @@ namespace Ludots.Core.Engine
                 teamLookup: teamEntityLookup,
                 relationships: relationshipRuntime,
                 memberOfTypeId: memberOfRelationshipTypeId,
+                ownsTypeId: relationshipTypeRegistry.GetId("Owns"),
                 entityTriggerGraphMounts: EntityTriggerGraphMounts,
                 initialInteractionContexts: interactionContextProfileRegistry),
                 SystemGroup.EffectProcessing);

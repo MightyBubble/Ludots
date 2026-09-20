@@ -36,6 +36,7 @@ namespace Ludots.Tests.GAS
             BlackboardStoredTargetKeys keys = CreateTestKeys();
             Entity host = world.Create(
                 new BlackboardIntBuffer(),
+                new BlackboardFloatBuffer(),
                 new BlackboardSpatialBuffer(),
                 new BlackboardEntityBuffer());
             Entity targetUnit = world.Create();
@@ -72,7 +73,7 @@ namespace Ludots.Tests.GAS
                 PersistentStoredTargetKeys = keys,
             });
 
-            Entity host = world.Create(OrderBuffer.CreateEmpty(), new BlackboardIntBuffer(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer());
+            Entity host = world.Create(OrderBuffer.CreateEmpty(), new BlackboardIntBuffer(), new BlackboardFloatBuffer(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer());
             ref OrderBuffer buffer = ref world.Get<OrderBuffer>(host);
             buffer.SetActiveDirect(new Order
             {
@@ -116,6 +117,7 @@ namespace Ludots.Tests.GAS
             Entity host = world.Create(
                 OrderBuffer.CreateEmpty(),
                 new BlackboardIntBuffer(),
+                new BlackboardFloatBuffer(),
                 new BlackboardSpatialBuffer(),
                 new BlackboardEntityBuffer());
             ref OrderBuffer buffer = ref world.Get<OrderBuffer>(host);
@@ -152,6 +154,7 @@ namespace Ludots.Tests.GAS
             Entity host = world.Create(
                 OrderBuffer.CreateEmpty(),
                 new BlackboardIntBuffer(),
+                new BlackboardFloatBuffer(),
                 new BlackboardSpatialBuffer(),
                 new BlackboardEntityBuffer());
             Entity oldTarget = world.Create();
@@ -218,6 +221,7 @@ namespace Ludots.Tests.GAS
             Entity host = world.Create(
                 OrderBuffer.CreateEmpty(),
                 new BlackboardIntBuffer(),
+                new BlackboardFloatBuffer(),
                 new BlackboardSpatialBuffer(),
                 new BlackboardEntityBuffer());
             Entity oldTarget = world.Create();
@@ -282,6 +286,7 @@ namespace Ludots.Tests.GAS
             Entity host = world.Create(
                 OrderBuffer.CreateEmpty(),
                 new BlackboardIntBuffer(),
+                new BlackboardFloatBuffer(),
                 new BlackboardSpatialBuffer(),
                 new BlackboardEntityBuffer());
             Vector3 oldPoint = new(120f, 0f, 340f);
@@ -337,6 +342,7 @@ namespace Ludots.Tests.GAS
             Entity host = world.Create(
                 OrderBuffer.CreateEmpty(),
                 new BlackboardIntBuffer(),
+                new BlackboardFloatBuffer(),
                 new BlackboardSpatialBuffer(),
                 new BlackboardEntityBuffer());
             Vector3 oldPoint = new(120f, 0f, 340f);
@@ -368,6 +374,7 @@ namespace Ludots.Tests.GAS
         }
 
         [TestCase(nameof(BlackboardIntBuffer))]
+        [TestCase(nameof(BlackboardFloatBuffer))]
         [TestCase(nameof(BlackboardSpatialBuffer))]
         [TestCase(nameof(BlackboardEntityBuffer))]
         public void InstantCompleteOrderSystem_MissingStoredTargetBlackboard_HardFailsBeforeMutation(string missingComponent)
@@ -388,6 +395,10 @@ namespace Ludots.Tests.GAS
             if (missingComponent != nameof(BlackboardIntBuffer))
             {
                 world.Add(host, new BlackboardIntBuffer());
+            }
+            if (missingComponent != nameof(BlackboardFloatBuffer))
+            {
+                world.Add(host, new BlackboardFloatBuffer());
             }
             if (missingComponent != nameof(BlackboardSpatialBuffer))
             {
@@ -505,10 +516,11 @@ namespace Ludots.Tests.GAS
             admissionResults.BeginLogicStep();
             var orderQueue = new OrderQueue(capacity: 8, admissionResults);
 
-            Entity source = world.Create(new BlackboardIntBuffer(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer());
+            Entity source = world.Create(new BlackboardIntBuffer(), new BlackboardFloatBuffer(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer());
             Entity spawned = world.Create(
                 OrderBuffer.CreateEmpty(),
                 new BlackboardIntBuffer(),
+                new BlackboardFloatBuffer(),
                 new BlackboardSpatialBuffer(),
                 new BlackboardEntityBuffer(),
                 new PlayerOwner { PlayerId = 1 });
@@ -605,7 +617,7 @@ namespace Ludots.Tests.GAS
                 PersistentStoredTargetKeys = keys,
             });
 
-            Entity host = world.Create(OrderBuffer.CreateEmpty(), new BlackboardIntBuffer(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer());
+            Entity host = world.Create(OrderBuffer.CreateEmpty(), new BlackboardIntBuffer(), new BlackboardFloatBuffer(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer());
             Entity garrisonTarget = world.Create();
             ref OrderBuffer buffer = ref world.Get<OrderBuffer>(host);
             buffer.SetActiveDirect(new Order
@@ -637,10 +649,11 @@ namespace Ludots.Tests.GAS
             admissionResults.BeginLogicStep();
             var orderQueue = new OrderQueue(capacity: 8, admissionResults);
 
-            Entity source = world.Create(new BlackboardIntBuffer(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer());
+            Entity source = world.Create(new BlackboardIntBuffer(), new BlackboardFloatBuffer(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer());
             Entity spawned = world.Create(
                 OrderBuffer.CreateEmpty(),
                 new BlackboardIntBuffer(),
+                new BlackboardFloatBuffer(),
                 new BlackboardSpatialBuffer(),
                 new BlackboardEntityBuffer(),
                 new PlayerOwner { PlayerId = 1 });
@@ -738,7 +751,7 @@ namespace Ludots.Tests.GAS
             admissionResults.BeginLogicStep();
             var orderQueue = new OrderQueue(capacity: 8, admissionResults);
 
-            Entity source = world.Create(new BlackboardIntBuffer(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer());
+            Entity source = world.Create(new BlackboardIntBuffer(), new BlackboardFloatBuffer(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer());
             Entity spawned = world.Create(OrderBuffer.CreateEmpty());
             BlackboardStoredTargetOps.SetPoint(world, source, new Vector3(100f, 0f, 200f), in keys);
 

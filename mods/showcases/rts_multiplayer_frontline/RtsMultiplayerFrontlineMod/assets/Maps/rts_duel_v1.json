@@ -49,9 +49,7 @@
     {
       "Name": "default",
       "SpatialType": "HexGrid",
-      "DataFile": "rts_duel_v1_flat.vtxm",
-      "WidthCells": 16384,
-      "HeightCells": 16384
+      "DataFile": "rts_duel_v1_flat.vtxm"
     }
   ],
   "Entities": [
@@ -113,11 +111,6 @@
             "X": 13000,
             "Y": 15000
           }
-        },
-        "ResourceSinkProfile": {
-          "ResourceAttribute": "Crystals",
-          "DockOffsetXCm": -800,
-          "DockOffsetYCm": 0
         },
         "FrontlineParticipant": {
           "SideIndex": 0
@@ -262,11 +255,6 @@
             "X": 17000,
             "Y": 15000
           }
-        },
-        "ResourceSinkProfile": {
-          "ResourceAttribute": "Crystals",
-          "DockOffsetXCm": 800,
-          "DockOffsetYCm": 0
         },
         "FrontlineParticipant": {
           "SideIndex": 1

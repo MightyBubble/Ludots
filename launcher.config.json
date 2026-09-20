@@ -2417,6 +2417,78 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryFilterControllableEntryMod",
         "projectPath": "CapabilityStandardGraphOpQueryFilterControllableEntryMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_CompleteActiveOrder",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpCompleteActiveOrderEntryMod",
+        "projectPath": "CapabilityStandardGraphOpCompleteActiveOrderEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_FloatToInt",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpFloatToIntEntryMod",
+        "projectPath": "CapabilityStandardGraphOpFloatToIntEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_IntToFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpIntToFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpIntToFloatEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadEntityPosValid",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEntityPosValidEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadEntityPosValidEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadEntityPosX",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEntityPosXEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadEntityPosXEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadEntityPosY",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEntityPosYEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadEntityPosYEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadOrderTypeId",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadOrderTypeIdEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadOrderTypeIdEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_SqrtFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSqrtFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSqrtFloatEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_SubmitAssignedOrder",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSubmitAssignedOrderEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSubmitAssignedOrderEntryMod.csproj"
+      }
     }
   ],
   "adapters": {
