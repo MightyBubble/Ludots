@@ -1,11 +1,11 @@
 {
   "types": [
-    { "id": "CombatStance.Participant", "isSymmetric": false }
+    {
+      "id": "CombatStance.Participant",
+      "isSymmetric": false
+    }
   ],
   "metrics": [],
   "flags": [],
-  "bands": [],
-  "reasons": [],
-  "callbacks": [],
-  "synergies": []
+  "reasons": []
 }

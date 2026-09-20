@@ -1,24 +1,45 @@
 {
   "types": [
-    { "id": "EntityQueryTactics.Participant", "isSymmetric": false },
-    { "id": "TacticalIntel", "isSymmetric": false }
+    {
+      "id": "EntityQueryTactics.Participant",
+      "isSymmetric": false
+    },
+    {
+      "id": "TacticalIntel",
+      "isSymmetric": false
+    }
   ],
   "metrics": [
-    { "id": "Threat", "minValue": 0, "maxValue": 2000, "defaultValue": 0 },
-    { "id": "Focus", "minValue": 0, "maxValue": 2000, "defaultValue": 0 }
+    {
+      "id": "Threat",
+      "minValue": 0,
+      "maxValue": 2000,
+      "defaultValue": 0
+    },
+    {
+      "id": "Focus",
+      "minValue": 0,
+      "maxValue": 2000,
+      "defaultValue": 0
+    }
   ],
   "flags": [
-    { "id": "PriorityTarget" },
-    { "id": "HighThreat" }
-  ],
-  "bands": [
-    { "id": "TacticalIntel.HighThreat", "typeId": "TacticalIntel", "metricId": "Threat", "flagId": "HighThreat", "threshold": 80, "comparison": "GreaterOrEqual" }
+    {
+      "id": "PriorityTarget"
+    },
+    {
+      "id": "HighThreat"
+    }
   ],
   "reasons": [
-    { "id": "Scenario.Setup" },
-    { "id": "Player.PressurePulse" },
-    { "id": "Graph.Query" }
-  ],
-  "callbacks": [],
-  "synergies": []
+    {
+      "id": "Scenario.Setup"
+    },
+    {
+      "id": "Player.PressurePulse"
+    },
+    {
+      "id": "Graph.Query"
+    }
+  ]
 }

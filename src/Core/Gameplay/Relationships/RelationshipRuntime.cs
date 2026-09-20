@@ -219,7 +219,8 @@ namespace Ludots.Core.Gameplay.Relationships
             }
 
             _reverseIndex.OnLinkAdded(source, target, validatedTypeId);
-            MaterializeRelationshipEntity(source, target, validatedTypeId);
+            Entity relationshipEntity = MaterializeRelationshipEntity(source, target, validatedTypeId);
+            SeedMetricDefaults(relationshipEntity);
             _changes.TryAdd(new RelationshipChangeRecord(
                 source, target, validatedTypeId, RelationshipChangeKind.LinkAdded,
                 metricId: -1, reasonId: 0, oldValue: 0, newValue: 0, oldFlags: 0, newFlags: 0));
@@ -304,6 +305,7 @@ namespace Ludots.Core.Gameplay.Relationships
                     _world.SetRelationship(source, target, set);
                 }
 
+                SyncBufferIfDrifted(relationshipEntity, metricId, clamped);
                 return clamped;
             }
 
@@ -316,7 +318,7 @@ namespace Ludots.Core.Gameplay.Relationships
             if (_metrics.TryGetAttributeId(metricId, out int attributeId))
             {
                 _tagOps ??= new Ludots.Core.Gameplay.GAS.TagOps(
-                    new Ludots.Core.Gameplay.GAS.DirtyEntityQueue(1024),
+                    new Ludots.Core.Gameplay.GAS.DirtyEntityQueue(1 << 22),
                     new Ludots.Core.Gameplay.GAS.TagRuleRegistry(),
                     new Ludots.Core.Gameplay.GAS.GasBudget(),
                     new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry());
@@ -706,6 +708,44 @@ namespace Ludots.Core.Gameplay.Relationships
             return typeId == RelationshipTypeRegistry.AnyTypeId
                 ? set.Count > 0
                 : set.HasType(typeId);
+        }
+
+
+        /// <summary>#1570：SoA 默认值在首建边时播种进边实体 AttributeBuffer（base 侧，raw 写
+        /// 不触发 GAS 管线——出生播种不是变更）；早退路径防御性同步，消除真相/缓存漂移面。</summary>
+        private void SeedMetricDefaults(Entity relationshipEntity)
+        {
+            if (!_world.Has<Ludots.Core.Gameplay.GAS.Components.AttributeBuffer>(relationshipEntity))
+            {
+                return;
+            }
+
+            for (int metricId = 0; metricId < _metrics.Count; metricId++)
+            {
+                if (!_metrics.TryGetAttributeId(metricId, out int attributeId))
+                {
+                    continue;
+                }
+
+                short defaultValue = _metrics.Get(metricId).DefaultValue;
+                if (defaultValue != 0)
+                {
+                    _world.Get<Ludots.Core.Gameplay.GAS.Components.AttributeBuffer>(relationshipEntity).SetBase(attributeId, defaultValue);
+                }
+            }
+        }
+
+        private void SyncBufferIfDrifted(Entity relationshipEntity, int metricId, short value)
+        {
+            if (_metrics.TryGetAttributeId(metricId, out int attributeId) &&
+                _world.Has<Ludots.Core.Gameplay.GAS.Components.AttributeBuffer>(relationshipEntity))
+            {
+                ref Ludots.Core.Gameplay.GAS.Components.AttributeBuffer buffer = ref _world.Get<Ludots.Core.Gameplay.GAS.Components.AttributeBuffer>(relationshipEntity);
+                if (buffer.GetBase(attributeId) != value)
+                {
+                    buffer.SetBase(attributeId, value);
+                }
+            }
         }
 
         private short ClampToDefinition(int metricId, int value)
