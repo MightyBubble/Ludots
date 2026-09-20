@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Ludots.Core.Config;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
+using Ludots.Platform.Abstractions;
 using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
 using Ludots.Core.Map.Hex;
@@ -107,6 +108,55 @@ namespace Ludots.Tests.GAS
             That(world.Y, Is.EqualTo(-140_000));
             var back = board.CoordinateConverter.WorldToHex(new WorldCmInt2(320_000, -140_000));
             That(back, Is.EqualTo(default(HexCoordinates)));
+        }
+
+        [Test]
+        public void MultipleGridAndHexSatellitesCoexist()
+        {
+            var config = ConfigWithBoards(
+                Board("world", "Grid", 10000, 10000, cellSizeCm: 100),
+                Board("arena_west", "Grid", 40, 30, originX: -400_000, originY: 300_000),
+                Board("arena_east", "Grid", 64, 64, cellSizeCm: 200, originX: 200_000, originY: 350_000),
+                Board("harbor_south", "HexGrid", 24, 24, originX: 320_000, originY: -140_000),
+                Board("harbor_north", "HexGrid", 16, 32, cellSizeCm: 50, originX: -350_000, originY: -200_000));
+            MapManager.ValidateSpatialDeclaration(config, new MapId("dual-board-test"));
+
+            var aabbByBoard = new System.Collections.Generic.Dictionary<string, WorldAabbCm>();
+            foreach (BoardConfig boardConfig in config.Boards)
+            {
+                var board = BoardFactory.Create(boardConfig, new BoardIdRegistry());
+                aabbByBoard[boardConfig.Name] = board.WorldSize.Bounds;
+            }
+
+            // 根板是画布：四块卫星全部落在根板内；卫星两两不重叠（本配置如此摆放）。
+            WorldAabbCm root = aabbByBoard["world"];
+            var satellites = new[] { "arena_west", "arena_east", "harbor_south", "harbor_north" };
+            foreach (string name in satellites)
+            {
+                WorldAabbCm a = aabbByBoard[name];
+                That(a.Left >= root.Left && a.Top >= root.Top &&
+                     a.Left + (long)a.Width <= root.Left + (long)root.Width &&
+                     a.Top + (long)a.Height <= root.Top + (long)root.Height,
+                    Is.True, $"{name} must sit inside the root board frame");
+            }
+            for (int i = 0; i < satellites.Length; i++)
+            {
+                for (int j = i + 1; j < satellites.Length; j++)
+                {
+                    WorldAabbCm a = aabbByBoard[satellites[i]];
+                    WorldAabbCm b = aabbByBoard[satellites[j]];
+                    bool disjoint = a.Left + (long)a.Width <= b.Left || b.Left + (long)b.Width <= a.Left ||
+                                    a.Top + (long)a.Height <= b.Top || b.Top + (long)b.Height <= a.Top;
+                    That(disjoint, Is.True, $"{satellites[i]} and {satellites[j]} must not overlap as placed");
+                }
+            }
+
+            // 异构度量共存：两块 grid 板不同 cell、两块 hex 板不同 cell，各自换算各自闭环。
+            var west = aabbByBoard["arena_west"];
+            That(west.Width, Is.EqualTo(4000));
+            var east = aabbByBoard["arena_east"];
+            That(east.Width, Is.EqualTo(12800));
+            That(east.Left, Is.EqualTo(200_000));
         }
 
         [Test]
