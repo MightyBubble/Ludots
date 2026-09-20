@@ -1444,7 +1444,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
             if (_world.IsAlive(entity) && _world.Has<AttributeBuffer>(entity))
             {
-                value = _world.Get<AttributeBuffer>(entity).GetCurrent(attributeId);
+                value = Ludots.Core.Gameplay.GAS.AttributeReads.Current(_world, entity, attributeId);
                 return true;
             }
 

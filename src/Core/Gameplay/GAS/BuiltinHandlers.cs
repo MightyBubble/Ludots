@@ -114,9 +114,9 @@ namespace Ludots.Core.Gameplay.GAS
                 return;
             }
 
-            float before = primaryAttrId >= 0 ? world.Get<AttributeBuffer>(context.Target).GetCurrent(primaryAttrId) : 0f;
+            float before = primaryAttrId >= 0 ? Ludots.Core.Gameplay.GAS.AttributeReads.Current(world, context.Target, primaryAttrId) : 0f;
             AttributeMutationOps.ApplyModifiers(world, context.Target, in modifiers, runtime?.TagOps);
-            float after = primaryAttrId >= 0 ? world.Get<AttributeBuffer>(context.Target).GetCurrent(primaryAttrId) : 0f;
+            float after = primaryAttrId >= 0 ? Ludots.Core.Gameplay.GAS.AttributeReads.Current(world, context.Target, primaryAttrId) : 0f;
             runtime?.RecordAttributeDelta(primaryAttrId, after - before);
         }
 

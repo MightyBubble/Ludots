@@ -2209,9 +2209,12 @@ namespace Ludots.Core.Engine
             var gasCapacityPlan = Ludots.Core.Gameplay.GAS.GasLoadTimeCapacityPlan.Freeze(
                 Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.Count,
                 Ludots.Core.Gameplay.GAS.Registry.TagRegistry.Count,
-                Ludots.Core.Gameplay.GAS.Components.AttributeBuffer.MAX_ATTRS,
+                Ludots.Core.Gameplay.GAS.GasLoadTimeCapacityPlan.AbsoluteMaxAttributeSlots,
                 Ludots.Core.Gameplay.GAS.Components.GameplayTagContainer.MAX_TAG_ID + 1);
             SetService(CoreServiceKeys.GasLoadTimeCapacityPlan, gasCapacityPlan);
+            var worldAttributeStore = new Ludots.Core.Gameplay.GAS.WorldAttributeStore(gasCapacityPlan);
+            Ludots.Core.Gameplay.GAS.WorldAttributeStoreAmbient.Bind(worldAttributeStore);
+            SetService(CoreServiceKeys.WorldAttributeStore, worldAttributeStore);
             _cameraRuntimeSystem = new CameraRuntimeSystem(World, GlobalContext, virtualCameraRegistry);
             RegisterSystem(new GasBudgetResetSystem(gasBudget, orderTerminalResults, orderAdmissionResults), SystemGroup.SchemaUpdate);
             RegisterSystem(schemaUpdateSystem, SystemGroup.SchemaUpdate);

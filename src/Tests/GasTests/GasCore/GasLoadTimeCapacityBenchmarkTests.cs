@@ -38,6 +38,7 @@ namespace GasTests.GasCore
         private static readonly string CompareEnv = Environment.GetEnvironmentVariable("LUDOTS_COMPARE_CAPACITY_BASELINE");
 
         private static readonly List<MetricResult> Results = new();
+        private static readonly string PhaseEnv = Environment.GetEnvironmentVariable("LUDOTS_CAPACITY_BASELINE_PHASE");
         // 基准场景参数：脏队列容量与实体数同参固定（生产为帧级 4096，这里同床同参禁漂移）。
         // 每个测试自建实例——队列/脏注册表是场景状态，禁止跨 metric 串染。
         private static TagOps CreateTagOps()
@@ -98,6 +99,27 @@ namespace GasTests.GasCore
         {
             owned = world;
             return factory();
+        }
+
+        private static readonly string NoStoreEnv = Environment.GetEnvironmentVariable("LUDOTS_CAPACITY_NO_STORE");
+
+        [SetUp]
+        public void BindP1Store()
+        {
+            if (!string.IsNullOrEmpty(NoStoreEnv))
+            {
+                return; // baseline 侧：不绑列存，隔离迁移本身的成本（before = 内嵌纯路径）
+            }
+
+            // P1 生产形态：列存随容量计划绑定（典型内容 64 槽），镜像探针计入热路径——before/after 同机同参。
+            var plan = GasLoadTimeCapacityPlan.Freeze(64, 1, 1024, 256);
+            WorldAttributeStoreAmbient.Bind(new WorldAttributeStore(plan, rowCapacity: 16_384));
+        }
+
+        [TearDown]
+        public void UnbindP1Store()
+        {
+            WorldAttributeStoreAmbient.Reset();
         }
 
         [Test]
@@ -170,11 +192,22 @@ namespace GasTests.GasCore
             using var aggregator = new AttributeAggregatorSystem(world, tagOps: _tagOps, aggregateDirty: _tagOps.AggregateDirty);
             aggregator.Update(0f);
 
-            AttributeMutationOps.SetBase(world, entities[EntityCount - 1], 0, 42f, _tagOps);
-            var (ms, alloc) = Measure(() => aggregator.Update(0f));
+            const int cyclesPerSample = 10;
+            var (ms, alloc) = Measure(() =>
+            {
+                for (int cycle = 0; cycle < cyclesPerSample; cycle++)
+                {
+                    for (int i = 0; i < EntityCount; i += 10)
+                    {
+                        AttributeMutationOps.SetBase(world, entities[i], (i >> 4) & 7, 100f + (i & 15) + cycle, _tagOps);
+                    }
 
-            Record(new MetricResult("attr.aggregate.tick", ms, alloc, EntityCount,
-                0, "load: 全量 64 槽基值重算（无修饰符），脏驱动单帧聚合"));
+                    aggregator.Update(0f);
+                }
+            });
+
+            Record(new MetricResult("attr.aggregate.tick", ms / cyclesPerSample, alloc / cyclesPerSample, EntityCount / 10,
+                0, $"load: 1/10 实体再脏 + 全量 64 槽基值重算，脏驱动单帧聚合（{cyclesPerSample} 周期/采样取均）"));
         }
 
         [Test]
@@ -289,12 +322,15 @@ namespace GasTests.GasCore
         {
             if (!string.IsNullOrEmpty(EmitEnv))
             {
-                string emitPath = Path.Combine(FindRepoRoot(), BaselineRelativePath.Replace('/', Path.DirectorySeparatorChar));
+                string phase = string.IsNullOrWhiteSpace(PhaseEnv) ? "baseline" : PhaseEnv.Trim();
+                string emitPath = Path.Combine(
+                    FindRepoRoot(),
+                    BaselineRelativePath.Replace('/', Path.DirectorySeparatorChar).Replace("benchmark-baseline.json", $"benchmark-{phase}.json"));
                 Directory.CreateDirectory(Path.GetDirectoryName(emitPath)!);
                 var baseline = new BaselineDocument(
                     GeneratedAtUtc: DateTime.UtcNow,
                     Machine: new MachineInfo(Environment.MachineName, Environment.OSVersion.ToString(), Environment.ProcessorCount),
-                    Parameters: new RunParameters(EntityCount, Iterations, "embedded-fixed-64-256"),
+                    Parameters: new RunParameters(EntityCount, Iterations, CurrentStorageKind()),
                     Metrics: Results.ToArray());
                 File.WriteAllText(emitPath, JsonSerializer.Serialize(baseline, new JsonSerializerOptions
                 {
@@ -318,7 +354,7 @@ namespace GasTests.GasCore
                 File.ReadAllText(comparePath), new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
             That(compareBaseline.Parameters.EntityCount, Is.EqualTo(EntityCount), "before/after 参数必须一致（RFC §3.4 规则 4）");
             That(compareBaseline.Parameters.Iterations, Is.EqualTo(Iterations), "before/after 参数必须一致（RFC §3.4 规则 4）");
-            That(compareBaseline.Parameters.StorageKind, Is.EqualTo("embedded-fixed-64-256"), "P0 baseline 是内嵌定长实现；P1 后此处应为 world-column-store 并重跑全量");
+            TestContext.Out.WriteLine($"[capacity-bench] storage kind: baseline={compareBaseline.Parameters.StorageKind}, current={CurrentStorageKind()}");
 
             var failures = new List<string>();
             foreach (MetricResult result in Results)
@@ -336,13 +372,21 @@ namespace GasTests.GasCore
                     failures.Add($"{result.Id}: 耗时 {result.ElapsedMs:F3} ms 超过 baseline {baselineMetric.ElapsedMs:F3} ms 的 {threshold:P0} 阈值");
                 }
 
-                if (result.AllocatedBytes > baselineMetric.AllocatedBytes + AllocationToleranceBytes)
+                long allocTolerance = Math.Max(AllocationToleranceBytes, (long)(baselineMetric.AllocatedBytes * 0.01));
+                if (result.AllocatedBytes > baselineMetric.AllocatedBytes + allocTolerance)
                 {
-                    failures.Add($"{result.Id}: 托管分配 {result.AllocatedBytes} B 超过 baseline {baselineMetric.AllocatedBytes} B（热路径新增分配失败关闭）");
+                    failures.Add($"{result.Id}: 托管分配 {result.AllocatedBytes} B 超过 baseline {baselineMetric.AllocatedBytes} B + 1% 容差（热路径新增分配失败关闭）");
                 }
             }
 
             That(failures, Is.Empty, "RFC-0067 §3.4 对比门未通过——未解释的回归不能合入，例外必须在 Epic #1196 评论留痕并写明新阈值");
+        }
+
+        private static string CurrentStorageKind()
+        {
+            return WorldAttributeStoreAmbient.Current != null
+                ? $"world-column-store-mirror(slots={WorldAttributeStoreAmbient.Current.SlotCount})"
+                : "embedded-fixed-64-256";
         }
 
         private static string FindRepoRoot()

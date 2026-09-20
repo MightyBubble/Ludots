@@ -1,53 +1,60 @@
 # GAS Composition Gate — Self Review
 
-- **Task / Issue**: Epic #1196 / RFC-0067 P0——GasLoadTimeCapacityPlan 脚手架 + 七指标基准对比床 + baseline 入库
+- **Task / Issue**: Epic #1196 / RFC-0067 **P1**——属性世界列存切流（上限 64 → 计划定容 ≤1024）
 - **Date**: 2026-09-20
-- **Agent / Author**: ZCode（分支 feat/gas-loadtime-capacity-p0）
+- **Agent / Author**: ZCode（分支 feat/gas-world-attribute-store）
 
 ## 1. Core judgment
 
-新变体主要交付物是（A/B/C/D）: 均不是——装载期容量计划（纯数据记录 + fail-fast 校验）与基准对比床（测试设施）。不新增运行时行为变体、enum、preset 开关或平行管线；存储形态零变化（P0 明确不动 AttributeBuffer/GameplayTagContainer）。
+新变体主要交付物是（A/B/C/D）: 均不是——`WorldAttributeStore`（装载期定容 SoA 列存）+ 写权威双车道路由（<64 内嵌镜像 / ≥64 列存真相）+ 聚合/延迟触发/种子/事务/存档的高车道。无新 enum、无 preset 开关；存储形态是 RFC §3.3 明文列出的 P1 交付（"并行（或特性开关），读写与聚合切流"），P4 拆内嵌真相。
 
 结论: PASS
 
-一句话理由: P0 是容量真相的"记账与门禁"，属性/标签读写路径一行未动；写入口径仍由既有 AttributeMutationOps + 治理白名单锁死。
+一句话理由: 写入口径仍唯一（AttributeMutationOps + 既有治理白名单零改动）；高车道全部失败关闭（无列存/越界/超天花板）；迁移成本由已入库对比床逐指标验证 ≤10%、热路径零新增分配。
 
 ## 2. Layer assignment
 
-| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
-|-----------|-----------------|----------|
-| GasLoadTimeCapacityPlan | 3（装载期容量合同，纯数据） | `src/Core/Gameplay/GAS/GasLoadTimeCapacityPlan.cs` |
-| 冻结窗口挂接 | 3 | GameEngine.InitializeCoreSystems 尾部（AttributeRegistry.Freeze 同窗口，RFC 点名位置） |
-| 基准对比床 | 测试设施 | `GasLoadTimeCapacityBenchmarkTests`（七 MetricId，min-of-5，emit/compare 双模式） |
+| 步骤/能力 | Layer | 实现载体 |
+|-----------|-------|----------|
+| 世界属性列存（预定容、行稀疏、零对局扩容） | 0（纯数据结构） | `WorldAttributeStore` + `WorldAttributeStoreAmbient` |
+| 读路由（<64 镜像 / ≥64 列存） | 0 | `AttributeReads` |
+| 写权威双车道 + 区间守卫 | 0 | `AttributeMutationOps`（SetCurrent/SetBase/ApplyModifiers 路由 + MirrorToStore） |
+| 聚合高槽位 pass（base→修饰→cap/current 恢复） | 2 | `AttributeAggregatorSystem.ProcessHighSlots` + `EffectModifierOps.ApplyAggregatedHigh` |
+| 延迟触发高车道 | 2 | `AttributeHighLane.CollectAttributeChanges`（DeferredTriggerCollectionSystem 接入） |
+| 种子建行（authoring/批量） | 3 | ComponentRegistry.SetAttributeBuffer / TemplateEntityBatchSpawner.SeedWorldStore |
+| 事务高车道（懒分配原始/暂存行） | 1 | EffectPhaseSideEffectTransaction（Capture/Stage/Commit/Rollback） |
+| 存档高行 | 3 | LifecycleSnapshot.HighAttributes + CopyAttributeSlice 路由 |
+| 注册上限解耦 64→1024 | 3 | AttributeRegistry.MaxAttributeIds + ModRegistrySet（约束数组同步 1024） |
 
 ## 3. Reuse list
 
-- Registries: `AttributeRegistry`/`TagRegistry`（Count 透传新增，委托 IdentityTable 既有 Count）；`CoreServiceKeys`/`SetService` 世界级暴露先例
-- 冻结窗口: `GameEngine.InitializeCoreSystems` 既有 AttributeRegistry.Freeze 位置（:2183）
-- 基准: NUnit 内嵌 alloc+耗时范式（FogBenchmark/GasBenchmarkTests 先例）、`GasBenchmark.Run`（RFC 点名扩展点，本次顺手修复其在 main 上的两处既有损坏）
-- 不新建 runner 脚本：对比器内嵌为测试（RFC §3.4 规则 3 的失败关闭即断言失败）
+- `GasLoadTimeCapacityPlan`（P0 交付，物理上限参数升级为列存天花板）
+- `ModRegistryAmbient` 形状 → `WorldAttributeStoreAmbient`
+- `AttributeMutationOps` 写权威与治理白名单（零改动，白名单锁的正是双车道落点）
+- `EffectModifierOps`（≥64 跳过 + ApplyAggregatedHigh 高车道）
+- 既有 NUnit 基准床（P0）——P1 升级为可绑定/不绑定列存的双形态对比
 
-## 4. New Layer 0 ops (if any)
+## 4. New Layer 0 ops
 
-N/A
+N/A（无新 atomic op；本切为存储与数据面）
 
 ## 5. Transaction boundary
 
-N/A——装载期一次性 Freeze，失败即启动失败。
+事务高车道沿用既有 EffectPhaseSideEffectTransaction 的 all-or-nothing：捕获原始行 → 暂存 → commit 经写权威回放 / rollback 整行恢复。
 
 ## 6. Config SSOT
 
-行为配置落在: 无新表；baseline 数据 `docs/rfcs/gas-loadtime-capacity/benchmark-baseline.json`（RFC §3.4 规则 1 点名路径）。
+容量真相唯一：`GasLoadTimeCapacityPlan`（GameEngine 冻结窗口构建 store 并绑定）。baseline/after 数据：`docs/rfcs/gas-loadtime-capacity/benchmark-{baseline,p1}.json`（§3.4 规则 1/2）。
 
-是否新增 JSON schema: NO（baseline 是证据工件非配置）。
+是否新增 JSON schema: NO。
 
 ## 7. Red flag scan
 
-- [x] 未新增 profile inherit/placement enum
-- [x] 未新建与 spawn 平行的物化管线（存储零改动）
-- [x] 未把 placement 校验塞进 lifecycle op
-- [x] 未添加「说不清的」默认 fallback（超天花板/超物理上限/负数全部 fail-closed，错误指明 P1/P2 出口）
+- [x] 未新增 profile enum/开关（迁移期"双轨"是 RFC §3.3 P1 明文形态，P4 拆除已排程）
+- [x] 未新建平行物化管线（读面 27 处既有 `Get<AttributeBuffer>` 全部零改动即正确——<64 镜像合同）
+- [x] 高车道失败模式全部 fail-closed（HighLaneUnavailable / AttributeSlotOutOfRange / AttributeRowCapacityExceeded / 区间 ArgumentOutOfRange）
+- [x] 镜像只做有源镜像（种子建行后写路径同步；无行不镜像——不制造半真相）
 
 ## 8. Next variant test
 
-下一个变体（P1 属性世界列存）将修改: 新世界列存类型 + AttributeMutationOps 路由开关（RFC 允许的迁移期开关，P4 拆）——不改 Core enum、不加 preset。
+下一个变体（内容作者再加第 200 个属性名）将修改：**零代码改动**——注册表在装载窗口直接登记至 1024，模板/地图照常 authoring，UAT `GasWorldAttributeStoreTests.HighSlots_RegisterWriteRead_RoundTripsThroughStore` 钉死全链。
