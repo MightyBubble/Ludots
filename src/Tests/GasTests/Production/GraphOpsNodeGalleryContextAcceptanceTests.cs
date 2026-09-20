@@ -197,4 +197,32 @@ public sealed class GraphOpsNodeGalleryContextAcceptanceTests
 
         Assert.That(runtime.Metrics.Detail, Does.Contain("成立"), "the caption reports the guard held");
     }
+
+    [Test]
+    public void SubmitCommandIntentVignette_PushesIntoTheSubmissionBuffer()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("SubmitCommandIntent");
+        runtime.EnsureWorld();
+        runtime.Tick(0.35f);
+
+        foreach (string phrase in runtime.Vignette.AssertDetailContains)
+        {
+            Assert.That(runtime.Metrics.Detail, Does.Contain(phrase), runtime.Metrics.Detail);
+        }
+    }
+
+    [Test]
+    public void SubmitCastVignette_PushesIntoTheCastSubmissionBuffer()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("SubmitCast");
+        runtime.EnsureWorld();
+        runtime.Tick(0.35f);
+
+        foreach (string phrase in runtime.Vignette.AssertDetailContains)
+        {
+            Assert.That(runtime.Metrics.Detail, Does.Contain(phrase), runtime.Metrics.Detail);
+        }
+    }
 }

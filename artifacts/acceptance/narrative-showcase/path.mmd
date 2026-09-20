@@ -1,0 +1,14 @@
+flowchart TD
+    A[Load narrative_showcase_hub] --> B[Intro Sequencer StorySkip]
+    B --> C[Briefing Dialogue lore branch]
+    C --> D[TaskRuntime advances to trial]
+    D --> E[Right-click move near shrine]
+    E --> F[StoryInteract -> TrialReveal Sequencer]
+    F --> G[Completed callback spawns Ashen Beast]
+    G --> H[Arcweaver combat damages beast]
+    H --> I[GAS finisher defeats beast -> signal emitted]
+    I --> J[TaskRuntime advances to return]
+    J --> K{Lore learned?}
+    K -- no --> L[Guard branch: Mercy ending stays locked]
+    K -- yes --> M[Return dialogue unlocks Mercy branch]
+    M --> N[Reward signal applies GAS blessing and task completes]
