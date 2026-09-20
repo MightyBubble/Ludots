@@ -11,6 +11,7 @@ using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
+using Ludots.Core.Systems;
 
 namespace Ludots.Core.MassNavigation.Runtime;
 
@@ -128,7 +129,12 @@ public sealed class MassNavigationRuntime
                 ? simulation
                 : null));
         engine.RegisterSystem(new MassNavigationAgentMetadataSyncSystem(engine, config), SystemGroup.InputCollection);
-        engine.RegisterSystem(new MassNavigationSimulationStepSystem(engine), SystemGroup.PostMovement);
+        // 仿真步进是 PostMovement 组的移动生产者，必须排在 SpatialPartitionUpdateSystem 之前：
+        // 分区同步按 PreviousWorldPositionCm != WorldPositionCm 判定本 tick 是否移动，晚于步进注册会让
+        // 该判定永远为 false（Save 在 SchemaUpdate、同步先跑、步进后跑），成员格将冻结在出生位置。
+        engine.InsertSystemBeforeRequired<SpatialPartitionUpdateSystem>(
+            new MassNavigationSimulationStepSystem(engine),
+            SystemGroup.PostMovement);
         engine.RegisterSystem(
             new MassNavigationAuthoredAgentBindingSystem(engine, config),
             SystemGroup.RuntimeEntityBinding);

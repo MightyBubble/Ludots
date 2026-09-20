@@ -49,15 +49,17 @@
 
 - Schema：`behavior_trees.schema.json` / `hfsm.schema.json`。
 - 装载：`GraphBehaviorDefinitionLoader` → `GraphBehaviorCatalog`（生产路径，与演武场一致）。
-- 默认数据源：Core（仓库根 `assets/AI/`）；有 `assets/AI/*.json` 的 Mod 也会出现在目录里。
+- 数据源：Core 是引擎自带的表；启动器扫到的每个 Mod 都会出现在目录里。Mod 还没有 `assets/AI/behavior_trees.json` / `hfsm.json` 时，清单是空的，不是报找不到。新建并保存会写出这个 Mod 自己的文件，运行时按 `ArrayById` 和 Core 合成。
+- 叶子动作表：Core 的 `GAS/action_lib.json` 加上当前 Mod 自己的同名表（后者同名覆盖）。双击叶子进蓝图时，跟这张动作是谁写的走，不钉死 Core。
 - 糖宿主 / 门户织入（`BehaviorGraphLeafWeaver`、`GraphBehaviorTreeHost`、`GraphFsmHost`）保留为**回归**，不得再当 featured 作者面。
 
 ## 4. 场景
 
 1. 打开 `/bt-editor`，数据源选 Core，目录出现 `bt.patrolChaseAttack`；调色板语义是树节点，不是加减查询。
-2. 双击挂了 `bt.seeEnemy` 的 Condition，跳进 Graph Editor 打开 `Graph.BT.Leaf.SeeEnemy`；保存后外层仍指向同一 ActionLib 名。
-3. 打开 `/fsm-editor`，编辑 `hfsm.sentry.scripted` 的 combat 生命周期；双击 `onTick` 进叶子函数图。
-4. 跑演武场：BT 走 `BehaviorTreeWorld`，哨兵走 `HfsmWorld` + 叶子 Script。
+2. 打开一个自己的 Mod（磁盘上还没有 `AI/behavior_trees.json`），清单是空的。点「+ 新建拓扑」、保存，文件出现在这个 Mod 的 `assets/AI/behavior_trees.json`。
+3. 双击挂了 `bt.seeEnemy` 的 Condition，跳进 Graph Editor 打开 `Graph.BT.Leaf.SeeEnemy`；保存后外层仍指向同一 ActionLib 名。
+4. 打开 `/fsm-editor`，编辑 `hfsm.sentry.scripted` 的 combat 生命周期；双击 `onTick` 进叶子函数图。
+5. 跑演武场：BT 走 `BehaviorTreeWorld`，哨兵走 `HfsmWorld` + 叶子 Script。
 
 ## 5. 边界
 
@@ -85,6 +87,15 @@ Feature: 行为树拓扑编辑器
     Given 树上有一个 Condition，已经挂好 bt.seeEnemy
     When 我双击这个叶子
     Then 页面跳到 Graph Editor，并打开 Graph.BT.Leaf.SeeEnemy
+
+  Scenario: 我能给自己的 Mod 写一棵树
+    Given 我打开 /bt-editor
+    And 数据源里能选到一个磁盘上还没有 AI/behavior_trees.json 的 Mod
+    When 我选中这个 Mod
+    Then 拓扑清单是空的，页面没有报找不到文件
+    When 我点「+ 新建拓扑」并保存
+    Then 这个 Mod 的 assets/AI/behavior_trees.json 被写出来
+    And 游戏加载时按 ArrayById 把它和 Core 合成
 
 Feature: 状态机拓扑编辑器
 

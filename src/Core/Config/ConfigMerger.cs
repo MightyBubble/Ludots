@@ -205,7 +205,7 @@ namespace Ludots.Core.Config
             return bool.TryParse(node.ToString(), out value);
         }
 
-        private static void MergeObject(JsonNode target, JsonObject source, string[] arrayAppendFields)
+        public static void MergeObject(JsonNode target, JsonObject source, string[] arrayAppendFields)
         {
             if (target is not JsonObject tObj) return;
 

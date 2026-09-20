@@ -31,11 +31,11 @@
     "DistanceCm": 65000,
     "FovYDeg": 60
   },
-  "continuousHeightmap": {
-    "asset": "assets/terrain/navmesh_debug_grid.height",
-    "renderProfile": {
-      "absoluteColorPeakSpanCm": 1500,
-      "colorContrast": 2.5
+  "ContinuousHeightmap": {
+    "Asset": "assets/terrain/navmesh_debug_grid.height",
+    "RenderProfile": {
+      "AbsoluteColorPeakSpanCm": 1500,
+      "ColorContrast": 2.5
     }
   }
 }

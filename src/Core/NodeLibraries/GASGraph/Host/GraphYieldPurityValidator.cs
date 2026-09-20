@@ -328,7 +328,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     return false;
 
                 default:
-                    if (!Enum.IsDefined(typeof(GraphNodeOp), op))
+                    if (!Enum.IsDefined(typeof(GraphNodeOp), op) &&
+                        ins.Op < GasGraphOpRegistry.FirstModOpCode)
                     {
                         return Fail(walk.Path, $"unknown graph op {ins.Op}@pc={pc}", out diagnostic);
                     }

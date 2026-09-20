@@ -113,6 +113,10 @@ assert(topologyPage.includes('删除此转移'), 'state machine inspector must o
 assert(topologyPage.includes('添加节点'), 'topology canvas must offer add-node');
 assert(topologyPage.includes('新建拓扑'), 'topology list must offer create');
 assert(topologyPage.includes('删除当前拓扑'), 'topology list must offer delete');
+assert(topologyPage.includes('尚未写出'), 'mod sources without files must stay selectable');
+assert(topologyPage.includes('/api/ai/action-lib?host='), 'topology action picker must query ActionLib');
+assert(topologyPage.includes('&source=${encodeURIComponent(source)}'), 'topology action picker must follow the selected mod');
+assert(!topologyPage.includes('mod=core&graph='), 'leaf jump must not hardcode Core as the graph owner');
 const dialoguePage = readFileSync(join(here, '../src/pages/dialogue-tree-editor/DialogueTreeCanvas.tsx'), 'utf8');
 assert(dialoguePage.includes('加一句'), 'dialogue canvas must offer add-say');
 assert(dialoguePage.includes('删除此句'), 'dialogue inspector must offer delete-say');

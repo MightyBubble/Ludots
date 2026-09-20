@@ -553,6 +553,30 @@
       "notes": "Mod-authored builtin handler registered via IModContext.Extensions.Gas.RegisterBuiltinHandler with explicit operation metadata."
     },
     {
+      "id": "capability_standard_mod_graph_op_extension_showcase",
+      "path": "mods/showcases/capability_standard/CapabilityStandardGraphOpExtensionShowcaseMod",
+      "projectPath": "CapabilityStandardGraphOpExtensionShowcaseMod.csproj",
+      "title": "跨 Mod 威胁评分",
+      "summary": "点 Re-score Threat，左右目标的分数由另一份 Mod 登记的评分公式算出，高分那边被点亮。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph-op",
+        "capability-standard",
+        "gas",
+        "mod-extensible-runtime"
+      ],
+      "binding": "capability_standard_mod_graph_op_extension_showcase",
+      "preset": "capability_standard_mod_graph_op_extension_showcase_raylib",
+      "docsPath": "gitbook/architecture/mod-extensible-runtime-showcases/graph-op-extension.md",
+      "readmePath": null,
+      "acceptanceTest": "CapabilityStandardExtensibleRuntimeShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_mod_graph_op_extension_showcase",
+      "screenshot": null,
+      "status": "active",
+      "notes": "Consumer Score graph references CapabilityStandardGraphOpProviderMod.QueryThreat via controlEdges/valueEdges; provider registers RegisterGraphOp at OnLoad."
+    },
+    {
       "id": "capability_standard_graph_behavior_integration",
       "path": "mods/showcases/capability_standard/CapabilityStandardGraphBehaviorIntegrationMod",
       "projectPath": "CapabilityStandardGraphBehaviorIntegrationMod.csproj",
@@ -9992,6 +10016,56 @@
       "artifactDir": null,
       "screenshot": null,
       "status": "active"
+    },
+    {
+      "id": "entity_group_textbook",
+      "path": "mods/showcases/entity_group_textbook/EntityGroupTextbookMod",
+      "title": "Entity Group 教科书",
+      "summary": "实体组教科书（#1540）：营地作为普通 EntityTemplate（递归 children + localId + attach 标记）可复用、可多处置放；同一营地摆两处并做实例差异 override。当前已落：切A 结构底子（装载测试锁定 26 条可寻址路径）；路径 override 全集、关系物化、黑板相对引用属后续切片（见 issue #1540 切B–I）。零 showcase 代码。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "entity-group",
+        "override",
+        "relation",
+        "prefab-like",
+        "textbook"
+      ],
+      "binding": null,
+      "preset": null,
+      "docsPath": "gitbook/architecture/entity-group-and-override.md",
+      "readmePath": null,
+      "acceptanceTest": "EntityGroupTextbookLoadTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryFilterControllable",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryFilterControllableEntryMod",
+      "projectPath": "CapabilityStandardGraphOpQueryFilterControllableEntryMod.csproj",
+      "title": "只圈你能指挥的",
+      "summary": "满场单位里，被实线指挥的才留下圈，其余退成灰影。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "QueryFilterControllable"
+      ],
+      "binding": "capability_standard_graph_op_QueryFilterControllable",
+      "preset": "capability_standard_graph_op_QueryFilterControllable_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/QueryFilterControllable.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_QueryFilterControllable",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_QueryFilterControllable/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_QueryFilterControllable/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ],
   "pathExemptions": [

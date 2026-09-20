@@ -39,6 +39,7 @@ public static class NavObstacleAuthoringAdapter
         {
             EntitySpawnData entityData = map.Entities[i]
                 ?? throw new InvalidOperationException($"Map '{map.Id}' contains null entity entry at index {i}.");
+
             if (string.IsNullOrWhiteSpace(entityData.Template))
             {
                 throw new InvalidOperationException($"Map '{map.Id}' entity[{i}] requires a template.");

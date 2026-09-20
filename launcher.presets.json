@@ -505,6 +505,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_mod_graph_op_extension_showcase_raylib",
+      "name": "Capability Standard Graph Op Extension Raylib",
+      "selectors": [
+        "$capability_standard_mod_graph_op_extension_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_presenter_behavior_extension_showcase_raylib",
       "name": "Capability Standard Presenter Behavior Extension Raylib",
       "selectors": [
@@ -3293,6 +3302,15 @@
       "selectors": [
         "$contact_sensor_textbook",
         "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryFilterControllable_raylib",
+      "name": "Graph Op QueryFilterControllable Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryFilterControllable"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

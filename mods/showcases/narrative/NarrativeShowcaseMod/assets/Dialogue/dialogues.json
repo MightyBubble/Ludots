@@ -41,7 +41,7 @@
         "onEnterActionGraphId": "Graph.Narrative.Action.AcceptBriefing"
       }
     ],
-    "display_token": "story.dialogue.briefing.display"
+    "displayToken": "story.dialogue.briefing.display"
   },
   {
     "id": "Dialogue.Narrative.Return",
@@ -79,7 +79,7 @@
         "presentationProfile": "story.world_bubble"
       }
     ],
-    "display_token": "story.dialogue.return.display"
+    "displayToken": "story.dialogue.return.display"
   },
   {
     "id": "Dialogue.Demo.Audience",
@@ -156,6 +156,6 @@
         "presentationProfile": "story.dialogue_overlay"
       }
     ],
-    "display_token": "story.dialogue.audience.display"
+    "displayToken": "story.dialogue.audience.display"
   }
 ]

@@ -351,7 +351,6 @@ namespace Ludots.Core.Presentation.Hud
                 LaneState lane = _lanes[GetLaneIndex(layer, (PresentationOverlayItemKind)kindValue)];
                 if (lane.Count <= 0)
                 {
-                    ResetLaneBuildDeltas(lane);
                     continue;
                 }
 
@@ -847,6 +846,31 @@ namespace Ludots.Core.Presentation.Hud
             return TryAppend(in item);
         }
 
+        /// <summary>取证计数：RemoveStable 按 stableId 查索引未命中而静默跳过的次数。</summary>
+        public int RemoveStableMisses { get; private set; }
+
+        /// <summary>UnderUi 屏幕 HUD lane 是否持有条目（append-only 决策用）。</summary>
+        public bool HasUnderUiHudContent =>
+            GetLaneSpan(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Text).Length > 0 ||
+            GetLaneSpan(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Bar).Length > 0;
+
+        /// <summary>取证：UnderUi 文本 lane 中 StableId>0 但不在稳定索引里的条数（索引失同步直接读数）。</summary>
+        public int CountUnderUiTextOrphansWithoutIndex()
+        {
+            LaneState lane = _lanes[GetLaneIndex(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Text)];
+            int orphans = 0;
+            for (int i = 0; i < lane.Count; i++)
+            {
+                int id = lane.Items[i].StableId;
+                if (id > 0 && !lane.StableIndexById.ContainsKey(id))
+                {
+                    orphans++;
+                }
+            }
+
+            return orphans;
+        }
+
         public void RemoveStable(PresentationOverlayLayer layer, PresentationOverlayItemKind kind, int stableId)
         {
             if (stableId <= 0)
@@ -858,6 +882,7 @@ namespace Ludots.Core.Presentation.Hud
             LaneState lane = _lanes[laneIndex];
             if (!lane.StableIndexById.TryGetValue(stableId, out int index))
             {
+                RemoveStableMisses++;
                 return;
             }
 
@@ -925,6 +950,13 @@ namespace Ludots.Core.Presentation.Hud
             LaneState lane = _lanes[laneIndex];
             EnsureLaneCapacity(lane, lane.Count + 1);
             lane.Items[lane.Count++] = item;
+            // 稳定 id 条目必须登记索引：RemoveStable 只认 StableIndexById，漏登记即永生孤儿
+            // （#HUD 残留：边缘刮过的文本黏屏）。
+            if (item.StableId > 0)
+            {
+                lane.StableIndexById[item.StableId] = lane.Count - 1;
+            }
+
             _count++;
             return true;
         }
