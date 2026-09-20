@@ -77,7 +77,8 @@ Query 纯读、显式 subject、缺 subject 失败关闭、精确输出、无 St
 显式 subject + pins、目标必须已登记 GraphKind.Query、typed Bool/Int/Float/Entity/EntitySet、缺失/类型不符失败关闭、禁止 Query 动作/事件/Store/continuation、不新增第二 VM 的统一 Query 网关合同已由主干 GraphReturnWriter/操作策略/编译器与回归测试覆盖（TriggerGraph 程序走同一 GraphExecutor，不经 Query 网关），本页只记关单。
 → https://github.com/MightyBubble/Ludots/issues/1099
 
-这五张票都已经进主干；本页只记关单，不再派实现票。
+这五张票都已经进主干；本页只记关单，不再派实现票。  
+关单评语文稿在 [`docs/rfcs/issue-hygiene-2026-08-25.md`](../../docs/rfcs/issue-hygiene-2026-08-25.md)。
 
 ### 3.3 真正还在做的
 
