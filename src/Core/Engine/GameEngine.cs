@@ -2358,6 +2358,7 @@ namespace Ludots.Core.Engine
                 teamLookup: teamEntityLookup,
                 relationships: relationshipRuntime,
                 memberOfTypeId: memberOfRelationshipTypeId,
+                ownsTypeId: relationshipTypeRegistry.GetId("Owns"),
                 entityTriggerGraphMounts: EntityTriggerGraphMounts,
                 initialInteractionContexts: interactionContextProfileRegistry),
                 SystemGroup.EffectProcessing);
