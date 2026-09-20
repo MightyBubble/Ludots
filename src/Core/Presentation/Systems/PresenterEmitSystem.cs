@@ -1809,7 +1809,6 @@ namespace Ludots.Core.Presentation.Systems
                 }
 
                 ref readonly AssetBindingConfig asset = ref slot.AssetBinding;
-                PresenterLocalOffsetConsumption.MarkSlotConsumed(slot.SlotIndex, in asset, state.DefId, ref localOffsetConsumedMask);
                 if (TryEmitSkinnedVisualBatchFast(
                         entity,
                         in state,
@@ -1823,6 +1822,8 @@ namespace Ludots.Core.Presentation.Systems
                         presenterWorldScale,
                         animatorSlot))
                 {
+                    // fast 车道在本分支消费 LocalOffset;回退车道由 _assetEmitter.Emit 自行标记,预标记会造成双消费。
+                    PresenterLocalOffsetConsumption.MarkSlotConsumed(slot.SlotIndex, in asset, state.DefId, ref localOffsetConsumedMask);
                     emittedStableVisual = true;
                     continue;
                 }
