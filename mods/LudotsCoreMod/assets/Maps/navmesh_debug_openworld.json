@@ -18,7 +18,6 @@
       "HeightCells": 1024,
       "GridCellSizeCm": 100,
       "DataFile": "navmesh_debug_openworld.hex",
-      "NavigationEnabled": true,
       "HexEdgeLengthCm": 100
     }
   ],

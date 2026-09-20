@@ -16,7 +16,6 @@
       "WidthCells": 1792,
       "HeightCells": 1024,
       "GridCellSizeCm": 3571,
-      "NavigationEnabled": true,
       "TerrainHeightStepCm": 100,
       "TerrainBlockedAtOrBelowHeightCm": 0
     }

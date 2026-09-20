@@ -1533,9 +1533,9 @@ app.MapPost("/api/nav/bootstrap-flat-grid-react", async (HttpRequest req) =>
         if (!mapR.Found) return Results.NotFound(new { ok = false, error = $"Map not found: {payload.MapId}" });
         boardConfig = EditorRepo.ResolveRequiredBoardByName(mapR.Map, payload.BoardName);
         boardInfo = EditorRepo.DescribeBoard(ctx, payload.MapId, boardConfig);
-        if (!boardConfig.NavigationEnabled)
+        if (!EditorRepo.BoardHasNavDeclaration(EditorRepo.CreateContext(repoRoot, payload.ModId), payload.MapId, boardConfig.Name))
         {
-            return Results.BadRequest(new { ok = false, error = $"Map board '{boardConfig.Name}' has NavigationEnabled=false." });
+            return Results.BadRequest(new { ok = false, error = $"Map board '{boardConfig.Name}' has no nav declaration in Navigation/navmesh.json maps.{payload.MapId}.boards; declare it on the nav side (#1567)." });
         }
 
         if (!EditorRepo.IsGridBoard(boardConfig))
@@ -1683,9 +1683,9 @@ app.MapPost("/api/nav/query-recast-react", async (HttpRequest req) =>
     {
         var mapConfig = ToolMapConfigResolver.LoadMap(repoRoot, payload.MapId, payload.ModId);
         boardConfig = EditorRepo.ResolveRequiredBoardByName(mapConfig, payload.BoardName);
-        if (!boardConfig.NavigationEnabled)
+        if (!EditorRepo.BoardHasNavDeclaration(EditorRepo.CreateContext(repoRoot, payload.ModId), payload.MapId, boardConfig.Name))
         {
-            return Results.BadRequest(new { ok = false, error = $"Map board '{boardConfig.Name}' has NavigationEnabled=false." });
+            return Results.BadRequest(new { ok = false, error = $"Map board '{boardConfig.Name}' has no nav declaration in Navigation/navmesh.json maps.{payload.MapId}.boards; declare it on the nav side (#1567)." });
         }
 
         bakeConfigContext = NavMeshBakeConfigLoader.LoadContextFromRepoRoot(repoRoot, payload.ModId);
@@ -3955,9 +3955,9 @@ static bool TryBuildEditorUploadRecastContext(
         return false;
     }
 
-    if (!boardConfig.NavigationEnabled)
+    if (!EditorRepo.BoardHasNavDeclaration(EditorRepo.CreateContext(repoRoot, modId), mapId, boardConfig.Name))
     {
-        error = Results.BadRequest(new { error = $"Map board '{boardConfig.Name}' has NavigationEnabled=false and cannot bake navmesh." });
+        error = Results.BadRequest(new { error = $"Map board '{boardConfig.Name}' has no nav declaration in Navigation/navmesh.json maps.{mapId}.boards (#1567)." });
         return false;
     }
 
@@ -4382,7 +4382,6 @@ static class EditorRepo
         int CellSizeCm,
         int HexEdgeLengthCm,
         int ChunkSizeCells,
-        bool NavigationEnabled,
         bool HasDataFile,
         bool DataFileExists,
         string? DataFile,
@@ -4399,7 +4398,6 @@ static class EditorRepo
         int CellSizeCm,
         int HexEdgeLengthCm,
         int ChunkSizeCells,
-        bool NavigationEnabled,
         bool HasDataFile,
         bool DataFileExists,
         string? DataFile,
@@ -4501,7 +4499,6 @@ static class EditorRepo
                 CellSizeCm: Ludots.Core.Spatial.SpatialScaleDefaults.CellCm,
                 HexEdgeLengthCm: Ludots.Core.Spatial.SpatialScaleDefaults.DefaultHexEdgeLengthCm,
                 ChunkSizeCells: Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells,
-                NavigationEnabled: false,
                 HasDataFile: false,
                 DataFileExists: false,
                 DataFile: null,
@@ -4525,7 +4522,6 @@ static class EditorRepo
                 CellSizeCm: Ludots.Core.Spatial.SpatialScaleDefaults.CellCm,
                 HexEdgeLengthCm: Ludots.Core.Spatial.SpatialScaleDefaults.DefaultHexEdgeLengthCm,
                 ChunkSizeCells: Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells,
-                NavigationEnabled: false,
                 HasDataFile: false,
                 DataFileExists: false,
                 DataFile: null,
@@ -4550,7 +4546,6 @@ static class EditorRepo
             CellSizeCm: primary.CellSizeCm,
             HexEdgeLengthCm: primary.HexEdgeLengthCm,
             ChunkSizeCells: primary.ChunkSizeCells,
-            NavigationEnabled: primary.NavigationEnabled,
             HasDataFile: primary.HasDataFile,
             DataFileExists: primary.DataFileExists,
             DataFile: primary.DataFile,
@@ -4602,12 +4597,12 @@ static class EditorRepo
         bool chunkSizeEditable = chunkSizeCells == Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells;
         bool canUseVirtualEmptyTerrain = topologyError == null && !dataFileExists && CanServeVirtualEmptyTerrain(mapId, board);
         bool canEditTerrain = topologyError == null && supportedTerrainTopology && chunkSizeEditable && hasDataFile && (dataFileExists || canUseVirtualEmptyTerrain);
-        bool canBake = canEditTerrain && board.NavigationEnabled;
+        bool canBake = canEditTerrain && BoardHasNavDeclaration(ctx, mapId, board.Name);
         string reason =
             topologyError != null ? topologyError :
             canBake ? "Ready for nav bake." :
             canUseVirtualEmptyTerrain ? "Sparse empty terrain is virtual; missing chunks are treated as flat until saved." :
-            !board.NavigationEnabled ? "Board NavigationEnabled is false." :
+            !canBake ? "Board has no nav declaration in navmesh.json maps." :
             !supportedTerrainTopology ? $"Board SpatialType '{board.SpatialType}' is not terrain-editable." :
             !chunkSizeEditable ? $"React terrain editor requires ChunkSizeCells={Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells}; map uses {chunkSizeCells}." :
             !hasDataFile ? "Board DataFile is empty." :
@@ -4622,7 +4617,6 @@ static class EditorRepo
             CellSizeCm: board.GridCellSizeCm > 0 ? board.GridCellSizeCm : Ludots.Core.Spatial.SpatialScaleDefaults.CellCm,
             HexEdgeLengthCm: board.HexEdgeLengthCm > 0 ? board.HexEdgeLengthCm : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultHexEdgeLengthCm,
             ChunkSizeCells: chunkSizeCells,
-            NavigationEnabled: board.NavigationEnabled,
             HasDataFile: hasDataFile,
             DataFileExists: dataFileExists,
             DataFile: hasDataFile ? board.DataFile : null,
@@ -4949,7 +4943,6 @@ int widthCells = request.WidthCells > 0
             GridCellSizeCm = cellSizeCm,
             HexEdgeLengthCm = request.HexEdgeLengthCm > 0 ? request.HexEdgeLengthCm : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultHexEdgeLengthCm,
             DataFile = dataFile,
-            NavigationEnabled = request.NavigationEnabled,
         };
 
         string? dataPath = null;
@@ -5025,10 +5018,6 @@ int widthCells = request.WidthCells > 0
             board.HexEdgeLengthCm = request.HexEdgeLengthCm.Value;
         }
 
-        if (request.NavigationEnabled.HasValue)
-        {
-            board.NavigationEnabled = request.NavigationEnabled.Value;
-        }
 
         foreach (var existing in map.Boards)
         {
@@ -5089,6 +5078,35 @@ int widthCells = request.WidthCells > 0
         return new BoardMutationResult(map, mapInfo, removedInfo, mapPath, dataPath);
     }
 
+    public static bool BoardHasNavDeclaration(ModContext ctx, string mapId, string boardName)
+    {
+        try
+        {
+            var bake = NavMeshBakeConfigLoader.LoadContextFromRepoRoot(ctx.RepoRoot, ctx.TargetModId);
+            foreach (var mapEntry in bake.Config.Maps)
+            {
+                if (!string.Equals(mapEntry.Key, mapId, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                foreach (var boardEntry in mapEntry.Value.Boards)
+                {
+                    if (string.Equals(boardEntry.Key, boardName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     public static Ludots.Core.Map.Board.BoardConfig? ResolvePrimaryBoard(Ludots.Core.Config.MapConfig map)
     {
         if (map?.Boards == null || map.Boards.Count == 0)
@@ -5106,20 +5124,13 @@ int widthCells = request.WidthCells > 0
             }
         }
 
-        Ludots.Core.Map.Board.BoardConfig? firstNavigationBoard = null;
         for (int i = 0; i < map.Boards.Count; i++)
         {
             var board = map.Boards[i];
             if (board == null) continue;
-            if (!board.NavigationEnabled) continue;
-
-            firstNavigationBoard ??= board;
             if (string.Equals(board.Name, "default", StringComparison.OrdinalIgnoreCase))
                 return board;
         }
-
-        if (firstNavigationBoard != null)
-            return firstNavigationBoard;
 
         for (int i = 0; i < map.Boards.Count; i++)
         {
@@ -5872,7 +5883,6 @@ sealed class BoardCreateRequest
     public int HeightCells { get; set; }
     public int CellSizeCm { get; set; }
     public int HexEdgeLengthCm { get; set; }
-    public bool NavigationEnabled { get; set; } = true;
     public string? DataFile { get; set; }
 }
 

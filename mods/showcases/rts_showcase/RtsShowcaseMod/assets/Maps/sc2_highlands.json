@@ -100,8 +100,7 @@
       "HeightCells": 16384,
       "GridCellSizeCm": 100,
       "HexEdgeLengthCm": 400,
-      "DataFile": "sc2_highlands.hex",
-      "NavigationEnabled": false
+      "DataFile": "sc2_highlands.hex"
     }
   ],
   "TriggerTypes": [],

@@ -21,8 +21,7 @@
       "SpatialType": "HexGrid",
       "WidthCells": 8192,
       "HeightCells": 8192,
-      "HexEdgeLengthCm": 400,
-      "NavigationEnabled": false
+      "HexEdgeLengthCm": 400
     }
   ],
   "Entities": [

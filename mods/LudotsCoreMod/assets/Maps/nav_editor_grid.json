@@ -15,8 +15,7 @@
       "WidthCells": 256,
       "HeightCells": 256,
       "GridCellSizeCm": 100,
-      "DataFile": "nav_editor_grid.grid",
-      "NavigationEnabled": true
+      "DataFile": "nav_editor_grid.grid"
     },
     {
       "Name": "board_2",
@@ -25,8 +24,7 @@
       "HeightCells": 4096,
       "GridCellSizeCm": 100,
       "HexEdgeLengthCm": 100,
-      "DataFile": "nav_editor_grid_board_2.grid",
-      "NavigationEnabled": true
+      "DataFile": "nav_editor_grid_board_2.grid"
     }
   ],
   "Entities": [],

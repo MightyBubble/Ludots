@@ -30,7 +30,6 @@ namespace GasTests
             Assert.That(config.HexEdgeLengthCm, Is.EqualTo(400));
             Assert.That(config.ChunkSizeCells, Is.EqualTo(64));
             Assert.That(config.LoadedChunkCapacity, Is.Zero);
-            Assert.That(config.NavigationEnabled, Is.False);
             Assert.That(config.DataFile, Is.Null);
         }
 
@@ -47,7 +46,6 @@ namespace GasTests
                 HexEdgeLengthCm = 600,
                 ChunkSizeCells = 32,
                 LoadedChunkCapacity = 96,
-                NavigationEnabled = true,
                 DataFile = "Data/Maps/battle.hex",
                 ContinuousHeightmapAsset = "Data/Maps/battle.height"
             };
@@ -60,7 +58,6 @@ namespace GasTests
             Assert.That(config.HexEdgeLengthCm, Is.EqualTo(600));
             Assert.That(config.ChunkSizeCells, Is.EqualTo(32));
             Assert.That(config.LoadedChunkCapacity, Is.EqualTo(96));
-            Assert.That(config.NavigationEnabled, Is.True);
             Assert.That(config.DataFile, Is.EqualTo("Data/Maps/battle.hex"));
             Assert.That(config.ContinuousHeightmapAsset, Is.EqualTo("Data/Maps/battle.height"));
         }
@@ -117,7 +114,6 @@ namespace GasTests
             Assert.That(config.HexEdgeLengthCm, Is.EqualTo(600));
             Assert.That(config.ChunkSizeCells, Is.EqualTo(64),
                 "partition granularity is runtime-only now; authored on map Tuning.PartitionChunkCells");
-            Assert.That(config.NavigationEnabled, Is.True);
             Assert.That(config.ContinuousHeightmapAsset, Is.EqualTo("Data/Maps/strategic.height"));
         }
 

@@ -4146,16 +4146,17 @@ namespace Ludots.Core.Engine
             // grid (authored with the bake). Runtime never derives it from boards or
             // terrain objects; an undeclared grid is a map-authoring error.
             var tileGrids = mapConfig.Boards
-                .Select(b => TryGetBoardNavTileGrid(bakeConfig, mapId, b.Name, out var grid) ? grid : null)
+                .Where(b => TryGetBoardNavTileGrid(bakeConfig, mapId, b.Name, out var grid) && grid != null)
+                .Select(b => { TryGetBoardNavTileGrid(bakeConfig, mapId, b.Name, out var grid); return grid; })
                 .ToList();
-            if (tileGrids.Any(g => g == null))
+            if (tileGrids.Count == 0)
                 throw new InvalidOperationException(
-                    $"Map '{mapId}' has boards without nav tile grid declarations; author them in Navigation/navmesh.json under maps.{mapId}.boards.<boardName>.");
-            if (tileGrids.Any(g => g!.WidthChunks <= 0 || g!.HeightChunks <= 0 ||
-                g!.ChunkSizeCells <= 0 || g!.CellSizeCm <= 0))
+                    $"Map '{mapId}' is nav-tagged but no board is declared in Navigation/navmesh.json maps.{mapId}.boards; navigation participation is declared by the nav side (#1567).");
+            if (tileGrids.Any(g => g.WidthChunks <= 0 || g.HeightChunks <= 0 ||
+                g.ChunkSizeCells <= 0 || g.CellSizeCm <= 0))
             {
                 throw new InvalidOperationException(
-                    $"Map '{mapId}' has a board whose NavTileGrid declares non-positive dimensions.");
+                    $"Map '{mapId}' has a board whose nav tile grid declares non-positive dimensions.");
             }
             int widthChunks = tileGrids.Max(g => g!.WidthChunks);
             int heightChunks = tileGrids.Max(g => g!.HeightChunks);

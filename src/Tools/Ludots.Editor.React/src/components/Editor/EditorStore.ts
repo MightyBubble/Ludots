@@ -37,7 +37,6 @@ export interface BoardInfo {
     cellSizeCm: number;
     hexEdgeLengthCm: number;
     chunkSizeCells: number;
-    navigationEnabled: boolean;
     hasDataFile: boolean;
     dataFileExists: boolean;
     dataFile: string | null;
@@ -53,13 +52,11 @@ export interface BoardCreateRequest {
     heightCells: number;
     cellSizeCm: number;
     hexEdgeLengthCm?: number;
-    navigationEnabled: boolean;
 }
 
 export interface BoardUpdateRequest {
     cellSizeCm?: number;
     hexEdgeLengthCm?: number;
-    navigationEnabled?: boolean;
 }
 
 export interface MapInfo extends BoardInfo {
@@ -575,7 +572,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
                 cellSizeCm: request.cellSizeCm,
                 hexEdgeLengthCm: request.hexEdgeLengthCm ?? DEFAULT_BOARD_METRICS.hexEdgeLengthCm,
                 chunkSizeCells: DEFAULT_BOARD_METRICS.chunkSizeCells,
-                navigationEnabled: request.navigationEnabled,
             }),
         });
         const json = await res.json().catch(() => null) as JsonRecord | null;
@@ -606,7 +602,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             body: JSON.stringify({
                 cellSizeCm: request.cellSizeCm,
                 hexEdgeLengthCm: request.hexEdgeLengthCm,
-                navigationEnabled: request.navigationEnabled,
             }),
         });
         const json = await res.json().catch(() => null) as JsonRecord | null;

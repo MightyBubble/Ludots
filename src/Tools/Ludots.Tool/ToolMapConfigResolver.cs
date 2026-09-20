@@ -93,7 +93,7 @@ namespace Ludots.Tool
             for (int i = 0; i < map.Boards.Count; i++)
             {
                 BoardConfig board = map.Boards[i];
-                if (board == null || !board.NavigationEnabled)
+                if (board == null)
                 {
                     continue;
                 }

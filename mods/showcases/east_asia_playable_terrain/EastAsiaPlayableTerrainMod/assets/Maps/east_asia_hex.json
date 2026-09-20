@@ -41,8 +41,7 @@
       "ContinuousHeightmapAsset": null,
       "StructureCollisionAsset": "",
       "StructureAwareGrounding": false,
-      "StructureAwareNavigation": false,
-      "NavigationEnabled": false
+      "StructureAwareNavigation": false
     }
   ],
   "ContinuousHeightmap": null,

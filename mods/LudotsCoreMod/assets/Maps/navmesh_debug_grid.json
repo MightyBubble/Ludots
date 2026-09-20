@@ -17,8 +17,7 @@
       "WidthCells": 1024,
       "HeightCells": 1024,
       "GridCellSizeCm": 100,
-      "DataFile": "navmesh_debug_openworld.grid",
-      "NavigationEnabled": true
+      "DataFile": "navmesh_debug_openworld.grid"
     }
   ],
   "Entities": [],

@@ -57,8 +57,7 @@
       "HeightCells": 16384,
       "GridCellSizeCm": 100,
       "HexEdgeLengthCm": 400,
-      "DataFile": "terrain_bench.hex",
-      "NavigationEnabled": false
+      "DataFile": "terrain_bench.hex"
     }
   ],
   "TriggerTypes": []

@@ -54,9 +54,6 @@ namespace Ludots.Core.Map.Board
 
         public bool StructureAwareNavigation { get; set; }
 
-        /// <summary>Whether navigation is enabled for this board.</summary>
-        public bool NavigationEnabled { get; set; }
-
         /// <summary>
         /// ContinuousHeightmap → LogicTerrain 投影的高度量化步长（cm）。0 = 引擎默认
         /// （SpatialScaleDefaults.CellCm）。起伏地图用细步长（如 25）可避免
@@ -89,8 +86,6 @@ namespace Ludots.Core.Map.Board
                 ContinuousHeightmapAsset = ContinuousHeightmapAsset,
                 StructureCollisionAsset = StructureCollisionAsset,
                 StructureAwareGrounding = StructureAwareGrounding,
-                StructureAwareNavigation = StructureAwareNavigation,
-                NavigationEnabled = NavigationEnabled,
                 TerrainHeightStepCm = TerrainHeightStepCm,
                 TerrainBlockedAtOrBelowHeightCm = TerrainBlockedAtOrBelowHeightCm
             };

@@ -32,8 +32,7 @@
       "SpatialType": "Grid",
       "WidthCells": 32768,
       "HeightCells": 32768,
-      "GridCellSizeCm": 100,
-      "NavigationEnabled": false
+      "GridCellSizeCm": 100
     }
   ],
   "Entities": [

@@ -17,7 +17,6 @@
       "WidthCells": 256,
       "HeightCells": 256,
       "GridCellSizeCm": 100,
-      "NavigationEnabled": true,
       "TerrainHeightStepCm": 25
     }
   ],
