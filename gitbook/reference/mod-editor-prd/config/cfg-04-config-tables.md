@@ -31,6 +31,22 @@
 - UTF-8；不允许注释与尾逗号。
 - 内容表条目的字段名小驼峰且**大小写敏感**；目录登记条目本身是 PascalCase 白名单（`Path`/`Policy`/…）。**未知字段即错**；枚举值**精确匹配**；语义字符串禁首尾空白；布尔写规范 `true`/`false`。
 
+### 字段大小写三层规范（SSOT）
+
+配置资产按文件家族分三层，每层一个大小写合同：
+
+| 层 | 范围 | 合同 |
+|---|---|---|
+| 目录表 | `config_catalog.json` 登记的内容表（含分片目录）条目的 schema 字段 | camelCase |
+| Maps 资产 | `assets/Maps/*.json` 顶层键 | PascalCase |
+| 组件 payload | 模板 `components` 与地图 `Overrides` 的内层 | 由组件注册合同决定；**新组件一律 camelCase** |
+
+- 目录表的存量例外是迁移债务（另票分期，改名必须连装载器属性白名单一起动）：`AI/` 全域表（`AiConfigLoader` 属性白名单是 Pascal 名，如 `TargetFilter`、`Priority`）；`Tasks/tasks.json` 与 `Activities/activities.json`（DTO 合同声明 snake_case 字段名，如 `display_token`）。
+- Maps 顶层以下不查：嵌套块形状由所属 DTO 决定（`ContinuousHeightmap` 族按 `mass_navigation.json` 的 Pascal 范本；`NavTileGrid` 现状为 camel）。手解析子块按各自装载器合同：`Variables[]` 的合同是 camel（`name`/`type`/`initial`/`__delete`，白名单在 `MapVariableDeclarations`）。地图装载通道（`MapManager`）按大小写不敏感绑定，写错大小写不会报错，只会留下不生效的死字段——契约测试只拦顶层键，嵌套层靠本表正字。
+- 组件 payload 不迁移存量：以下组件的现状是 Pascal payload，分期迁移、迁移前禁止新增同类——`CommandSourceSelectableState`、`CrowdPhysicsArena.Door`、`CullState`、`DirectAttackProfile`、`FacingDirection`、`FrontlineMatchStateProjection`、`FrontlineParticipant`、`Health`、`Name`、`PlayerOwner`、`ReplicationSchemaRef`、`ResourceSinkProfile`、`ResourceSourceProfile`、`ResourceTransportProfile`、`RoadFortControlState`、`RoadMoveProfileRef`、`Team`、`Velocity`、`VisualTransform`、`WorldPositionCm`。
+- 白名单：`_` 前缀键不查（`__` 调试 marker；`_comment` 作者注释，装载器显式容忍）。
+- 契约测试：`src/Tests/ArchitectureTests/ConfigSchemaCasingContractTests.cs` 扫描 mods 下全部资产 JSON，执行前两层检查；组件 payload 与 `Overrides` 内层不在其范围。
+
 ## 2. 字段与行为
 
 | 字段 | 类型 | 必填 | 这样配会产生什么效果 |

@@ -56,17 +56,17 @@ namespace Ludots.Tests.GAS
 
         private const string BaseMap = """
         {
-          "id": "harbor",
-          "entities": [
-            { "instanceId": "harbor.zhangsan", "template": "gang.member",
-              "overrides": { "AttributeTable": { "Hp": 100, "Atk": 10 } },
-              "relations": [
-                { "to": "harbor.wangwu", "type": "WorksFor", "metric": { "Loyalty": 80 } }
+          "Id": "harbor",
+          "Entities": [
+            { "InstanceId": "harbor.zhangsan", "Template": "gang.member",
+              "Overrides": { "AttributeTable": { "Hp": 100, "Atk": 10 } },
+              "Relations": [
+                { "To": "harbor.wangwu", "Type": "WorksFor", "Metric": { "Loyalty": 80 } }
               ] },
-            { "instanceId": "harbor.lisi", "template": "gang.member",
-              "overrides": { "AttributeTable": { "Hp": 90 } } },
-            { "instanceId": "harbor.wangwu", "template": "gang.member",
-              "positionXCm": 1600, "positionYCm": -400 }
+            { "InstanceId": "harbor.lisi", "Template": "gang.member",
+              "Overrides": { "AttributeTable": { "Hp": 90 } } },
+            { "InstanceId": "harbor.wangwu", "Template": "gang.member",
+              "PositionXCm": 1600, "PositionYCm": -400 }
           ]
         }
         """;
@@ -80,12 +80,12 @@ namespace Ludots.Tests.GAS
                 WriteMod(root, "ModA", BaseMap);
                 WriteMod(root, "ModB", """
                 {
-                  "id": "harbor",
-                  "entities": [
-                    { "instanceId": "harbor.zhangsan",
-                      "overrides": { "AttributeTable": { "Hp": 200 } } },
-                    { "instanceId": "harbor.wangwu",
-                      "positionXCm": 2000, "positionYCm": 0 }
+                  "Id": "harbor",
+                  "Entities": [
+                    { "InstanceId": "harbor.zhangsan",
+                      "Overrides": { "AttributeTable": { "Hp": 200 } } },
+                    { "InstanceId": "harbor.wangwu",
+                      "PositionXCm": 2000, "PositionYCm": 0 }
                   ]
                 }
                 """);
@@ -119,9 +119,9 @@ namespace Ludots.Tests.GAS
                 WriteMod(root, "ModA", BaseMap);
                 WriteMod(root, "ModC", """
                 {
-                  "id": "harbor",
-                  "entities": [
-                    { "instanceId": "harbor.lisi", "__delete": true }
+                  "Id": "harbor",
+                  "Entities": [
+                    { "InstanceId": "harbor.lisi", "__delete": true }
                   ]
                 }
                 """);
@@ -137,9 +137,9 @@ namespace Ludots.Tests.GAS
                 // 墓碑打空：可观测不阻断
                 WriteMod(root, "ModC", """
                 {
-                  "id": "harbor",
-                  "entities": [
-                    { "instanceId": "harbor.ghost", "__delete": true }
+                  "Id": "harbor",
+                  "Entities": [
+                    { "InstanceId": "harbor.ghost", "__delete": true }
                   ]
                 }
                 """);
@@ -163,9 +163,9 @@ namespace Ludots.Tests.GAS
                 WriteMod(root, "ModA", BaseMap);
                 WriteMod(root, "ModB", """
                 {
-                  "id": "harbor",
-                  "entities": [
-                    { "template": "gang.member" }
+                  "Id": "harbor",
+                  "Entities": [
+                    { "Template": "gang.member" }
                   ]
                 }
                 """);
@@ -191,12 +191,12 @@ namespace Ludots.Tests.GAS
                 WriteMod(root, "ModA", BaseMap);
                 WriteMod(root, "ModD", """
                 {
-                  "id": "harbor",
-                  "entities": [
-                    { "instanceId": "harbor.zhangsan",
-                      "relations": [
-                        { "to": "harbor.wangwu", "type": "WorksFor", "metric": { "Loyalty": 95 } },
-                        { "to": "harbor.lisi", "type": "SwornBrothers" }
+                  "Id": "harbor",
+                  "Entities": [
+                    { "InstanceId": "harbor.zhangsan",
+                      "Relations": [
+                        { "To": "harbor.wangwu", "Type": "WorksFor", "Metric": { "Loyalty": 95 } },
+                        { "To": "harbor.lisi", "Type": "SwornBrothers" }
                       ] }
                   ]
                 }
@@ -214,11 +214,11 @@ namespace Ludots.Tests.GAS
                 // 边墓碑
                 WriteMod(root, "ModD", """
                 {
-                  "id": "harbor",
-                  "entities": [
-                    { "instanceId": "harbor.zhangsan",
-                      "relations": [
-                        { "to": "harbor.wangwu", "type": "WorksFor", "__delete": true }
+                  "Id": "harbor",
+                  "Entities": [
+                    { "InstanceId": "harbor.zhangsan",
+                      "Relations": [
+                        { "To": "harbor.wangwu", "type": "WorksFor", "__delete": true }
                       ] }
                   ]
                 }
@@ -243,9 +243,9 @@ namespace Ludots.Tests.GAS
                 WriteMod(root, "ModA", BaseMap);
                 WriteMod(root, "ModC", """
                 {
-                  "id": "harbor",
-                  "entities": [
-                    { "template": "gang.member", "__delete": true }
+                  "Id": "harbor",
+                  "Entities": [
+                    { "Template": "gang.member", "__delete": true }
                   ]
                 }
                 """);
@@ -422,20 +422,20 @@ namespace Ludots.Tests.GAS
                 File.WriteAllText(Path.Combine(root, "Maps", "base.json"),
                 """
                 {
-                  "id": "base",
-                  "entities": [
-                    { "instanceId": "harbor.lisi", "template": "gang.member" },
-                    { "instanceId": "harbor.zhangsan", "template": "gang.member" }
+                  "Id": "base",
+                  "Entities": [
+                    { "InstanceId": "harbor.lisi", "Template": "gang.member" },
+                    { "InstanceId": "harbor.zhangsan", "Template": "gang.member" }
                   ]
                 }
                 """);
                 File.WriteAllText(Path.Combine(root, "Maps", "child.json"),
                 """
                 {
-                  "id": "child",
+                  "Id": "child",
                   "parentId": "base",
-                  "entities": [
-                    { "instanceId": "harbor.lisi", "__delete": true }
+                  "Entities": [
+                    { "InstanceId": "harbor.lisi", "__delete": true }
                   ]
                 }
                 """);
@@ -467,10 +467,10 @@ namespace Ludots.Tests.GAS
                 WriteMod(root, "ModA",
                 """
                 {
-                  "id": "harbor",
-                  "entities": [
-                    { "instanceId": "dup.guy", "template": "gang.a" },
-                    { "instanceId": "dup.guy", "template": "gang.b" }
+                  "Id": "harbor",
+                  "Entities": [
+                    { "InstanceId": "dup.guy", "Template": "gang.a" },
+                    { "InstanceId": "dup.guy", "Template": "gang.b" }
                   ]
                 }
                 """);
@@ -494,9 +494,9 @@ namespace Ludots.Tests.GAS
                 WriteMod(root, "ModA",
                 """
                 {
-                  "id": "harbor",
-                  "entities": [
-                    { "instanceId": " harbor.lisi ", "__delete": true }
+                  "Id": "harbor",
+                  "Entities": [
+                    { "InstanceId": " harbor.lisi ", "__delete": true }
                   ]
                 }
                 """);
@@ -520,24 +520,24 @@ namespace Ludots.Tests.GAS
                 WriteMod(root, "ModA",
                 """
                 {
-                  "id": "harbor",
-                  "entities": [
-                    { "instanceId": "harbor.zhangsan", "template": "gang.member",
-                      "relations": [
-                        { "to": "harbor.wangwu", "type": "WorksFor", "metric": { "Loyalty": 80, "Trust": 50 } }
+                  "Id": "harbor",
+                  "Entities": [
+                    { "InstanceId": "harbor.zhangsan", "Template": "gang.member",
+                      "Relations": [
+                        { "To": "harbor.wangwu", "Type": "WorksFor", "Metric": { "Loyalty": 80, "Trust": 50 } }
                       ] },
-                    { "instanceId": "harbor.wangwu", "template": "gang.member" }
+                    { "InstanceId": "harbor.wangwu", "Template": "gang.member" }
                   ]
                 }
                 """);
                 WriteMod(root, "ModD",
                 """
                 {
-                  "id": "harbor",
-                  "entities": [
-                    { "instanceId": "harbor.zhangsan",
-                      "relations": [
-                        { "to": "harbor.wangwu", "type": "WorksFor", "metric": { "Loyalty": 95 } }
+                  "Id": "harbor",
+                  "Entities": [
+                    { "InstanceId": "harbor.zhangsan",
+                      "Relations": [
+                        { "To": "harbor.wangwu", "Type": "WorksFor", "Metric": { "Loyalty": 95 } }
                       ] }
                   ]
                 }
@@ -566,18 +566,18 @@ namespace Ludots.Tests.GAS
                 WriteMod(root, "ModC",
                 """
                 {
-                  "id": "harbor",
-                  "entities": [
-                    { "instanceId": "harbor.lisi", "__delete": true }
+                  "Id": "harbor",
+                  "Entities": [
+                    { "InstanceId": "harbor.lisi", "__delete": true }
                   ]
                 }
                 """);
                 WriteMod(root, "ModE",
                 """
                 {
-                  "id": "harbor",
-                  "entities": [
-                    { "instanceId": "harbor.lisi", "template": "gang.revived" }
+                  "Id": "harbor",
+                  "Entities": [
+                    { "InstanceId": "harbor.lisi", "Template": "gang.revived" }
                   ]
                 }
                 """);
@@ -668,18 +668,18 @@ namespace Ludots.Tests.GAS
                 WriteMod(root, "ModA",
                 """
                 {
-                  "id": "harbor",
+                  "Id": "harbor",
                   "variables": [
                     { "name": "killCount", "type": "int", "initial": 0 },
                     { "name": "morale", "type": "float", "initial": 75.5 }
                   ],
-                  "entities": []
+                  "Entities": []
                 }
                 """);
                 WriteMod(root, "ModC",
                 """
                 {
-                  "id": "harbor",
+                  "Id": "harbor",
                   "variables": [
                     { "name": "killCount", "__delete": true }
                   ]
@@ -696,7 +696,7 @@ namespace Ludots.Tests.GAS
                 WriteMod(root, "ModE",
                 """
                 {
-                  "id": "harbor",
+                  "Id": "harbor",
                   "variables": [
                     { "name": "killCount", "type": "int", "initial": 10 }
                   ]
@@ -723,14 +723,14 @@ namespace Ludots.Tests.GAS
                 File.WriteAllText(Path.Combine(root, "Maps", "base.json"),
                 """
                 {
-                  "id": "base",
+                  "Id": "base",
                   "variables": [ { "name": "killCount", "type": "int", "initial": 0 } ]
                 }
                 """);
                 File.WriteAllText(Path.Combine(root, "Maps", "child.json"),
                 """
                 {
-                  "id": "child",
+                  "Id": "child",
                   "parentId": "base",
                   "variables": [ { "name": "killCount", "__delete": true } ]
                 }
@@ -762,15 +762,15 @@ namespace Ludots.Tests.GAS
                 WriteMod(root, "ModA",
                 """
                 {
-                  "id": "harbor",
+                  "Id": "harbor",
                   "variables": [ { "name": "morale", "type": "int", "initial": 75 } ],
-                  "entities": []
+                  "Entities": []
                 }
                 """);
                 WriteMod(root, "ModB",
                 """
                 {
-                  "id": "harbor",
+                  "Id": "harbor",
                   "variables": [ { "name": "morale", "type": "float", "initial": 75.5 } ]
                 }
                 """);
@@ -795,15 +795,15 @@ namespace Ludots.Tests.GAS
                 WriteMod(root, "ModA",
                 """
                 {
-                  "id": "harbor",
+                  "Id": "harbor",
                   "variables": [ { "name": "killCount", "type": "int", "initial": 0 } ],
-                  "entities": []
+                  "Entities": []
                 }
                 """);
                 WriteMod(root, "ModB",
                 """
                 {
-                  "id": "harbor",
+                  "Id": "harbor",
                   "variables": [ { "name": "killCount", "type": "int", "initial": 42 } ]
                 }
                 """);
@@ -848,22 +848,22 @@ namespace Ludots.Tests.GAS
                 WriteMod(root, "ModA",
                 """
                 {
-                  "id": "harbor",
+                  "Id": "harbor",
                   "variables": [ { "name": "morale", "type": "int", "initial": 75 } ],
-                  "entities": []
+                  "Entities": []
                 }
                 """);
                 WriteMod(root, "ModB",
                 """
                 {
-                  "id": "harbor",
+                  "Id": "harbor",
                   "variables": [ { "name": "morale", "__delete": true } ]
                 }
                 """);
                 WriteMod(root, "ModC",
                 """
                 {
-                  "id": "harbor",
+                  "Id": "harbor",
                   "variables": [ { "name": "morale", "type": "float", "initial": 75.5 } ]
                 }
                 """);
@@ -889,9 +889,9 @@ namespace Ludots.Tests.GAS
                 WriteMod(root, "ModA",
                 """
                 {
-                  "id": "harbor",
+                  "Id": "harbor",
                   "variables": [ { "name": " morale ", "type": "int", "initial": 1 } ],
-                  "entities": []
+                  "Entities": []
                 }
                 """);
 
@@ -922,20 +922,20 @@ namespace Ludots.Tests.GAS
                 Directory.CreateDirectory(Path.Combine(root, "Maps"));
                 File.WriteAllText(Path.Combine(root, "Maps", "base.json"), """
                 {
-                  "id": "base",
-                  "entities": [
-                    { "instanceId": "shared.guy", "template": "gang.member",
-                      "overrides": { "AttributeTable": { "Hp": 50 } } }
+                  "Id": "base",
+                  "Entities": [
+                    { "InstanceId": "shared.guy", "Template": "gang.member",
+                      "Overrides": { "AttributeTable": { "Hp": 50 } } }
                   ]
                 }
                 """);
                 File.WriteAllText(Path.Combine(root, "Maps", "child.json"), """
                 {
-                  "id": "child",
+                  "Id": "child",
                   "parentId": "base",
-                  "entities": [
-                    { "instanceId": "shared.guy",
-                      "overrides": { "AttributeTable": { "Hp": 77 } } }
+                  "Entities": [
+                    { "InstanceId": "shared.guy",
+                      "Overrides": { "AttributeTable": { "Hp": 77 } } }
                   ]
                 }
                 """);

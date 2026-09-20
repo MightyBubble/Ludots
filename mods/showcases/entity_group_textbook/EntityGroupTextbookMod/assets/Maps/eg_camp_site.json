@@ -1,29 +1,31 @@
 {
-  "id": "eg_camp_site",
-  "boards": [
+  "Id": "eg_camp_site",
+  "Boards": [
     {
-      "name": "default",
-      "spatialType": "Grid",
-      "widthInMacroTiles": 24,
-      "heightInMacroTiles": 16,
-      "gridCellSizeCm": 200
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 24,
+      "HeightInMacroTiles": 16,
+      "GridCellSizeCm": 200
     }
   ],
-  "entities": [
+  "Entities": [
     {
-      "instanceId": "mule.harbor",
-      "template": "eg.camp",
-      "positionXCm": 1200,
-      "positionYCm": -800,
-      "overrides": {
-        "Name": { "Value": "Mule Harbor Camp" }
+      "InstanceId": "mule.harbor",
+      "Template": "eg.camp",
+      "PositionXCm": 1200,
+      "PositionYCm": -800,
+      "Overrides": {
+        "Name": {
+          "Value": "Mule Harbor Camp"
+        }
       }
     },
     {
-      "instanceId": "mule.alpine",
-      "template": "eg.camp",
-      "positionXCm": 500,
-      "positionYCm": 2400
+      "InstanceId": "mule.alpine",
+      "Template": "eg.camp",
+      "PositionXCm": 500,
+      "PositionYCm": 2400
     }
   ]
 }

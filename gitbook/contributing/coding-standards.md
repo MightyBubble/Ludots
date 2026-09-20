@@ -37,6 +37,7 @@
 - 组件使用 `Cm`、`Tag`、`Event` 等既定后缀。
 - 新增 System 必须明确归属一个 `SystemGroup` phase。
 - 命名不耦合具体业务，业务差异优先由配置和 Mod 决定。
+- 配置 JSON 字段大小写按 [cfg-04 三层规范](../reference/mod-editor-prd/config/cfg-04-config-tables.md)执行：目录表 schema 字段 camelCase，Maps 顶层 PascalCase，组件 payload 由组件注册合同决定（新组件 camelCase）。
 
 ## 4 提交要求
 
