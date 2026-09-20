@@ -16,10 +16,10 @@ namespace Ludots.Core.Map.Board
         public string SpatialType { get; set; } = "Grid";
 
         /// <summary>Board width in topology cells (#1567: authored directly; the root board anchors the host world.</summary>
-        public int WidthCells { get; set; } = SpatialScaleDefaults.DefaultWorldWidthMacroTiles * SpatialScaleDefaults.MacroTileCells;
+        public int WidthCells { get; set; } = SpatialScaleDefaults.DefaultBoardWidthPages * SpatialScaleDefaults.TerrainPageCells;
 
         /// <summary>Board height in topology cells (#1567: authored directly; the root board anchors the host world.</summary>
-        public int HeightCells { get; set; } = SpatialScaleDefaults.DefaultWorldHeightMacroTiles * SpatialScaleDefaults.MacroTileCells;
+        public int HeightCells { get; set; } = SpatialScaleDefaults.DefaultBoardHeightPages * SpatialScaleDefaults.TerrainPageCells;
 
         /// <summary>Board AABB min-corner anchor in world coordinates, X axis; null = centered on the world (#1567 slice 2). Same anchor semantics as NavTileGridConfig.OriginXcm.</summary>
         public int? OriginXCm { get; set; }

@@ -36,7 +36,10 @@
   "maps": {
     "nav_gate_valley": {
       "boards": {
-        "default": {}
+        "default": {
+          "tileWorldWidthCm": 6400,
+          "tileWorldHeightCm": 6400
+        }
       }
     }
   }

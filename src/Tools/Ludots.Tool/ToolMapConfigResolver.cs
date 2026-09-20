@@ -412,7 +412,7 @@ namespace Ludots.Tool
             }
 
             if (ContainsKey(root, "WidthInTiles") || ContainsKey(root, "HeightInTiles") ||
-                ContainsKey(root, "WidthInMacroTiles") || ContainsKey(root, "HeightInMacroTiles"))
+                ContainsKey(root, "WidthInPages") || ContainsKey(root, "HeightInPages"))
             {
                 throw new InvalidOperationException(
                     $"Map config '{path}' uses legacy tile-count world keys. Use Boards[].WidthCells/HeightCells; the root board anchors the host world.");
@@ -425,7 +425,7 @@ namespace Ludots.Tool
                     JsonNode? boardNode = boards[i];
                     if (boardNode is JsonObject board &&
                         (ContainsKey(board, "WidthInTiles") || ContainsKey(board, "HeightInTiles") ||
-                         ContainsKey(board, "WidthInMacroTiles") || ContainsKey(board, "HeightInMacroTiles")))
+                         ContainsKey(board, "WidthInPages") || ContainsKey(board, "HeightInPages")))
                     {
                         throw new InvalidOperationException(
                             $"Map config '{path}' board[{i}] uses legacy tile-count extent keys. Use Boards[].WidthCells/HeightCells; the root board anchors the host world.");

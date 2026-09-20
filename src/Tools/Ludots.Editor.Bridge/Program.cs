@@ -4324,7 +4324,7 @@ static string ToEditorUploadSourceUri(string fileName)
 
 static class EditorRepo
 {
-    private const int EagerEmptyTerrainFileMacroTileLimit = 16;
+    private const int EagerEmptyTerrainFilePageLimit = 16;
 
     public static readonly Dictionary<string, string> StoryCatalogFiles = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -4921,10 +4921,10 @@ static class EditorRepo
 
 int widthCells = request.WidthCells > 0
             ? request.WidthCells
-            : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultWorldWidthMacroTiles * Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells;
+            : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultBoardWidthPages * Ludots.Core.Spatial.SpatialScaleDefaults.TerrainPageCells;
         int heightCells = request.HeightCells > 0
             ? request.HeightCells
-            : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultWorldHeightMacroTiles * Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells;
+            : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultBoardHeightPages * Ludots.Core.Spatial.SpatialScaleDefaults.TerrainPageCells;
         int cellSizeCm = request.CellSizeCm > 0
             ? request.CellSizeCm
             : Ludots.Core.Spatial.SpatialScaleDefaults.CellCm;
@@ -5429,7 +5429,7 @@ int widthCells = request.WidthCells > 0
 
     private static bool ShouldCreateFullEmptyTerrainDataFile(Ludots.Core.Map.Board.BoardConfig board)
     {
-        int eagerCellLimit = EagerEmptyTerrainFileMacroTileLimit * Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells;
+        int eagerCellLimit = EagerEmptyTerrainFilePageLimit * Ludots.Core.Spatial.SpatialScaleDefaults.TerrainPageCells;
         return board.WidthCells <= eagerCellLimit &&
             board.HeightCells <= eagerCellLimit;
     }

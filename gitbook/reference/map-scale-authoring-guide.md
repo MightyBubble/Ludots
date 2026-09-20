@@ -25,9 +25,9 @@ boardWidthCm  = WidthCells * CellSizeCm        # 板：格子数 × 格边
 boardOrigin   = (OriginXCm, OriginYCm)         # 板摆在根板坐标系哪里，缺省居中
 ```
 
-作者请求的米数是编辑器 UI 的输入；JSON 里存的是分配后的尺寸，磁盘即运行时真相。宏块（MacroTile = 256 cells）是世界 IO 的内部寻址单位，由引擎从世界尺寸派生，作者不需要知道它。
+作者请求的米数是编辑器 UI 的输入；JSON 里存的是分配后的尺寸，磁盘即运行时真相。地形数据页（page = 256 cells）是世界 IO 的内部寻址单位，由引擎从世界尺寸派生，作者不需要知道它。
 
-编辑器里的正式 board 创建入口不要求作者填写 chunk 数量或宏块数量。作者输入“目标米数 + `CellSizeCm` / `HexEdgeLengthCm` 等尺度参数”，编辑器按预算规则分配范围并预览（分配后世界尺寸、板摆放、nav 瓦片数与内存），再派生出 grid cells 与 Terrain/NavTile 数量落盘。
+编辑器里的正式 board 创建入口不要求作者填写 chunk 数量或地形数据页数量。作者输入“目标米数 + `CellSizeCm` / `HexEdgeLengthCm` 等尺度参数”，编辑器按预算规则分配范围并预览（分配后世界尺寸、板摆放、nav 瓦片数与内存），再派生出 grid cells 与 Terrain/NavTile 数量落盘。
 
 ## 配置入口速查
 
@@ -237,7 +237,7 @@ Runtime incremental 起点：
 
 | 现状键 | 目标键 | 迁移动作 |
 |---|---|---|
-| `Boards[].WidthInMacroTiles` / `HeightInMacroTiles` + `GridCellSizeCm` | `Boards[].WidthCells/HeightCells` + 根板锚定 host world | 机器迁移：宏块数 × 256 = 格子数；host world 由根板（`RootBoard`，缺省首板）锚定 |
+| `Boards[].WidthInMacroTiles` / `HeightInMacroTiles` + `GridCellSizeCm` | `Boards[].WidthCells/HeightCells` + 根板锚定 host world | 机器迁移：地形数据页数 × 256 = 格子数；host world 由根板（`RootBoard`，缺省首板）锚定 |
 | 板恒居中（无 origin 字段） | `Boards[].OriginXCm` / `OriginYCm` | 迁移期缺省居中，等价现状 |
 | `Boards[].WidthInMacroTiles` × 256 / `GridCellSizeCm` 个 cell | `Boards[].WidthCells` / `HeightCells` | 板范围改为格子数直写 |
 | `Boards[].ChunkSizeCells` / `LoadedChunkCapacity` | map `Tuning.PartitionChunkCells` / `LoadedChunkCapacity` | 切 4 迁入 map 级，缺省可推导（4b） |

@@ -363,9 +363,23 @@ namespace Ludots.Tests.Architecture
             }
 
             string navmeshPath = Path.Combine(tempAssetsRoot, "Navigation", "navmesh.json");
-            var navmesh = File.Exists(navmeshPath)
-                ? System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(navmeshPath))!.AsObject()
-                : new System.Text.Json.Nodes.JsonObject();
+            var navmesh = new System.Text.Json.Nodes.JsonObject
+            {
+                ["mode"] = "offline",
+                ["algorithm"] = "recast",
+                ["profiles"] = new System.Text.Json.Nodes.JsonArray(
+                    new System.Text.Json.Nodes.JsonObject { ["id"] = "Small", ["maxClimbCm"] = 40, ["maxSlopeDeg"] = 55 }),
+                ["layers"] = new System.Text.Json.Nodes.JsonArray(
+                    new System.Text.Json.Nodes.JsonObject { ["id"] = "ground", ["layer"] = 0 })
+            };
+            if (File.Exists(navmeshPath))
+            {
+                var existing = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(navmeshPath))!.AsObject();
+                foreach (var kv in existing)
+                {
+                    navmesh[kv.Key] = kv.Value?.DeepClone();
+                }
+            }
             var mapsNode = navmesh["maps"] as System.Text.Json.Nodes.JsonObject ?? new System.Text.Json.Nodes.JsonObject();
             navmesh["maps"] = mapsNode;
             var mapNode = new System.Text.Json.Nodes.JsonObject();
@@ -374,10 +388,8 @@ namespace Ludots.Tests.Architecture
             mapNode["boards"] = boardsNode;
             var gridNode = new System.Text.Json.Nodes.JsonObject
             {
-                ["widthChunks"] = effectiveTerrain.WidthChunks,
-                ["heightChunks"] = effectiveTerrain.HeightChunks,
-                ["chunkSizeCells"] = SpatialScaleDefaults.TerrainChunkCells,
-                ["cellSizeCm"] = 250
+                ["tileWorldWidthCm"] = SpatialScaleDefaults.TerrainChunkCells * 250,
+                ["tileWorldHeightCm"] = SpatialScaleDefaults.TerrainChunkCells * 250
             };
             boardsNode["default"] = gridNode;
             File.WriteAllText(navmeshPath, navmesh.ToJsonString());

@@ -175,8 +175,8 @@ namespace GasTests
 
                     RejectLegacyKey(repoRoot, file, i, board, "WidthInTiles", "WidthCells", violations);
                     RejectLegacyKey(repoRoot, file, i, board, "HeightInTiles", "HeightCells", violations);
-                    RejectLegacyKey(repoRoot, file, i, board, "WidthInMacroTiles", "WidthCells", violations);
-                    RejectLegacyKey(repoRoot, file, i, board, "HeightInMacroTiles", "HeightCells", violations);
+                    RejectLegacyKey(repoRoot, file, i, board, "WidthInPages", "WidthCells", violations);
+                    RejectLegacyKey(repoRoot, file, i, board, "HeightInPages", "HeightCells", violations);
                     RejectLegacyKey(repoRoot, file, i, board, "ChunkSizeCells", "Tuning.PartitionChunkCells", violations);
                     RejectLegacyKey(repoRoot, file, i, board, "LoadedChunkCapacity", "Tuning.LoadedChunkCapacity", violations);
                     RejectLegacyKey(repoRoot, file, i, board, "NavTileGrid", "Navigation/navmesh.json maps.<mapId>.boards", violations);
@@ -221,8 +221,8 @@ namespace GasTests
 
             Assert.That(extent.WidthInCells, Is.EqualTo(512));
             Assert.That(extent.HeightInCells, Is.EqualTo(768));
-            Assert.That(extent.WidthInMacroTiles, Is.EqualTo(2));
-            Assert.That(extent.HeightInMacroTiles, Is.EqualTo(3));
+            Assert.That(extent.WidthInPages, Is.EqualTo(2));
+            Assert.That(extent.HeightInPages, Is.EqualTo(3));
             Assert.That(worldSize.GridCellSizeCm, Is.EqualTo(100));
             Assert.That(worldSize.Bounds.Width, Is.EqualTo(51_200));
             Assert.That(worldSize.Bounds.Height, Is.EqualTo(76_800));

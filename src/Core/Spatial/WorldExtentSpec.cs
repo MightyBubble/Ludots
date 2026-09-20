@@ -35,10 +35,10 @@ namespace Ludots.Core.Spatial
         public int HeightInCells => HeightCm / CellCm;
 
         /// <summary>Macro-tile count for the lazily allocated IO grid; pads partial tiles up.</summary>
-        public int WidthInMacroTiles => (WidthInCells + SpatialScaleDefaults.MacroTileCells - 1) / SpatialScaleDefaults.MacroTileCells;
+        public int WidthInPages => (WidthInCells + SpatialScaleDefaults.TerrainPageCells - 1) / SpatialScaleDefaults.TerrainPageCells;
 
         /// <summary>Macro-tile count for the lazily allocated IO grid; pads partial tiles up.</summary>
-        public int HeightInMacroTiles => (HeightInCells + SpatialScaleDefaults.MacroTileCells - 1) / SpatialScaleDefaults.MacroTileCells;
+        public int HeightInPages => (HeightInCells + SpatialScaleDefaults.TerrainPageCells - 1) / SpatialScaleDefaults.TerrainPageCells;
 
         public static WorldExtentSpec FromWorld(WorldConfig world) =>
             new(world.WidthCm, world.HeightCm, world.CellSizeCm);

@@ -538,9 +538,9 @@ namespace Ludots.Core.Engine
             {
                 // 4. Setup ECS & Session using merged config values
                 var bootWorldExtent = ResolveHostMapWorldExtent();
-                InitializeWorld(bootWorldExtent.WidthInMacroTiles, bootWorldExtent.HeightInMacroTiles);
+                InitializeWorld(bootWorldExtent.WidthInPages, bootWorldExtent.HeightInPages);
                 SetService(CoreServiceKeys.World, World);
-                WorldMap = new WorldMap(bootWorldExtent.WidthInMacroTiles, bootWorldExtent.HeightInMacroTiles);
+                WorldMap = new WorldMap(bootWorldExtent.WidthInPages, bootWorldExtent.HeightInPages);
                 SetService(CoreServiceKeys.WorldMap, WorldMap);
                 GameSession = new GameSession();
                 SetService(CoreServiceKeys.GameSession, GameSession);
@@ -778,10 +778,10 @@ namespace Ludots.Core.Engine
                 $"Host map '{MergedConfig.StartupMapId}' neither has boards (RootBoard anchors the world) nor declares World; a host map must root the boot world (#1567).");
         }
 
-        private void InitializeWorld(int widthInMacroTiles, int heightInMacroTiles)
+        private void InitializeWorld(int widthInPages, int heightInPages)
         {
             World = World.Create();
-            PhysicsWorld = new PhysicsWorld(widthInChunks: widthInMacroTiles, heightInChunks: heightInMacroTiles);
+            PhysicsWorld = new PhysicsWorld(widthInChunks: widthInPages, heightInChunks: heightInPages);
             EventBus = new GameplayEventBus(); // Initialize EventBus
 
             // Initialize JobScheduler if not already set (Static per AppDomain usually, but we manage it here)
@@ -3553,6 +3553,8 @@ namespace Ludots.Core.Engine
                 _spatialPartitionUpdateSystem?.SetPartition(_spatialPartition, WorldSizeSpec);
         }
 
+        private static int CeilDiv(int value, int divisor) => (value + divisor - 1) / divisor;
+
         private static bool TryGetBoardNavTileGrid(NavMeshBakeConfig bakeConfig, string mapId, string boardName, out NavTileGridConfig grid)
         {
             grid = null;
@@ -4180,36 +4182,31 @@ namespace Ludots.Core.Engine
                     continue;
                 }
 
-                string boardType = (b.SpatialType ?? "Grid").Trim();
-                if (boardType.Equals("Grid", StringComparison.OrdinalIgnoreCase) ||
-                    boardType.Equals("NodeGraph", StringComparison.OrdinalIgnoreCase))
+                if (declared.TileWorldWidthCm <= 0 || declared.TileWorldHeightCm <= 0)
                 {
-                    tileGrids.Add(new NavTileGridConfig
-                    {
-                        WidthChunks = (b.WidthCells + Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells - 1) / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells,
-                        HeightChunks = (b.HeightCells + Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells - 1) / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells,
-                        ChunkSizeCells = Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells,
-                        CellSizeCm = b.GridCellSizeCm
-                    });
+                    throw new InvalidOperationException(
+                        $"Map '{mapId}' board '{b.Name}' nav declaration needs positive tileWorldWidthCm/tileWorldHeightCm in Navigation/navmesh.json maps.{mapId}.boards (nav-owned granularity, #1346).");
                 }
-                else
-                {
-                    if (declared.WidthChunks <= 0 || declared.HeightChunks <= 0 ||
-                        declared.ChunkSizeCells <= 0 || declared.CellSizeCm <= 0)
-                    {
-                        throw new InvalidOperationException(
-                            $"Map '{mapId}' hex board '{b.Name}' needs its nav tile grid dims in Navigation/navmesh.json maps.{mapId}.boards (hex footprint is bake-owned until #1346 two-axis).");
-                    }
 
-                    tileGrids.Add(declared);
-                }
+                tileGrids.Add(declared);
             }
 
             if (tileGrids.Count == 0)
                 throw new InvalidOperationException(
                     $"Map '{mapId}' is nav-tagged but no board is declared in Navigation/navmesh.json maps.{mapId}.boards; navigation participation is declared by the nav side (#1567).");
-            int widthChunks = tileGrids.Max(g => g!.WidthChunks);
-            int heightChunks = tileGrids.Max(g => g!.HeightChunks);
+            var participatingBoards = mapConfig.Boards
+                .Where(b => TryGetBoardNavTileGrid(bakeConfig, mapId, b.Name, out var g) && g != null)
+                .ToList();
+            int widthChunks = participatingBoards
+                .Select(b => CeilDiv(checked(b.WidthCells * b.GridCellSizeCm), TryGetBoardNavTileGrid(bakeConfig, mapId, b.Name, out var tg) ? tg!.TileWorldWidthCm : 1))
+                .DefaultIfEmpty(0)
+                .Max();
+            int heightChunks = participatingBoards
+                .Select(b => CeilDiv(checked(b.HeightCells * b.GridCellSizeCm), TryGetBoardNavTileGrid(bakeConfig, mapId, b.Name, out var tg2) ? tg2!.TileWorldHeightCm : 1))
+                .DefaultIfEmpty(0)
+                .Max();
+            var tileWidthCm = tileGrids.Max(g => g!.TileWorldWidthCm);
+            var tileHeightCm = tileGrids.Max(g => g!.TileWorldHeightCm);
 
             for (int li = 0; li < bakeConfig.Layers.Count; li++)
             {
@@ -4243,8 +4240,7 @@ namespace Ludots.Core.Engine
                 }
             }
 
-            var chunkWidthCm = tileGrids.Max(g => g!.ChunkWidthCm);
-            var navRegistry = new NavQueryServiceRegistry(stores, chunkWidthCm, chunkWidthCm);
+            var navRegistry = new NavQueryServiceRegistry(stores, tileWidthCm, tileHeightCm);
             SetService(CoreServiceKeys.NavQueryServices, navRegistry);
             if (bakeConfig.ParsedMode == NavBakeMode.RuntimeIncremental)
             {

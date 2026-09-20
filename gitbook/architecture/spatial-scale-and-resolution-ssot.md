@@ -10,8 +10,8 @@
 |---|---:|---:|---|
 | `GridCellSizeCm` | sim 原子 cell 边长 | 100 cm | `src/Core/Map/Board/BoardConfig.cs` |
 | `HexEdgeLengthCm` | hex 边长 | 400 cm | `src/Core/Map/Board/BoardConfig.cs` / `src/Core/Map/Hex/HexMetrics.cs` |
-| `MapTile.Size` / `WorldMap.TileSize` | 256-cell IO/寻址宏块 | 256 cells | `src/Core/Map/MapTile.cs` / `src/Core/Map/WorldMap.cs` |
-| `BoardConfig.WidthInTiles` / `HeightInTiles` | 名为 tiles，实为 256-cell 宏块数量 | 默认 64 | `src/Core/Map/Board/BoardConfig.cs` |
+| `MapTile.Size` / `WorldMap.TileSize` | 256-cell IO/寻址地形数据页 | 256 cells | `src/Core/Map/MapTile.cs` / `src/Core/Map/WorldMap.cs` |
+| `BoardConfig.WidthInTiles` / `HeightInTiles` | 名为 tiles，实为 256-cell 地形数据页数量 | 默认 64 | `src/Core/Map/Board/BoardConfig.cs` |
 | `BoardConfig.ChunkSizeCells` | 空间分区/AOI 块边长 | 默认 64 cells | `src/Core/Map/Board/BoardConfig.cs` |
 | `VertexChunk.ChunkSize` | hex 逻辑地形块边长，也是当前 NavTile 足迹 | 64 cells | `src/Core/Map/Hex/VertexChunk.cs` |
 | `VertexMap.WidthInChunks` / `HeightInChunks` | 逻辑地形块数量 | 默认 64 | `src/Core/Map/Hex/VertexMap.cs` |
@@ -25,7 +25,7 @@
 - `64` 同时表示 `PartitionChunk` 边长、`TerrainChunk` 边长、默认地形 chunk 数、portal/list 容量和 bit word 宽度。
 - 三个 board 构造函数曾直接写 `WidthInTiles * 256 * GridCellSizeCm`。
 - `100` 同时用于 board cell、bake 米到厘米转换、MassNavigationFlow flow/hash cell 默认值、NodeGraph 投影 cell 最小值。
-- `WidthInTiles` / `HeightInTiles` 实际是宏块数量，不是 cell、TerrainChunk 或 NavTile 数量。
+- `WidthInTiles` / `HeightInTiles` 实际是地形数据页数量，不是 cell、TerrainChunk 或 NavTile 数量。
 
 ## 目标（预期）
 
@@ -40,7 +40,7 @@
 | 导航 | 烘焙源选择、瓦片颗粒度（显式两轴）、层/profile/语义/障碍 | `Navigation/navmesh.json` | board 只是可选源 + 寻址 scope |
 | 执行 | FlowWindow/FlowCell/避障 hash | `MassNavigationConfig.json` | 无 |
 
-世界的宏块数、板的 AABB、nav 格网覆盖是引擎派生值，不进 authoring JSON。
+世界的地形数据页数、板的 AABB、nav 格网覆盖是引擎派生值，不进 authoring JSON。
 
 In scope：
 
@@ -67,10 +67,10 @@ Out of scope：
 | `TerrainChunk` | `TerrainChunkCells`，固定 64 | `TerrainChunkCells * CellCm` 的逻辑足迹；hex bake 还会乘 hex metric | `VertexChunk.ChunkSize` / `SpatialScaleDefaults.TerrainChunkCells` | 逻辑地形块；当前等于 NavTile 足迹 | 否 | 当前固定 64；grid/hex 共用抽象在 #286 落地 |
 | `NavTile footprint` | = `TerrainChunk` | = `TerrainChunk` footprint | NavMesh bake (`NavTileBuilder` / `BakePipeline`)；#1567 目标态解除与 `TerrainChunk` 的焊接，颗粒度见 `NavTileGranularity` | navmesh 产物 tile 足迹 | 否 | 现状只作为 `TerrainChunk` 的用途；#1567 切 3 后此行废止，由 navmesh.json 显式声明取代 |
 | `NavTileGranularity`（#1567 目标态） | 由声明值与世界 cm 决定 | `tileWorldWidthCm` × `tileWorldHeightCm` | `Navigation/navmesh.json` 每板寻址条目 | nav 烘焙/重烤的瓦片颗粒度预算，独立于板与地形块 | 是 | 必须 > 0；不从 `CellSizeCm × ChunkSizeCells` 推导；hex 两轴（如 44340×38400）由此表达 |
-| `MacroTile` | `MacroTileCells` = `MapTile.Size` = 256 | `MacroTileCells * CellCm` | `MapTile.Size` / `SpatialScaleDefaults.MacroTileCells` | 世界层 IO/寻址宏块；#1567 目标态为派生值（由 `World.WidthCm/HeightCm` 换算），不再进 authoring | 否，数量可配 | `MacroTileCells` 引用 `MapTile.Size`；数量键 `WidthInMacroTiles` / `HeightInMacroTiles` 自 #1567 切 1 起 fail-fast |
+| `TerrainPage`（地形数据页） | `TerrainPageCells` = `MapTile.Size` = 256 | `TerrainPageCells * CellCm` | `MapTile.Size` / `SpatialScaleDefaults.TerrainPageCells` | 世界层 IO/寻址地形数据页；#1567 目标态为派生值（由 `World.WidthCm/HeightCm` 换算），不再进 authoring | 否，数量可配 | `TerrainPageCells` 引用 `MapTile.Size`；数量键 `WidthInMacroTiles` / `HeightInMacroTiles` 自 #1567 切 1 起 fail-fast |
 | `StreamingChunk` | N x `PartitionChunk` | N x `PartitionChunkCells * CellCm` | streaming/loaded chunk owner；NodeGraph 当前通过 `WorldGridLoadedChunks` 消费；#1567 目标态容量归 `World.Tuning` | 流式加载、loaded graph rebuild | 是 | 必须显式配置或由分区推导；禁止私有 loader fallback |
-| `WorldExtent` | 根板 `WidthCells × CellSizeCm` / boot `WidthCm / CellCm` | cm 直构 | 运行时 host world = 根板 `BoardExtentSpec`；引擎 boot 占位 = `GameConfig.World`（`WorldExtentSpec`） | 世界范围、坐标转换、minimap/full-map bounds、越界校验 | 是 | 旧宏块数量键 fail-fast，无别名兼容 |
-| `BoardExtent`（#1567 目标态） | 格子数 × 拓扑度量 | `WidthCells × CellCm` 或 `WidthHexes × HexMetrics 足迹` | map JSON `Boards[]`（`WidthCells/HeightCells`、`WidthHexes/HeightHexes`） | 板业务区域范围，精确整数派生，无宏块对齐 | 是 | 必须 > 0；hex 板世界足迹经 `HexMetrics` 派生，不再借 `GridCellSizeCm` |
+| `WorldExtent` | 根板 `WidthCells × CellSizeCm` / boot `WidthCm / CellCm` | cm 直构 | 运行时 host world = 根板 `BoardExtentSpec`；引擎 boot 占位 = `GameConfig.World`（`WorldExtentSpec`） | 世界范围、坐标转换、minimap/full-map bounds、越界校验 | 是 | 旧地形数据页数量键 fail-fast，无别名兼容 |
+| `BoardExtent`（#1567 目标态） | 格子数 × 拓扑度量 | `WidthCells × CellCm` 或 `WidthHexes × HexMetrics 足迹` | map JSON `Boards[]`（`WidthCells/HeightCells`、`WidthHexes/HeightHexes`） | 板业务区域范围，精确整数派生，无地形数据页对齐 | 是 | 必须 > 0；hex 板世界足迹经 `HexMetrics` 派生，不再借 `GridCellSizeCm` |
 | `BoardOrigin`（#1567 切 2a 已落地 schema，2b 放开） | —— | `OriginXCm` / `OriginYCm` | map JSON `Boards[]` | 板在根板坐标系（host world frame）的摆放；世界坐标入口减板 origin 换算一次 | 是 | 缺省 = 居中；任何显式声明在切 2b 前 fail-closed；卫星板越出根板范围加载期 fail-fast |
 | `FlowWindow` | `FieldWidthCm / CellCm` by `FieldHeightCm / CellCm` | `FieldWidthCm` x `FieldHeightCm` | MassNavigationFlow solver config | 执行层滑窗/工作区 | 是 | 宽高必须 > 0；必须能被 `FlowCell`、`AvoidanceHashCell` 整除 |
 | `FlowCell` | `FlowCellSizeCm / CellCm` | 默认 100 | MassNavigationFlow solver `flowCellSizeCm` / `SpatialScaleDefaults.FlowCellCm` | 流场网格 cell | 是 | 必须 > 0；`FlowWindow` 宽高必须整除它 |
@@ -85,7 +85,7 @@ Out of scope：
 - `HexEdgeLengthCm`：HexGrid board 的 hex 边长。它只影响 `HexMetrics`、`HexGridBoard`、hex 位置/查询/渲染，不改 Grid / NodeGraph board。
 - `PartitionChunk`：空间分区块。只描述 query/AOI 分区，不描述地形或 navmesh。
 - `TerrainChunk`：逻辑地形块。当前 hex owner 是 `VertexChunk`；#286 后 grid/hex 共用地形抽象仍沿用此名。
-- `MacroTile`：256-cell IO/寻址宏块。owner 是 `MapTile.Size`，常量模块只引用它；#1567 目标态为世界层派生值，不是 authoring 词汇。
+- `TerrainPage`（地形数据页）：256-cell IO/寻址地形数据页。owner 是 `MapTile.Size`，常量模块只引用它；#1567 目标态为世界层派生值，不是 authoring 词汇。
 - `StreamingChunk`：流式加载块。不要用 `chunk` 裸词。
 - `WorldExtent`：世界范围 authoring/计算概念。`WorldExtentSpec` 产出 `WorldSizeSpec`（仅引擎 boot 占位）；host world 由根板锚定，地图可以无板。
 - `BoardExtent`（#1567）：板业务区域范围，格子数 × 拓扑度量派生，不参与世界对齐。
@@ -101,8 +101,8 @@ Out of scope：
 |---|---|---|---|
 | `BoardConfig.GridCellSizeCm` | `CellCm` | 默认值引用 `SpatialScaleDefaults.CellCm` | 继续作为 `WorldExtentSpec` 输入；是否改字段名另立 |
 | `BoardConfig.HexEdgeLengthCm` | `HexEdgeLengthCm` | 默认值引用 `SpatialScaleDefaults.DefaultHexEdgeLengthCm` | 仅 HexGrid board 生效；由 `HexMetrics` / `HexGridBoard` 消费 |
-| `MapTile.Size` | `MacroTileCells` | `SpatialScaleDefaults.MacroTileCells` 引用它 | 保持 owner，不复制新 owner |
-| `WorldMap.TileSize` | `MacroTileCells` | 引用 `SpatialScaleDefaults.MacroTileCells` | 后续可移除重复旧名 |
+| `MapTile.Size` | `TerrainPageCells` | `SpatialScaleDefaults.TerrainPageCells` 引用它 | 保持 owner，不复制新 owner |
+| `WorldMap.TileSize` | `TerrainPageCells` | 引用 `SpatialScaleDefaults.TerrainPageCells` | 后续可移除重复旧名 |
 | `BoardConfig.WidthInTiles` | `WidthInMacroTiles` | 仅文档映射，不改 JSON/API | #283 破坏式迁移；旧键 fail-fast，无别名兼容 |
 | `BoardConfig.HeightInTiles` | `HeightInMacroTiles` | 仅文档映射，不改 JSON/API | #283 破坏式迁移；旧键 fail-fast，无别名兼容 |
 | `BoardConfig.ChunkSizeCells` | `PartitionChunkCells` | 默认值引用 `SpatialScaleDefaults.PartitionChunkCells` | #283 配置 schema 正名 |
@@ -119,7 +119,7 @@ Out of scope：
 
 | 现状名 | 目标名 | 迁移动作 |
 |---|---|---|
-| `BoardConfig.WidthInMacroTiles` / `HeightInMacroTiles` | `World.WidthCm` / `World.HeightCm` 派生宏块数 | 切 1：旧键 fail-fast，机器迁移 `World = 旧板范围居中` |
+| `BoardConfig.WidthInMacroTiles` / `HeightInMacroTiles` | `World.WidthCm` / `World.HeightCm` 派生地形数据页数 | 切 1：旧键 fail-fast，机器迁移 `World = 旧板范围居中` |
 | `BoardConfig.ChunkSizeCells` | `World.Tuning.PartitionChunkCells` | 切 4：预算归世界层，缺省由引擎按世界尺寸推导 |
 | `BoardConfig.LoadedChunkCapacity` | `World.Tuning.LoadedChunkCapacity` | 切 4：同上 |
 | `BoardConfig.NavTileGrid`（含 `OriginXcm/Zcm`、`widthChunks/heightChunks`、`chunkSizeCells`、`cellSizeCm`） | `Navigation/navmesh.json` 每板寻址条目（`source` + `tileWorldWidthCm/HeightCm`） | 切 3（依赖 PR #1484 合入）：迁出 BoardConfig，颗粒度显式化 |
@@ -143,7 +143,7 @@ NAV-0 的产物是文档、常量和扫描 contract，不新增可玩 preset。�
 | 命令 / 操作 | 可见反馈 |
 |---|---|
 | `dotnet test src/Tests/ArchitectureTests/ArchitectureTests.csproj --filter NavigationSpatialScaleMagicNumberContractTests` | contract 测试通过 |
-| 在 `src/Core/Map/Board/GridBoard.cs` 将 `SpatialScaleDefaults.MacroTileCells` 临时改回字面 `256` 后重跑上述命令 | 测试失败，输出 `src/Core/Map/Board/GridBoard.cs:<line>: literal 256` |
+| 在 `src/Core/Map/Board/GridBoard.cs` 将 `SpatialScaleDefaults.TerrainPageCells` 临时改回字面 `256` 后重跑上述命令 | 测试失败，输出 `src/Core/Map/Board/GridBoard.cs:<line>: literal 256` |
 | 撤销临时改动后重跑 | 测试恢复通过 |
 | 打开本页对照 `src/Core/Spatial/SpatialScaleDefaults.cs` | 层级表中每个默认尺度都有命名常量或明确 owner |
 
@@ -179,7 +179,7 @@ NAV-0 不新增配置 schema。现有配置项按本文口径解释：
 | 修改 `PartitionChunkCells` 或 `ChunkSizeCells` | spatial query/AOI 分区粒度变化，世界范围不变化 | 现有 spatial partition tests + #283 补充 |
 | 修改 `FlowCellSizeCm` | MassNavigationFlow grid 宽高按 `FieldWidthCm / FlowCellSizeCm` 改变 | 现有 `MassNavigationFlowSolverStateConfigurationTests` + #288 补充 |
 | 在 board/bake/MassNavigationFlow 代码内联 `256` / `64` / `100` | 不允许 | `NavigationSpatialScaleMagicNumberContractTests` 失败并打印文件行号 |
-| 修改 map `World.WidthCm/HeightCm`（#1567 切 1 后） | 世界边界、越界校验、minimap 全图按声明变化；宏块数为派生值 | #1567 切 1 contract：World 派生链 + 全 mod 扫描 |
+| 修改 map `World.WidthCm/HeightCm`（#1567 切 1 后） | 世界边界、越界校验、minimap 全图按声明变化；地形数据页数为派生值 | #1567 切 1 contract：World 派生链 + 全 mod 扫描 |
 | 修改 `Boards[].OriginXCm/OriginYCm`（#1567 切 2 后） | 板世界 AABB 与局部↔世界换算随摆放变化，世界范围不变化 | #1567 切 2 contract：非零 origin 寻址（接 board-addressing.md 验收） |
 | 修改 navmesh.json `tileWorldWidthCm/HeightCm`（#1567 切 3 后） | nav 瓦片颗粒度与重烤预算变化，板范围与地形块不变 | #1567 切 3 contract |
 
@@ -187,7 +187,7 @@ NAV-0 不新增配置 schema。现有配置项按本文口径解释：
 
 NAV-0 不合并任何外部分支，不试合 PR #235/#186。复用项：
 
-- `MapTile.Size` 作为 `MacroTileCells` owner。
+- `MapTile.Size` 作为 `TerrainPageCells` owner。
 - `WorldSizeSpec` 作为 board runtime 世界范围产物。
 - `VertexChunk.ChunkSize` 作为当前 `TerrainChunkCells` owner，后续 #286 解耦。
 - 既有 MassNavigationFlow solver config 的显式校验，继续 fail-fast。
@@ -197,7 +197,7 @@ NAV-0 不合并任何外部分支，不试合 PR #235/#186。复用项：
 
 - 数据驱动：尺度默认值集中在 `SpatialScaleDefaults`，配置项继续显式输入。
 - 无 fallback：NAV-0 不新增任何缺失配置兜底。
-- 无重复数据源：`MacroTileCells` 引用 `MapTile.Size`；`WorldExtentSpec` 产出 `WorldSizeSpec`，不替换。
+- 无重复数据源：`TerrainPageCells` 引用 `MapTile.Size`；`WorldExtentSpec` 产出 `WorldSizeSpec`，不替换。
 - 大小写严格 fail-fast：本步不改变 loader；后续 #283/#285/#287 迁移时沿用严格 loader。
 - 附 contract test：`NavigationSpatialScaleMagicNumberContractTests` 扫描 board/bake/MassNavigationFlow 代码。
 - 更新 GitBook：本页加入 `gitbook/architecture/README.md` 与 `gitbook/SUMMARY.md`，配置查表加入 `gitbook/reference/`。

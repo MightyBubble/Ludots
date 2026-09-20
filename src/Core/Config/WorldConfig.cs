@@ -24,8 +24,8 @@ namespace Ludots.Core.Config
 
         public static WorldConfig CreateEngineBootDefault() => new()
         {
-            WidthCm = SpatialScaleDefaults.DefaultWorldWidthMacroTiles * SpatialScaleDefaults.MacroTileCells * SpatialScaleDefaults.CellCm,
-            HeightCm = SpatialScaleDefaults.DefaultWorldHeightMacroTiles * SpatialScaleDefaults.MacroTileCells * SpatialScaleDefaults.CellCm,
+            WidthCm = SpatialScaleDefaults.DefaultBoardWidthPages * SpatialScaleDefaults.TerrainPageCells * SpatialScaleDefaults.CellCm,
+            HeightCm = SpatialScaleDefaults.DefaultBoardHeightPages * SpatialScaleDefaults.TerrainPageCells * SpatialScaleDefaults.CellCm,
             CellSizeCm = SpatialScaleDefaults.CellCm
         };
     }
