@@ -373,7 +373,9 @@ namespace CoreInputMod.Systems
                 !_globals.TryGetValue(CoreServiceKeys.CastDispatchProfileRegistry.Name, out var dispatchObj) ||
                 dispatchObj is not CastDispatchProfileRegistry dispatch ||
                 !_globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var collectionsObj) ||
-                collectionsObj is not EntityCollectionStore collections)
+                collectionsObj is not EntityCollectionStore collections ||
+                !_globals.TryGetValue(CoreServiceKeys.AbilityDefinitionRegistry.Name, out var landingAbilitiesObj) ||
+                landingAbilitiesObj is not AbilityDefinitionRegistry landingAbilities)
             {
                 throw new InvalidOperationException(
                     $"{nameof(LocalOrderSourceHelper)} requires command intent routing services before input-order mappings install.");
@@ -385,6 +387,7 @@ namespace CoreInputMod.Systems
                 intents,
                 dispatch,
                 collections,
+                landingAbilities,
                 TryGetCommandSourceOwner,
                 TryGetPlayerRepresentative);
         }
