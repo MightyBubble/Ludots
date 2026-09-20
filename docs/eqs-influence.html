@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EQS × Influence — 避威胁落点预览 · Ludots</title>
+<meta name="description" content="数据驱动的影响力场与环境查询系统交互预览：威胁热力、环形候选、最优绕行落点。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="site-assets/site.css">
+<style>
+  :root {
+    --ink: #1a1f27;
+    --mist: #e8edf3;
+    --panel: #f4f7fa;
+    --threat: #c45c48;
+    --safe: #3d8f6e;
+    --goal: #3a6ea5;
+    --best: #c9a227;
+    --grid: rgba(47, 53, 66, 0.08);
+  }
+  body { font-family: "IBM Plex Sans", var(--font); color: var(--ink); background:
+    radial-gradient(1200px 500px at 10% -10%, #eef3f8 0%, transparent 55%),
+    radial-gradient(900px 420px at 100% 0%, #f3ebe6 0%, transparent 50%),
+    var(--bg); }
+  .stage {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.9fr);
+    gap: 28px;
+    align-items: start;
+    margin: 28px 0 48px;
+  }
+  @media (max-width: 960px) {
+    .stage { grid-template-columns: 1fr; }
+  }
+  .hero-block h1 {
+    font-size: clamp(32px, 4vw, 46px);
+    letter-spacing: -0.03em;
+    margin: 10px 0 12px;
+    line-height: 1.15;
+  }
+  .hero-block .lead {
+    font-size: 17px; color: var(--muted); max-width: 42rem; margin: 0 0 18px;
+  }
+  .canvas-shell {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background:
+      linear-gradient(180deg, #fbfcfe 0%, #f1f4f8 100%);
+    box-shadow: var(--shadow-soft);
+    overflow: hidden;
+    aspect-ratio: 1.15 / 1;
+  }
+  canvas#board {
+    width: 100%; height: 100%; display: block;
+  }
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 14px 18px;
+    margin-top: 14px; font-size: 13px; color: var(--muted);
+  }
+  .legend i {
+    display: inline-block; width: 12px; height: 12px; border-radius: 50%;
+    margin-right: 6px; vertical-align: -1px;
+  }
+  .side-panel {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--card);
+    padding: 20px 20px 16px;
+    box-shadow: var(--shadow-soft);
+  }
+  .side-panel h2 {
+    margin: 0 0 8px; font-size: 18px;
+  }
+  .side-panel p { margin: 0 0 14px; color: var(--muted); font-size: 14px; }
+  .ctl-row { display: grid; gap: 10px; margin-bottom: 16px; }
+  label.ctl {
+    display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center;
+    font-size: 13.5px; color: var(--fg);
+  }
+  label.ctl input[type="range"] { width: 100%; grid-column: 1 / -1; }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+  .btn-row button {
+    border: 1px solid var(--border-strong);
+    background: var(--bg-soft);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-row button.primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .readout {
+    font-family: "IBM Plex Mono", var(--mono);
+    font-size: 12.5px;
+    background: var(--code-bg);
+    border-radius: 8px;
+    padding: 12px 14px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+  }
+  .schema {
+    margin-top: 36px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+  @media (max-width: 960px) {
+    .schema { grid-template-columns: 1fr; }
+  }
+  .schema article {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    background: var(--card);
+  }
+  .schema h3 { margin: 0 0 8px; font-size: 15px; }
+  .schema code {
+    display: block;
+    font-family: "IBM Plex Mono", var(--mono);
+    font-size: 11.5px;
+    background: var(--code-bg);
+    padding: 10px;
+    border-radius: 6px;
+    overflow: auto;
+    white-space: pre;
+  }
+  .kicker {
+    font-size: 12px; font-weight: 700; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--steel);
+  }
+</style>
+</head>
+<body data-page="eqs-influence">
+<div id="topbar"></div>
+<main class="wrap">
+  <section class="hero-block">
+    <div class="kicker">Spatial Reasoning</div>
+    <h1>EQS × Influence</h1>
+    <p class="lead">威胁挡在直线上时，AI 如何绕开？下面这份预览与 showcase 共用同一份配置：热力场是影响力，环上的点是候选，金环是最终落点。</p>
+    <div class="btn-row">
+      <a class="btn btn-primary" href="gallery.html">去 Showcase 画廊</a>
+      <a class="btn btn-ghost" href="index.html#docs/architecture/eqs-influence-config-and-showcase.md">读配置契约</a>
+    </div>
+  </section>
+
+  <section class="stage">
+    <div>
+      <div class="canvas-shell">
+        <canvas id="board" width="900" height="780" aria-label="EQS 与影响力场预览画布"></canvas>
+      </div>
+      <div class="legend">
+        <span><i style="background:var(--threat)"></i>威胁热力</span>
+        <span><i style="background:var(--safe)"></i>EQS 候选</span>
+        <span><i style="background:var(--best)"></i>最优落点</span>
+        <span><i style="background:var(--goal)"></i>目标</span>
+      </div>
+    </div>
+
+    <aside class="side-panel">
+      <h2>当场调参</h2>
+      <p>改半径与权重会即时重算候选分——配置字段与 JSON 一一对应，没有隐藏默认。</p>
+      <div class="ctl-row">
+        <label class="ctl">威胁半径 <strong id="v-radius">200</strong> cm
+          <input id="radius" type="range" min="80" max="320" step="10" value="200">
+        </label>
+        <label class="ctl">威胁峰值 <strong id="v-peak">10</strong>
+          <input id="peak" type="range" min="4" max="16" step="1" value="10">
+        </label>
+        <label class="ctl">安全权重 <strong id="v-safe">2.0</strong>
+          <input id="safeW" type="range" min="0.5" max="4" step="0.1" value="2">
+        </label>
+        <label class="ctl">接近目标权重 <strong id="v-goal">1.0</strong>
+          <input id="goalW" type="range" min="0.5" max="3" step="0.1" value="1">
+        </label>
+      </div>
+      <div class="btn-row">
+        <button class="primary" id="btn-rerun" type="button">重算落点</button>
+        <button id="btn-reset" type="button">恢复演示默认</button>
+      </div>
+      <div class="readout" id="readout">加载配置中…</div>
+    </aside>
+  </section>
+
+  <section class="schema">
+    <article>
+      <h3>influence_fields.json</h3>
+      <code id="schema-fields"></code>
+    </article>
+    <article>
+      <h3>eqs_queries.json</h3>
+      <code id="schema-queries"></code>
+    </article>
+    <article>
+      <h3>eqs_scenarios.json</h3>
+      <code id="schema-scenarios"></code>
+    </article>
+  </section>
+</main>
+<script src="site-assets/site.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var canvas = document.getElementById("board");
+  var ctx = canvas.getContext("2d");
+  var demo = null;
+  var latest = null;
+
+  var ORIGIN = { x: 0, y: 0 };
+  var GOAL = { x: 500, y: 0 };
+  var THREAT = { x: 300, y: 0 };
+
+  function cmToPx(xCm, yCm) {
+    // Map world cm into canvas with origin left-of-center.
+    var scale = 0.85;
+    var ox = canvas.width * 0.28;
+    var oy = canvas.height * 0.52;
+    return { x: ox + xCm * scale, y: oy - yCm * scale };
+  }
+
+  function falloff(dist, radius, peak, kind) {
+    if (dist > radius) return 0;
+    var ratio = dist / radius;
+    if (kind === "Constant") return peak;
+    if (kind === "Quadratic") return peak * Math.pow(Math.max(0, 1 - ratio), 2);
+    return peak * Math.max(0, 1 - ratio);
+  }
+
+  function sampleThreat(x, y, radius, peak) {
+    var dx = x - THREAT.x;
+    var dy = y - THREAT.y;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+    return falloff(dist, radius, peak, "Linear");
+  }
+
+  function generateRing(radius, count) {
+    var items = [];
+    for (var i = 0; i < count; i++) {
+      var a = (Math.PI * 2 * i) / count;
+      items.push({
+        x: Math.round(Math.cos(a) * radius),
+        y: Math.round(Math.sin(a) * radius),
+        score: 0
+      });
+    }
+    return items;
+  }
+
+  function scoreItems(items, radius, peak, safeW, goalW) {
+    var maxDist = 0;
+    for (var i = 0; i < items.length; i++) {
+      var ddx = items[i].x - GOAL.x;
+      var ddy = items[i].y - GOAL.y;
+      maxDist = Math.max(maxDist, Math.sqrt(ddx * ddx + ddy * ddy));
+    }
+    if (maxDist <= 0) maxDist = 1;
+    var best = null;
+    for (var j = 0; j < items.length; j++) {
+      var it = items[j];
+      var dist = Math.sqrt(Math.pow(it.x - GOAL.x, 2) + Math.pow(it.y - GOAL.y, 2));
+      var near = 1 - dist / maxDist;
+      var threat = sampleThreat(it.x, it.y, radius, peak);
+      var safe = 1 - Math.min(1, threat / Math.max(peak, 1e-6));
+      it.score = near * goalW + safe * safeW;
+      it.threat = threat;
+      if (!best || it.score > best.score) best = it;
+    }
+    return best;
+  }
+
+  function drawHeat(radius, peak) {
+    var img = ctx.createImageData(canvas.width, canvas.height);
+    var data = img.data;
+    for (var py = 0; py < canvas.height; py += 2) {
+      for (var px = 0; px < canvas.width; px += 2) {
+        var worldX = (px - canvas.width * 0.28) / 0.85;
+        var worldY = (canvas.height * 0.52 - py) / 0.85;
+        var v = sampleThreat(worldX, worldY, radius, peak);
+        if (v <= 0.05) continue;
+        var t = Math.min(1, v / peak);
+        var r = Math.round(180 + 55 * t);
+        var g = Math.round(90 * (1 - t));
+        var b = Math.round(40 * (1 - 0.5 * t));
+        var a = Math.round(40 + 140 * t);
+        for (var oy = 0; oy < 2; oy++) {
+          for (var ox = 0; ox < 2; ox++) {
+            var idx = ((py + oy) * canvas.width + (px + ox)) * 4;
+            data[idx] = r; data[idx + 1] = g; data[idx + 2] = b; data[idx + 3] = a;
+          }
+        }
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+
+  function drawScene(state) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // soft grid
+    ctx.strokeStyle = "rgba(47,53,66,0.06)";
+    ctx.lineWidth = 1;
+    for (var g = -200; g <= 900; g += 50) {
+      var a = cmToPx(g, -400), b = cmToPx(g, 400);
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      var c = cmToPx(-100, g), d = cmToPx(800, g);
+      ctx.beginPath(); ctx.moveTo(c.x, c.y); ctx.lineTo(d.x, d.y); ctx.stroke();
+    }
+
+    drawHeat(state.radius, state.peak);
+
+    // actor / goal / threat markers
+    function marker(p, color, label) {
+      var m = cmToPx(p.x, p.y);
+      ctx.beginPath();
+      ctx.fillStyle = color;
+      ctx.arc(m.x, m.y, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#243041";
+      ctx.font = "600 13px IBM Plex Sans";
+      ctx.fillText(label, m.x + 10, m.y - 8);
+    }
+    marker(ORIGIN, "#2f3542", "演员");
+    marker(GOAL, "#3a6ea5", "目标");
+    marker(THREAT, "#c45c48", "威胁");
+
+    // threat ring
+    var tr = cmToPx(THREAT.x, THREAT.y);
+    ctx.beginPath();
+    ctx.strokeStyle = "rgba(196,92,72,0.65)";
+    ctx.lineWidth = 2;
+    ctx.arc(tr.x, tr.y, state.radius * 0.85, 0, Math.PI * 2);
+    ctx.stroke();
+
+    var maxScore = 0;
+    for (var i = 0; i < state.items.length; i++) maxScore = Math.max(maxScore, state.items[i].score);
+    for (var j = 0; j < state.items.length; j++) {
+      var it = state.items[j];
+      var p = cmToPx(it.x, it.y);
+      var t = maxScore <= 0 ? 0.5 : it.score / maxScore;
+      ctx.beginPath();
+      ctx.fillStyle = "rgba(61,143,110," + (0.18 + 0.35 * t) + ")";
+      ctx.strokeStyle = "rgba(61,143,110," + (0.45 + 0.4 * t) + ")";
+      ctx.lineWidth = 2;
+      ctx.arc(p.x, p.y, 8 + 4 * t, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    if (state.best) {
+      var bp = cmToPx(state.best.x, state.best.y);
+      ctx.beginPath();
+      ctx.strokeStyle = "#c9a227";
+      ctx.lineWidth = 3;
+      ctx.arc(bp.x, bp.y, 16, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(bp.x, bp.y, 10, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  function rerun() {
+    var radius = +document.getElementById("radius").value;
+    var peak = +document.getElementById("peak").value;
+    var safeW = +document.getElementById("safeW").value;
+    var goalW = +document.getElementById("goalW").value;
+    document.getElementById("v-radius").textContent = String(radius);
+    document.getElementById("v-peak").textContent = String(peak);
+    document.getElementById("v-safe").textContent = safeW.toFixed(1);
+    document.getElementById("v-goal").textContent = goalW.toFixed(1);
+
+    var items = generateRing(400, 16);
+    var best = scoreItems(items, radius, peak, safeW, goalW);
+    latest = { radius: radius, peak: peak, items: items, best: best, safeW: safeW, goalW: goalW };
+    drawScene(latest);
+
+    document.getElementById("readout").textContent =
+      "最优落点  (" + best.x + ", " + best.y + ")\n" +
+      "综合分    " + best.score.toFixed(2) + "\n" +
+      "威胁采样  " + best.threat.toFixed(2) + "\n" +
+      "横向偏移  " + Math.abs(best.y) + " cm\n" +
+      (Math.abs(best.y) > 50 && best.threat < 3
+        ? "判定      绕开威胁线 ✓"
+        : "判定      需要更大安全权重");
+  }
+
+  function fillSchema() {
+    if (!demo) return;
+    document.getElementById("schema-fields").textContent = JSON.stringify(demo.fields, null, 2);
+    document.getElementById("schema-queries").textContent = JSON.stringify(demo.queries, null, 2);
+    document.getElementById("schema-scenarios").textContent = JSON.stringify(demo.scenarios, null, 2);
+  }
+
+  function reset() {
+    document.getElementById("radius").value = "200";
+    document.getElementById("peak").value = "10";
+    document.getElementById("safeW").value = "2";
+    document.getElementById("goalW").value = "1";
+    rerun();
+  }
+
+  ["radius", "peak", "safeW", "goalW"].forEach(function (id) {
+    document.getElementById(id).addEventListener("input", rerun);
+  });
+  document.getElementById("btn-rerun").addEventListener("click", rerun);
+  document.getElementById("btn-reset").addEventListener("click", reset);
+
+  fetch("site-assets/eqs-influence-demo.json")
+    .then(function (r) {
+      if (!r.ok) throw new Error("demo json missing");
+      return r.json();
+    })
+    .then(function (json) {
+      demo = json;
+      fillSchema();
+      reset();
+    })
+    .catch(function (err) {
+      document.getElementById("readout").textContent = "配置加载失败: " + err.message;
+      reset();
+    });
+})();
+</script>
+</body>
+</html>

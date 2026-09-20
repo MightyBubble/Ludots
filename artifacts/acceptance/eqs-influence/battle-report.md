@@ -37,6 +37,11 @@
   ✓ 胜出点在 ~400cm 环上（生成器正确）
   ✓ 胜出点威胁 influence < 3.0（避险生效）
   ✓ 胜出点 |Y| > 50cm（成功偏离威胁直线）
+
+完成度备注（合入口径）：
+  - 本验收覆盖 EQS + Influence 基础设施与 headless 场景
+  - Influence 主循环投影 / EQS config authoring / EqsBestScore01 尚未接线
+  - Decay 走 SoA 就地乘（0-alloc）；缺 registry/空间查询硬失败，禁止静默当 0
 ```
 
 ## 覆盖的测试路径

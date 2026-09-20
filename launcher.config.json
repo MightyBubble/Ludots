@@ -335,6 +335,14 @@
         "value": "mods/showcases/item_system/WeaponBenchShowcaseMod",
         "projectPath": "WeaponBenchShowcaseMod.csproj"
       }
+    },
+    {
+      "name": "eqs_influence",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/eqs_influence/EqsInfluenceShowcaseMod",
+        "projectPath": "EqsInfluenceShowcaseMod.csproj"
+      }
     }
   ],
   "adapters": {
@@ -348,7 +356,9 @@
       "assemblyPath": "BrowserRuntime/cef/Ludots.UI.Browser.Cef.dll",
       "hostTypeName": "Ludots.UI.Browser.Cef.CefBrowserRuntimeHost",
       "useCollectibleLoadContext": false,
-      "processSharedAssemblyNamePrefixes": ["CefSharp"]
+      "processSharedAssemblyNamePrefixes": [
+        "CefSharp"
+      ]
     }
   ],
   "projectHints": []

@@ -385,6 +385,15 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "eqs_influence_raylib",
+      "name": "EQS Influence Raylib",
+      "selectors": [
+        "$eqs_influence"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

@@ -29,6 +29,7 @@
     { href: "index.html", label: "门户", page: "home" },
     { href: "index.html#docs", label: "文档", page: "home", hash: "#docs" },
     { href: "gallery.html", label: "Showcase 画廊", page: "gallery" },
+    { href: "eqs-influence.html", label: "EQS 预览", page: "eqs-influence" },
     { href: "tests.html", label: "测试与验收", page: "tests" },
     { href: "diagrams.html", label: "架构图库", page: "diagrams" }
   ];

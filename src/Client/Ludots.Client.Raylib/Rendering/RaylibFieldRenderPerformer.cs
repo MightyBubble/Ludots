@@ -44,16 +44,11 @@ namespace Ludots.Client.Raylib.Rendering
         public readonly bool FullUpload;
     }
 
-    public sealed unsafe class RaylibFieldRenderPerformer : IDisposable
+    public sealed class RaylibFieldRenderPerformer : IDisposable
     {
         private readonly Dictionary<GlobalFieldVisualId, FieldTextureState> _stateById = new();
         private readonly List<FieldTextureState> _states = new();
         private RaylibFieldTexturePlan[] _plans = Array.Empty<RaylibFieldTexturePlan>();
-        private byte[] _uploadScratch = Array.Empty<byte>();
-        private Mesh _quadMesh;
-        private Material _material;
-        private bool _quadMeshLoaded;
-        private bool _materialLoaded;
         private bool _disposed;
 
         public float FogOverlayY { get; set; } = 0.08f;
@@ -92,7 +87,7 @@ namespace Ludots.Client.Raylib.Rendering
                 }
 
                 GlobalFieldVisualDescriptor descriptor = record.Descriptor;
-                if (descriptor.Id.Kind != GlobalFieldVisualKind.Fog)
+                if (descriptor.Id.Kind is not (GlobalFieldVisualKind.Fog or GlobalFieldVisualKind.Influence))
                 {
                     LastUnsupportedFieldCount++;
                     throw new InvalidOperationException(
@@ -102,7 +97,7 @@ namespace Ludots.Client.Raylib.Rendering
                 if (descriptor.ValueKind != GlobalFieldVisualValueKind.Byte)
                 {
                     throw new InvalidOperationException(
-                        $"Raylib fog field renderer requires byte-valued cells, but field '{descriptor.Id}' published {descriptor.ValueKind}.");
+                        $"Raylib field renderer requires byte-valued cells, but field '{descriptor.Id}' published {descriptor.ValueKind}.");
                 }
 
                 if (descriptor.BoundsCells.Width <= 0 || descriptor.BoundsCells.Height <= 0)
@@ -111,13 +106,22 @@ namespace Ludots.Client.Raylib.Rendering
                 }
 
                 FieldTextureState state = GetOrCreateState(descriptor.Id);
+                state.Kind = descriptor.Id.Kind;
                 bool fullUpload = EnsureStateSize(state, descriptor.BoundsCells);
                 ReadOnlySpan<GlobalFieldVisualCell> cells = buffer.GetCells(record);
                 ReadOnlySpan<IntRect> dirtyRects = buffer.GetDirtyRects(record);
 
                 if (fullUpload)
                 {
-                    FillRect(state.Pixels, state.Width, new IntRect(0, 0, state.Width, state.Height), FogVisibilityUnseen);
+                    if (descriptor.Id.Kind == GlobalFieldVisualKind.Fog)
+                    {
+                        FillRect(state.Pixels, state.Width, new IntRect(0, 0, state.Width, state.Height), FogVisibilityUnseen);
+                    }
+                    else
+                    {
+                        FillRectRgba(state.Pixels, state.Width, new IntRect(0, 0, state.Width, state.Height), 0, 0, 0, 0);
+                    }
+
                     ApplyCells(state, cells);
                     SetSingleDirtyRect(state, new IntRect(0, 0, state.Width, state.Height));
                 }
@@ -177,54 +181,23 @@ namespace Ludots.Client.Raylib.Rendering
                 return;
             }
 
-            EnsureRaylibResources();
             Rl.BeginBlendMode(BlendMode.BLEND_ALPHA);
-            Rl.rlDisableBackfaceCulling();
             Rl.rlDisableDepthMask();
 
             for (int i = 0; i < plans.Length; i++)
             {
                 ref readonly RaylibFieldTexturePlan plan = ref plans[i];
                 FieldTextureState state = _stateById[plan.Id];
-                UploadDirtyRects(state);
-                DrawTexturePlane(state, plan.CellSizeCm);
+                DrawCellCubes(state, plan.CellSizeCm);
                 LastDrawCount++;
             }
 
             Rl.rlEnableDepthMask();
-            Rl.rlEnableBackfaceCulling();
             Rl.EndBlendMode();
         }
 
         public void Dispose()
         {
-            if (_disposed)
-            {
-                return;
-            }
-
-            for (int i = 0; i < _states.Count; i++)
-            {
-                FieldTextureState state = _states[i];
-                if (state.TextureLoaded)
-                {
-                    Rl.UnloadTexture(state.Texture);
-                    state.TextureLoaded = false;
-                }
-            }
-
-            if (_quadMeshLoaded)
-            {
-                Rl.UnloadMesh(_quadMesh);
-                _quadMeshLoaded = false;
-            }
-
-            if (_materialLoaded)
-            {
-                Rl.UnloadMaterial(_material);
-                _materialLoaded = false;
-            }
-
             _disposed = true;
         }
 
@@ -262,7 +235,6 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             state.DirtyRectCount = 0;
-            state.GpuUploaded = false;
             return true;
         }
 
@@ -276,7 +248,14 @@ namespace Ludots.Client.Raylib.Rendering
                     continue;
                 }
 
-                SetPixel(state.Pixels, state.Width, x, y, cell.ByteValue);
+                if (state.Kind == GlobalFieldVisualKind.Influence)
+                {
+                    SetInfluencePixel(state.Pixels, state.Width, x, y, cell.ByteValue);
+                }
+                else
+                {
+                    SetPixel(state.Pixels, state.Width, x, y, cell.ByteValue);
+                }
             }
         }
 
@@ -299,7 +278,14 @@ namespace Ludots.Client.Raylib.Rendering
         {
             for (int i = 0; i < state.DirtyRectCount; i++)
             {
-                FillRect(state.Pixels, state.Width, state.DirtyRects[i], FogVisibilityUnseen);
+                if (state.Kind == GlobalFieldVisualKind.Influence)
+                {
+                    FillRectRgba(state.Pixels, state.Width, state.DirtyRects[i], 0, 0, 0, 0);
+                }
+                else
+                {
+                    FillRect(state.Pixels, state.Width, state.DirtyRects[i], FogVisibilityUnseen);
+                }
             }
         }
 
@@ -361,6 +347,18 @@ namespace Ludots.Client.Raylib.Rendering
         private static void FillRect(byte[] pixels, int textureWidth, IntRect rect, byte visibility)
         {
             ResolveFogColorBytes(visibility, out byte r, out byte g, out byte b, out byte a);
+            FillRectRgba(pixels, textureWidth, rect, r, g, b, a);
+        }
+
+        private static void FillRectRgba(
+            byte[] pixels,
+            int textureWidth,
+            IntRect rect,
+            byte r,
+            byte g,
+            byte b,
+            byte a)
+        {
             int endY = rect.Y + rect.Height;
             int endX = rect.X + rect.Width;
             for (int y = rect.Y; y < endY; y++)
@@ -385,6 +383,32 @@ namespace Ludots.Client.Raylib.Rendering
             pixels[pixel + 1] = g;
             pixels[pixel + 2] = b;
             pixels[pixel + 3] = a;
+        }
+
+        private static void SetInfluencePixel(byte[] pixels, int textureWidth, int x, int y, byte intensity)
+        {
+            ResolveInfluenceColorBytes(intensity, out byte r, out byte g, out byte b, out byte a);
+            int pixel = ((y * textureWidth) + x) * 4;
+            pixels[pixel] = r;
+            pixels[pixel + 1] = g;
+            pixels[pixel + 2] = b;
+            pixels[pixel + 3] = a;
+        }
+
+        public static Color ResolveInfluenceColor(byte intensity)
+        {
+            ResolveInfluenceColorBytes(intensity, out byte r, out byte g, out byte b, out byte a);
+            return new Color(r, g, b, a);
+        }
+
+        private static void ResolveInfluenceColorBytes(byte intensity, out byte r, out byte g, out byte b, out byte a)
+        {
+            // Warm threat heat: amber → crimson; keep mid values readable on dark terrain.
+            float t = intensity / 255f;
+            r = (byte)Math.Clamp((int)Math.Round(190 + (55 * t)), 0, 255);
+            g = (byte)Math.Clamp((int)Math.Round(110 * (1f - (0.75f * t))), 0, 255);
+            b = (byte)Math.Clamp((int)Math.Round(48 * (1f - (0.55f * t))), 0, 255);
+            a = (byte)Math.Clamp((int)Math.Round(70 + (160 * t)), 0, 255);
         }
 
         public static Color ResolveFogColor(byte visibility)
@@ -426,142 +450,35 @@ namespace Ludots.Client.Raylib.Rendering
             }
         }
 
-        private void UploadDirtyRects(FieldTextureState state)
+        private void DrawCellCubes(FieldTextureState state, int cellSizeCm)
         {
-            EnsureTexture(state);
-            if (!state.GpuUploaded && state.DirtyRectCount == 0)
-            {
-                SetSingleDirtyRect(state, new IntRect(0, 0, state.Width, state.Height));
-            }
+            float cellMeters = WorldUnits.CmToM(cellSizeCm);
+            float height = MathF.Max(0.02f, cellMeters * 0.08f);
+            int width = state.Width;
+            int heightCells = state.Height;
+            byte[] pixels = state.Pixels;
+            int originCellX = state.BoundsCells.X;
+            int originCellY = state.BoundsCells.Y;
 
-            for (int i = 0; i < state.DirtyRectCount; i++)
+            for (int ty = 0; ty < heightCells; ty++)
             {
-                IntRect rect = state.DirtyRects[i];
-                if (rect.X == 0 && rect.Y == 0 && rect.Width == state.Width && rect.Height == state.Height)
+                int row = ty * width;
+                for (int tx = 0; tx < width; tx++)
                 {
-                    fixed (byte* ptr = state.Pixels)
+                    int pixel = (row + tx) * 4;
+                    byte a = pixels[pixel + 3];
+                    if (a == 0)
                     {
-                        Rl.UpdateTexture(state.Texture, ptr);
+                        continue;
                     }
-                }
-                else
-                {
-                    int byteCount = checked(rect.Width * rect.Height * 4);
-                    EnsureUploadScratch(byteCount);
-                    CopyTextureRect(state.Pixels, state.Width, rect, _uploadScratch);
-                    fixed (byte* ptr = _uploadScratch)
-                    {
-                        Rl.UpdateTextureRec(
-                            state.Texture,
-                            new Rectangle(rect.X, rect.Y, rect.Width, rect.Height),
-                            ptr);
-                    }
+
+                    var color = new Color(pixels[pixel], pixels[pixel + 1], pixels[pixel + 2], a);
+                    float worldXCm = (originCellX + tx) * cellSizeCm + (cellSizeCm * 0.5f);
+                    float worldYCm = (originCellY + ty) * cellSizeCm + (cellSizeCm * 0.5f);
+                    Vector3 center = WorldUnits.WorldCmToVisualMeters(worldXCm, worldYCm, FogOverlayY);
+                    Rl.DrawCube(center, cellMeters, height, cellMeters, color);
                 }
             }
-
-            state.GpuUploaded = true;
-        }
-
-        private void EnsureTexture(FieldTextureState state)
-        {
-            if (state.TextureLoaded &&
-                state.Texture.width == state.Width &&
-                state.Texture.height == state.Height)
-            {
-                return;
-            }
-
-            if (state.TextureLoaded)
-            {
-                Rl.UnloadTexture(state.Texture);
-                state.Texture = default;
-                state.TextureLoaded = false;
-            }
-
-            Image image = Rl.GenImageColor(state.Width, state.Height, Color.BLANK);
-            state.Texture = Rl.LoadTextureFromImage(image);
-            Rl.UnloadImage(image);
-            state.TextureLoaded = true;
-            state.GpuUploaded = false;
-        }
-
-        private void DrawTexturePlane(FieldTextureState state, int cellSizeCm)
-        {
-            EnsureRaylibResources();
-            int albedoIndex = (int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO;
-            _material.maps[albedoIndex].texture = state.Texture;
-            _material.maps[albedoIndex].color = Color.WHITE;
-
-            float widthMeters = WorldUnits.CmToM(state.Width * cellSizeCm);
-            float heightMeters = WorldUnits.CmToM(state.Height * cellSizeCm);
-            WorldCmInt2 originWorld = new(
-                state.BoundsCells.X * cellSizeCm,
-                state.BoundsCells.Y * cellSizeCm);
-            Vector3 origin = WorldUnits.WorldCmToVisualMeters(in originWorld, FogOverlayY);
-            RaylibMatrix transform = RaylibMatrix.FromSystemNumerics(
-                Matrix4x4.CreateScale(widthMeters, 1f, heightMeters) *
-                Matrix4x4.CreateTranslation(origin));
-            Rl.DrawMesh(_quadMesh, _material, transform);
-        }
-
-        private void EnsureRaylibResources()
-        {
-            if (!_quadMeshLoaded)
-            {
-                _quadMesh = CreateQuadMesh();
-                _quadMeshLoaded = true;
-            }
-
-            if (!_materialLoaded)
-            {
-                _material = Rl.LoadMaterialDefault();
-                _materialLoaded = true;
-            }
-        }
-
-        private static Mesh CreateQuadMesh()
-        {
-            Mesh mesh = new Mesh
-            {
-                vertexCount = 4,
-                triangleCount = 2,
-            };
-
-            mesh.vertices = (float*)Rl.MemAlloc(sizeof(float) * 12);
-            mesh.normals = (float*)Rl.MemAlloc(sizeof(float) * 12);
-            mesh.texcoords = (float*)Rl.MemAlloc(sizeof(float) * 8);
-            mesh.indices = (ushort*)Rl.MemAlloc(sizeof(ushort) * 6);
-
-            Span<float> vertices = new(mesh.vertices, 12);
-            vertices[0] = 0f; vertices[1] = 0f; vertices[2] = 0f;
-            vertices[3] = 1f; vertices[4] = 0f; vertices[5] = 0f;
-            vertices[6] = 1f; vertices[7] = 0f; vertices[8] = 1f;
-            vertices[9] = 0f; vertices[10] = 0f; vertices[11] = 1f;
-
-            Span<float> normals = new(mesh.normals, 12);
-            for (int i = 0; i < 4; i++)
-            {
-                int offset = i * 3;
-                normals[offset] = 0f;
-                normals[offset + 1] = 1f;
-                normals[offset + 2] = 0f;
-            }
-
-            Span<float> uvs = new(mesh.texcoords, 8);
-            uvs[0] = 0f; uvs[1] = 0f;
-            uvs[2] = 1f; uvs[3] = 0f;
-            uvs[4] = 1f; uvs[5] = 1f;
-            uvs[6] = 0f; uvs[7] = 1f;
-
-            mesh.indices[0] = 0;
-            mesh.indices[1] = 1;
-            mesh.indices[2] = 2;
-            mesh.indices[3] = 0;
-            mesh.indices[4] = 2;
-            mesh.indices[5] = 3;
-
-            Rl.UploadMesh(ref mesh, false);
-            return mesh;
         }
 
         private void EnsurePlanCapacity(int required)
@@ -574,16 +491,6 @@ namespace Ludots.Client.Raylib.Rendering
             Array.Resize(ref _plans, NextCapacity(_plans.Length, required));
         }
 
-        private void EnsureUploadScratch(int required)
-        {
-            if (required <= _uploadScratch.Length)
-            {
-                return;
-            }
-
-            Array.Resize(ref _uploadScratch, NextCapacity(_uploadScratch.Length, required));
-        }
-
         private static int NextCapacity(int current, int required)
         {
             int next = Math.Max(4, current);
@@ -593,17 +500,6 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             return next;
-        }
-
-        private static void CopyTextureRect(byte[] source, int sourceWidth, IntRect rect, byte[] destination)
-        {
-            int rowBytes = rect.Width * 4;
-            for (int y = 0; y < rect.Height; y++)
-            {
-                int sourceOffset = (((rect.Y + y) * sourceWidth) + rect.X) * 4;
-                int destinationOffset = y * rowBytes;
-                source.AsSpan(sourceOffset, rowBytes).CopyTo(destination.AsSpan(destinationOffset, rowBytes));
-            }
         }
 
         private void ThrowIfDisposed()
@@ -627,15 +523,13 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             public readonly GlobalFieldVisualId Id;
+            public GlobalFieldVisualKind Kind;
             public IntRect BoundsCells;
             public int Width;
             public int Height;
             public byte[] Pixels = Array.Empty<byte>();
             public IntRect[] DirtyRects = Array.Empty<IntRect>();
             public int DirtyRectCount;
-            public Texture2D Texture;
-            public bool TextureLoaded;
-            public bool GpuUploaded;
 
             public bool TryCellToTexture(FieldCell2D cell, out int x, out int y)
             {
