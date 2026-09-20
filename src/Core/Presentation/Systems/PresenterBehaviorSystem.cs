@@ -1697,7 +1697,7 @@ namespace Ludots.Core.Presentation.Systems
 
         private void ApplyCompiledAttributeBinding(Entity entity, ref AttributeBuffer attributes, in CompiledBinding binding)
         {
-            float value = ResolveAttributeValue(ref attributes, binding.SourceAttributeId, binding.Mode);
+            float value = ResolveAttributeValue(entity, ref attributes, binding.SourceAttributeId, binding.Mode);
             SetParam(entity, binding.TargetParamKey, ParamLane.Float, value, 0, Vector4.Zero);
 
             if (binding.TrySelectThreshold(value, out ThresholdMapping threshold))
@@ -3214,21 +3214,35 @@ namespace Ludots.Core.Presentation.Systems
                 : TransformSource.WorldFixed;
         }
 
-        private static float ResolveAttributeValue(ref AttributeBuffer attributes, int attributeId, ValueSourceKind mode)
+        private float ResolveAttributeValue(Entity owner, ref AttributeBuffer attributes, int attributeId, ValueSourceKind mode)
         {
             return mode switch
             {
-                ValueSourceKind.Attribute => attributes.GetCurrent(attributeId),
-                ValueSourceKind.AttributeRatio => ResolveAttributeRatio(ref attributes, attributeId),
-                ValueSourceKind.AttributeBase => attributes.GetBase(attributeId),
-                _ => attributes.GetCurrent(attributeId),
+                ValueSourceKind.Attribute => ReadCurrent(owner, ref attributes, attributeId),
+                ValueSourceKind.AttributeRatio => ResolveAttributeRatio(owner, ref attributes, attributeId),
+                ValueSourceKind.AttributeBase => ReadBase(owner, ref attributes, attributeId),
+                _ => ReadCurrent(owner, ref attributes, attributeId),
             };
         }
 
-        private static float ResolveAttributeRatio(ref AttributeBuffer attributes, int attributeId)
+        private float ReadCurrent(Entity owner, ref AttributeBuffer attributes, int attributeId)
         {
-            float current = attributes.GetCurrent(attributeId);
-            float max = attributes.GetBase(attributeId);
+            return (uint)attributeId < (uint)AttributeBuffer.MAX_ATTRS
+                ? attributes.GetCurrent(attributeId)
+                : Ludots.Core.Gameplay.GAS.AttributeReads.Current(World, owner, attributeId);
+        }
+
+        private float ReadBase(Entity owner, ref AttributeBuffer attributes, int attributeId)
+        {
+            return (uint)attributeId < (uint)AttributeBuffer.MAX_ATTRS
+                ? attributes.GetBase(attributeId)
+                : Ludots.Core.Gameplay.GAS.AttributeReads.Base(World, owner, attributeId);
+        }
+
+        private float ResolveAttributeRatio(Entity owner, ref AttributeBuffer attributes, int attributeId)
+        {
+            float current = ReadCurrent(owner, ref attributes, attributeId);
+            float max = ReadBase(owner, ref attributes, attributeId);
             return max <= 0f ? 0f : Math.Clamp(current / max, 0f, 1f);
         }
 

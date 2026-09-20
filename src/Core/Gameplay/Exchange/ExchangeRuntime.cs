@@ -178,7 +178,10 @@ namespace Ludots.Core.Gameplay.Exchange
                 }
 
                 AttributeBuffer attributes = _world.Get<AttributeBuffer>(actor);
-                if (attributes.GetCurrent(input.AttributeId) < input.Quantity)
+                float available = (uint)input.AttributeId < (uint)Ludots.Core.Gameplay.GAS.Components.AttributeBuffer.MAX_ATTRS
+                    ? attributes.GetCurrent(input.AttributeId)
+                    : Ludots.Core.Gameplay.GAS.AttributeReads.Current(_world, actor, input.AttributeId);
+                if (available < input.Quantity)
                 {
                     return new ExchangeExecutionResult(ExchangeExecutionStatus.InsufficientInput, operationId, index);
                 }
@@ -369,7 +372,9 @@ namespace Ludots.Core.Gameplay.Exchange
                 }
 
                 ref AttributeBuffer attributes = ref _world.Get<AttributeBuffer>(actor);
-                float previousValue = attributes.GetCurrent(input.AttributeId);
+                float previousValue = (uint)input.AttributeId < (uint)Ludots.Core.Gameplay.GAS.Components.AttributeBuffer.MAX_ATTRS
+                    ? attributes.GetCurrent(input.AttributeId)
+                    : Ludots.Core.Gameplay.GAS.AttributeReads.Current(_world, actor, input.AttributeId);
                 if (previousValue < input.Quantity)
                 {
                     return false;

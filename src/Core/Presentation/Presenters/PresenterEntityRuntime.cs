@@ -3647,6 +3647,12 @@ namespace Ludots.Core.Presentation.Presenters
 
         private static float ResolveAttributeValue(ref AttributeBuffer attributes, int attributeId, ValueSourceKind mode)
         {
+            if ((uint)attributeId >= (uint)AttributeBuffer.MAX_ATTRS)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.CAPACITY.ERR.InlineInitialHighAttribute: 内联初始属性绑定 id={attributeId} ≥ 64 需要 owner 上下文读列存（RFC-0067 P3 边界）——初始值改用运行期属性绑定（PresenterBehaviorSystem 已支持高槽读）。");
+            }
+
             return mode switch
             {
                 ValueSourceKind.Attribute => attributes.GetCurrent(attributeId),

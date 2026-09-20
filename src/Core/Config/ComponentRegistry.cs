@@ -1411,6 +1411,7 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
 
             var container = new GameplayTagContainer();
             var counts = new TagCountContainer();
+            var highTags = new System.Collections.Generic.List<int>();
             if (obj.TryGetPropertyValue("tags", out var tagsNode))
             {
                 if (tagsNode is not JsonArray tags)
@@ -1427,12 +1428,42 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
 
                     string tagName = ReadStringNode(tag, "GameplayTagContainer.tags");
                     int tagId = ResolveGameplayTagId(tagName, $"GameplayTagContainer.tags.{tagName}");
-                    container.AddTag(tagId);
+                    if (tagId > Ludots.Core.Gameplay.GAS.Components.GameplayTagContainer.MAX_TAG_ID)
+                    {
+                        highTags.Add(tagId);
+                    }
+                    else
+                    {
+                        container.AddTag(tagId);
+                    }
+
                     if (!counts.AddCount(tagId))
                     {
                         throw new InvalidOperationException("GameplayTagContainer.tags exceeds TagCountContainer capacity.");
                     }
                 }
+            }
+
+            var tagStore = Ludots.Core.Gameplay.GAS.WorldAttributeStoreAmbient.Current;
+            if (highTags.Count > 0)
+            {
+                if (tagStore == null)
+                {
+                    throw new InvalidOperationException(
+                        "GAS.CAPACITY.ERR.HighLaneUnavailable: GameplayTagContainer.tags 引用 tagId ≥ 256 需要世界列存（RFC-0067 P2）。");
+                }
+
+                int row = tagStore.EnsureRow(entity);
+                foreach (int tagId in highTags)
+                {
+                    tagStore.SetTag(row, tagId);
+                }
+            }
+
+            if (tagStore != null && tagStore.TryGetRow(entity, out int seededRow))
+            {
+                tagStore.MirrorTagWords(seededRow, in container);
+                tagStore.SeedTagSnapshotFromBits(seededRow);
             }
 
             entity.Add(container);

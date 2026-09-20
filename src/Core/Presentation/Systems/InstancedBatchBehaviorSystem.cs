@@ -192,7 +192,9 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             ref AttributeBuffer attributes = ref World.Get<AttributeBuffer>(owner);
-            return attributes.GetCurrent(attributeId);
+            return (uint)attributeId < (uint)Ludots.Core.Gameplay.GAS.Components.AttributeBuffer.MAX_ATTRS
+                ? attributes.GetCurrent(attributeId)
+                : Ludots.Core.Gameplay.GAS.AttributeReads.Current(World, owner, attributeId);
         }
 
         private static bool IsGasPresentationEvent(PresentationEventKind kind)

@@ -88,7 +88,7 @@ public sealed class ModRegistrySet
     private static IdentityTable CreateTags()
         => new(
             "Tag",
-            maxExclusive: 256,
+            maxExclusive: TagRegistry.MaxTagIds,
             startId: 1,
             invalidId: 0,
             comparer: StringComparer.Ordinal);
