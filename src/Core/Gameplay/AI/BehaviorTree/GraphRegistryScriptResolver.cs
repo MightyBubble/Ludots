@@ -44,9 +44,6 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
             => RequireProgram(registry, ResolveId(graphKey));
 
         public static int RequireActionId(GraphActionCatalog catalog, string actionName)
-            => RequireActionId(catalog, actionName, GraphActionHost.Script);
-
-        public static int RequireActionId(GraphActionCatalog catalog, string actionName, GraphActionHost expectedHost)
         {
             if (catalog == null) throw new ArgumentNullException(nameof(catalog));
             if (string.IsNullOrWhiteSpace(actionName))

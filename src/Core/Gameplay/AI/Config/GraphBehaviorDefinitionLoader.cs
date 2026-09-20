@@ -21,24 +21,25 @@ namespace Ludots.Core.Gameplay.AI.Config
             _functions = functions;
         }
 
-        private GraphBehaviorDefinitionLoader(GraphActionCatalog actions)
+        private GraphBehaviorDefinitionLoader(GraphActionCatalog actions, GraphFunctionCatalog functions)
         {
             _actions = actions ?? throw new ArgumentNullException(nameof(actions));
+            _functions = functions ?? throw new ArgumentNullException(nameof(functions));
         }
 
-        public static void ValidateBehaviorTrees(JsonArray items, GraphActionCatalog actions)
+        public static void ValidateBehaviorTrees(JsonArray items, GraphActionCatalog actions, GraphFunctionCatalog functions)
         {
             ArgumentNullException.ThrowIfNull(items);
-            var compiler = new GraphBehaviorDefinitionLoader(actions);
+            var compiler = new GraphBehaviorDefinitionLoader(actions, functions);
             var catalog = new GraphBehaviorCatalog();
             ValidateItems(items, "AI/behavior_trees.json", (id, row) =>
                 catalog.RegisterTree(compiler.CompileTree(id, row)));
         }
 
-        public static void ValidateHfsms(JsonArray items, GraphActionCatalog actions)
+        public static void ValidateHfsms(JsonArray items, GraphActionCatalog actions, GraphFunctionCatalog functions)
         {
             ArgumentNullException.ThrowIfNull(items);
-            var compiler = new GraphBehaviorDefinitionLoader(actions);
+            var compiler = new GraphBehaviorDefinitionLoader(actions, functions);
             var catalog = new GraphBehaviorCatalog();
             ValidateItems(items, "AI/hfsm.json", (id, row) =>
                 catalog.RegisterHfsm(compiler.CompileHfsm(id, row)));

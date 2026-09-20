@@ -751,11 +751,13 @@ app.MapPut("/api/ai/behavior-trees", async (HttpRequest req, string? source) =>
         }
     }
 
-    if (!TryBuildAiTopologyActionCatalog(out GraphActionCatalog actions, out string? actionError))
+    if (!TryBuildAiTopologyActionCatalog(launcher, source, out GraphActionCatalog actions, out string? actionError))
         return Results.BadRequest(new { ok = false, error = actionError });
+    if (!TryBuildAiTopologyFunctionCatalog(launcher, source, out GraphFunctionCatalog functions, out string? funcError))
+        return Results.BadRequest(new { ok = false, error = funcError });
     try
     {
-        GraphBehaviorDefinitionLoader.ValidateBehaviorTrees(items, actions);
+        GraphBehaviorDefinitionLoader.ValidateBehaviorTrees(items, actions, functions);
     }
     catch (Exception ex)
     {
@@ -795,11 +797,13 @@ app.MapPut("/api/ai/hfsm", async (HttpRequest req, string? source) =>
         }
     }
 
-    if (!TryBuildAiTopologyActionCatalog(out GraphActionCatalog actions, out string? actionError))
+    if (!TryBuildAiTopologyActionCatalog(launcher, source, out GraphActionCatalog actions, out string? actionError))
         return Results.BadRequest(new { ok = false, error = actionError });
+    if (!TryBuildAiTopologyFunctionCatalog(launcher, source, out GraphFunctionCatalog functions, out string? funcError))
+        return Results.BadRequest(new { ok = false, error = funcError });
     try
     {
-        GraphBehaviorDefinitionLoader.ValidateHfsms(items, actions);
+        GraphBehaviorDefinitionLoader.ValidateHfsms(items, actions, functions);
     }
     catch (Exception ex)
     {
@@ -811,32 +815,30 @@ app.MapPut("/api/ai/hfsm", async (HttpRequest req, string? source) =>
     return Results.Ok(new { ok = true, source = resolvedSource, relativePath = "AI/hfsm.json", path });
 });
 
-app.MapGet("/api/ai/action-lib", (string? host) =>
+app.MapGet("/api/ai/action-lib", (string? source) =>
 {
-    string repoRoot = FindAssetsRoot();
-    string path = Path.Combine(repoRoot, "assets", "GAS", "action_lib.json");
-    if (!File.Exists(path))
-        return Results.NotFound(new { ok = false, error = $"action_lib.json missing at {path}", path });
-    if (!TryReadJsonArrayFile(path, out JsonArray items, out string? readError))
-        return Results.BadRequest(new { ok = false, error = readError, path });
+    if (!TryCollectAiLibRoots(launcher, source, out List<string> roots, out string? resolveError))
+        return Results.BadRequest(new { ok = false, error = resolveError });
 
-    string? hostFilter = string.IsNullOrWhiteSpace(host) ? null : host.Trim();
-    var actions = new List<object>();
-    foreach (JsonNode? node in items)
+    List<(string Name, string Graph)> entries = MergeAiLibEntries(roots, Path.Combine("GAS", "action_lib.json"));
+    return Results.Ok(new
     {
-        if (node is not JsonObject row)
-            continue;
-        string name = row["name"]?.GetValue<string>() ?? "";
-        string actionHost = row["host"]?.GetValue<string>() ?? "";
-        string graph = row["graph"]?.GetValue<string>() ?? "";
-        if (name.Length == 0)
-            continue;
-        if (hostFilter != null && !string.Equals(actionHost, hostFilter, StringComparison.OrdinalIgnoreCase))
-            continue;
-        actions.Add(new { name, host = actionHost, graph });
-    }
+        ok = true,
+        actions = entries.Select(e => new { name = e.Name, graph = e.Graph }),
+    });
+});
 
-    return Results.Ok(new { ok = true, path, host = hostFilter, actions });
+app.MapGet("/api/ai/func-lib", (string? source) =>
+{
+    if (!TryCollectAiLibRoots(launcher, source, out List<string> roots, out string? resolveError))
+        return Results.BadRequest(new { ok = false, error = resolveError });
+
+    List<(string Name, string Graph)> entries = MergeAiLibEntries(roots, Path.Combine("GAS", "func_lib.json"));
+    return Results.Ok(new
+    {
+        ok = true,
+        functions = entries.Select(e => new { name = e.Name, graph = e.Graph }),
+    });
 });
 
 app.MapPost("/api/mods/{modId}/maps/{mapId}/boards", async (string modId, string mapId, HttpRequest req) =>
@@ -3750,37 +3752,156 @@ static bool TryParseAiTopologyItemsBody(string body, out JsonArray items, out st
     }
 }
 
-static bool TryBuildAiTopologyActionCatalog(out GraphActionCatalog catalog, out string? error)
+static bool TryCollectAiLibRoots(LauncherService launcher, string? source, out List<string> roots, out string? error)
+{
+    roots = new List<string>();
+    error = null;
+    string repoRoot = FindAssetsRoot();
+    roots.Add(Path.Combine(repoRoot, "assets"));
+
+    string sourceKey = string.IsNullOrWhiteSpace(source) ? "core" : source.Trim();
+    if (string.Equals(sourceKey, "core", StringComparison.OrdinalIgnoreCase))
+    {
+        return true;
+    }
+
+    var mod = launcher.DiscoverMods().FirstOrDefault(m =>
+        string.Equals(m.Id, sourceKey, StringComparison.OrdinalIgnoreCase));
+    if (mod == null)
+    {
+        error = $"Unknown AI topology source '{sourceKey}'. Use 'core' or a launcher mod id.";
+        return false;
+    }
+
+    string modAssets = Path.Combine(mod.RootPath, "assets");
+    if (!roots[0].Equals(modAssets, StringComparison.OrdinalIgnoreCase))
+    {
+        roots.Add(modAssets);
+    }
+
+    return true;
+}
+
+static List<(string Name, string Graph)> MergeAiLibEntries(List<string> roots, string relativePath)
+{
+    // Core first, mod overlay after — mirrors the ConfigPipeline fragment order.
+    var byName = new Dictionary<string, string>(StringComparer.Ordinal);
+    foreach (string root in roots)
+    {
+        string path = Path.Combine(root, relativePath);
+        if (!TryReadJsonArrayFile(path, out JsonArray items, out _))
+            continue;
+
+        foreach (JsonNode? node in items)
+        {
+            if (node is not JsonObject row)
+                continue;
+            string name = row["name"]?.GetValue<string>()?.Trim() ?? "";
+            string graph = row["graph"]?.GetValue<string>()?.Trim() ?? "";
+            if (name.Length == 0 || graph.Length == 0)
+                continue;
+            byName[name] = graph;
+        }
+    }
+
+    return byName.Select(kv => (kv.Key, kv.Value)).ToList();
+}
+
+static bool TryBuildAiTopologyActionCatalog(LauncherService launcher, string? source, out GraphActionCatalog catalog, out string? error)
 {
     catalog = new GraphActionCatalog();
-    error = null;
-    string path = Path.Combine(FindAssetsRoot(), "assets", "GAS", "action_lib.json");
-    if (!TryReadJsonArrayFile(path, out JsonArray items, out error))
+    if (!TryCollectAiLibRoots(launcher, source, out List<string> roots, out error))
     {
         return false;
     }
 
     try
     {
-        for (int i = 0; i < items.Count; i++)
+        List<(string Name, string Graph)> entries = MergeAiLibEntries(roots, Path.Combine("GAS", "action_lib.json"));
+        if (entries.Count == 0)
         {
-            if (items[i] is not JsonObject row)
-            {
-                throw new InvalidOperationException($"ActionLib '{path}' item {i} must be an object.");
-            }
+            error = "ActionLib has no entries — GAS/action_lib.json is missing or empty in every source root.";
+            return false;
+        }
 
-            string name = row["name"]?.GetValue<string>()?.Trim() ?? "";
-            string hostText = row["host"]?.GetValue<string>()?.Trim() ?? "";
-            if (name.Length == 0)
-            {
-                throw new InvalidOperationException($"ActionLib '{path}' item {i} requires a non-empty name.");
-            }
-            if (!GraphActionHostYieldPolicy.TryParse(hostText, out GraphActionHost host))
-            {
-                throw new InvalidOperationException($"ActionLib '{name}' host '{hostText}' is unsupported.");
-            }
+        for (int i = 0; i < entries.Count; i++)
+        {
+            catalog.Register(entries[i].Name, i + 1, GraphKind.Script);
+        }
 
-            catalog.Register(name, i + 1, GraphKind.Script, host);
+        return true;
+    }
+    catch (Exception ex)
+    {
+        error = ex.Message;
+        return false;
+    }
+}
+
+static bool TryBuildAiTopologyFunctionCatalog(LauncherService launcher, string? source, out GraphFunctionCatalog catalog, out string? error)
+{
+    catalog = new GraphFunctionCatalog();
+    if (!TryCollectAiLibRoots(launcher, source, out List<string> roots, out error))
+    {
+        return false;
+    }
+
+    try
+    {
+        var graphKeys = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (string root in roots)
+        {
+            if (!TryReadJsonArrayFile(Path.Combine(root, "GAS", "graphs.json"), out JsonArray graphs, out _))
+                continue;
+
+            foreach (JsonNode? node in graphs)
+            {
+                if (node is not JsonObject row)
+                    continue;
+                string id = row["id"]?.GetValue<string>()?.Trim() ?? "";
+                if (id.Length > 0)
+                    graphKeys[id] = id;
+            }
+        }
+
+        Dictionary<string, string> raw = new(StringComparer.Ordinal);
+        foreach (string root in roots)
+        {
+            if (!TryReadJsonArrayFile(Path.Combine(root, "GAS", "func_lib.json"), out JsonArray items, out _))
+                continue;
+
+            foreach (JsonNode? node in items)
+            {
+                if (node is not JsonObject row)
+                    continue;
+                string name = row["name"]?.GetValue<string>()?.Trim() ?? "";
+                string graph = row["graph"]?.GetValue<string>()?.Trim() ?? "";
+                string kind = row["kind"]?.GetValue<string>()?.Trim() ?? "Script";
+                string purity = row["purity"]?.GetValue<string>()?.Trim() ?? "pure";
+                if (name.Length == 0 || graph.Length == 0)
+                    continue;
+                if (!string.Equals(kind, "Script", StringComparison.Ordinal))
+                    throw new InvalidOperationException($"FuncLib '{name}' kind '{kind}' must be Script.");
+                if (!string.Equals(purity, "pure", StringComparison.Ordinal))
+                    throw new InvalidOperationException($"FuncLib '{name}' purity '{purity}' must be pure.");
+                raw[name] = graph;
+            }
+        }
+
+        if (raw.Count == 0)
+        {
+            error = "FuncLib has no entries — GAS/func_lib.json is missing or empty in every source root.";
+            return false;
+        }
+
+        foreach ((string name, string graph) in raw)
+        {
+            if (!graphKeys.ContainsKey(graph))
+                throw new InvalidOperationException($"FuncLib '{name}' graph '{graph}' is not declared in GAS/graphs.json.");
+            int id = GraphIdRegistry.GetId(graph);
+            if (id <= 0)
+                id = GraphIdRegistry.Register(graph);
+            catalog.Register(name, id, GraphKind.Script);
         }
 
         return true;

@@ -121,7 +121,7 @@ TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面�
 
 又开了一条线：行为树「真图化」（BT-1）与 HFSM「真图化」（FSM-1）。设计冻结本在 `artifacts/showcases/graph-fsm-bt-refactor-design.md`（L2 身份已纠偏，见下）。
 
-**BT / FSM 作者合同（已纠偏）：** 外层是 L2 拓扑，不是 Script 糖文档。BT SSOT = `AI/behavior_trees.json` → `BehaviorTreeWorld`；FSM SSOT = `AI/hfsm.json` → `HfsmWorld` + `GraphProgramHfsmHost`；叶子 = `action_lib.json` + `GAS/graphs.json` Script。编辑器正门：[作者工作室](authoring-studio.md)（`/blueprint` / `/bt-editor` / `/fsm-editor`）。双击叶子进 `/blueprint`（旧址 `/gas-graphs` 仍认）。
+**BT / FSM 作者合同（#1542 起组件式驱动）：** 外层是 L2 拓扑，不是 Script 糖文档。BT SSOT = `AI/behavior_trees.json`，FSM SSOT = `AI/hfsm.json`；驱动 = `GraphActionBrain{BtId|HfsmId}` + `BtState`/`HfsmState` 组件 + `BtBrainHostSystem`/`HfsmBrainHostSystem`（照 Animator 范式，每实体自持状态，无池无索引无释放）。动作叶 = `action_lib.json`（资产中性，无 host 字段）+ `GAS/graphs.json` Script；转移条件与 BT Condition 叶 = `func_lib.json` 纯函数。`BehaviorTreeWorld` 已退出演武场驱动（遗留消费者：`GraphBehaviorIntegrationMod`，迁移债）；`HfsmWorld` 遗留消费者：HFSM 哨兵 arena（待迁）。编辑器正门：[作者工作室](authoring-studio.md)（`/blueprint` / `/bt-editor` / `/fsm-editor`），保存走生产校验器（action_lib + func_lib 双目录）。双击叶子进 `/blueprint`（旧址 `/gas-graphs` 仍认）。
 
 **糖 / 降级宿主（回归，非作者 SSOT）：** `BtSequence` / `BtSelector` / `BtDecorator` / `FsmState` 与 `GraphBehaviorTreeHost` / `GraphFsmHost` 仍保留作编译降级与单元回归；**禁止**再把整树 / 整机 Script 糖当作演武场或编辑器正门。生产资产已删除 `Graph.BT.Tree.PatrolChaseAttack` / `Graph.FSM.Sentry` 外壳。
 

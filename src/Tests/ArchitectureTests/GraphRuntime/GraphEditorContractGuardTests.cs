@@ -233,13 +233,17 @@ namespace Ludots.Tests.Architecture.GraphRuntime
             string source = File.ReadAllText(bridgePath);
 
             Assert.That(
-                Regex.Matches(source, @"GraphBehaviorDefinitionLoader\.ValidateBehaviorTrees\(items, actions\)").Count,
+                Regex.Matches(source, @"GraphBehaviorDefinitionLoader\.ValidateBehaviorTrees\(items, actions, functions\)").Count,
                 Is.EqualTo(1),
                 "The behavior-tree PUT path must reject data that the production loader cannot compile.");
             Assert.That(
-                Regex.Matches(source, @"GraphBehaviorDefinitionLoader\.ValidateHfsms\(items, actions\)").Count,
+                Regex.Matches(source, @"GraphBehaviorDefinitionLoader\.ValidateHfsms\(items, actions, functions\)").Count,
                 Is.EqualTo(1),
                 "The HFSM PUT path must reject data that the production loader cannot compile.");
+            Assert.That(
+                source.Contains("TryBuildAiTopologyFunctionCatalog"),
+                Is.True,
+                "Both PUT paths must validate conditions against FuncLib, not ActionLib.");
         }
 
         [Test]

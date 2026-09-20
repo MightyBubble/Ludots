@@ -45,6 +45,15 @@ namespace Ludots.Tests.GasTests.AI
                     }]
                     """,
                     "Graph action 'missing' is not registered"),
+                (
+                    """
+                    [{
+                      "id": "bt.condition-not-in-funclib",
+                      "root": "root",
+                      "nodes": [{ "id": "root", "kind": "Condition", "leaf": "ScriptSlice", "action": "bt.action" }]
+                    }]
+                    """,
+                    "Graph function 'bt.action' is not registered in FuncLib"),
             };
 
         private static readonly IReadOnlyList<(string Json, string Error)> HfsmFailures =
@@ -69,17 +78,32 @@ namespace Ludots.Tests.GasTests.AI
                     }]
                     """,
                     "Graph action 'missing' is not registered"),
+                (
+                    """
+                    [{
+                      "id": "hfsm.condition-not-in-funclib",
+                      "root": "root",
+                      "states": [
+                        { "id": "root", "kind": "Compound", "children": ["idle", "alert"], "defaultChild": "idle" },
+                        { "id": "idle", "kind": "Leaf" },
+                        { "id": "alert", "kind": "Leaf" }
+                      ],
+                      "transitions": [{ "from": "idle", "to": "alert", "predicate": "Always", "condition": "hfsm.action" }]
+                    }]
+                    """,
+                    "Graph function 'hfsm.action' is not registered in FuncLib"),
             };
 
         [Test]
         public void ValidateBehaviorTrees_UsesProductionTopologyAndActionRules()
         {
             GraphActionCatalog actions = CreateActions();
+            GraphFunctionCatalog functions = CreateFunctions();
 
             foreach ((string json, string expectedError) in BehaviorTreeFailures)
             {
                 InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
-                    GraphBehaviorDefinitionLoader.ValidateBehaviorTrees(ParseArray(json), actions))!;
+                    GraphBehaviorDefinitionLoader.ValidateBehaviorTrees(ParseArray(json), actions, functions))!;
                 Assert.That(error.Message, Does.Contain(expectedError));
             }
         }
@@ -88,11 +112,12 @@ namespace Ludots.Tests.GasTests.AI
         public void ValidateHfsms_UsesProductionTopologyAndActionRules()
         {
             GraphActionCatalog actions = CreateActions();
+            GraphFunctionCatalog functions = CreateFunctions();
 
             foreach ((string json, string expectedError) in HfsmFailures)
             {
                 InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
-                    GraphBehaviorDefinitionLoader.ValidateHfsms(ParseArray(json), actions))!;
+                    GraphBehaviorDefinitionLoader.ValidateHfsms(ParseArray(json), actions, functions))!;
                 Assert.That(error.Message, Does.Contain(expectedError));
             }
         }
@@ -101,28 +126,40 @@ namespace Ludots.Tests.GasTests.AI
         public void ValidateBehaviorDefinitions_AcceptsValidAndEmptyCatalogs()
         {
             GraphActionCatalog actions = CreateActions();
+            GraphFunctionCatalog functions = CreateFunctions();
             JsonArray trees = ParseArray(
                 """
                 [{
                   "id": "bt.valid",
                   "root": "root",
-                  "nodes": [{ "id": "root", "kind": "Action", "leaf": "ScriptSlice", "action": "bt.action" }]
+                  "nodes": [
+                    { "id": "root", "kind": "Sequence", "children": ["see", "act"] },
+                    { "id": "see", "kind": "Condition", "leaf": "ScriptSlice", "action": "bt.cond" },
+                    { "id": "act", "kind": "Action", "leaf": "ScriptSlice", "action": "bt.action" }
+                  ]
                 }]
                 """);
             JsonArray hfsms = ParseArray(
                 """
                 [{
                   "id": "hfsm.valid",
-                  "root": "idle",
-                  "states": [{ "id": "idle", "kind": "Leaf", "onTick": "hfsm.action" }],
-                  "transitions": [{ "from": "idle", "to": "idle", "predicate": "Always", "priority": 10 }]
+                  "root": "root",
+                  "states": [
+                    { "id": "root", "kind": "Compound", "children": ["idle", "alert"], "defaultChild": "idle" },
+                    { "id": "idle", "kind": "Leaf", "onTick": "hfsm.action" },
+                    { "id": "alert", "kind": "Leaf" }
+                  ],
+                  "transitions": [
+                    { "from": "idle", "to": "alert", "predicate": "Always", "condition": "hfsm.cond", "priority": 10 },
+                    { "from": "alert", "to": "idle", "predicate": "Always" }
+                  ]
                 }]
                 """);
 
-            Assert.DoesNotThrow(() => GraphBehaviorDefinitionLoader.ValidateBehaviorTrees(trees, actions));
-            Assert.DoesNotThrow(() => GraphBehaviorDefinitionLoader.ValidateHfsms(hfsms, actions));
-            Assert.DoesNotThrow(() => GraphBehaviorDefinitionLoader.ValidateBehaviorTrees(new JsonArray(), actions));
-            Assert.DoesNotThrow(() => GraphBehaviorDefinitionLoader.ValidateHfsms(new JsonArray(), actions));
+            Assert.DoesNotThrow(() => GraphBehaviorDefinitionLoader.ValidateBehaviorTrees(trees, actions, functions));
+            Assert.DoesNotThrow(() => GraphBehaviorDefinitionLoader.ValidateHfsms(hfsms, actions, functions));
+            Assert.DoesNotThrow(() => GraphBehaviorDefinitionLoader.ValidateBehaviorTrees(new JsonArray(), actions, functions));
+            Assert.DoesNotThrow(() => GraphBehaviorDefinitionLoader.ValidateHfsms(new JsonArray(), actions, functions));
         }
 
         private static GraphActionCatalog CreateActions()
@@ -131,6 +168,14 @@ namespace Ludots.Tests.GasTests.AI
             actions.Register("bt.action", 1, GraphKind.Script);
             actions.Register("hfsm.action", 2, GraphKind.Script);
             return actions;
+        }
+
+        private static GraphFunctionCatalog CreateFunctions()
+        {
+            var functions = new GraphFunctionCatalog();
+            functions.Register("bt.cond", 3, GraphKind.Script);
+            functions.Register("hfsm.cond", 4, GraphKind.Script);
+            return functions;
         }
 
         private static JsonArray ParseArray(string json)

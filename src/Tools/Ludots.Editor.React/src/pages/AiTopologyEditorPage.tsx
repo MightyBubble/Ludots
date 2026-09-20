@@ -38,7 +38,8 @@ type CatalogSource = {
   hfsm: { path: string; exists: boolean; items: Array<{ id: string }> };
 };
 
-type ActionLibEntry = { name: string; host: string; graph: string };
+type ActionLibEntry = { name: string; graph: string };
+type FuncLibEntry = { name: string; graph: string };
 
 type BtNode = {
   id: string;
@@ -289,7 +290,6 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
   const subtitle = isBt
     ? '图画布编辑 AI/behavior_trees.json · 拖线挂子节点 · 双击叶子进函数图'
     : '图画布编辑 AI/hfsm.json · 虚线=层级 · 黄线=转移 · 双击叶子进函数图';
-  const actionHost = isBt ? 'BehaviorTree' : 'Hfsm';
 
   const [sources, setSources] = useState<CatalogSource[]>([]);
   const [sourceId, setSourceId] = useState('core');
@@ -298,6 +298,7 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
   const [selectedNodeId, setSelectedNodeId] = useState('');
   const [selectedEdgeId, setSelectedEdgeId] = useState('');
   const [actions, setActions] = useState<ActionLibEntry[]>([]);
+  const [functions, setFunctions] = useState<FuncLibEntry[]>([]);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -323,15 +324,14 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
     setError('');
   }, []);
 
-  const loadActions = useCallback(async () => {
-    const res = await fetch(`/api/ai/action-lib?host=${encodeURIComponent(actionHost)}`);
-    const json = await res.json();
-    if (!json.ok) {
-      setActions([]);
-      return;
-    }
-    setActions(asArray<ActionLibEntry>(json.actions));
-  }, [actionHost]);
+  const loadLibs = useCallback(async (source: string) => {
+    const actionRes = await fetch(`/api/ai/action-lib?source=${encodeURIComponent(source)}`);
+    const actionJson = await actionRes.json();
+    setActions(actionJson.ok ? asArray<ActionLibEntry>(actionJson.actions) : []);
+    const funcRes = await fetch(`/api/ai/func-lib?source=${encodeURIComponent(source)}`);
+    const funcJson = await funcRes.json();
+    setFunctions(funcJson.ok ? asArray<FuncLibEntry>(funcJson.functions) : []);
+  }, []);
 
   const applySelectionToFlow = useCallback((row: BtTree | HfsmMachine | null) => {
     if (!row) {
@@ -370,12 +370,12 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
 
   useEffect(() => {
     void loadCatalog();
-    void loadActions();
-  }, [loadCatalog, loadActions]);
+  }, [loadCatalog]);
 
   useEffect(() => {
     void loadItems(sourceId);
-  }, [sourceId, loadItems]);
+    void loadLibs(sourceId);
+  }, [sourceId, loadItems, loadLibs]);
 
   const syncItemsFromFlow = useCallback(
     (nextNodes: Node<TopologyNodeData>[], nextEdges: Edge<TopologyEdgeData>[]) => {
@@ -411,17 +411,18 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
   const openLeafGraph = useCallback(
     (actionName: string | undefined) => {
       if (!actionName) {
-        setError('这个叶子还没挂 ActionLib 名字');
+        setError('这个叶子还没挂 ActionLib/FuncLib 名字');
         return;
       }
-      const entry = actions.find((a) => a.name === actionName);
-      if (!entry?.graph) {
-        setError(`ActionLib 里找不到 ${actionName}，或没有 graph 字段`);
+      const graphKey = actions.find((a) => a.name === actionName)?.graph
+        ?? functions.find((f) => f.name === actionName)?.graph;
+      if (!graphKey) {
+        setError(`ActionLib/FuncLib 里找不到 ${actionName}，或没有 graph 字段`);
         return;
       }
-      navigate(`/gas-graphs?mod=core&graph=${encodeURIComponent(entry.graph)}`);
+      navigate(`/gas-graphs?mod=${encodeURIComponent(sourceId)}&graph=${encodeURIComponent(graphKey)}`);
     },
-    [actions, navigate],
+    [actions, functions, navigate, sourceId],
   );
 
   const onConnect: OnConnect = useCallback(
@@ -916,15 +917,15 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
                     </select>
                   </label>
                   <label className={labelClass}>
-                    ActionLib
+                    {selectedBtNode.kind === 'Condition' ? 'FuncLib（condition）' : 'ActionLib'}
                     <select
                       className={fieldClass}
                       value={selectedBtNode.action ?? ''}
                       onChange={(e) => updateSelectedNode({ action: e.target.value })}
                     >
                       <option value="">（未挂）</option>
-                      {actions.map((a) => (
-                        <option key={a.name} value={a.name}>{a.name} → {a.graph}</option>
+                      {(selectedBtNode.kind === 'Condition' ? functions : actions).map((e) => (
+                        <option key={e.name} value={e.name}>{e.name} → {e.graph}</option>
                       ))}
                     </select>
                   </label>
@@ -1023,15 +1024,15 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
                 </select>
               </label>
               <label className={labelClass}>
-                condition（ActionLib）
+                condition（FuncLib）
                 <select
                   className={fieldClass}
                   value={selectedTransition.data?.condition ?? ''}
                   onChange={(e) => updateSelectedTransition({ condition: e.target.value })}
                 >
                   <option value="">（无）</option>
-                  {actions.map((a) => (
-                    <option key={a.name} value={a.name}>{a.name}</option>
+                  {functions.map((f) => (
+                    <option key={f.name} value={f.name}>{f.name}</option>
                   ))}
                 </select>
               </label>

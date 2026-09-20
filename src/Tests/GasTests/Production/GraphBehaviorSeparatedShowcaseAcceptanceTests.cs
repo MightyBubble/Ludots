@@ -66,7 +66,7 @@ namespace Ludots.Tests.Gas.Production
         }
 
         /// <summary>
-        /// Crowd honesty gate: featured = L2 BehaviorTreeWorld (bt.patrolChaseAttack) with leaf Scripts;
+        /// Crowd honesty gate: featured = component-driven bt.patrolChaseAttack (GraphActionBrain{BtId} + BtState) with leaf Scripts;
         /// 10k crowd = no-graph AlwaysSuccess tree (ScriptSlices==0).
         /// </summary>
         [Test]
