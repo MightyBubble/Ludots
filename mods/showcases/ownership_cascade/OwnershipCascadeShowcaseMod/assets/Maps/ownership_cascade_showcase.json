@@ -1,3 +1,8 @@
 {
-  "Id": "ownership_cascade_showcase"
+  "Id": "ownership_cascade_showcase",
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  }
 }

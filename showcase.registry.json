@@ -58,7 +58,7 @@
     },
     {
       "kind": "binding",
-      "value": "capability_standard_graph_op_provider",
+      "value": "graph_op_provider",
       "reason": "GraphOp provider 注册库 mod（RegisterGraphOp at OnLoad），由 capability_standard_mod_graph_op_extension_showcase 消费演示；非独立 showcase 条目"
     },
     {
