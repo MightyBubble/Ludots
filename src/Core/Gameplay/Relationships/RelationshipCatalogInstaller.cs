@@ -70,22 +70,6 @@ namespace Ludots.Core.Gameplay.Relationships
                 flags.Register(catalog.Flags[i].Id);
             }
 
-            bands.Clear();
-            for (int i = 0; i < catalog.Bands.Count; i++)
-            {
-                RelationshipBandConfig band = catalog.Bands[i];
-                int typeId = types.GetId(band.TypeId);
-                int metricId = metrics.GetId(band.MetricId);
-                int flagId = flags.GetId(band.FlagId);
-                if (!Enum.TryParse(band.Comparison, ignoreCase: true, out RelationshipBandComparison comparison))
-                {
-                    throw new InvalidOperationException(
-                        $"Unknown relationship band comparison '{band.Comparison}' for band '{band.Id}'.");
-                }
-
-                bands.Register(new RelationshipBandDefinition(typeId, metricId, flagId, band.Threshold, comparison));
-            }
-
             for (int i = 0; i < catalog.Reasons.Count; i++)
             {
                 reasons.Register(catalog.Reasons[i].Id);

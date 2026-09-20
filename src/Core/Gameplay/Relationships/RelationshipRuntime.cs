@@ -324,7 +324,6 @@ namespace Ludots.Core.Gameplay.Relationships
             }
 
             edge.SetMetric(metricId, clamped);
-            edge.Flags = ApplyBands(validatedTypeId, metricId, edge.Flags, clamped);
             edge.Version++;
             set.Set(validatedTypeId, edge);
             _world.SetRelationship(source, target, set);
@@ -723,31 +722,6 @@ namespace Ludots.Core.Gameplay.Relationships
             }
 
             return (short)value;
-        }
-
-        private uint ApplyBands(int typeId, int metricId, uint flags, short value)
-        {
-            var bands = _bands.Bands;
-            for (int i = 0; i < bands.Count; i++)
-            {
-                RelationshipBandDefinition band = bands[i];
-                if (band.TypeId != typeId || band.MetricId != metricId)
-                {
-                    continue;
-                }
-
-                uint mask = _flags.GetMask(band.FlagId);
-                bool isActive = band.Comparison switch
-                {
-                    RelationshipBandComparison.GreaterOrEqual => value >= band.Threshold,
-                    RelationshipBandComparison.LessOrEqual => value <= band.Threshold,
-                    _ => false,
-                };
-
-                flags = isActive ? flags | mask : flags & ~mask;
-            }
-
-            return flags;
         }
 
         private readonly struct RelationshipEntityKey : IEquatable<RelationshipEntityKey>
