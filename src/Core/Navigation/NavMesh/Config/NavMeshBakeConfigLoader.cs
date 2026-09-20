@@ -269,8 +269,7 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                             RequireOnlyProperties(
                                 boardObj,
                                 $"NavMeshBakeConfig.maps.{mapEntry.Key}.boards.{boardEntry.Key}",
-                                new[] { "tileWorldWidthCm", "tileWorldHeightCm" },
-                                new[] { "originXcm", "originYcm" });
+                                new[] { "tileWorldWidthCm", "tileWorldHeightCm" });
                         }
                     }
                 }

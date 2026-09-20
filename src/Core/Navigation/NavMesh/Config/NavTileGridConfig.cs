@@ -12,9 +12,5 @@ namespace Ludots.Core.Navigation.NavMesh.Config
         public int TileWorldWidthCm { get; set; }
 
         public int TileWorldHeightCm { get; set; }
-
-        public int OriginXcm { get; set; }
-
-        public int OriginYcm { get; set; }
     }
 }
