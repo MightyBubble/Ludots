@@ -97,10 +97,15 @@ namespace Ludots.Core.Config
                 }
             }
 
-            // 2. Apply Overrides
+            // 2. Apply Overrides — field-level deep merge over the template component
+            // (unmentioned fields inherit template values; components absent from the
+            // template are added as-is). A "__replace": true marker on the override
+            // object opts back into whole-component replacement — variant-shaped
+            // components (e.g. RegionVolumeCm circle→rect) must not field-merge.
             foreach (var kvp in _overrides)
             {
-                ApplyComponent(entity, kvp.Key, kvp.Value, isOverride: true);
+                JsonNode data = ResolveOverrideData(kvp.Key, kvp.Value);
+                ApplyComponent(entity, kvp.Key, data, isOverride: true);
             }
 
             SeedGasTagSnapshots(entity);
@@ -143,6 +148,45 @@ namespace Ludots.Core.Config
                 ref TagCountContainer counts = ref _world.Get<TagCountContainer>(entity);
                 _world.Add(entity, TagCountSnapshot.From(ref counts));
             }
+        }
+
+        private JsonNode ResolveOverrideData(string componentName, JsonNode overrideNode)
+        {
+            if (TryConsumeReplaceMarker(overrideNode, out JsonNode replaced))
+            {
+                return replaced;
+            }
+
+            if (_activeTemplate != null &&
+                _activeTemplate.Components.TryGetValue(componentName, out JsonNode templateNode))
+            {
+                var merged = templateNode.DeepClone();
+                JsonMerger.Merge(merged, overrideNode);
+                return merged;
+            }
+
+            return overrideNode;
+        }
+
+        /// <summary>
+        /// "__replace": true（对象顶层布尔标记，沿用 ConfigMerger __delete 的保留字惯例）
+        /// 表示该覆盖整组件替换模板值；标记本身在装配前剥离。
+        /// </summary>
+        private static bool TryConsumeReplaceMarker(JsonNode node, out JsonNode replaced)
+        {
+            replaced = null;
+            if (node is not JsonObject obj ||
+                !obj.TryGetPropertyValue("__replace", out JsonNode? marker) ||
+                marker is not JsonValue value ||
+                !value.TryGetValue<bool>(out bool replace) || !replace)
+            {
+                return false;
+            }
+
+            var clone = (JsonObject)obj.DeepClone();
+            clone.Remove("__replace");
+            replaced = clone;
+            return true;
         }
 
         private void ApplyComponent(Entity entity, string componentName, JsonNode data, bool isOverride)

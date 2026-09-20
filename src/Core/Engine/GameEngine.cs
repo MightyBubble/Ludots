@@ -920,7 +920,7 @@ namespace Ludots.Core.Engine
             MapLoader.SetComponentAuthoringContext(componentAuthoringContext);
             new AttributeConstraintsLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             int timeScalePermilleAttributeId = AttributeRegistry.Register(TimeAttributeNames.ScalePermille);
-            var graphProgramRegistry = new GraphProgramRegistry();
+            var graphProgramRegistry = new GraphProgramRegistry(graphHandlers);
             // Enums load before events: custom event params may annotate enumType
             // against this catalog, and graph compilation resolves enum-bound sugar through it.
             var enumCatalog = new Ludots.Core.Scripting.EnumCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
@@ -997,7 +997,8 @@ namespace Ludots.Core.Engine
                 builtinHandlers,
                 customEventCatalog.Schemas,
                 enumCatalog,
-                intIdCollectionStore);
+                intIdCollectionStore,
+                graphHandlers);
             var graphPackages = graphConfigLoader.LoadIdsAndCompile(ConfigCatalog, ConfigConflictReport);
             var presetTypes = new PresetTypeRegistry();
             var presetTypeLoader = new PresetTypeLoader(ConfigPipeline, presetTypes, builtinHandlers);
@@ -1082,7 +1083,7 @@ namespace Ludots.Core.Engine
                 presetTypes,
                 builtinHandlers,
                 graphProgramRegistry,
-                GasGraphOpHandlerTable.Instance);
+                graphHandlers);
             new ContextGroupConfigLoader(ConfigPipeline, contextGroups).Load(ConfigCatalog, ConfigConflictReport);
             itemConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             exchangeLoader.Load(ConfigCatalog, ConfigConflictReport);
@@ -2678,7 +2679,11 @@ namespace Ludots.Core.Engine
             }
 
             RegisterSystem(physics2dSystem, SystemGroup.InputCollection);
-            RegisterSystem(worldSyncSystem, SystemGroup.PostMovement);
+            // worldSync 必须钉在 SpatialPartitionUpdateSystem 之前：它把物理体位姿写回
+            // WorldPositionCm，是 PostMovement 组的位置生产者。追加到组尾会让 massnav
+            // 仿真步进（钉在分区同步前）读到上一拍的体位姿——步进写入被组尾回写覆盖，
+            // 解算器下拍又重吞旧位姿，运动学单位原地死锁（人群物理 arena 行军全灭）。
+            InsertSystemBeforeRequired<SpatialPartitionUpdateSystem>(worldSyncSystem, SystemGroup.PostMovement);
             GlobalContext["Ludots.Core.Physics2D.Ticking.Physics2DSimulationSystem"] = physics2dSystem;
             GlobalContext["Ludots.Core.Physics2D.Systems.Physics2DToWorldPositionSyncSystem"] = worldSyncSystem;
 
@@ -2871,6 +2876,7 @@ namespace Ludots.Core.Engine
                 var entityIndex = MapLoader.LoadEntitiesAndIndex(mapConfig);
                 session.EntityIndex = entityIndex;
                 BakeRegionVolumesForSession(session);
+                MaterializeInstanceRelations(session, mapConfig, entityIndex);
                 SetSessionParticipants(
                     session,
                     ParticipantBindingResolver.Resolve(
@@ -3044,6 +3050,7 @@ namespace Ludots.Core.Engine
             var entityIndex = MapLoader.LoadEntitiesAndIndex(mapConfig);
             session.EntityIndex = entityIndex;
             BakeRegionVolumesForSession(session);
+            MaterializeInstanceRelations(session, mapConfig, entityIndex);
             SetSessionParticipants(
                 session,
                 ParticipantBindingResolver.Resolve(
@@ -3415,6 +3422,17 @@ namespace Ludots.Core.Engine
             var rosters = new Ludots.Core.Fields.Config.FieldHierarchyConfigLoader(ConfigPipeline)
                 .Load(ConfigCatalog, ConfigConflictReport);
             session.RegionGroups = Ludots.Core.Gameplay.FieldRegions.RegionHierarchyBuilder.Build(World, session, rosters);
+        }
+
+        private void MaterializeInstanceRelations(MapSession session, MapConfig mapConfig, Ludots.Core.Systems.MapLoadEntityIndex entityIndex)
+        {
+            Ludots.Core.Gameplay.Relationships.InstanceRelationMaterializer.Materialize(
+                session,
+                mapConfig,
+                entityIndex,
+                GetService(CoreServiceKeys.RelationshipRuntime),
+                GetService(CoreServiceKeys.RelationshipTypeRegistry),
+                GetService(CoreServiceKeys.RelationshipMetricRegistry));
         }
 
         private void BakeRegionVolumesForSession(MapSession session)

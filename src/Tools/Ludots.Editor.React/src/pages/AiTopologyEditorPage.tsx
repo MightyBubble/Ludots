@@ -38,7 +38,7 @@ type CatalogSource = {
   hfsm: { path: string; exists: boolean; items: Array<{ id: string }> };
 };
 
-type ActionLibEntry = { name: string; graph: string };
+type ActionLibEntry = { name: string; host: string; graph: string; source: string };
 type FuncLibEntry = { name: string; graph: string };
 
 type BtNode = {
@@ -107,6 +107,11 @@ function emptyHfsm(id: string): HfsmMachine {
     ],
     transitions: [],
   };
+}
+
+function readTopologySource(): string {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('source')?.trim() || 'core';
 }
 
 function uniqueId(prefix: string, existing: Set<string>): string {
@@ -292,7 +297,7 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
     : '图画布编辑 AI/hfsm.json · 虚线=层级 · 黄线=转移 · 双击叶子进函数图';
 
   const [sources, setSources] = useState<CatalogSource[]>([]);
-  const [sourceId, setSourceId] = useState('core');
+  const [sourceId, setSourceId] = useState(readTopologySource);
   const [items, setItems] = useState<Array<BtTree | HfsmMachine>>([]);
   const [selectedId, setSelectedId] = useState('');
   const [selectedNodeId, setSelectedNodeId] = useState('');
@@ -365,12 +370,27 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
     setSelectedId(first?.id ?? '');
     applySelectionToFlow(first);
     setError('');
+    if (next.length === 0) {
+      setStatus(
+        source === 'core'
+          ? `Core 表是空的`
+          : `「${source}」还没有自己的${isBt ? '行为树' : '状态机'}，新建并保存会写到这个 Mod`,
+      );
+      return;
+    }
     setStatus(`已加载 ${source} · ${next.length} 条`);
   }, [applySelectionToFlow, isBt]);
 
   useEffect(() => {
     void loadCatalog();
   }, [loadCatalog]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if ((params.get('source') ?? 'core') === sourceId) return;
+    params.set('source', sourceId);
+    window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
+  }, [sourceId]);
 
   useEffect(() => {
     void loadItems(sourceId);
@@ -420,7 +440,7 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
         setError(`ActionLib/FuncLib 里找不到 ${actionName}，或没有 graph 字段`);
         return;
       }
-      navigate(`/gas-graphs?mod=${encodeURIComponent(sourceId)}&graph=${encodeURIComponent(graphKey)}`);
+      navigate(`/blueprint?mod=${encodeURIComponent(sourceId)}&graph=${encodeURIComponent(graphKey)}`);
     },
     [actions, functions, navigate, sourceId],
   );
@@ -673,9 +693,14 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
             value={sourceId}
             onChange={(e) => setSourceId(e.target.value)}
           >
-            {sources.map((s) => (
-              <option key={s.id} value={s.id}>{s.name} ({s.id})</option>
-            ))}
+            {sources.map((s) => {
+              const exists = isBt ? s.behaviorTrees.exists : s.hfsm.exists;
+              return (
+                <option key={s.id} value={s.id}>
+                  {s.name} ({s.id}){exists ? '' : ' · 尚未写出'}
+                </option>
+              );
+            })}
             {sources.length === 0 ? <option value="core">Core</option> : null}
           </select>
         </label>
@@ -873,8 +898,10 @@ export const AiTopologyEditorPage: React.FC<{ kind: TopologyKind }> = ({ kind })
               ) : null}
             </>
           ) : (
-            <div className="flex h-full items-center justify-center text-sm text-studio-muted">
-              左边选一条拓扑
+            <div className="flex h-full items-center justify-center px-8 text-center text-sm text-studio-muted">
+              {items.length === 0
+                ? `这个数据源还没有${isBt ? '行为树' : '状态机'}。左边点「+ 新建拓扑」，保存后会写出它自己的文件。`
+                : '左边选一条拓扑'}
             </div>
           )}
         </main>

@@ -149,8 +149,7 @@
       "name": "mass_navigation",
       "target": {
         "type": "path",
-        "value": "mods/capabilities/navigation/MassNavigationMod",
-        "projectPath": "MassNavigationMod.csproj"
+        "value": "mods/capabilities/navigation/MassNavigationMod"
       }
     },
     {
@@ -374,6 +373,22 @@
         "type": "path",
         "value": "mods/showcases/capability_standard/CapabilityStandardEffectPresetTypeCodeShowcaseMod",
         "projectPath": "CapabilityStandardEffectPresetTypeCodeShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_mod_graph_op_extension_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardGraphOpExtensionShowcaseMod",
+        "projectPath": "CapabilityStandardGraphOpExtensionShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_provider",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardGraphOpProviderMod",
+        "projectPath": "CapabilityStandardGraphOpProviderMod.csproj"
       }
     },
     {
@@ -2396,6 +2411,14 @@
       }
     },
     {
+      "name": "capability_standard_graph_op_QueryFilterControllable",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryFilterControllableEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryFilterControllableEntryMod.csproj"
+      }
+    },
+    {
       "name": "capability_standard_graph_op_CompleteActiveOrder",
       "target": {
         "type": "path",
@@ -2420,6 +2443,14 @@
       }
     },
     {
+      "name": "capability_standard_graph_op_LoadEntityPosValid",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEntityPosValidEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadEntityPosValidEntryMod.csproj"
+      }
+    },
+    {
       "name": "capability_standard_graph_op_LoadEntityPosX",
       "target": {
         "type": "path",
@@ -2436,11 +2467,11 @@
       }
     },
     {
-      "name": "capability_standard_graph_op_QueryFilterControllable",
+      "name": "capability_standard_graph_op_LoadOrderTypeId",
       "target": {
         "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryFilterControllableEntryMod",
-        "projectPath": "CapabilityStandardGraphOpQueryFilterControllableEntryMod.csproj"
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadOrderTypeIdEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadOrderTypeIdEntryMod.csproj"
       }
     },
     {
@@ -2457,22 +2488,6 @@
         "type": "path",
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSubmitAssignedOrderEntryMod",
         "projectPath": "CapabilityStandardGraphOpSubmitAssignedOrderEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_LoadOrderTypeId",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadOrderTypeIdEntryMod",
-        "projectPath": "CapabilityStandardGraphOpLoadOrderTypeIdEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_LoadEntityPosValid",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEntityPosValidEntryMod",
-        "projectPath": "CapabilityStandardGraphOpLoadEntityPosValidEntryMod.csproj"
       }
     }
   ],

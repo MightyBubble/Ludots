@@ -322,7 +322,7 @@ namespace Ludots.Tests.Gas.Graph
         {
             using var harness = RegionHarness.Create(
                 VolumeAt(100, 100, """{ "volumeKey": "ring", "shape": "circle", "radiusCm": 50 }"""),
-                overridesJson: """{ "RegionVolumeCm": { "volumeKey": "yard", "shape": "rect", "halfWidthCm": 50, "halfHeightCm": 40 } }""");
+                overridesJson: """{ "RegionVolumeCm": { "__replace": true, "volumeKey": "yard", "shape": "rect", "halfWidthCm": 50, "halfHeightCm": 40 } }""");
             Entity insideRect = harness.SpawnPositioned(130, 130);
             Entity insideCircleOnly = harness.SpawnPositioned(100, 148);
 

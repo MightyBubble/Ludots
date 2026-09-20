@@ -18,6 +18,7 @@ namespace Ludots.Core.Presentation.Hud
         private readonly ScreenOverlayBuffer? _screenOverlay;
         private readonly MinimapScreenMarkerBuffer? _minimapMarkers;
         private readonly Dictionary<TextPacketCacheKey, string> _textPacketCache = new();
+        private readonly HashSet<int> _removedThisFrame = new();
         private readonly Dictionary<NumericTextCacheKey, string> _numericTextCache = new();
         private readonly Dictionary<int, ScreenHudResolvedTextCacheEntry> _screenHudResolvedTextCache = new();
         private int _lastScreenHudRevision = -1;
@@ -46,13 +47,23 @@ namespace Ludots.Core.Presentation.Hud
                 throw new ArgumentNullException(nameof(scene));
             }
 
+            // 终局合同：screenHud 双计数为零而 scene 的 UnderUi 仍有条目 = 增量移除链已漏，
+            // 直接清层收回（镜头离开后的黏滞残留即此终态）。
+            if (_screenHud.BarCount == 0 &&
+                _screenHud.TextCount == 0 &&
+                scene.HasUnderUiHudContent)
+            {
+                scene.ClearLayer(PresentationOverlayLayer.UnderUi);
+            }
+
             if (TryApplyScreenHudDeltas(scene))
             {
                 return;
             }
 
             bool appendOnlyScreenHud = _screenHud.RequiresFullRebuild &&
-                !HasScreenOverlayContent(scene);
+                !HasScreenOverlayContent(scene) &&
+                !scene.HasUnderUiHudContent;
             if (appendOnlyScreenHud)
             {
                 scene.BeginAppendOnlyBuild();
@@ -60,6 +71,8 @@ namespace Ludots.Core.Presentation.Hud
             }
             else
             {
+                // UnderUi 已有条目时必须走权威重建（EndBuild 移除本帧未见的条目）——
+                // append-only 不清旧条目，screenHud 空重建会把旧内容永久滞留成孤儿。
                 scene.BeginBuild();
                 AppendScreenHud(scene, appendOnly: false);
             }
@@ -162,9 +175,28 @@ namespace Ludots.Core.Presentation.Hud
                 scene.RemoveStable(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Text, stableId);
             }
 
+            // 同帧"值变化→出画"的条目会同时出现在 dirty 与 removed 流里：dirty 快照不因移除失效，
+            // 若不跳过会把刚移除的条目复活成永生孤儿（边缘刮过的 HUD 黏滞残留根因）。
+            // 复用集合零分配：仅在本帧确有 removed 且 dirty 非空时启用。
+            bool guardRemoved = removedStableIds.Length > 0 && (dirtyBars.Length > 0 || dirtyTexts.Length > 0);
+            HashSet<int> removedThisFrame = _removedThisFrame;
+            if (guardRemoved)
+            {
+                removedThisFrame.Clear();
+                foreach (int removedId in removedStableIds)
+                {
+                    removedThisFrame.Add(removedId);
+                }
+            }
+
             for (int i = 0; i < dirtyBars.Length; i++)
             {
                 ref readonly ScreenHudBarItem item = ref dirtyBars[i];
+                if (guardRemoved && item.StableId > 0 && removedThisFrame.Contains(item.StableId))
+                {
+                    continue;
+                }
+
                 scene.TryUpsertBar(
                     PresentationOverlayLayer.UnderUi,
                     item.ScreenX,
@@ -181,6 +213,11 @@ namespace Ludots.Core.Presentation.Hud
             for (int i = 0; i < dirtyTexts.Length; i++)
             {
                 ref readonly ScreenHudTextItem item = ref dirtyTexts[i];
+                if (guardRemoved && item.StableId > 0 && removedThisFrame.Contains(item.StableId))
+                {
+                    continue;
+                }
+
                 string? text = ResolveScreenHudText(in item);
                 if (!string.IsNullOrEmpty(text))
                 {

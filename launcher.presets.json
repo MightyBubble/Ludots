@@ -505,6 +505,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_mod_graph_op_extension_showcase_raylib",
+      "name": "Capability Standard Graph Op Extension Raylib",
+      "selectors": [
+        "$capability_standard_mod_graph_op_extension_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_presenter_behavior_extension_showcase_raylib",
       "name": "Capability Standard Presenter Behavior Extension Raylib",
       "selectors": [
@@ -3298,6 +3307,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_graph_op_QueryFilterControllable_raylib",
+      "name": "Graph Op QueryFilterControllable Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryFilterControllable"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_graph_op_CompleteActiveOrder_raylib",
       "name": "Graph Op CompleteActiveOrder Raylib",
       "selectors": [
@@ -3325,6 +3343,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_graph_op_LoadEntityPosValid_raylib",
+      "name": "Graph Op LoadEntityPosValid Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadEntityPosValid"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_graph_op_LoadEntityPosX_raylib",
       "name": "Graph Op LoadEntityPosX Raylib",
       "selectors": [
@@ -3343,10 +3370,10 @@
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_graph_op_QueryFilterControllable_raylib",
-      "name": "Graph Op QueryFilterControllable Raylib",
+      "id": "capability_standard_graph_op_LoadOrderTypeId_raylib",
+      "name": "Graph Op LoadOrderTypeId Raylib",
       "selectors": [
-        "$capability_standard_graph_op_QueryFilterControllable"
+        "$capability_standard_graph_op_LoadOrderTypeId"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
@@ -3365,24 +3392,6 @@
       "name": "Graph Op SubmitAssignedOrder Raylib",
       "selectors": [
         "$capability_standard_graph_op_SubmitAssignedOrder"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_LoadOrderTypeId_raylib",
-      "name": "Graph Op LoadOrderTypeId Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_LoadOrderTypeId"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_LoadEntityPosValid_raylib",
-      "name": "Graph Op LoadEntityPosValid Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_LoadEntityPosValid"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

@@ -27,6 +27,10 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         /// <summary>Declared initial value. Required; for <see cref="MapVariableType.Int"/> it must be integral.</summary>
         public double? Initial { get; set; }
+
+        /// <summary>跨 mod 合并墓碑：与实体/资产层同键；命中即从合并结果移除该变量。</summary>
+        [JsonPropertyName("__delete")]
+        public bool? Delete { get; set; }
     }
 
     /// <summary>One variable in a save snapshot; only the field matching <see cref="Type"/> carries a live value.</summary>
@@ -41,7 +45,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
     public static class MapVariableDeclarations
     {
-        private const string AllowedFields = "name, type, initial";
+        private const string AllowedFields = "name, type, initial, __delete";
 
         /// <summary>
         /// Strict parse of the optional map JSON <c>Variables</c> array. Rejects unknown fields,
@@ -87,6 +91,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             MapVariableType type = MapVariableType.Int;
             bool hasType = false;
             double? initial = null;
+            bool delete = false;
             foreach (KeyValuePair<string, JsonNode?> field in obj)
             {
                 switch (field.Key)
@@ -107,6 +112,17 @@ namespace Ludots.Core.Gameplay.MapTriggers
                                 $"Map '{context}' Variables[{index}] field 'type' must be \"int\" or \"float\".");
                         }
 
+                        break;
+
+                    case "__delete":
+                        if (field.Value is not JsonValue deleteValue ||
+                            !deleteValue.TryGetValue<bool>(out bool deleteFlag))
+                        {
+                            throw new InvalidOperationException(
+                                $"Map '{context}' Variables[{index}] field '__delete' must be a boolean.");
+                        }
+
+                        delete = deleteFlag;
                         break;
 
                     case "initial":
@@ -138,12 +154,16 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     $"Map '{context}' declares variable '{trimmed}' more than once.");
             }
 
+            if (delete)
+            {
+                return new MapVariableDeclaration { Name = trimmed, Type = type, Delete = true };
+            }
+
             if (!hasType)
             {
                 throw new InvalidOperationException(
                     $"Map '{context}' variable '{trimmed}' requires a 'type' (\"int\" or \"float\").");
             }
-
             if (!initial.HasValue)
             {
                 throw new InvalidOperationException(

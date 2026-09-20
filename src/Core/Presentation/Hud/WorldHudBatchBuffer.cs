@@ -59,12 +59,49 @@ namespace Ludots.Core.Presentation.Hud
             _ownerGroupWriteOffsets = new int[Math.Min(capacity, 1024)];
         }
 
+        /// <summary>
+        /// LUDOTS_HUD_TRACE=1 时的残留取证：缓冲从近空回填的头三笔 TryAdd 打调用栈，
+        /// 用于钉住“镜头离开后条目被重新生产”的发射路径。默认零开销。
+        /// </summary>
+        private static void TraceRefillCallers(int count)
+        {
+            if (!HudTraceEnabled || _traceRefillLogs >= 3)
+            {
+                return;
+            }
+
+            if (count != 0)
+            {
+                return;
+            }
+
+            _traceRefillLogs++;
+            var stack = new System.Diagnostics.StackTrace(2, false);
+            var frames = new System.Text.StringBuilder();
+            for (int i = 0; i < Math.Min(10, stack.FrameCount); i++)
+            {
+                var frame = stack.GetFrame(i);
+                frames.Append("  ").Append(frame?.GetMethod()?.ReflectedType?.Name).Append('.').Append(frame?.GetMethod()?.Name).Append('\n');
+            }
+
+            Ludots.Core.Diagnostics.Log.Info(
+                in Ludots.Core.Diagnostics.LogChannels.Presentation,
+                $"[hud-refill] TryAdd from empty #{_traceRefillLogs}:\n{frames}");
+        }
+
+        private static readonly bool HudTraceEnabled =
+            Environment.GetEnvironmentVariable("LUDOTS_HUD_TRACE") is "1" or "true" or "yes" or "on";
+
+        private static int _traceRefillLogs;
+
         public bool TryAdd(in WorldHudItem item)
         {
+            TraceRefillCallers(_count);
             if (item.StableId > 0 && _retainedIndexByStableId.TryGetValue(item.StableId, out int existingIndex))
             {
                 if (WorldHudItemEquals(in _buffer[existingIndex], in item))
                 {
+                    AdoptValueBoundValues(existingIndex, in item);
                     return true;
                 }
 
@@ -107,6 +144,26 @@ namespace Ludots.Core.Presentation.Hud
             ProjectionRevision++;
             StructuralRevision++;
             return true;
+        }
+
+        /// <summary>
+        /// 值绑定条目的 emit 侧 serial 不混入数值，重发在 serial 命中被判"相等"；
+        /// 但世界车道自身（wire 全量帧、调试读数）直接消费 Value0/Value1，
+        /// 不能停留在首帧快照——静默采纳重发带来的新值，不产生脏增量与修订号：
+        /// 屏幕侧权威值仍由 RefreshAttributeBoundTexts 投影期现读，互不替代。
+        /// </summary>
+        private void AdoptValueBoundValues(int index, in WorldHudItem item)
+        {
+            ref WorldHudItem retained = ref _buffer[index];
+            if (retained.ValueBound == 0 ||
+                item.ValueBound == 0 ||
+                (retained.Value0 == item.Value0 && retained.Value1 == item.Value1))
+            {
+                return;
+            }
+
+            retained.Value0 = item.Value0;
+            retained.Value1 = item.Value1;
         }
 
         public void UpdatePosition(int stableId, in Vector3 position)
@@ -355,11 +412,15 @@ namespace Ludots.Core.Presentation.Hud
         {
             if (_removedStableIdCount >= _removedStableIds.Length)
             {
+                RemovedIdDrops++;
                 return;
             }
 
             _removedStableIds[_removedStableIdCount++] = stableId;
         }
+
+        /// <summary>取证计数：removedStableIds 容量溢出被丢弃的条数（LUDOTS_HUD_TRACE 之外恒为 0 且无人读取）。</summary>
+        public int RemovedIdDrops { get; private set; }
 
         private void EnsureOwnerGroups()
         {

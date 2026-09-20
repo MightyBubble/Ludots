@@ -213,6 +213,9 @@ namespace Ludots.Core.Gameplay.Relationships
 
             _reverseIndex.OnLinkAdded(source, target, validatedTypeId);
             MaterializeRelationshipEntity(source, target, validatedTypeId);
+            _changes.TryAdd(new RelationshipChangeRecord(
+                source, target, validatedTypeId, RelationshipChangeKind.LinkAdded,
+                metricId: -1, reasonId: 0, oldValue: 0, newValue: 0, oldFlags: 0, newFlags: 0));
         }
 
         public void RemoveLink(Entity source, Entity target, int typeId)
@@ -245,6 +248,9 @@ namespace Ludots.Core.Gameplay.Relationships
             }
 
             _reverseIndex.OnLinkRemoved(source, target, validatedTypeId);
+            _changes.TryAdd(new RelationshipChangeRecord(
+                source, target, validatedTypeId, RelationshipChangeKind.LinkRemoved,
+                metricId: -1, reasonId: 0, oldValue: 0, newValue: 0, oldFlags: 0, newFlags: 0));
         }
 
         public bool TryGetMetric(Entity source, Entity target, int typeId, int metricId, out short value)
@@ -301,7 +307,7 @@ namespace Ludots.Core.Gameplay.Relationships
             edge.Version++;
             set.Set(validatedTypeId, edge);
             _world.SetRelationship(source, target, set);
-            _changes.TryAdd(new RelationshipChangeRecord(source, target, validatedTypeId, metricId, reasonId, oldValue, clamped, oldFlags, edge.Flags));
+            _changes.TryAdd(new RelationshipChangeRecord(source, target, validatedTypeId, RelationshipChangeKind.MetricChanged, metricId, reasonId, oldValue, clamped, oldFlags, edge.Flags));
             return clamped;
         }
 
@@ -356,7 +362,7 @@ namespace Ludots.Core.Gameplay.Relationships
             edge.Version++;
             set.Set(validatedTypeId, edge);
             _world.SetRelationship(source, target, set);
-            _changes.TryAdd(new RelationshipChangeRecord(source, target, validatedTypeId, metricId: -1, reasonId, oldValue: 0, newValue: 0, oldFlags, newFlags));
+            _changes.TryAdd(new RelationshipChangeRecord(source, target, validatedTypeId, RelationshipChangeKind.FlagChanged, metricId: -1, reasonId, oldValue: 0, newValue: 0, oldFlags, newFlags));
         }
 
         public bool TryGetHighestMetricTarget(Entity source, ReadOnlySpan<Entity> candidates, int typeId, int metricId, out Entity target, out short value)
