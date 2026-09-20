@@ -18,6 +18,14 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public class MudAbilityChainStressDemoTests
     {
+        [SetUp]
+        public void ResetRegistries()
+        {
+            // Engine-booting fixtures freeze the shared ambient; these demos register
+            // their own attributes lazily, so start from a fresh unfrozen table.
+            AttributeRegistry.Clear();
+        }
+
         private const string ChainHealthAttributeName = "tests.mud.ability-chain.health";
         private const string StressHealthAttributeName = "tests.mud.ability-stress.health";
 

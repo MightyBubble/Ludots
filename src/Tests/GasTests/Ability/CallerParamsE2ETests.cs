@@ -245,6 +245,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var requests = new EffectRequestQueue();
             var api = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null, effectRequests: requests);
+            api.AggregateDirty = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
 
             var target = world.Create();
 
@@ -531,6 +532,7 @@ namespace Ludots.Tests.GAS
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                 tagOps: tagOps);
             var graphApi = new GasGraphRuntimeApi(world, tagOps: tagOps);
+            graphApi.AggregateDirty = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
             var phaseExecutor = new EffectPhaseExecutor(
                 programs,
                 presetTypes,
@@ -555,6 +557,7 @@ namespace Ludots.Tests.GAS
                 effectRequests: requests,
                 templates: templates,
                 phaseExecutor: phaseExecutor,
+                aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry(),
                 graphApi: graphApi,
                 tagOps: tagOps,
                 presentationEvents: new Ludots.Core.Gameplay.GAS.Presentation.GasPresentationEventBuffer(16));
