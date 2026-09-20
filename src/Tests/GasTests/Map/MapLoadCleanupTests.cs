@@ -28,6 +28,25 @@ namespace GasTests
             _world?.Dispose();
         }
 
+        [Test]
+        public void PrimaryBoard_HonorsRootBoardDesignation()
+        {
+            var cfgA = new MapConfig { Id = "m", RootBoard = "second" };
+            var session = new MapSession(new MapId("m"), cfgA);
+            var first = DefaultBoardConfig();
+            var second = new BoardConfig { Name = "second", SpatialType = "Grid", WidthCells = 256, HeightCells = 256, GridCellSizeCm = 100, ChunkSizeCells = 4, LoadedChunkCapacity = 16 };
+            session.AddBoard(new GridBoard(new BoardId(first.Name), first.Name, first));
+            session.AddBoard(new GridBoard(new BoardId(second.Name), second.Name, second));
+
+            Assert.That(session.PrimaryBoard!.Name, Is.EqualTo("second"));
+
+            var cfgB = new MapConfig { Id = "m" };
+            var session2 = new MapSession(new MapId("m"), cfgB);
+            session2.AddBoard(new GridBoard(new BoardId(first.Name), first.Name, first.Clone()));
+            session2.AddBoard(new GridBoard(new BoardId(second.Name), second.Name, second.Clone()));
+            Assert.That(session2.PrimaryBoard!.Name, Is.EqualTo("default"));
+        }
+
         private static BoardConfig DefaultBoardConfig() => new BoardConfig
         {
             Name = "default",

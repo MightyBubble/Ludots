@@ -87,7 +87,7 @@ Out of scope：
 - `TerrainChunk`：逻辑地形块。当前 hex owner 是 `VertexChunk`；#286 后 grid/hex 共用地形抽象仍沿用此名。
 - `MacroTile`：256-cell IO/寻址宏块。owner 是 `MapTile.Size`，常量模块只引用它；#1567 目标态为世界层派生值，不是 authoring 词汇。
 - `StreamingChunk`：流式加载块。不要用 `chunk` 裸词。
-- `WorldExtent`：世界范围 authoring/计算概念。`WorldExtentSpec` 产出 `WorldSizeSpec`；#1567 目标态下世界范围只由 map `World` 节声明，板不再定义世界。
+- `WorldExtent`：世界范围 authoring/计算概念。`WorldExtentSpec` 产出 `WorldSizeSpec`（仅引擎 boot 占位）；#1567 rootboard 裁决后运行时 host world 由根板锚定，地图可以无板。
 - `BoardExtent`（#1567）：板业务区域范围，格子数 × 拓扑度量派生，不参与世界对齐。
 - `BoardOrigin`（#1567）：板在世界坐标系的摆放，缺省居中于世界；世界坐标在入口换算一次，见 `gitbook/navmesh-features/board-addressing.md`。
 - `NavTileGranularity`（#1567）：nav 瓦片颗粒度，navmesh.json 显式两轴世界尺寸，独立于 `TerrainChunk` 与板。

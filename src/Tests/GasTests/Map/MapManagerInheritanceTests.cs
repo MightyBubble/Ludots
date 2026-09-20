@@ -22,7 +22,6 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "parent", """
                 {
                   "id": "parent",
-                  "world": { "widthCm": 6553600, "heightCm": 3276800, "cellSizeCm": 200 },
                   "boards": [
                     {
                       "name": "default",

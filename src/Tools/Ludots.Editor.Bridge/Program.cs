@@ -5033,7 +5033,11 @@ static class EditorRepo
             board.NavigationEnabled = request.NavigationEnabled.Value;
         }
 
-        EnsureBoardFitsRoot(map, board);
+        foreach (var existing in map.Boards)
+        {
+            EnsureBoardFitsRoot(map, existing);
+        }
+
         string mapPath = WriteWritableMapConfig(ctx, mapId, map);
         var mapInfo = DescribeMap(ctx, mapId);
         var boardInfo = DescribeBoard(ctx, mapId, board);
@@ -5079,6 +5083,10 @@ static class EditorRepo
         }
 
         map.Boards.RemoveAt(index);
+        if (string.Equals(map.RootBoard?.Trim(), boardName, StringComparison.OrdinalIgnoreCase))
+        {
+            map.RootBoard = null;
+        }
         string mapPath = WriteWritableMapConfig(ctx, mapId, map);
         var mapInfo = DescribeMap(ctx, mapId);
         return new BoardMutationResult(map, mapInfo, removedInfo, mapPath, dataPath);
@@ -5088,6 +5096,18 @@ static class EditorRepo
     {
         if (map?.Boards == null || map.Boards.Count == 0)
             return null;
+
+        if (!string.IsNullOrWhiteSpace(map.RootBoard))
+        {
+            string designation = map.RootBoard.Trim();
+            foreach (var candidate in map.Boards)
+            {
+                if (string.Equals(candidate.Name, designation, StringComparison.OrdinalIgnoreCase))
+                {
+                    return candidate;
+                }
+            }
+        }
 
         Ludots.Core.Map.Board.BoardConfig? firstNavigationBoard = null;
         for (int i = 0; i < map.Boards.Count; i++)
@@ -5704,6 +5724,17 @@ static class EditorRepo
                     target.Boards.Add(srcBoard.Clone());
                 }
             }
+
+        if (!string.IsNullOrWhiteSpace(source.RootBoard))
+        {
+            target.RootBoard = source.RootBoard;
+        }
+
+        if (source.Tuning is { } srcTuning && srcTuning.IsAuthored)
+        {
+            target.Tuning = srcTuning.Clone();
+        }
+
         }
 
         if (source.TriggerTypes != null)

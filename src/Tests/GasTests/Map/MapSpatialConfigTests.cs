@@ -265,6 +265,11 @@ namespace GasTests
                     continue;
                 }
 
+                if (TryGetPropertyCaseInsensitive(root, "World", out JsonNode? _))
+                {
+                    violations.Add($"{Path.GetRelativePath(repoRoot, file)}: root-level World key is retired; the root board anchors the host world (#1567).");
+                }
+
                 if (TryGetPropertyCaseInsensitive(root, "rootBoard", out JsonNode? rootNode) &&
                     rootNode is JsonValue rootValue &&
                     rootValue.TryGetValue<string>(out string? designated) &&

@@ -73,6 +73,21 @@ namespace Ludots.Tool
                 throw new InvalidOperationException($"Map '{map.Id}' has no BoardConfig entries.");
             }
 
+            string? rootDesignation = map.RootBoard?.Trim();
+            if (!string.IsNullOrWhiteSpace(rootDesignation))
+            {
+                foreach (var board in map.Boards)
+                {
+                    if (string.Equals(board.Name, rootDesignation, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return board;
+                    }
+                }
+
+                throw new InvalidOperationException(
+                    $"Map '{map.Id}' RootBoard '{rootDesignation}' matches no board (#1567).");
+            }
+
             BoardConfig? defaultNavigationBoard = null;
             BoardConfig? firstNavigationBoard = null;
             for (int i = 0; i < map.Boards.Count; i++)
@@ -388,7 +403,7 @@ namespace Ludots.Tool
                 ContainsKey(root, "WidthInMacroTiles") || ContainsKey(root, "HeightInMacroTiles"))
             {
                 throw new InvalidOperationException(
-                    $"Map config '{path}' uses legacy tile-count world keys. Use World.WidthCm/HeightCm + Boards[].WidthCells/HeightCells.");
+                    $"Map config '{path}' uses legacy tile-count world keys. Use Boards[].WidthCells/HeightCells; the root board anchors the host world.");
             }
 
             if (TryGetObjectArray(root, "boards", out JsonArray? boards) && boards != null)
@@ -401,7 +416,7 @@ namespace Ludots.Tool
                          ContainsKey(board, "WidthInMacroTiles") || ContainsKey(board, "HeightInMacroTiles")))
                     {
                         throw new InvalidOperationException(
-                            $"Map config '{path}' board[{i}] uses legacy tile-count extent keys. Use Boards[].WidthCells/HeightCells + World.WidthCm/HeightCm.");
+                            $"Map config '{path}' board[{i}] uses legacy tile-count extent keys. Use Boards[].WidthCells/HeightCells; the root board anchors the host world.");
                     }
                 }
             }

@@ -435,18 +435,19 @@ namespace Ludots.Core.Map
 
         internal static BoardConfig ResolveRootBoard(MapConfig config, MapId mapId)
         {
-            if (!string.IsNullOrWhiteSpace(config.RootBoard))
+            string rootDesignation = config.RootBoard?.Trim();
+            if (!string.IsNullOrWhiteSpace(rootDesignation))
             {
                 foreach (var board in config.Boards)
                 {
-                    if (string.Equals(board.Name, config.RootBoard, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(board.Name, rootDesignation, StringComparison.OrdinalIgnoreCase))
                     {
                         return board;
                     }
                 }
 
                 throw new InvalidOperationException(
-                    $"Map '{mapId}' RootBoard '{config.RootBoard}' matches no board; fix the designation or omit it to root the first board (#1567).");
+                    $"Map '{mapId}' RootBoard '{rootDesignation}' matches no board; fix the designation or omit it to root the first board (#1567).");
             }
 
             return config.Boards[0];
@@ -463,13 +464,13 @@ namespace Ludots.Core.Map
                 (partition <= 0 || (partition & (partition - 1)) != 0))
             {
                 throw new InvalidOperationException(
-                    $"Map '{mapId}' World.Tuning.PartitionChunkCells must be positive and a power of two; got {partition}.");
+                    $"Map '{mapId}' Tuning.PartitionChunkCells must be positive and a power of two; got {partition}.");
             }
 
             if (tuning.LoadedChunkCapacity is int capacity && capacity <= 0)
             {
                 throw new InvalidOperationException(
-                    $"Map '{mapId}' World.Tuning.LoadedChunkCapacity must be positive; got {capacity}.");
+                    $"Map '{mapId}' Tuning.LoadedChunkCapacity must be positive; got {capacity}.");
             }
         }
 
@@ -507,7 +508,7 @@ namespace Ludots.Core.Map
                 board.ChunkSizeCells != partitionValue)
             {
                 throw new InvalidOperationException(
-                    $"Map '{mapId}' board '{board.Name}' declares ChunkSizeCells={board.ChunkSizeCells}, conflicting with World.Tuning.PartitionChunkCells={partitionValue}; remove the board-level field or align it (single world budget, #1567).");
+                    $"Map '{mapId}' board '{board.Name}' declares ChunkSizeCells={board.ChunkSizeCells}, conflicting with Tuning.PartitionChunkCells={partitionValue}; remove the board-level field or align it (single world budget, #1567).");
             }
 
             if (tuning.LoadedChunkCapacity is int capacityValue &&
@@ -515,7 +516,7 @@ namespace Ludots.Core.Map
                 board.LoadedChunkCapacity != capacityValue)
             {
                 throw new InvalidOperationException(
-                    $"Map '{mapId}' board '{board.Name}' declares LoadedChunkCapacity={board.LoadedChunkCapacity}, conflicting with World.Tuning.LoadedChunkCapacity={capacityValue}; remove the board-level field or align it (single world budget, #1567).");
+                    $"Map '{mapId}' board '{board.Name}' declares LoadedChunkCapacity={board.LoadedChunkCapacity}, conflicting with Tuning.LoadedChunkCapacity={capacityValue}; remove the board-level field or align it (single world budget, #1567).");
             }
         }
 
@@ -564,10 +565,11 @@ namespace Ludots.Core.Map
                 return;
             }
 
-            RejectLegacyKey(root, "WidthInTiles", "World.WidthCm", jsonPath);
-            RejectLegacyKey(root, "HeightInTiles", "World.HeightCm", jsonPath);
-            RejectLegacyKey(root, "WidthInMacroTiles", "World.WidthCm", jsonPath);
-            RejectLegacyKey(root, "HeightInMacroTiles", "World.HeightCm", jsonPath);
+            RejectLegacyKey(root, "WidthInTiles", "Boards[].WidthCells", jsonPath);
+            RejectLegacyKey(root, "HeightInTiles", "Boards[].HeightCells", jsonPath);
+            RejectLegacyKey(root, "WidthInMacroTiles", "Boards[].WidthCells", jsonPath);
+            RejectLegacyKey(root, "HeightInMacroTiles", "Boards[].HeightCells", jsonPath);
+            RejectLegacyKey(root, "World", "RootBoard (host world is rooted by the root board)", jsonPath);
 
             if (!TryGetPropertyCaseInsensitive(root, "boards", out JsonNode boardsNode) ||
                 boardsNode is not JsonArray boards)
