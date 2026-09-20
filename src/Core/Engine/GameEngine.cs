@@ -2511,6 +2511,16 @@ namespace Ludots.Core.Engine
 
             RegisterSystem(new GameplayEventDispatchSystem(EventBus, gasBudget), SystemGroup.EventDispatch);
             RegisterSystem(new GasEventTriggerBridgeSystem(EventBus, TriggerManager, World, CreateContext), SystemGroup.EventDispatch);
+            RegisterSystem(
+                new Ludots.Core.UI.PanelProjection.PanelEventDispatchSystem(
+                    () => TryGetService(CoreServiceKeys.PanelEventActionBridge, out Ludots.Core.UI.PanelProjection.PanelEventActionBridge? panelEventBridge)
+                        ? panelEventBridge
+                        : null,
+                    TriggerManager,
+                    GetService(CoreServiceKeys.CustomEventNameRegistry),
+                    () => CurrentMapSession?.MapId,
+                    CreateContext),
+                SystemGroup.EventDispatch);
             RegisterSystem(new GasBudgetReportSystem(gasBudget, gasDiagnostics, orderAdmissionResults), SystemGroup.EventDispatch);
 
             // Phase 7.1: Hosts with a presentation consumer project gameplay facts for performer owner bindings.

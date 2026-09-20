@@ -57,6 +57,7 @@ public static class PanelPresentationInstaller
                 () => engine.TryGetService(CoreServiceKeys.InputHandler, out Ludots.Core.Input.Runtime.PlayerInputHandler? handler)
                     ? handler
                     : null);
+            engine.SetService(CoreServiceKeys.PanelEventActionBridge, eventBridge);
         }
 
         engine.RegisterPresentationSystem(new PanelPresentationSystem(

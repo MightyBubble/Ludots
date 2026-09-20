@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.Json.Nodes;
 using Ludots.Core.Client;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Scripting;
 using Ludots.Core.UI.PanelActivation;
 
 namespace Ludots.Core.UI.PanelProjection
@@ -26,8 +27,12 @@ namespace Ludots.Core.UI.PanelProjection
         private readonly Func<ClientLocalSeatRegistry?> _seats;
         private readonly Func<PlayerInputHandler?> _globalHandler;
         private readonly Action<string>? _onRejected;
+        /// <summary>Companion custom-event prefix: payload-carrying fires also dispatch "panel.&lt;eventId&gt;" in-tick.</summary>
+        public const string CompanionEventPrefix = "panel.";
+
         private readonly Dictionary<string, PanelEventDispatcher> _dispatchers = new(StringComparer.Ordinal);
         private readonly List<PendingRelease> _pendingReleases = new();
+        private readonly List<PendingCompanionEvent> _pendingCompanions = new();
 
         public PanelEventActionBridge(
             UiPanelActivationStore activation,
@@ -70,6 +75,11 @@ namespace Ludots.Core.UI.PanelProjection
 
             LastRefusalReason = null;
             InjectActionEdge(seatId, eventId);
+            if (result.Payload is { Count: > 0 })
+            {
+                _pendingCompanions.Add(new PendingCompanionEvent(eventId, result.Payload));
+            }
+
             return result;
         }
 
@@ -145,6 +155,47 @@ namespace Ludots.Core.UI.PanelProjection
 
             return dispatcher;
         }
+
+        /// <summary>
+        /// Drains queued companion events inside the engine tick (EventDispatch phase) —
+        /// never at presentation time. Each fires the custom event "panel.&lt;eventId&gt;"
+        /// with the validated payload fields set on the context; the mod declares the event
+        /// in Events/custom_events.json with a matching schema, and context profiles mount
+        /// the consuming graph by event. Undeclared events fail named at dispatch.
+        /// Returns the number of events dispatched.
+        /// </summary>
+        public int DispatchPendingCompanions(
+            Scripting.TriggerManager triggers,
+            Gameplay.MapTriggers.CustomEventNameRegistry customEvents,
+            Map.MapId mapId,
+            Func<ScriptContext> createContext)
+        {
+            ArgumentNullException.ThrowIfNull(triggers);
+            ArgumentNullException.ThrowIfNull(customEvents);
+            ArgumentNullException.ThrowIfNull(createContext);
+            if (_pendingCompanions.Count == 0)
+            {
+                return 0;
+            }
+
+            int dispatched = 0;
+            foreach (PendingCompanionEvent entry in _pendingCompanions)
+            {
+                ScriptContext context = createContext();
+                foreach (KeyValuePair<string, object?> field in entry.Payload)
+                {
+                    context.Set(field.Key, field.Value);
+                }
+
+                triggers.FireMapCustomEvent(mapId, CompanionEventPrefix + entry.EventId, context, customEvents);
+                dispatched++;
+            }
+
+            _pendingCompanions.Clear();
+            return dispatched;
+        }
+
+        private readonly record struct PendingCompanionEvent(string EventId, IReadOnlyDictionary<string, object?> Payload);
 
         private readonly record struct PendingRelease(PlayerInputHandler Handler, string ActionId, int RemainingTicks);
     }

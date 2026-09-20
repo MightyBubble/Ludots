@@ -200,6 +200,51 @@ namespace Ludots.Tests.GasTests.UI
             Assert.That(error!.Message, Does.Contain("PANEL.EVENT.ERR.ActionNotDeclared"));
         }
 
+        // ── companion payload events (in-tick dispatch) ──
+
+        [Test]
+        public void Bridge_PayloadFire_QueuesCompanionDispatchedOnceInTick()
+        {
+            using SeatHarness harness = SeatHarness.Create(actionId: ChooseActionId);
+            PanelTemplate template = PanelTemplateLoader.Load(ButtonTemplateJson(payload: "{ \"option\": \"3\" }"));
+            var bridge = new PanelEventActionBridge(harness.Activation, () => harness.Runtime, () => harness.Seats, () => null);
+            bridge.FireFromSeat(template, ChooseActionId, new JsonObject { ["option"] = 3 }, "seat.0");
+
+            var customEvents = new Ludots.Core.Gameplay.MapTriggers.CustomEventNameRegistry();
+            customEvents.Register(PanelEventActionBridge.CompanionEventPrefix + ChooseActionId);
+            var system = new PanelEventDispatchSystem(
+                () => bridge,
+                new Ludots.Core.Scripting.TriggerManager(),
+                customEvents,
+                () => new Ludots.Core.Map.MapId("tests.map"),
+                () => new ScriptContext());
+
+            system.Update(default);
+            Assert.That(system.LastDispatched, Is.EqualTo(1), "payload-carrying fire dispatches panel.<eventId> in-tick");
+            system.Update(default);
+            Assert.That(system.LastDispatched, Is.EqualTo(0), "the queue drains once per fire");
+        }
+
+        [Test]
+        public void Bridge_CompanionUndeclaredEvent_FailsNamedAtDispatch()
+        {
+            using SeatHarness harness = SeatHarness.Create(actionId: ChooseActionId);
+            PanelTemplate template = PanelTemplateLoader.Load(ButtonTemplateJson(payload: "{ \"option\": \"3\" }"));
+            var bridge = new PanelEventActionBridge(harness.Activation, () => harness.Runtime, () => harness.Seats, () => null);
+            bridge.FireFromSeat(template, ChooseActionId, new JsonObject { ["option"] = 3 }, "seat.0");
+
+            var system = new PanelEventDispatchSystem(
+                () => bridge,
+                new Ludots.Core.Scripting.TriggerManager(),
+                new Ludots.Core.Gameplay.MapTriggers.CustomEventNameRegistry(),
+                () => new Ludots.Core.Map.MapId("tests.map"),
+                () => new ScriptContext());
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => system.Update(default));
+            Assert.That(error!.Message, Does.Contain("panel." + ChooseActionId));
+            Assert.That(error.Message, Does.Contain("not a declared custom event"));
+        }
+
         // ── helpers ──
 
         private static PanelLayoutControl RequireButton(PanelTemplate template)
