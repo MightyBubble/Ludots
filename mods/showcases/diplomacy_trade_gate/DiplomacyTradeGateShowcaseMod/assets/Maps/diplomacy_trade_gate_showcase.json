@@ -1,3 +1,8 @@
 {
-  "Id": "diplomacy_trade_gate_showcase"
+  "Id": "diplomacy_trade_gate_showcase",
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  }
 }

@@ -131,7 +131,7 @@ public sealed class CapabilityStandardExtensibleRuntimeShowcaseAcceptanceTests
 
         AssertRootShowcaseAssets(repoRoot, modId, mapId, bindingName, presetId,
             "assets/GAS/graphs/capability_standard.graph_op_extension.score_threat.json");
-        AssertLauncherBinding(repoRoot, "capability_standard_graph_op_provider", "CapabilityStandardGraphOpProviderMod");
+        AssertLauncherBinding(repoRoot, "graph_op_provider", "CapabilityStandardGraphOpProviderMod");
 
         using var engine = CreateEngine(repoRoot, "CapabilityStandardGraphOpProviderMod", modId);
         engine.LoadEntryMap(engine.MergedConfig.StartupMapId);

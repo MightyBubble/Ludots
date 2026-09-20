@@ -1,3 +1,8 @@
 {
-  "Id": "fourx_association_showcase"
+  "Id": "fourx_association_showcase",
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  }
 }

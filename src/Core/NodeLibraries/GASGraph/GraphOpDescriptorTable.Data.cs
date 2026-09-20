@@ -37,6 +37,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private const GraphKindMask LinearQueryScript = LinearAll | GraphKindMask.Query | ScriptAndTriggerGraph;
 
         private const GraphKindMask EffectAndScript = GraphKindMask.Effect | ScriptAndTriggerGraph;
+        private const GraphKindMask EffectAndScriptOnly = GraphKindMask.Effect | GraphKindMask.Script;
         private const GraphKindMask EffectAndTriggerGraph = GraphKindMask.Effect | GraphKindMask.TriggerGraph;
 
         private static GraphOpDescriptor[] Build()
@@ -144,7 +145,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.QueryHexRange, LinearAll, GraphValueType.Void, flags: GraphOperandRole.SpatialCapacityFlags, imm: GraphOperandRole.Immediate);
             Add(rows, GraphNodeOp.QueryHexRing, LinearAll, GraphValueType.Void, flags: GraphOperandRole.SpatialCapacityFlags, imm: GraphOperandRole.Immediate);
             Add(rows, GraphNodeOp.QueryHexNeighbors, LinearAll, GraphValueType.Void);
-            Add(rows, GraphNodeOp.ApplyEffectTemplate, EffectAndScript, GraphValueType.Void, portApplyTemplate, scriptPorts: portApplyTemplate, imm: GraphOperandRole.SymbolImm);
+            // Effect-transactional: Script hosts may apply templates (#1536 behavior hosts),
+            // but the TriggerGraph dialect stays effect-free by contract.
+            Add(rows, GraphNodeOp.ApplyEffectTemplate, EffectAndScriptOnly, GraphValueType.Void, portApplyTemplate, scriptPorts: portApplyTemplate, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.FanOutApplyEffect, LinearEffect, GraphValueType.Void, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.ApplyEffectDynamic, LinearEffect, GraphValueType.Void, portTargetValue);
             Add(rows, GraphNodeOp.FanOutApplyEffectDynamic, LinearEffect, GraphValueType.Void, portValue);
