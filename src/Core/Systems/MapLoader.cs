@@ -426,7 +426,7 @@ namespace Ludots.Core.Systems
             // This loads "Entities/templates.json" from Core and all Mods
             // Merging them with priority
             TemplateRegistry.Load("Entities/templates.json", catalog, report);
-            ExpandTemplateInheritance();
+            ExpandTemplateInheritance(report);
             EntityTemplateKeys.Clear();
             _templateSources.Clear();
             var templateIds = new HashSet<string>(StringComparer.Ordinal);
@@ -448,12 +448,12 @@ namespace Ludots.Core.Systems
         }
 
         /// <summary>
-        /// extends 展开插在跨 mod 同 id 合并之后、装载校验之前：子模板可以引用
-        /// 任意 mod 贡献的父模板，而 children/TriggerGraphs 校验看到的是展开后的
+        /// extends/uses 展开插在跨 mod 同 id 合并之后、装载校验之前：子模板可以引用
+        /// 任意 mod 贡献的父模板/块，而 children/TriggerGraphs 校验看到的是展开后的
         /// 完整组合。原地展开保证所有消费方（spawn/batch/lifecycle/离线烘焙）
-        /// 经由同一注册表读到同一份结果。
+        /// 经由同一注册表读到同一份结果；report 接住 uses 折叠的组件覆盖链。
         /// </summary>
-        private void ExpandTemplateInheritance()
+        private void ExpandTemplateInheritance(ConfigConflictReport report)
         {
             var byId = new Dictionary<string, EntityTemplate>(StringComparer.Ordinal);
             foreach (var template in TemplateRegistry.GetAll())
@@ -461,7 +461,7 @@ namespace Ludots.Core.Systems
                 byId[template.Id] = template;
             }
 
-            EntityTemplateInheritance.ExpandAll(byId);
+            EntityTemplateInheritance.ExpandAll(byId, report);
         }
 
         /// <summary>

@@ -19,6 +19,17 @@ namespace Ludots.Core.Config
         [JsonPropertyName("extends")]
         public string? Extends { get; set; }
 
+        /// <summary>
+        /// 装载期组件组组装（推荐范式）：按序引用一组块模板 id。折叠优先级一条规则——
+        /// 声明越靠后优先级越高，自身 components 永远最高（extends 父模板打底 → uses
+        /// 逐个覆盖 → 自身最后）。合并合同与 extends 同一族（components 字段级深合并、
+        /// children/TriggerGraphs 追加去重、标量非空才覆盖、__replace 整替）。未知块或
+        /// uses+extends 混合环启动失败；展开后本字段清空。被引用的块是注册表共享对象，
+        /// 折叠只读不改。
+        /// </summary>
+        [JsonPropertyName("uses")]
+        public List<string>? Uses { get; set; }
+
         [JsonPropertyName("onSpawnEffect")]
         public string OnSpawnEffect { get; set; }
 

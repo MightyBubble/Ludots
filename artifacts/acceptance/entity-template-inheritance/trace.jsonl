@@ -1,8 +1,8 @@
 {"t":0,"event":"load","path":"Entities/templates.json","entries":["test.tpl.grunt","test.tpl.hero"],"order":"ArrayById同id合并 -> extends展开 -> 校验"}
-{"t":1,"event":"expand","template":"test.tpl.hero","extends":"test.tpl.grunt","result":"components字段级深合并; children/TriggerGraphs追加; 标量子代非空才覆盖"}
+{"t":1,"event":"expand","template":"test.tpl.hero","extends":"test.tpl.grunt","result":"components字段级深合并; children/triggerGraphs追加; 标量子代非空才覆盖"}
 {"t":2,"event":"expand.assert","template":"test.tpl.hero","field":"AttributeBuffer.base.Health","expected":250,"actual":250,"passed":true}
 {"t":3,"event":"expand.assert","template":"test.tpl.hero","field":"AttributeBuffer.current.Health","expected":80,"inherited_from":"grunt","actual":80,"passed":true}
-{"t":4,"event":"expand.assert","template":"test.tpl.hero","field":"TriggerGraphs","expected":["graph.shared","graph.grunt","graph.hero"],"note":"精确去重","passed":true}
+{"t":4,"event":"expand.assert","template":"test.tpl.hero","field":"triggerGraphs","expected":["graph.shared","graph.grunt","graph.hero"],"note":"精确去重","passed":true}
 {"t":5,"event":"expand.guard","case":"未知父模板","input":"hero extends missing_parent","outcome":"启动失败,错误含双方id","passed":true}
 {"t":6,"event":"expand.guard","case":"继承环","input":"self/self; a<->b","outcome":"启动失败,cycle detected","passed":true}
 {"t":6.5,"event":"replace.marker","layer":"extends+override","case":"RegionVolumeCm circle->rect with __replace:true","outcome":"整组件替换,radiusCm不残留,标记剥离","passed":true}

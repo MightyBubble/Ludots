@@ -5,29 +5,41 @@ using System.Text.Json.Nodes;
 namespace Ludots.Core.Config
 {
     /// <summary>
-    /// 模板 extends 的装载期展开器。语义对齐 presenter 层 extends 先例
-    /// （<c>PresenterDefinitionConfigLoader.ExpandDefinition</c>）：递归展开、继承环
-    /// fail fast、数组字段追加、标量字段子代非空才覆盖。运行时
-    /// （<c>MapLoader.LoadTemplates</c>）与离线烘焙（<c>NavObstacleAuthoringCatalog</c>）
-    /// 两个加载终点共用，保证两侧看到同一份展开结果。
+    /// 模板 extends / uses 的装载期展开器。语义对齐 presenter 层 extends 先例
+    /// （<c>PresenterDefinitionConfigLoader.ExpandDefinition</c>）：递归展开、环
+    /// fail fast、数组字段追加、标量字段子代非空才覆盖。折叠优先级一条规则：
+    /// 声明越靠后优先级越高，模板自身 components 永远最高——extends 父模板打底、
+    /// uses 块按列表顺序逐个覆盖、自身最后。运行时（<c>MapLoader.LoadTemplates</c>）
+    /// 与离线烘焙（<c>NavObstacleAuthoringCatalog</c>）两个加载终点共用，保证两侧
+    /// 看到同一份展开结果。
     /// </summary>
     public static class EntityTemplateInheritance
     {
-        public static void ExpandAll(IReadOnlyDictionary<string, EntityTemplate> templates)
+        public static void ExpandAll(
+            IReadOnlyDictionary<string, EntityTemplate> templates,
+            ConfigConflictReport report = null)
         {
             var expanding = new HashSet<string>(StringComparer.Ordinal);
             foreach (var template in templates.Values)
             {
-                Expand(template, templates, expanding);
+                Expand(template, templates, expanding, report);
             }
         }
 
         private static void Expand(
             EntityTemplate template,
             IReadOnlyDictionary<string, EntityTemplate> templates,
-            HashSet<string> expanding)
+            HashSet<string> expanding,
+            ConfigConflictReport report)
         {
-            if (template == null || string.IsNullOrWhiteSpace(template.Extends))
+            if (template == null)
+            {
+                return;
+            }
+
+            bool hasExtends = !string.IsNullOrWhiteSpace(template.Extends);
+            bool hasUses = template.Uses is { Count: > 0 };
+            if (!hasExtends && !hasUses)
             {
                 return;
             }
@@ -40,21 +52,155 @@ namespace Ludots.Core.Config
 
             try
             {
-                string parentKey = template.Extends.Trim();
-                if (!templates.TryGetValue(parentKey, out EntityTemplate parent))
+                var sources = new List<EntityTemplate>();
+                if (hasExtends)
                 {
-                    throw new InvalidOperationException(
-                        $"Entity template '{template.Id}' extends unknown template '{parentKey}'.");
+                    string parentKey = template.Extends!.Trim();
+                    if (!templates.TryGetValue(parentKey, out EntityTemplate parent))
+                    {
+                        throw new InvalidOperationException(
+                            $"Entity template '{template.Id}' extends unknown template '{parentKey}'.");
+                    }
+
+                    Expand(parent, templates, expanding, report);
+                    sources.Add(parent);
                 }
 
-                Expand(parent, templates, expanding);
-                MergeIntoChild(parent, template);
+                if (hasUses)
+                {
+                    for (int i = 0; i < template.Uses!.Count; i++)
+                    {
+                        string rawUse = template.Uses[i] ?? string.Empty;
+                        string useKey = rawUse.Trim();
+                        if (!templates.TryGetValue(useKey, out EntityTemplate block))
+                        {
+                            throw new InvalidOperationException(
+                                $"Entity template '{template.Id}' uses unknown template '{rawUse}'.");
+                        }
+
+                        Expand(block, templates, expanding, report);
+                        sources.Add(block);
+                    }
+                }
+
+                if (hasUses)
+                {
+                    FoldSources(sources, template, report);
+                }
+                else
+                {
+                    MergeIntoChild(sources[0], template);
+                }
+
                 template.Extends = null;
+                template.Uses = null;
             }
             finally
             {
                 expanding.Remove(template.Id);
             }
+        }
+
+        /// <summary>
+        /// uses 折叠。不能把每个块直接 merge 进 template（那会让自身恒胜，块间冲突
+        /// 变成先声明者胜）：折叠发生在一串一次性私有克隆上，后一个克隆作为
+        /// MergeIntoChild 的子代吸收前一个的结果（后声明者胜），自身最后合并。
+        /// 父模板/块是注册表共享对象，全程只读。
+        /// </summary>
+        private static void FoldSources(
+            List<EntityTemplate> sources,
+            EntityTemplate template,
+            ConfigConflictReport report)
+        {
+            RecordComponentWriterChains(sources, template, report);
+
+            var accumulator = CloneTemplate(sources[0]);
+            for (int i = 1; i < sources.Count; i++)
+            {
+                var next = CloneTemplate(sources[i]);
+                MergeIntoChild(accumulator, next);
+                accumulator = next;
+            }
+
+            MergeIntoChild(accumulator, template);
+        }
+
+        private static void RecordComponentWriterChains(
+            List<EntityTemplate> sources,
+            EntityTemplate template,
+            ConfigConflictReport report)
+        {
+            if (report == null)
+            {
+                return;
+            }
+
+            var writersByKey = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+            foreach (var source in sources)
+            {
+                foreach (string component in source.Components.Keys)
+                {
+                    if (!writersByKey.TryGetValue(component, out var writers))
+                    {
+                        writers = new List<string>();
+                        writersByKey[component] = writers;
+                    }
+
+                    writers.Add(source.Id);
+                }
+            }
+
+            foreach (string component in template.Components.Keys)
+            {
+                if (!writersByKey.TryGetValue(component, out var writers))
+                {
+                    writers = new List<string>();
+                    writersByKey[component] = writers;
+                }
+
+                writers.Add("self");
+            }
+
+            foreach (var kvp in writersByKey)
+            {
+                if (kvp.Value.Count >= 2)
+                {
+                    report.RecordComponentOverrideChain(
+                        template.Id, kvp.Key, string.Join(" -> ", kvp.Value));
+                }
+            }
+        }
+
+        private static EntityTemplate CloneTemplate(EntityTemplate source)
+        {
+            var clone = new EntityTemplate
+            {
+                Id = source.Id,
+                OnSpawnEffect = source.OnSpawnEffect,
+                InitialInteractionContext = source.InitialInteractionContext,
+                Components = new Dictionary<string, JsonNode>(source.Components.Count, StringComparer.Ordinal),
+            };
+
+            foreach (var kvp in source.Components)
+            {
+                clone.Components[kvp.Key] = kvp.Value?.DeepClone();
+            }
+
+            if (source.TriggerGraphs is { Count: > 0 })
+            {
+                clone.TriggerGraphs = new List<string>(source.TriggerGraphs);
+            }
+
+            if (source.Children is { Count: > 0 })
+            {
+                clone.Children = new List<EntityTemplateChild>(source.Children.Count);
+                for (int i = 0; i < source.Children.Count; i++)
+                {
+                    clone.Children.Add(CloneChild(source.Children[i]));
+                }
+            }
+
+            return clone;
         }
 
         private static void MergeIntoChild(EntityTemplate parent, EntityTemplate child)
@@ -148,7 +294,15 @@ namespace Ludots.Core.Config
 
             if (child is not { Count: > 0 })
             {
-                return new List<EntityTemplateChild>(parent);
+                // 父代条目一律克隆：装载期校验会就地改写内联 children，
+                // 共享实例会把派生模板的改写漏回父模板。
+                var inherited = new List<EntityTemplateChild>(parent.Count);
+                for (int i = 0; i < parent.Count; i++)
+                {
+                    inherited.Add(CloneChild(parent[i]));
+                }
+
+                return inherited;
             }
 
             var merged = new List<EntityTemplateChild>(parent.Count + child.Count);

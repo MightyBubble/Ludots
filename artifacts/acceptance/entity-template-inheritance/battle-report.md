@@ -2,7 +2,7 @@
 [装载] templates.json 同 id 合并 → extends 展开 → 校验：grunt(父) + hero(extends grunt) 就位
 [展开] hero.AttributeBuffer = 父 base.Health=100/current.Health=80 ∘ 子 base.Health=250 → base.Health=250, current.Health=80（未提及字段继承）
 [展开] 标量钩子：子代静默继承父 onSpawnEffect=Effect.GruntIncome；子代非空才覆盖
-[展开] children/TriggerGraphs 追加：chassis→+flag_bearer；graph.shared 精确去重（同图双挂不是合法组合）
+[展开] children/triggerGraphs 追加：chassis→+flag_bearer；graph.shared 精确去重（同图双挂不是合法组合）
 [展开] 三级链 base_unit→veteran→hero：Health=150（最近父代胜），Team.Id=1（祖父代组件继承）
 [整替通道] 子代组件顶层 "__replace": true → RegionVolumeCm 圆形整替为矩形，radiusCm 不残留嵌合体，标记装载期剥离；实例 Overrides 同通道（MapTriggerRegionTests.Override_ReplacesShape_WholeComponent 迁移后保持原断言）
 [失败分支] extends 未知父 'missing_parent' → 启动失败指明双方 id；继承环(self/a↔b) → 启动失败
