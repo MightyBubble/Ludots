@@ -154,6 +154,83 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
+        /// <summary>
+        /// 高槽位（[64, Plan)）聚合：current=base 叠加已提交效果的修饰符（聚合车道），
+        /// cap 捕获聚合值、current 恢复持久值（与内嵌 RestorePersistentCurrentValues 同语义；
+        /// 派生图高槽位车道属 P3，本切不接）。cap/current 变化标行级高脏位，由延迟触发器消费。
+        /// </summary>
+        private static void ProcessHighSlots(World world, Entity entity)
+        {
+            WorldAttributeStore store = WorldAttributeStoreAmbient.Current;
+            if (store == null || store.SlotCount <= AttributeBuffer.MAX_ATTRS)
+            {
+                return;
+            }
+
+            if (!store.TryGetRow(entity, out int row))
+            {
+                return;
+            }
+
+            int first = AttributeBuffer.MAX_ATTRS;
+            int count = store.SlotCount - first;
+            Span<float> oldCurrent = count <= 512 ? stackalloc float[512] : new float[count];
+            Span<float> oldCap = count <= 512 ? stackalloc float[512] : new float[count];
+            oldCurrent = oldCurrent.Slice(0, count);
+            oldCap = oldCap.Slice(0, count);
+            for (int i = 0; i < count; i++)
+            {
+                oldCurrent[i] = store.GetCurrent(row, first + i);
+                oldCap[i] = store.GetCap(row, first + i);
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                if (store.IsDefined(row, first + i))
+                {
+                    store.SetCurrentRaw(row, first + i, store.GetBase(row, first + i));
+                }
+            }
+
+            if (world.Has<ActiveEffectContainer>(entity))
+            {
+                ref ActiveEffectContainer effects = ref world.Get<ActiveEffectContainer>(entity);
+                for (int e = 0; e < effects.Count; e++)
+                {
+                    Entity effectEntity = effects.GetEntity(e);
+                    if (!world.IsAlive(effectEntity) || !world.Has<GameplayEffect>(effectEntity))
+                    {
+                        continue;
+                    }
+
+                    ref readonly GameplayEffect effect = ref world.Get<GameplayEffect>(effectEntity);
+                    if (effect.CancelRequested || effect.State < EffectState.Committed || !effect.AggregatesModifiers)
+                    {
+                        continue;
+                    }
+
+                    ref readonly var modifiers = ref world.Get<EffectModifiers>(effectEntity);
+                    EffectModifierOps.ApplyAggregatedHigh(in modifiers, store, row);
+                }
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                int slot = first + i;
+                if (!store.IsDefined(row, slot))
+                {
+                    continue;
+                }
+
+                store.SetCapRaw(row, slot, store.GetCurrent(row, slot));
+                store.SetCurrentRaw(row, slot, oldCurrent[i]);
+                if (oldCap[i] != store.GetCap(row, slot) || oldCurrent[i] != store.GetCurrent(row, slot))
+                {
+                    store.MarkAttributeDirtyHigh(row, slot);
+                }
+            }
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static unsafe ulong RecomputeEffectiveValues(
             World world, Entity entity,
@@ -300,6 +377,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     }
                 }
             }
+
+            ProcessHighSlots(world, entity);
 
             if (!hasPresentationChanged && presentationChangedLocal.IsAnyBitSet())
             {

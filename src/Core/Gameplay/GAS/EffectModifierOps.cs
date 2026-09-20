@@ -36,6 +36,11 @@ namespace Ludots.Core.Gameplay.GAS
             for (int i = 0; i < modifiers.Count; i++)
             {
                 var mod = modifiers.Get(i);
+                if ((uint)mod.AttributeId >= (uint)AttributeBuffer.MAX_ATTRS)
+                {
+                    continue; // 高槽位（≥64）只存在于 WorldAttributeStore，由调用方的高车道处理（RFC-0067 P1）
+                }
+
                 float current = buffer.GetCurrent(mod.AttributeId);
 
                 switch (mod.Operation)
@@ -71,6 +76,34 @@ namespace Ludots.Core.Gameplay.GAS
                         }
                         break;
                 }
+            }
+        }
+
+        /// <summary>
+        /// 聚合车道的高槽位（≥64）应用：直接写列存，绕过 ClampCurrentToBase
+        ///（与 <see cref="ApplyAggregated"/> 同语义；持久 current 恢复由聚合器统一做）。
+        /// </summary>
+        public static void ApplyAggregatedHigh(
+            in EffectModifiers modifiers,
+            WorldAttributeStore store,
+            int row)
+        {
+            for (int i = 0; i < modifiers.Count; i++)
+            {
+                var mod = modifiers.Get(i);
+                if (mod.AttributeId < AttributeBuffer.MAX_ATTRS)
+                {
+                    continue;
+                }
+
+                float current = store.GetCurrent(row, mod.AttributeId);
+                float value = mod.Operation switch
+                {
+                    ModifierOp.Add => current + mod.Value,
+                    ModifierOp.Multiply => current * mod.Value,
+                    _ => mod.Value,
+                };
+                store.SetCurrentRaw(row, mod.AttributeId, value);
             }
         }
     }

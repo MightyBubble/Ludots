@@ -1,5 +1,5 @@
 {
-  "GeneratedAtUtc": "2026-09-20T11:50:08.4597968Z",
+  "GeneratedAtUtc": "2026-09-20T11:51:23.6470583Z",
   "Machine": {
     "Name": "CODESEAL",
     "Os": "Microsoft Windows NT 10.0.26220.0",
@@ -8,12 +8,12 @@
   "Parameters": {
     "EntityCount": 10000,
     "Iterations": 100,
-    "StorageKind": "embedded-fixed-64-256"
+    "StorageKind": "world-column-store-mirror(slots=64)"
   },
   "Metrics": [
     {
       "Id": "attr.aggregate.tick",
-      "ElapsedMs": 0.5838599999999999,
+      "ElapsedMs": 0.5963700000000001,
       "AllocatedBytes": 0,
       "Ops": 1000,
       "PerEntityBytes": 0,
@@ -21,7 +21,7 @@
     },
     {
       "Id": "attr.footprint.per_entity",
-      "ElapsedMs": 3.8062,
+      "ElapsedMs": 3.6005,
       "AllocatedBytes": 10772592,
       "Ops": 10000,
       "PerEntityBytes": 1077.2592,
@@ -29,7 +29,7 @@
     },
     {
       "Id": "attr.setw.get.hot",
-      "ElapsedMs": 459.8832,
+      "ElapsedMs": 456.8931,
       "AllocatedBytes": 0,
       "Ops": 2000000,
       "PerEntityBytes": 0,
@@ -37,15 +37,15 @@
     },
     {
       "Id": "gas.pipeline.100k",
-      "ElapsedMs": 172.2696,
-      "AllocatedBytes": 1184486064,
+      "ElapsedMs": 188.2838,
+      "AllocatedBytes": 1184478744,
       "Ops": 100000,
       "PerEntityBytes": 0,
       "Note": "load: GasBenchmark.Run \u5168\u7BA1\u7EBF\uFF08100k \u5B9E\u4F53 / 100 \u5E27\u4E8B\u4EF6\u98CE\u66B4\uFF09\uFF0C\u540C\u53C2\u7981\u6F02\u79FB"
     },
     {
       "Id": "tag.add.has.hot",
-      "ElapsedMs": 22.8312,
+      "ElapsedMs": 16.2661,
       "AllocatedBytes": 0,
       "Ops": 3000000,
       "PerEntityBytes": 0,
@@ -53,7 +53,7 @@
     },
     {
       "Id": "tag.dirty.collect",
-      "ElapsedMs": 0.0006,
+      "ElapsedMs": 0.0002,
       "AllocatedBytes": 0,
       "Ops": 1000,
       "PerEntityBytes": 0,
@@ -61,7 +61,7 @@
     },
     {
       "Id": "tag.footprint.per_entity",
-      "ElapsedMs": 2.2414,
+      "ElapsedMs": 1.7466,
       "AllocatedBytes": 1363992,
       "Ops": 10000,
       "PerEntityBytes": 136.3992,

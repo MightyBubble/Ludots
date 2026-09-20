@@ -1263,6 +1263,9 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
         private static unsafe void SetAttributeBuffer(Entity entity, JsonNode data)
         {
             var buffer = default(AttributeBuffer);
+            var highBase = new System.Collections.Generic.Dictionary<int, float>();
+            var highCurrent = new System.Collections.Generic.Dictionary<int, float>();
+            bool hasHigh = false;
             if (data is not JsonObject obj)
             {
                 throw new InvalidOperationException("AttributeBuffer requires an object payload.");
@@ -1285,7 +1288,15 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
 
                     float v = kvp.Value.GetValue<float>();
                     int attrId = ResolveAttributeBufferAttributeId(kvp.Key, $"AttributeBuffer.base.{kvp.Key}");
-                    buffer.SetBase(attrId, v);
+                    if (attrId >= Ludots.Core.Gameplay.GAS.Components.AttributeBuffer.MAX_ATTRS)
+                    {
+                        highBase[attrId] = v;
+                        hasHigh = true;
+                    }
+                    else
+                    {
+                        buffer.SetBase(attrId, v);
+                    }
                 }
             }
 
@@ -1305,7 +1316,15 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
 
                     float v = kvp.Value.GetValue<float>();
                     int attrId = ResolveAttributeBufferAttributeId(kvp.Key, $"AttributeBuffer.current.{kvp.Key}");
-                    buffer.SetCurrent(attrId, v);
+                    if (attrId >= Ludots.Core.Gameplay.GAS.Components.AttributeBuffer.MAX_ATTRS)
+                    {
+                        highCurrent[attrId] = v;
+                        hasHigh = true;
+                    }
+                    else
+                    {
+                        buffer.SetCurrent(attrId, v);
+                    }
                 }
             }
 
@@ -1316,6 +1335,43 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
                 int attributeId = System.Numerics.BitOperations.TrailingZeroCount(definedMask);
                 definedMask &= definedMask - 1UL;
                 snapshot.Values[attributeId] = buffer.GetCurrent(attributeId);
+            }
+
+            var store = Ludots.Core.Gameplay.GAS.WorldAttributeStoreAmbient.Current;
+            if (store != null)
+            {
+                // 种子期建行 + 内嵌全量镜像：列存成为该实体属性数据的完整快照（P4 切真相的地基）。
+                int row = store.EnsureRow(entity);
+                while (definedMask != 0UL)
+                {
+                    definedMask = 0UL; // 上面的循环已耗尽掩码；此处仅为可读性占位
+                }
+
+                ulong mirrorMask = buffer.DefinedMask;
+                while (mirrorMask != 0UL)
+                {
+                    int attributeId = System.Numerics.BitOperations.TrailingZeroCount(mirrorMask);
+                    mirrorMask &= mirrorMask - 1UL;
+                    store.MirrorCurrent(row, attributeId, buffer.GetBase(attributeId), buffer.GetCap(attributeId), buffer.GetCurrent(attributeId));
+                    Ludots.Core.Gameplay.GAS.AttributeHighLane.SeedLastSnapshot(store, row, attributeId);
+                }
+
+                foreach (var kvp in highBase)
+                {
+                    store.SetBase(row, kvp.Key, kvp.Value);
+                    Ludots.Core.Gameplay.GAS.AttributeHighLane.SeedLastSnapshot(store, row, kvp.Key);
+                }
+
+                foreach (var kvp in highCurrent)
+                {
+                    store.SetCurrentHigh(row, kvp.Key, kvp.Value);
+                    store.SetLastSnapshot(row, kvp.Key, store.GetCurrent(row, kvp.Key));
+                }
+            }
+            else if (hasHigh)
+            {
+                throw new InvalidOperationException(
+                    "GAS.CAPACITY.ERR.HighLaneUnavailable: AttributeBuffer authoring 引用 attributeId >= 64 需要世界列存（RFC-0067 P1），但 WorldAttributeStore 未绑定。");
             }
 
             entity.Add(buffer);

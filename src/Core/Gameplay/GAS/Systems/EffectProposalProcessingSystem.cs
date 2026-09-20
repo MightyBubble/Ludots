@@ -1581,12 +1581,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             float before = primaryAttributeId >= 0
-                ? World.Get<AttributeBuffer>(proposal.Target).GetCurrent(primaryAttributeId)
+                ? Ludots.Core.Gameplay.GAS.AttributeReads.Current(World, proposal.Target, primaryAttributeId)
                 : 0f;
             TagOps tagOps = _tagOps ?? throw new InvalidOperationException(TagOps.MissingTagOpsError);
             AttributeMutationOps.ApplyModifiers(World, proposal.Target, in proposal.Modifiers, tagOps);
             float after = primaryAttributeId >= 0
-                ? World.Get<AttributeBuffer>(proposal.Target).GetCurrent(primaryAttributeId)
+                ? Ludots.Core.Gameplay.GAS.AttributeReads.Current(World, proposal.Target, primaryAttributeId)
                 : 0f;
             PublishInstantApplied(in proposal, primaryAttributeId, after - before);
         }

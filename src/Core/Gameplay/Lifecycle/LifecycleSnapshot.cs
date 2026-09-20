@@ -31,10 +31,47 @@ namespace Ludots.Core.Gameplay.Lifecycle
                 hasAttributes ? world.Get<AttributeBuffer>(source) : default,
                 hasAttributes,
                 hasStableId ? world.Get<PresentationStableId>(source).Value : 0,
-                hasStableId);
+                hasStableId,
+                CaptureHighRow(world, source));
         }
 
         public static LifecycleSnapshot CaptureDeployConsumeSource(World world, Entity source) => Capture(world, source);
+
+        /// <summary>高槽位（≥64）整行随档捕获（RFC-0067 P1）；无列存/无行时为 null。</summary>
+        public readonly float[]? HighAttributes;
+
+        private static float[]? CaptureHighRow(World world, Entity source)
+        {
+            var store = Ludots.Core.Gameplay.GAS.WorldAttributeStoreAmbient.Current;
+            if (store == null || store.SlotCount <= AttributeBuffer.MAX_ATTRS || !store.TryGetRow(source, out int row))
+            {
+                return null;
+            }
+
+            int slots = store.SlotCount - AttributeBuffer.MAX_ATTRS;
+            var values = new float[slots];
+            for (int i = 0; i < slots; i++)
+            {
+                values[i] = store.GetCurrent(row, AttributeBuffer.MAX_ATTRS + i);
+            }
+
+            return values;
+        }
+
+        /// <summary>恢复期把高槽位行写回列存（实体换壳后由部署路径调用）。</summary>
+        public void RestoreHighRow(Ludots.Core.Gameplay.GAS.WorldAttributeStore store, Entity target)
+        {
+            if (HighAttributes == null || HighAttributes.Length == 0)
+            {
+                return;
+            }
+
+            int row = store.EnsureRow(target);
+            for (int i = 0; i < HighAttributes.Length && AttributeBuffer.MAX_ATTRS + i < store.SlotCount; i++)
+            {
+                store.SetCurrentRaw(row, AttributeBuffer.MAX_ATTRS + i, HighAttributes[i]);
+            }
+        }
 
         private LifecycleSnapshot(
             bool hasPlayerOwner,
@@ -44,7 +81,8 @@ namespace Ludots.Core.Gameplay.Lifecycle
             AttributeBuffer attributes,
             bool hasAttributes,
             int stableId,
-            bool hasStableId)
+            bool hasStableId,
+            float[]? highAttributes)
         {
             HasPlayerOwner = hasPlayerOwner;
             PlayerOwner = playerOwner;
@@ -54,6 +92,7 @@ namespace Ludots.Core.Gameplay.Lifecycle
             HasAttributes = hasAttributes;
             StableId = stableId;
             HasStableId = hasStableId;
+            HighAttributes = highAttributes;
         }
     }
 }

@@ -6,7 +6,14 @@ namespace Ludots.Core.Gameplay.GAS.Registry
     public static class AttributeRegistry
     {
         public const int InvalidId = -1;
+
+        /// <summary>内嵌镜像宽度：AttributeBuffer/AttributeLastSnapshot/位掩码等组件内定长数组的槽位数。
+        /// 槽位 [64, <see cref="MaxAttributeIds"/}) 只存在于 WorldAttributeStore（RFC-0067 P1），
+        /// 注册上限与组件宽度自此解耦。</summary>
         public const int MaxAttributes = 64;
+
+        /// <summary>可登记属性种类上限 = 容量计划绝对天花板（RFC-0067 §3.1）。</summary>
+        public const int MaxAttributeIds = 1024;
 
         private static IdentityTable Table => ModRegistryAmbient.Current.Attributes;
         private static AttributeConstraints[] Constraints => ModRegistryAmbient.Current.AttributeConstraints;
@@ -51,14 +58,14 @@ namespace Ludots.Core.Gameplay.GAS.Registry
         public static bool TryGetConstraints(int attributeId, out AttributeConstraints constraints)
         {
             constraints = default;
-            if ((uint)attributeId >= (uint)MaxAttributes) return false;
+            if ((uint)attributeId >= (uint)MaxAttributeIds) return false;
             constraints = Constraints[attributeId];
             return constraints.HasAny;
         }
 
         public static void SetConstraints(int attributeId, in AttributeConstraints constraints)
         {
-            if (attributeId == InvalidId || (uint)attributeId >= (uint)MaxAttributes)
+            if (attributeId == InvalidId || (uint)attributeId >= (uint)MaxAttributeIds)
             {
                 throw new ArgumentOutOfRangeException(nameof(attributeId), attributeId, "Attribute id is invalid.");
             }
@@ -68,7 +75,7 @@ namespace Ludots.Core.Gameplay.GAS.Registry
 
         public static void ReplaceConstraints(int attributeId, in AttributeConstraints constraints)
         {
-            if (attributeId == InvalidId || (uint)attributeId >= (uint)MaxAttributes)
+            if (attributeId == InvalidId || (uint)attributeId >= (uint)MaxAttributeIds)
             {
                 throw new ArgumentOutOfRangeException(nameof(attributeId), attributeId, "Attribute id is invalid.");
             }

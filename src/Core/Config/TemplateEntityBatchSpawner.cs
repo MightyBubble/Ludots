@@ -308,6 +308,7 @@ namespace Ludots.Core.Config
                         AttributeBuffer attributeBuffer = descriptor.CreateAttributeBuffer();
                         attributes[componentIndex] = attributeBuffer;
                         attributeSnapshots[componentIndex] = descriptor.CreateAttributeLastSnapshot(ref attributeBuffer);
+                        descriptor.SeedWorldStore(entity, attributeBuffer);
                     }
 
                     if (descriptor.HasGameplayTagContainer)
@@ -601,6 +602,11 @@ namespace Ludots.Core.Config
                 var buffer = default(AttributeBuffer);
                 for (int i = 0; i < _attributeSeeds.Length; i++)
                 {
+                    if (_attributeSeeds[i].AttributeId >= Gameplay.GAS.Components.AttributeBuffer.MAX_ATTRS)
+                    {
+                        continue;
+                    }
+
                     if (_attributeSeeds[i].HasBase)
                     {
                         buffer.SetBase(_attributeSeeds[i].AttributeId, _attributeSeeds[i].BaseValue);
@@ -609,6 +615,11 @@ namespace Ludots.Core.Config
 
                 for (int i = 0; i < _attributeSeeds.Length; i++)
                 {
+                    if (_attributeSeeds[i].AttributeId >= Gameplay.GAS.Components.AttributeBuffer.MAX_ATTRS)
+                    {
+                        continue;
+                    }
+
                     if (_attributeSeeds[i].HasCurrent)
                     {
                         buffer.SetCurrent(_attributeSeeds[i].AttributeId, _attributeSeeds[i].CurrentValue);
@@ -616,6 +627,56 @@ namespace Ludots.Core.Config
                 }
 
                 return buffer;
+            }
+
+            /// <summary>种子期建行：内嵌低槽位全量镜像 + 高槽位（≥64）直写列存并播快照。</summary>
+            public void SeedWorldStore(Entity entity, AttributeBuffer embedded)
+            {
+                Gameplay.GAS.WorldAttributeStore store = Gameplay.GAS.WorldAttributeStoreAmbient.Current;
+                if (store == null)
+                {
+                    for (int i = 0; i < _attributeSeeds.Length; i++)
+                    {
+                        if (_attributeSeeds[i].AttributeId >= Gameplay.GAS.Components.AttributeBuffer.MAX_ATTRS)
+                        {
+                            throw new InvalidOperationException(
+                                "GAS.CAPACITY.ERR.HighLaneUnavailable: 模板 AttributeBuffer 引用 attributeId >= 64 需要世界列存（RFC-0067 P1）。");
+                        }
+                    }
+
+                    return;
+                }
+
+                int row = store.EnsureRow(entity);
+                ulong mirrorMask = embedded.DefinedMask;
+                while (mirrorMask != 0UL)
+                {
+                    int attributeId = System.Numerics.BitOperations.TrailingZeroCount(mirrorMask);
+                    mirrorMask &= mirrorMask - 1UL;
+                    store.MirrorCurrent(row, attributeId, embedded.GetBase(attributeId), embedded.GetCap(attributeId), embedded.GetCurrent(attributeId));
+                    Gameplay.GAS.AttributeHighLane.SeedLastSnapshot(store, row, attributeId);
+                }
+
+                for (int i = 0; i < _attributeSeeds.Length; i++)
+                {
+                    int attributeId = _attributeSeeds[i].AttributeId;
+                    if (attributeId < Gameplay.GAS.Components.AttributeBuffer.MAX_ATTRS)
+                    {
+                        continue;
+                    }
+
+                    if (_attributeSeeds[i].HasBase)
+                    {
+                        store.SetBase(row, attributeId, _attributeSeeds[i].BaseValue);
+                    }
+
+                    if (_attributeSeeds[i].HasCurrent)
+                    {
+                        store.SetCurrentHigh(row, attributeId, _attributeSeeds[i].CurrentValue);
+                    }
+
+                    Gameplay.GAS.AttributeHighLane.SeedLastSnapshot(store, row, attributeId);
+                }
             }
 
             public unsafe AttributeLastSnapshot CreateAttributeLastSnapshot(ref AttributeBuffer buffer)
