@@ -187,8 +187,7 @@ Board 起点（#1567 目标态）：
       "SpatialType": "Grid",
       "WidthCells": 400,
       "HeightCells": 400,
-      "CellSizeCm": 100,
-      "NavigationEnabled": true
+      "CellSizeCm": 100
     }
   ]
 }
