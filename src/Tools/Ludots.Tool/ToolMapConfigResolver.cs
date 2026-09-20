@@ -307,7 +307,8 @@ namespace Ludots.Tool
                 return parent;
             }
 
-            return merged;
+            Ludots.Core.Map.MapManager.ApplyWorldTuningToBoards(merged);
+        return merged;
         }
 
         private static void MergeMap(MapConfig target, MapConfig source)
@@ -380,6 +381,16 @@ namespace Ludots.Tool
             if (source.DefaultCamera != null) target.DefaultCamera = source.DefaultCamera;
             if (source.ContinuousHeightmap != null) target.ContinuousHeightmap = source.ContinuousHeightmap;
             if (source.ParticipantRelationships != null) target.ParticipantRelationships = source.ParticipantRelationships;
+        if (!string.IsNullOrWhiteSpace(source.RootBoard))
+        {
+            target.RootBoard = source.RootBoard;
+        }
+
+        if (source.Tuning is { } srcTuning && srcTuning.IsAuthored)
+        {
+            target.Tuning = srcTuning.Clone();
+        }
+
         }
 
         private static bool MapFileExists(string rootPath, string mapId)

@@ -1,5 +1,8 @@
 {
   "Id": "chunk_streaming_showcase",
+  "Tuning": {
+    "LoadedChunkCapacity": 64
+  },
   "Tags": [
     "chunk_streaming_showcase",
     "showcase",
@@ -12,9 +15,7 @@
       "SpatialType": "NodeGraph",
       "WidthCells": 512,
       "HeightCells": 512,
-      "GridCellSizeCm": 100,
-      "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 64
+      "GridCellSizeCm": 100
     }
   ],
   "DefaultCamera": {

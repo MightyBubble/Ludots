@@ -323,31 +323,6 @@ namespace Ludots.Tests.Architecture
             return tempRoot;
         }
 
-        [Test]
-        public void BoardConfig_Clone_DoesNotAliasNavTileGrid()
-        {
-            var board = new BoardConfig
-            {
-                Name = "default",
-                NavTileGrid = new NavTileGridConfig
-                {
-                    WidthChunks = 4,
-                    HeightChunks = 3,
-                    ChunkSizeCells = 64,
-                    CellSizeCm = 250,
-                    OriginXcm = 12_000,
-                    OriginZcm = -3_400
-                }
-            };
-
-            BoardConfig clone = board.Clone();
-            clone.NavTileGrid!.WidthChunks = 99;
-            clone.NavTileGrid.OriginXcm = -1;
-
-            Assert.That(board.NavTileGrid.WidthChunks, Is.EqualTo(4), "mutating the clone's tile grid must not leak into the source board");
-            Assert.That(board.NavTileGrid.OriginXcm, Is.EqualTo(12_000));
-        }
-
         private static GameEngine CreateEngineWithTempNavAssets(string repoRoot, string tempAssetsRoot, string mapId, LogicTerrainField? terrain = null)
         {
             var effectiveTerrain = terrain ?? new FlatGridLogicTerrainField(
@@ -368,6 +343,45 @@ namespace Ludots.Tests.Architecture
                 .GetProperty(nameof(GameEngine.LogicTerrain), BindingFlags.Instance | BindingFlags.Public)!
                 .SetValue(engine, effectiveTerrain);
 
+            // The declared grid must match the tile geometry written by
+            // WriteAllChunkTileFiles: 64-cell chunks at 250 cm per cell.
+            Directory.CreateDirectory(Path.Combine(tempAssetsRoot, "Navigation"));
+            string catalogPath = Path.Combine(tempAssetsRoot, "config_catalog.json");
+            string catalog = File.Exists(catalogPath)
+                ? File.ReadAllText(catalogPath)
+                : "[]";
+            if (!catalog.Contains("Navigation/navmesh.json"))
+            {
+                var catalogNode = System.Text.Json.Nodes.JsonNode.Parse(catalog)!.AsArray();
+                var entry = new System.Text.Json.Nodes.JsonObject
+                {
+                    ["Path"] = "Navigation/navmesh.json",
+                    ["Policy"] = "DeepObject"
+                };
+                catalogNode.Add(entry);
+                File.WriteAllText(catalogPath, catalogNode.ToJsonString());
+            }
+
+            string navmeshPath = Path.Combine(tempAssetsRoot, "Navigation", "navmesh.json");
+            var navmesh = File.Exists(navmeshPath)
+                ? System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(navmeshPath))!.AsObject()
+                : new System.Text.Json.Nodes.JsonObject();
+            var mapsNode = navmesh["maps"] as System.Text.Json.Nodes.JsonObject ?? new System.Text.Json.Nodes.JsonObject();
+            navmesh["maps"] = mapsNode;
+            var mapNode = new System.Text.Json.Nodes.JsonObject();
+            mapsNode[mapId] = mapNode;
+            var boardsNode = new System.Text.Json.Nodes.JsonObject();
+            mapNode["boards"] = boardsNode;
+            var gridNode = new System.Text.Json.Nodes.JsonObject
+            {
+                ["widthChunks"] = effectiveTerrain.WidthChunks,
+                ["heightChunks"] = effectiveTerrain.HeightChunks,
+                ["chunkSizeCells"] = SpatialScaleDefaults.TerrainChunkCells,
+                ["cellSizeCm"] = 250
+            };
+            boardsNode["default"] = gridNode;
+            File.WriteAllText(navmeshPath, navmesh.ToJsonString());
+
             engine.LoadNavForMapForTests(
                 mapId,
                 new MapConfig
@@ -376,19 +390,7 @@ namespace Ludots.Tests.Architecture
                     Tags = new List<string> { MapTags.FeatureNavMeshOn.Name },
                     Boards = new List<BoardConfig>
                     {
-                        new BoardConfig
-                        {
-                            Name = "default",
-                            // The declared grid must match the tile geometry written by
-                            // WriteAllChunkTileFiles: 64-cell chunks at 250 cm per cell.
-                            NavTileGrid = new NavTileGridConfig
-                            {
-                                WidthChunks = effectiveTerrain.WidthChunks,
-                                HeightChunks = effectiveTerrain.HeightChunks,
-                                ChunkSizeCells = SpatialScaleDefaults.TerrainChunkCells,
-                                CellSizeCm = 250
-                            }
-                        }
+                        new BoardConfig { Name = "default" }
                     }
                 });
 

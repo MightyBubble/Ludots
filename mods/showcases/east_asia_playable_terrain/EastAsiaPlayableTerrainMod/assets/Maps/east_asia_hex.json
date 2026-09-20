@@ -37,7 +37,6 @@
       "HeightCells": 4096,
       "GridCellSizeCm": 125649,
       "HexEdgeLengthCm": 125649,
-      "ChunkSizeCells": 64,
       "DataFile": "samples/LudotsSample/east_asia/east_asia_hex.hex",
       "ContinuousHeightmapAsset": null,
       "StructureCollisionAsset": "",

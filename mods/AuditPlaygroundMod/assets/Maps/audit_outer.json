@@ -1,5 +1,8 @@
 {
   "Id": "audit_outer",
+  "Tuning": {
+    "LoadedChunkCapacity": 256
+  },
   "Tags": [
     "audit_demo",
     "audit_outer"
@@ -9,7 +12,6 @@
       "Name": "default",
       "SpatialType": "Grid",
       "DataFile": "level_1.bin",
-      "LoadedChunkCapacity": 256,
       "WidthCells": 16384,
       "HeightCells": 16384
     }

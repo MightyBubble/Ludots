@@ -4930,14 +4930,11 @@ static class EditorRepo
         int heightCells = request.HeightCells > 0
             ? request.HeightCells
             : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultWorldHeightMacroTiles * Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells;
-        int chunkSizeCells = request.ChunkSizeCells > 0
-            ? request.ChunkSizeCells
-            : Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells;
         int cellSizeCm = request.CellSizeCm > 0
             ? request.CellSizeCm
             : Ludots.Core.Spatial.SpatialScaleDefaults.CellCm;
 
-        ValidateBoardDimensions(widthCells, heightCells, chunkSizeCells);
+        ValidateBoardDimensions(widthCells, heightCells);
         string dataFile = string.IsNullOrWhiteSpace(request.DataFile)
             ? BuildDefaultBoardDataFile(mapId, name, spatialType)
             : request.DataFile.Trim();
@@ -4950,7 +4947,6 @@ static class EditorRepo
             HeightCells = heightCells,
             GridCellSizeCm = cellSizeCm,
             HexEdgeLengthCm = request.HexEdgeLengthCm > 0 ? request.HexEdgeLengthCm : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultHexEdgeLengthCm,
-            ChunkSizeCells = chunkSizeCells,
             DataFile = dataFile,
             NavigationEnabled = request.NavigationEnabled,
         };
@@ -4972,6 +4968,12 @@ static class EditorRepo
             {
                 dataPath = null;
             }
+        }
+
+        if (map.Tuning is not { } mapTuning || mapTuning.LoadedChunkCapacity is not > 0)
+        {
+            throw new InvalidOperationException(
+                $"Map '{mapId}' must declare Tuning.LoadedChunkCapacity before boards can be added (single map budget, #1567).");
         }
 
         EnsureBoardFitsRoot(map, board);
@@ -5378,20 +5380,10 @@ static class EditorRepo
         }
     }
 
-    private static void ValidateBoardDimensions(int widthCells, int heightCells, int chunkSizeCells)
+    private static void ValidateBoardDimensions(int widthCells, int heightCells)
     {
         if (widthCells <= 0) throw new InvalidOperationException("WidthCells must be positive.");
         if (heightCells <= 0) throw new InvalidOperationException("HeightCells must be positive.");
-        if (chunkSizeCells != Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells)
-        {
-            throw new InvalidOperationException(
-                $"React terrain editor creates boards with ChunkSizeCells={Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells}; requested {chunkSizeCells}.");
-        }
-        if (widthCells % chunkSizeCells != 0 || heightCells % chunkSizeCells != 0)
-        {
-            throw new InvalidOperationException(
-                $"Board extent in cells must align to ChunkSizeCells={chunkSizeCells}; got {widthCells}x{heightCells}.");
-        }
     }
 
     private static string BuildDefaultBoardDataFile(string mapId, string boardName, string spatialType)
@@ -5885,7 +5877,6 @@ sealed class BoardCreateRequest
     public int HeightCells { get; set; }
     public int CellSizeCm { get; set; }
     public int HexEdgeLengthCm { get; set; }
-    public int ChunkSizeCells { get; set; }
     public bool NavigationEnabled { get; set; } = true;
     public string? DataFile { get; set; }
 }

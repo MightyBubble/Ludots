@@ -1,5 +1,8 @@
 {
   "Id": "road_network_showcase_chunked",
+  "Tuning": {
+    "LoadedChunkCapacity": 256
+  },
   "Tags": [
     "road_network_showcase",
     "showcase",
@@ -13,9 +16,7 @@
       "SpatialType": "NodeGraph",
       "WidthCells": 512,
       "HeightCells": 512,
-      "GridCellSizeCm": 100,
-      "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 256
+      "GridCellSizeCm": 100
     }
   ],
   "DefaultCamera": {

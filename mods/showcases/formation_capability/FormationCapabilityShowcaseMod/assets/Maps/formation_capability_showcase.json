@@ -1,5 +1,8 @@
 {
   "Id": "formation_capability_showcase",
+  "Tuning": {
+    "LoadedChunkCapacity": 512
+  },
   "TriggerGraphs": [
     {
       "graph": "graph.mass_navigation.selection_roster",
@@ -26,9 +29,7 @@
       "SpatialType": "Grid",
       "WidthCells": 64000,
       "HeightCells": 64000,
-      "GridCellSizeCm": 100,
-      "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 512
+      "GridCellSizeCm": 100
     }
   ],
   "Entities": [

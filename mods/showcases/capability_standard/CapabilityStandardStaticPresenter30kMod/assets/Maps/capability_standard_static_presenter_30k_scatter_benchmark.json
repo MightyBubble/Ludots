@@ -1,5 +1,8 @@
 {
   "Id": "capability_standard_static_presenter_30k_scatter_benchmark",
+  "Tuning": {
+    "LoadedChunkCapacity": 16
+  },
   "Tags": [
     "showcase",
     "presenter",
@@ -23,8 +26,7 @@
       "SpatialType": "Grid",
       "WidthCells": 256,
       "HeightCells": 256,
-      "GridCellSizeCm": 100,
-      "LoadedChunkCapacity": 16
+      "GridCellSizeCm": 100
     }
   ],
   "DefaultCamera": {

@@ -4,7 +4,6 @@
     {
       "name": "default",
       "dataFile": "level_1.bin",
-      "loadedChunkCapacity": 256,
       "WidthCells": 16384,
       "HeightCells": 16384
     }
@@ -47,5 +46,8 @@
         }
       }
     }
-  ]
+  ],
+  "Tuning": {
+    "LoadedChunkCapacity": 256
+  }
 }

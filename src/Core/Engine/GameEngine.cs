@@ -4123,11 +4123,12 @@ namespace Ludots.Core.Engine
             // grid (authored with the bake). Runtime never derives it from boards or
             // terrain objects; an undeclared grid is a map-authoring error.
             var tileGrids = mapConfig.Boards
-                .Select(b => b.NavTileGrid)
+                .Select(b => bakeConfig.Maps.TryGetValue(mapId, out var mapBoards) &&
+                             mapBoards.Boards.TryGetValue(b.Name, out var grid) ? grid : null)
                 .ToList();
             if (tileGrids.Any(g => g == null))
                 throw new InvalidOperationException(
-                    $"Map '{mapId}' has boards without NavTileGrid declarations; author each board's nav tile grid in the map config.");
+                    $"Map '{mapId}' has boards without nav tile grid declarations; author them in Navigation/navmesh.json under maps.{mapId}.boards.<boardName>.");
             if (tileGrids.Any(g => g!.WidthChunks <= 0 || g!.HeightChunks <= 0 ||
                 g!.ChunkSizeCells <= 0 || g!.CellSizeCm <= 0))
             {

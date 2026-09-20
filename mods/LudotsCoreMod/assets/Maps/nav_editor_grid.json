@@ -1,5 +1,8 @@
 {
   "Id": "nav_editor_grid",
+  "Tuning": {
+    "LoadedChunkCapacity": 256
+  },
   "Tags": [
     "nav_editor",
     "grid",
@@ -12,8 +15,6 @@
       "WidthCells": 256,
       "HeightCells": 256,
       "GridCellSizeCm": 100,
-      "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 16,
       "DataFile": "nav_editor_grid.grid",
       "NavigationEnabled": true
     },
@@ -24,8 +25,6 @@
       "HeightCells": 4096,
       "GridCellSizeCm": 100,
       "HexEdgeLengthCm": 100,
-      "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 256,
       "DataFile": "nav_editor_grid_board_2.grid",
       "NavigationEnabled": true
     }

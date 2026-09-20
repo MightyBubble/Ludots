@@ -594,7 +594,6 @@ export const Toolbar: React.FC = () => {
             topology: newTopology,
             cellSizeCm: Math.max(1, Math.floor(newMapCellSizeCmValue)),
             hexEdgeLengthCm: Math.max(1, Math.floor(newTopology === 'HexGrid' ? newMapHexEdgeLengthCmValue : DefaultHexEdgeLengthCm)),
-            chunkSizeCells: TerrainChunkCells,
         });
         setShowNewMap(false);
     };

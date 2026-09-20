@@ -1,5 +1,8 @@
 {
   "Id": "animation_acceptance_entry",
+  "Tuning": {
+    "LoadedChunkCapacity": 16
+  },
   "Tags": [
     "animation.acceptance",
     "animation.acceptance.layered"
@@ -10,8 +13,7 @@
       "SpatialType": "Grid",
       "WidthCells": 256,
       "HeightCells": 256,
-      "GridCellSizeCm": 100,
-      "LoadedChunkCapacity": 16
+      "GridCellSizeCm": 100
     }
   ],
   "DefaultCamera": {

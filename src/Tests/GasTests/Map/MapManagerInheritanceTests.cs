@@ -29,8 +29,7 @@ namespace GasTests
                       "widthCells": 32768,
                       "heightCells": 16384,
                       "gridCellSizeCm": 200,
-                      "hexEdgeLengthCm": 900,
-                      "chunkSizeCells": 32
+                      "hexEdgeLengthCm": 900
                     }
                   ]
                 }
@@ -173,7 +172,7 @@ namespace GasTests
         }
 
         [Test]
-        public void LoadMap_WhenBoardCapacityConflictsWithWorldTuning_Throws()
+        public void LoadMap_WhenBoardAuthorsRetiredCapacityKey_Throws()
         {
             var tempRoot = CreateTempDir();
             try
@@ -189,7 +188,7 @@ namespace GasTests
                 """);
                 var manager = CreateMapManager(tempRoot);
                 var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("conflict"));
-                Assert.That(ex!.Message, Does.Contain("single world budget"));
+                Assert.That(ex!.Message, Does.Contain("legacy key 'loadedChunkCapacity'"));
             }
             finally { TryDelete(tempRoot); }
         }
@@ -217,7 +216,7 @@ namespace GasTests
         }
 
         [Test]
-        public void LoadMap_WhenBoardPartitionConflictsWithWorldTuning_Throws()
+        public void LoadMap_WhenBoardAuthorsRetiredPartitionKey_Throws()
         {
             var tempRoot = CreateTempDir();
             try
@@ -225,7 +224,7 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "partconflict", """
                 {
                   "id": "partconflict",
-                  "tuning": { "partitionChunkCells": 128 },
+                  "tuning": { "loadedChunkCapacity": 64, "partitionChunkCells": 128 },
                   "boards": [
                     { "name": "default", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100, "chunkSizeCells": 32 }
                   ]
@@ -233,7 +232,7 @@ namespace GasTests
                 """);
                 var manager = CreateMapManager(tempRoot);
                 var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("partconflict"));
-                Assert.That(ex!.Message, Does.Contain("ChunkSizeCells=32, conflicting"));
+                Assert.That(ex!.Message, Does.Contain("legacy key 'chunkSizeCells'"));
             }
             finally { TryDelete(tempRoot); }
         }
@@ -247,6 +246,7 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "oversize", """
                 {
                   "id": "oversize",
+                  "tuning": { "loadedChunkCapacity": 16 },
                   "boards": [
                     { "name": "root", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100 },
                     { "name": "default", "widthCells": 1024, "heightCells": 256, "gridCellSizeCm": 100 }
@@ -272,6 +272,7 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "badroot", """
                 {
                   "id": "badroot",
+                  "tuning": { "loadedChunkCapacity": 16 },
                   "rootBoard": "ghost",
                   "boards": [
                     { "name": "root", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100 }
@@ -297,6 +298,7 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "halforigin", """
                 {
                   "id": "halforigin",
+                  "tuning": { "loadedChunkCapacity": 16 },
                   "boards": [
                     {
                       "name": "default",
@@ -327,6 +329,7 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "placed", """
                 {
                   "id": "placed",
+                  "tuning": { "loadedChunkCapacity": 16 },
                   "boards": [
                     {
                       "name": "default",
@@ -358,6 +361,7 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "zeroplace", """
                 {
                   "id": "zeroplace",
+                  "tuning": { "loadedChunkCapacity": 16 },
                   "boards": [
                     { "name": "default", "widthCells": 256, "heightCells": 256, "gridCellSizeCm": 100, "originXCm": 0, "originYCm": 0 }
                   ]
@@ -379,6 +383,7 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "exact", """
                 {
                   "id": "exact",
+                  "tuning": { "loadedChunkCapacity": 16 },
                   "boards": [
                     {
                       "name": "default",
@@ -440,6 +445,7 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "board_map", """
                 {
                   "id": "board_map",
+                  "tuning": { "loadedChunkCapacity": 16 },
                   "boards": [
                     {
                       "name": "default",

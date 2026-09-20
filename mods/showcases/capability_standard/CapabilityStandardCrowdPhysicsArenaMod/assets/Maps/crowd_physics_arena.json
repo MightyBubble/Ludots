@@ -1,5 +1,8 @@
 {
   "Id": "crowd_physics_arena",
+  "Tuning": {
+    "LoadedChunkCapacity": 256
+  },
   "ContinuousHeightmapAsset": "assets/terrain/crowd_physics_arena_flat.height",
   "Tags": [
     "crowd_physics_arena"
@@ -19,9 +22,7 @@
       "SpatialType": "Grid",
       "WidthCells": 64000,
       "HeightCells": 64000,
-      "GridCellSizeCm": 100,
-      "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 256
+      "GridCellSizeCm": 100
     }
   ],
   "Entities": [

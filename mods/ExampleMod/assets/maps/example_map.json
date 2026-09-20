@@ -1,10 +1,12 @@
 {
   "Id": "example_map",
+  "Tuning": {
+    "LoadedChunkCapacity": 256
+  },
   "Boards": [
     {
       "Name": "default",
       "DataFile": "example_map.bin",
-      "LoadedChunkCapacity": 256,
       "WidthCells": 16384,
       "HeightCells": 16384
     }

@@ -184,7 +184,7 @@ namespace Ludots.Core.Navigation.NavMesh.Config
 
         private void ValidateRaw(JsonObject root, string relativePath)
         {
-            RequireOnlyProperties(root, "NavMeshBakeConfig", new[] { "mode", "algorithm", "profiles", "layers", "areas", "runtimeIncremental" }, new[] { "terrainFeed" });
+            RequireOnlyProperties(root, "NavMeshBakeConfig", new[] { "mode", "algorithm", "profiles", "layers", "areas", "runtimeIncremental" }, new[] { "terrainFeed", "maps" });
             string mode = RequireString(root, "mode", "NavMeshBakeConfig");
             string algorithm = RequireString(root, "algorithm", "NavMeshBakeConfig");
             _ = NavBakeNames.ParseMode(mode, "NavMeshBakeConfig.mode");
@@ -197,6 +197,35 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                 }
 
                 _ = NavBakeNames.ParseTerrainFeed(RequireString(root, "terrainFeed", "NavMeshBakeConfig"), "NavMeshBakeConfig.terrainFeed");
+            }
+
+            if (root.TryGetPropertyValue("maps", out var mapsNode) && mapsNode is JsonObject maps)
+            {
+                foreach (var mapEntry in maps)
+                {
+                    if (mapEntry.Value is not JsonObject mapObj)
+                    {
+                        throw new InvalidOperationException($"NavMeshBakeConfig.maps.{mapEntry.Key} must be an object.");
+                    }
+
+                    RequireOnlyProperties(mapObj, $"NavMeshBakeConfig.maps.{mapEntry.Key}", new[] { "boards" });
+                    if (mapObj.TryGetPropertyValue("boards", out var boardsNode) && boardsNode is JsonObject boards)
+                    {
+                        foreach (var boardEntry in boards)
+                        {
+                            if (boardEntry.Value is not JsonObject boardObj)
+                            {
+                                throw new InvalidOperationException($"NavMeshBakeConfig.maps.{mapEntry.Key}.boards.{boardEntry.Key} must be an object.");
+                            }
+
+                            RequireOnlyProperties(
+                                boardObj,
+                                $"NavMeshBakeConfig.maps.{mapEntry.Key}.boards.{boardEntry.Key}",
+                                new[] { "widthChunks", "heightChunks", "chunkSizeCells", "cellSizeCm" },
+                                new[] { "originXcm", "originZcm" });
+                        }
+                    }
+                }
             }
 
             if (root["profiles"] is not JsonArray profiles || profiles.Count == 0)

@@ -108,7 +108,7 @@ flowchart TD
 | 板 | `Boards[].WidthHexes/HeightHexes` + `HexEdgeLengthCm` | hexes | Hex 板范围，世界足迹经 `HexMetrics` 派生 | 同上（含借 `GridCellSizeCm` 算 hex 板足迹的现状做法） |
 | 板 | `Boards[].OriginXCm` / `OriginYCm` | cm | 板摆在世界坐标哪里，缺省居中；越出世界 fail-fast | 板恒居中（无 origin 字段） |
 | 导航 | navmesh.json `boards.<name>.source` | —— | 烘焙源（.height 直采 / .grid / .hex），板是可选源之一 | bake 从板 LogicTerrain 投影的现状链路（#1350 直采方向） |
-| 导航 | navmesh.json `boards.<name>.tileWorldWidthCm/HeightCm` | cm | nav 瓦片颗粒度，显式两轴，不从板或地形块推导 | `Boards[].NavTileGrid`（与 TerrainChunk 64-cell 的焊接） |
+| 导航 | navmesh.json `maps.<mapId>.boards.<name>`（widthChunks/heightChunks/chunkSizeCells/cellSizeCm） | cm/cells | 每板导航瓦片格网，nav 自有家；两轴显式化随 #1346 后续 | 板内 `NavTileGrid`（已迁出，出现即 fail-fast） |
 | 执行 | `MassNavigationConfig.json` 各键 | cm | 不变 | —— |
 
 四域边界三句话：世界尺寸不由板决定；板是业务区域不是性能分区；nav 瓦片颗粒度与板无关。

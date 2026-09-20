@@ -103,7 +103,6 @@ namespace GasTests
                 "widthCells": 32768,
                 "heightCells": 32768,
                 "hexEdgeLengthCm": 600,
-                "chunkSizeCells": 32,
                 "navigationEnabled": true,
                 "continuousHeightmapAsset": "Data/Maps/strategic.height"
             }
@@ -116,13 +115,14 @@ namespace GasTests
             Assert.That(config.WidthCells, Is.EqualTo(32768));
             Assert.That(config.HeightCells, Is.EqualTo(32768));
             Assert.That(config.HexEdgeLengthCm, Is.EqualTo(600));
-            Assert.That(config.ChunkSizeCells, Is.EqualTo(32));
+            Assert.That(config.ChunkSizeCells, Is.EqualTo(64),
+                "partition granularity is runtime-only now; authored on map Tuning.PartitionChunkCells");
             Assert.That(config.NavigationEnabled, Is.True);
             Assert.That(config.ContinuousHeightmapAsset, Is.EqualTo("Data/Maps/strategic.height"));
         }
 
         [Test]
-        public void NodeGraphBoard_UsesExplicitLoadedChunkCapacityFromBoardConfig()
+        public void BoardConfig_RetiredBudgetKeys_AreIgnoredOnDeserialize()
         {
             string json = """
             {
@@ -138,12 +138,15 @@ namespace GasTests
 
             var config = JsonSerializer.Deserialize<BoardConfig>(json, _jsonOpts);
             Assert.That(config, Is.Not.Null);
-            Assert.That(config!.LoadedChunkCapacity, Is.EqualTo(37));
+            Assert.That(config!.LoadedChunkCapacity, Is.Zero,
+                "board-level budget authoring is retired; the map's Tuning is the single budget source");
 
+            config.LoadedChunkCapacity = 37;
             var board = new NodeGraphBoard(new BoardId("roads"), "roads", config);
             try
             {
-                Assert.That(board.LoadedChunksSource.LoadedChunkCapacity, Is.EqualTo(37));
+                Assert.That(board.LoadedChunksSource.LoadedChunkCapacity, Is.EqualTo(37),
+                    "the runtime field still feeds board construction (MapManager backfills from Tuning)");
             }
             finally
             {
@@ -178,6 +181,9 @@ namespace GasTests
                     RejectLegacyKey(repoRoot, file, i, board, "HeightInTiles", "HeightCells", violations);
                     RejectLegacyKey(repoRoot, file, i, board, "WidthInMacroTiles", "WidthCells", violations);
                     RejectLegacyKey(repoRoot, file, i, board, "HeightInMacroTiles", "HeightCells", violations);
+                    RejectLegacyKey(repoRoot, file, i, board, "ChunkSizeCells", "Tuning.PartitionChunkCells", violations);
+                    RejectLegacyKey(repoRoot, file, i, board, "LoadedChunkCapacity", "Tuning.LoadedChunkCapacity", violations);
+                    RejectLegacyKey(repoRoot, file, i, board, "NavTileGrid", "Navigation/navmesh.json maps.<mapId>.boards", violations);
 
                     string spatialType = TryGetString(board, "SpatialType") ?? "Grid";
                     if (!spatialType.Equals("Grid", StringComparison.OrdinalIgnoreCase) &&

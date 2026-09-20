@@ -1,5 +1,8 @@
 {
   "Id": "capability_standard_participant_views",
+  "Tuning": {
+    "LoadedChunkCapacity": 64
+  },
   "ContinuousHeightmapAsset": "assets/terrain/mass_navigation_large_world_relief.height",
   "Tags": [
     "capability_standard_participant_views",
@@ -212,9 +215,7 @@
       "SpatialType": "Grid",
       "WidthCells": 64000,
       "HeightCells": 64000,
-      "GridCellSizeCm": 100,
-      "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 64
+      "GridCellSizeCm": 100
     }
   ],
   "Entities": [

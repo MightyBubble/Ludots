@@ -1,5 +1,8 @@
 {
   "Id": "capability_standard_static_presenter_30k_dynamic_worker_large_world_benchmark",
+  "Tuning": {
+    "LoadedChunkCapacity": 256
+  },
   "Tags": [
     "showcase",
     "presenter",
@@ -26,9 +29,7 @@
       "SpatialType": "Grid",
       "WidthCells": 65536,
       "HeightCells": 65536,
-      "GridCellSizeCm": 100,
-      "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 256
+      "GridCellSizeCm": 100
     }
   ],
   "DefaultCamera": {

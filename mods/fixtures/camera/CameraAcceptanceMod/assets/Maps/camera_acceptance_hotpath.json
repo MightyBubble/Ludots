@@ -1,5 +1,8 @@
 {
   "Id": "camera_acceptance_hotpath",
+  "Tuning": {
+    "LoadedChunkCapacity": 64
+  },
   "Tags": [
     "camera.acceptance",
     "camera.acceptance.hotpath"
@@ -10,8 +13,7 @@
       "SpatialType": "Grid",
       "WidthCells": 512,
       "HeightCells": 512,
-      "GridCellSizeCm": 100,
-      "LoadedChunkCapacity": 64
+      "GridCellSizeCm": 100
     }
   ],
   "DefaultCamera": {

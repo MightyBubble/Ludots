@@ -1,5 +1,8 @@
 {
   "Id": "progression_scope_showcase",
+  "Tuning": {
+    "PartitionChunkCells": 32
+  },
   "Tags": [
     "progression_scope_showcase"
   ],
@@ -19,7 +22,6 @@
       "WidthCells": 8192,
       "HeightCells": 8192,
       "HexEdgeLengthCm": 400,
-      "ChunkSizeCells": 32,
       "NavigationEnabled": false
     }
   ],

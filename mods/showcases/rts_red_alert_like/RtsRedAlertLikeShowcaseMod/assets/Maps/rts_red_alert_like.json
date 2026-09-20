@@ -1,5 +1,9 @@
 {
   "Id": "rts_red_alert_like",
+  "Tuning": {
+    "LoadedChunkCapacity": 256,
+    "PartitionChunkCells": 32
+  },
   "Tags": [
     "rts",
     "rts_showcase",
@@ -22,8 +26,6 @@
       "WidthCells": 16384,
       "HeightCells": 16384,
       "GridCellSizeCm": 400,
-      "ChunkSizeCells": 32,
-      "LoadedChunkCapacity": 256,
       "NavigationEnabled": false
     }
   ],

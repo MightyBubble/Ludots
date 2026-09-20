@@ -242,7 +242,7 @@ Runtime incremental 起点：
 | 板恒居中（无 origin 字段） | `Boards[].OriginXCm` / `OriginYCm` | 迁移期缺省居中，等价现状 |
 | `Boards[].WidthInMacroTiles` × 256 / `GridCellSizeCm` 个 cell | `Boards[].WidthCells` / `HeightCells` | 板范围改为格子数直写 |
 | `Boards[].ChunkSizeCells` / `LoadedChunkCapacity` | map `Tuning.PartitionChunkCells` / `LoadedChunkCapacity` | 切 4 迁入 map 级，缺省可推导（4b） |
-| `Boards[].NavTileGrid`（含 `originXcm/originZcm`、`widthChunks/heightChunks`） | `Navigation/navmesh.json` `boards.<name>` 条目 | 切 3 迁出（等 PR #1484）；瓦片颗粒度显式 `tileWorldWidthCm/HeightCm` |
+| `Boards[].NavTileGrid`（含 `originXcm/originZcm`、`widthChunks/heightChunks`） | `Navigation/navmesh.json` `maps.<mapId>.boards.<name>` 条目 | 已迁移；板级出现即 fail-fast |
 | game.json `gridCellSizeCm` / `worldWidthInMacroTiles` / `worldHeightInMacroTiles` | game.json `world`（仅 boot 占位）+ 根板 | 升格迁移；运行时 host world 出自根板，boot 占位只在进图前生效 |
 
 旧键在新键生效后加载即 fail-fast 并指向新键（沿用 #283 的 `RejectLegacyWorldExtentKeys` 模式），不提供别名兼容。存量 67 张图的迁移由脚本按上表规则完成，迁移后世界边界、板行为、导航与迁移前一致（#1567 切 1 验收）。

@@ -1,5 +1,8 @@
 {
   "Id": "attachment_capability",
+  "Tuning": {
+    "LoadedChunkCapacity": 16
+  },
   "Tags": [
     "attachment.capability"
   ],
@@ -9,8 +12,7 @@
       "SpatialType": "Grid",
       "WidthCells": 1024,
       "HeightCells": 1024,
-      "GridCellSizeCm": 100,
-      "LoadedChunkCapacity": 16
+      "GridCellSizeCm": 100
     }
   ],
   "DefaultCamera": {

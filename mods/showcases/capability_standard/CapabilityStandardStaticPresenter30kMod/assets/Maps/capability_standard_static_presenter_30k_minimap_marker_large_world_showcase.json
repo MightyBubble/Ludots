@@ -1,5 +1,8 @@
 {
   "Id": "capability_standard_static_presenter_30k_minimap_marker_large_world_showcase",
+  "Tuning": {
+    "LoadedChunkCapacity": 256
+  },
   "ContinuousHeightmapAsset": "assets/terrain/capability_standard_static_presenter_30k_minimap_marker_large_world_relief.height",
   "Tags": [
     "showcase",
@@ -28,9 +31,7 @@
       "SpatialType": "Grid",
       "WidthCells": 65536,
       "HeightCells": 65536,
-      "GridCellSizeCm": 100,
-      "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 256
+      "GridCellSizeCm": 100
     }
   ],
   "DefaultCamera": {

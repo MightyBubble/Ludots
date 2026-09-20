@@ -27,5 +27,19 @@
     "heightScaleMeters": 1.0,
     "minWalkableUpDot": 0.6,
     "cliffHeightThreshold": 1
+  },
+  "maps": {
+    "east_asia_visual_heightmap": {
+      "boards": {
+        "default": {
+          "widthChunks": 28,
+          "heightChunks": 16,
+          "chunkSizeCells": 64,
+          "cellSizeCm": 3571,
+          "originXcm": 0,
+          "originZcm": 0
+        }
+      }
+    }
   }
 }

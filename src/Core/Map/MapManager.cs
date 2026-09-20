@@ -424,6 +424,23 @@ namespace Ludots.Core.Map
                 return;
             }
 
+            bool needsStreamingCapacity = false;
+            foreach (var board in config.Boards)
+            {
+                string spatialType = (board.SpatialType ?? "Grid").Trim();
+                if (spatialType.Equals("Grid", StringComparison.OrdinalIgnoreCase) ||
+                    spatialType.Equals("NodeGraph", StringComparison.OrdinalIgnoreCase))
+                {
+                    needsStreamingCapacity = true;
+                }
+            }
+
+            if (needsStreamingCapacity && config.Tuning.LoadedChunkCapacity is not > 0)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' has Grid/NodeGraph boards and must declare Tuning.LoadedChunkCapacity (board-level budget fields are retired, #1567).");
+            }
+
             BoardConfig root = ResolveRootBoard(config, mapId);
 
             foreach (var board in config.Boards)
@@ -474,7 +491,7 @@ namespace Ludots.Core.Map
             }
         }
 
-        private static void ApplyWorldTuningToBoards(MapConfig config)
+        public static void ApplyWorldTuningToBoards(MapConfig config)
         {
             var tuning = config?.Tuning;
             if (config?.Boards is not { Count: > 0 } || tuning is null || !tuning.IsAuthored)
@@ -583,10 +600,13 @@ namespace Ludots.Core.Map
                     continue;
                 }
 
-                RejectLegacyKey(board, "WidthInTiles", "Boards[].WidthCells + World.WidthCm", $"{jsonPath}.boards[{i}]");
-                RejectLegacyKey(board, "HeightInTiles", "Boards[].HeightCells + World.HeightCm", $"{jsonPath}.boards[{i}]");
-                RejectLegacyKey(board, "WidthInMacroTiles", "Boards[].WidthCells + World.WidthCm", $"{jsonPath}.boards[{i}]");
-                RejectLegacyKey(board, "HeightInMacroTiles", "Boards[].HeightCells + World.HeightCm", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "WidthInTiles", "Boards[].WidthCells", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "HeightInTiles", "Boards[].HeightCells", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "WidthInMacroTiles", "Boards[].WidthCells", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "HeightInMacroTiles", "Boards[].HeightCells", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "ChunkSizeCells", "Tuning.PartitionChunkCells", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "LoadedChunkCapacity", "Tuning.LoadedChunkCapacity", $"{jsonPath}.boards[{i}]");
+                RejectLegacyKey(board, "NavTileGrid", "Navigation/navmesh.json maps.<mapId>.boards.<name>", $"{jsonPath}.boards[{i}]");
             }
         }
 

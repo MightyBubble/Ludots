@@ -1,5 +1,8 @@
 {
   "Id": "spline_surface_uat",
+  "Tuning": {
+    "LoadedChunkCapacity": 64
+  },
   "Tags": [
     "showcase",
     "uat",
@@ -13,9 +16,7 @@
       "SpatialType": "NodeGraph",
       "WidthCells": 512,
       "HeightCells": 512,
-      "GridCellSizeCm": 100,
-      "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 64
+      "GridCellSizeCm": 100
     }
   ],
   "DefaultCamera": {

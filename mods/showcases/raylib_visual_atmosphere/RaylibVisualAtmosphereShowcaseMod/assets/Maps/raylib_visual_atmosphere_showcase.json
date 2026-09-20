@@ -1,5 +1,8 @@
 {
   "Id": "raylib_visual_atmosphere_showcase",
+  "Tuning": {
+    "LoadedChunkCapacity": 512
+  },
   "ContinuousHeightmap": {
     "Asset": "assets/terrain/tropical_island.height",
     "RenderProfile": {
@@ -30,8 +33,6 @@
       "WidthCells": 32768,
       "HeightCells": 32768,
       "GridCellSizeCm": 100,
-      "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 512,
       "NavigationEnabled": false
     }
   ],

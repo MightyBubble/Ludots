@@ -1,5 +1,8 @@
 {
   "Id": "raylib_client_parity_showcase",
+  "Tuning": {
+    "LoadedChunkCapacity": 64
+  },
   "Tags": [
     "showcase",
     "raylib",
@@ -11,8 +14,7 @@
       "SpatialType": "Grid",
       "WidthCells": 512,
       "HeightCells": 512,
-      "GridCellSizeCm": 100,
-      "LoadedChunkCapacity": 64
+      "GridCellSizeCm": 100
     }
   ],
   "DefaultCamera": {

@@ -1,5 +1,8 @@
 {
   "Id": "mass_navigation",
+  "Tuning": {
+    "LoadedChunkCapacity": 256
+  },
   "TriggerGraphs": [
     {
       "graph": "graph.mass_navigation.selection_roster",
@@ -36,9 +39,7 @@
       "SpatialType": "Grid",
       "WidthCells": 64000,
       "HeightCells": 64000,
-      "GridCellSizeCm": 100,
-      "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 256
+      "GridCellSizeCm": 100
     }
   ],
   "Entities": [

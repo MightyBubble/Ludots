@@ -1,5 +1,8 @@
 {
   "Id": "presenter_blacksmith_scatter_hudtext_benchmark",
+  "Tuning": {
+    "LoadedChunkCapacity": 64
+  },
   "Tags": [
     "showcase",
     "presenter",
@@ -24,8 +27,7 @@
       "SpatialType": "Grid",
       "WidthCells": 512,
       "HeightCells": 512,
-      "GridCellSizeCm": 100,
-      "LoadedChunkCapacity": 64
+      "GridCellSizeCm": 100
     }
   ],
   "DefaultCamera": {

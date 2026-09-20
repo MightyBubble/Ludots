@@ -1,5 +1,8 @@
 {
   "Id": "presenter_blacksmith_dynamic_worker_benchmark",
+  "Tuning": {
+    "LoadedChunkCapacity": 256
+  },
   "Tags": [
     "showcase",
     "presenter",
@@ -25,8 +28,7 @@
       "SpatialType": "Grid",
       "WidthCells": 1280,
       "HeightCells": 1280,
-      "GridCellSizeCm": 100,
-      "LoadedChunkCapacity": 256
+      "GridCellSizeCm": 100
     }
   ],
   "DefaultCamera": {

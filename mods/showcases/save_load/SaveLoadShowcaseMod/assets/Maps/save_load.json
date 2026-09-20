@@ -1,5 +1,8 @@
 {
   "Id": "save_load",
+  "Tuning": {
+    "LoadedChunkCapacity": 16
+  },
   "Tags": [
     "showcase",
     "save",
@@ -12,8 +15,6 @@
       "WidthCells": 256,
       "HeightCells": 256,
       "GridCellSizeCm": 100,
-      "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 16,
       "NavigationEnabled": true
     }
   ],

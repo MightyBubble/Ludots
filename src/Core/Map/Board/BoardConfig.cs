@@ -33,11 +33,15 @@ namespace Ludots.Core.Map.Board
         /// <summary>Hex edge length in centimeters. Applies to HexGrid boards.</summary>
         public int HexEdgeLengthCm { get; set; } = SpatialScaleDefaults.DefaultHexEdgeLengthCm;
 
-        /// <summary>Spatial partition chunk size in cells per side. Must be a power of two.</summary>
+        /// <summary>Spatial partition chunk size in cells per side. Runtime only: populated from
+        /// the map's Tuning (#1567); JSON authoring lives on map Tuning.PartitionChunkCells.</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
         public int ChunkSizeCells { get; set; } = SpatialScaleDefaults.PartitionChunkCells;
 
-        /// <summary>Maximum simultaneously loaded chunks. Must be positive for every board kind; Grid boards construct their chunk window eagerly on load.</summary>
-        public int LoadedChunkCapacity { get; set; }
+        /// <summary>Maximum simultaneously loaded chunks. Runtime only: populated from the map's
+        /// Tuning (#1567); JSON authoring lives on map Tuning.LoadedChunkCapacity.</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public int LoadedChunkCapacity { get; set;}
 
         /// <summary>Path to binary data file (.hex, .graph) — optional.</summary>
         public string DataFile { get; set; }
@@ -63,9 +67,6 @@ namespace Ludots.Core.Map.Board
 
         public int? TerrainBlockedAtOrBelowHeightCm { get; set; }
 
-        /// <summary>Explicit nav tile grid for this board (authored with the bake).
-        /// Required when the board participates in navmesh; runtime reads this declaration only.</summary>
-        public NavTileGridConfig NavTileGrid { get; set; }
 
         /// <summary>
         /// Clone this config to prevent aliasing during merge operations.
@@ -91,8 +92,7 @@ namespace Ludots.Core.Map.Board
                 StructureAwareNavigation = StructureAwareNavigation,
                 NavigationEnabled = NavigationEnabled,
                 TerrainHeightStepCm = TerrainHeightStepCm,
-                TerrainBlockedAtOrBelowHeightCm = TerrainBlockedAtOrBelowHeightCm,
-                NavTileGrid = NavTileGrid?.Clone()
+                TerrainBlockedAtOrBelowHeightCm = TerrainBlockedAtOrBelowHeightCm
             };
         }
     }

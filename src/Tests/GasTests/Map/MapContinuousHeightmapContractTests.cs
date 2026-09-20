@@ -353,6 +353,7 @@ namespace Ludots.Tests.Gas
             {
               "id": "outer_map",
               "continuousHeightmapAsset": "assets/terrain/map.height",
+              "tuning": { "loadedChunkCapacity": 16 },
               "boards": [
                 {
                   "name": "default",

@@ -1,5 +1,8 @@
 {
   "Id": "capability_standard_transport_network",
+  "Tuning": {
+    "LoadedChunkCapacity": 64
+  },
   "Tags": [
     "capability_standard",
     "transport_network",
@@ -11,9 +14,7 @@
       "SpatialType": "NodeGraph",
       "WidthCells": 512,
       "HeightCells": 512,
-      "GridCellSizeCm": 100,
-      "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 64
+      "GridCellSizeCm": 100
     }
   ],
   "Entities": []

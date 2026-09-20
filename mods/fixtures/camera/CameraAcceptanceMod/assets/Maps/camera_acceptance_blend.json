@@ -1,5 +1,8 @@
 {
   "Id": "camera_acceptance_blend",
+  "Tuning": {
+    "LoadedChunkCapacity": 16
+  },
   "Tags": [
     "camera.acceptance",
     "camera.acceptance.blend"
@@ -10,8 +13,7 @@
       "SpatialType": "Grid",
       "WidthCells": 256,
       "HeightCells": 256,
-      "GridCellSizeCm": 100,
-      "LoadedChunkCapacity": 16
+      "GridCellSizeCm": 100
     }
   ],
   "DefaultCamera": {
