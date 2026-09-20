@@ -43,6 +43,19 @@ namespace Ludots.Core.Gameplay.Relationships
 
         public bool TryGetId(string name, out int id) => _ids.TryGetId(name, out id);
 
+        /// <summary>#1570 单轨化：metric 词汇是 AttributeRegistry 的别名——注册同名属性，
+        /// metricId→attributeId 的映射供写穿边实体 AttributeBuffer（唯一真相）使用。</summary>
+        private readonly Dictionary<int, int> _attributeIds = new();
+
+        public void RegisterAliasAttribute(int metricId, string name)
+        {
+            int attributeId = Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.Register(name);
+            _attributeIds[metricId] = attributeId;
+        }
+
+        public bool TryGetAttributeId(int metricId, out int attributeId)
+            => _attributeIds.TryGetValue(metricId, out attributeId!);
+
         public int GetId(string name)
         {
             if (!_ids.TryGetId(name, out int id))

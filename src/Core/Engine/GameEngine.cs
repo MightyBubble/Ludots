@@ -896,6 +896,7 @@ namespace Ludots.Core.Engine
                 relationshipTypeRegistry,
                 associationControlProfileCatalog,
                 grantedRelationshipFlagId);
+            relationshipRuntime.InstallTagOps(tagOps);
             var relationshipProcessingSystem = new RelationshipProcessingSystem(this, relationshipChangeBuffer, tagOps, teamEntityLookup);
             var entitySetQueryRuntime = new EntitySetQueryRuntime(World, tagOps, relationshipRuntime);
             var effectTemplateRegistry = new EffectTemplateRegistry();

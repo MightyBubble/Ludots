@@ -20,6 +20,7 @@ namespace Ludots.Core.Gameplay.Relationships
         private readonly RelationshipBandRegistry _bands;
         private readonly RelationshipChangeBuffer _changes;
         private readonly RelationshipReverseIndex _reverseIndex;
+        private Ludots.Core.Gameplay.GAS.TagOps? _tagOps;
         private readonly Dictionary<RelationshipEntityKey, Entity> _entityIndex = new();
         private RelationshipTypeTemplate?[] _typeTemplates = Array.Empty<RelationshipTypeTemplate?>();
 
@@ -41,6 +42,12 @@ namespace Ludots.Core.Gameplay.Relationships
             _reverseIndex = reverseIndex ?? throw new ArgumentNullException(nameof(reverseIndex));
             _reverseIndex.RebuildFromWorld();
             RebuildEntityIndexFromWorld();
+        }
+
+        /// <summary>#1570：引擎装配期注入（tagOps 在 runtime 之后构造）；metric 写穿前必须已装。</summary>
+        public void InstallTagOps(Ludots.Core.Gameplay.GAS.TagOps tagOps)
+        {
+            _tagOps = tagOps ?? throw new ArgumentNullException(nameof(tagOps));
         }
 
         public RelationshipTypeRegistry TypeRegistry => _types;
@@ -302,6 +309,21 @@ namespace Ludots.Core.Gameplay.Relationships
 
             BumpMaterializedRelationshipRevision(relationshipEntity);
             uint oldFlags = edge.Flags;
+
+            // #1570 单轨化第一步：真相写穿边实体的 AttributeBuffer（AttributeMutationOps 带
+            // 钳制/差分位/聚合/deferred trigger 全链）；RelationshipEdge 的 SoA 值降级为
+            // 写后同步缓存，供热查询路径与既有图 op 读取。变更记录与事件面保持不变。
+            if (_metrics.TryGetAttributeId(metricId, out int attributeId))
+            {
+                if (_tagOps == null)
+                {
+                    throw new InvalidOperationException(
+                        "RelationshipRuntime requires InstallTagOps before metric writes (#1570 single-track).");
+                }
+
+                Ludots.Core.Gameplay.GAS.AttributeMutationOps.SetBase(_world, relationshipEntity, attributeId, clamped, _tagOps);
+            }
+
             edge.SetMetric(metricId, clamped);
             edge.Flags = ApplyBands(validatedTypeId, metricId, edge.Flags, clamped);
             edge.Version++;

@@ -62,6 +62,7 @@ namespace Ludots.Core.Gameplay.Relationships
             {
                 RelationshipMetricConfig metric = catalog.Metrics[i];
                 metrics.Register(metric.Id, metric.MinValue, metric.MaxValue, metric.DefaultValue);
+                metrics.RegisterAliasAttribute(metrics.GetId(metric.Id), metric.Id);
             }
 
             for (int i = 0; i < catalog.Flags.Count; i++)
