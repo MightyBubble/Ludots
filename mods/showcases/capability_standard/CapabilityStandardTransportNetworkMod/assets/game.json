@@ -1,10 +1,5 @@
 {
   "startupMapId": "capability_standard_transport_network",
-  "world": {
-    "widthCm": 51200,
-    "heightCm": 51200,
-    "cellSizeCm": 100
-  },
   "windowTitle": "Ludots Engine - Capability Standard Transport Network",
   "targetFps": 0,
   "presentation": {

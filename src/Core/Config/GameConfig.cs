@@ -85,8 +85,7 @@ namespace Ludots.Core.Config
 
         public GasRuntimeCapacityConfig GasRuntimeCapacity { get; set; } = null!;
 
-        /// <summary>Engine-boot world declaration (#1567): replaced on map load by the map's World.</summary>
-        public WorldConfig World { get; set; } = WorldConfig.CreateEngineBootDefault();
+        /// <summary>Host map binding (#1567): the startup map roots the boot world via its root board.</summary>
 
         public Physics2DConfig Physics2D { get; set; } = new Physics2DConfig();
 

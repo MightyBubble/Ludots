@@ -251,7 +251,7 @@ namespace Ludots.Core.Navigation.Terrain
             if (cellSizeCm <= 0) throw new ArgumentOutOfRangeException(nameof(cellSizeCm));
             CellSizeCm = cellSizeCm;
             OriginXcm = originXcm;
-            OriginZcm = originZcm;
+            OriginYcm = originZcm;
             _cells = new LogicTerrainCell[checked(widthCells * heightCells)];
             Fill(new LogicTerrainCell(0, 0, LogicTerrainSurfaceFlags.None));
         }
@@ -262,7 +262,7 @@ namespace Ludots.Core.Navigation.Terrain
 
         public int OriginXcm { get; }
 
-        public int OriginZcm { get; }
+        public int OriginYcm { get; }
 
         public override int HorizontalStepCm => CellSizeCm;
 
@@ -289,7 +289,7 @@ namespace Ludots.Core.Navigation.Terrain
         public override void GetWorldPositionMeters(int col, int row, out float xMeters, out float zMeters)
         {
             xMeters = SpatialScaleDefaults.CentimetersToMeters(checked(OriginXcm + (col * CellSizeCm)));
-            zMeters = SpatialScaleDefaults.CentimetersToMeters(checked(OriginZcm + (row * CellSizeCm)));
+            zMeters = SpatialScaleDefaults.CentimetersToMeters(checked(OriginYcm + (row * CellSizeCm)));
         }
     }
 
@@ -406,7 +406,7 @@ namespace Ludots.Core.Navigation.Terrain
             LayerIndex = layerIndex;
             BlockedAtOrBelowHeightCm = blockedAtOrBelowHeightCm;
             OriginXcm = originXcm;
-            OriginZcm = originZcm;
+            OriginYcm = originZcm;
         }
 
         public int HeightStepCm { get; }
@@ -417,7 +417,7 @@ namespace Ludots.Core.Navigation.Terrain
 
         public int OriginXcm { get; }
 
-        public int OriginZcm { get; }
+        public int OriginYcm { get; }
 
         public static LogicTerrainProjectionOptions Default { get; } =
             new LogicTerrainProjectionOptions(SpatialScaleDefaults.CellCm);
@@ -439,13 +439,13 @@ namespace Ludots.Core.Navigation.Terrain
                 heightCells,
                 cellSizeCm,
                 originXcm: options.OriginXcm,
-                originZcm: options.OriginZcm);
+                originZcm: options.OriginYcm);
             for (int row = 0; row < heightCells; row++)
             {
                 for (int col = 0; col < widthCells; col++)
                 {
                     float xCm = options.OriginXcm + (col * cellSizeCm);
-                    float yCm = options.OriginZcm + (row * cellSizeCm);
+                    float yCm = options.OriginYcm + (row * cellSizeCm);
                     if (!continuousHeightmap.TrySampleHeightCm(xCm, yCm, out float heightCm, options.LayerIndex))
                     {
                         throw new InvalidOperationException(

@@ -42,10 +42,5 @@
     "channelLevels": {},
     "fileLogging": false,
     "logFilePath": "ludots.log"
-  },
-  "world": {
-    "widthCm": 1638400,
-    "heightCm": 1638400,
-    "cellSizeCm": 100
   }
 }

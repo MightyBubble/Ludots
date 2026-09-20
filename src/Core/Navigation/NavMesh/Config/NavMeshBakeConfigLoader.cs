@@ -226,8 +226,8 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                             RequireOnlyProperties(
                                 boardObj,
                                 $"NavMeshBakeConfig.maps.{mapEntry.Key}.boards.{boardEntry.Key}",
-                                new[] { "widthChunks", "heightChunks", "chunkSizeCells", "cellSizeCm" },
-                                new[] { "originXcm", "originZcm" });
+                                new string[] { },
+                                new[] { "widthChunks", "heightChunks", "chunkSizeCells", "cellSizeCm", "originXcm", "originYcm" });
                         }
                     }
                 }

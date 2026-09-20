@@ -45,6 +45,12 @@ namespace Ludots.Core.Config
         public string RootBoard { get; set; }
 
         /// <summary>
+        /// Host world declaration for boardless maps (#1567): no board exists to anchor
+        /// the world, so the map declares it directly. Mutually exclusive with Boards.
+        /// </summary>
+        public WorldConfig World { get; set; } = new WorldConfig();
+
+        /// <summary>
         /// Map-level spatial budget (#1567): partition granularity and streaming
         /// capacity for the whole map. Authored values are the single budget every
         /// board runs on; board-level fields retire in slice 4b.

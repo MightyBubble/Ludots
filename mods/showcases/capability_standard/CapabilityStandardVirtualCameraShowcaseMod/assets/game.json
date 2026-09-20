@@ -1,10 +1,5 @@
 {
   "startupMapId": "capability_standard_virtual_camera",
-  "world": {
-    "widthCm": 51200,
-    "heightCm": 51200,
-    "cellSizeCm": 100
-  },
   "startupInputContexts": [
     "Default_Gameplay",
     "CapabilityStandard.VirtualCamera.Controls"

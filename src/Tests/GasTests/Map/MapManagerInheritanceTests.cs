@@ -312,7 +312,7 @@ namespace GasTests
                 """);
                 var manager = CreateMapManager(tempRoot);
                 var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("halforigin"));
-                Assert.That(ex!.Message, Does.Contain("OriginXCm and OriginYCm together"));
+                Assert.That(ex!.Message, Does.Contain("OriginXCm and OriginYcm together"));
             }
             finally
             {

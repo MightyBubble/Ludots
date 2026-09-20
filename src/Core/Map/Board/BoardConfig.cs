@@ -25,7 +25,7 @@ namespace Ludots.Core.Map.Board
         public int? OriginXCm { get; set; }
 
         /// <summary>Board AABB min-corner anchor in world coordinates, Y axis; null = centered on the world. Both axes must be authored together.</summary>
-        public int? OriginYCm { get; set; }
+        public int? OriginYcm { get; set; }
 
         /// <summary>Grid cell size in centimeters.</summary>
         public int GridCellSizeCm { get; set; } = SpatialScaleDefaults.CellCm;
@@ -77,7 +77,7 @@ namespace Ludots.Core.Map.Board
                 WidthCells = WidthCells,
                 HeightCells = HeightCells,
                 OriginXCm = OriginXCm,
-                OriginYCm = OriginYCm,
+                OriginYcm = OriginYcm,
                 GridCellSizeCm = GridCellSizeCm,
                 HexEdgeLengthCm = HexEdgeLengthCm,
                 ChunkSizeCells = ChunkSizeCells,

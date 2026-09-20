@@ -15,7 +15,7 @@ namespace Ludots.Core.Navigation.NavMesh.Config
         public int ChunkSizeCells { get; set; } = SpatialScaleDefaults.TerrainChunkCells;
         public int CellSizeCm { get; set; } = SpatialScaleDefaults.CellCm;
         public int OriginXcm { get; set; }
-        public int OriginZcm { get; set; }
+        public int OriginYcm { get; set; }
 
         public int ChunkWidthCm => checked(CellSizeCm * ChunkSizeCells);
 
@@ -28,7 +28,7 @@ namespace Ludots.Core.Navigation.NavMesh.Config
             ChunkSizeCells = ChunkSizeCells,
             CellSizeCm = CellSizeCm,
             OriginXcm = OriginXcm,
-            OriginZcm = OriginZcm
+            OriginYcm = OriginYcm
         };
     }
 }

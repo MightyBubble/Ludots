@@ -1,10 +1,5 @@
 {
   "startupMapId": "crowd_physics_arena",
-  "world": {
-    "widthCm": 6400000,
-    "heightCm": 6400000,
-    "cellSizeCm": 100
-  },
   "startupInputContexts": [
     "Default_Gameplay",
     "CrowdPhysicsArena.Controls"

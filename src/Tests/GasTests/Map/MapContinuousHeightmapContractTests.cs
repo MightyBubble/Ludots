@@ -35,12 +35,6 @@ namespace Ludots.Tests.Gas
             JsonObject gameConfig = JsonNode.Parse(File.ReadAllText(gameConfigPath))?.AsObject()
                 ?? throw new InvalidOperationException("Copied core game.json must contain a JSON object.");
             gameConfig["startupMapId"] = "outer_map";
-            gameConfig["world"] = new JsonObject
-            {
-                ["widthCm"] = 409600,
-                ["heightCm"] = 409600,
-                ["cellSizeCm"] = 100
-            };
             File.WriteAllText(gameConfigPath, gameConfig.ToJsonString());
 
             File.WriteAllText(Path.Combine(_coreRoot, "Navigation", "agent_profiles.json"), """
@@ -121,7 +115,8 @@ namespace Ludots.Tests.Gas
             WriteMap("boardless", """
             {
               "id": "boardless",
-              "tags": ["menu"]
+              "tags": ["menu"],
+              "world": { "widthCm": 409600, "heightCm": 409600, "cellSizeCm": 100 }
             }
             """);
 
@@ -129,8 +124,9 @@ namespace Ludots.Tests.Gas
             engine.LoadMap("boardless");
 
             Ludots.Core.Spatial.WorldSizeSpec spec = engine.GetService(CoreServiceKeys.WorldSizeSpec);
-            Assert.That(spec.Bounds.Width, Is.EqualTo(409600));
-            Assert.That(spec.Bounds.Height, Is.EqualTo(409600));
+            Assert.That(spec.Bounds.Width, Is.EqualTo(1638400),
+                "boot world comes from the host map (entry: boardless, World-declared); a loaded boardless map keeps it");
+            Assert.That(spec.Bounds.Height, Is.EqualTo(1638400));
         }
 
         [Test]

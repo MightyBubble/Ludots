@@ -231,6 +231,11 @@ namespace Ludots.Core.Map
                 target.RootBoard = source.RootBoard;
             }
 
+            if (source.World is { } srcWorld && (srcWorld.WidthCm > 0 || srcWorld.HeightCm > 0))
+            {
+                target.World = srcWorld.Clone();
+            }
+
             if (source.Tuning is { } srcTuning && srcTuning.IsAuthored)
             {
                 target.Tuning = srcTuning.Clone();
@@ -418,10 +423,17 @@ namespace Ludots.Core.Map
         {
             ValidateTuningValues(config.Tuning, mapId);
 
-            // Boardless maps are first-class: no boards, no host world, nothing to validate.
             if (config.Boards is not { Count: > 0 })
             {
+                // Boardless maps are first-class; they may declare the host world directly
+                // (nothing else anchors it) but are not required to (non-spatial maps).
                 return;
+            }
+
+            if (config.World is { } declared && (declared.WidthCm > 0 || declared.HeightCm > 0))
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' has boards and a World declaration; board-bearing maps root the host world on RootBoard, World is boardless-only (#1567).");
             }
 
             foreach (var board in config.Boards)
@@ -445,6 +457,11 @@ namespace Ludots.Core.Map
                 ValidateBoardPlacement(board, root, mapId);
                 ValidateBoardAgainstWorldTuning(board, config.Tuning, mapId);
             }
+        }
+
+        public static BoardConfig ResolveRootBoardFor(MapConfig config, string mapId)
+        {
+            return ResolveRootBoard(config, new MapId(mapId));
         }
 
         internal static BoardConfig ResolveRootBoard(MapConfig config, MapId mapId)
@@ -535,17 +552,17 @@ namespace Ludots.Core.Map
         private static void ValidateBoardPlacement(BoardConfig board, BoardConfig root, MapId mapId)
         {
             bool hasX = board.OriginXCm.HasValue;
-            bool hasY = board.OriginYCm.HasValue;
+            bool hasY = board.OriginYcm.HasValue;
             if (hasX != hasY)
             {
                 throw new InvalidOperationException(
-                    $"Map '{mapId}' board '{board.Name}' must author OriginXCm and OriginYCm together.");
+                    $"Map '{mapId}' board '{board.Name}' must author OriginXCm and OriginYcm together.");
             }
 
             if (hasX)
             {
                 throw new InvalidOperationException(
-                    $"Map '{mapId}' board '{board.Name}' declares OriginXCm/OriginYCm; declared placement (min-corner anchor in the root board frame, cm) stays fail-closed until #1567 slice 2b unifies SpatialCoordinateConverter origin semantics. Omit both fields for the centered default.");
+                    $"Map '{mapId}' board '{board.Name}' declares OriginXCm/OriginYcm; declared placement (min-corner anchor in the root board frame, cm) stays fail-closed until #1567 slice 2b unifies SpatialCoordinateConverter origin semantics. Omit both fields for the centered default.");
             }
 
             if (board.WidthCells <= 0 || board.HeightCells <= 0 || board.GridCellSizeCm <= 0)

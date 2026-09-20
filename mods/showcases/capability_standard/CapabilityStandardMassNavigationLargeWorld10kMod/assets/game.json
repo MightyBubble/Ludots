@@ -1,10 +1,5 @@
 {
   "startupMapId": "mass_navigation",
-  "world": {
-    "widthCm": 6400000,
-    "heightCm": 6400000,
-    "cellSizeCm": 100
-  },
   "windowTitle": "Ludots Engine - Capability Standard Mass Navigation Large World 10K",
   "windowWidth": 1600,
   "windowHeight": 900,

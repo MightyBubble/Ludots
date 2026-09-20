@@ -390,7 +390,13 @@ namespace Ludots.Tests.Architecture
                     Tags = new List<string> { MapTags.FeatureNavMeshOn.Name },
                     Boards = new List<BoardConfig>
                     {
-                        new BoardConfig { Name = "default" }
+                        new BoardConfig
+                        {
+                            Name = "default",
+                            WidthCells = effectiveTerrain.WidthChunks * SpatialScaleDefaults.TerrainChunkCells,
+                            HeightCells = effectiveTerrain.HeightChunks * SpatialScaleDefaults.TerrainChunkCells,
+                            GridCellSizeCm = 250
+                        }
                     }
                 });
 
