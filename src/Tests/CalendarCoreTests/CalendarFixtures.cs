@@ -5,6 +5,10 @@ namespace Ludots.Tests.CalendarCore;
 
 internal static class CalendarFixtures
 {
+    public const string Solar360Id = "calendar.solar360";
+    public const string LunisolarId = "calendar.lunisolar.zhang19";
+    public const string RegnalId = "calendar.regnal";
+
     public static IReadOnlyList<CalendarDayPhaseDefinition> DefaultDayPhases()
     {
         return new[]
@@ -16,7 +20,7 @@ internal static class CalendarFixtures
         };
     }
 
-    public static CalendarWorldConfig World(string activeCalendarId = "calendar.solar360", int ticksPerDay = 20, int startDayIndex = 0)
+    public static CalendarWorldConfig World(string activeCalendarId = Solar360Id, int ticksPerDay = 20, int startDayIndex = 0)
     {
         return new CalendarWorldConfig(
             TickSource: "Step",
@@ -28,20 +32,17 @@ internal static class CalendarFixtures
 
     public static CalendarDefinition Solar360()
     {
-        return ParseCalendar(Solar360Json());
+        return ParseCalendar(Solar360Json(), Solar360Id);
+    }
+
+    public static CalendarDefinition Lunisolar()
+    {
+        return ParseCalendar(Solar360Json(), LunisolarId);
     }
 
     public static CalendarDefinition Regnal()
     {
-        return new CalendarDefinition(
-            "calendar.regnal",
-            360,
-            new[]
-            {
-                new CalendarEraDefinition("era.founding", "立国", 0),
-                new CalendarEraDefinition("era.expansion", "开疆", 3600),
-            },
-            Solar360().Cycles);
+        return ParseCalendar(Solar360Json(), RegnalId);
     }
 
     public static CalendarDefinitionRegistry Registry(params CalendarDefinition[] calendars)
@@ -55,10 +56,25 @@ internal static class CalendarFixtures
         return registry;
     }
 
-    public static CalendarDefinition ParseCalendar(string json)
+    public static CalendarDefinitionRegistry DefaultRegistry()
+    {
+        return Registry(Solar360(), Lunisolar(), Regnal());
+    }
+
+    public static CalendarDefinition ParseCalendar(string json, string calendarId)
     {
         JsonArray array = (JsonArray)JsonNode.Parse(json)!;
-        return CalendarConfigLoader.ParseCalendars(array)[0];
+        foreach (JsonNode? node in array)
+        {
+            CalendarDefinition calendar = CalendarConfigLoader.ParseCalendars(
+                new JsonArray(node!.DeepClone()))[0];
+            if (string.Equals(calendar.Id, calendarId, System.StringComparison.Ordinal))
+            {
+                return calendar;
+            }
+        }
+
+        throw new System.InvalidOperationException($"Calendar '{calendarId}' not found in default tables.");
     }
 
     public static string Solar360Json()

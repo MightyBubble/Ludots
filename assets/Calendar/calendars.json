@@ -3,76 +3,1645 @@
     "id": "calendar.solar360",
     "yearLengthDays": 360,
     "eras": [
-      { "id": "era.founding", "label": "立国", "startDayIndex": 0 }
+      {
+        "id": "era.founding",
+        "label": "立国",
+        "startDayIndex": 0
+      }
     ],
     "cycles": [
       {
         "id": "season",
         "lengthDays": 360,
         "phases": [
-          { "id": "spring", "label": "春", "lengthDays": 90 },
-          { "id": "summer", "label": "夏", "lengthDays": 90 },
-          { "id": "autumn", "label": "秋", "lengthDays": 90 },
-          { "id": "winter", "label": "冬", "lengthDays": 90 }
+          {
+            "id": "spring",
+            "label": "春",
+            "lengthDays": 90
+          },
+          {
+            "id": "summer",
+            "label": "夏",
+            "lengthDays": 90
+          },
+          {
+            "id": "autumn",
+            "label": "秋",
+            "lengthDays": 90
+          },
+          {
+            "id": "winter",
+            "label": "冬",
+            "lengthDays": 90
+          }
         ]
       },
       {
         "id": "month",
         "lengthDays": 360,
         "phases": [
-          { "id": "month.01", "label": "正月", "lengthDays": 30 },
-          { "id": "month.02", "label": "二月", "lengthDays": 30 },
-          { "id": "month.03", "label": "三月", "lengthDays": 30 },
-          { "id": "month.04", "label": "四月", "lengthDays": 30 },
-          { "id": "month.05", "label": "五月", "lengthDays": 30 },
-          { "id": "month.06", "label": "六月", "lengthDays": 30 },
-          { "id": "month.07", "label": "七月", "lengthDays": 30 },
-          { "id": "month.08", "label": "八月", "lengthDays": 30 },
-          { "id": "month.09", "label": "九月", "lengthDays": 30 },
-          { "id": "month.10", "label": "十月", "lengthDays": 30 },
-          { "id": "month.11", "label": "十一月", "lengthDays": 30 },
-          { "id": "month.12", "label": "十二月", "lengthDays": 30 }
+          {
+            "id": "month.01",
+            "label": "正月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.02",
+            "label": "二月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.03",
+            "label": "三月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.04",
+            "label": "四月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.05",
+            "label": "五月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.06",
+            "label": "六月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.07",
+            "label": "七月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.08",
+            "label": "八月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.09",
+            "label": "九月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.10",
+            "label": "十月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.11",
+            "label": "十一月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.12",
+            "label": "十二月",
+            "lengthDays": 30
+          }
         ]
       },
       {
         "id": "xun",
         "lengthDays": 30,
         "phases": [
-          { "id": "early", "label": "上旬", "lengthDays": 10 },
-          { "id": "mid", "label": "中旬", "lengthDays": 10 },
-          { "id": "late", "label": "下旬", "lengthDays": 10 }
+          {
+            "id": "early",
+            "label": "上旬",
+            "lengthDays": 10
+          },
+          {
+            "id": "mid",
+            "label": "中旬",
+            "lengthDays": 10
+          },
+          {
+            "id": "late",
+            "label": "下旬",
+            "lengthDays": 10
+          }
         ]
       },
       {
         "id": "solarTerm",
         "lengthDays": 360,
         "phases": [
-          { "id": "lichun", "label": "立春", "lengthDays": 15 },
-          { "id": "yushui", "label": "雨水", "lengthDays": 15 },
-          { "id": "jingzhe", "label": "惊蛰", "lengthDays": 15 },
-          { "id": "chunfen", "label": "春分", "lengthDays": 15 },
-          { "id": "qingming", "label": "清明", "lengthDays": 15 },
-          { "id": "guyu", "label": "谷雨", "lengthDays": 15 },
-          { "id": "lixia", "label": "立夏", "lengthDays": 15 },
-          { "id": "xiaoman", "label": "小满", "lengthDays": 15 },
-          { "id": "mangzhong", "label": "芒种", "lengthDays": 15 },
-          { "id": "xiazhi", "label": "夏至", "lengthDays": 15 },
-          { "id": "xiaoshu", "label": "小暑", "lengthDays": 15 },
-          { "id": "dashu", "label": "大暑", "lengthDays": 15 },
-          { "id": "liqiu", "label": "立秋", "lengthDays": 15 },
-          { "id": "chushu", "label": "处暑", "lengthDays": 15 },
-          { "id": "bailu", "label": "白露", "lengthDays": 15 },
-          { "id": "qiufen", "label": "秋分", "lengthDays": 15 },
-          { "id": "hanlu", "label": "寒露", "lengthDays": 15 },
-          { "id": "shuangjiang", "label": "霜降", "lengthDays": 15 },
-          { "id": "lidong", "label": "立冬", "lengthDays": 15 },
-          { "id": "xiaoxue", "label": "小雪", "lengthDays": 15 },
-          { "id": "daxue", "label": "大雪", "lengthDays": 15 },
-          { "id": "dongzhi", "label": "冬至", "lengthDays": 15 },
-          { "id": "xiaohan", "label": "小寒", "lengthDays": 15 },
-          { "id": "dahan", "label": "大寒", "lengthDays": 15 }
+          {
+            "id": "lichun",
+            "label": "立春",
+            "lengthDays": 15
+          },
+          {
+            "id": "yushui",
+            "label": "雨水",
+            "lengthDays": 15
+          },
+          {
+            "id": "jingzhe",
+            "label": "惊蛰",
+            "lengthDays": 15
+          },
+          {
+            "id": "chunfen",
+            "label": "春分",
+            "lengthDays": 15
+          },
+          {
+            "id": "qingming",
+            "label": "清明",
+            "lengthDays": 15
+          },
+          {
+            "id": "guyu",
+            "label": "谷雨",
+            "lengthDays": 15
+          },
+          {
+            "id": "lixia",
+            "label": "立夏",
+            "lengthDays": 15
+          },
+          {
+            "id": "xiaoman",
+            "label": "小满",
+            "lengthDays": 15
+          },
+          {
+            "id": "mangzhong",
+            "label": "芒种",
+            "lengthDays": 15
+          },
+          {
+            "id": "xiazhi",
+            "label": "夏至",
+            "lengthDays": 15
+          },
+          {
+            "id": "xiaoshu",
+            "label": "小暑",
+            "lengthDays": 15
+          },
+          {
+            "id": "dashu",
+            "label": "大暑",
+            "lengthDays": 15
+          },
+          {
+            "id": "liqiu",
+            "label": "立秋",
+            "lengthDays": 15
+          },
+          {
+            "id": "chushu",
+            "label": "处暑",
+            "lengthDays": 15
+          },
+          {
+            "id": "bailu",
+            "label": "白露",
+            "lengthDays": 15
+          },
+          {
+            "id": "qiufen",
+            "label": "秋分",
+            "lengthDays": 15
+          },
+          {
+            "id": "hanlu",
+            "label": "寒露",
+            "lengthDays": 15
+          },
+          {
+            "id": "shuangjiang",
+            "label": "霜降",
+            "lengthDays": 15
+          },
+          {
+            "id": "lidong",
+            "label": "立冬",
+            "lengthDays": 15
+          },
+          {
+            "id": "xiaoxue",
+            "label": "小雪",
+            "lengthDays": 15
+          },
+          {
+            "id": "daxue",
+            "label": "大雪",
+            "lengthDays": 15
+          },
+          {
+            "id": "dongzhi",
+            "label": "冬至",
+            "lengthDays": 15
+          },
+          {
+            "id": "xiaohan",
+            "label": "小寒",
+            "lengthDays": 15
+          },
+          {
+            "id": "dahan",
+            "label": "大寒",
+            "lengthDays": 15
+          }
+        ]
+      },
+      {
+        "id": "festival",
+        "lengthDays": 360,
+        "phases": [
+          {
+            "id": "chunjie",
+            "label": "春节",
+            "lengthDays": 5
+          },
+          {
+            "id": "ordinary.p01",
+            "label": "平日",
+            "lengthDays": 9
+          },
+          {
+            "id": "yuanxiao",
+            "label": "元宵",
+            "lengthDays": 1
+          },
+          {
+            "id": "ordinary.p02",
+            "label": "平日",
+            "lengthDays": 109
+          },
+          {
+            "id": "duanwu",
+            "label": "端午",
+            "lengthDays": 1
+          },
+          {
+            "id": "ordinary.p03",
+            "label": "平日",
+            "lengthDays": 61
+          },
+          {
+            "id": "qixi",
+            "label": "七夕",
+            "lengthDays": 1
+          },
+          {
+            "id": "ordinary.p04",
+            "label": "平日",
+            "lengthDays": 37
+          },
+          {
+            "id": "zhongqiu",
+            "label": "中秋",
+            "lengthDays": 1
+          },
+          {
+            "id": "ordinary.p05",
+            "label": "平日",
+            "lengthDays": 23
+          },
+          {
+            "id": "chongyang",
+            "label": "重阳",
+            "lengthDays": 1
+          },
+          {
+            "id": "ordinary.p06",
+            "label": "平日",
+            "lengthDays": 110
+          },
+          {
+            "id": "chuxi",
+            "label": "除夕",
+            "lengthDays": 1
+          }
         ]
       }
     ]
+  },
+  {
+    "id": "calendar.lunisolar.zhang19",
+    "yearCycleId": "year",
+    "eras": [
+      {
+        "id": "era.founding",
+        "label": "立国",
+        "startDayIndex": 0
+      }
+    ],
+    "cycles": [
+      {
+        "id": "month",
+        "lengthDays": 6940,
+        "phases": [
+          {
+            "id": "month.001",
+            "label": "正月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.002",
+            "label": "二月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.003",
+            "label": "三月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.004",
+            "label": "四月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.005",
+            "label": "五月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.006",
+            "label": "六月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.007",
+            "label": "七月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.008",
+            "label": "八月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.009",
+            "label": "九月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.010",
+            "label": "十月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.011",
+            "label": "十一月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.012",
+            "label": "十二月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.013",
+            "label": "正月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.014",
+            "label": "二月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.015",
+            "label": "三月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.016",
+            "label": "四月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.017",
+            "label": "五月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.018",
+            "label": "六月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.019",
+            "label": "七月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.020",
+            "label": "八月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.021",
+            "label": "九月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.022",
+            "label": "十月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.023",
+            "label": "十一月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.024",
+            "label": "十二月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.025",
+            "label": "正月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.026",
+            "label": "二月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.027",
+            "label": "三月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.028",
+            "label": "四月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.029",
+            "label": "五月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.030",
+            "label": "六月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.031",
+            "label": "闰六月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.032",
+            "label": "七月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.033",
+            "label": "八月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.034",
+            "label": "九月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.035",
+            "label": "十月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.036",
+            "label": "十一月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.037",
+            "label": "十二月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.038",
+            "label": "正月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.039",
+            "label": "二月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.040",
+            "label": "三月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.041",
+            "label": "四月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.042",
+            "label": "五月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.043",
+            "label": "六月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.044",
+            "label": "七月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.045",
+            "label": "八月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.046",
+            "label": "九月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.047",
+            "label": "十月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.048",
+            "label": "十一月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.049",
+            "label": "十二月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.050",
+            "label": "正月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.051",
+            "label": "二月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.052",
+            "label": "三月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.053",
+            "label": "四月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.054",
+            "label": "五月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.055",
+            "label": "六月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.056",
+            "label": "七月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.057",
+            "label": "八月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.058",
+            "label": "九月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.059",
+            "label": "十月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.060",
+            "label": "十一月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.061",
+            "label": "十二月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.062",
+            "label": "正月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.063",
+            "label": "二月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.064",
+            "label": "三月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.065",
+            "label": "四月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.066",
+            "label": "五月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.067",
+            "label": "六月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.068",
+            "label": "闰六月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.069",
+            "label": "七月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.070",
+            "label": "八月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.071",
+            "label": "九月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.072",
+            "label": "十月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.073",
+            "label": "十一月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.074",
+            "label": "十二月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.075",
+            "label": "正月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.076",
+            "label": "二月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.077",
+            "label": "三月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.078",
+            "label": "四月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.079",
+            "label": "五月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.080",
+            "label": "六月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.081",
+            "label": "七月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.082",
+            "label": "八月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.083",
+            "label": "九月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.084",
+            "label": "十月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.085",
+            "label": "十一月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.086",
+            "label": "十二月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.087",
+            "label": "正月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.088",
+            "label": "二月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.089",
+            "label": "三月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.090",
+            "label": "四月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.091",
+            "label": "五月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.092",
+            "label": "六月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.093",
+            "label": "七月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.094",
+            "label": "八月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.095",
+            "label": "九月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.096",
+            "label": "十月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.097",
+            "label": "十一月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.098",
+            "label": "十二月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.099",
+            "label": "正月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.100",
+            "label": "二月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.101",
+            "label": "三月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.102",
+            "label": "四月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.103",
+            "label": "五月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.104",
+            "label": "六月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.105",
+            "label": "闰六月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.106",
+            "label": "七月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.107",
+            "label": "八月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.108",
+            "label": "九月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.109",
+            "label": "十月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.110",
+            "label": "十一月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.111",
+            "label": "十二月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.112",
+            "label": "正月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.113",
+            "label": "二月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.114",
+            "label": "三月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.115",
+            "label": "四月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.116",
+            "label": "五月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.117",
+            "label": "六月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.118",
+            "label": "七月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.119",
+            "label": "八月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.120",
+            "label": "九月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.121",
+            "label": "十月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.122",
+            "label": "十一月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.123",
+            "label": "十二月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.124",
+            "label": "正月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.125",
+            "label": "二月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.126",
+            "label": "三月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.127",
+            "label": "四月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.128",
+            "label": "五月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.129",
+            "label": "六月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.130",
+            "label": "闰六月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.131",
+            "label": "七月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.132",
+            "label": "八月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.133",
+            "label": "九月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.134",
+            "label": "十月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.135",
+            "label": "十一月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.136",
+            "label": "十二月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.137",
+            "label": "正月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.138",
+            "label": "二月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.139",
+            "label": "三月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.140",
+            "label": "四月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.141",
+            "label": "五月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.142",
+            "label": "六月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.143",
+            "label": "七月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.144",
+            "label": "八月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.145",
+            "label": "九月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.146",
+            "label": "十月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.147",
+            "label": "十一月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.148",
+            "label": "十二月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.149",
+            "label": "正月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.150",
+            "label": "二月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.151",
+            "label": "三月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.152",
+            "label": "四月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.153",
+            "label": "五月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.154",
+            "label": "六月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.155",
+            "label": "七月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.156",
+            "label": "八月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.157",
+            "label": "九月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.158",
+            "label": "十月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.159",
+            "label": "十一月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.160",
+            "label": "十二月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.161",
+            "label": "正月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.162",
+            "label": "二月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.163",
+            "label": "三月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.164",
+            "label": "四月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.165",
+            "label": "五月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.166",
+            "label": "六月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.167",
+            "label": "闰六月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.168",
+            "label": "七月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.169",
+            "label": "八月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.170",
+            "label": "九月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.171",
+            "label": "十月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.172",
+            "label": "十一月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.173",
+            "label": "十二月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.174",
+            "label": "正月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.175",
+            "label": "二月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.176",
+            "label": "三月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.177",
+            "label": "四月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.178",
+            "label": "五月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.179",
+            "label": "六月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.180",
+            "label": "七月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.181",
+            "label": "八月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.182",
+            "label": "九月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.183",
+            "label": "十月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.184",
+            "label": "十一月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.185",
+            "label": "十二月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.186",
+            "label": "正月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.187",
+            "label": "二月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.188",
+            "label": "三月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.189",
+            "label": "四月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.190",
+            "label": "五月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.191",
+            "label": "六月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.192",
+            "label": "七月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.193",
+            "label": "八月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.194",
+            "label": "九月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.195",
+            "label": "十月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.196",
+            "label": "十一月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.197",
+            "label": "十二月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.198",
+            "label": "正月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.199",
+            "label": "二月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.200",
+            "label": "三月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.201",
+            "label": "四月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.202",
+            "label": "五月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.203",
+            "label": "六月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.204",
+            "label": "闰六月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.205",
+            "label": "七月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.206",
+            "label": "八月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.207",
+            "label": "九月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.208",
+            "label": "十月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.209",
+            "label": "十一月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.210",
+            "label": "十二月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.211",
+            "label": "正月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.212",
+            "label": "二月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.213",
+            "label": "三月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.214",
+            "label": "四月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.215",
+            "label": "五月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.216",
+            "label": "六月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.217",
+            "label": "七月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.218",
+            "label": "八月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.219",
+            "label": "九月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.220",
+            "label": "十月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.221",
+            "label": "十一月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.222",
+            "label": "十二月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.223",
+            "label": "正月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.224",
+            "label": "二月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.225",
+            "label": "三月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.226",
+            "label": "四月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.227",
+            "label": "五月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.228",
+            "label": "六月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.229",
+            "label": "闰六月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.230",
+            "label": "七月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.231",
+            "label": "八月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.232",
+            "label": "九月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.233",
+            "label": "十月",
+            "lengthDays": 29
+          },
+          {
+            "id": "month.234",
+            "label": "十一月",
+            "lengthDays": 30
+          },
+          {
+            "id": "month.235",
+            "label": "十二月",
+            "lengthDays": 30
+          }
+        ]
+      },
+      {
+        "id": "year",
+        "lengthDays": 6940,
+        "phases": [
+          {
+            "id": "year.01",
+            "label": "第1年",
+            "lengthDays": 354
+          },
+          {
+            "id": "year.02",
+            "label": "第2年",
+            "lengthDays": 354
+          },
+          {
+            "id": "year.03",
+            "label": "第3年",
+            "lengthDays": 385
+          },
+          {
+            "id": "year.04",
+            "label": "第4年",
+            "lengthDays": 354
+          },
+          {
+            "id": "year.05",
+            "label": "第5年",
+            "lengthDays": 354
+          },
+          {
+            "id": "year.06",
+            "label": "第6年",
+            "lengthDays": 384
+          },
+          {
+            "id": "year.07",
+            "label": "第7年",
+            "lengthDays": 354
+          },
+          {
+            "id": "year.08",
+            "label": "第8年",
+            "lengthDays": 354
+          },
+          {
+            "id": "year.09",
+            "label": "第9年",
+            "lengthDays": 385
+          },
+          {
+            "id": "year.10",
+            "label": "第10年",
+            "lengthDays": 354
+          },
+          {
+            "id": "year.11",
+            "label": "第11年",
+            "lengthDays": 384
+          },
+          {
+            "id": "year.12",
+            "label": "第12年",
+            "lengthDays": 354
+          },
+          {
+            "id": "year.13",
+            "label": "第13年",
+            "lengthDays": 354
+          },
+          {
+            "id": "year.14",
+            "label": "第14年",
+            "lengthDays": 385
+          },
+          {
+            "id": "year.15",
+            "label": "第15年",
+            "lengthDays": 354
+          },
+          {
+            "id": "year.16",
+            "label": "第16年",
+            "lengthDays": 354
+          },
+          {
+            "id": "year.17",
+            "label": "第17年",
+            "lengthDays": 384
+          },
+          {
+            "id": "year.18",
+            "label": "第18年",
+            "lengthDays": 354
+          },
+          {
+            "id": "year.19",
+            "label": "第19年",
+            "lengthDays": 385
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "calendar.regnal",
+    "yearLengthDays": 360,
+    "eras": [
+      {
+        "id": "era.founding",
+        "label": "立国",
+        "startDayIndex": 0
+      },
+      {
+        "id": "era.expansion",
+        "label": "开疆",
+        "startDayIndex": 3600
+      },
+      {
+        "id": "era.pacification",
+        "label": "靖远",
+        "startDayIndex": 7200
+      },
+      {
+        "id": "era.restoration",
+        "label": "中兴",
+        "startDayIndex": 10800
+      }
+    ],
+    "cycles": []
   }
 ]

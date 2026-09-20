@@ -13,10 +13,25 @@ namespace Ludots.Core.Gameplay.Calendar
                 throw new InvalidOperationException("Calendar dayIndex must be >= 0.");
             }
 
-            int year = checked(dayIndex / calendar.YearLengthDays + 1);
-            int dayOfYear = dayIndex % calendar.YearLengthDays + 1;
+            CalendarCycleDefinition? yearCycle = null;
+            if (calendar.UsesYearCycle)
+            {
+                yearCycle = RequireYearCycle(calendar);
+            }
+            else if (!calendar.YearLengthDays.HasValue)
+            {
+                throw new InvalidOperationException(
+                    $"Calendar '{calendar.Id}' must declare exactly one of yearLengthDays / yearCycleId.");
+            }
+
+            int year = YearCount(calendar, yearCycle, dayIndex);
+            int dayOfYear = DayOfYears(calendar, yearCycle, dayIndex);
             CalendarEraDefinition era = ResolveEra(calendar.Eras, dayIndex);
-            int eraYear = checked((dayIndex - era.StartDayIndex) / calendar.YearLengthDays + 1);
+            // 均匀年：自纪年起点满 yearLengthDays 整年进位（周年制）。
+            // 相位表年：纪年内年号按跨过的年相位计数（年界制），起点相位即元年。
+            int eraYear = yearCycle == null
+                ? checked((dayIndex - era.StartDayIndex) / calendar.YearLengthDays!.Value + 1)
+                : checked(year - YearCount(calendar, yearCycle, era.StartDayIndex) + 1);
 
             var cycles = new CalendarCycleSnapshot[calendar.Cycles.Count];
             for (int i = 0; i < calendar.Cycles.Count; i++)
@@ -33,6 +48,48 @@ namespace Ludots.Core.Gameplay.Calendar
                 era.Label,
                 eraYear,
                 cycles);
+        }
+
+        private static CalendarCycleDefinition RequireYearCycle(CalendarDefinition calendar)
+        {
+            for (int i = 0; i < calendar.Cycles.Count; i++)
+            {
+                if (string.Equals(calendar.Cycles[i].Id, calendar.YearCycleId, StringComparison.Ordinal))
+                {
+                    return calendar.Cycles[i];
+                }
+            }
+
+            throw new InvalidOperationException(
+                $"Calendar '{calendar.Id}' yearCycleId '{calendar.YearCycleId}' does not name one of its cycles.");
+        }
+
+        private static int YearCount(
+            CalendarDefinition calendar,
+            CalendarCycleDefinition? yearCycle,
+            int dayIndex)
+        {
+            if (yearCycle == null)
+            {
+                return checked(dayIndex / calendar.YearLengthDays!.Value + 1);
+            }
+
+            // 相位表年：绝对年 = 完整圈数 × 每圈年相位数 + 圈内第几年（均 1 基）。
+            CalendarCycleSnapshot phase = ProjectCycle(yearCycle, dayIndex);
+            return checked((dayIndex / yearCycle.LengthDays) * yearCycle.Phases.Count + phase.PhaseIndex + 1);
+        }
+
+        private static int DayOfYears(
+            CalendarDefinition calendar,
+            CalendarCycleDefinition? yearCycle,
+            int dayIndex)
+        {
+            if (yearCycle == null)
+            {
+                return dayIndex % calendar.YearLengthDays!.Value + 1;
+            }
+
+            return ProjectCycle(yearCycle, dayIndex).DayInPhase;
         }
 
         public static CalendarCycleSnapshot ProjectCycle(CalendarCycleDefinition cycle, int dayIndex)

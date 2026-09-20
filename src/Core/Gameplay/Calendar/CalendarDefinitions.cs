@@ -15,9 +15,15 @@ namespace Ludots.Core.Gameplay.Calendar
 
     public sealed record CalendarDefinition(
         string Id,
-        int YearLengthDays,
+        int? YearLengthDays,
+        string? YearCycleId,
         IReadOnlyList<CalendarEraDefinition> Eras,
-        IReadOnlyList<CalendarCycleDefinition> Cycles);
+        IReadOnlyList<CalendarCycleDefinition> Cycles)
+    {
+        // 年计数二选一：均匀年（YearLengthDays）或相位表年（YearCycleId 指向本历一个
+        // 周期，相位即年、年长可变——阴阳历闰年靠这个表达）。装载器强制恰好一个非空。
+        public bool UsesYearCycle => YearCycleId != null;
+    }
 
     public sealed record CalendarWorldConfig(
         string TickSource,

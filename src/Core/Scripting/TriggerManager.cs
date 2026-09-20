@@ -576,6 +576,22 @@ namespace Ludots.Core.Scripting
         }
 
         /// <summary>
+        /// Subscriber probe mirroring FireGlobalEvent: true when any live global event
+        /// trigger or mod event handler matches the event. Fire-side producers use this
+        /// to skip event work entirely (payload build, dispatch) when nobody listens.
+        /// </summary>
+        public bool HasGlobalEventSubscribers(EventKey eventKey)
+        {
+            if (_eventHandlers.TryGetValue(eventKey, out var handlers) && handlers.Count > 0)
+            {
+                return true;
+            }
+
+            return _globalEventTriggers.TryGetValue(eventKey, out var triggers) &&
+                triggers.Count > 0;
+        }
+
+        /// <summary>
         /// Async version of FireMapEvent.
         /// </summary>
         public Task FireMapEventAsync(MapId mapId, EventKey eventKey, ScriptContext context)

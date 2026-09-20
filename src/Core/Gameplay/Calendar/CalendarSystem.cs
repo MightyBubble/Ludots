@@ -11,12 +11,14 @@ namespace Ludots.Core.Gameplay.Calendar
         private readonly GasClockStepPolicy _stepPolicy;
         private readonly Func<ScriptContext>? _contextFactory;
         private readonly Action<EventKey, ScriptContext>? _fireEvent;
+        private readonly Func<EventKey, bool>? _hasSubscribers;
 
         public CalendarSystem(
             CalendarRuntime runtime,
             GasClockStepPolicy stepPolicy,
             Func<ScriptContext>? contextFactory = null,
-            Action<EventKey, ScriptContext>? fireEvent = null)
+            Action<EventKey, ScriptContext>? fireEvent = null,
+            Func<EventKey, bool>? hasSubscribers = null)
         {
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             if (!runtime.IsEnabled)
@@ -28,13 +30,14 @@ namespace Ludots.Core.Gameplay.Calendar
             _stepPolicy = stepPolicy ?? throw new ArgumentNullException(nameof(stepPolicy));
             _contextFactory = contextFactory;
             _fireEvent = fireEvent;
+            _hasSubscribers = hasSubscribers;
         }
 
         public void Initialize() { }
 
         public void Update(in float dt)
         {
-            _runtime.Advance(_stepPolicy.LastConsumedSteps, _contextFactory, _fireEvent);
+            _runtime.Advance(_stepPolicy.LastConsumedSteps, _contextFactory, _fireEvent, _hasSubscribers);
         }
 
         public void BeforeUpdate(in float dt) { }

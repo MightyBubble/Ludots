@@ -167,16 +167,54 @@ namespace Ludots.Core.Gameplay.Calendar
         private static CalendarDefinition ParseCalendar(JsonObject node, string context)
         {
             string id = RequireCanonicalString(node["id"], $"{context}.id");
-            int yearLengthDays = RequireInt(node["yearLengthDays"], $"{context}.yearLengthDays");
-            if (yearLengthDays < 1)
+
+            int? yearLengthDays = null;
+            if (node["yearLengthDays"] != null)
             {
-                throw new InvalidOperationException($"{context}.yearLengthDays must be >= 1.");
+                yearLengthDays = RequireInt(node["yearLengthDays"], $"{context}.yearLengthDays");
+                if (yearLengthDays.Value < 1)
+                {
+                    throw new InvalidOperationException($"{context}.yearLengthDays must be >= 1.");
+                }
+            }
+
+            string? yearCycleId = null;
+            if (node["yearCycleId"] != null)
+            {
+                yearCycleId = RequireCanonicalString(node["yearCycleId"], $"{context}.yearCycleId");
+            }
+
+            if ((yearLengthDays.HasValue) == (yearCycleId != null))
+            {
+                throw new InvalidOperationException(
+                    $"{context} must declare exactly one of yearLengthDays / yearCycleId: uniform years use "
+                    + "yearLengthDays; phase-tabled years (e.g. lunisolar leap years) use yearCycleId naming one "
+                    + "of this calendar's cycles.");
             }
 
             IReadOnlyList<CalendarEraDefinition> eras = ParseEras(node["eras"], $"{context}.eras");
             IReadOnlyList<CalendarCycleDefinition> cycles = ParseCycles(node["cycles"], $"{context}.cycles");
-            RejectUnknownObjectKeys(node, context, "id", "yearLengthDays", "eras", "cycles");
-            return new CalendarDefinition(id, yearLengthDays, eras, cycles);
+            if (yearCycleId != null && !ContainsCycle(cycles, yearCycleId))
+            {
+                throw new InvalidOperationException(
+                    $"{context}.yearCycleId '{yearCycleId}' does not name a cycle of this calendar.");
+            }
+
+            RejectUnknownObjectKeys(node, context, "id", "yearLengthDays", "yearCycleId", "eras", "cycles");
+            return new CalendarDefinition(id, yearLengthDays, yearCycleId, eras, cycles);
+        }
+
+        private static bool ContainsCycle(IReadOnlyList<CalendarCycleDefinition> cycles, string cycleId)
+        {
+            for (int i = 0; i < cycles.Count; i++)
+            {
+                if (string.Equals(cycles[i].Id, cycleId, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static IReadOnlyList<CalendarEraDefinition> ParseEras(JsonNode? node, string context)
@@ -234,7 +272,8 @@ namespace Ludots.Core.Gameplay.Calendar
             JsonArray array = RequireArray(node, context);
             if (array.Count == 0)
             {
-                throw new InvalidOperationException($"{context} must contain at least one cycle.");
+                // 空周期表合法：纯纪年历（只读年号/年，不带周期相位）。
+                return Array.Empty<CalendarCycleDefinition>();
             }
 
             var cycles = new List<CalendarCycleDefinition>(array.Count);

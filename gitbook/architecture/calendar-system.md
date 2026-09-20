@@ -10,7 +10,8 @@
 
 - 全世界共用一个日序（从 0 起的绝对天数）。
 - 一份历法表把日序投影成可读日期。可以同时挂多份历，同一天可以有不同纪年。
-- 四季、月、旬、二十四节气都是周期：一组相位，长度加起来等于周期天数。
+- 四季、月、旬、二十四节气、节日都是周期：一组相位，长度加起来等于周期天数。
+- 年计数只有两种写法：均匀年 `yearLengthDays`，或相位表年 `yearCycleId`（年长可变，阴阳历闰年靠这个表达）。二选一，都写或都不写装载失败。
 - 没有 `Calendar/world.json` 时，历法不推进。有这份文件时，缺表、缺字段、相位对不齐一律启动失败。
 
 ## 2 结构
@@ -36,6 +37,7 @@ Calendar.DayPhaseChanged
 | `Calendar/calendars.json` | 历法表：年长、纪年、周期与相位 |
 | `CalendarRuntime` | 日序、当天已走步、投影、存档 |
 | `CalendarSystem` | 只在启用时挂进循环，读 `GasClockStepPolicy.LastConsumedSteps`。Paused / 暂停令牌为 0 时不走日。没 `world.json` 不挂这个系统 |
+| 全局订阅表（#1123） | 日子事件从这里派发：`TriggerManager.FireGlobalEvent`，配 `HasGlobalEventSubscribers` 探针 |
 
 推进源只允许 `Step`。`Turn`、`FixedFrame`、`EntityLocal` 都拒绝。
 
@@ -43,7 +45,7 @@ Calendar.DayPhaseChanged
 
 ### 3.1 日序推进
 
-`assets/config_catalog.json` 已登记两条路径。`Calendar/calendars.json` 默认带一份 360 日年的 `calendar.solar360`。`Calendar/world.json` 允许空：没有这份文件，运行时 `IsEnabled=false`，不发事件、不改日序。
+`assets/config_catalog.json` 已登记两条路径。`Calendar/calendars.json` 默认带三份历：`calendar.solar360`（太阳历 + 节气 + 节日）、`calendar.lunisolar.zhang19`（阴阳历）、`calendar.regnal`（多年号）。`Calendar/world.json` 允许空：没有这份文件，运行时 `IsEnabled=false`，不发事件、不改日序。
 
 `Engine/clock.json`、`GAS/clock.json`、`Physics2D/clock.json` 只管步进。历法不另开一份 clock，也不往那些文件里写日。
 
@@ -63,19 +65,29 @@ Mod 要启用历法，写 `Calendar/world.json`，并保证 catalog 里有这条
 
 ### 3.2 历法表
 
-每份历：
+每份历的年计数二选一：
 
-- `yearLengthDays`：一年几天。年 = `dayIndex / yearLengthDays + 1`，年内第几天从 1 计。
-- `eras`：纪年。第一项 `startDayIndex` 必须是 0，后面递增。当前纪年取「起始日 ≤ 今天」的最后一项。纪年内年号按该纪年起点另算。
-- `cycles`：周期。`lengthDays` 是重复周期。`phases[].lengthDays` 之和必须等于 `lengthDays`。
+- `yearLengthDays`：均匀年。年 = `dayIndex / yearLengthDays + 1`，年内第几天从 1 计。
+- `yearCycleId`：相位表年，指向本历 `cycles` 里一个周期，相位即年，年长可变。绝对年 = 完整圈数 × 每圈年数 + 圈内第几年。阴阳历的闰年（354 日平年、384/385 日闰年）靠这个表达，月长 29/30 也是明文相位。
+
+两种都写或都不写，装载失败点名。
+
+其余字段：
+
+- `eras`：纪年。第一项 `startDayIndex` 必须是 0，后面递增。当前纪年取「起始日 ≤ 今天」的最后一项。均匀年的纪年内年号自起点满整年进位；相位表年按跨过的年相位计数。
+- `cycles`：周期。`lengthDays` 是重复周期。`phases[].lengthDays` 之和必须等于 `lengthDays`。空周期表合法：纯纪年历只读年号和年，不发周期事件。
 
 同一日序可以投到多份历。主历只影响 `Calendar.DayAdvanced` 的 `calendarId`；周期进出对每份历各自发事件，载荷带 `Calendar.CalendarId`。
 
-默认 `calendar.solar360`：一年 360 日，四季各 90 日，十二月各 30 日，旬 10 日一转，二十四节气各 15 日。
+默认表三份历，全部明文：
+
+- `calendar.solar360`：一年 360 日，四季各 90 日，十二月各 30 日，旬 10 日一转，二十四节气各 15 日，节日周期铺满一年（春节 5 日、元宵、端午、七夕、中秋、重阳、除夕各 1 日，平日相位填满其余）。
+- `calendar.lunisolar.zhang19`：19 年一章，共 6940 日。235 个月相位（125 个大月、110 个小月），7 个闰年各带一个明文「闰六月」相位；年用 `yearCycleId` 指向 19 相位的年周期。
+- `calendar.regnal`：多年号历。立国、开疆（第 11 年）、靖远（第 21 年）、中兴（第 31 年），不带周期。
 
 ### 3.3 事件
 
-全局事件，不是地图域：
+全局事件，不是地图域，从 #1123 全局订阅表派发（`TriggerManager.FireGlobalEvent`，地图挂的全局触发听得到）：
 
 | 事件 | 何时 |
 |---|---|
@@ -83,6 +95,13 @@ Mod 要启用历法，写 `Calendar/world.json`，并保证 catalog 里有这条
 | `Calendar.CyclePhaseExited` / `Entered` | 某份历的某个周期换相位 |
 | `Calendar.EraChanged` | 纪年切换 |
 | `Calendar.DayPhaseChanged` | 当天昼夜相位变了，日序可以不变 |
+
+派发按订阅者来，不遍历广播：
+
+- 推进前先问 `HasGlobalEventSubscribers`。某个事件没人订，就不派发它，连为它准备的投影重建和相位 diff 都跳过。
+- 一个事件都没人订时，只推日序。
+- 订阅空窗期跨过的相位切换不补发。事件是通知，不是历史；订阅者后到，投影静默追平，不重放空窗内的进出对。
+- Mod 事件回调（`IModContext.OnEvent`）算订阅者，同样过探针。
 
 一次 Advance 跨过多天时，按天逐日发事件，不跳相位。
 
@@ -96,7 +115,13 @@ Mod 要启用历法，写 `Calendar/world.json`，并保证 catalog 里有这条
 
 玩家开一局经营战。作者配 `ticksPerDay`，让一天对应一段玩法时间。日序走到春尽，`Calendar.CyclePhaseEntered` 带上 `summer`。生产规则订阅这个事件，把春耕减半关掉，夏补给恢复。UI 读主历投影，显示「第 1 年 · 夏 · 四月上旬 · 立夏」。
 
-另一份历 `calendar.regnal` 挂在同一日序上。第 11 年换「开疆」纪年。玩家看到的年号变了，季节事件仍按 `calendar.solar360` 走。
+日序走到端午相位。地图上订了同一事件的触发收到 `duanwu`，集市 Mod 开端午集市三天（相位表里端午是一天，开几天是玩法的事）。走到除夕，跨年结算订阅 `Calendar.CyclePhaseEntered` 的 `chuxi`。
+
+阴阳历挂在同一日序上。第三年是闰年，385 日，带一个明文「闰六月」相位。走到闰六月，月相周期进 `month.031`，年周期仍是 `year.03`——闰不闰月对年计数没有特殊分支，全是相位表读数。
+
+另一份历 `calendar.regnal` 挂在同一日序上。第 11 年换「开疆」纪年，第 21 年换「靖远」，第 31 年换「中兴」。玩家看到的年号变了，季节事件仍按 `calendar.solar360` 走。
+
+整个会话没人订阅日子事件：日序照走，`Project` 读数照常，一天事件都不发。地图后加载补挂了订阅：从下一个相位边界开始听，之前的切换不补发。
 
 暂停或 TimeFlow 暂停令牌让 `Step` 为 0：日子停，季节不切。
 
@@ -105,10 +130,11 @@ Mod 要启用历法，写 `Calendar/world.json`，并保证 catalog 里有这条
 - 不新建 TimeFlow domain，不把季节写成枚举塞进 Core。
 - 不复活全局 `Turn` 钟来表示过了一年。
 - 不在玩法 Mod 里再写一份 `if (day > 360)`。
-- 闰年、阴阳合历、月长不齐：用相位表表达。本年不做隐式闰规则。
+- 闰年、阴阳合历、月长不齐、节日：全部用明文相位表表达（含 `yearCycleId` 相位表年）。本年不做隐式闰规则。
+- 事件不遍历广播：没订阅者的事件不派发、不算投影。订阅空窗不补发。
 - `EntityLocalClock` 不驱动世界历。单体变速不影响日序。
 - 没有 `world.json` 时不挂 `CalendarSystem`，不每帧问开没开。调用 `Project` 失败，不返回假日期。
-- 未知字段、相位长度对不齐、主历不存在：装载失败并点名。
+- 未知字段、相位长度对不齐、主历不存在、年计数二选一写重或漏写：装载失败并点名。
 - `minutesPerDay` / 累计已过分钟不是日序字段。一天只按 `ticksPerDay` 翻页。
 - 时钟层（Engine / GAS / Physics2D / TimeFlow）不认识日、年、季节。日期属性走 `Calendar.*`。
 
@@ -137,6 +163,36 @@ Feature: 世界日子按历法走
     And 日序走到该纪年的起始日
     Then 纪年历显示新纪年的第 1 年
     And 主历的四季算法不变
+
+  Scenario: 节日是铺满一年的周期相位
+    Given 主历的节日周期把一年铺满
+    And 日序走到端午相位
+    When 日序跨过该相位边界
+    Then 周期相位进入事件带上端午
+    And 不在代码里写任何节日规则
+
+  Scenario: 阴阳历的闰年是明文相位
+    Given 一份 19 年章法的阴阳历挂在同一日序上
+    And 章内第三年是闰年、带闰六月相位
+    When 日序走到闰六月起始日
+    Then 月周期进入闰六月相位
+    And 年计数仍按年相位表读
+    And 代码里没有闰月判断
+
+  Scenario: 没人订阅就不发日子事件
+    Given 世界历法已启用
+    And 没有任何地图或 Mod 订阅日历事件
+    When 世界又走完若干天
+    Then 日序照常推进
+    And 一个日历事件都不发
+
+  Scenario: 订阅空窗不补发
+    Given 世界历法已启用
+    And 春夏边界跨过去时没人订阅
+    When 有地图随后挂上季节订阅
+    And 世界再走到下一个相位边界
+    Then 新订阅从下一个边界开始听
+    And 空窗内的进出事件不重放
 
   Scenario: 没启用历法就不能读日期
     Given 没有 Calendar/world.json

@@ -241,7 +241,7 @@ public sealed class SaveParticipantRegistryTests
             "season",
             90,
             new[] { new CalendarPhaseDefinition("spring", "春", 90) });
-        var calendar = new CalendarDefinition("calendar.solar360", 360, new[] { era }, new[] { cycle });
+        var calendar = new CalendarDefinition("calendar.solar360", 360, null, new[] { era }, new[] { cycle });
         var registry = new CalendarDefinitionRegistry();
         registry.Register(calendar);
         var world = new CalendarWorldConfig(
