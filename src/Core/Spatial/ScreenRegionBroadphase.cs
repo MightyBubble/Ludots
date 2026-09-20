@@ -71,8 +71,15 @@ public static class ScreenRegionBroadphase
                 nZ * ((double)center.Origin.Z + probeDistanceMeters * center.Direction.Z);
             if (insideDot + offset < 0) { nX = -nX; nY = -nY; nZ = -nZ; offset = -offset; }
             // An intersecting projected bound has at least one vertex inside each side plane.
-            // Expanding every plane by the bounding radius conservatively retains its origin.
-            offset += (radiusCm + 1) / 100.0;
+            // Expand by the bounding radius, but never less than the anchor's own float
+            // storage uncertainty: ray origins near the world edge drift by ulps of their
+            // magnitude, and a fixed floor below that can silently clip point entities.
+            // (float.Epsilon is the smallest subnormal, not the machine epsilon.)
+            const double machineEpsilon = 1.192092896e-7;
+            double anchorUncertaintyMeters = 4.0 * machineEpsilon * Math.Max(
+                Math.Abs(a.Origin.X),
+                Math.Max(Math.Abs(a.Origin.Y), Math.Abs(a.Origin.Z)));
+            offset += Math.Max((radiusCm + 1) / 100.0, anchorUncertaintyMeters);
             double heightContribution = Math.Max(nY * minHeightMeters, nY * maxHeightMeters);
             int written = 0;
             for (int i = 0; i < count; i++)

@@ -83,13 +83,14 @@ namespace Ludots.Core.Spatial
                         int cx = (int)(key >> 32);
                         int cy = (int)(key & 0xFFFFFFFFL);
                         if (cx < minChunkX || cx > maxChunkX || cy < minChunkY || cy > maxChunkY) continue;
-                        // Store (cy, cx) so a plain sort yields the dense path's row-major order.
-                        rented[stored++] = ((long)cy << 32) | (uint)cx;
+                        // Store (cy, cx) with cx's sign bit flipped so a plain sort of
+                        // the low half yields the dense path's signed row-major order.
+                        rented[stored++] = ((long)cy << 32) | (uint)(cx ^ int.MinValue);
                     }
                     Array.Sort(rented, 0, stored);
                     for (int i = 0; i < stored; i++)
                     {
-                        int cx = (int)(rented[i] & 0xFFFFFFFFL);
+                        int cx = (int)((rented[i] & 0xFFFFFFFFL) ^ 0x80000000L);
                         int cy = (int)(rented[i] >> 32);
                         QueryChunk(_chunks[GetChunkKey(cx, cy)], cx, cy, minCellX, minCellY, maxCellX, maxCellY, buffer, ref count, ref dropped);
                     }

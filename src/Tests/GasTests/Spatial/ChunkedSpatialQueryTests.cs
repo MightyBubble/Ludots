@@ -81,9 +81,11 @@ namespace Ludots.Tests.GAS
                 var partition = new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 64);
 
                 // Scattered chunks across all four quadrants, one entity per occupied cell.
+                // Row chunkY=0 mixes negative and non-negative chunkX: the sparse path's
+                // sort must keep signed column order across the sign boundary.
                 (int cellX, int cellY)[] cells =
                 {
-                    (-70, 66), (-5, 66), (0, -130), (100, -130), (63, 0), (64, 0), (65, 1), (-200, 90),
+                    (-70, 66), (-5, 66), (0, -130), (100, -130), (-1, 0), (63, 0), (64, 0), (65, 1), (-200, 90),
                 };
                 var cellByEntity = new Dictionary<Entity, (int cellX, int cellY)>();
                 foreach ((int cellX, int cellY) in cells)
@@ -93,7 +95,7 @@ namespace Ludots.Tests.GAS
                     partition.Add(entity, cellX, cellY);
                 }
 
-                // A world-sized rect covers billions of chunk addresses but stores eight
+                // A world-sized rect covers billions of chunk addresses but stores nine
                 // chunks; the query must enumerate stored chunks, in the dense path's order.
                 var worldRect = new IntRect(-3_456_000, -3_456_000, 6_912_000, 6_912_000);
                 Span<Entity> buffer = stackalloc Entity[cells.Length];
@@ -104,7 +106,7 @@ namespace Ludots.Tests.GAS
                 // Row-major chunk order (chunkY asc, chunkX asc), then cell order inside.
                 (int cellX, int cellY)[] expectedOrder =
                 {
-                    (0, -130), (100, -130), (63, 0), (64, 0), (65, 1), (-200, 90), (-70, 66), (-5, 66),
+                    (0, -130), (100, -130), (-1, 0), (63, 0), (64, 0), (65, 1), (-200, 90), (-70, 66), (-5, 66),
                 };
                 for (int i = 0; i < expectedOrder.Length; i++)
                 {

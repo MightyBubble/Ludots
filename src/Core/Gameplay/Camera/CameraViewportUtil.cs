@@ -115,13 +115,10 @@ namespace Ludots.Core.Gameplay.Camera
             float ndcX = (screenPosition.X / resolution.X) * 2f - 1f;
             float ndcY = 1f - (screenPosition.Y / resolution.Y) * 2f;
 
-            // Unproject in camera-relative space: an absolute view matrix carries the
-            // world translation through the float inverse, and far-minus-near at large
-            // coordinates destroys the direction before it can be normalized.
-            var relativeForward = new Vector3(
-                (float)((double)camera.Target.X - camera.Position.X),
-                (float)((double)camera.Target.Y - camera.Position.Y),
-                (float)((double)camera.Target.Z - camera.Position.Z));
+            // Unproject in camera-relative space: the fix is keeping the world
+            // translation out of the inverted matrix, so far-minus-near no longer
+            // cancels large coordinates before the direction can be normalized.
+            var relativeForward = camera.Target - camera.Position;
             var view = Matrix4x4.CreateLookAt(Vector3.Zero, relativeForward, camera.Up);
             float fovYRad = WorldPlane2D.DegToRadValue(camera.FovYDeg);
             CameraClipPlanes clipPlanes = ResolveClipPlanes(in camera);
