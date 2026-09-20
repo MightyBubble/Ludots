@@ -76,6 +76,15 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void NavTileGridConfig_OriginKeysAreRemoved()
+        {
+            // #1346 定案：瓦片网格原点不由 navmesh.json 声明（NavTile 自带世界 origin，
+            // Detour 基原点派生）；originXcm/originYcm 曾是死键，现在写即拒。
+            Assert.That(new NavTileGridConfig().GetType().GetProperty("OriginXcm"), Is.Null);
+            Assert.That(new NavTileGridConfig().GetType().GetProperty("OriginYcm"), Is.Null);
+        }
+
+        [Test]
         public void NavTileGranularity_SingleBoardOrEmptyEntriesAreSkipped()
         {
             var config = new NavMeshBakeConfig();

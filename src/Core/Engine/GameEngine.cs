@@ -4223,6 +4223,24 @@ namespace Ludots.Core.Engine
                         $"Map '{mapId}' board '{b.Name}' is placement-anchored and cannot join navigation yet; nav tiles are enumerated in the root board frame until per-board nav tile addressing lands (#1567 slice 2 follow-up).");
                 }
 
+                // The bake pipeline still tiles by terrain chunk (#1346 bake-side regridding
+                // pending); a declared size that disagrees produces baked artifacts on a
+                // different grid than runtime enumerates, exploding deep in tile URI
+                // resolution. Fail here with the contract instead.
+                var boardTerrain = CurrentMapSession?.GetBoard(b.Name) is ITerrainBoard terrainBoard
+                    ? terrainBoard.LogicTerrain
+                    : null;
+                if (boardTerrain != null)
+                {
+                    int chunkWidthCm = checked(boardTerrain.ChunkSizeCells * boardTerrain.HorizontalStepCm);
+                    int chunkHeightCm = checked(boardTerrain.ChunkSizeCells * boardTerrain.VerticalStepCm);
+                    if (declared.TileWorldWidthCm != chunkWidthCm || declared.TileWorldHeightCm != chunkHeightCm)
+                    {
+                        throw new InvalidOperationException(
+                            $"Map '{mapId}' board '{b.Name}' declares nav tiles {declared.TileWorldWidthCm}x{declared.TileWorldHeightCm}cm but its terrain chunks are {chunkWidthCm}x{chunkHeightCm}cm; the bake pipeline tiles by terrain chunk until nav-owned bake granularity lands (#1346 follow-up), so the declared size must match the chunk size.");
+                    }
+                }
+
                 tileGrids.Add(declared);
             }
 

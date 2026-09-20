@@ -4232,6 +4232,26 @@ static bool TryBuildEditorUploadRecastContext(
         var terrain = CreateReactEditorLogicTerrain(inputReactBinPath, boardConfig);
         targets = NavBakeTileSelection.Resolve(terrain, dirtyJson, includeNeighbors, dirtyOnly);
         NavMeshBakeConfig bakeConfig = bakeConfigContext.Config;
+        // The bake pipeline tiles by terrain chunk (#1346 bake-side regridding pending);
+        // refuse bakes whose declared nav granularity disagrees, so the mismatch surfaces
+        // here instead of at map load.
+        if (bakeConfig.Maps.TryGetValue(mapId, out var declaredBoards) &&
+            declaredBoards?.Boards.TryGetValue(boardConfig.Name, out var declaredGrid) == true &&
+            declaredGrid != null)
+        {
+            int chunkWidthCm = checked(terrain.ChunkSizeCells * terrain.HorizontalStepCm);
+            int chunkHeightCm = checked(terrain.ChunkSizeCells * terrain.VerticalStepCm);
+            if (declaredGrid.TileWorldWidthCm != chunkWidthCm || declaredGrid.TileWorldHeightCm != chunkHeightCm)
+            {
+                error = Results.BadRequest(new
+                {
+                    ok = false,
+                    error = $"Board '{boardConfig.Name}' declares nav tiles {declaredGrid.TileWorldWidthCm}x{declaredGrid.TileWorldHeightCm}cm but its terrain chunks are {chunkWidthCm}x{chunkHeightCm}cm; the bake pipeline tiles by terrain chunk until nav-owned bake granularity lands (#1346 follow-up), so the declared size must match the chunk size.",
+                });
+                return false;
+            }
+        }
+
         navBakeContext = new NavBakeContext
         {
             MapId = mapId,
