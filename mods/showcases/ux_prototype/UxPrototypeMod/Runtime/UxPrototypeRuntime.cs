@@ -317,7 +317,7 @@ internal sealed class UxPrototypeRuntime
                    engine.World,
                    engine.GlobalContext,
                    owner,
-                   EntityCollectionKeys.CommandSource,
+                   "collection.command.source",
                    out Entity commandSourcePrimary)
             ? commandSourcePrimary
             : Entity.Null;

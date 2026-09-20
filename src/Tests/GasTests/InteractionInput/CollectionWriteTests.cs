@@ -17,6 +17,7 @@ namespace Ludots.Tests.Gas.InteractionInput
         private EntityCollectionStore _store = null!;
         private Entity _owner;
         private int _keyId;
+        private Ludots.Core.EntityCollections.CollectionApplier _applier = null!;
         private Entity _a;
         private Entity _b;
         private Entity _c;
@@ -32,6 +33,7 @@ namespace Ludots.Tests.Gas.InteractionInput
             _b = _world.Create();
             _c = _world.Create();
             _keyId = _store.KeyRegistry.Register("test.selected");
+            _applier = new Ludots.Core.EntityCollections.CollectionApplier(_world, _store);
         }
 
         [TearDown]
@@ -42,7 +44,7 @@ namespace Ludots.Tests.Gas.InteractionInput
 
         private void Write(CollectionWriteOp op, params Entity[] entities)
         {
-            CollectionWrite.Apply(_store, _owner, _keyId, op, entities);
+            _applier.Apply(_owner, _keyId, op, entities);
         }
 
         private Entity[] Members()
@@ -78,7 +80,7 @@ namespace Ludots.Tests.Gas.InteractionInput
         public void UnknownKey_FailsFast()
         {
             Assert.Throws<InvalidOperationException>(
-                () => CollectionWrite.Apply(_store, _owner, 9999, CollectionWriteOp.Replace, new[] { _a }),
+                () => _applier.Apply(_owner, 9999, CollectionWriteOp.Replace, new Entity[] { _a }),
                 "unregistered collection key ids fail closed");
         }
 
@@ -86,7 +88,7 @@ namespace Ludots.Tests.Gas.InteractionInput
         public void DeadOwner_FailsFast()
         {
             Assert.Throws<InvalidOperationException>(
-                () => CollectionWrite.Apply(_store, Entity.Null, _keyId, CollectionWriteOp.Replace, new[] { _a }),
+                () => _applier.Apply(Entity.Null, _keyId, CollectionWriteOp.Replace, new Entity[] { _a }),
                 "a live owner (the writing rep) is required");
         }
 
@@ -94,7 +96,7 @@ namespace Ludots.Tests.Gas.InteractionInput
         public void InvalidOp_FailsFast()
         {
             Assert.Throws<InvalidOperationException>(
-                () => CollectionWrite.Apply(_store, _owner, _keyId, (CollectionWriteOp)7, new[] { _a }),
+                () => _applier.Apply(_owner, _keyId, (CollectionWriteOp)7, new Entity[] { _a }),
                 "op must be replace(0)/add(1)/subtract(2)");
         }
 

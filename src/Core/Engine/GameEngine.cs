@@ -791,17 +791,17 @@ namespace Ludots.Core.Engine
             });
         }
 
-        private static void RegisterBuiltInEntityCollectionKeys(StringIntRegistry registry)
+        private Ludots.Core.Input.Config.InputCollectionKeyDeclarations LoadInputCollectionKeys(StringIntRegistry registry)
         {
-            registry.Register(EntityCollectionKeys.UiCommandAcquisition);
-            registry.Register(EntityCollectionKeys.HoveredEntity);
-            registry.Register(EntityCollectionKeys.AbilityAimHover);
-            registry.Register(EntityCollectionKeys.AbilityAimAffected);
-            registry.Register(EntityCollectionKeys.EntityInfoExplicit);
-            registry.Register(EntityCollectionKeys.CommandSource);
-            registry.Register(EntityCollectionKeys.UiCastRaw);
+            var declarations = Ludots.Core.Input.Config.InputCollectionKeyDeclarations.LoadAndRegister(
+                ConfigPipeline,
+                registry,
+                ConfigCatalog,
+                ConfigConflictReport);
+            // View materialization keys for the command deck / production overview projectors.
             registry.Register(EntityViewKeys.ControlPlaneCommand);
             registry.Register(EntityViewKeys.CommandDeckFiltered);
+            return declarations;
         }
 
         private void InitializeCoreSystems(GameConfig config)
@@ -848,7 +848,7 @@ namespace Ludots.Core.Engine
             var dirtyEntities = new DirtyEntityQueue(gasRuntimeCapacity.DeferredTriggerActiveEntityCapacity);
             var tagOps = new TagOps(dirtyEntities, new TagRuleRegistry(), gasBudget);
             var entityCollectionKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            RegisterBuiltInEntityCollectionKeys(entityCollectionKeyRegistry);
+            var inputCollectionKeyDeclarations = LoadInputCollectionKeys(entityCollectionKeyRegistry);
             var entityCollectionStore = new EntityCollectionStore(entityCollectionKeyRegistry, initialCollectionCapacity: 128, initialRowCapacity: 4096);
             var intIdCollectionStore = new IntIdCollectionStore(entityCollectionKeyRegistry, initialCollectionCapacity: 128, initialRowCapacity: 4096);
             var relationshipCatalog = new RelationshipCatalogPipelineLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
@@ -879,7 +879,6 @@ namespace Ludots.Core.Engine
                 relationshipRuntime,
                 memberOfRelationshipTypeId,
                 relationshipCatalog.Stance);
-            var domainRoutedCollectionWriter = new DomainRoutedCollectionWriter(entityCollectionStore, controlDomainQuery);
             var controlPlaneView = new ControlPlaneView(entityCollectionStore, controlDomainQuery);
             // Infrastructure flag marking profile-granted edges (RFC-0065 CTRL-4b); registration is idempotent.
             int grantedRelationshipFlagId = relationshipFlagRegistry.Register(AssociationControlProfileRuntime.GrantedFlagName);
@@ -1733,12 +1732,9 @@ namespace Ludots.Core.Engine
             TemplateInteractionContextMounting.ValidateTemplates(MapLoader.TemplateRegistry.GetAll(), interactionContextProfileRegistry);
 
             gasGraphApi.BindCustomEvents(customEventCatalog.Names);
-            var contextBoundCollectionWriter = new ContextBoundCollectionWriter(
-                World,
-                interactionContextProfileRegistry,
-                filterProfileRegistry,
-                domainRoutedCollectionWriter,
-                entityCollectionStore);
+            var collectionApplier = new CollectionApplier(World, entityCollectionStore);
+            collectionApplier.BindInputInteraction(filterProfileRegistry, controlDomainQuery, inputCollectionKeyDeclarations.CastRawKeyId);
+            gasGraphApi.BindCollectionApplier(collectionApplier);
             var castCommitProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var castCommitActionIds = new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var castCommitProfileRegistry = new CastCommitProfileRegistry(castCommitProfileIds, castCommitActionIds, interactionContextProfileRegistry);
@@ -1920,7 +1916,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.LogicViewRegistry, logicViewRegistry);
             SetService(CoreServiceKeys.ClientLocalSeatDeviceBinding, new Client.ClientLocalSeatDeviceBinding(clientLocalSeatRegistry));
             SetService(CoreServiceKeys.ClientLocalSeatInputRuntime, clientLocalSeatInputRuntime);
-            SetService(CoreServiceKeys.DomainRoutedCollectionWriter, domainRoutedCollectionWriter);
+            SetService(CoreServiceKeys.CollectionApplier, collectionApplier);
+            SetService(CoreServiceKeys.InputCollectionKeys, inputCollectionKeyDeclarations);
             SetService(CoreServiceKeys.ControlPlaneView, controlPlaneView);
             SetService(CoreServiceKeys.KnowledgeProjectionStore, knowledgeProjectionStore);
             SetService(CoreServiceKeys.KnowledgeRelationCollectionProjector, knowledgeRelationCollectionProjector);
@@ -1946,7 +1943,6 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.CommandDeckProfileRegistry, commandDeckProfileRegistry);
             SetService(CoreServiceKeys.CommandDeckRouteResolver, commandDeckRouteResolver);
             SetService(CoreServiceKeys.ProductionOverviewProfileRegistry, productionOverviewProfileRegistry);
-            SetService(CoreServiceKeys.ContextBoundCollectionWriter, contextBoundCollectionWriter);
             RemoveService(CoreServiceKeys.ContinuousHeightmap);
             RemoveService(CoreServiceKeys.StructureCollisionAsset);
             RemoveService(CoreServiceKeys.StructureCollisionRuntimeState);

@@ -73,7 +73,7 @@ namespace Ludots.Tests.GAS.Production
             Entity[] commandSourceBeforeTargets = CopyCollectionOrEmpty(
                 preTickStore,
                 preTickState.Commander,
-                EntityCollectionKeys.CommandSource);
+                "collection.command.source");
             Tick(engine, 6);
 
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
@@ -116,8 +116,8 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(state.AbilityId, Is.EqualTo(AbilityIdRegistry.GetId(SuperweaponContextShowcaseIds.AbilityId)));
 
             int abilityTargetsKey = store.KeyRegistry.GetId(SuperweaponContextShowcaseIds.TargetsCollectionKey);
-            int commandSourceKey = store.KeyRegistry.GetId(EntityCollectionKeys.CommandSource);
-            int rawKey = store.KeyRegistry.GetId(EntityCollectionKeys.UiCastRaw);
+            int commandSourceKey = store.KeyRegistry.GetId("collection.command.source");
+            int rawKey = store.KeyRegistry.GetId("collection.ui.cast.raw");
             int casterMarkerKey = store.KeyRegistry.GetId(SuperweaponContextShowcaseIds.CasterMarkerCollectionKey);
             int targetMarkerKey = store.KeyRegistry.GetId(SuperweaponContextShowcaseIds.TargetMarkerCollectionKey);
 
@@ -151,8 +151,8 @@ namespace Ludots.Tests.GAS.Production
                 Is.False,
                 "confirming the ability must release the entity-mounted context back to the steady-state anchor.");
 
-            var writer = engine.GetService(CoreServiceKeys.ContextBoundCollectionWriter)
-                ?? throw new InvalidOperationException("ContextBoundCollectionWriter service is missing.");
+            var writer = engine.GetService(CoreServiceKeys.CollectionApplier)
+                ?? throw new InvalidOperationException("CollectionApplier service is missing.");
             writer.CommitCast(state.SolePossessedRep, new[] { state.Commander }, EntityCollectionSourceKind.UiAcquisition);
             Entity[] commandSource = CopyCollection(store, state.Commander, commandSourceKey);
             Assert.That(commandSource, Is.EqualTo(new[] { state.Commander }));
@@ -449,7 +449,7 @@ namespace Ludots.Tests.GAS.Production
             builder.AppendLine("## Timeline");
             builder.AppendLine($"- [T+000] Launcher binding `{LauncherBindingName}` -> `{LauncherTargetPath}` verified; Commander#{state.Commander.Id}.Cast(Superweapon Context) -> GateWaiting(`Event.Showcase.Superweapon.Confirmed`).");
             builder.AppendLine($"- [T+001] AbilityFrame.Push(`ctx.ability.superweapon.confirm_targets`) -> `InputContextProjectionSystem` next-tick diff -> IMC `{SuperweaponContextShowcaseIds.ConfirmInputContextId}` active.");
-            builder.AppendLine($"- [T+002] ContextBoundCollectionWriter.CommitCast -> ability targets `{string.Join(", ", abilityTargets.Select(static e => e.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)))}`.");
+            builder.AppendLine($"- [T+002] CollectionApplier.CommitCast -> ability targets `{string.Join(", ", abilityTargets.Select(static e => e.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)))}`.");
             builder.AppendLine($"- [T+003] PlayerInput(`<Keyboard>/enter`) -> Authoritative `{SuperweaponContextShowcaseIds.ConfirmActionId}` -> GameplayEvent published.");
             builder.AppendLine($"- [T+004] AbilityExecSystem consumes event -> End -> frame restored to `{InteractionContextIds.Default}`.");
             builder.AppendLine();

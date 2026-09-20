@@ -1037,7 +1037,7 @@ namespace Ludots.Tests.Presentation
         private static Entity[] SnapshotCommandSource(GameEngine engine)
         {
             Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
-            return EntityCollectionContextRuntime.Snapshot(engine.GlobalContext, owner, EntityCollectionKeys.CommandSource);
+            return EntityCollectionContextRuntime.Snapshot(engine.GlobalContext, owner, "collection.command.source");
         }
 
         private static bool TryDescribeCommandSourceView(GameEngine engine, out EntityCollectionView view)
@@ -1049,14 +1049,14 @@ namespace Ludots.Tests.Presentation
                 return false;
             }
 
-            return EntityCollectionContextRuntime.TryDescribeView(collections, owner, EntityCollectionKeys.CommandSource, out view);
+            return EntityCollectionContextRuntime.TryDescribeView(collections, owner, "collection.command.source", out view);
         }
 
         private static void ReplaceCommandSource(GameEngine engine, Entity owner, ReadOnlySpan<Entity> members)
         {
             EntityCollectionStore collections = RequireService(engine, CoreServiceKeys.EntityCollectionStore);
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 owner,

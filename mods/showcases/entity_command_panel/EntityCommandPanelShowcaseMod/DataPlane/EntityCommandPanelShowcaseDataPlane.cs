@@ -111,7 +111,7 @@ namespace EntityCommandPanelShowcaseMod.DataPlane
             var context = new EntityCommandPanelSourceContext(
                 owner,
                 CollectionGasEntityCommandPanelSource.SourceId,
-                EntityCollectionKeys.CommandSource);
+                "collection.command.source");
             EntityCommandPanelSourceDispatch.TryGetRevision(source, in context, out uint sourceRevision);
             int groupCount = EntityCommandPanelSourceDispatch.GetGroupCount(source, in context);
             EntityCommandPanelGroupView group = default;
@@ -390,7 +390,7 @@ namespace EntityCommandPanelShowcaseMod.DataPlane
 
             var collections = _engine.GetService(CoreServiceKeys.EntityCollectionStore);
             if (collections == null ||
-                !collections.TryGetView(localPlayer, EntityCollectionKeys.CommandSource, out EntityCollectionView view) ||
+                !collections.TryGetView(localPlayer, "collection.command.source", out EntityCollectionView view) ||
                 view.Count <= 0)
             {
                 error = "Hero command roster is not published yet.";
@@ -406,7 +406,7 @@ namespace EntityCommandPanelShowcaseMod.DataPlane
             owners = Array.Empty<EntityCommandPanelShowcaseOwnerView>();
             var collections = _engine.GetService(CoreServiceKeys.EntityCollectionStore);
             if (collections == null ||
-                !collections.TryGet(owner, EntityCollectionKeys.CommandSource, out EntityCollectionHandle handle))
+                !collections.TryGet(owner, "collection.command.source", out EntityCollectionHandle handle))
             {
                 return 0;
             }

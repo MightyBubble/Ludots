@@ -879,7 +879,7 @@ namespace Ludots.Tests.GAS
             Assert.That(viewOwnerObj, Is.EqualTo(owner));
             Assert.That(engine.World.Has<CommandSourceDragState>(owner), Is.True);
             EntityCollectionStore collections = GetEntityCollectionStore(engine);
-            Assert.That(collections.TryGetView(owner, EntityCollectionKeys.CommandSource, out EntityCollectionView view), Is.True);
+            Assert.That(collections.TryGetView(owner, "collection.command.source", out EntityCollectionView view), Is.True);
             Assert.That(view.SourceKind, Is.EqualTo(EntityCollectionSourceKind.Explicit));
             Assert.That(view.Role, Is.EqualTo(EntityCollectionRoleKind.CommandSource));
             Assert.That(view.PrimaryEntity, Is.EqualTo(owner));
@@ -2492,7 +2492,7 @@ namespace Ludots.Tests.GAS
         {
             EntityCollectionStore collections = GetEntityCollectionStore(engine);
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 contextEntity: owner,
@@ -2507,7 +2507,7 @@ namespace Ludots.Tests.GAS
         {
             primary = Entity.Null;
             EntityCollectionStore collections = GetEntityCollectionStore(engine);
-            return collections.TryGet(owner, EntityCollectionKeys.CommandSource, out EntityCollectionHandle handle) &&
+            return collections.TryGet(owner, "collection.command.source", out EntityCollectionHandle handle) &&
                    collections.TryGetEntityAt(handle, 0, out primary);
         }
 

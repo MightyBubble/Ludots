@@ -647,7 +647,7 @@ namespace Ludots.Tests.GAS
         private static void AssertCommandSource(Dictionary<string, object> globals, Entity owner, params Entity[] expected)
         {
             var collections = (EntityCollectionStore)globals[CoreServiceKeys.EntityCollectionStore.Name];
-            That(collections.TryGet(owner, EntityCollectionKeys.CommandSource, out EntityCollectionHandle handle), Is.True);
+            That(collections.TryGet(owner, "collection.command.source", out EntityCollectionHandle handle), Is.True);
             That(collections.TryGetView(handle, out EntityCollectionView view), Is.True);
             That(view.SourceKind, Is.EqualTo(EntityCollectionSourceKind.UiAcquisition));
             That(view.Role, Is.EqualTo(EntityCollectionRoleKind.CommandSource));
@@ -670,7 +670,7 @@ namespace Ludots.Tests.GAS
                 TargetFilter = new CommandSourceTargetFilterConfig { RelationFilter = relationFilter },
                 Acquisition = new CommandSourceAcquisitionCollectionConfig
                 {
-                    CollectionKey = EntityCollectionKeys.UiCommandAcquisition,
+                    CollectionKey = "collection.ui.command.acquisition",
                     Title = "Command acquisition",
                 },
             };
@@ -726,7 +726,7 @@ namespace Ludots.Tests.GAS
                 ? store
                 : throw new InvalidOperationException("EntityCollectionStore missing from globals.");
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.UiAcquisition,
                 EntityCollectionRoleKind.CommandSource,
                 owner,

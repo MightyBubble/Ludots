@@ -95,7 +95,7 @@ namespace CoreInputMod.Triggers
 
         private static bool TryResolveMinimapFocusCollection(GameEngine engine, out Entity owner, out string collectionKey)
         {
-            collectionKey = EntityCollectionKeys.CommandSource;
+            collectionKey = CoreInputMod.Systems.CoreInputCollectionKeys.CommandSource;
             return TryResolveLocalCommandSourceOwner(engine, out owner);
         }
 

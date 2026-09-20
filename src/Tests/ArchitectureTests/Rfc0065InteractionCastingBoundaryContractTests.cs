@@ -123,7 +123,7 @@ namespace Ludots.Tests.Architecture
             Type[] types =
             {
                 typeof(EntityCollectionStore),
-                typeof(DomainRoutedCollectionWriter),
+                typeof(Ludots.Core.EntityCollections.CollectionApplier),
                 typeof(ControlPlaneView)
             };
             string[] forbiddenNameTokens = { "Migrate", "Move", "Transfer", "Handback" };
@@ -160,33 +160,44 @@ namespace Ludots.Tests.Architecture
             string entityCollectionTypesPath = Path.Combine(repoRoot, "src", "Core", "EntityCollections", "EntityCollectionTypes.cs");
             string gameEnginePath = Path.Combine(repoRoot, "src", "Core", "Engine", "GameEngine.cs");
             string contextRuntimePath = Path.Combine(repoRoot, "src", "Core", "Input", "CommandSources", "EntityCollectionContextRuntime.cs");
+            string collectionKeysDeclarationPath = Path.Combine(repoRoot, "assets", "Input", "collection_keys.json");
+            string applierPath = Path.Combine(repoRoot, "src", "Core", "EntityCollections", "CollectionApplier.cs");
+            string contextBoundWriterPath = Path.Combine(repoRoot, "src", "Core", "Input", "Interaction", "ContextBoundCollectionWriter.cs");
+            string domainRoutedWriterPath = Path.Combine(repoRoot, "src", "Core", "EntityCollections", "DomainRoutedCollectionWriter.cs");
+            string collectionWritePath = Path.Combine(repoRoot, "src", "Core", "EntityCollections", "CollectionWrite.cs");
             Assert.That(File.Exists(entityCollectionTypesPath), Is.True, $"Missing {entityCollectionTypesPath}");
             Assert.That(File.Exists(gameEnginePath), Is.True, $"Missing {gameEnginePath}");
             Assert.That(File.Exists(contextRuntimePath), Is.True, $"Missing {contextRuntimePath}");
+            Assert.That(File.Exists(collectionKeysDeclarationPath), Is.True, $"Missing {collectionKeysDeclarationPath}");
+            Assert.That(File.Exists(applierPath), Is.True, $"Missing {applierPath}");
 
             string entityCollectionTypes = File.ReadAllText(entityCollectionTypesPath);
             string gameEngine = File.ReadAllText(gameEnginePath);
             string contextRuntime = File.ReadAllText(contextRuntimePath);
+            string collectionKeysDeclaration = File.ReadAllText(collectionKeysDeclarationPath);
 
             Assert.Multiple(() =>
             {
-                Assert.That(EntityCollectionKeys.CommandSource, Is.EqualTo("collection.command.source"));
-                Assert.That(entityCollectionTypes, Does.Contain("public const string CommandSource = \"collection.command.source\""),
-                    "The command-source authority key must remain a first-class EntityCollectionKeys constant.");
-                Assert.That(gameEngine, Does.Contain("registry.Register(EntityCollectionKeys.CommandSource)"),
-                    "GameEngine must register the command-source collection key with EntityCollectionStore.");
-                Assert.That(gameEngine, Does.Contain("EntityCollectionKeys.CommandSource"),
-                    "The steady-state interaction context must use EntityCollectionKeys.CommandSource.");
+                Assert.That(entityCollectionTypes, Does.Not.Contain("EntityCollectionKeys"),
+                    "Constitution §08: the engine holds no builtin collection key table; key semantics are data-declared.");
+                Assert.That(gameEngine, Does.Contain("InputCollectionKeyDeclarations.LoadAndRegister"),
+                    "GameEngine must register input collection keys from the Input/collection_keys.json declaration, not from a C# constant table.");
+                Assert.That(collectionKeysDeclaration, Does.Contain("\"castRaw\""),
+                    "The cast-raw capture key must be declared in Input/collection_keys.json.");
                 Assert.That(gameEngine, Does.Not.Contain("InteractionContextIds.Default"),
                     "GameEngine must not install any profile programmatically — profiles come only from data (constitution: no steady-state anchor).");
                 Assert.That(contextRuntime, Does.Contain("TryResolveCollection(collections, owner, collectionKey"),
                     "EntityCollectionContextRuntime must resolve the caller-provided collection key, not hard-code command-source authority.");
                 Assert.That(contextRuntime, Does.Contain("collections.TryGet(owner, collectionKey"),
                     "EntityCollectionContextRuntime must read the explicit owner/key pair from EntityCollectionStore.");
-                Assert.That(contextRuntime, Does.Not.Contain("EntityCollectionKeys.CommandSource"),
+                Assert.That(contextRuntime, Does.Not.Contain("collection.command.source"),
                     "EntityCollectionContextRuntime must stay collection-generic; command-source is a caller-provided key, not a built-in fallback.");
-                Assert.That(contextRuntime, Does.Not.Contain("Register(EntityCollectionKeys.CommandSource)"),
-                    "EntityCollectionContextRuntime must not register or imply a default command-source fallback.");
+                Assert.That(File.Exists(contextBoundWriterPath), Is.False,
+                    "Constitution §08: ContextBoundCollectionWriter is retired; the single write point is CollectionApplier.");
+                Assert.That(File.Exists(domainRoutedWriterPath), Is.False,
+                    "Constitution §08: DomainRoutedCollectionWriter is retired; routed writes live on CollectionApplier.");
+                Assert.That(File.Exists(collectionWritePath), Is.False,
+                    "Constitution §08: the standalone CollectionWrite primitive is retired; set math lives on CollectionApplier.");
             });
         }
 
@@ -385,7 +396,7 @@ namespace Ludots.Tests.Architecture
             string[] forbidden =
             {
                 "EntityCollectionStore",
-                "EntityCollectionKeys.CommandSource",
+                "\"collection.command.source\"",
                 "\"collection.command.source\"",
                 "EntityCollectionContextRuntime",
                 "InteractionContextStack",
@@ -619,7 +630,7 @@ namespace Ludots.Tests.Architecture
             string[] forbidden =
             {
                 "Ludots.Core.Input.CommandSources",
-                "EntityCollectionKeys.CommandSource",
+                "\"collection.command.source\"",
                 "\"collection.command.source\"",
                 "Command" + "Source" + "Owner" + "Provider",
                 "CenterOn" + "CommandSource" + "Primary"
@@ -658,14 +669,14 @@ namespace Ludots.Tests.Architecture
             {
                 Assert.That(source, Does.Contain("EntityCollectionStore"),
                     "The interaction showcase must publish through EntityCollectionStore.");
-                Assert.That(source, Does.Contain("EntityCollectionKeys.CommandSource"),
+                Assert.That(source, Does.Contain("\"collection.command.source\""),
                     "The interaction showcase must target collection.command.source explicitly.");
                 Assert.That(source, Does.Contain("EntityCollectionRoleKind.CommandSource"),
                     "The interaction showcase descriptor must mark the collection as command-source authority.");
                 Assert.That(source, Does.Contain("EntityCollectionSourceKind.Explicit"),
                     "The showcase command-source descriptor should remain an explicit host-seeded collection.");
-                Assert.That(source, Does.Contain("collections.Replace(owner, in descriptor, actors, owner)"),
-                    "The writer domain must be recorded as the local command-source owner.");
+                Assert.That(source, Does.Contain("applier.ApplyDescriptor(owner, collections.KeyRegistry.Register(\"collection.command.source\"), in descriptor, actors, writerDomain: owner)"),
+                    "The writer domain must be recorded as the local command-source owner via the single CollectionApplier write point.");
             });
         }
 

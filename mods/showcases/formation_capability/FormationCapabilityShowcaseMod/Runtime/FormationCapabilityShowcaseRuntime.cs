@@ -1121,7 +1121,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
 
         _initialCommandSourceScratch[0] = formation;
         var descriptor = EntityCollectionDescriptor.Create(
-            EntityCollectionKeys.CommandSource,
+            "collection.command.source",
             EntityCollectionSourceKind.Explicit,
             EntityCollectionRoleKind.CommandSource,
             owner,
@@ -1315,7 +1315,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
             ?? throw new InvalidOperationException("Formation Capability showcase requires EntityCollectionStore before clearing command source.");
         if (TryResolveLocalCommandSourceOwner(engine, out Entity owner))
         {
-            collections.Remove(owner, EntityCollectionKeys.CommandSource);
+            collections.Remove(owner, "collection.command.source");
         }
     }
 

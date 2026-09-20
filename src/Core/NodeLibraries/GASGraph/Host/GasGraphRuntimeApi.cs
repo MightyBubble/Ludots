@@ -147,6 +147,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private Gameplay.MapTriggers.CustomEventNameRegistry? _customEvents;
         private Func<GameEngine?>? _engineResolver;
         private Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmissionBuffer? _commandIntentSubmissions;
+        private Ludots.Core.EntityCollections.CollectionApplier? _collectionApplier;
 
         // ── Topology predicate services (RFC-0065 PROV-4b), bound post-construction ──
         private ControlDomainQuery? _controlDomains;
@@ -336,6 +337,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public void BindContextInstances(Ludots.Core.Input.Interaction.InteractionContextInstanceRuntime contextInstances)
         {
             _contextInstances = contextInstances ?? throw new ArgumentNullException(nameof(contextInstances));
+        }
+
+        /// <summary>
+        /// Binds the single collection write point (constitution §08) so the <c>WriteCollection</c>
+        /// op routes through the CollectionApplier; the applier owns all store mutations.
+        /// </summary>
+        public void BindCollectionApplier(Ludots.Core.EntityCollections.CollectionApplier collectionApplier)
+        {
+            _collectionApplier = collectionApplier ?? throw new ArgumentNullException(nameof(collectionApplier));
         }
 
         /// <summary>
@@ -951,13 +961,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         /// key must be a declared custom event (fail closed) and a map scope is required.
         /// </summary>
         /// <summary>
-        /// Direct owned-collection write (graph-side primitive): the caller computed owner, op,
-        /// and the entity set in-graph; set semantics execute in CollectionWrite and membership
-        /// change events fire from the store's presentation diff like any other writer.
+        /// Direct owned-collection write (graph bridge entry): the caller computed owner, op, and
+        /// the entity set in-graph; the set semantics execute in the CollectionApplier — the
+        /// engine's single collection write point (constitution §08) — and membership change events
+        /// fire from the store's presentation diff like any other writer.
         /// </summary>
         public void WriteCollection(int collectionKeyId, int opKind, Entity owner, Span<Entity> entities, int count)
         {
-            var store = _entityCollections
+            var applier = _collectionApplier
                 ?? throw new InvalidOperationException("GAS.GRAPH.ERR.EntityCollectionsUnavailable");
             if (count < 0 || count > entities.Length)
             {
@@ -965,7 +976,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     $"GAS.GRAPH.ERR.CollectionWriteCountInvalid: count {count} is outside entity list length {entities.Length}.");
             }
 
-            CollectionWrite.Apply(store, owner, collectionKeyId, (CollectionWriteOp)opKind, entities.Slice(0, count));
+            applier.Apply(owner, collectionKeyId, (CollectionWriteOp)opKind, entities.Slice(0, count));
         }
 
         /// <summary>

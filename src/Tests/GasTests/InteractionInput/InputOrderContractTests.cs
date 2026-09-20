@@ -1945,7 +1945,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             world.Add(localPlayer, new InteractionContextInstance
             {
                 ContextEntity = localPlayer,
-                ActiveCollectionKeyId = collectionKeys.Register(EntityCollectionKeys.CommandSource),
+                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
                 CommandIntentProfileId = 0,
             });
             var commandIntents = CommandIntentProfileTests.Harness.Create(world).Intents;
@@ -1960,7 +1960,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             }));
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource);
             collections.Replace(localPlayer, in descriptor, new[] { actor }, localPlayer);
@@ -2086,7 +2086,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 ContextEntity = localPlayer,
                 CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.capacity"),
-                ActiveCollectionKeyId = collectionKeys.Register(EntityCollectionKeys.CommandSource),
+                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
             });
 
             var collections = new EntityCollectionStore(
@@ -2094,7 +2094,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 initialCollectionCapacity: 4,
                 initialRowCapacity: Math.Max(4, selectionCount));
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource);
             collections.Replace(localPlayer, in descriptor, actors, localPlayer);
@@ -2242,12 +2242,12 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 ContextEntity = localPlayer,
                 CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.parallel_layout"),
-                ActiveCollectionKeyId = collectionKeys.Register(EntityCollectionKeys.CommandSource),
+                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
             });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource);
             collections.Replace(localPlayer, in descriptor, new[] { firstActor, secondActor }, localPlayer);
@@ -2429,12 +2429,12 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 ContextEntity = localPlayer,
                 CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.mixed_layout"),
-                ActiveCollectionKeyId = collectionKeys.Register(EntityCollectionKeys.CommandSource),
+                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
             });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource);
             collections.Replace(
@@ -2571,12 +2571,12 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 ContextEntity = localPlayer,
                 CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.programmatic"),
-                ActiveCollectionKeyId = collectionKeys.Register(EntityCollectionKeys.CommandSource),
+                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
             });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource);
             collections.Replace(localPlayer, in descriptor, new[] { commandActor }, localPlayer);
@@ -2691,11 +2691,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 ContextEntity = localPlayer,
                 CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.none_target"),
-                ActiveCollectionKeyId = collectionKeys.Register(EntityCollectionKeys.CommandSource),
+                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
             });
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource);
             collections.Replace(localPlayer, in descriptor, new[] { commandActor }, localPlayer);
@@ -2863,12 +2863,12 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 ContextEntity = localPlayer,
                 CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.atomic_batch"),
-                ActiveCollectionKeyId = collectionKeys.Register(EntityCollectionKeys.CommandSource),
+                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
             });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource);
             collections.Replace(localPlayer, in descriptor, new[] { firstSource, secondSource }, localPlayer);
@@ -3004,12 +3004,12 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 ContextEntity = localPlayer,
                 CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.routed_only"),
-                ActiveCollectionKeyId = collectionKeys.Register(EntityCollectionKeys.CommandSource),
+                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
             });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource);
             collections.Replace(localPlayer, in descriptor, new[] { unroutedNearActor, routedFarActor }, localPlayer);
@@ -3120,12 +3120,12 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 ContextEntity = localPlayer,
                 CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.atomic_authorization"),
-                ActiveCollectionKeyId = collectionKeys.Register(EntityCollectionKeys.CommandSource),
+                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
             });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource);
             collections.Replace(localPlayer, in descriptor, new[] { authorizedActor, foreignActor }, localPlayer);
@@ -3249,12 +3249,12 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 ContextEntity = localPlayer,
                 CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.test"),
-                ActiveCollectionKeyId = collectionKeys.Register(EntityCollectionKeys.CommandSource),
+                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
             });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource);
             collections.Replace(localPlayer, in descriptor, new[] { commandActor, secondCommandActor }, localPlayer);
@@ -3335,7 +3335,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     new()
                     {
                         Id = InteractionContextIds.Default,
-                        ActiveCollectionKey = EntityCollectionKeys.CommandSource,
+                        ActiveCollectionKey = "collection.command.source",
                     },
                 },
             }, collectionKeys,

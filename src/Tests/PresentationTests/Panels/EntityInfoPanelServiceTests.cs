@@ -278,7 +278,7 @@ public sealed class EntityInfoPanelServiceTests
         EntityInfoPanelHandle handle = service.Open(new EntityInfoPanelRequest(
             EntityInfoPanelKind.EntityCollectionInspector,
             EntityInfoPanelSurface.Ui,
-            EntityInfoPanelTarget.EntityCollection(viewer, EntityCollectionKeys.CommandSource),
+            EntityInfoPanelTarget.EntityCollection(viewer, "collection.command.source"),
             new EntityInfoPanelLayout(EntityInfoPanelAnchor.BottomLeft, 16f, 16f, 480f, 280f),
             EntityInfoGasDetailFlags.None,
             true));
@@ -286,8 +286,8 @@ public sealed class EntityInfoPanelServiceTests
         service.Refresh(world, globals);
 
         Assert.That(service.GetEntityCollectionCount(handle.Slot), Is.EqualTo(3));
-        Assert.That(service.GetEntityCollectionViewKey(handle.Slot), Is.EqualTo(EntityCollectionKeys.CommandSource));
-        Assert.That(service.GetEntityCollectionSetKey(handle.Slot), Is.EqualTo(EntityCollectionKeys.CommandSource));
+        Assert.That(service.GetEntityCollectionViewKey(handle.Slot), Is.EqualTo("collection.command.source"));
+        Assert.That(service.GetEntityCollectionSetKey(handle.Slot), Is.EqualTo("collection.command.source"));
         Assert.That(service.GetSubtitle(handle.Slot), Does.Contain("3 entities"));
         Assert.That(service.TryGetEntityCollectionRow(handle.Slot, 0, out EntityCollectionPanelRow firstRow), Is.True);
         Assert.That(firstRow.EntityId, Is.EqualTo(first.Id));
@@ -352,7 +352,7 @@ public sealed class EntityInfoPanelServiceTests
 
         service.Refresh(world, globals);
 
-        Assert.That(collections.TryGet(viewer, EntityCollectionKeys.CommandSource, out EntityCollectionHandle commandSource), Is.True);
+        Assert.That(collections.TryGet(viewer, "collection.command.source", out EntityCollectionHandle commandSource), Is.True);
         Assert.That(collections.TryGetEntityAt(commandSource, 0, out Entity stillSelected), Is.True);
         Assert.That(stillSelected, Is.EqualTo(selected));
         Assert.That(service.GetEntityCollectionCount(handle.Slot), Is.EqualTo(2));
@@ -376,7 +376,7 @@ public sealed class EntityInfoPanelServiceTests
         string summary)
     {
         var descriptor = EntityCollectionDescriptor.Create(
-            EntityCollectionKeys.CommandSource,
+            "collection.command.source",
             EntityCollectionSourceKind.Explicit,
             EntityCollectionRoleKind.CommandSource,
             viewer,

@@ -14,7 +14,7 @@ namespace Ludots.Core.Input.CommandSources
 
     public sealed class CommandSourceAcquisitionCollectionConfig
     {
-        public string CollectionKey { get; set; } = Ludots.Core.EntityCollections.EntityCollectionKeys.UiCommandAcquisition;
+        public string CollectionKey { get; set; } = string.Empty;
         public string Title { get; set; } = "Command acquisition";
     }
 

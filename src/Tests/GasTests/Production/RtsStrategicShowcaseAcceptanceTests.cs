@@ -1178,11 +1178,18 @@ namespace Ludots.Tests.GAS.Production
             presenters.Clear();
             presentationEvents.Clear();
 
+            var aimApplier = engine.GetService(CoreServiceKeys.CollectionApplier)
+                ?? throw new InvalidOperationException("CollectionApplier service is missing.");
+            var aimKeys = engine.GetService(CoreServiceKeys.InputCollectionKeys)
+                ?? throw new InvalidOperationException("InputCollectionKeys service is missing.");
             var runtime = new AbilityAimPresentationRuntime(
                 engine.World,
                 abilities,
                 effects,
                 collections,
+                aimApplier,
+                aimKeys.AbilityAimHoverKeyId,
+                aimKeys.AbilityAimAffectedKeyId,
                 spatialQueries,
                 presentationEvents,
                 engine.GameSession);
@@ -1205,7 +1212,7 @@ namespace Ludots.Tests.GAS.Production
 
             string overlaySummary = string.Join(", ",
                 overlays.GetSpan().ToArray().GroupBy(item => item.Shape).Select(group => $"{group.Key}:{group.Count()}"));
-            if (collections.TryGetView(actor, EntityCollectionKeys.AbilityAimAffected, out var affected))
+            if (collections.TryGetView(actor, "collection.ability.aim.affected", out var affected))
             {
                 overlaySummary = string.IsNullOrWhiteSpace(overlaySummary)
                     ? $"affected:{affected.Count}"
@@ -1275,7 +1282,7 @@ namespace Ludots.Tests.GAS.Production
             Span<Entity> next = stackalloc Entity[1];
             next[0] = target;
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.UiAcquisition,
                 EntityCollectionRoleKind.CommandSource,
                 contextEntity: owner,

@@ -107,7 +107,7 @@ namespace CoreInputMod.Systems
         public void Update(in float dt)
         {
             Entity collectionOwner = ResolveCommandSourceOwner();
-            const string collectionKey = EntityCollectionKeys.CommandSource;
+            const string collectionKey = CoreInputCollectionKeys.CommandSource;
             Entity collectionContext = Entity.Null;
             Entity primaryViewed = TryResolveCommandSourceView(collectionOwner, out EntityCollectionView commandSourceView)
                 ? ResolveCollectionViewSummary(in commandSourceView, out collectionContext)
@@ -181,7 +181,7 @@ namespace CoreInputMod.Systems
                    EntityCollectionContextRuntime.TryDescribeView(
                        collections,
                        owner,
-                       EntityCollectionKeys.CommandSource,
+                       CoreInputCollectionKeys.CommandSource,
                        out view);
         }
 
@@ -190,7 +190,7 @@ namespace CoreInputMod.Systems
             return owner != Entity.Null &&
                    _globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var collectionsObj) &&
                    collectionsObj is EntityCollectionStore collections
-                ? EntityCollectionContextRuntime.GetCount(collections, owner, EntityCollectionKeys.CommandSource)
+                ? EntityCollectionContextRuntime.GetCount(collections, owner, CoreInputCollectionKeys.CommandSource)
                 : 0;
         }
 
@@ -199,7 +199,7 @@ namespace CoreInputMod.Systems
             return owner != Entity.Null &&
                    _globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var collectionsObj) &&
                    collectionsObj is EntityCollectionStore collections
-                ? EntityCollectionContextRuntime.Copy(collections, owner, EntityCollectionKeys.CommandSource, destination)
+                ? EntityCollectionContextRuntime.Copy(collections, owner, CoreInputCollectionKeys.CommandSource, destination)
                 : 0;
         }
 

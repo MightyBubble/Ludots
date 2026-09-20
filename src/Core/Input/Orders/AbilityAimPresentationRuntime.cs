@@ -95,6 +95,9 @@ namespace Ludots.Core.Input.Orders
         private readonly EntityCollectionStore _collections;
         private readonly int _aimHoverCollectionKeyId;
         private readonly int _aimAffectedCollectionKeyId;
+        private readonly string _aimHoverCollectionKeyName;
+        private readonly string _aimAffectedCollectionKeyName;
+        private readonly Ludots.Core.EntityCollections.CollectionApplier _collectionApplier;
         private readonly ISpatialQueryService _spatialQueries;
         private readonly PresentationEventStream _events;
         private readonly GameSession? _session;
@@ -137,6 +140,9 @@ namespace Ludots.Core.Input.Orders
             AbilityDefinitionRegistry abilities,
             EffectTemplateRegistry effects,
             EntityCollectionStore collections,
+            Ludots.Core.EntityCollections.CollectionApplier collectionApplier,
+            int aimHoverCollectionKeyId,
+            int aimAffectedCollectionKeyId,
             ISpatialQueryService spatialQueries,
             PresentationEventStream events,
             GameSession? session = null,
@@ -148,8 +154,11 @@ namespace Ludots.Core.Input.Orders
             _abilities = abilities ?? throw new ArgumentNullException(nameof(abilities));
             _effects = effects ?? throw new ArgumentNullException(nameof(effects));
             _collections = collections ?? throw new ArgumentNullException(nameof(collections));
-            _aimHoverCollectionKeyId = _collections.KeyRegistry.Register(EntityCollectionKeys.AbilityAimHover);
-            _aimAffectedCollectionKeyId = _collections.KeyRegistry.Register(EntityCollectionKeys.AbilityAimAffected);
+            _collectionApplier = collectionApplier ?? throw new ArgumentNullException(nameof(collectionApplier));
+            _aimHoverCollectionKeyId = aimHoverCollectionKeyId;
+            _aimAffectedCollectionKeyId = aimAffectedCollectionKeyId;
+            _aimHoverCollectionKeyName = ResolveKeyName(collections, aimHoverCollectionKeyId);
+            _aimAffectedCollectionKeyName = ResolveKeyName(collections, aimAffectedCollectionKeyId);
             _spatialQueries = spatialQueries ?? throw new ArgumentNullException(nameof(spatialQueries));
             _events = events ?? throw new ArgumentNullException(nameof(events));
             _session = session;
@@ -222,8 +231,8 @@ namespace Ludots.Core.Input.Orders
             }
 
             Entity viewer = ResolveActiveViewer(actor);
-            _collections.Remove(actor, _aimAffectedCollectionKeyId);
-            _collections.Remove(actor, _aimHoverCollectionKeyId);
+            _collectionApplier.Remove(actor, _aimAffectedCollectionKeyId);
+            _collectionApplier.Remove(actor, _aimHoverCollectionKeyId);
             ClearAimSessionState(actor);
             PublishEnded(actor, viewer, AbilityAimPresentationEventKeys.Range, RangeScopeOffset);
             PublishEnded(actor, viewer, AbilityAimPresentationEventKeys.AreaCircle, AreaScopeOffset);
@@ -252,11 +261,11 @@ namespace Ludots.Core.Input.Orders
         {
             if (!impact.HasTargetResolver)
             {
-                _collections.Replace(
+                _collectionApplier.ApplyDescriptor(
                     actor,
                     _aimAffectedCollectionKeyId,
                     EntityCollectionDescriptor.Create(
-                        EntityCollectionKeys.AbilityAimAffected,
+                        _aimAffectedCollectionKeyName,
                         EntityCollectionSourceKind.Explicit,
                         EntityCollectionRoleKind.AimAffected,
                         actor,
@@ -292,11 +301,11 @@ namespace Ludots.Core.Input.Orders
                 rowFlags[i] = i == 0 ? EntityCollectionRowFlags.Primary : EntityCollectionRowFlags.None;
             }
 
-            _collections.Replace(
+            _collectionApplier.ApplyDescriptor(
                 actor,
                 _aimAffectedCollectionKeyId,
                 EntityCollectionDescriptor.Create(
-                    EntityCollectionKeys.AbilityAimAffected,
+                    _aimAffectedCollectionKeyName,
                     ResolveCollectionSourceKind(in impact),
                     EntityCollectionRoleKind.AimAffected,
                     actor,
@@ -649,10 +658,18 @@ namespace Ludots.Core.Input.Orders
             }
         }
 
+        private static string ResolveKeyName(EntityCollectionStore collections, int keyId)
+        {
+            return collections.KeyRegistry.GetName(keyId)
+                ?? throw new ArgumentOutOfRangeException(
+                    nameof(keyId),
+                    $"Aim collection key id {keyId} is not registered; aim keys are data-declared (Input/collection_keys.json).");
+        }
+
         private void PublishAimHoverCollection(Entity actor, Entity hovered)
         {
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.AbilityAimHover,
+                _aimHoverCollectionKeyName,
                 EntityCollectionSourceKind.UiHover,
                 EntityCollectionRoleKind.AcquisitionPreview,
                 actor,
@@ -668,11 +685,11 @@ namespace Ludots.Core.Input.Orders
                 rowRoleIds[0] = PrimaryAimTargetRoleId;
                 Span<EntityCollectionRowFlags> rowFlags = stackalloc EntityCollectionRowFlags[1];
                 rowFlags[0] = EntityCollectionRowFlags.Primary;
-                _collections.Replace(actor, _aimHoverCollectionKeyId, descriptor, single, rowRoleIds, rowFlags);
+                _collectionApplier.ApplyDescriptor(actor, _aimHoverCollectionKeyId, descriptor, single, rowRoleIds, rowFlags, actor);
                 return;
             }
 
-            _collections.Replace(actor, _aimHoverCollectionKeyId, descriptor, ReadOnlySpan<Entity>.Empty);
+            _collectionApplier.ApplyDescriptor(actor, _aimHoverCollectionKeyId, descriptor, ReadOnlySpan<Entity>.Empty);
         }
 
         private void PublishLifecycleEvents(

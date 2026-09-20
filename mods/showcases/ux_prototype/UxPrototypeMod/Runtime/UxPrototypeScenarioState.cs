@@ -733,7 +733,7 @@ internal sealed class UxPrototypeScenarioState
                    engine.World,
                    engine.GlobalContext,
                    owner,
-                   EntityCollectionKeys.CommandSource,
+                   "collection.command.source",
                    out Entity entity)
             ? entity
             : Entity.Null;

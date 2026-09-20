@@ -557,7 +557,7 @@ namespace Ludots.Tests.GAS
             public EntityCollectionStore Store = null!;
             public InteractionContextProfileRegistry ContextProfiles = null!;
             public StringIntRegistry IntentIds = null!;
-            public ContextBoundCollectionWriter Writer = null!;
+            public Ludots.Core.EntityCollections.CollectionApplier Writer = null!;
             public GameplayEventBus EventBus = null!;
             public OrderTypeRegistry OrderTypes = null!;
             public GasPresentationEventBuffer PresentationEvents = null!;
@@ -609,17 +609,13 @@ namespace Ludots.Tests.GAS
                         new()
                         {
                             Id = BaseContextProfileName,
-                            ActiveCollectionKey = EntityCollectionKeys.CommandSource,
+                            ActiveCollectionKey = "collection.command.source",
                         },
                     },
                 }, keyRegistry, filterProfileIds, commandIntentProfileIds);
 
-                var writer = new ContextBoundCollectionWriter(
-                    world,
-                    contextProfiles,
-                    filters,
-                    new DomainRoutedCollectionWriter(store, domains),
-                    store);
+                var writer = new Ludots.Core.EntityCollections.CollectionApplier(world, store);
+                writer.BindInputInteraction(filters, domains, keyRegistry.Register("collection.ui.cast.raw"));
 
                 int stunTagId = TagRegistry.Register(StunTagName);
                 var waitSpec = default(AbilityExecSpec);
@@ -685,7 +681,7 @@ namespace Ludots.Tests.GAS
                     Definitions = definitions,
                     ExecSystem = execSystem,
                     ContextSystem = new AbilityExecInteractionContextSystem(world, contextProfiles, definitions, domains),
-                    CommandSourceKeyId = keyRegistry.Register(EntityCollectionKeys.CommandSource),
+                    CommandSourceKeyId = keyRegistry.Register("collection.command.source"),
                     AbilityTargetsKeyId = keyRegistry.Register(AbilityTargetsCollectionKey),
                 };
             }
