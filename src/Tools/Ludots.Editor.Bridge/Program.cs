@@ -697,9 +697,6 @@ app.MapGet("/api/ai/topology-catalog", () =>
         string hfsmPath = Path.Combine(mod.RootPath, "assets", "AI", "hfsm.json");
         bool hasBt = File.Exists(btPath);
         bool hasHfsm = File.Exists(hfsmPath);
-        if (!hasBt && !hasHfsm)
-            continue;
-
         sources.Add(new
         {
             id = mod.Id,
@@ -727,11 +724,7 @@ app.MapGet("/api/ai/behavior-trees", (string? source) =>
 {
     if (!TryResolveAiTopologyPath(launcher, source, "behavior_trees.json", out string path, out string resolvedSource, out IResult? error))
         return error!;
-    if (!File.Exists(path))
-        return Results.NotFound(new { ok = false, error = $"behavior_trees.json missing at {path}", source = resolvedSource, path });
-    if (!TryReadJsonArrayFile(path, out JsonArray items, out string? readError))
-        return Results.BadRequest(new { ok = false, error = readError, path });
-    return Results.Ok(new { ok = true, source = resolvedSource, relativePath = "AI/behavior_trees.json", path, items });
+    return ReadAiTopologyFile(path, resolvedSource, "AI/behavior_trees.json");
 });
 
 app.MapPut("/api/ai/behavior-trees", async (HttpRequest req, string? source) =>
@@ -751,7 +744,7 @@ app.MapPut("/api/ai/behavior-trees", async (HttpRequest req, string? source) =>
         }
     }
 
-    if (!TryBuildAiTopologyActionCatalog(out GraphActionCatalog actions, out string? actionError))
+    if (!TryBuildAiTopologyActionCatalog(launcher, resolvedSource, out GraphActionCatalog actions, out string? actionError))
         return Results.BadRequest(new { ok = false, error = actionError });
     try
     {
@@ -771,11 +764,7 @@ app.MapGet("/api/ai/hfsm", (string? source) =>
 {
     if (!TryResolveAiTopologyPath(launcher, source, "hfsm.json", out string path, out string resolvedSource, out IResult? error))
         return error!;
-    if (!File.Exists(path))
-        return Results.NotFound(new { ok = false, error = $"hfsm.json missing at {path}", source = resolvedSource, path });
-    if (!TryReadJsonArrayFile(path, out JsonArray items, out string? readError))
-        return Results.BadRequest(new { ok = false, error = readError, path });
-    return Results.Ok(new { ok = true, source = resolvedSource, relativePath = "AI/hfsm.json", path, items });
+    return ReadAiTopologyFile(path, resolvedSource, "AI/hfsm.json");
 });
 
 app.MapPut("/api/ai/hfsm", async (HttpRequest req, string? source) =>
@@ -795,7 +784,7 @@ app.MapPut("/api/ai/hfsm", async (HttpRequest req, string? source) =>
         }
     }
 
-    if (!TryBuildAiTopologyActionCatalog(out GraphActionCatalog actions, out string? actionError))
+    if (!TryBuildAiTopologyActionCatalog(launcher, resolvedSource, out GraphActionCatalog actions, out string? actionError))
         return Results.BadRequest(new { ok = false, error = actionError });
     try
     {
@@ -811,32 +800,27 @@ app.MapPut("/api/ai/hfsm", async (HttpRequest req, string? source) =>
     return Results.Ok(new { ok = true, source = resolvedSource, relativePath = "AI/hfsm.json", path });
 });
 
-app.MapGet("/api/ai/action-lib", (string? host) =>
+app.MapGet("/api/ai/action-lib", (string? host, string? source) =>
 {
-    string repoRoot = FindAssetsRoot();
-    string path = Path.Combine(repoRoot, "assets", "GAS", "action_lib.json");
-    if (!File.Exists(path))
-        return Results.NotFound(new { ok = false, error = $"action_lib.json missing at {path}", path });
-    if (!TryReadJsonArrayFile(path, out JsonArray items, out string? readError))
-        return Results.BadRequest(new { ok = false, error = readError, path });
+    if (!TryResolveAiSource(launcher, source, out string resolvedSource, out _, out IResult? error))
+        return error!;
+    if (!TryCollectMergedActionLibRows(
+            launcher,
+            resolvedSource,
+            out List<(string Name, string Host, string Graph, string Source)> rows,
+            out string? readError))
+        return Results.BadRequest(new { ok = false, error = readError, source = resolvedSource });
 
     string? hostFilter = string.IsNullOrWhiteSpace(host) ? null : host.Trim();
     var actions = new List<object>();
-    foreach (JsonNode? node in items)
+    foreach ((string name, string actionHost, string graph, string actionSource) in rows)
     {
-        if (node is not JsonObject row)
-            continue;
-        string name = row["name"]?.GetValue<string>() ?? "";
-        string actionHost = row["host"]?.GetValue<string>() ?? "";
-        string graph = row["graph"]?.GetValue<string>() ?? "";
-        if (name.Length == 0)
-            continue;
         if (hostFilter != null && !string.Equals(actionHost, hostFilter, StringComparison.OrdinalIgnoreCase))
             continue;
-        actions.Add(new { name, host = actionHost, graph });
+        actions.Add(new { name, host = actionHost, graph, source = actionSource });
     }
 
-    return Results.Ok(new { ok = true, path, host = hostFilter, actions });
+    return Results.Ok(new { ok = true, source = resolvedSource, host = hostFilter, actions });
 });
 
 app.MapPost("/api/mods/{modId}/maps/{mapId}/boards", async (string modId, string mapId, HttpRequest req) =>
@@ -3633,6 +3617,40 @@ static bool TryFindGraphObject(JsonArray arr, string graphId, out JsonObject gra
     return false;
 }
 
+static bool TryResolveAiSource(
+    LauncherService launcher,
+    string? source,
+    out string resolvedSource,
+    out string? modRoot,
+    out IResult? error)
+{
+    resolvedSource = string.IsNullOrWhiteSpace(source) ? "core" : source.Trim();
+    modRoot = null;
+    error = null;
+    if (string.Equals(resolvedSource, "core", StringComparison.OrdinalIgnoreCase))
+    {
+        resolvedSource = "core";
+        return true;
+    }
+
+    string sourceKey = resolvedSource;
+    var mod = launcher.DiscoverMods().FirstOrDefault(m =>
+        string.Equals(m.Id, sourceKey, StringComparison.OrdinalIgnoreCase));
+    if (mod == null)
+    {
+        error = Results.BadRequest(new
+        {
+            ok = false,
+            error = $"Unknown AI topology source '{resolvedSource}'. Use 'core' or a launcher mod id.",
+        });
+        return false;
+    }
+
+    resolvedSource = mod.Id;
+    modRoot = mod.RootPath;
+    return true;
+}
+
 static bool TryResolveAiTopologyPath(
     LauncherService launcher,
     string? source,
@@ -3642,31 +3660,42 @@ static bool TryResolveAiTopologyPath(
     out IResult? error)
 {
     path = "";
-    resolvedSource = string.IsNullOrWhiteSpace(source) ? "core" : source.Trim();
-    error = null;
-    string repoRoot = FindAssetsRoot();
-    string sourceKey = resolvedSource;
-
-    if (string.Equals(sourceKey, "core", StringComparison.OrdinalIgnoreCase))
-    {
-        path = Path.Combine(repoRoot, "assets", "AI", fileName);
-        return true;
-    }
-
-    var mod = launcher.DiscoverMods().FirstOrDefault(m =>
-        string.Equals(m.Id, sourceKey, StringComparison.OrdinalIgnoreCase));
-    if (mod == null)
-    {
-        error = Results.BadRequest(new
-        {
-            ok = false,
-            error = $"Unknown AI topology source '{sourceKey}'. Use 'core' or a launcher mod id.",
-        });
+    if (!TryResolveAiSource(launcher, source, out resolvedSource, out string? modRoot, out error))
         return false;
+
+    path = string.Equals(resolvedSource, "core", StringComparison.OrdinalIgnoreCase)
+        ? Path.Combine(FindAssetsRoot(), "assets", "AI", fileName)
+        : Path.Combine(modRoot!, "assets", "AI", fileName);
+    return true;
+}
+
+static IResult ReadAiTopologyFile(string path, string resolvedSource, string relativePath)
+{
+    if (!File.Exists(path))
+    {
+        return Results.Ok(new
+        {
+            ok = true,
+            source = resolvedSource,
+            relativePath,
+            path,
+            exists = false,
+            items = Array.Empty<object>(),
+        });
     }
 
-    path = Path.Combine(mod.RootPath, "assets", "AI", fileName);
-    return true;
+    if (!TryReadJsonArrayFile(path, out JsonArray items, out string? readError))
+        return Results.BadRequest(new { ok = false, error = readError, path, source = resolvedSource });
+
+    return Results.Ok(new
+    {
+        ok = true,
+        source = resolvedSource,
+        relativePath,
+        path,
+        exists = true,
+        items,
+    });
 }
 
 static object[] TryReadAiTopologyIds(string path)
@@ -3750,31 +3779,96 @@ static bool TryParseAiTopologyItemsBody(string body, out JsonArray items, out st
     }
 }
 
-static bool TryBuildAiTopologyActionCatalog(out GraphActionCatalog catalog, out string? error)
+static bool TryCollectMergedActionLibRows(
+    LauncherService launcher,
+    string resolvedSource,
+    out List<(string Name, string Host, string Graph, string Source)> rows,
+    out string? error)
+{
+    rows = new List<(string Name, string Host, string Graph, string Source)>();
+    error = null;
+    var byName = new Dictionary<string, (string Name, string Host, string Graph, string Source)>(StringComparer.Ordinal);
+    string corePath = Path.Combine(FindAssetsRoot(), "assets", "GAS", "action_lib.json");
+    if (!TryAbsorbActionLibFile(corePath, "core", byName, out error))
+        return false;
+
+    if (!string.Equals(resolvedSource, "core", StringComparison.OrdinalIgnoreCase))
+    {
+        if (!TryResolveAiSource(launcher, resolvedSource, out _, out string? modRoot, out _))
+        {
+            error = $"Unknown AI topology source '{resolvedSource}'.";
+            return false;
+        }
+
+        string overlayPath = Path.Combine(modRoot!, "assets", "GAS", "action_lib.json");
+        if (File.Exists(overlayPath) && !TryAbsorbActionLibFile(overlayPath, resolvedSource, byName, out error))
+            return false;
+    }
+
+    rows.AddRange(byName.Values);
+    rows.Sort((a, b) => string.CompareOrdinal(a.Name, b.Name));
+    return true;
+}
+
+static bool TryAbsorbActionLibFile(
+    string path,
+    string sourceId,
+    Dictionary<string, (string Name, string Host, string Graph, string Source)> byName,
+    out string? error)
+{
+    error = null;
+    if (!File.Exists(path))
+    {
+        if (string.Equals(sourceId, "core", StringComparison.OrdinalIgnoreCase))
+        {
+            error = $"action_lib.json missing at {path}";
+            return false;
+        }
+
+        return true;
+    }
+
+    if (!TryReadJsonArrayFile(path, out JsonArray items, out error))
+        return false;
+
+    for (int i = 0; i < items.Count; i++)
+    {
+        if (items[i] is not JsonObject row)
+        {
+            error = $"ActionLib '{path}' item {i} must be an object.";
+            return false;
+        }
+
+        string name = row["name"]?.GetValue<string>()?.Trim() ?? "";
+        string hostText = row["host"]?.GetValue<string>()?.Trim() ?? "";
+        string graph = row["graph"]?.GetValue<string>()?.Trim() ?? "";
+        if (name.Length == 0)
+        {
+            error = $"ActionLib '{path}' item {i} requires a non-empty name.";
+            return false;
+        }
+
+        byName[name] = (name, hostText, graph, sourceId);
+    }
+
+    return true;
+}
+
+static bool TryBuildAiTopologyActionCatalog(
+    LauncherService launcher,
+    string resolvedSource,
+    out GraphActionCatalog catalog,
+    out string? error)
 {
     catalog = new GraphActionCatalog();
-    error = null;
-    string path = Path.Combine(FindAssetsRoot(), "assets", "GAS", "action_lib.json");
-    if (!TryReadJsonArrayFile(path, out JsonArray items, out error))
-    {
+    if (!TryCollectMergedActionLibRows(launcher, resolvedSource, out List<(string Name, string Host, string Graph, string Source)> rows, out error))
         return false;
-    }
 
     try
     {
-        for (int i = 0; i < items.Count; i++)
+        for (int i = 0; i < rows.Count; i++)
         {
-            if (items[i] is not JsonObject row)
-            {
-                throw new InvalidOperationException($"ActionLib '{path}' item {i} must be an object.");
-            }
-
-            string name = row["name"]?.GetValue<string>()?.Trim() ?? "";
-            string hostText = row["host"]?.GetValue<string>()?.Trim() ?? "";
-            if (name.Length == 0)
-            {
-                throw new InvalidOperationException($"ActionLib '{path}' item {i} requires a non-empty name.");
-            }
+            (string name, string hostText, _, _) = rows[i];
             if (!GraphActionHostYieldPolicy.TryParse(hostText, out GraphActionHost host))
             {
                 throw new InvalidOperationException($"ActionLib '{name}' host '{hostText}' is unsupported.");
