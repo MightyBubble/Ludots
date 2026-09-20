@@ -31,16 +31,12 @@
       "PositionYCm": 600
     }
   ],
+  "ContinuousHeightmapAsset": "assets/terrain/ballista_flat.height",
   "Teams": [
     {
       "TeamId": 1,
       "Name": "Player",
       "RepresentativeInstanceId": "ballista_1"
-    },
-    {
-      "TeamId": 2,
-      "Name": "Enemy",
-      "RepresentativeInstanceId": "wolf_1"
     }
   ],
   "Players": [
@@ -49,6 +45,5 @@
       "TeamId": 1,
       "RepresentativeInstanceId": "ballista_1"
     }
-  ],
-  "ContinuousHeightmapAsset": "assets/terrain/ballista_flat.height"
+  ]
 }
