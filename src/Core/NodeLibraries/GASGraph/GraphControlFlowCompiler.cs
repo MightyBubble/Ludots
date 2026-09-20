@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.GraphRuntime;
 
@@ -889,7 +890,53 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 }
             }
 
-            return new TriggerGraphEntryFilters(region, tag, filters.Team, filters.Threshold, direction, action, instanceId, null, varName);
+            List<TriggerGraphEntryPayloadFilter>? payloadFilters = null;
+            if (filters.Payload != null)
+            {
+                foreach (KeyValuePair<string, JsonElement> pair in filters.Payload)
+                {
+                    string payloadKey = pair.Key.Trim();
+                    if (payloadKey.Length == 0)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
+                            $"TriggerGraph graph '{graphId}' entry '{shown}' filters field 'payload' requires non-empty payload keys.", pair.Key));
+                        continue;
+                    }
+
+                    if (pair.Value.ValueKind == JsonValueKind.String)
+                    {
+                        string expected = (pair.Value.GetString() ?? string.Empty).Trim();
+                        if (expected.Length == 0)
+                        {
+                            diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
+                                $"TriggerGraph graph '{graphId}' entry '{shown}' filters payload '{payloadKey}' requires a non-empty string value.", payloadKey));
+                            continue;
+                        }
+
+                        (payloadFilters ??= new List<TriggerGraphEntryPayloadFilter>()).Add(
+                            new TriggerGraphEntryPayloadFilter(payloadKey, expected, null));
+                    }
+                    else if (pair.Value.ValueKind == JsonValueKind.Number)
+                    {
+                        if (!pair.Value.TryGetInt32(out int expected))
+                        {
+                            diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
+                                $"TriggerGraph graph '{graphId}' entry '{shown}' filters payload '{payloadKey}' requires an int32 value.", payloadKey));
+                            continue;
+                        }
+
+                        (payloadFilters ??= new List<TriggerGraphEntryPayloadFilter>()).Add(
+                            new TriggerGraphEntryPayloadFilter(payloadKey, null, expected));
+                    }
+                    else
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
+                            $"TriggerGraph graph '{graphId}' entry '{shown}' filters payload '{payloadKey}' values must be a string or an integer.", payloadKey));
+                    }
+                }
+            }
+
+            return new TriggerGraphEntryFilters(region, tag, filters.Team, filters.Threshold, direction, action, instanceId, null, varName, payloadFilters);
         }
 
         private static Dictionary<string, int> BuildNodeIndex(

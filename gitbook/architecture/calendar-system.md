@@ -105,6 +105,19 @@ Mod 要启用历法，写 `Calendar/world.json`，并保证 catalog 里有这条
 
 一次 Advance 跨过多天时，按天逐日发事件，不跳相位。
 
+订阅指定相位或日期用 TriggerGraph 条目的 `filters.payload`（载荷键值相等过滤，值限字符串或整数；键必须在该事件的 schema 载荷里）：
+
+```json
+{ "label": "on_spring_begin", "event": "Calendar.CyclePhaseEntered", "start": "spring_rules",
+  "filters": { "payload": { "Calendar.CycleId": "season", "Calendar.PhaseId": "spring" } } }
+```
+
+- 春始 / 春末：订 `CyclePhaseEntered` / `Exited`，过滤 `CycleId=season` + `PhaseId=spring`。
+- 某月起 / 某月止：同一个事件，过滤 `CycleId=month` + `PhaseId=month.04`。节气、节日、旬、阴阳历月相位同法。
+- 指定日期：订 `DayAdvanced`，过滤 `Calendar.DayIndex = 360`（整数比较）。
+- 多历并存时加一条 `Calendar.CalendarId` 过滤即可只听某份历；不过滤则每份历的相位都各发一次。
+- 图内读取：整数载荷（日序、相位序、年）可 `LoadEntryPayloadInt`；字符串载荷（相位 id 等）只在 entry 过滤层可用，图内暂无 string 寄存器。
+
 ### 3.4 存档
 
 存档域 `calendar`：`enabled`、`dayIndex`、`ticksIntoDay`、`activeCalendarId`。定义不存，以配置为准。恢复时 enabled / 主历必须和当前配置一致，否则失败。恢复不补发事件。

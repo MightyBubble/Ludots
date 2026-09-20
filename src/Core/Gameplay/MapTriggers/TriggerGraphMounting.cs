@@ -415,7 +415,9 @@ namespace Ludots.Core.Gameplay.MapTriggers
                             entry.Filters.Direction,
                             entry.Filters.Action,
                             entry.Filters.InstanceId,
-                            tagId == Ludots.Core.Gameplay.GAS.Registry.TagRegistry.InvalidId ? null : tagId),
+                            tagId == Ludots.Core.Gameplay.GAS.Registry.TagRegistry.InvalidId ? null : tagId,
+                            entry.Filters.VarName,
+                            entry.Filters.Payload),
                         entry.Refire,
                         entry.Priority);
                 }
