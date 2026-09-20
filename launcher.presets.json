@@ -505,10 +505,10 @@
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_graph_op_extension_showcase_raylib",
+      "id": "capability_standard_mod_graph_op_extension_showcase_raylib",
       "name": "Capability Standard Graph Op Extension Raylib",
       "selectors": [
-        "$capability_standard_graph_op_extension_showcase"
+        "$capability_standard_mod_graph_op_extension_showcase"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

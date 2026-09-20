@@ -16,7 +16,7 @@ namespace CapabilityStandardGraphOpExtensionShowcaseMod;
 
 public sealed class CapabilityStandardGraphOpExtensionShowcaseModEntry : IMod
 {
-    private const string MapId = "capability_standard_graph_op_extension_showcase";
+    private const string MapId = "capability_standard_mod_graph_op_extension_showcase";
     private const string GraphId = "Graph.CapabilityStandard.GraphOpExtension.ScoreThreat";
     private Entity _sourceEntity = Entity.Null;
     private Entity _leftTarget = Entity.Null;

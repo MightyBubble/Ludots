@@ -124,9 +124,9 @@ public sealed class CapabilityStandardExtensibleRuntimeShowcaseAcceptanceTests
     public void GraphOpExtension_PlayerRescoresThreatUsingProviderModOp()
     {
         const string modId = "CapabilityStandardGraphOpExtensionShowcaseMod";
-        const string mapId = "capability_standard_graph_op_extension_showcase";
-        const string bindingName = "capability_standard_graph_op_extension_showcase";
-        const string presetId = "capability_standard_graph_op_extension_showcase_raylib";
+        const string mapId = "capability_standard_mod_graph_op_extension_showcase";
+        const string bindingName = "capability_standard_mod_graph_op_extension_showcase";
+        const string presetId = "capability_standard_mod_graph_op_extension_showcase_raylib";
         string repoRoot = CapabilityStandardShowcaseTestHarness.FindRepoRoot();
 
         AssertRootShowcaseAssets(repoRoot, modId, mapId, bindingName, presetId,
@@ -160,7 +160,7 @@ public sealed class CapabilityStandardExtensibleRuntimeShowcaseAcceptanceTests
     public void GraphOpExtension_ProviderOpRejectsTargetWithoutThreatScore()
     {
         const string modId = "CapabilityStandardGraphOpExtensionShowcaseMod";
-        const string mapId = "capability_standard_graph_op_extension_showcase";
+        const string mapId = "capability_standard_mod_graph_op_extension_showcase";
         string repoRoot = CapabilityStandardShowcaseTestHarness.FindRepoRoot();
 
         using var engine = CreateEngine(repoRoot, "CapabilityStandardGraphOpProviderMod", modId);

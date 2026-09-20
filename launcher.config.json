@@ -376,7 +376,7 @@
       }
     },
     {
-      "name": "capability_standard_graph_op_extension_showcase",
+      "name": "capability_standard_mod_graph_op_extension_showcase",
       "target": {
         "type": "path",
         "value": "mods/showcases/capability_standard/CapabilityStandardGraphOpExtensionShowcaseMod",

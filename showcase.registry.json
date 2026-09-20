@@ -553,7 +553,7 @@
       "notes": "Mod-authored builtin handler registered via IModContext.Extensions.Gas.RegisterBuiltinHandler with explicit operation metadata."
     },
     {
-      "id": "capability_standard_graph_op_extension_showcase",
+      "id": "capability_standard_mod_graph_op_extension_showcase",
       "path": "mods/showcases/capability_standard/CapabilityStandardGraphOpExtensionShowcaseMod",
       "projectPath": "CapabilityStandardGraphOpExtensionShowcaseMod.csproj",
       "title": "跨 Mod 威胁评分",
@@ -566,12 +566,12 @@
         "gas",
         "mod-extensible-runtime"
       ],
-      "binding": "capability_standard_graph_op_extension_showcase",
-      "preset": "capability_standard_graph_op_extension_showcase_raylib",
+      "binding": "capability_standard_mod_graph_op_extension_showcase",
+      "preset": "capability_standard_mod_graph_op_extension_showcase_raylib",
       "docsPath": "gitbook/architecture/mod-extensible-runtime-showcases/graph-op-extension.md",
       "readmePath": null,
       "acceptanceTest": "CapabilityStandardExtensibleRuntimeShowcaseAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_graph_op_extension_showcase",
+      "artifactDir": "artifacts/evidence/capability_standard_mod_graph_op_extension_showcase",
       "screenshot": null,
       "status": "active",
       "notes": "Consumer Score graph references CapabilityStandardGraphOpProviderMod.QueryThreat via controlEdges/valueEdges; provider registers RegisterGraphOp at OnLoad."

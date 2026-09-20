@@ -46,7 +46,7 @@ mods/showcases/capability_standard/
 ```powershell
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_config_shards_showcase_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_effect_preset_type_code_showcase_raylib'
-.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_graph_op_extension_showcase_raylib'
+.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_mod_graph_op_extension_showcase_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_presenter_behavior_extension_showcase_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_presenter_command_extension_showcase_raylib'
 ```

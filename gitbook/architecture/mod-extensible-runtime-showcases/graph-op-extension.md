@@ -18,7 +18,7 @@ CapabilityStandardGraphOpExtensionShowcaseMod/
   assets/
     game.json
     Maps/
-      capability_standard_graph_op_extension_showcase.json
+      capability_standard_mod_graph_op_extension_showcase.json
     GAS/
       graphs/
         capability_standard.graph_op_extension.score_threat.json
@@ -81,7 +81,7 @@ consumer 的打分图只引用这个键，走现行控制流边：
 Feature: 玩家看到左右目标重新评分
 
   Scenario: 点击后左右目标出现新评分
-    Given 我启动 `capability_standard_graph_op_extension_showcase_raylib`
+    Given 我启动 `capability_standard_mod_graph_op_extension_showcase_raylib`
     And 地图显示左右两个目标
     When 我点击 `Re-score Threat`
     Then 面板显示评分已重新计算
