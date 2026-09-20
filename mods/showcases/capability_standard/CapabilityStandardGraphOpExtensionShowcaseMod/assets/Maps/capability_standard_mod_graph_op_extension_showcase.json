@@ -1,6 +1,10 @@
 {
   "Id": "capability_standard_mod_graph_op_extension_showcase",
-  "Tags": ["showcase", "capability-standard", "graph-op-extension"],
+  "Tags": [
+    "showcase",
+    "capability-standard",
+    "graph-op-extension"
+  ],
   "DefaultCamera": {
     "VirtualCameraId": "Camera.Profile.Tactical",
     "TargetXCm": 850,
@@ -10,5 +14,10 @@
     "Yaw": 180,
     "FovYDeg": 50
   },
-  "Entities": []
+  "Entities": [],
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  }
 }

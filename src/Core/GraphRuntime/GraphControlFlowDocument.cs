@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Text.Json;
 using Ludots.Core.NodeLibraries.GASGraph;
 
 namespace Ludots.Core.GraphRuntime
@@ -164,6 +165,10 @@ namespace Ludots.Core.GraphRuntime
         public string? Action { get; set; }
         public string? InstanceId { get; set; }
         public string? VarName { get; set; }
+        /// <summary>Generic payload-key filters: payload key → expected value (string or
+        /// int32). Example: { "Calendar.CycleId": "season", "Calendar.PhaseId": "spring" }
+        /// subscribes to spring beginning only.</summary>
+        public Dictionary<string, JsonElement>? Payload { get; set; }
     }
 
     public sealed class GraphControlFlowNode

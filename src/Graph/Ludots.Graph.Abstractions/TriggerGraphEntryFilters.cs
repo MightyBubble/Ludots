@@ -17,7 +17,8 @@ namespace Ludots.Core.GraphRuntime
             string? action = null,
             string? instanceId = null,
             int? tagId = null,
-            string? varName = null)
+            string? varName = null,
+            IReadOnlyList<TriggerGraphEntryPayloadFilter>? payload = null)
         {
             Region = region;
             Tag = tag;
@@ -28,6 +29,7 @@ namespace Ludots.Core.GraphRuntime
             InstanceId = instanceId;
             TagId = tagId;
             VarName = varName;
+            Payload = payload;
         }
 
         public string? Region { get; }
@@ -45,6 +47,10 @@ namespace Ludots.Core.GraphRuntime
         /// <summary>Exact map-variable subscription for MapVariableChanged ("this very
         /// variable"); matched against the event's VarName payload.</summary>
         public string? VarName { get; }
+        /// <summary>Generic payload-key subscription ("this very payload value"): each filter
+        /// names a payload key and one expected string or int. Matched against the firing
+        /// context; a key missing from the event payload never matches.</summary>
+        public IReadOnlyList<TriggerGraphEntryPayloadFilter>? Payload { get; }
 
         public bool IsEmpty =>
             Region == null &&
@@ -54,7 +60,38 @@ namespace Ludots.Core.GraphRuntime
             !Direction.HasValue &&
             Action == null &&
             InstanceId == null &&
-            VarName == null;
+            VarName == null &&
+            (Payload == null || Payload.Count == 0);
+    }
+
+    /// <summary>
+    /// One payload-key equality filter. Exactly one of StringValue / IntValue is set;
+    /// the key must be a payload key the event schema declares (e.g.
+    /// "Calendar.CycleId" / "Calendar.PhaseId" on Calendar cycle events).
+    /// </summary>
+    public readonly struct TriggerGraphEntryPayloadFilter
+    {
+        public TriggerGraphEntryPayloadFilter(string key, string? stringValue, int? intValue)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                throw new InvalidOperationException("Payload filter key must be a non-empty payload key.");
+            }
+
+            if ((stringValue != null) == (intValue.HasValue))
+            {
+                throw new InvalidOperationException(
+                    $"Payload filter '{key}' must declare exactly one of a string or int value.");
+            }
+
+            Key = key;
+            StringValue = stringValue;
+            IntValue = intValue;
+        }
+
+        public string Key { get; }
+        public string? StringValue { get; }
+        public int? IntValue { get; }
     }
 
     /// <summary>

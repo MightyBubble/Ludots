@@ -315,7 +315,6 @@
       "op": "ApplyEffectTemplate",
       "authorableKinds": [
         "Effect",
-        "TriggerGraph",
         "Script"
       ],
       "showcaseId": "capability_standard_graph_op_ApplyEffectTemplate",

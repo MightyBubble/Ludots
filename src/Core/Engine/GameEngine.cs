@@ -25,6 +25,7 @@ using Ludots.Core.Gameplay.Dialogue;
 using Ludots.Core.Gameplay.Sequencer;
 using Ludots.Core.Gameplay.Story;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Gameplay.Calendar;
 using Ludots.Core.Gameplay.Activities;
 using Ludots.Core.Gameplay.Providers;
 using Ludots.Core.Gameplay.Tasks;
@@ -1631,6 +1632,20 @@ namespace Ludots.Core.Engine
             var clockStepPolicy = new GasClockStepPolicy(gasClockConfig.StepEveryFixedTicks, gasClockConfig.Mode);
             var clockSystem = new GasClockSystem(clock, clockStepPolicy, CreateContext, TriggerManager.FireEvent);
             var entityLocalClockSystem = new EntityLocalClockSystem(World, clockStepPolicy, timeScalePermilleAttributeId);
+            var calendarRegistry = new CalendarDefinitionRegistry();
+            CalendarWorldConfig? calendarWorld = new CalendarConfigLoader(ConfigPipeline)
+                .Load(calendarRegistry, ConfigCatalog, ConfigConflictReport);
+            var calendarRuntime = new CalendarRuntime(calendarWorld, calendarRegistry);
+            // Calendar.* schema 声明为 Global scope：走全局订阅表派发（地图挂的全局触发
+            // 听得到），并带订阅探针——没人听的日子事件连投影 diff 都不算。
+            CalendarSystem? calendarSystem = calendarRuntime.IsEnabled
+                ? new CalendarSystem(
+                    calendarRuntime,
+                    clockStepPolicy,
+                    CreateContext,
+                    TriggerManager.FireGlobalEvent,
+                    TriggerManager.HasGlobalEventSubscribers)
+                : null;
             var physics2dTickPolicy = new Physics2DTickPolicy(physics2dClockConfig.PhysicsHz, physics2dClockConfig.MaxStepsPerFixedTick);
             var physics2dBroadphasePolicy = new Physics2DBroadphasePolicy(physics2dClockConfig.Broadphase);
             _physics2DController = new Physics2DController(World, physics2dTickPolicy, physics2dClockConfig.PhysicsHz, CreateContext, TriggerManager.FireEvent);
@@ -1872,7 +1887,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.GraphLookupTableRegistry, graphLookupTables);
             SetService(CoreServiceKeys.GraphFunctionCatalog, graphFunctionCatalog);
             SetService(CoreServiceKeys.GraphActionCatalog, graphActionCatalog);
-            var liveGasEditPipeline = new LiveGasEditPipeline(graphProgramRegistry, graphFunctionCatalog, effectTemplateRegistry, tagOps);
+            var liveGasEditPipeline = new LiveGasEditPipeline(graphProgramRegistry, graphFunctionCatalog, effectTemplateRegistry, tagOps, eventSchemas: TriggerManager.EventSchemas);
             var liveAttributeCommandExecutor = new LiveAttributeCommandExecutor(World, tagOps);
             var liveEffectChainTracer = new LiveEffectChainTracer(capacity: 256);
             var liveAiDraftBinder = new LiveAiDraftBinder();
@@ -1897,6 +1912,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.OrderAdmissionResultBuffer, orderAdmissionResults);
             SetService(CoreServiceKeys.OrderTerminalResultBuffer, orderTerminalResults);
             SetService(CoreServiceKeys.TimeFlow, _timeFlow);
+            SetService(CoreServiceKeys.CalendarRuntime, calendarRuntime);
+            SetService(CoreServiceKeys.CalendarDefinitionRegistry, calendarRegistry);
             SetService(CoreServiceKeys.Clock, (IClock)clock);
             SetService(CoreServiceKeys.GasClockStepPolicy, clockStepPolicy);
             SetService(CoreServiceKeys.GasClocks, gasClocks);
@@ -2274,6 +2291,10 @@ namespace Ludots.Core.Engine
             RegisterSystem(new StoryRuntimeSystem(this, dialogueRuntime, sequencerRuntime), SystemGroup.InputCollection);
             RegisterSystem(clockSystem, SystemGroup.InputCollection);
             RegisterSystem(entityLocalClockSystem, SystemGroup.InputCollection);
+            if (calendarSystem != null)
+            {
+                RegisterSystem(calendarSystem, SystemGroup.InputCollection);
+            }
             RegisterSystem(timedTagSystem, SystemGroup.InputCollection);
             RegisterSystem(new ProgressionScopeBindingSystem(World, progressionEvaluator, progressionScopeKeys), SystemGroup.InputCollection);
             var inventoryEquipmentGrantSyncSystem = new InventoryEquipmentGrantSyncSystem(World, inventoryRuntime, effectRequestQueue, abilityDefinitions);
@@ -4101,7 +4122,8 @@ namespace Ludots.Core.Engine
                     programs,
                     manifest,
                     GetService(CoreServiceKeys.CustomEventNameRegistry)
-                        ?? throw new InvalidOperationException("Mod TriggerGraph installation requires CustomEventNameRegistry."));
+                        ?? throw new InvalidOperationException("Mod TriggerGraph installation requires CustomEventNameRegistry."),
+                    TriggerManager.EventSchemas);
                 ApplyTriggerDecorators(triggers);
                 TriggerManager.RegisterModTriggers(manifest.Name, triggers);
             }

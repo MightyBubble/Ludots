@@ -20,6 +20,7 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
     {
         private readonly GraphProgramRegistry _graphs;
         private readonly GraphFunctionCatalog _functions;
+        private readonly Ludots.Core.Scripting.EventSchemaRegistry? _eventSchemas;
         private readonly EffectTemplateRegistry? _effects;
         private readonly TagOps? _tagOps;
         private readonly JsonSerializerOptions _jsonOptions;
@@ -37,10 +38,12 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
             GraphFunctionCatalog functions,
             EffectTemplateRegistry? effects = null,
             TagOps? tagOps = null,
-            JsonSerializerOptions? jsonOptions = null)
+            JsonSerializerOptions? jsonOptions = null,
+            Ludots.Core.Scripting.EventSchemaRegistry? eventSchemas = null)
         {
             _graphs = graphs ?? throw new ArgumentNullException(nameof(graphs));
             _functions = functions ?? throw new ArgumentNullException(nameof(functions));
+            _eventSchemas = eventSchemas;
             _effects = effects;
             _tagOps = tagOps;
             _jsonOptions = jsonOptions ?? StrictJsonOptions.CreateCamelCase();
@@ -517,7 +520,7 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
             }
 
             GraphControlFlowCompileResult compile =
-                GraphProgramAuthoringFrontDoor.CompileJsonObjectFull(obj, graphKey, _jsonOptions);
+                GraphProgramAuthoringFrontDoor.CompileJsonObjectFull(obj, graphKey, _jsonOptions, _eventSchemas);
 
             bool hasCompileErrors = false;
             for (int d = 0; d < compile.Diagnostics.Count; d++)

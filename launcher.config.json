@@ -384,7 +384,7 @@
       }
     },
     {
-      "name": "capability_standard_graph_op_provider",
+      "name": "graph_op_provider",
       "target": {
         "type": "path",
         "value": "mods/showcases/capability_standard/CapabilityStandardGraphOpProviderMod",
