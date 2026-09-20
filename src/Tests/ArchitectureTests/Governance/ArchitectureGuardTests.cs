@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using Ludots.Core.Gameplay.Relationships;
 using Arch.Core;
 using Arch.System;
 using CoreInputMod.Systems;
@@ -1274,6 +1275,7 @@ namespace Ludots.Tests.Architecture.Governance
                 typeof(AttributeBuffer),
                 typeof(AttributeMutationOps),
                 typeof(AttributeAggregatorSystem),
+                typeof(RelationshipRuntime),
                 typeof(EffectPhaseSideEffectTransaction),
                 typeof(EffectModifierOps),
                 typeof(GasGraphRuntimeApi),
@@ -1778,7 +1780,20 @@ namespace Ludots.Tests.Architecture.Governance
                 Assert.That(showcaseInstaller, Does.Not.Contain("InstallGrants"));
                 Assert.That(showcaseInstaller, Does.Not.Contain("KnowledgeGrantSpec"));
                 Assert.That(showcaseMap, Does.Not.Contain("\"Grants\""));
-                Assert.That(showcaseCatalog, Does.Contain("\"knowledgeGrants\""));
+                // #1570 切6：knowledgeGrants/stance 从 catalog.json 拆至 projection.json
+                string showcaseProjectionPath = Path.Combine(
+                    repoRoot,
+                    "mods",
+                    "showcases",
+                    "capability_standard",
+                    "CapabilityStandardParticipantViewsMod",
+                    "assets",
+                    "Relationships",
+                    "projection.json");
+                Assert.That(File.Exists(showcaseProjectionPath), Is.True, $"Missing {showcaseProjectionPath}");
+                string showcaseProjection = File.ReadAllText(showcaseProjectionPath);
+                Assert.That(showcaseProjection, Does.Contain("\"knowledgeGrants\""));
+                Assert.That(showcaseCatalog, Does.Not.Contain("\"knowledgeGrants\""));
             });
         }
 
