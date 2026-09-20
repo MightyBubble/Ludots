@@ -716,5 +716,18 @@ namespace Ludots.Tests.GAS
             public void SetWorldPosition(Entity target, int xCm, int yCm) { }
             public void SpawnTemplate(int templateKeyId, Entity source, float xCm, float yCm, bool hasPosition) { }
         }
+
+                [Test]
+        public void UtilityAiDecisionSystem_InfluenceSample01_WithoutRegistry_Throws()
+        {
+            using var fixture = RuntimeFixture.Create();
+            _ = fixture.CreateHostile(100, 0);
+            var runtime = fixture.CreateSingleDecisionRuntime(
+                orderTypeId: 102,
+                inputKind: UtilityAiInputKind.InfluenceSample01);
+            fixture.AddActor();
+
+            Assert.Throws<InvalidOperationException>(() => fixture.RunDecision(runtime));
+        }
     }
 }

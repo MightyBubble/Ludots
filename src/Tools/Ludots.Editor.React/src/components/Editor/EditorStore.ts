@@ -43,6 +43,12 @@ export interface BoardInfo {
     canEditTerrain: boolean;
     canBake: boolean;
     reason: string;
+    originXcm: number | null;
+    originYcm: number | null;
+    widthHexes: number | null;
+    heightHexes: number | null;
+    effectiveWidthCm: number;
+    effectiveHeightCm: number;
 }
 
 export interface BoardCreateRequest {
@@ -52,11 +58,21 @@ export interface BoardCreateRequest {
     heightCells: number;
     cellSizeCm: number;
     hexEdgeLengthCm?: number;
+    originXCm?: number;
+    originYCm?: number;
+    widthHexes?: number;
+    heightHexes?: number;
 }
 
 export interface BoardUpdateRequest {
     cellSizeCm?: number;
     hexEdgeLengthCm?: number;
+    originXCm?: number;
+    originYCm?: number;
+    clearOrigin?: boolean;
+    widthHexes?: number;
+    heightHexes?: number;
+    clearHexAuthoring?: boolean;
 }
 
 export interface MapInfo extends BoardInfo {
@@ -1050,6 +1066,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }
 }));
 
+function nullableNumberOr(value: unknown): number | null {
+    const parsed = typeof value === 'string' ? Number(value) : value;
+    return typeof parsed === 'number' && Number.isFinite(parsed) ? Math.floor(parsed) : null;
+}
+
 function normalizeBoardInfo(raw: JsonRecord | null | undefined): BoardInfo {
     const spatialTypeRaw = raw?.spatialType ?? raw?.SpatialType ?? null;
     const spatialType = spatialTypeRaw == null ? null : normalizeSpatialTopology(spatialTypeRaw);
@@ -1067,6 +1088,12 @@ function normalizeBoardInfo(raw: JsonRecord | null | undefined): BoardInfo {
         canEditTerrain: Boolean(raw?.canEditTerrain ?? raw?.CanEditTerrain ?? false),
         canBake: Boolean(raw?.canBake ?? raw?.CanBake ?? false),
         reason: String(raw?.reason ?? raw?.Reason ?? ''),
+        originXcm: nullableNumberOr(raw?.originXcm ?? raw?.OriginXcm),
+        originYcm: nullableNumberOr(raw?.originYcm ?? raw?.OriginYcm),
+        widthHexes: nullableNumberOr(raw?.widthHexes ?? raw?.WidthHexes),
+        heightHexes: nullableNumberOr(raw?.heightHexes ?? raw?.HeightHexes),
+        effectiveWidthCm: numberOr(raw?.effectiveWidthCm ?? raw?.EffectiveWidthCm, 0),
+        effectiveHeightCm: numberOr(raw?.effectiveHeightCm ?? raw?.EffectiveHeightCm, 0),
     };
 }
 
@@ -1086,6 +1113,12 @@ function normalizeMapInfo(raw: JsonRecord | null | undefined): MapInfo {
         CanEditTerrain: raw?.canEditTerrain ?? raw?.CanEditTerrain,
         CanBake: raw?.canBake ?? raw?.CanBake,
         Reason: raw?.reason ?? raw?.Reason,
+        OriginXcm: raw?.originXcm ?? raw?.OriginXcm,
+        OriginYcm: raw?.originYcm ?? raw?.OriginYcm,
+        WidthHexes: raw?.widthHexes ?? raw?.WidthHexes,
+        HeightHexes: raw?.heightHexes ?? raw?.HeightHexes,
+        EffectiveWidthCm: raw?.effectiveWidthCm ?? raw?.EffectiveWidthCm,
+        EffectiveHeightCm: raw?.effectiveHeightCm ?? raw?.EffectiveHeightCm,
     });
     const boardsRaw = Array.isArray(raw?.boards) ? raw.boards : (Array.isArray(raw?.Boards) ? raw.Boards : []);
     const boards = arrayOfRecords(boardsRaw).map(normalizeBoardInfo).filter((b: BoardInfo) => b.name.length > 0);

@@ -705,7 +705,13 @@ namespace Ludots.Core.Gameplay.AI.Config
                     parsedKind = UtilityAiInputKind.SourceHasTag;
                     arg0 = ResolveTag(RequireString(obj, "Tag", path), $"{path}.Tag");
                 }
-                else
+                else if (string.Equals(kind, "InfluenceSample01", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw Fail(
+                        $"{path}.Kind",
+                        "InfluenceSample01 is runtime-injected only (InfluenceFieldRegistry + field key table). " +
+                        "AI/inputs.json authoring is not supported until influence projection is wired into the main loop.");
+                }                else
                 {
                     throw Fail($"{path}.Kind", $"Unknown input kind '{kind}'.");
                 }
@@ -869,8 +875,7 @@ namespace Ludots.Core.Gameplay.AI.Config
                     {
                         throw Fail($"{path}.PlayerId", "PlayerId must be positive.");
                     }
-                }
-                ids.Add(id, tasks.Count);
+                }                ids.Add(id, tasks.Count);
                 tasks.Add(new UtilityAiTaskDefinition(
                     parsedKind,
                     payloadKind,
@@ -1412,7 +1417,6 @@ namespace Ludots.Core.Gameplay.AI.Config
             {
                 throw Fail($"{path}.PlayerId", "PlayerId must be positive.");
             }
-
             return new ActionOrderSpec(payloadKind, orderTypeId, (OrderSubmitMode)submitModeByte, playerId);
         }
 

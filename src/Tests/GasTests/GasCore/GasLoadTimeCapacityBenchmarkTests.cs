@@ -125,6 +125,11 @@ namespace GasTests.GasCore
         [Test]
         public void Metric_AttrFootprint_PerEntity()
         {
+            Record(Run_Metric_AttrFootprint_PerEntity());
+        }
+
+        private MetricResult Run_Metric_AttrFootprint_PerEntity()
+        {
             using World world = World.Create();
             var (ms, alloc) = Measure(() =>
             {
@@ -134,12 +139,18 @@ namespace GasTests.GasCore
                 }
             });
 
-            Record(new MetricResult("attr.footprint.per_entity", ms, alloc, EntityCount,
-                alloc / (double)EntityCount, "load: AttributeBuffer+AttributeLastSnapshot 内嵌定长 64 槽"));
+            return new MetricResult("attr.footprint.per_entity", ms, alloc, EntityCount,
+                alloc / (double)EntityCount, "load: AttributeBuffer+AttributeLastSnapshot 内嵌定长 64 槽");
         }
+
 
         [Test]
         public void Metric_AttrSetGetHot()
+        {
+            Record(Run_Metric_AttrSetGetHot());
+        }
+
+        private MetricResult Run_Metric_AttrSetGetHot()
         {
             using World world = World.Create();
             Entity[] entities = new Entity[EntityCount];
@@ -173,12 +184,18 @@ namespace GasTests.GasCore
 
             That(sink, Is.GreaterThanOrEqualTo(0f), "防 JIT 死码消除");
             That(alloc, Is.EqualTo(0), "写入权威热路径必须零托管分配（当前内嵌实现的既有合同）");
-            Record(new MetricResult("attr.setw.get.hot", ms, alloc, EntityCount * Iterations * 2L,
-                0, "load: AttributeMutationOps.SetCurrent + buffer.GetCurrent ×100 迭代"));
+            return new MetricResult("attr.setw.get.hot", ms, alloc, EntityCount * Iterations * 2L,
+                0, "load: AttributeMutationOps.SetCurrent + buffer.GetCurrent ×100 迭代");
         }
+
 
         [Test]
         public void Metric_AttrAggregateTick()
+        {
+            Record(Run_Metric_AttrAggregateTick());
+        }
+
+        private MetricResult Run_Metric_AttrAggregateTick()
         {
             TagOps _tagOps = CreateTagOps();
             using World world = World.Create();
@@ -206,12 +223,18 @@ namespace GasTests.GasCore
                 }
             });
 
-            Record(new MetricResult("attr.aggregate.tick", ms / cyclesPerSample, alloc / cyclesPerSample, EntityCount / 10,
-                0, $"load: 1/10 实体再脏 + 全量 64 槽基值重算，脏驱动单帧聚合（{cyclesPerSample} 周期/采样取均）"));
+            return new MetricResult("attr.aggregate.tick", ms / cyclesPerSample, alloc / cyclesPerSample, EntityCount / 10,
+                0, $"load: 1/10 实体再脏 + 全量 64 槽基值重算，脏驱动单帧聚合（{cyclesPerSample} 周期/采样取均）");
         }
+
 
         [Test]
         public void Metric_TagFootprint_PerEntity()
+        {
+            Record(Run_Metric_TagFootprint_PerEntity());
+        }
+
+        private MetricResult Run_Metric_TagFootprint_PerEntity()
         {
             using World world = World.Create();
             var (ms, alloc) = Measure(() =>
@@ -225,12 +248,18 @@ namespace GasTests.GasCore
                 }
             });
 
-            Record(new MetricResult("tag.footprint.per_entity", ms, alloc, EntityCount,
-                alloc / (double)EntityCount, "load: GameplayTagContainer+Snapshot+EffectiveCache 内嵌 256 位"));
+            return new MetricResult("tag.footprint.per_entity", ms, alloc, EntityCount,
+                alloc / (double)EntityCount, "load: GameplayTagContainer+Snapshot+EffectiveCache 内嵌 256 位");
         }
+
 
         [Test]
         public void Metric_TagAddHasHot()
+        {
+            Record(Run_Metric_TagAddHasHot());
+        }
+
+        private MetricResult Run_Metric_TagAddHasHot()
         {
             using World world = World.Create();
             Entity[] entities = new Entity[EntityCount];
@@ -265,12 +294,18 @@ namespace GasTests.GasCore
             });
 
             That(alloc, Is.EqualTo(0), "标签位图热路径必须零托管分配（当前内嵌实现的既有合同）");
-            Record(new MetricResult("tag.add.has.hot", ms, alloc, EntityCount * Iterations * 3L,
-                0, "load: 容器级 AddTag+HasTag+RemoveTag ×100 迭代"));
+            return new MetricResult("tag.add.has.hot", ms, alloc, EntityCount * Iterations * 3L,
+                0, "load: 容器级 AddTag+HasTag+RemoveTag ×100 迭代");
         }
+
 
         [Test]
         public void Metric_TagDirtyCollect()
+        {
+            Record(Run_Metric_TagDirtyCollect());
+        }
+
+        private MetricResult Run_Metric_TagDirtyCollect()
         {
             using World world = World.Create();
             Entity[] entities = new Entity[EntityCount];
@@ -300,9 +335,10 @@ namespace GasTests.GasCore
             });
 
             That(visited, Is.EqualTo(marked), "队列必须清空");
-            Record(new MetricResult("tag.dirty.collect", ms, alloc, marked,
-                0, $"load: {marked} 稀疏脏实体出队 + 容器探测"));
+            return new MetricResult("tag.dirty.collect", ms, alloc, marked,
+                0, $"load: {marked} 稀疏脏实体出队 + 容器探测");
         }
+
 
         [Test]
         public void Metric_GasPipeline100k()
@@ -342,9 +378,63 @@ namespace GasTests.GasCore
                 return;
             }
 
+            string liveEnv = Environment.GetEnvironmentVariable("LUDOTS_COMPARE_LIVE");
+            if (!string.IsNullOrEmpty(liveEnv))
+            {
+                // 活差分：同进程背靠背——解绑列存跑 baseline 侧，与本次 Results（列存侧）同承压对比，
+                // 外部负载（IDE/编译服务器）对两侧近似同权，抖动抵消。打满负载机器上的诚实口径。
+                WorldAttributeStoreAmbient.Reset();
+                var liveBaseline = new List<MetricResult>
+                {
+                    Run_Metric_AttrFootprint_PerEntity(),
+                    Run_Metric_AttrSetGetHot(),
+                    Run_Metric_AttrAggregateTick(),
+                    Run_Metric_TagFootprint_PerEntity(),
+                    Run_Metric_TagAddHasHot(),
+                    Run_Metric_TagDirtyCollect(),
+                };
+                BindP1Store();
+                var liveStore = new List<MetricResult>
+                {
+                    Run_Metric_AttrFootprint_PerEntity(),
+                    Run_Metric_AttrSetGetHot(),
+                    Run_Metric_AttrAggregateTick(),
+                    Run_Metric_TagFootprint_PerEntity(),
+                    Run_Metric_TagAddHasHot(),
+                    Run_Metric_TagDirtyCollect(),
+                };
+
+                var liveFailures = new List<string>();
+                foreach (MetricResult after in liveStore)
+                {
+                    MetricResult? before = liveBaseline.Find(m => m.Id == after.Id);
+                    if (before == null)
+                    {
+                        continue;
+                    }
+
+                    double threshold = TimeThresholdOverrides.TryGetValue(after.Id, out double o) ? o : TimeRegressionThreshold;
+                    if (after.ElapsedMs > before.ElapsedMs * threshold)
+                    {
+                        liveFailures.Add($"{after.Id}: 活差分耗时 {after.ElapsedMs:F3} ms vs 无列存 {before.ElapsedMs:F3} ms 超 {threshold:P0}");
+                    }
+
+                    long allocTolerance = Math.Max(AllocationToleranceBytes, (long)(before.AllocatedBytes * 0.01));
+                    if (after.AllocatedBytes > before.AllocatedBytes + allocTolerance)
+                    {
+                        liveFailures.Add($"{after.Id}: 活差分分配 {after.AllocatedBytes} B vs {before.AllocatedBytes} B 超 1% 容差");
+                    }
+
+                    TestContext.Out.WriteLine($"[capacity-bench:live] {after.Id}: no-store {before.ElapsedMs:F3}ms/{before.AllocatedBytes}B -> store {after.ElapsedMs:F3}ms/{after.AllocatedBytes}B");
+                }
+
+                That(liveFailures, Is.Empty, "RFC-0067 §3.4 活差分门未通过——迁移侧在同承压条件下回归。");
+                return;
+            }
+
             if (string.IsNullOrEmpty(CompareEnv))
             {
-                Assert.Ignore("基准床就绪。生成 baseline：LUDOTS_EMIT_CAPACITY_BASELINE=1；跑对比门：LUDOTS_COMPARE_CAPACITY_BASELINE=1（RFC-0067 §3.4，同机同参）。");
+                Assert.Ignore("基准床就绪。生成 baseline：LUDOTS_EMIT_CAPACITY_BASELINE=1；跑对比门：LUDOTS_COMPARE_CAPACITY_BASELINE=1（活差分：+LUDOTS_COMPARE_LIVE=1）。");
                 return;
             }
 

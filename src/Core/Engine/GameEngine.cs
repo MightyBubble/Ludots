@@ -851,9 +851,7 @@ namespace Ludots.Core.Engine
             _timeFlow = new TimeFlowService();
             Time.TimeScale = _timeFlow.GetEffectiveScalePermille(TimeFlowDomainIds.Simulation) / 1000f;
 
-            var extensionAttributeRegistry = new ExtensionAttributeRegistry();
             var attributeSchemaUpdateQueue = new AttributeSchemaUpdateQueue();
-            var schemaUpdateSystem = new AttributeSchemaUpdateSystem(World, extensionAttributeRegistry, attributeSchemaUpdateQueue);
             var gasBudget = new GasBudget();
             var gasDiagnostics = new GasDiagnosticEventBuffer();
             TeamManager.DefaultRelationship = TeamRelationship.Hostile;
@@ -1898,7 +1896,6 @@ namespace Ludots.Core.Engine
 
             // Register systems in Phase order according to GAS design document
             // Phase 0: SchemaUpdate
-            SetService(CoreServiceKeys.ExtensionAttributeRegistry, extensionAttributeRegistry);
             SetService(CoreServiceKeys.AttributeSchemaUpdateQueue, attributeSchemaUpdateQueue);
             SetService(CoreServiceKeys.GasBudget, gasBudget);
             SetService(CoreServiceKeys.GasDiagnosticEventBuffer, gasDiagnostics);
@@ -2227,14 +2224,13 @@ namespace Ludots.Core.Engine
                 Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.Count,
                 Ludots.Core.Gameplay.GAS.Registry.TagRegistry.Count,
                 Ludots.Core.Gameplay.GAS.GasLoadTimeCapacityPlan.AbsoluteMaxAttributeSlots,
-                Ludots.Core.Gameplay.GAS.Components.GameplayTagContainer.MAX_TAG_ID + 1);
+                Ludots.Core.Gameplay.GAS.GasLoadTimeCapacityPlan.AbsoluteMaxTagIdSpace);
             SetService(CoreServiceKeys.GasLoadTimeCapacityPlan, gasCapacityPlan);
             var worldAttributeStore = new Ludots.Core.Gameplay.GAS.WorldAttributeStore(gasCapacityPlan);
             Ludots.Core.Gameplay.GAS.WorldAttributeStoreAmbient.Bind(worldAttributeStore);
             SetService(CoreServiceKeys.WorldAttributeStore, worldAttributeStore);
             _cameraRuntimeSystem = new CameraRuntimeSystem(World, GlobalContext, virtualCameraRegistry);
             RegisterSystem(new GasBudgetResetSystem(gasBudget, orderTerminalResults, orderAdmissionResults), SystemGroup.SchemaUpdate);
-            RegisterSystem(schemaUpdateSystem, SystemGroup.SchemaUpdate);
             RegisterSystem(new AssociationControlProfileSystem(World, associationControlProfileRuntime), SystemGroup.SchemaUpdate);
 
             // Phase 0.5: 保存上一帧位置（插值前置条件，必须在所有移动系统之前）
