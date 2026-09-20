@@ -35,7 +35,7 @@
 
 | 域 | 管什么 | 配置的家 | 与 board 的关系 |
 |---|---|---|---|
-| 世界（host world） | 坐标基准；实体空间分区、AOI/streaming、越界边界、相机/minimap 全图 | 有板图：根板锚定（map `RootBoard`，缺省第一块板）；无板图：game.json `world`（`GameConfig.World`） | 根板即自己 |
+| 世界（host world） | 坐标基准；实体空间分区、AOI/streaming、越界边界、相机/minimap 全图 | 有板图：根板锚定（map `RootBoard`，缺省第一块板）；无板图：map `World` 节（boot 世界来自宿主图 startupMapId） | 根板即自己 |
 | 板 | 业务区域：拓扑、度量、摆放（世界系 origin）、格子语义 | map JSON `Boards[]` | 就是自己 |
 | 导航 | 烘焙源选择、瓦片颗粒度（显式两轴）、层/profile/语义/障碍 | `Navigation/navmesh.json` | board 只是可选源 + 寻址 scope |
 | 执行 | FlowWindow/FlowCell/避障 hash | `MassNavigationConfig.json` | 无 |
@@ -70,7 +70,7 @@ Out of scope：
 | `TerrainPage`（地形数据页） | `TerrainPageCells` = `MapTile.Size` = 256 | `TerrainPageCells * CellCm` | `MapTile.Size` / `SpatialScaleDefaults.TerrainPageCells` | 世界层 IO/寻址地形数据页；#1567 目标态为派生值（由 `World.WidthCm/HeightCm` 换算），不再进 authoring | 否，数量可配 | `TerrainPageCells` 引用 `MapTile.Size`；数量键 `WidthInMacroTiles` / `HeightInMacroTiles` 自 #1567 切 1 起 fail-fast |
 | `StreamingChunk` | N x `PartitionChunk` | N x `PartitionChunkCells * CellCm` | streaming/loaded chunk owner；NodeGraph 当前通过 `WorldGridLoadedChunks` 消费；#1567 目标态容量归 `World.Tuning` | 流式加载、loaded graph rebuild | 是 | 必须显式配置或由分区推导；禁止私有 loader fallback |
 | `WorldExtent` | 根板 `WidthCells × CellSizeCm` / boot `WidthCm / CellCm` | cm 直构 | 运行时 host world = 根板 `BoardExtentSpec`；引擎 boot 占位 = `GameConfig.World`（`WorldExtentSpec`） | 世界范围、坐标转换、minimap/full-map bounds、越界校验 | 是 | 旧地形数据页数量键 fail-fast，无别名兼容 |
-| `BoardExtent`（#1567 目标态） | 格子数 × 拓扑度量 | `WidthCells × CellCm` 或 `WidthHexes × HexMetrics 足迹` | map JSON `Boards[]`（`WidthCells/HeightCells`、`WidthHexes/HeightHexes`） | 板业务区域范围，精确整数派生，无地形数据页对齐 | 是 | 必须 > 0；hex 板世界足迹经 `HexMetrics` 派生，不再借 `GridCellSizeCm` |
+| `BoardExtent`（#1567 目标态） | 格子数 × 拓扑度量 | `WidthCells × CellCm` 或 `WidthHexes × HexMetrics 足迹` | map JSON `Boards[]`（`WidthCells/HeightCells`、`WidthHexes/HeightHexes`） | 板业务区域范围，精确整数派生，无地形数据页对齐 | 是 | 必须 > 0；hex 计量单位 `WidthHexes`（目标态，切 2b；现仍为格子数借 `GridCellSizeCm`） |
 | `BoardOrigin`（#1567 切 2a 已落地 schema，2b 放开） | —— | `OriginXCm` / `OriginYCm` | map JSON `Boards[]` | 板在根板坐标系（host world frame）的摆放；世界坐标入口减板 origin 换算一次 | 是 | 缺省 = 居中；任何显式声明在切 2b 前 fail-closed；卫星板越出根板范围加载期 fail-fast |
 | `FlowWindow` | `FieldWidthCm / CellCm` by `FieldHeightCm / CellCm` | `FieldWidthCm` x `FieldHeightCm` | MassNavigationFlow solver config | 执行层滑窗/工作区 | 是 | 宽高必须 > 0；必须能被 `FlowCell`、`AvoidanceHashCell` 整除 |
 | `FlowCell` | `FlowCellSizeCm / CellCm` | 默认 100 | MassNavigationFlow solver `flowCellSizeCm` / `SpatialScaleDefaults.FlowCellCm` | 流场网格 cell | 是 | 必须 > 0；`FlowWindow` 宽高必须整除它 |

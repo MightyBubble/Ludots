@@ -73,7 +73,7 @@ flowchart TD
 | `BoardConfig.WidthInMacroTiles`（#1567 切 1 已迁移） | 历史键 | macro tiles | 64 | 曾是 board/world 宽度 authoring 数量；切 1 起加载即 fail-fast。 | 现行写法：`Boards[].WidthCells`（host world 由根板锚定）。 |
 | `BoardConfig.HeightInMacroTiles`（#1567 切 1 已迁移） | 历史键 | macro tiles | 64 | 曾是 board/world 高度 authoring 数量；切 1 起加载即 fail-fast。 | 现行写法：`Boards[].HeightCells`（host world 由根板锚定）。 |
 | `WorldExtentSpec` | `WorldExtent` | cm | derived | 运行时由根板 `BoardExtentSpec` 直构、boot 由 `GameConfig.World` 直构（#1567），地形数据页数为派生 IO 细节，产出 runtime `WorldSizeSpec`。 | 是计算对象，不替换 `WorldSizeSpec`。 |
-| `BoardConfig.ChunkSizeCells` | `PartitionChunkCells` | cells | 64 | 空间分区、AOI、query backend 的分区块边长。只描述查询分区，不描述地形或 navmesh。`World.Tuning.PartitionChunkCells` 声明后为唯一预算（#1567 切 4 已落地），板级字段仅在未声明 Tuning 时生效，退役随切 4b。 | 必须 > 0 且为 2 的幂。 |
+| `BoardConfig.ChunkSizeCells` | `PartitionChunkCells` | cells | 64 | 空间分区、AOI、query backend 的分区块边长。只描述查询分区，不描述地形或 navmesh。`World.Tuning.PartitionChunkCells` 声明后为唯一预算（#1567 切 4 已落地），板级字段已退役（JSON 出现即 fail-fast，运行时由 Tuning 回填）。 | 必须 > 0 且为 2 的幂。 |
 | `VertexChunk.ChunkSize` | `TerrainChunkCells` | cells | 64 | 逻辑地形块边长。当前 navmesh tile footprint 等于 `TerrainChunk` footprint。 | 当前固定；#286 已把 grid/hex 地形输入统一到 `LogicTerrainField`。 |
 | Nav bake tile footprint | `TerrainChunk` footprint | cells / cm | 64 cells | navmesh `.ntil` 的 tile 覆盖一个 `TerrainChunk`。 | 不再单独命名为尺度 owner；不要把 `NavTile` 当第二个 chunk 尺度。 |
 | streaming / loaded graph window | `StreamingChunk` | cells / cm | derived | 流式加载、loaded graph rebuild 的空间窗口。 | 从 board 分区或显式配置推导；禁止私有 loader fallback。 |
@@ -108,7 +108,7 @@ flowchart TD
 | 板 | `Boards[].WidthHexes/HeightHexes` + `HexEdgeLengthCm` | hexes | Hex 板范围，世界足迹经 `HexMetrics` 派生 | 同上（含借 `GridCellSizeCm` 算 hex 板足迹的现状做法） |
 | 板 | `Boards[].OriginXCm` / `OriginYCm` | cm | 板摆在世界坐标哪里，缺省居中；越出世界 fail-fast | 板恒居中（无 origin 字段） |
 | 导航 | navmesh.json `boards.<name>.source` | —— | 烘焙源（.height 直采 / .grid / .hex），板是可选源之一 | bake 从板 LogicTerrain 投影的现状链路（#1350 直采方向） |
-| 导航 | navmesh.json `maps.<mapId>.boards.<name>`（widthChunks/heightChunks/chunkSizeCells/cellSizeCm） | cm/cells | 每板导航瓦片格网，nav 自有家；两轴显式化随 #1346 后续 | 板内 `NavTileGrid`（已迁出，出现即 fail-fast） |
+| 导航 | navmesh.json `maps.<mapId>.boards.<name>`（tileWorldWidthCm/tileWorldHeightCm） | cm | 每板导航瓦片颗粒度（nav 自有，与 cell/chunk 解耦）；瓦片数由板范围÷瓦片尺寸派生 | 板内 `NavTileGrid`（已迁出，出现即 fail-fast） |
 | 执行 | `MassNavigationConfig.json` 各键 | cm | 不变 | —— |
 
 四域边界三句话：世界尺寸不由板决定；板是业务区域不是性能分区；nav 瓦片颗粒度与板无关。

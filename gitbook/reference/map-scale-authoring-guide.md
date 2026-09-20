@@ -2,7 +2,7 @@
 
 本页写给要做真实地图的 Mod 作者。它不替代 [空间尺度与分辨率 SSOT](../architecture/spatial-scale-and-resolution-ssot.md)，而是把 SSOT 翻译成“我要做多大的地图、要多细的地形/导航/避障/表现，该从哪些配置入口下手”。
 
-> **状态**：本页 schema 与键位是 [#1567 空间配置四域归位](https://github.com/MightyBubble/Ludots/issues/1567)的合同。地图可以无板；有板图由根板锚定 host world（`RootBoard` 指定，缺省第一块板），无板图沿用 game.json `world`；预算挂 map 级 `Tuning`；板摆放 `OriginXCm/OriginYCm` 的显式声明在切 2b 前不开放。旧键对照见文末[迁移对照](#迁移对照1567)。
+> **状态**：本页 schema 与键位是 [#1567 空间配置四域归位](https://github.com/MightyBubble/Ludots/issues/1567)的合同。地图可以无板；有板图由根板锚定 host world（`RootBoard` 指定，缺省第一块板），无板图用自己的 `World` 节；预算挂 map 级 `Tuning`；板摆放 `OriginXCm/OriginYCm` 的显式声明在切 2b 前不开放。旧键对照见文末[迁移对照](#迁移对照1567)。
 
 交互式入门页见 [`map-scale-authoring-starter.html`](map-scale-authoring-starter.html)。如果你只想先调几个数看世界有多大、网格有多密、FlowWindow 会不会整除、全量/局部 nav bake 大概要多少操作和时间，先打开 HTML；真正落配置前再回到本页查 owner 和约束。Terrain/obstacle/area/agent/bake/editor/Raylib debug 的完整工具链设计见 [`navmesh-authoring-bake-toolchain.md`](navmesh-authoring-bake-toolchain.md)。
 
@@ -35,8 +35,8 @@ boardOrigin   = (OriginXCm, OriginYCm)         # 板摆在根板坐标系哪里�
 |---|---|---|
 | `assets/Maps/<map>.json` | `RootBoard` | host world 根板指定，缺省第一块板 |
 | `assets/Maps/<map>.json` | `Boards[].SpatialType` | `Grid` / `HexGrid` / `NodeGraph`，决定板拓扑 |
-| `assets/Maps/<map>.json` | `Boards[].WidthCells` / `HeightCells` + `CellSizeCm` | Grid 板范围与格边 |
-| `assets/Maps/<map>.json` | `Boards[].WidthHexes` / `HeightHexes` + `HexEdgeLengthCm` | Hex 板范围与 hex 边长 |
+| `assets/Maps/<map>.json` | `Boards[].WidthCells` / `HeightCells` + `GridCellSizeCm` | Grid 板范围与格边 |
+| `assets/Maps/<map>.json` | `Boards[].WidthCells` / `HeightCells` + `HexEdgeLengthCm`（hex 计量单位在切 2b 落地，现仍为格子数） | Hex 板范围与 hex 边长 |
 | `assets/Maps/<map>.json` | `Boards[].OriginXCm` / `OriginYCm` | 板摆在世界坐标哪里，缺省居中（#1567 切 2 引入） |
 | `assets/Maps/<map>.json` | `Tuning.PartitionChunkCells` / `LoadedChunkCapacity` | map 级分区与 streaming 预算；声明后为唯一预算，容量回填未声明的板（#1567 切 4 已落地，缺省自动推导随切 4b） |
 | `assets/Navigation/navmesh.json` | `boards.<name>.source` / `tileWorldWidthCm` / `tileWorldHeightCm` | nav 烘焙源与瓦片颗粒度（#1567 切 3 引入） |
@@ -88,7 +88,7 @@ boardOrigin   = (OriginXCm, OriginYCm)         # 板摆在根板坐标系哪里�
       "SpatialType": "Grid",
       "WidthCells": 400,
       "HeightCells": 400,
-      "CellSizeCm": 100
+      "GridCellSizeCm": 100
     }
   ]
 }
@@ -139,7 +139,7 @@ MassNavigationFlow 起点：
       "SpatialType": "NodeGraph",
       "WidthCells": 64,
       "HeightCells": 64,
-      "CellSizeCm": 100
+      "GridCellSizeCm": 100
     }
   ]
 }
@@ -187,7 +187,7 @@ Board 起点（#1567 目标态）：
       "SpatialType": "Grid",
       "WidthCells": 400,
       "HeightCells": 400,
-      "CellSizeCm": 100
+      "GridCellSizeCm": 100
     }
   ]
 }
