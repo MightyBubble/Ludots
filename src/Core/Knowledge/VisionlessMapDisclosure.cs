@@ -1,6 +1,7 @@
 using System;
 using Arch.Core;
 using Ludots.Core.Engine;
+using Ludots.Core.Scripting;
 using Ludots.Core.Components;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Vision;
@@ -39,9 +40,13 @@ namespace Ludots.Core.Knowledge
 
             public bool IsActivated(GameEngine engine)
             {
-                var emit = HasVisionEmitter(engine.World);
-                System.Console.WriteLine($"[HOVERDBG] Visionless session={engine.CurrentMapSession != null} hasEmitter={emit}");
-                return engine.CurrentMapSession != null && !emit;
+                // Exactly one local seat is required: the disclosure publishes to the sole
+                // possessed rep, and zero-seat (headless) or multi-seat engines must never
+                // reach RequireSolePossessedRep's throw path.
+                return engine.CurrentMapSession != null &&
+                    engine.GetService(CoreServiceKeys.ClientLocalSeatRegistry) is Ludots.Core.Client.ClientLocalSeatRegistry seats &&
+                    seats.Count == 1 &&
+                    !HasVisionEmitter(engine.World);
             }
 
             public int ResolveExpectedTargetCount(GameEngine engine)
