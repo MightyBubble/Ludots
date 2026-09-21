@@ -1061,7 +1061,7 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         string modRoot = Path.Combine(repoRoot, "mods", "showcases", "rts_multiplayer_frontline", "RtsMultiplayerFrontlineMod");
         using JsonDocument config = JsonDocument.Parse(File.ReadAllText(Path.Combine(modRoot, "assets", "RtsMultiplayerFrontlineConfig.json")));
         using JsonDocument map = JsonDocument.Parse(File.ReadAllText(Path.Combine(modRoot, "assets", "Maps", "rts_duel_v1.json")));
-        using JsonDocument cameras = JsonDocument.Parse(File.ReadAllText(Path.Combine(modRoot, "assets", "Configs", "Camera", "virtual_cameras.json")));
+        using JsonDocument cameras = JsonDocument.Parse(File.ReadAllText(Path.Combine(modRoot, "assets", "Camera", "virtual_cameras.json")));
         using JsonDocument templates = JsonDocument.Parse(File.ReadAllText(Path.Combine(modRoot, "assets", "Entities", "templates.json")));
 
         JsonElement sides = config.RootElement.GetProperty("sides");
@@ -1086,7 +1086,7 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
             Assert.That(openingCamera.GetProperty("FovYDeg").GetInt32(), Is.InRange(1, 179));
             Assert.That(frontlineCamera.GetProperty("panMode").GetString(), Is.EqualTo("Keyboard"));
             Assert.That(frontlineCamera.GetProperty("enableGrabDrag").GetBoolean(), Is.True);
-            Assert.That(frontlineCamera.GetProperty("targetHeightMode").GetString(), Is.EqualTo("VisualHeightmap"));
+            Assert.That(frontlineCamera.GetProperty("targetHeightMode").GetString(), Is.EqualTo("ContinuousHeightmap"));
             JsonElement commandUi = map.RootElement.GetProperty("Metadata").GetProperty("rts.commandSourceUi");
             Assert.That(commandUi.GetProperty("cameraFocusDistanceCm").GetInt32(), Is.EqualTo(5200));
             Assert.That(commandUi.GetProperty("cameraFocusFovYDeg").GetInt32(), Is.EqualTo(46));
