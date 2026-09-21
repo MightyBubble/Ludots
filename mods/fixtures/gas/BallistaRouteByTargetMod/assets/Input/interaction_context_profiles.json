@@ -2,7 +2,6 @@
   "profiles": [
     {
       "id": "interaction.context.ballista",
-      "activeCollectionKey": "collection.command.source",
       "bindings": [
         "Ballista.Command"
       ],

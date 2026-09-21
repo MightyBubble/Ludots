@@ -19,9 +19,8 @@ namespace Ludots.Core.Input.Orders
     /// <para>
     /// Routing reads only declared data: the acting rep's active interaction context chain is
     /// walked LIFO (op-activated instances newest-first, then the base mounted instance) for
-    /// the most recent context declaring <see cref="InteractionContextInstance.ActiveCollectionKeyId"/>;
-    /// its carrier entity owns the active collection and its declared command intent profile
-    /// routes the members. No engine-reserved key, no steady-state fallback: no declaring
+    /// the most recent context declaring a command intent profile; actor sets ride the
+    /// submission itself (v2). No engine-reserved key, no steady-state fallback: no declaring
     /// context on the chain is a named rejection, never a silent route elsewhere.
     /// </para>
     /// </summary>
@@ -147,8 +146,8 @@ namespace Ludots.Core.Input.Orders
         }
 
         /// <summary>
-        /// Cast side of the §12 bridge: actors are the same active-context-declared collection
-        /// members; each authorized member receives one cast order with Args.I0 = slot. The cast
+        /// Cast side of the §12 bridge: actors are the intent-carried member set (empty = the
+        /// acting rep alone, v2); each authorized member receives one cast order with Args.I0 = slot. The cast
         /// order-type key resolves through the OrderTypeRegistry at drain time (cold path).
         /// </summary>
         private bool TryRouteCastSubmission(in CastIntentSubmission submission)
@@ -164,16 +163,6 @@ namespace Ludots.Core.Input.Orders
                     $"ORDER.CAST_INTENT.ERR.RepHasNoPlayerOwner: rep {submission.Rep} submitted a cast intent but carries no PlayerOwner.");
             }
 
-            if (!TryResolveRoutingContext(submission.Rep, out InteractionContextInstance routingContext))
-            {
-                return Reject("cast: no active context declares activeCollectionKey");
-            }
-
-            if (!_world.IsAlive(routingContext.ContextEntity))
-            {
-                return Reject("cast: routing context carrier is dead");
-            }
-
             var orderTypes = _orderTypes
                 ?? throw new InvalidOperationException(
                     "ORDER.CAST_INTENT.ERR.OrderTypeRegistryUnavailable: cast intent drain requires the OrderTypeRegistry.");
@@ -186,23 +175,7 @@ namespace Ludots.Core.Input.Orders
                     $"ORDER.CAST_INTENT.ERR.UnknownCastOrderType: SubmitCast references order type key '{orderTypeKey}' which is not registered.");
             }
 
-            if (!_entityCollections.TryGet(routingContext.ContextEntity, routingContext.ActiveCollectionKeyId, out EntityCollectionHandle handle) ||
-                !_entityCollections.TryGetView(handle, out EntityCollectionView view))
-            {
-                return Reject("cast: active collection is not mounted");
-            }
-
-            if (view.Count > _actorScratch.Length)
-            {
-                throw new InvalidOperationException(
-                    $"ORDER.CAST_INTENT.ERR.ActorScratchCapacityExceeded: active collection holds {view.Count} actors, capacity {_actorScratch.Length}.");
-            }
-
-            int actorCount = _entityCollections.CopyEntities(handle, 0, _actorScratch);
-            if (actorCount <= 0)
-            {
-                return Reject("cast: active collection is empty");
-            }
+            int actorCount = ResolveActors(submission.Rep, submission.MemberOffset, submission.MemberCount);
 
             bool allAccepted = true;
             for (int i = 0; i < actorCount; i++)
@@ -247,8 +220,8 @@ namespace Ludots.Core.Input.Orders
         }
 
         /// <summary>
-        /// Engage side of the §12 bridge: actors are the active-context-declared collection
-        /// members (same resolution as casts); the profile's EQS query runs around the target
+        /// Engage side of the §12 bridge: actors are the intent-carried member set (empty =
+        /// the acting rep alone, v2); the profile's EQS query runs around the target
         /// and each authorized member gets a move-then-cast plan — moveTo its assigned ring
         /// point with the cast as an order continuation, plus a per-target slot claim so a
         /// later batch excludes occupied points.
@@ -296,32 +269,10 @@ namespace Ludots.Core.Input.Orders
                 return Reject("engage: target is dead or carries no world position");
             }
 
-            if (!TryResolveRoutingContext(submission.Rep, out InteractionContextInstance routingContext))
-            {
-                return Reject("engage: no active context declares activeCollectionKey");
-            }
-
-            if (!_world.IsAlive(routingContext.ContextEntity))
-            {
-                return Reject("engage: routing context carrier is dead");
-            }
-
-            if (!_entityCollections.TryGet(routingContext.ContextEntity, routingContext.ActiveCollectionKeyId, out EntityCollectionHandle handle) ||
-                !_entityCollections.TryGetView(handle, out EntityCollectionView view))
-            {
-                return Reject("engage: active collection is not mounted");
-            }
-
-            if (view.Count > _actorScratch.Length)
-            {
-                throw new InvalidOperationException(
-                    $"ORDER.ENGAGE_INTENT.ERR.ActorScratchCapacityExceeded: active collection holds {view.Count} actors, capacity {_actorScratch.Length}.");
-            }
-
-            int actorCount = _entityCollections.CopyEntities(handle, 0, _actorScratch);
+            int actorCount = ResolveActors(submission.Rep, submission.MemberOffset, submission.MemberCount);
             if (actorCount <= 0)
             {
-                return Reject("engage: active collection is empty");
+                return Reject("engage: no actors");
             }
 
             var targetPos = _world.Get<Ludots.Core.Components.WorldPositionCm>(submission.Target).Value.ToWorldCmInt2();
@@ -430,43 +381,16 @@ namespace Ludots.Core.Input.Orders
                     "map binding publishes player owners on player representatives.");
             }
 
-            if (!TryResolveRoutingContext(submission.Rep, out InteractionContextInstance routingContext))
+            if (!TryResolveIntentProfileContext(submission.Rep, out int commandIntentProfileId))
             {
-                return Reject("no active context declares activeCollectionKey");
+                return Reject("no active context declares commandIntentId");
             }
 
-            if (!_world.IsAlive(routingContext.ContextEntity))
-            {
-                return Reject("routing context carrier is dead");
-            }
-
-            if (routingContext.CommandIntentProfileId == 0)
-            {
-                return Reject("routing context declares no commandIntentId");
-            }
-
-            Entity ownerEntity = routingContext.ContextEntity;
-            if (!_entityCollections.TryGet(ownerEntity, routingContext.ActiveCollectionKeyId, out EntityCollectionHandle handle))
-            {
-                return Reject("active collection is not mounted on the context carrier");
-            }
-
-            if (!_entityCollections.TryGetView(handle, out EntityCollectionView view))
-            {
-                return Reject("active collection view is unavailable");
-            }
-
-            if (view.Count > _actorScratch.Length)
-            {
-                throw new InvalidOperationException(
-                    $"ORDER.COMMAND_INTENT.ERR.ActorScratchCapacityExceeded: active collection holds {view.Count} actors, capacity {_actorScratch.Length}; " +
-                    "raise gasRuntimeCapacity.commandIntentScratchCapacity.");
-            }
-
-            int actorCount = _entityCollections.CopyEntities(handle, 0, _actorScratch);
+            Entity ownerEntity = submission.Rep;
+            int actorCount = ResolveActors(submission.Rep, submission.MemberOffset, submission.MemberCount);
             if (actorCount <= 0)
             {
-                return Reject("active collection is empty");
+                return Reject("no actors");
             }
 
             var facts = new CommandIntentTargetFacts(
@@ -476,7 +400,7 @@ namespace Ludots.Core.Input.Orders
 
             Span<Entity> actors = _actorScratch.AsSpan(0, actorCount);
             Span<CommandIntentRoute> routes = _routeScratch.AsSpan(0, actorCount);
-            _intentProfiles.RouteGroup(routingContext.CommandIntentProfileId, actors, ownerEntity, in facts, routes);
+            _intentProfiles.RouteGroup(commandIntentProfileId, actors, ownerEntity, in facts, routes);
 
             int routedCount = 0;
             for (int i = 0; i < actorCount; i++)
@@ -513,7 +437,7 @@ namespace Ludots.Core.Input.Orders
             int dispatchCount = _dispatchProfiles.SelectDispatchTargets(
                 dispatchProfileId,
                 routedActors,
-                new CastDispatchContext(_world, groundWorldCm, GroupKey(routingContext)),
+                new CastDispatchContext(_world, groundWorldCm, GroupKey(submission.Rep)),
                 dispatchSpan,
                 out CastDispatchRouting routing);
             if (dispatchCount <= 0)
@@ -583,30 +507,52 @@ namespace Ludots.Core.Input.Orders
         /// carrier instance is skipped as an unresolved step (fail-closed per instance, the
         /// pre-reclaim window must not silently route through a dead carrier's collections).
         /// </summary>
-        private bool TryResolveRoutingContext(Entity rep, out InteractionContextInstance routingContext)
+        /// <summary>
+        /// v2: intents carry their own actor set — an empty member range means the acting rep
+        /// alone. The submitting graph owns fan-out membership; the drain never resolves
+        /// actors from context-declared collections.
+        /// </summary>
+        private int ResolveActors(Entity rep, int memberOffset, int memberCount)
+        {
+            if (memberCount == 0)
+            {
+                _actorScratch[0] = rep;
+                return 1;
+            }
+
+            if (memberCount > _actorScratch.Length)
+            {
+                throw new InvalidOperationException(
+                    $"ORDER.INTENT.ERR.ActorScratchCapacityExceeded: intent carries {memberCount} actors, capacity {_actorScratch.Length}; " +
+                    "raise gasRuntimeCapacity.commandIntentScratchCapacity.");
+            }
+
+            _submissions.Members(memberOffset, memberCount).CopyTo(_actorScratch);
+            return memberCount;
+        }
+
+        private bool TryResolveIntentProfileContext(Entity rep, out int commandIntentProfileId)
         {
             if (_world.TryGet<InteractionContextInstances>(rep, out InteractionContextInstances instances))
             {
                 for (int i = instances.Count - 1; i >= 0; i--)
                 {
-                    InteractionContextInstance candidate = instances[i];
-                    if (candidate.ActiveCollectionKeyId != 0 && _world.IsAlive(candidate.ContextEntity))
+                    if (instances[i].CommandIntentProfileId != 0)
                     {
-                        routingContext = candidate;
+                        commandIntentProfileId = instances[i].CommandIntentProfileId;
                         return true;
                     }
                 }
             }
 
             if (_world.TryGet<InteractionContextInstance>(rep, out InteractionContextInstance baseInstance) &&
-                baseInstance.ActiveCollectionKeyId != 0 &&
-                _world.IsAlive(baseInstance.ContextEntity))
+                baseInstance.CommandIntentProfileId != 0)
             {
-                routingContext = baseInstance;
+                commandIntentProfileId = baseInstance.CommandIntentProfileId;
                 return true;
             }
 
-            routingContext = default;
+            commandIntentProfileId = 0;
             return false;
         }
 
@@ -666,12 +612,11 @@ namespace Ludots.Core.Input.Orders
             return -1;
         }
 
-        private static long GroupKey(in InteractionContextInstance routingContext)
+        private static long GroupKey(Entity rep)
         {
-            Entity carrier = routingContext.ContextEntity;
-            return carrier == default
+            return rep == default
                 ? 0
-                : ((long)(uint)carrier.Id << 32) | (uint)carrier.Version;
+                : ((long)(uint)rep.Id << 32) | (uint)rep.Version;
         }
 
         private bool Reject(string reason)

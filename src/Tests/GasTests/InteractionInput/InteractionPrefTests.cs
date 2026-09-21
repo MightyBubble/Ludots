@@ -225,7 +225,6 @@ namespace Ludots.Tests.GAS
             {
                 ContextEntity = world.Create(),
                 CommandIntentProfileId = 0,
-                ActiveCollectionKeyId = harness.Collections.KeyRegistry.Register("collection.command.source"),
                 });
 
             OrderSubmitResult result = harness.SubmitPointerCommandRaw();
@@ -401,7 +400,6 @@ namespace Ludots.Tests.GAS
                         new()
                         {
                             Id = InteractionContextIds.Default,
-                            ActiveCollectionKey = "collection.command.source",
                         },
                     },
                 }, collectionKeys, new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal), intents.Intents.ProfileIdRegistry);
@@ -420,7 +418,6 @@ namespace Ludots.Tests.GAS
                     {
                         ContextEntity = rep,
                         CommandIntentProfileId = pref.DefaultCommandIntentId,
-                        ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
                     });
                 }
 

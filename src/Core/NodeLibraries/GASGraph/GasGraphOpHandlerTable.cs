@@ -1610,7 +1610,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 s.Caster,
                 hasTarget ? s.E[ins.A] : Entity.Null,
                 hasTarget,
-                s.TargetPosCm);
+                s.TargetPosCm,
+                s.Targets.Slice(0, s.TargetList.Count));
         }
 
         private static void HandleSubmitCast(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -1630,7 +1631,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 hasTarget,
                 hasGround,
                 s.TargetPosCm,
-                ins.Imm);
+                ins.Imm,
+                s.Targets.Slice(0, s.TargetList.Count));
         }
 
         private static void HandleSubmitEngageBatch(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -1652,7 +1654,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 s.I[ins.A],
                 s.E[ins.B],
                 Ludots.Core.Gameplay.GAS.Orders.EngageOpEncoding.UnpackQueryKeyId(ins.Imm),
-                Ludots.Core.Gameplay.GAS.Orders.EngageOpEncoding.UnpackOrderTypeKeyId(ins.Imm));
+                Ludots.Core.Gameplay.GAS.Orders.EngageOpEncoding.UnpackOrderTypeKeyId(ins.Imm),
+                s.Targets.Slice(0, s.TargetList.Count));
         }
 
         private static void HandleBindQueryCollection(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

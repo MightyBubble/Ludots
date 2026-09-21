@@ -2,7 +2,6 @@
   "profiles": [
     {
       "id": "interaction.context.crowd.battle",
-      "activeCollectionKey": "collection.command.source",
       "commandIntentId": "intent.command.default",
       "bindings": [
         "Select.Begin",

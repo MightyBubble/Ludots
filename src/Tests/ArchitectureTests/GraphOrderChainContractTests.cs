@@ -62,7 +62,7 @@ namespace Ludots.Tests.Architecture
                 Assert.That(File.Exists(file), Is.True, $"Missing bridge file {file}");
                 string source = File.ReadAllText(file);
                 Assert.That(source, Does.Not.Contain("EntityCollectionKeys"),
-                    $"{Path.GetFileName(file)} must stay collection-generic (constitution §12: routing reads only the rep's active-context-declared activeCollectionKey).");
+                    $"{Path.GetFileName(file)} must stay collection-generic (constitution §12 v2: intents carry their own actor sets).");
                 Assert.That(source, Does.Not.Contains("collection.command.source"),
                     $"{Path.GetFileName(file)} must not reference the legacy command-source key literal.");
             }
@@ -73,42 +73,6 @@ namespace Ludots.Tests.Architecture
             Assert.That(handlerTable, Does.Contain("SubmitCast"), "SubmitCast op must stay registered.");
         }
 
-        [Test]
-        public void MigratedShowcases_DeclareActiveCollectionKeyOnBattleContexts()
-        {
-            string repoRoot = FindRepoRoot();
-            string[] profileFiles =
-            {
-                Path.Combine(repoRoot, "mods", "showcases", "case_e_selection", "CaseESelectionMod", "assets", "Input", "interaction_context_profiles.json"),
-                Path.Combine(repoRoot, "mods", "showcases", "rts_demo", "RtsDemoMod", "assets", "Input", "interaction_context_profiles.json"),
-                Path.Combine(repoRoot, "mods", "showcases", "arpg_demo", "ArpgDemoMod", "assets", "Input", "interaction_context_profiles.json"),
-            };
-
-            foreach (string file in profileFiles)
-            {
-                Assert.That(File.Exists(file), Is.True, $"Missing migrated showcase profile {file}");
-                using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(file));
-                JsonElement profiles = doc.RootElement.GetProperty("profiles");
-                Assert.That(profiles.GetArrayLength(), Is.GreaterThan(0), $"{file} must declare at least the battle context");
-                bool battleDeclared = false;
-                foreach (JsonElement profile in profiles.EnumerateArray())
-                {
-                    string id = profile.GetProperty("id").GetString() ?? string.Empty;
-                    if (!id.EndsWith(".battle", StringComparison.Ordinal))
-                    {
-                        continue;
-                    }
-
-                    Assert.That(profile.TryGetProperty("activeCollectionKey", out JsonElement key), Is.True,
-                        $"{file}: battle context must declare activeCollectionKey (the order pipeline's read interface, constitution §12).");
-                    Assert.That(key.GetString(), Is.Not.Null.And.Not.Empty,
-                        $"{file}: activeCollectionKey must be a non-empty declared key name.");
-                    battleDeclared = true;
-                }
-
-                Assert.That(battleDeclared, Is.True, $"{file} must contain a battle context profile.");
-            }
-        }
 
         private static string FindRepoRoot()
         {

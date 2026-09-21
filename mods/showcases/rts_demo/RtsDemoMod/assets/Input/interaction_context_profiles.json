@@ -27,8 +27,7 @@
         {
           "trigger": "graph.rts.select_begin"
         }
-      ],
-      "activeCollectionKey": "collection.command.source"
+      ]
     },
     {
       "id": "interaction.context.rts.aim",

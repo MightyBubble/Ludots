@@ -6,11 +6,20 @@
       {
         "label": "on_cast_q",
         "action": "CaseE.CastQ",
-        "start": "slot",
+        "start": "caster",
         "refire": "restart"
       }
     ],
     "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "members",
+        "op": "QueryFromCollection",
+        "collectionKey": "selected"
+      },
       {
         "id": "slot",
         "op": "ConstInt",
@@ -32,13 +41,51 @@
       }
     ],
     "controlEdges": [
-      { "from": "slot", "fromPort": "next", "to": "submit" },
-      { "from": "submit", "fromPort": "next", "to": "ok" },
-      { "from": "ok", "fromPort": "next", "to": "halt" }
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "members"
+      },
+      {
+        "from": "members",
+        "fromPort": "next",
+        "to": "slot"
+      },
+      {
+        "from": "slot",
+        "fromPort": "next",
+        "to": "submit"
+      },
+      {
+        "from": "submit",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
     ],
     "valueEdges": [
-      { "from": "slot", "fromPort": "value", "to": "submit", "toPort": "value" },
-      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "members",
+        "toPort": "source"
+      },
+      {
+        "from": "slot",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "value"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
     ]
   }
 ]
