@@ -464,6 +464,9 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
                 world.Get<OrderBuffer>(core).ActiveOrder.Order.OrderId == first.OrderId,
             4,
             "The first queued training order should start on the next fixed simulation step.");
+        // The admission guard runs before OrderBufferSystem in the tick, so activation lands
+        // on tick N and the crystal charge on tick N+1 (one-tick admission contract).
+        AdvanceCommittedTicks(engine, 1);
         Assert.Multiple(() =>
         {
             Assert.That(world.Get<OrderBuffer>(core).ActiveOrder.Order.OrderId, Is.EqualTo(first.OrderId));
@@ -524,6 +527,9 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
                 world.Get<OrderBuffer>(core).ActiveOrder.Order.OrderId == first.OrderId,
             4,
             "The first queued training order should start on the next fixed simulation step.");
+        // The admission guard runs before OrderBufferSystem in the tick, so activation lands
+        // on tick N and the crystal charge on tick N+1 (one-tick admission contract).
+        AdvanceCommittedTicks(engine, 1);
         Assert.Multiple(() =>
         {
             Assert.That(world.Get<OrderBuffer>(core).ActiveOrder.Order.OrderId, Is.EqualTo(first.OrderId));
