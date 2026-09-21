@@ -371,6 +371,19 @@ public sealed class GraphOpsNodeGalleryQueryAcceptanceTests
         Assert.That(driver.LastTargetCount, Is.GreaterThan(0), op);
     }
 
+    [Test]
+    public void QueryFilterKnowledgeVisible_KeepsOnlyKnownCandidatesInOrder()
+    {
+        using GraphOpsNodeGalleryRuntime runtime = Play("QueryFilterKnowledgeVisible");
+
+        foreach (string phrase in runtime.Vignette.AssertDetailContains)
+        {
+            Assert.That(runtime.Metrics.Detail, Does.Contain(phrase));
+        }
+
+        Assert.That(runtime.Context.CaptionValues.ContainsKey("count"), Is.True, "认知筛执行后名单计数可读");
+    }
+
     private static GraphOpsNodeGalleryRuntime Play(string op)
     {
         var runtime = new GraphOpsNodeGalleryRuntime();

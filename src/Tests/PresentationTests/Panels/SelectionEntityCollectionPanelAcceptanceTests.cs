@@ -168,7 +168,7 @@ public sealed class CommandSourceEntityCollectionPanelAcceptanceTests
     private static void ReplaceCommandSource(EntityCollectionStore collections, Entity owner, ReadOnlySpan<Entity> members)
     {
         var descriptor = EntityCollectionDescriptor.Create(
-            EntityCollectionKeys.CommandSource,
+            "collection.command.source",
             EntityCollectionSourceKind.Explicit,
             EntityCollectionRoleKind.CommandSource,
             owner,

@@ -2670,7 +2670,8 @@ namespace Ludots.Adapter.Raylib
 
             string hoveredSummary = "hovered=(none)";
             if (TryGetLocalEntityCollectionStore(engine, out Entity debugOwner, out EntityCollectionStore debugCollections) &&
-                EntityCollectionContextRuntime.TryGetHovered(engine.World, debugCollections, debugOwner, out Entity hovered) &&
+                engine.TryGetService(CoreServiceKeys.InputCollectionKeys, out Ludots.Core.Input.Config.InputCollectionKeyDeclarations inputKeys) &&
+                EntityCollectionContextRuntime.TryGetHovered(engine.World, debugCollections, debugOwner, inputKeys.Hover, out Entity hovered) &&
                 hovered != Entity.Null)
             {
                 hoveredSummary = $"hovered={DescribeEntity(engine, hovered)}";
@@ -2678,15 +2679,22 @@ namespace Ludots.Adapter.Raylib
 
             string selectedSummary = "commandSource=(none)";
             if (TryGetLocalEntityCollectionStore(engine, out debugOwner, out debugCollections) &&
-                EntityCollectionContextRuntime.TryGetPrimary(
-                    engine.World,
-                    debugCollections,
-                    debugOwner,
-                    EntityCollectionKeys.CommandSource,
-                    out Entity commandSource) &&
-                commandSource != Entity.Null)
+                engine.World.IsAlive(debugOwner) &&
+                engine.World.TryGet<Ludots.Core.Input.Interaction.InteractionContextInstance>(debugOwner, out var debugContext) &&
+                debugContext.ActiveCollectionKeyId > 0)
             {
-                selectedSummary = $"commandSource={DescribeEntity(engine, commandSource)}";
+                string activeKey = debugCollections.KeyRegistry.GetName(debugContext.ActiveCollectionKeyId);
+                if (!string.IsNullOrEmpty(activeKey) &&
+                    EntityCollectionContextRuntime.TryGetPrimary(
+                        engine.World,
+                        debugCollections,
+                        debugOwner,
+                        activeKey,
+                        out Entity commandSource) &&
+                    commandSource != Entity.Null)
+                {
+                    selectedSummary = $"commandSource={DescribeEntity(engine, commandSource)}";
+                }
             }
 
             bool uiCaptured = engine.TryGetService(CoreServiceKeys.UiCaptured, out bool captured) &&

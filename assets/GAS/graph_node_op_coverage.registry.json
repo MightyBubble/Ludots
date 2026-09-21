@@ -59,6 +59,24 @@
       "codegenStatus": "covered"
     },
     {
+      "op": "ActivateContext",
+      "authorableKinds": [
+        "Effect",
+        "TriggerGraph",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_ActivateContext",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryContextAcceptanceTests.ActivateContextVignette_MountsTheGalleryAimInstance"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
       "op": "AddFloat",
       "authorableKinds": [
         "Derived",
@@ -683,6 +701,24 @@
       "codegenStatus": "covered"
     },
     {
+      "op": "DeactivateContext",
+      "authorableKinds": [
+        "Effect",
+        "TriggerGraph",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_DeactivateContext",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryContextAcceptanceTests.DeactivateContextVignette_RoundsTripTheInstanceSet"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
       "op": "DestroyPanel",
       "authorableKinds": [
         "Effect",
@@ -1255,6 +1291,50 @@
       "codegenStatus": "covered"
     },
     {
+      "op": "LoadEffectStack",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "TriggerGraph",
+        "Query",
+        "Score",
+        "Script",
+        "Validation"
+      ],
+      "showcaseId": "capability_standard_graph_op_LoadEffectStack",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryAttrAcceptanceTests.LoadEffectStack_ReadsSeededStackCount"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "LoadEffectTiming",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "TriggerGraph",
+        "Query",
+        "Score",
+        "Script",
+        "Validation"
+      ],
+      "showcaseId": "capability_standard_graph_op_LoadEffectTiming",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryAttrAcceptanceTests.LoadEffectTiming_ReadsSeededRemainingTicks"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
       "op": "LoadEntryPayloadEntity",
       "authorableKinds": [
         "TriggerGraph"
@@ -1656,6 +1736,29 @@
       "codegenStatus": "covered"
     },
     {
+      "op": "ModifyAttributeSet",
+      "authorableKinds": [
+        "Effect",
+        "TriggerGraph"
+      ],
+      "showcaseId": "capability_standard_graph_op_ModifyAttributeSet",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions",
+        "GraphOpsNodeGalleryAttrAcceptanceTests.ModifyAttributeSet_TriggerGraphWritesTargetHealth",
+        "TriggerGraphAttributeWriteTests.TriggerGraphModifyAttributeSet_WritesThroughAuthority",
+        "TriggerGraphAttributeWriteTests.TriggerGraphModifyAttributeSet_UnknownEntityFailsClosed",
+        "TriggerGraphAttributeWriteTests.TriggerGraphModifyAttributeSet_UnknownAttributeFailsClosedByName",
+        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
+        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
       "op": "MoveInt",
       "authorableKinds": [
         "TriggerGraph",
@@ -1722,6 +1825,57 @@
       "codegenStatus": "covered"
     },
     {
+      "op": "OfferActivity",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_OfferActivity",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryOfferActivityAcceptanceTests.OfferActivity_RollCallOffersGalleryActivityEachWave"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "OfferTask",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_OfferTask",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryOfferTaskAcceptanceTests.OfferTask_RollCallCreatesNamedScopedTask"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "PointToDirection",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Query"
+      ],
+      "showcaseId": "capability_standard_graph_op_PointToDirection",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryAimSourceAcceptanceTests.PointToDirection_QuotesTheAimAngle"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
       "op": "QueryAllMapEntities",
       "authorableKinds": [
         "TriggerGraph",
@@ -1740,6 +1894,195 @@
         "GraphOpsNodeGalleryQueryAcceptanceTests.QueryAllMapEntities_ScanLightsUnitsProgressively",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "QueryCollectAbilityHolders",
+      "authorableKinds": [
+        "Query"
+      ],
+      "showcaseId": "capability_standard_graph_op_QueryCollectAbilityHolders",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectAbilityHolders_ListsSeededHolders",
+        "QueryCollectTypedBagsTests.QueryCollectAbilityHolders_FiltersCandidatesByAbility",
+        "QueryCollectTypedBagsTests.TypedCollector_CompilesWithRequiredInputs"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "QueryCollectAbilitySlots",
+      "authorableKinds": [
+        "Query"
+      ],
+      "showcaseId": "capability_standard_graph_op_QueryCollectAbilitySlots",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectAbilitySlots_ListsSeededSlots",
+        "QueryCollectTypedBagsTests.QueryCollectAbilitySlots_ListsResolvedSlotsInOrder",
+        "QueryCollectTypedBagsTests.TypedCollector_CompilesWithRequiredInputs"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "QueryCollectActiveActivities",
+      "authorableKinds": [
+        "Query"
+      ],
+      "showcaseId": "capability_standard_graph_op_QueryCollectActiveActivities",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectActiveActivities_ListsSeededActivities",
+        "QueryCollectTypedBagsTests.TypedCollector_CompilesWithRequiredInputs"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "QueryCollectActiveDialogueChoices",
+      "authorableKinds": [
+        "Query"
+      ],
+      "showcaseId": "capability_standard_graph_op_QueryCollectActiveDialogueChoices",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectActiveDialogueChoices_ListsSeededChoices"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "QueryCollectActiveEffects",
+      "authorableKinds": [
+        "Query"
+      ],
+      "showcaseId": "capability_standard_graph_op_QueryCollectActiveEffects",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectActiveEffects_ListsSeededBuffs"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "QueryCollectActiveTasks",
+      "authorableKinds": [
+        "Query"
+      ],
+      "showcaseId": "capability_standard_graph_op_QueryCollectActiveTasks",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectActiveTasks_ListsSeededTasks",
+        "QueryCollectTypedBagsTests.TypedCollector_CompilesWithRequiredInputs"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "QueryCollectEffectTemplates",
+      "authorableKinds": [
+        "Query"
+      ],
+      "showcaseId": "capability_standard_graph_op_QueryCollectEffectTemplates",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectEffectTemplates_ListsRegisteredTemplates",
+        "QueryCollectTypedBagsTests.QueryCollectEffectTemplates_ReturnsRegisteredIdsSorted",
+        "QueryCollectTypedBagsTests.TypedCollector_CompilesWithRequiredInputs"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "QueryCollectInventoryItems",
+      "authorableKinds": [
+        "Query"
+      ],
+      "showcaseId": "capability_standard_graph_op_QueryCollectInventoryItems",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectInventoryItems_ListsSeededItems",
+        "QueryCollectTypedBagsTests.TypedCollector_CompilesWithRequiredInputs"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "QueryCollectItemDefinitions",
+      "authorableKinds": [
+        "Query"
+      ],
+      "showcaseId": "capability_standard_graph_op_QueryCollectItemDefinitions",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectItemDefinitions_ListsRegisteredItems",
+        "QueryCollectTypedBagsTests.TypedCollector_CompilesWithRequiredInputs"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "QueryCollectPresentTags",
+      "authorableKinds": [
+        "Query"
+      ],
+      "showcaseId": "capability_standard_graph_op_QueryCollectPresentTags",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectPresentTags_ListsSeededTags",
+        "QueryCollectTypedBagsTests.QueryCollectPresentTags_ReadsTagCountContainer",
+        "QueryCollectTypedBagsTests.TypedCollector_CompilesWithRequiredInputs"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "QueryCollectProgressionNodes",
+      "authorableKinds": [
+        "Query"
+      ],
+      "showcaseId": "capability_standard_graph_op_QueryCollectProgressionNodes",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectProgressionNodes_ListsSeededProgressions",
+        "QueryCollectTypedBagsTests.TypedCollector_CompilesWithRequiredInputs"
       ],
       "codegenStatus": "covered"
     },
@@ -1769,8 +2112,7 @@
       "op": "QueryFilterAttributeRange",
       "authorableKinds": [
         "TriggerGraph",
-        "Query",
-        "Script"
+        "Query"
       ],
       "showcaseId": "capability_standard_graph_op_QueryFilterAttributeRange",
       "status": "covered",
@@ -1783,6 +2125,23 @@
         "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFamily_CaptionsCarryRealCountsAndAggregates",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "QueryFilterKnowledgeVisible",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Query"
+      ],
+      "showcaseId": "capability_standard_graph_op_QueryFilterKnowledgeVisible",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFilterKnowledgeVisible_KeepsOnlyKnownCandidatesInOrder"
       ],
       "codegenStatus": "covered"
     },
@@ -1856,8 +2215,7 @@
       "op": "QueryFilterTagAny",
       "authorableKinds": [
         "TriggerGraph",
-        "Query",
-        "Script"
+        "Query"
       ],
       "showcaseId": "capability_standard_graph_op_QueryFilterTagAny",
       "status": "covered",
@@ -1878,8 +2236,7 @@
       "op": "QueryFilterTagNone",
       "authorableKinds": [
         "TriggerGraph",
-        "Query",
-        "Script"
+        "Query"
       ],
       "showcaseId": "capability_standard_graph_op_QueryFilterTagNone",
       "status": "covered",
@@ -1900,8 +2257,7 @@
       "op": "QueryFilterTeam",
       "authorableKinds": [
         "TriggerGraph",
-        "Query",
-        "Script"
+        "Query"
       ],
       "showcaseId": "capability_standard_graph_op_QueryFilterTeam",
       "status": "covered",
@@ -1922,8 +2278,7 @@
       "op": "QueryFilterTemplate",
       "authorableKinds": [
         "TriggerGraph",
-        "Query",
-        "Script"
+        "Query"
       ],
       "showcaseId": "capability_standard_graph_op_QueryFilterTemplate",
       "status": "covered",
@@ -2789,6 +3144,57 @@
       "codegenStatus": "covered"
     },
     {
+      "op": "ScreenPointToEntity",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Query"
+      ],
+      "showcaseId": "capability_standard_graph_op_ScreenPointToEntity",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryAimSourceAcceptanceTests.ScreenPointToEntity_NamesThePickedCandidate"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "ScreenPointToGround",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Query"
+      ],
+      "showcaseId": "capability_standard_graph_op_ScreenPointToGround",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryAimSourceAcceptanceTests.ScreenPointToGround_QuotesResolvedGroundPoint"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "ScreenRegionToEntities",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Query"
+      ],
+      "showcaseId": "capability_standard_graph_op_ScreenRegionToEntities",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryAimSourceAcceptanceTests.ScreenRegionToEntities_CountsTheRectHits"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
       "op": "SelectEntity",
       "authorableKinds": [
         "Derived",
@@ -3001,6 +3407,23 @@
       "codegenStatus": "covered"
     },
     {
+      "op": "StickToDirection",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Query"
+      ],
+      "showcaseId": "capability_standard_graph_op_StickToDirection",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryAimSourceAcceptanceTests.StickToDirection_QuotesTheStickAngle"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
       "op": "StoreArgEntity",
       "authorableKinds": [
         "TriggerGraph"
@@ -3069,6 +3492,38 @@
         "GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "SubmitCast",
+      "authorableKinds": [
+        "TriggerGraph"
+      ],
+      "showcaseId": "capability_standard_graph_op_SubmitCast",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryContextAcceptanceTests.SubmitCastVignette_PushesIntoTheCastSubmissionBuffer"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "SubmitCommandIntent",
+      "authorableKinds": [
+        "TriggerGraph"
+      ],
+      "showcaseId": "capability_standard_graph_op_SubmitCommandIntent",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryContextAcceptanceTests.SubmitCommandIntentVignette_PushesIntoTheSubmissionBuffer"
       ],
       "codegenStatus": "covered"
     },
@@ -3225,6 +3680,23 @@
       "codegenStatus": "covered"
     },
     {
+      "op": "WriteCollection",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_WriteCollection",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryContextAcceptanceTests.WriteCollectionVignette_CommitsThroughTheStoreWrite"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
       "op": "WriteMapVarFloat",
       "authorableKinds": [
         "TriggerGraph",
@@ -3255,29 +3727,6 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryMapVarAcceptanceTests.WriteMapVarIntVignette_ExecutesOpWithoutThrow"
-      ],
-      "codegenStatus": "covered"
-    },
-    {
-      "op": "ModifyAttributeSet",
-      "authorableKinds": [
-        "Effect",
-        "TriggerGraph"
-      ],
-      "showcaseId": "capability_standard_graph_op_ModifyAttributeSet",
-      "status": "covered",
-      "unitTestRefs": [
-        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
-        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
-        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
-        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions",
-        "GraphOpsNodeGalleryAttrAcceptanceTests.ModifyAttributeSet_TriggerGraphWritesTargetHealth",
-        "TriggerGraphAttributeWriteTests.TriggerGraphModifyAttributeSet_WritesThroughAuthority",
-        "TriggerGraphAttributeWriteTests.TriggerGraphModifyAttributeSet_UnknownEntityFailsClosed",
-        "TriggerGraphAttributeWriteTests.TriggerGraphModifyAttributeSet_UnknownAttributeFailsClosedByName",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
       ],
       "codegenStatus": "covered"
     },
@@ -3320,411 +3769,6 @@
         "GraphOpsNodeGalleryScriptAcceptanceTests.Yield_FillsWaterAcrossTicks_AndCaptionRests",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ],
-      "codegenStatus": "covered"
-    },
-    {
-      "op": "OfferActivity",
-      "authorableKinds": [
-        "TriggerGraph",
-        "Script"
-      ],
-      "showcaseId": "capability_standard_graph_op_OfferActivity",
-      "status": "covered",
-      "unitTestRefs": [
-        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
-        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
-        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
-        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryOfferActivityAcceptanceTests.OfferActivity_RollCallOffersGalleryActivityEachWave"
-      ],
-      "codegenStatus": "covered"
-    },
-    {
-      "op": "OfferTask",
-      "authorableKinds": [
-        "TriggerGraph",
-        "Script"
-      ],
-      "showcaseId": "capability_standard_graph_op_OfferTask",
-      "status": "covered",
-      "unitTestRefs": [
-        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
-        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
-        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
-        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryOfferTaskAcceptanceTests.OfferTask_RollCallCreatesNamedScopedTask"
-      ],
-      "codegenStatus": "covered"
-    },
-    {
-      "op": "LoadEffectTiming",
-      "authorableKinds": [
-        "Derived",
-        "Effect",
-        "TriggerGraph",
-        "Query",
-        "Score",
-        "Script",
-        "Validation"
-      ],
-      "showcaseId": "capability_standard_graph_op_LoadEffectTiming",
-      "status": "covered",
-      "unitTestRefs": [
-        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
-        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
-        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
-        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryAttrAcceptanceTests.LoadEffectTiming_ReadsSeededRemainingTicks"
-      ],
-      "codegenStatus": "covered"
-    },
-    {
-      "op": "LoadEffectStack",
-      "authorableKinds": [
-        "Derived",
-        "Effect",
-        "TriggerGraph",
-        "Query",
-        "Score",
-        "Script",
-        "Validation"
-      ],
-      "showcaseId": "capability_standard_graph_op_LoadEffectStack",
-      "status": "covered",
-      "unitTestRefs": [
-        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
-        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
-        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
-        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryAttrAcceptanceTests.LoadEffectStack_ReadsSeededStackCount"
-      ],
-      "codegenStatus": "covered"
-    },
-    {
-      "op": "QueryCollectAbilityHolders",
-      "authorableKinds": [
-        "Query"
-      ],
-      "showcaseId": "capability_standard_graph_op_QueryCollectAbilityHolders",
-      "status": "covered",
-      "unitTestRefs": [
-        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
-        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
-        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
-        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectAbilityHolders_ListsSeededHolders",
-        "QueryCollectTypedBagsTests.QueryCollectAbilityHolders_FiltersCandidatesByAbility",
-        "QueryCollectTypedBagsTests.TypedCollector_CompilesWithRequiredInputs"
-      ],
-      "codegenStatus": "covered"
-    },
-    {
-      "op": "QueryCollectAbilitySlots",
-      "authorableKinds": [
-        "Query"
-      ],
-      "showcaseId": "capability_standard_graph_op_QueryCollectAbilitySlots",
-      "status": "covered",
-      "unitTestRefs": [
-        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
-        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
-        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
-        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectAbilitySlots_ListsSeededSlots",
-        "QueryCollectTypedBagsTests.QueryCollectAbilitySlots_ListsResolvedSlotsInOrder",
-        "QueryCollectTypedBagsTests.TypedCollector_CompilesWithRequiredInputs"
-      ],
-      "codegenStatus": "covered"
-    },
-    {
-      "op": "QueryCollectActiveEffects",
-      "authorableKinds": [
-        "Query"
-      ],
-      "showcaseId": "capability_standard_graph_op_QueryCollectActiveEffects",
-      "status": "covered",
-      "unitTestRefs": [
-        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
-        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
-        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
-        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectActiveEffects_ListsSeededBuffs"
-      ],
-      "codegenStatus": "covered"
-    },
-    {
-      "op": "QueryCollectActiveTasks",
-      "authorableKinds": [
-        "Query"
-      ],
-      "showcaseId": "capability_standard_graph_op_QueryCollectActiveTasks",
-      "status": "covered",
-      "unitTestRefs": [
-        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
-        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
-        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
-        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectActiveTasks_ListsSeededTasks",
-        "QueryCollectTypedBagsTests.TypedCollector_CompilesWithRequiredInputs"
-      ],
-      "codegenStatus": "covered"
-    },
-    {
-      "op": "QueryCollectActiveActivities",
-      "authorableKinds": [
-        "Query"
-      ],
-      "showcaseId": "capability_standard_graph_op_QueryCollectActiveActivities",
-      "status": "covered",
-      "unitTestRefs": [
-        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
-        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
-        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
-        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectActiveActivities_ListsSeededActivities",
-        "QueryCollectTypedBagsTests.TypedCollector_CompilesWithRequiredInputs"
-      ],
-      "codegenStatus": "covered"
-    },
-    {
-      "op": "QueryCollectActiveDialogueChoices",
-      "authorableKinds": [
-        "Query"
-      ],
-      "showcaseId": "capability_standard_graph_op_QueryCollectActiveDialogueChoices",
-      "status": "covered",
-      "unitTestRefs": [
-        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
-        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
-        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
-        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectActiveDialogueChoices_ListsSeededChoices"
-      ],
-      "codegenStatus": "covered"
-    },
-    {
-      "op": "QueryCollectEffectTemplates",
-      "authorableKinds": [
-        "Query"
-      ],
-      "showcaseId": "capability_standard_graph_op_QueryCollectEffectTemplates",
-      "status": "covered",
-      "unitTestRefs": [
-        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
-        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
-        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
-        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectEffectTemplates_ListsRegisteredTemplates",
-        "QueryCollectTypedBagsTests.QueryCollectEffectTemplates_ReturnsRegisteredIdsSorted",
-        "QueryCollectTypedBagsTests.TypedCollector_CompilesWithRequiredInputs"
-      ],
-      "codegenStatus": "covered"
-    },
-    {
-      "op": "QueryCollectInventoryItems",
-      "authorableKinds": [
-        "Query"
-      ],
-      "showcaseId": "capability_standard_graph_op_QueryCollectInventoryItems",
-      "status": "covered",
-      "unitTestRefs": [
-        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
-        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
-        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
-        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectInventoryItems_ListsSeededItems",
-        "QueryCollectTypedBagsTests.TypedCollector_CompilesWithRequiredInputs"
-      ],
-      "codegenStatus": "covered"
-    },
-    {
-      "op": "QueryCollectItemDefinitions",
-      "authorableKinds": [
-        "Query"
-      ],
-      "showcaseId": "capability_standard_graph_op_QueryCollectItemDefinitions",
-      "status": "covered",
-      "unitTestRefs": [
-        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
-        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
-        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
-        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectItemDefinitions_ListsRegisteredItems",
-        "QueryCollectTypedBagsTests.TypedCollector_CompilesWithRequiredInputs"
-      ],
-      "codegenStatus": "covered"
-    },
-    {
-      "op": "QueryCollectPresentTags",
-      "authorableKinds": [
-        "Query"
-      ],
-      "showcaseId": "capability_standard_graph_op_QueryCollectPresentTags",
-      "status": "covered",
-      "unitTestRefs": [
-        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
-        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
-        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
-        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectPresentTags_ListsSeededTags",
-        "QueryCollectTypedBagsTests.QueryCollectPresentTags_ReadsTagCountContainer",
-        "QueryCollectTypedBagsTests.TypedCollector_CompilesWithRequiredInputs"
-      ],
-      "codegenStatus": "covered"
-    },
-    {
-      "op": "QueryCollectProgressionNodes",
-      "authorableKinds": [
-        "Query"
-      ],
-      "showcaseId": "capability_standard_graph_op_QueryCollectProgressionNodes",
-      "status": "covered",
-      "unitTestRefs": [
-        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
-        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
-        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
-        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryCollectProgressionNodes_ListsSeededProgressions",
-        "QueryCollectTypedBagsTests.TypedCollector_CompilesWithRequiredInputs"
-      ],
-      "codegenStatus": "covered"
-    },
-    {
-      "op": "ScreenPointToGround",
-      "authorableKinds": [
-        "TriggerGraph",
-        "Query"
-      ],
-      "showcaseId": "capability_standard_graph_op_ScreenPointToGround",
-      "status": "covered",
-      "unitTestRefs": [
-        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
-        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
-        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
-        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryAimSourceAcceptanceTests.ScreenPointToGround_QuotesResolvedGroundPoint"
-      ],
-      "codegenStatus": "covered"
-    },
-    {
-      "op": "ScreenPointToEntity",
-      "authorableKinds": [
-        "TriggerGraph",
-        "Query"
-      ],
-      "showcaseId": "capability_standard_graph_op_ScreenPointToEntity",
-      "status": "covered",
-      "unitTestRefs": [
-        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
-        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
-        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
-        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryAimSourceAcceptanceTests.ScreenPointToEntity_NamesThePickedCandidate"
-      ],
-      "codegenStatus": "covered"
-    },
-    {
-      "op": "ScreenRegionToEntities",
-      "authorableKinds": [
-        "TriggerGraph",
-        "Query"
-      ],
-      "showcaseId": "capability_standard_graph_op_ScreenRegionToEntities",
-      "status": "covered",
-      "unitTestRefs": [
-        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
-        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
-        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
-        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryAimSourceAcceptanceTests.ScreenRegionToEntities_CountsTheRectHits"
-      ],
-      "codegenStatus": "covered"
-    },
-    {
-      "op": "PointToDirection",
-      "authorableKinds": [
-        "TriggerGraph",
-        "Query"
-      ],
-      "showcaseId": "capability_standard_graph_op_PointToDirection",
-      "status": "covered",
-      "unitTestRefs": [
-        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
-        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
-        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
-        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryAimSourceAcceptanceTests.PointToDirection_QuotesTheAimAngle"
-      ],
-      "codegenStatus": "covered"
-    },
-    {
-      "op": "StickToDirection",
-      "authorableKinds": [
-        "TriggerGraph",
-        "Query"
-      ],
-      "showcaseId": "capability_standard_graph_op_StickToDirection",
-      "status": "covered",
-      "unitTestRefs": [
-        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
-        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
-        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
-        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryAimSourceAcceptanceTests.StickToDirection_QuotesTheStickAngle"
-      ],
-      "codegenStatus": "covered"
-    },
-    {
-      "op": "ActivateContext",
-      "authorableKinds": [
-        "Effect",
-        "TriggerGraph",
-        "Script"
-      ],
-      "showcaseId": "capability_standard_graph_op_ActivateContext",
-      "status": "covered",
-      "unitTestRefs": [
-        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
-        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
-        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
-        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryContextAcceptanceTests.ActivateContextVignette_MountsTheGalleryAimInstance"
-      ],
-      "codegenStatus": "covered"
-    },
-    {
-      "op": "DeactivateContext",
-      "authorableKinds": [
-        "Effect",
-        "TriggerGraph",
-        "Script"
-      ],
-      "showcaseId": "capability_standard_graph_op_DeactivateContext",
-      "status": "covered",
-      "unitTestRefs": [
-        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
-        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
-        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
-        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryContextAcceptanceTests.DeactivateContextVignette_RoundsTripTheInstanceSet"
-      ],
-      "codegenStatus": "covered"
-    },
-    {
-      "op": "WriteCollection",
-      "authorableKinds": [
-        "TriggerGraph",
-        "Script"
-      ],
-      "showcaseId": "capability_standard_graph_op_WriteCollection",
-      "status": "covered",
-      "unitTestRefs": [
-        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
-        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
-        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
-        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryContextAcceptanceTests.WriteCollectionVignette_CommitsThroughTheStoreWrite"
       ],
       "codegenStatus": "covered"
     },
@@ -3869,24 +3913,6 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryContextAcceptanceTests.CompleteActiveOrderVignette_SettlesTheActiveOrderAndFreesTheBuffer"
-      ],
-      "codegenStatus": "covered"
-    },
-    {
-      "op": "QueryFilterControllable",
-      "authorableKinds": [
-        "TriggerGraph",
-        "Query",
-        "Script"
-      ],
-      "status": "covered",
-      "showcaseId": "capability_standard_graph_op_QueryFilterControllable",
-      "unitTestRefs": [
-        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
-        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
-        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
-        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryContextAcceptanceTests.QueryFilterControllableVignette_KeepsOnlyTheViewerControllableUnits"
       ],
       "codegenStatus": "covered"
     },

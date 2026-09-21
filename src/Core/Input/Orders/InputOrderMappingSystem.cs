@@ -297,6 +297,7 @@ namespace Ludots.Core.Input.Orders
         private CollectionPrimaryEntityProvider? _collectionPrimaryEntityProvider;
         private CollectionEntityListProvider? _collectionEntityListProvider;
         private HoveredEntityProvider? _hoveredEntityProvider;
+        private Ludots.Core.Gameplay.GAS.AbilityDefinitionRegistry? _abilityDefinitions;
         private OrderSubmitHandler? _orderSubmitHandler;
         private OrderBatchSubmitHandler? _orderBatchSubmitHandler;
         private OrderClusterBatchSubmitHandler? _orderClusterBatchSubmitHandler;
@@ -324,7 +325,6 @@ namespace Ludots.Core.Input.Orders
         private PlayerRepresentativeProvider? _playerRepresentativeProvider;
         private CommandIntentTargetFactsProvider? _commandIntentTargetFactsProvider;
         private OrderIdentityAssigner? _orderIdentityAssigner;
-        private int _steadyStateCollectionKeyId;
 
         // Context
         private Entity _solePossessedRep;
@@ -539,6 +539,14 @@ namespace Ludots.Core.Input.Orders
         public void SetCollectionPrimaryEntityProvider(CollectionPrimaryEntityProvider provider) => _collectionPrimaryEntityProvider = provider;
         public void SetCollectionEntityListProvider(CollectionEntityListProvider provider) => _collectionEntityListProvider = provider;
         public void SetHoveredEntityProvider(HoveredEntityProvider provider) => _hoveredEntityProvider = provider;
+
+        /// <summary>
+        /// Binds the ability catalog for byAbilityCategory slot landing (RFC-0065 DEC-14): a routed
+        /// cast order's I0 must land on the actor's first slot whose ability carries the routed
+        /// category. Routes declaring a slot selector without this registry fail closed at build time.
+        /// </summary>
+        public void SetAbilityDefinitionRegistry(Ludots.Core.Gameplay.GAS.AbilityDefinitionRegistry registry) =>
+            _abilityDefinitions = registry ?? throw new ArgumentNullException(nameof(registry));
         public void SetOrderSubmitHandler(OrderSubmitHandler handler) => _orderSubmitHandler = handler;
         public void SetOrderBatchSubmitHandler(OrderBatchSubmitHandler handler) => _orderBatchSubmitHandler = handler;
         public void SetOrderClusterBatchSubmitHandler(OrderClusterBatchSubmitHandler handler) =>
@@ -562,6 +570,7 @@ namespace Ludots.Core.Input.Orders
             CommandIntentProfileRegistry commandIntentProfiles,
             CastDispatchProfileRegistry castDispatchProfiles,
             EntityCollectionStore entityCollections,
+            Ludots.Core.Gameplay.GAS.AbilityDefinitionRegistry abilityDefinitions,
             ActiveActorCollectionOwnerProvider? activeActorCollectionOwnerProvider = null,
             PlayerRepresentativeProvider? playerRepresentativeProvider = null)
         {
@@ -572,13 +581,7 @@ namespace Ludots.Core.Input.Orders
             _entityCollections = entityCollections ?? throw new ArgumentNullException(nameof(entityCollections));
             _activeActorCollectionOwnerProvider = activeActorCollectionOwnerProvider;
             _playerRepresentativeProvider = playerRepresentativeProvider;
-            if (!contextProfiles.TryGetSteadyStateRouting(out int steadyStateCollectionKeyId, out _))
-            {
-                throw new InvalidOperationException(
-                    $"Command intent routing requires the steady-state interaction context profile '{InteractionContextIds.Default}' to be installed.");
-            }
-
-            _steadyStateCollectionKeyId = steadyStateCollectionKeyId;
+            SetAbilityDefinitionRegistry(abilityDefinitions);
         }
 
         public void SetOrderIdentityAssigner(OrderIdentityAssigner assigner) =>
@@ -1720,8 +1723,12 @@ namespace Ludots.Core.Input.Orders
             }
 
             Entity actingRep = RequireActingPlayerRepresentative();
-            bool hasActiveContext = _commandIntentWorld.TryGet<InteractionContextInstance>(actingRep, out InteractionContextInstance activeContext);
-            int activeCollectionKeyId = hasActiveContext ? activeContext.ActiveCollectionKeyId : _steadyStateCollectionKeyId;
+            if (!_commandIntentWorld.TryGet<InteractionContextInstance>(actingRep, out InteractionContextInstance activeContext))
+            {
+                return RejectCommandIntent(mapping, OrderSubmitResult.RejectedInvalidActor);
+            }
+
+            int activeCollectionKeyId = activeContext.ActiveCollectionKeyId;
 
             int actorCount;
             if (_hasExplicitActivationContext)
@@ -1781,7 +1788,7 @@ namespace Ludots.Core.Input.Orders
             int dispatchCount = _castDispatchProfiles.SelectDispatchTargets(
                 dispatchProfileId,
                 routedActors,
-                new CastDispatchContext(_commandIntentWorld, groundWorldCm, ResolveCastDispatchGroupKey(hasActiveContext, activeContext)),
+                new CastDispatchContext(_commandIntentWorld, groundWorldCm, ResolveCastDispatchGroupKey(true, activeContext)),
                 _commandIntentDispatchActorsScratch.AsSpan(0, routedCount),
                 out CastDispatchRouting routing);
 
@@ -1991,6 +1998,52 @@ namespace Ludots.Core.Input.Orders
             return pref;
         }
 
+        /// <summary>
+        /// Slot landing (RFC-0065 DEC-14): a route declaring byAbilityCategory overrides the static
+        /// argsTemplate I0 with the actor's first ability slot carrying the routed category.
+        /// </summary>
+        private void ApplyRouteSlot(ref OrderArgs args, Entity actor, in CommandIntentRoute route)
+        {
+            if (route.RouteKind == CommandIntentRouteKinds.None)
+            {
+                return;
+            }
+
+            if (route.RouteKind == CommandIntentRouteKinds.ContextGroup)
+            {
+                throw new InvalidOperationException(
+                    $"INPUT.COMMAND_INTENT.ERR.SlotKindUnsupported: route slot kind contextGroup (param id {route.RouteParamId}) has no order-build landing; declare byAbilityCategory or omit the slot.");
+            }
+
+            if (route.RouteKind != CommandIntentRouteKinds.ByAbilityCategory)
+            {
+                throw new InvalidOperationException(
+                    $"INPUT.COMMAND_INTENT.ERR.SlotKindUnknown: route slot kind {route.RouteKind} is not a known selector.");
+            }
+
+            args.I0 = ResolveAbilityCategorySlot(actor, route.RouteParamId);
+        }
+
+        private int ResolveAbilityCategorySlot(Entity actor, int categoryId)
+        {
+            var abilities = _abilityDefinitions
+                ?? throw new InvalidOperationException(
+                    "INPUT.COMMAND_INTENT.ERR.SlotLandingWithoutAbilityRegistry: byAbilityCategory slot routes require SetAbilityDefinitionRegistry (engine wiring).");
+
+            for (int slotIndex = 0; slotIndex < Ludots.Core.Gameplay.GAS.Components.AbilityStateBuffer.CAPACITY; slotIndex++)
+            {
+                if (Ludots.Core.Gameplay.GAS.Components.AbilitySlotResolver.TryResolve(_commandIntentWorld!, actor, slotIndex, out Ludots.Core.Gameplay.GAS.Components.AbilitySlotState slot) &&
+                    slot.AbilityId > 0 &&
+                    abilities.HasCategory(slot.AbilityId, categoryId))
+                {
+                    return slotIndex;
+                }
+            }
+
+            throw new InvalidOperationException(
+                $"INPUT.COMMAND_INTENT.ERR.NoSlotForCategory: actor {actor} has no ability slot in routed category id {categoryId}; the cast order cannot land.");
+        }
+
         private Order BuildCommandIntentOrder(
             InputOrderMapping mapping,
             Entity actor,
@@ -2001,6 +2054,7 @@ namespace Ludots.Core.Input.Orders
         {
             var args = new OrderArgs();
             ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
+            ApplyRouteSlot(ref args, actor, in route);
             Entity target = Entity.Null;
 
             switch (route.TargetShape)

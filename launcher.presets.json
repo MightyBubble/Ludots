@@ -3307,15 +3307,6 @@
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_graph_op_QueryFilterControllable_raylib",
-      "name": "Graph Op QueryFilterControllable Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_QueryFilterControllable"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
       "id": "capability_standard_graph_op_CompleteActiveOrder_raylib",
       "name": "Graph Op CompleteActiveOrder Raylib",
       "selectors": [
@@ -3401,6 +3392,33 @@
       "name": "EQS Influence Raylib",
       "selectors": [
         "$eqs_influence"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SubmitCommandIntent_raylib",
+      "name": "Graph Op SubmitCommandIntent Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SubmitCommandIntent"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SubmitCast_raylib",
+      "name": "Graph Op SubmitCast Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SubmitCast"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryFilterKnowledgeVisible_raylib",
+      "name": "Graph Op QueryFilterKnowledgeVisible Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryFilterKnowledgeVisible"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

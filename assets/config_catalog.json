@@ -425,7 +425,11 @@
   },
   {
     "Path": "Input/default_input.json",
-    "Policy": "DeepObject"
+    "Policy": "DeepObject",
+    "ArrayAppendFields": [
+      "actions",
+      "contexts"
+    ]
   },
   {
     "Path": "Input/action_attribute_bindings.json",
@@ -442,6 +446,10 @@
     "Policy": "DeepObject"
   },
   {
+    "Path": "Input/collection_keys.json",
+    "Policy": "DeepObject"
+  },
+  {
     "Path": "Input/command_intent_profiles.json",
     "Policy": "DeepObject"
   },
@@ -451,7 +459,10 @@
   },
   {
     "Path": "Input/interaction_context_profiles.json",
-    "Policy": "DeepObject"
+    "Policy": "DeepObject",
+    "ArrayAppendFields": [
+      "profiles"
+    ]
   },
   {
     "Path": "Input/cast_commit_profiles.json",

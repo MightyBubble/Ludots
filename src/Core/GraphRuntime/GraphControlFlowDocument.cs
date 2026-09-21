@@ -191,6 +191,9 @@ namespace Ludots.Core.GraphRuntime
         public string? Distribution { get; set; }
         public string? Template { get; set; }
         public string? CollectionKey { get; set; }
+
+        /// <summary>Cast order-type key for SubmitCast (symbol; resolved against OrderTypeRegistry by the drain).</summary>
+        public string? OrderTypeKey { get; set; }
         public string? EffectTemplate { get; set; }
         /// <summary>Order type key symbol for SubmitAssignedOrder; resolved to an order type id at patch time.</summary>
         public string? OrderType { get; set; }

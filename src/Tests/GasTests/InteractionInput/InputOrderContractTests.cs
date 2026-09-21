@@ -487,149 +487,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         }
 
         [Test]
-        public void MobaLocalOrderSource_ResolvesCallerSuppliedTargetCollectionKey()
-        {
-            const string customCollectionKey = "collection.test.explicit.targets";
-            string root = Path.Combine(Path.GetTempPath(), "Ludots_MobaCollectionKeyTests", Guid.NewGuid().ToString("N"));
-            string inputDir = Path.Combine(root, "assets", "Input");
-            Directory.CreateDirectory(inputDir);
-            File.WriteAllText(
-                Path.Combine(inputDir, "input_order_mappings.json"),
-                """
-                {
-                  "interactionMode": "TargetFirst",
-                  "mappings": [
-                    {
-                      "actionId": "SkillQ",
-                      "trigger": "PressedThisFrame",
-                      "orderTypeKey": "castAbility",
-                      "argsTemplate": { "i0": 0 },
-                      "requireTarget": true,
-                      "targetCollectionKey": "collection.test.explicit.targets",
-                      "targetType": "Entity",
-                      "isSkillMapping": false
-                    }
-                  ]
-                }
-                """);
-
-            try
-            {
-                using var world = World.Create();
-                Entity localPlayer = world.Create(new PlayerIdentity { PlayerId = 1 });
-                Entity commandSourceTarget = world.Create(new PlayerOwner { PlayerId = 1 });
-                Entity explicitTarget = world.Create(new PlayerOwner { PlayerId = 1 });
-                var controlHarness = CreateControlDomain(world);
-                controlHarness.Ownership.EnsureOwnership(localPlayer, commandSourceTarget);
-                var players = new PlayerEntityLookup();
-                players.Register(1, localPlayer);
-                var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
-                collections.Replace(
-                    localPlayer,
-                    EntityCollectionDescriptor.Create(
-                        EntityCollectionKeys.CommandSource,
-                        EntityCollectionSourceKind.UiAcquisition,
-                        EntityCollectionRoleKind.CommandSource,
-                        localPlayer,
-                        commandSourceTarget,
-                        "Command source",
-                        "Should not be used by this mapping"),
-                    new[] { commandSourceTarget },
-                    localPlayer);
-                collections.Replace(
-                    localPlayer,
-                    EntityCollectionDescriptor.Create(
-                        customCollectionKey,
-                        EntityCollectionSourceKind.Explicit,
-                        EntityCollectionRoleKind.CommandSource,
-                        localPlayer,
-                        explicitTarget,
-                        "Explicit target",
-                        "Mapping-requested collection"),
-                    new[] { explicitTarget },
-                    localPlayer);
-
-                var input = new FrozenInputActionReader();
-                input.SetActionState("SkillQ", Vector3.One, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
-                var globals = new Dictionary<string, object>
-                {
-                    [CoreServiceKeys.AuthoritativeInput.Name] = input,
-                    [CoreServiceKeys.EntityCollectionStore.Name] = collections,
-                    [CoreServiceKeys.EntityCollectionKeyRegistry.Name] = collectionKeys,
-                    [CoreServiceKeys.PlayerEntityLookup.Name] = players,
-                    [CoreServiceKeys.ControlDomainQuery.Name] = controlHarness.Domains,
-                    [CoreServiceKeys.GameConfig.Name] = new GameConfig
-                    {
-                        GasRuntimeCapacity = new GasRuntimeCapacityConfig
-                        {
-                            CommandIntentScratchCapacity = 64,
-                        },
-                        Constants = new GameConstants
-                        {
-                            OrderTypeIds = new Dictionary<string, int>
-                            {
-                                ["castAbility"] = 101,
-                                ["moveTo"] = 102,
-                                ["stop"] = 1003,
-                            },
-                        },
-                    },
-                    [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
-                };
-                ClientLocalSeatTestBindings.BindSoleSeat(globals, localPlayer, 1, "seat.0");
-
-                var vfs = new VirtualFileSystem();
-                vfs.Mount("TestMobaMappingMod", root);
-                var ctx = new ModContext(
-                    "TestMobaMappingMod",
-                    vfs,
-                    new FunctionRegistry(),
-                    new TriggerManager(),
-                    new Ludots.Core.Engine.SystemFactoryRegistry(),
-                    new TriggerDecoratorRegistry(),
-                    new ModExtensionHub());
-                var orders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
-                var system = new MobaLocalOrderSourceSystem(world, globals, orders, ctx);
-
-                system.Update(0f);
-
-                Assert.That(orders.TryDequeue(out Order order), Is.True);
-                Assert.That(order.Target, Is.EqualTo(explicitTarget),
-                    "MobaLocalOrderSourceSystem must resolve the entity collection named by the mapping, not the active command-source collection.");
-                Assert.That(order.Target, Is.Not.EqualTo(commandSourceTarget));
-
-                var mapping = (InputOrderMappingSystem)globals[CoreServiceKeys.ActiveInputOrderMapping.Name];
-                InputOrderActivationResult accepted = mapping.ActivateMappedAction(
-                    "SkillQ",
-                    new InputOrderActivationContext(commandSourceTarget, 1));
-                Assert.That(accepted.State, Is.EqualTo(InputOrderActivationState.Submitted));
-                Assert.That(accepted.OrderId, Is.GreaterThan(0));
-                Assert.That(orders.TryDequeue(out Order programmaticOrder), Is.True);
-                Assert.That(programmaticOrder.Actor, Is.EqualTo(commandSourceTarget));
-                Assert.That(programmaticOrder.OrderId, Is.EqualTo(accepted.OrderId));
-
-                Entity foreignActor = world.Create(new PlayerOwner { PlayerId = 2 });
-                InputOrderActivationResult rejected = mapping.ActivateMappedAction(
-                    "SkillQ",
-                    new InputOrderActivationContext(foreignActor, 1));
-                Assert.That(rejected.State, Is.EqualTo(InputOrderActivationState.Rejected));
-                Assert.That(rejected.Rejection, Is.EqualTo(OrderSubmitResult.RejectedInvalidActor));
-                Assert.That(orders.Count, Is.Zero);
-            }
-            finally
-            {
-                try
-                {
-                    if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
-                }
-                catch
-                {
-                }
-            }
-        }
-
-        [Test]
         public void InputOrderMappingLoader_RejectsPascalCaseAndRetiredCollectionField()
         {
             using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(
@@ -2087,7 +1944,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var contextProfiles = NewSteadyStateProfiles(collectionKeys);
             world.Add(localPlayer, new InteractionContextInstance
             {
-                ContextEntity = actor,
+                ContextEntity = localPlayer,
+                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
                 CommandIntentProfileId = 0,
             });
             var commandIntents = CommandIntentProfileTests.Harness.Create(world).Intents;
@@ -2102,7 +1960,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             }));
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource);
             collections.Replace(localPlayer, in descriptor, new[] { actor }, localPlayer);
@@ -2112,6 +1970,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandIntents,
                 dispatch,
                 collections,
+                NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
                     owner = localPlayer;
@@ -2224,13 +2083,19 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
             PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.capacity", "dispatch.all_together");
+            world.Add(localPlayer, new InteractionContextInstance
+            {
+                ContextEntity = localPlayer,
+                CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.capacity"),
+                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
+            });
 
             var collections = new EntityCollectionStore(
                 collectionKeys,
                 initialCollectionCapacity: 4,
                 initialRowCapacity: Math.Max(4, selectionCount));
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource);
             collections.Replace(localPlayer, in descriptor, actors, localPlayer);
@@ -2240,6 +2105,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
                     owner = localPlayer;
@@ -2374,10 +2240,16 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = false },
             }));
             PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.parallel_layout", "dispatch.parallel_per_actor");
+            world.Add(localPlayer, new InteractionContextInstance
+            {
+                ContextEntity = localPlayer,
+                CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.parallel_layout"),
+                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
+            });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource);
             collections.Replace(localPlayer, in descriptor, new[] { firstActor, secondActor }, localPlayer);
@@ -2387,6 +2259,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
                     owner = localPlayer;
@@ -2555,10 +2428,16 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
             PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.mixed_layout", "dispatch.all_together");
+            world.Add(localPlayer, new InteractionContextInstance
+            {
+                ContextEntity = localPlayer,
+                CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.mixed_layout"),
+                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
+            });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource);
             collections.Replace(
@@ -2572,6 +2451,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
                     owner = localPlayer;
@@ -2691,10 +2571,16 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
             PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.programmatic", "dispatch.all_together");
+            world.Add(localPlayer, new InteractionContextInstance
+            {
+                ContextEntity = localPlayer,
+                CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.programmatic"),
+                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
+            });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource);
             collections.Replace(localPlayer, in descriptor, new[] { commandActor }, localPlayer);
@@ -2704,6 +2590,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
                     owner = localPlayer;
@@ -2805,9 +2692,15 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
             PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.none_target", "dispatch.all_together");
+            world.Add(localPlayer, new InteractionContextInstance
+            {
+                ContextEntity = localPlayer,
+                CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.none_target"),
+                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
+            });
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource);
             collections.Replace(localPlayer, in descriptor, new[] { commandActor }, localPlayer);
@@ -2817,6 +2710,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
                     owner = localPlayer;
@@ -2971,10 +2865,16 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
             PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.atomic_batch", "dispatch.all_together");
+            world.Add(localPlayer, new InteractionContextInstance
+            {
+                ContextEntity = localPlayer,
+                CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.atomic_batch"),
+                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
+            });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource);
             collections.Replace(localPlayer, in descriptor, new[] { firstSource, secondSource }, localPlayer);
@@ -2984,6 +2884,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
                     owner = localPlayer;
@@ -3106,10 +3007,16 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
             PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.routed_only", "dispatch.nearest_one");
+            world.Add(localPlayer, new InteractionContextInstance
+            {
+                ContextEntity = localPlayer,
+                CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.routed_only"),
+                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
+            });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource);
             collections.Replace(localPlayer, in descriptor, new[] { unroutedNearActor, routedFarActor }, localPlayer);
@@ -3119,6 +3026,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
                     owner = localPlayer;
@@ -3216,10 +3124,16 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
             PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.atomic_authorization", "dispatch.atomic_authorization");
+            world.Add(localPlayer, new InteractionContextInstance
+            {
+                ContextEntity = localPlayer,
+                CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.atomic_authorization"),
+                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
+            });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource);
             collections.Replace(localPlayer, in descriptor, new[] { authorizedActor, foreignActor }, localPlayer);
@@ -3229,6 +3143,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
                     owner = localPlayer;
@@ -3339,10 +3254,16 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
             }));
             PlantPlayerInteractionPref(world, localPlayer, commandHarness.Intents, dispatch, "intent.command.test", "dispatch.all_together");
+            world.Add(localPlayer, new InteractionContextInstance
+            {
+                ContextEntity = localPlayer,
+                CommandIntentProfileId = commandHarness.Intents.ProfileIdRegistry.GetId("intent.command.test"),
+                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
+            });
 
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource);
             collections.Replace(localPlayer, in descriptor, new[] { commandActor, secondCommandActor }, localPlayer);
@@ -3352,6 +3273,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 commandHarness.Intents,
                 dispatch,
                 collections,
+                NewLandingAbilityRegistry(),
                 (out Entity owner) =>
                 {
                     owner = localPlayer;
@@ -3378,6 +3300,117 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 "The activation result must expose only an entity target shared by the submitted batch.");
             Assert.That(orders[0].Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.None),
                 "An entity-only route must not attach an unrelated ground target that changes the command shape.");
+        }
+
+        [Test]
+        public void CommandIntentRouting_ByAbilityCategorySlot_LandsCastOrderOnCategorySlot()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "moveTo",
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
+                        IsSkillMapping = false,
+                    }
+                }
+            };
+
+            using var world = World.Create();
+            Entity localPlayer = world.Create(new Ludots.Core.Gameplay.Components.PlayerIdentity { PlayerId = 1 });
+            Entity hostileOwner = world.Create(new Ludots.Core.Gameplay.Components.PlayerIdentity { PlayerId = 3 });
+            var profileHarness = CommandIntentProfileTests.Harness.Create(world);
+            profileHarness.InstallStandardProfile();
+            profileHarness.Relationships.EnsureLink(localPlayer, hostileOwner, profileHarness.HostileTypeId);
+
+            // Actor: slot 0 is a category-less filler, slot 1 carries the weapon ability —
+            // slot landing must find slot 1, not slot 0.
+            Entity actor = profileHarness.CreateActor(localPlayer, 9999, CommandIntentProfileTests.WeaponAbilityId);
+            Entity target = profileHarness.CreateTaggedEntity(hostileOwner, CommandIntentProfileTests.DestructibleTag);
+
+            var orders = new List<Order>();
+            var system = new InputOrderMappingSystem(input, config);
+            system.CommandActionId = "Command";
+            system.SetSolePossessedActor(localPlayer, 1);
+            system.SetOrderTypeKeyResolver(key => key == "castAbility" ? 1 : key == "moveTo" ? 2 : 0);
+            system.SetGroundPositionProvider((out Vector3 groundPos) =>
+            {
+                groundPos = new Vector3(100f, 0f, 200f);
+                return true;
+            });
+            system.SetCollectionEntityListProvider((string collectionKey, List<Entity> list, int capacity, out OrderSubmitResult rejection) =>
+            {
+                list.Add(actor);
+                rejection = OrderSubmitResult.Activated;
+                return true;
+            });
+            system.SetOrderSubmitHandler((in Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
+            system.SetCommandIntentTargetFactsProvider((InputOrderMapping _, out CommandIntentTargetFacts facts) =>
+            {
+                facts = new CommandIntentTargetFacts(target, HasEntity: true);
+                return true;
+            });
+
+            var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var contextProfiles = NewSteadyStateProfiles(collectionKeys);
+            world.Add(localPlayer, new InteractionContextInstance
+            {
+                ContextEntity = actor,
+                CommandIntentProfileId = profileHarness.ProfileId(CommandIntentProfileTests.TestProfileId),
+                ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
+            });
+            var dispatch = new CastDispatchProfileRegistry(
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+            dispatch.Install(CastDispatchProfileTests.Harness.Config(new CastDispatchProfileDefinition
+            {
+                Id = "dispatch.all_together",
+                Selector = new CastDispatchSelectorDefinition { Kind = "all" },
+                Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
+            }));
+            var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
+            var descriptor = EntityCollectionDescriptor.Create(
+                "collection.command.source",
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource);
+            collections.Replace(localPlayer, in descriptor, new[] { actor }, localPlayer);
+            system.SetCommandIntentRouting(
+                world,
+                contextProfiles,
+                profileHarness.Intents,
+                dispatch,
+                collections,
+                NewLandingAbilityRegistry(),
+                (out Entity owner) =>
+                {
+                    owner = localPlayer;
+                    return true;
+                },
+                (int playerId, out Entity rep) =>
+                {
+                    rep = localPlayer;
+                    return playerId == 1;
+                });
+            PlantPlayerInteractionPref(world, localPlayer, profileHarness.Intents, dispatch, CommandIntentProfileTests.TestProfileId, "dispatch.all_together");
+
+            system.Update(0f);
+
+            Assert.That(orders, Has.Count.EqualTo(1), "The weapon rule (destructible target) must submit exactly one routed order.");
+            Order order = orders[0];
+            TestContext.Out.WriteLine($"[Q2] order type={order.OrderTypeId} slot(I0)={order.Args.I0} target={order.Target.Id}");
+            Assert.Multiple(() =>
+            {
+                Assert.That(order.OrderTypeId, Is.EqualTo(profileHarness.CastAbilityOrderId), "Routed order type is castAbility.");
+                Assert.That(order.Args.I0, Is.EqualTo(1), "Slot landing must pick the weapon slot (1), skipping the category-less filler at slot 0.");
+                Assert.That(order.Target, Is.EqualTo(target), "Routed order carries the destructible entity target.");
+            });
         }
 
         private static void SetGroundCommandTargetFactsProvider(InputOrderMappingSystem system)
@@ -3409,6 +3442,19 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         }
 
         /// <summary>
+        /// Ability catalog for byAbilityCategory slot landing in routing tests: the standard
+        /// profile's garrison/weapon categories plus a category-less filler id.
+        /// </summary>
+        private static Ludots.Core.Gameplay.GAS.AbilityDefinitionRegistry NewLandingAbilityRegistry()
+        {
+            var abilities = new Ludots.Core.Gameplay.GAS.AbilityDefinitionRegistry();
+            CommandIntentProfileTests.Harness.RegisterAbility(abilities, 9999, "ability.catalog.filler_none");
+            CommandIntentProfileTests.Harness.RegisterAbility(abilities, CommandIntentProfileTests.GarrisonAbilityId, CommandIntentProfileTests.GarrisonAbilityTag);
+            CommandIntentProfileTests.Harness.RegisterAbility(abilities, CommandIntentProfileTests.WeaponAbilityId, CommandIntentProfileTests.WeaponAbilityTag);
+            return abilities;
+        }
+
+        /// <summary>
         /// Standalone interaction context profile registry carrying the steady-state default
         /// profile (command.source anchor), mirroring the engine's root asset wiring.
         /// </summary>
@@ -3423,7 +3469,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     new()
                     {
                         Id = InteractionContextIds.Default,
-                        ActiveCollectionKey = EntityCollectionKeys.CommandSource,
+                        ActiveCollectionKey = "collection.command.source",
                     },
                 },
             }, collectionKeys,

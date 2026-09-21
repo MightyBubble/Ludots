@@ -43,13 +43,13 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
             }
 
             EntityCollectionStore? collections = _engine.GetService(CoreServiceKeys.EntityCollectionStore);
-            DomainRoutedCollectionWriter? writer = _engine.GetService(CoreServiceKeys.DomainRoutedCollectionWriter);
+            Ludots.Core.EntityCollections.CollectionApplier? writer = _engine.GetService(CoreServiceKeys.CollectionApplier);
             if (collections == null || writer == null)
             {
                 return;
             }
 
-            if (!collections.TryGetView(_state.P1Rep, EntityCollectionKeys.CommandSource, out EntityCollectionView view))
+            if (!collections.TryGetView(_state.P1Rep, "collection.command.source", out EntityCollectionView view))
             {
                 return;
             }
@@ -60,7 +60,7 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
             }
 
             EnsureScratchCapacity(view.Count);
-            int count = collections.CopyEntities(_state.P1Rep, EntityCollectionKeys.CommandSource, _selectionScratch);
+            int count = collections.CopyEntities(_state.P1Rep, "collection.command.source", _selectionScratch);
             // Every unit on this map is owned by a domain rep, so unresolved entities are a scenario bug.
             writer.ReplaceRouted(
                 _state.P1Rep,

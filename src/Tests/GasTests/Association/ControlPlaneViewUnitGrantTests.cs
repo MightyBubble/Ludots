@@ -325,9 +325,9 @@ namespace Ludots.Tests.GAS
                     Store = store,
                     View = new ControlPlaneView(store, query),
                     ControlsTypeId = controlsTypeId,
-                    CommandSourceKeyId = keyRegistry.Register(EntityCollectionKeys.CommandSource),
+                    CommandSourceKeyId = keyRegistry.Register("collection.command.source"),
                     _descriptor = EntityCollectionDescriptor.Create(
-                        EntityCollectionKeys.CommandSource,
+                        "collection.command.source",
                         EntityCollectionSourceKind.UiAcquisition,
                         EntityCollectionRoleKind.CommandSource),
                 };

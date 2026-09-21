@@ -142,6 +142,25 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("GAS.GRAPH.ERR.EntityCollectionsUnavailable");
         }
 
+        /// <summary>
+        /// Pushes one command intent into the per-tick submission buffer (constitution §12);
+        /// the order kernel drains the buffer in its own system-group phase. The rep is the
+        /// acting representative (graph caster); target may be null for ground-only facts.
+        /// </summary>
+        void SubmitCommandIntent(Entity rep, Entity target, bool hasTarget, in IntVector2 groundCm)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CommandIntentBufferUnavailable");
+        }
+
+        /// <summary>
+        /// Pushes one cast intent into the per-tick submission buffer (constitution §12);
+        /// the drain resolves the cast order type id from the config-key symbol id.
+        /// </summary>
+        void SubmitCastIntent(Entity rep, int slot, Entity target, bool hasTarget, bool hasGround, in IntVector2 groundCm, int orderTypeKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CommandIntentBufferUnavailable");
+        }
+
         /// <summary>Enqueues a template entity spawn (runtime spawn queue; explicit position optional).</summary>
         void SpawnTemplate(int templateKeyId, Entity source, float xCm, float yCm, bool hasPosition);
 
@@ -345,11 +364,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("Graph entity query runtime is not available.");
         }
 
-        int FilterControllable(Span<Entity> entities, int count, Entity controller)
-        {
-            throw new InvalidOperationException("Graph entity query runtime is not available.");
-        }
-
         int FilterNotEntity(Span<Entity> entities, int count, Entity exclude)
         {
             throw new InvalidOperationException("Graph entity query runtime is not available.");
@@ -545,9 +559,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
+        /// In-place TargetList filter: keeps candidates the viewer currently has a knowledge
+        /// projection of; returns the surviving count. Order preserved.
+        /// </summary>
+        int FilterKnowledgeVisible(Span<Entity> candidates, int count, Entity viewer)
+        {
+            return 0;
+        }
         /// Behavior-side order submission (issue #1536): the acting unit enqueues an assigned
         /// order. Separate contract from the input-side command-intent buffer.
-        /// </summary>
         void SubmitAssignedOrder(Entity actor, Entity target, int orderTypeId, int xCm, int yCm)
         {
             throw new InvalidOperationException("Graph order pipeline is not available.");
@@ -558,7 +578,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             throw new InvalidOperationException("Graph order pipeline is not available.");
         }
-
         void ApplyEffectTemplate(Entity caster, Entity target, int templateId);
         void ApplyEffectTemplate(Entity caster, Entity target, int templateId, in EffectArgs args);
         void FanOutDispatchEffect(Entity source, Entity target, Entity targetContext, ReadOnlySpan<Entity> targets, int templateId, int payloadPresetId)

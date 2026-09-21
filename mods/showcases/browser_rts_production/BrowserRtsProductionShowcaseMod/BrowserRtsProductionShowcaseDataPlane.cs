@@ -458,7 +458,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
         Span<Entity> next = stackalloc Entity[1];
         next[0] = target;
         var descriptor = EntityCollectionDescriptor.Create(
-            EntityCollectionKeys.CommandSource,
+            "collection.command.source",
             EntityCollectionSourceKind.Explicit,
             EntityCollectionRoleKind.CommandSource,
             owner,
@@ -673,7 +673,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
         Span<Entity> next = stackalloc Entity[1];
         next[0] = target;
         var descriptor = EntityCollectionDescriptor.Create(
-            EntityCollectionKeys.CommandSource,
+            "collection.command.source",
             EntityCollectionSourceKind.Explicit,
             EntityCollectionRoleKind.CommandSource,
             owner,
@@ -713,7 +713,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
     private Entity[] SnapshotCommandSource()
     {
         return TryResolveLocalCommandSourceOwner(out Entity owner)
-            ? EntityCollectionContextRuntime.Snapshot(_engine.GlobalContext, owner, EntityCollectionKeys.CommandSource)
+            ? EntityCollectionContextRuntime.Snapshot(_engine.GlobalContext, owner, "collection.command.source")
             : Array.Empty<Entity>();
     }
 
@@ -725,7 +725,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
                    _engine.World,
                    _engine.GlobalContext,
                    owner,
-                   EntityCollectionKeys.CommandSource,
+                   "collection.command.source",
                    out entity);
     }
 

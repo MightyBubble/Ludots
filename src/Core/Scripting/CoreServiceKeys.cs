@@ -322,7 +322,8 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<EntityCollectionStore> EntityCollectionStore = new("EntityCollectionStore");
         public static readonly ServiceKey<IntIdCollectionStore> IntIdCollectionStore = new("IntIdCollectionStore");
         public static readonly ServiceKey<StringIntRegistry> EntityCollectionKeyRegistry = new("EntityCollectionKeyRegistry");
-        public static readonly ServiceKey<DomainRoutedCollectionWriter> DomainRoutedCollectionWriter = new("DomainRoutedCollectionWriter");
+        public static readonly ServiceKey<CollectionApplier> CollectionApplier = new("CollectionApplier");
+        public static readonly ServiceKey<Ludots.Core.Input.Config.InputCollectionKeyDeclarations> InputCollectionKeys = new("InputCollectionKeys");
         public static readonly ServiceKey<ControlPlaneView> ControlPlaneView = new("ControlPlaneView");
         public static readonly ServiceKey<InteractionActionBindings> InteractionActionBindings = new("InteractionActionBindings");
         public static readonly ServiceKey<FilterProfileRegistry> FilterProfileRegistry = new("FilterProfileRegistry");
@@ -337,11 +338,12 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<Ludots.Core.UI.CommandDeck.CommandDeckProfileRegistry> CommandDeckProfileRegistry = new("CommandDeckProfileRegistry");
         public static readonly ServiceKey<Ludots.Core.UI.CommandDeck.CommandDeckRouteResolver> CommandDeckRouteResolver = new("CommandDeckRouteResolver");
         public static readonly ServiceKey<Ludots.Core.UI.ProductionOverview.ProductionOverviewProfileRegistry> ProductionOverviewProfileRegistry = new("ProductionOverviewProfileRegistry");
-        public static readonly ServiceKey<ContextBoundCollectionWriter> ContextBoundCollectionWriter = new("ContextBoundCollectionWriter");
         public static readonly ServiceKey<Ludots.Core.Input.Interaction.InteractionContextInstanceRuntime> InteractionContextInstances = new("InteractionContextInstances");
         public static readonly ServiceKey<RuntimeEntitySpawnReceiptQueue> RuntimeEntitySpawnReceiptQueue = new("RuntimeEntitySpawnReceiptQueue");
         public static readonly ServiceKey<InputOrderMappingSystem> ActiveInputOrderMapping = new("ActiveInputOrderMapping");
         public static readonly ServiceKey<OrderQueue> OrderQueue = new("OrderQueue");
+        public static readonly ServiceKey<Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmissionBuffer> CommandIntentSubmissions = new("CommandIntentSubmissions");
+        public static readonly ServiceKey<Ludots.Core.Input.Orders.CommandIntentBufferDrainSystem> CommandIntentBufferDrain = new("CommandIntentBufferDrain");
         public static readonly ServiceKey<OrderTypeRegistry> OrderTypeRegistry = new("OrderTypeRegistry");
         public static readonly ServiceKey<OrderRuleRegistry> OrderRuleRegistry = new("OrderRuleRegistry");
         public static readonly ServiceKey<OrderBufferSystem> OrderBufferSystem = new("OrderBufferSystem");

@@ -183,7 +183,7 @@ namespace GenreInfoShowcaseMod.Runtime
                 EntityCollectionRoleKind.Display,
                 members,
                 "Formation view");
-            engine.GlobalContext[GenreInfoShowcaseIds.ActiveCollectionKey] = EntityCollectionKeys.CommandSource;
+            engine.GlobalContext[GenreInfoShowcaseIds.ActiveCollectionKey] = "collection.command.source";
             engine.GlobalContext[GenreInfoShowcaseIds.ActiveControlGroupKey] = groupIndex;
             return true;
         }
@@ -195,7 +195,7 @@ namespace GenreInfoShowcaseMod.Runtime
                 return false;
             }
 
-            engine.GlobalContext[GenreInfoShowcaseIds.ActiveCollectionKey] = EntityCollectionKeys.CommandSource;
+            engine.GlobalContext[GenreInfoShowcaseIds.ActiveCollectionKey] = "collection.command.source";
             return true;
         }
 
@@ -208,7 +208,7 @@ namespace GenreInfoShowcaseMod.Runtime
 
             if (!collections.TryGetView(viewer, GenreInfoShowcaseIds.FormationCollectionKey, out _))
             {
-                Entity[] members = SnapshotCollection(collections, viewer, EntityCollectionKeys.CommandSource);
+                Entity[] members = SnapshotCollection(collections, viewer, "collection.command.source");
                 ReplaceCollection(
                     collections,
                     viewer,
@@ -446,7 +446,7 @@ namespace GenreInfoShowcaseMod.Runtime
                    keyObj is string key &&
                    !string.IsNullOrWhiteSpace(key)
                 ? key
-                : EntityCollectionKeys.CommandSource;
+                : "collection.command.source";
         }
 
         private static Entity[] SnapshotCollection(EntityCollectionStore collections, Entity viewer, string key)
@@ -475,7 +475,7 @@ namespace GenreInfoShowcaseMod.Runtime
             string summary)
         {
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 viewer,

@@ -27,6 +27,7 @@ namespace Ludots.Core.Persistence
             NormalizeActiveEffectContainer(world, canonicalWorldId);
             NormalizeAbilityStateBuffer(world, canonicalWorldId);
             NormalizeTeamEntityRef(world, canonicalWorldId);
+            NormalizeInteractionContextInstance(world, canonicalWorldId);
             NormalizeActivityInstances(world, canonicalWorldId);
             NormalizeTaskInstances(world, canonicalWorldId);
             NormalizeOrderBuffers(world, canonicalWorldId);
@@ -158,6 +159,19 @@ namespace Ludots.Core.Persistence
                 if (value != Entity.Null)
                 {
                     teamRef.Value = EntityUtil.Reconstruct(value.Id, worldId, value.Version);
+                }
+            });
+        }
+
+        private static void NormalizeInteractionContextInstance(World world, int worldId)
+        {
+            var query = new QueryDescription().WithAll<Ludots.Core.Input.Interaction.InteractionContextInstance>();
+            world.Query(in query, (ref Ludots.Core.Input.Interaction.InteractionContextInstance instance) =>
+            {
+                Entity carrier = NormalizeOptionalEntity(instance.ContextEntity);
+                if (carrier != Entity.Null)
+                {
+                    instance.ContextEntity = EntityUtil.Reconstruct(carrier.Id, worldId, carrier.Version);
                 }
             });
         }

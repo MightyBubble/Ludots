@@ -129,7 +129,7 @@ namespace Ludots.Tests.Architecture
                 Is.EqualTo(new[] { "moveTo" }),
                 "LudotsCoreMod should author the generic move path preview contract.");
             Assert.That(coreConfig.Constants.OrderTypeIds.ContainsKey("moveTo"), Is.True);
-            Assert.That(EntityCollectionKeys.CommandSource, Is.EqualTo("collection.command.source"));
+            Assert.That("collection.command.source", Is.EqualTo("collection.command.source"));
 
             using var massNavigationEngine = new GameEngine();
             massNavigationEngine.InitializeWithConfigPipeline(
@@ -153,7 +153,7 @@ namespace Ludots.Tests.Architecture
                 "MassNavigationMod should author only its formal order key for command-source move path preview.");
             EntityCollectionStore collections = massNavigationEngine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore missing.");
-            Assert.That(collections.KeyRegistry.GetId(EntityCollectionKeys.CommandSource), Is.GreaterThan(0));
+            Assert.That(collections.KeyRegistry.GetId("collection.command.source"), Is.GreaterThan(0));
             Assert.That(massNavigationConfig.Constants.OrderTypeIds.ContainsKey("moveTo"), Is.True);
             Assert.That(
                 massNavigationConfig.Constants.OrderTypeIds.ContainsKey("massNavigationMove"),

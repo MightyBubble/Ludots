@@ -716,6 +716,11 @@ namespace Ludots.Tests.Gas.Graph
                 GraphNodeOp.QueryFilterAttributeRange,
                 GraphNodeOp.QueryFilterTagAny,
                 GraphNodeOp.QueryFilterTagNone,
+                // §12 order bridge: input-action-edge submit ops are TriggerGraph-only by
+                // design (Script graphs have no action edges to fire them from).
+                GraphNodeOp.SubmitCommandIntent,
+                GraphNodeOp.SubmitCast,
+                GraphNodeOp.QueryFilterKnowledgeVisible,
             };
             foreach (GraphNodeOp op in GraphOpDescriptorTable.EnumerateAuthorable(GraphKind.TriggerGraph))
             {

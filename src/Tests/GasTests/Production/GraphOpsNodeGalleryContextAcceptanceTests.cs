@@ -177,22 +177,6 @@ public sealed class GraphOpsNodeGalleryContextAcceptanceTests
     }
 
     [Test]
-    public void QueryFilterControllableVignette_KeepsOnlyTheViewerControllableUnits()
-    {
-        using var runtime = new GraphOpsNodeGalleryRuntime();
-        runtime.BindOp("QueryFilterControllable");
-        runtime.EnsureWorld();
-        runtime.Tick(0.35f);
-
-        foreach (string phrase in runtime.Vignette.AssertDetailContains)
-        {
-            Assert.That(runtime.Metrics.Detail, Does.Contain(phrase), runtime.Metrics.Detail);
-        }
-
-        Assert.That(runtime.Context.HitTargetCount, Is.GreaterThan(0), "at least one controllable unit stays circled");
-    }
-
-    [Test]
     public void LoadOrderTypeIdVignette_MaterializesTheMoveToOrderTypeId()
     {
         using var runtime = new GraphOpsNodeGalleryRuntime();
@@ -212,5 +196,33 @@ public sealed class GraphOpsNodeGalleryContextAcceptanceTests
         runtime.Tick(0.35f);
 
         Assert.That(runtime.Metrics.Detail, Does.Contain("成立"), "the caption reports the guard held");
+    }
+
+    [Test]
+    public void SubmitCommandIntentVignette_PushesIntoTheSubmissionBuffer()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("SubmitCommandIntent");
+        runtime.EnsureWorld();
+        runtime.Tick(0.35f);
+
+        foreach (string phrase in runtime.Vignette.AssertDetailContains)
+        {
+            Assert.That(runtime.Metrics.Detail, Does.Contain(phrase), runtime.Metrics.Detail);
+        }
+    }
+
+    [Test]
+    public void SubmitCastVignette_PushesIntoTheCastSubmissionBuffer()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("SubmitCast");
+        runtime.EnsureWorld();
+        runtime.Tick(0.35f);
+
+        foreach (string phrase in runtime.Vignette.AssertDetailContains)
+        {
+            Assert.That(runtime.Metrics.Detail, Does.Contain(phrase), runtime.Metrics.Detail);
+        }
     }
 }

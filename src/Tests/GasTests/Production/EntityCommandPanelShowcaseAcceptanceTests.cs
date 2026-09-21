@@ -119,7 +119,7 @@ namespace Ludots.Tests.GAS.Production
             var context = new EntityCommandPanelSourceContext(
                 owner,
                 CollectionGasEntityCommandPanelSource.SourceId,
-                EntityCollectionKeys.CommandSource);
+                "collection.command.source");
             CollectionEvidence collection = AssertAggregationCollection(engine, owner);
             var slots = new EntityCommandPanelSlotView[32];
 
@@ -332,18 +332,18 @@ namespace Ludots.Tests.GAS.Production
         {
             var collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
-            Assert.That(collections.TryGetView(owner, EntityCollectionKeys.CommandSource, out EntityCollectionView view), Is.True,
+            Assert.That(collections.TryGetView(owner, "collection.command.source", out EntityCollectionView view), Is.True,
                 "showcase host mod should publish a command-source collection for the local player.");
             Assert.That(view.Count, Is.EqualTo(3), "M6 aggregation showcase should contain Arcweaver, Vanguard, and Commander.");
             Assert.That(view.SourceKind, Is.EqualTo(EntityCollectionSourceKind.Explicit));
             Assert.That(view.Role, Is.EqualTo(EntityCollectionRoleKind.CommandSource));
 
             var members = new Entity[4];
-            int copied = collections.CopyEntities(owner, EntityCollectionKeys.CommandSource, members);
+            int copied = collections.CopyEntities(owner, "collection.command.source", members);
             Assert.That(copied, Is.EqualTo(3));
 
             return new CollectionEvidence(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 view.Title,
                 view.Summary,
                 view.Revision,

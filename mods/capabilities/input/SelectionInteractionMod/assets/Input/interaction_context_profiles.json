@@ -8,13 +8,21 @@
       "bindings": [
         "CaseE.BoxSelectBegin",
         "CaseE.BoxSelectEnd",
+        "CaseE.Command",
         "QueueModifier",
         "PrecisionModifier",
-        "ModifierSubtract"
+        "ModifierSubtract",
+        "CaseE.CastQ"
       ],
       "triggers": [
         {
           "trigger": "graph.case_e.box_begin"
+        },
+        {
+          "trigger": "graph.case_e.command_commit"
+        },
+        {
+          "trigger": "graph.case_e.cast_q"
         }
       ]
     },

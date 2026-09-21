@@ -378,6 +378,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// fire from the store's presentation diff like any other writer.
         /// </summary>
         WriteCollection = 477,
+
         /// <summary>
         /// Live pointer screen X (window px) for the authoritative PointerPos action.
         /// Pure float read; fail closed when the input snapshot is unavailable.
@@ -390,7 +391,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         LoadPointerScreenY = 480,
         BindQueryCollection = 481,
         QueryScreenRegionCollection = 482,
-        QueryFilterControllable = 483,
 
         // ── Order-driven graph brains (issue #1536; 484-499 reserved as the
         //    graph-input-order-chain line's renumbering buffer) ──
@@ -419,6 +419,35 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// OrderTerminalResultBuffer. Caster = the acting unit. Script slice hosts only.
         /// </summary>
         CompleteActiveOrder = 506,
+
+        /// <summary>
+        /// Submit one command intent into the order pipeline's per-tick submission buffer
+        /// (constitution §12). Caster = the acting rep (mount subject); ground point = the
+        /// frame's TargetPosCm, which B[B] (condition port, required) asserts was resolved this
+        /// run — a false condition fails closed by name. E[A] (target port, optional) carries a
+        /// picked entity for entity-target facts; absent or null means ground-only facts. The
+        /// order kernel drains the buffer in its own system-group phase: the op never routes,
+        /// reads collections, or touches the OrderQueue.
+        /// </summary>
+        SubmitCommandIntent = 483,
+
+        /// <summary>
+        /// Submit one cast intent into the order pipeline's per-tick submission buffer
+        /// (constitution §12). Caster = the acting rep; I[A] = ability slot index; E[B]
+        /// (optional) = cast target entity; B[C] (optional) asserts the frame's TargetPosCm was
+        /// resolved this run and carries the ground point. Imm = the cast order-type key symbol
+        /// (e.g. "castAbility"), resolved by the drain through the OrderTypeRegistry. Actors are
+        /// the rep's active-context-declared active collection members — same §12 resolution as
+        /// command intents.
+        /// </summary>
+        SubmitCast = 484,
+
+        /// <summary>
+        /// TargetList := candidates the viewer E[A] currently has a knowledge projection of
+        /// (per the viewer-target knowledge store); candidates order preserved. Read-only
+        /// viewer-relative query filter (RFC-0065 DEC-5).
+        /// </summary>
+        QueryFilterKnowledgeVisible = 485,
 
     }
 

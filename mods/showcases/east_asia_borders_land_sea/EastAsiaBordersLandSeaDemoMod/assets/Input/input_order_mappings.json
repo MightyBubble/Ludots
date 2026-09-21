@@ -16,7 +16,10 @@
   "groupMoveTargetLayout": {
     "mode": "Grid",
     "spacingCm": 5000,
-    "orderTypeKeys": ["massNavigationMove"]
+    "orderTypeKeys": [
+      "massNavigationMove"
+    ],
+    "assignment": "ActorOrder"
   },
   "userOverrides": {
     "enabled": false,

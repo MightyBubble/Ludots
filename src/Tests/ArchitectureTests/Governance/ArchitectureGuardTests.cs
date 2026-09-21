@@ -868,7 +868,6 @@ namespace Ludots.Tests.Architecture.Governance
                 Path.Combine(repoRoot, "src", "Core", "Knowledge", "KnowledgeProjectionConsumer.cs"),
                 Path.Combine(repoRoot, "src", "Core", "Knowledge", "KnowledgeRelationCollectionGrants.cs"),
                 Path.Combine(repoRoot, "src", "Core", "Input", "CommandSources", "CommandSourceEligibility.cs"),
-                Path.Combine(repoRoot, "src", "Core", "Input", "CommandSources", "CommandSourceAcquisitionSystem.cs"),
                 Path.Combine(repoRoot, "src", "Core", "Input", "Interaction", "GasInputResponseSystem.cs"),
                 Path.Combine(repoRoot, "src", "Core", "Presentation", "Minimap", "MinimapRuntime.cs"),
                 Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "TabTargetCycleSystem.cs"),
@@ -1154,9 +1153,6 @@ namespace Ludots.Tests.Architecture.Governance
             var hits = new List<string>();
             Type[] types =
             {
-                typeof(CommandSourceAcquisitionSystem),
-                typeof(CommandSourcePointerHitResolver),
-                typeof(CommandSourceEligibility),
                 typeof(SpatialBoundsUtility),
                 typeof(TabTargetCycleSystem),
                 typeof(LocalOrderSourceHelper),
@@ -1175,9 +1171,6 @@ namespace Ludots.Tests.Architecture.Governance
             var repoRoot = FindRepoRoot();
             string[] files =
             {
-                Path.Combine(repoRoot, "src", "Core", "Input", "CommandSources", "CommandSourceAcquisitionSystem.cs"),
-                Path.Combine(repoRoot, "src", "Core", "Input", "CommandSources", "CommandSourcePointerHitResolver.cs"),
-                Path.Combine(repoRoot, "src", "Core", "Input", "CommandSources", "CommandSourceEligibility.cs"),
                 Path.Combine(repoRoot, "src", "Core", "Spatial", "SpatialBoundsUtility.cs"),
                 Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "TabTargetCycleSystem.cs"),
                 Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "LocalOrderSourceHelper.cs"),

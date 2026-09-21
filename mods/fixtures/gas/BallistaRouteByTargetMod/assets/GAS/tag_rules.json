@@ -1,0 +1,11 @@
+[
+  {
+    "id": "Structure.Building"
+  },
+  {
+    "id": "Unit.Biological"
+  },
+  {
+    "id": "Unit.Commandable"
+  }
+]

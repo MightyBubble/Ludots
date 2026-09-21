@@ -1155,7 +1155,8 @@ namespace Ludots.Tests.GAS.Production
             }
 
             return engine.GetService(CoreServiceKeys.EntityCollectionStore) is { } collections &&
-                   EntityCollectionContextRuntime.TryGetHovered(engine.World, collections, local, out hovered);
+                   engine.GetService(CoreServiceKeys.InputCollectionKeys) is { } inputKeys &&
+                   EntityCollectionContextRuntime.TryGetHovered(engine.World, collections, local, inputKeys.Hover, out hovered);
         }
 
         private static string BuildSelectionStateDiagnostics(GameEngine engine)

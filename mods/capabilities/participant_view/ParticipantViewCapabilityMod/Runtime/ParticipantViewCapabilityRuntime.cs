@@ -11,6 +11,12 @@ using ParticipantViewCapabilityMod.Systems;
 using ParticipantViewCapabilityMod.UI;
 
 namespace ParticipantViewCapabilityMod.Runtime;
+    /// <summary>Collection keys consumed by participant view; declared/written by LudotsCoreMod selection graphs.</summary>
+    internal static class ParticipantViewCollectionKeys
+    {
+        public const string CommandSource = "collection.command.source";
+    }
+
 
 internal sealed class ParticipantViewCapabilityRuntime
 {
@@ -289,7 +295,7 @@ internal sealed class ParticipantViewCapabilityRuntime
         Entity[] members)
     {
         var descriptor = EntityCollectionDescriptor.Create(
-            EntityCollectionKeys.CommandSource,
+            ParticipantViewCollectionKeys.CommandSource,
             EntityCollectionSourceKind.DynamicParticipant,
             EntityCollectionRoleKind.CommandSource,
             contextEntity,

@@ -227,13 +227,13 @@ namespace InteractionShowcaseMod.Runtime
 
         private int CopyCommandSourceActors(EntityCollectionStore collections, Entity viewer)
         {
-            if (!collections.TryGetView(viewer, EntityCollectionKeys.CommandSource, out EntityCollectionView view))
+            if (!collections.TryGetView(viewer, "collection.command.source", out EntityCollectionView view))
             {
                 return 0;
             }
 
             EnsureScratchCapacity(ref _blinkActorsScratch, view.Count);
-            int copied = collections.CopyEntities(viewer, EntityCollectionKeys.CommandSource, _blinkActorsScratch.AsSpan(0, view.Count));
+            int copied = collections.CopyEntities(viewer, "collection.command.source", _blinkActorsScratch.AsSpan(0, view.Count));
             if (copied != view.Count)
             {
                 throw new InvalidOperationException(
@@ -286,7 +286,7 @@ namespace InteractionShowcaseMod.Runtime
 
         public bool SaveControlGroup(GameEngine engine, int groupIndex)
         {
-            if (!TryResolveCollectionContext(engine, out EntityCollectionStore collections, out Entity viewer))
+            if (!TryResolveCollectionContext(engine, out EntityCollectionStore collections, out Entity viewer, out var applier))
             {
                 return false;
             }
@@ -294,21 +294,21 @@ namespace InteractionShowcaseMod.Runtime
             Entity[] current = EntityCollectionContextRuntime.Snapshot(
                 engine.GlobalContext,
                 viewer,
-                EntityCollectionKeys.CommandSource);
+                "collection.command.source");
             if (current.Length <= 0)
             {
                 return false;
             }
 
-            PublishCollection(collections, viewer, ControlGroupCollectionKey(groupIndex), current, "Saved command group", $"{current.Length} hero(es)");
-            PublishCollection(collections, viewer, SavedCollectionKey, current, "Saved command group", $"{current.Length} hero(es)");
+            PublishCollection(collections, applier, viewer, ControlGroupCollectionKey(groupIndex), current, "Saved command group", $"{current.Length} hero(es)");
+            PublishCollection(collections, applier, viewer, SavedCollectionKey, current, "Saved command group", $"{current.Length} hero(es)");
             engine.GlobalContext[InteractionShowcaseIds.ActiveControlGroupKey] = groupIndex;
             return true;
         }
 
         public bool RecallControlGroup(GameEngine engine, int groupIndex)
         {
-            if (!TryResolveCollectionContext(engine, out EntityCollectionStore collections, out Entity viewer) ||
+            if (!TryResolveCollectionContext(engine, out EntityCollectionStore collections, out Entity viewer, out var applier) ||
                 !collections.TryGetView(viewer, ControlGroupCollectionKey(groupIndex), out EntityCollectionView group) ||
                 group.Count <= 0)
             {
@@ -321,7 +321,7 @@ namespace InteractionShowcaseMod.Runtime
             if (count != members.Length) Array.Resize(ref members, count);
 
             PublishShowcaseCommandSource(engine, viewer, members);
-            PublishCollection(collections, viewer, SavedCollectionKey, members, "Saved command group", $"{members.Length} hero(es)");
+            PublishCollection(collections, applier, viewer, SavedCollectionKey, members, "Saved command group", $"{members.Length} hero(es)");
             engine.GlobalContext[InteractionShowcaseIds.ActiveControlGroupKey] = groupIndex;
             return true;
         }
@@ -330,7 +330,7 @@ namespace InteractionShowcaseMod.Runtime
         {
             engine.GlobalContext[InteractionShowcaseIds.ActiveControlGroupKey] = 0;
             return TryResolveCollectionContext(engine, out EntityCollectionStore collections, out Entity viewer) &&
-                   collections.TryGetView(viewer, EntityCollectionKeys.CommandSource, out EntityCollectionView view) &&
+                   collections.TryGetView(viewer, "collection.command.source", out EntityCollectionView view) &&
                    view.Count > 0;
         }
 
@@ -381,21 +381,34 @@ namespace InteractionShowcaseMod.Runtime
 
         private static bool TryResolveCollectionContext(GameEngine engine, out EntityCollectionStore collections, out Entity owner)
         {
+            return TryResolveCollectionContext(engine, out collections, out owner, out _);
+        }
+
+        private static bool TryResolveCollectionContext(
+            GameEngine engine,
+            out EntityCollectionStore collections,
+            out Entity owner,
+            out Ludots.Core.EntityCollections.CollectionApplier applier)
+        {
             collections = default!;
             owner = Entity.Null;
+            applier = default!;
             if (engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore store ||
+                engine.GetService(CoreServiceKeys.CollectionApplier) is not Ludots.Core.EntityCollections.CollectionApplier resolvedApplier ||
                 !TryGetShowcaseLocalPlayerRep(engine, out Entity localViewer))
             {
                 return false;
             }
 
             collections = store;
+            applier = resolvedApplier;
             owner = localViewer;
             return true;
         }
 
         private static void PublishCollection(
             EntityCollectionStore collections,
+            Ludots.Core.EntityCollections.CollectionApplier applier,
             Entity owner,
             string key,
             ReadOnlySpan<Entity> actors,
@@ -410,7 +423,7 @@ namespace InteractionShowcaseMod.Runtime
                 primaryEntity: actors.Length > 0 ? actors[0] : Entity.Null,
                 title: title,
                 summary: summary);
-            collections.Replace(owner, in descriptor, actors, owner);
+            applier.ApplyDescriptor(owner, collections.KeyRegistry.Register(key), in descriptor, actors, writerDomain: owner);
         }
 
         private void ActivateInputContext(PlayerInputHandler? input)
@@ -475,7 +488,7 @@ namespace InteractionShowcaseMod.Runtime
                 new EntityInfoPanelRequest(
                     EntityInfoPanelKind.EntityCollectionInspector,
                     EntityInfoPanelSurface.Ui,
-                    EntityInfoPanelTarget.EntityCollection(commandSourceOwner, EntityCollectionKeys.CommandSource),
+                    EntityInfoPanelTarget.EntityCollection(commandSourceOwner, "collection.command.source"),
                     new EntityInfoPanelLayout(EntityInfoPanelAnchor.BottomLeft, 16f, 16f, 632f, 332f),
                     EntityInfoGasDetailFlags.None,
                     true));
@@ -540,7 +553,7 @@ namespace InteractionShowcaseMod.Runtime
                     engine.World,
                     collections,
                     commandSourceOwner,
-                    EntityCollectionKeys.CommandSource,
+                    "collection.command.source",
                     out Arch.Core.Entity selected))
             {
                 return null;
@@ -826,7 +839,7 @@ namespace InteractionShowcaseMod.Runtime
             AddInitialCommandActor(engine, InteractionShowcaseIds.CommanderName, initialCommandActors, ref count);
             if (count > 0)
             {
-                if (!collections.TryGetView(viewer, EntityCollectionKeys.CommandSource, out EntityCollectionView commandView) ||
+                if (!collections.TryGetView(viewer, "collection.command.source", out EntityCollectionView commandView) ||
                     commandView.Count <= 0)
                 {
                     PublishShowcaseCommandSource(engine, viewer, initialCommandActors[..count]);
@@ -848,20 +861,21 @@ namespace InteractionShowcaseMod.Runtime
         private static void PublishShowcaseCommandSource(GameEngine engine, Entity owner, ReadOnlySpan<Entity> actors)
         {
             if (actors.IsEmpty ||
-                engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore collections)
+                engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore collections ||
+                engine.GetService(CoreServiceKeys.CollectionApplier) is not Ludots.Core.EntityCollections.CollectionApplier applier)
             {
                 return;
             }
 
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 contextEntity: owner,
                 primaryEntity: actors[0],
                 title: "Active hero command group",
                 summary: "The showcase starts with these heroes ready for pointer commands.");
-            collections.Replace(owner, in descriptor, actors, owner);
+            applier.ApplyDescriptor(owner, collections.KeyRegistry.Register("collection.command.source"), in descriptor, actors, writerDomain: owner);
         }
 
         private static void TrySeedHoverTargetForVisibleUat(GameEngine engine, Entity owner, ReadOnlySpan<Entity> actors)
@@ -874,7 +888,7 @@ namespace InteractionShowcaseMod.Runtime
             }
 
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.HoveredEntity,
+                "collection.ui.command.hover",
                 EntityCollectionSourceKind.UiHover,
                 EntityCollectionRoleKind.Display,
                 contextEntity: owner,
@@ -889,7 +903,7 @@ namespace InteractionShowcaseMod.Runtime
         {
             if (!string.Equals(Environment.GetEnvironmentVariable("LUDOTS_INTERACTION_SHOWCASE_SEED_HOVER_TARGET"), "1", StringComparison.Ordinal) ||
                 !TryResolveCollectionContext(engine, out EntityCollectionStore commandCollections, out Entity viewer) ||
-                !commandCollections.TryGet(viewer, EntityCollectionKeys.CommandSource, out EntityCollectionHandle commandHandle) ||
+                !commandCollections.TryGet(viewer, "collection.command.source", out EntityCollectionHandle commandHandle) ||
                 !commandCollections.TryGetEntityAt(commandHandle, 1, out Entity hovered) ||
                 hovered == Entity.Null ||
                 !engine.World.IsAlive(hovered) ||
@@ -899,7 +913,7 @@ namespace InteractionShowcaseMod.Runtime
             }
 
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.HoveredEntity,
+                "collection.ui.command.hover",
                 EntityCollectionSourceKind.UiHover,
                 EntityCollectionRoleKind.Display,
                 contextEntity: viewer,

@@ -107,8 +107,7 @@ namespace CoreInputMod.Systems
         public void Update(in float dt)
         {
             Entity collectionOwner = ResolveCommandSourceOwner();
-            string collectionKey = InputInteractionContextAccessor.RequireActiveActorCollectionKey(_world, _globals, collectionOwner);
-            Entity collectionContext = Entity.Null;
+            string collectionKey = InputInteractionContextAccessor.RequireActiveActorCollectionKey(_world, _globals, collectionOwner);            Entity collectionContext = Entity.Null;
             Entity primaryViewed = TryResolveCommandSourceView(collectionOwner, collectionKey, out EntityCollectionView commandSourceView)
                 ? ResolveCollectionViewSummary(in commandSourceView, out collectionContext)
                 : Entity.Null;
@@ -181,8 +180,7 @@ namespace CoreInputMod.Systems
                    EntityCollectionContextRuntime.TryDescribeView(
                        collections,
                        owner,
-                       collectionKey,
-                       out view);
+                       collectionKey,                       out view);
         }
 
         private int GetCommandSourceCount(Entity owner, string collectionKey)
@@ -190,8 +188,7 @@ namespace CoreInputMod.Systems
             return owner != Entity.Null &&
                    _globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var collectionsObj) &&
                    collectionsObj is EntityCollectionStore collections
-                ? EntityCollectionContextRuntime.GetCount(collections, owner, collectionKey)
-                : 0;
+                ? EntityCollectionContextRuntime.GetCount(collections, owner, collectionKey)                : 0;
         }
 
         private int CopyCommandSourceActors(Entity owner, string collectionKey, Span<Entity> destination)
@@ -199,8 +196,7 @@ namespace CoreInputMod.Systems
             return owner != Entity.Null &&
                    _globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var collectionsObj) &&
                    collectionsObj is EntityCollectionStore collections
-                ? EntityCollectionContextRuntime.Copy(collections, owner, collectionKey, destination)
-                : 0;
+                ? EntityCollectionContextRuntime.Copy(collections, owner, collectionKey, destination)                : 0;
         }
 
         private static Entity ResolveCollectionViewSummary(

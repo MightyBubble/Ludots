@@ -104,6 +104,18 @@ namespace Ludots.Core.Input.Orders
                 throw new InvalidOperationException($"Input order mapping config '{source}' must explicitly define mappings.");
             }
 
+            if (config.SkillBar?.KeyLabels != null)
+            {
+                for (int i = 0; i < config.SkillBar.KeyLabels.Count; i++)
+                {
+                    string label = config.SkillBar.KeyLabels[i];
+                    if (string.IsNullOrWhiteSpace(label) || !string.Equals(label, label.Trim(), StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException($"{source}.skillBar.keyLabels[{i}] must be a trimmed non-empty string.");
+                    }
+                }
+            }
+
             var actionIds = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < config.Mappings.Count; i++)
             {

@@ -343,7 +343,7 @@ namespace Ludots.Tests.GAS
                 RegisterQuery(engine, new EntityCommandPanelCollectionQueryConfig
                 {
                     Id = AnyQueryId,
-                    CollectionKey = EntityCollectionKeys.CommandSource,
+                    CollectionKey = "collection.command.source",
                     Title = "Aggregation",
                     Filter = EntityCommandPanelCollectionFilter.Any,
                     Sort = EntityCommandPanelCollectionSortKind.SlotThenOwnerCountThenLabel
@@ -480,7 +480,7 @@ namespace Ludots.Tests.GAS
             store.Replace(
                 owner,
                 EntityCollectionDescriptor.Create(
-                    EntityCollectionKeys.CommandSource,
+                    "collection.command.source",
                     EntityCollectionSourceKind.Explicit,
                     EntityCollectionRoleKind.CommandSource,
                     owner,

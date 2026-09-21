@@ -225,7 +225,8 @@ namespace Ludots.Tests.GAS
             {
                 ContextEntity = world.Create(),
                 CommandIntentProfileId = 0,
-            });
+                ActiveCollectionKeyId = harness.Collections.KeyRegistry.Register("collection.command.source"),
+                });
 
             OrderSubmitResult result = harness.SubmitPointerCommandRaw();
 
@@ -400,7 +401,7 @@ namespace Ludots.Tests.GAS
                         new()
                         {
                             Id = InteractionContextIds.Default,
-                            ActiveCollectionKey = EntityCollectionKeys.CommandSource,
+                            ActiveCollectionKey = "collection.command.source",
                         },
                     },
                 }, collectionKeys, new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal), intents.Intents.ProfileIdRegistry);
@@ -415,11 +416,17 @@ namespace Ludots.Tests.GAS
                         harness.Dispatch.ProfileIdRegistry.GetId(DispatchId));
                     world.Add(rep, pref);
                     harness.Pref = pref;
+                    world.Add(rep, new InteractionContextInstance
+                    {
+                        ContextEntity = rep,
+                        CommandIntentProfileId = pref.DefaultCommandIntentId,
+                        ActiveCollectionKeyId = collectionKeys.Register("collection.command.source"),
+                    });
                 }
 
                 var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
                 var descriptor = EntityCollectionDescriptor.Create(
-                    EntityCollectionKeys.CommandSource,
+                    "collection.command.source",
                     EntityCollectionSourceKind.Explicit,
                     EntityCollectionRoleKind.CommandSource);
                 collections.Replace(rep, in descriptor, new[] { actor }, rep);
@@ -431,6 +438,7 @@ namespace Ludots.Tests.GAS
                     intents.Intents,
                     harness.Dispatch,
                     collections,
+                    intents.Abilities,
                     (out Entity owner) =>
                     {
                         owner = rep;

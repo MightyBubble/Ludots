@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>输入与可调用函数系统 · 配置宪法</title>
+<style>
+:root{--bg:#0f1117;--panel:#1b2030;--panel2:#202739;--border:#2b3247;--text:#dfe3ec;--dim:#97a3b8;--faint:#6f7a90;--accent:#5aa5ff;--accent2:#37d0b0;--warn:#f0b45a;--ok:#46c98b;--mono:"SF Mono",ui-monospace,"Cascadia Code",Consolas,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.75;font-size:15px;padding-bottom:80px}
+.wrap{max-width:960px;margin:0 auto;padding:40px 32px}
+h1{font-size:28px;font-weight:700;border-bottom:1px solid var(--border);padding-bottom:16px;margin-bottom:8px}
+h1+p{color:var(--dim);font-size:15px;line-height:1.7;margin-bottom:28px}
+h2{font-size:20px;font-weight:700;margin:36px 0 12px;padding-top:20px;border-top:1px solid var(--border);color:var(--accent)}
+h3{font-size:16px;font-weight:600;margin:24px 0 10px}
+h4{font-size:14px;font-weight:600;margin:18px 0 8px;color:var(--accent2)}
+p{color:var(--dim);margin:10px 0;line-height:1.75}
+p strong{color:var(--text)}
+ul,ol{color:var(--dim);margin:10px 0 10px 24px;line-height:1.75}
+li{margin:5px 0}
+code{font-family:var(--mono);font-size:.9em;background:var(--panel2);padding:1px 6px;border-radius:4px;color:var(--accent)}
+pre{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin:14px 0;overflow-x:auto}
+pre code{background:transparent;padding:0;color:var(--text);font-size:12.5px;line-height:1.6}
+blockquote{border-left:3px solid var(--accent);background:var(--panel2);border-radius:0 9px 9px 0;padding:12px 16px;margin:14px 0;color:var(--dim)}
+blockquote strong{color:var(--text)}
+table{width:100%;border-collapse:collapse;font-size:13.5px;margin:14px 0}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.6}
+th{color:var(--faint);font-weight:600;font-size:12px;letter-spacing:.04em}
+td{color:var(--dim)}
+td strong{color:var(--text)}
+tr:hover td{background:rgba(90,165,255,.03)}
+hr{border:none;border-top:1px solid var(--border);margin:30px 0}
+.state{display:inline-block;font-size:11.5px;padding:1px 8px;border-radius:9px;border:1px solid var(--border);color:var(--faint);margin-left:8px;vertical-align:2px}
+.state.now{color:var(--ok);border-color:var(--ok)}
+.state.cut{color:var(--warn);border-color:var(--warn)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>输入与可调用函数系统 · 配置宪法</h1>
+<blockquote>
+<p>面向要从零搭一遍这套系统的作者。读完你能按 §13 的清单，从空仓库配出一个「按下 → 拖框 → 预览 → 抬起 → 落选」的完整 showcase，并且知道每个字段由谁在什么时机校验、错了会怎么失败。<strong>本页是配置面的宪法；概念面（scheme / context / intent / order 的语义分层）仍以 <code>input-command-system.html</code> 为准</strong>，其 §4.1 的 Tap/Drag 段由本页 §01 取代。</p>
+<p>标注约定：<span class="state now">已落地</span> = main 上现网可用；<span class="state cut">切N</span> = 终态方案第 N 刀交付（见 <code>gitbook/architecture/graph-callable-function-vision.md</code> 的切片表）；<span class="state">退役</span> = 禁止再出现，装载即拒。</p>
+</blockquote>
+<hr>
+
+<h2>00. 总则：五层、三条不变量、一个判据<span class="state">全文规范</span></h2>
+<p>系统本质一句话：<strong>把设备事件流，折叠成对一组实体的集合运算。</strong></p>
+<table>
+<thead><tr><th>层</th><th>唯一职责</th><th>对应配置</th><th>不知道什么</th></tr></thead>
+<tbody>
+<tr><td><strong>L0 判定</strong></td><td>设备 → 语义动作边沿（press/release）；修饰快照解析成枚举</td><td><code>default_input.json</code></td><td>世界、实体、集合</td></tr>
+<tr><td><strong>L1 宿主</strong></td><td>context 门控动作；边沿 / 存活期调函数；把输出交给 L3</td><td><code>interaction_context_profiles.json</code></td><td>几何、集合运算</td></tr>
+<tr><td><strong>L2 函数</strong></td><td>纯计算：输入 → 名单</td><td><code>GAS/graphs/*.json</code></td><td>世界可变状态</td></tr>
+<tr><td><strong>L3 集合</strong></td><td>全引擎唯一集合写点：集合运算、成员事件、容量、生命周期</td><td>（挂载声明里的 applyOutputs，无独立文件）</td><td>输入设备、几何</td></tr>
+<tr><td><strong>L4 表现</strong></td><td>只订阅：环、框</td><td><code>Presentation/presenters.json</code></td><td>谁进框、何时清</td></tr>
+</tbody>
+</table>
+<p><strong>三条不变量</strong>（本页所有规则由它们推出，冲突时以它们为准）：</p>
+<ol>
+<li><strong>集合只有一个写者。</strong>图不写集合，宿主不摸存储；写只发生在 L3 的 <code>CollectionApplier</code>，入口是挂载声明。</li>
+<li><strong>状态必有生命周期主人。</strong>context 退 → 宿主按声明清（<code>clearOnExit</code>）；owner 死 → L3 自己清并发成员移除事件。不存在孤儿集合。</li>
+<li><strong>每个数字/字符串要么是显式引脚输入，要么是装载期校验过的作者参数，不存在第三种。</strong></li>
+</ol>
+<p><strong>假数据驱动判据</strong>（出现任何一条即违宪）：图内 <code>case:</code> 解释原始位掩码；靠扫程序字节码发现副作用；截断不报错；函数体内读宿主实体属性当输入；集合 key 魔法串埋在函数体；同一事实写两份。</p>
+<hr>
+
+<h2>01. 动作与绑定 · default_input.json<span class="state now">已落地（#1447 形态）</span></h2>
+<p>定义「有哪些语义动作、绑在哪个物理输入上、在哪个边沿触发」。这是 L0 的全部配置。</p>
+<pre><code>{
+  "actions": [
+    { "id": "CaseE.BoxSelectBegin", "name": "CaseE_BoxSelectBegin", "type": "Button" },
+    { "id": "CaseE.BoxSelectEnd",   "name": "CaseE_BoxSelectEnd",   "type": "Button", "firesOn": "release" },
+    { "id": "CaseE.Pointer",        "name": "CaseE_Pointer",        "type": "Axis2D" },
+    { "id": "QueueModifier",        "name": "CaseE_Queue",          "type": "Button" },
+    { "id": "ModifierSubtract",     "name": "CaseE_Subtract",       "type": "Button" }
+  ],
+  "contexts": [
+    { "id": "default", "bindings": [
+      { "actionId": "CaseE.BoxSelectBegin", "path": "&lt;Mouse&gt;/leftButton" },
+      { "actionId": "CaseE.BoxSelectEnd",   "path": "&lt;Mouse&gt;/leftButton" },
+      { "actionId": "CaseE.Pointer",        "path": "&lt;Mouse&gt;/position" },
+      { "actionId": "QueueModifier",        "path": "&lt;Keyboard&gt;/shift" },
+      { "actionId": "ModifierSubtract",     "path": "&lt;Keyboard&gt;/ctrl" }
+    ] }
+  ]
+}</code></pre>
+<h3>字段合同</h3>
+<table>
+<thead><tr><th>字段</th><th>取值</th><th>规则</th></tr></thead>
+<tbody>
+<tr><td><code>actions[].id</code></td><td>语义动作 id</td><td>全仓库唯一 SSOT；context、profile、挂载、图 entry 都只引用它</td></tr>
+<tr><td><code>type</code></td><td><code>Button</code> / <code>Axis2D</code> / <code>Axis</code></td><td>Button 有边沿，Axis 没有边沿只有值</td></tr>
+<tr><td><code>firesOn</code></td><td><code>press</code>（默认）/ <code>release</code></td><td><strong>裸边沿，仅此两种</strong>。同一 path 上多个 Button 动作必须以 firesOn 区分；不区分 → 装载即拒</td></tr>
+<tr><td><code>bindings[].path</code></td><td>设备路径</td><td>属于设备层；换设备只改这里</td></tr>
+</tbody>
+</table>
+<blockquote><p><strong>不存在 <code>interactions</code> 字段</strong>。<span class="state">退役</span> Tap / Drag（阈值、MaxTravel、空隙合同）已整体退役——「单击 vs 拖拽」不是判定问题：按下开框、抬起落定，零位移就是点选，同一次边沿、同一张函数。装载遇到 <code>interactions</code> 字段即拒，不留壳。</p></blockquote>
+<h3>修饰语义动作与位义 SSOT</h3>
+<p>修饰也是普通 Button 动作，但 id 必须取自下表的保留名（引擎按它解析意图）：</p>
+<table>
+<thead><tr><th>语义动作 id</th><th>载荷位</th><th>对集合运算的影响</th></tr></thead>
+<tbody>
+<tr><td><code>QueueModifier</code></td><td>bit0（值 1）</td><td>解析为 <code>Add</code></td></tr>
+<tr><td><code>PrecisionModifier</code></td><td>bit1（值 2）</td><td>保留位——不改变集合运算，供产品自用</td></tr>
+<tr><td><code>ModifierSubtract</code></td><td>bit2（值 4）</td><td>解析为 <code>Subtract</code>（压过 Add）</td></tr>
+</tbody>
+</table>
+<p>位义 SSOT 在代码 <code>InputActionFiredModifiers</code>，作者面只见语义 id；「减选压加选」这条优先级策略只活在引擎解析函数里，<strong>图和 profile 都不解释位</strong>。挂载声明 <code>op: "modifierIntent"</code> 时，装载器校验该 profile 的 <code>bindings</code> 已绑全上表动作，缺一即拒。</p>
+<h3>边沿载荷（payload 键 SSOT）</h3>
+<p>Button 动作触发时，事件载荷只携带以下保留键（<code>EventSchemaRegistry</code> 声明，<code>MapTriggerEventPayloadKeys</code> 定义）：</p>
+<table>
+<thead><tr><th>载荷键</th><th>类型</th><th>含义</th></tr></thead>
+<tbody>
+<tr><td><code>MapTrigger.Rep</code></td><td>Entity</td><td>触发玩家的 rep 实体（挂载 / 集合的 owner）</td></tr>
+<tr><td><code>MapTrigger.PointerScreenX/Y</code></td><td>Float</td><td>触发时刻指针屏幕坐标</td></tr>
+<tr><td><code>MapTrigger.Modifiers</code></td><td>Int（位掩码）</td><td>触发时刻按住的修饰位——只供引擎解析，作者面不读裸值</td></tr>
+</tbody>
+</table>
+<hr>
+
+<h2>02. 动作 → 属性桥 · action_attribute_bindings.json<span class="state now">已落地</span></h2>
+<p>把持续值动作投影到 rep 实体的属性上，供存活期挂载每 tick 读。唯一的用途就是「活角跟指针」这类连续量。</p>
+<pre><code>[
+  { "id": "Input.CaseE.PointerX", "action": "CaseE.Pointer", "attribute": "CaseE.PointerX" },
+  { "id": "Input.CaseE.PointerY", "action": "CaseE.Pointer", "attribute": "CaseE.PointerY" }
+]</code></pre>
+<p><strong>纪律</strong>：只做投影，不承载逻辑；边沿一次性数据（如按下时的起角）走 payload，不走属性；同一事实只写一份——起角写在按下边沿的图里（属性），<strong>禁止再写 map var 第二份</strong><span class="state cut">切2</span>。</p>
+<hr>
+
+<h2>03. 交互 context 与 profile · interaction_context_profiles.json<span class="state now">骨架已落地；挂载字段切1/切2</span></h2>
+<p>profile = 一个交互状态的<strong>定义</strong>（Definition）；运行时哪个 rep 处于哪个 context 是<strong>实例</strong>（Instance，挂实体，可衍生子、可并存，见概念宪法 §8）。本文件只写定义。</p>
+<pre><code>{
+  "profiles": [
+    {
+      "id": "interaction.context.case_e.battle",
+      "activeCollectionKey": "case_e.battle",
+      "activeEntityViewKey": "case_e.battle.view",
+      "bindings": [ "CaseE.BoxSelectBegin", "QueueModifier", "PrecisionModifier", "ModifierSubtract", "CaseE.Pointer" ],
+      "triggers": [
+        { "trigger": "graph.case_e.box_begin",
+          "applyOutputs": [ { "from": "roster", "collection": "case_e.selectable", "op": "replace", "capacity": 256 } ] }
+      ]
+    },
+    {
+      "id": "interaction.context.case_e.boxing",
+      "activeCollectionKey": "case_e.boxing",
+      "activeEntityViewKey": "case_e.boxing.view",
+      "bindings": [ "CaseE.BoxSelectEnd", "CaseE.Pointer" ],
+      "triggers": [
+        { "trigger": "graph.case_e.box_commit",
+          "applyOutputs": [ { "from": "hit", "collection": "selected", "op": "modifierIntent", "capacity": 256 } ] }
+      ],
+      "whileActive": {
+        "function": "graph.case_e.box_hit",
+        "bindInputs": { "pressX": "attr:CaseE.PressPx", "pressY": "attr:CaseE.PressPy", "liveX": "attr:CaseE.PointerX", "liveY": "attr:CaseE.PointerY" },
+        "applyOutputs": [ { "from": "hits", "collection": "case_e.box_hover", "op": "replace", "clearOnExit": true } ]
+      }
+    }
+  ]
+}</code></pre>
+<h3>字段合同</h3>
+<table>
+<thead><tr><th>字段</th><th>规则</th></tr></thead>
+<tbody>
+<tr><td><code>id</code></td><td>全局唯一；命名惯例 <code>interaction.context.&lt;mod&gt;.&lt;状态&gt;</code></td></tr>
+<tr><td><code>activeCollectionKey</code></td><td>「这个 context 的操作对象落在哪个集合」的 key——<strong>下令管线的唯一读接口</strong>（下单时按 rep 活跃 context 找到此集合，令下给成员，见 §12）。成员是运行时的；此处只声明 key 名。可下令的 context 必须声明；纯玩法 context（不下单）可省略。引擎不设任何默认键、默认 profile 或隐式回退——活跃 context 链上没有任何声明此字段的 context 时，下单具名拒绝</td></tr>
+<tr><td><code>activeEntityViewKey</code></td><td>上者集合的控制面视图 key（UI / 控制面投影名）。同为静态 key 名 + 动态成员</td></tr>
+<tr><td><code>bindings</code></td><td>动作门控表：<strong>只决定哪些动作在此 context 活</strong>，不含任何行为。所有挂载引用的动作必须 ⊆ 本表</td></tr>
+<tr><td><code>triggers[]</code></td><td>边沿挂载（§04）</td></tr>
+<tr><td><code>whileActive</code></td><td>存活期挂载（§04）。一 subject 同时至多一个 whileActive 函数，运行时冲突即抛错点名两个函数</td></tr>
+</tbody>
+</table>
+<blockquote><p><strong>动静分离（硬规则）</strong>：profile 只写「静」——定义一个 context 是什么（门控哪些动作、挂哪些函数、接口 key 叫什么）。<strong>context 的父子关系、scope 嵌套、谁在哪一刻处于哪个 context，全是「动」</strong>——由边沿包装图里的 <code>ActivateContext(parentContext: ...)</code> 在激活那一刻声明并校验（parent 当时必须真的活跃在该实体上，否则抛错；停用走 <code>DeactivateContext</code>，scope 随之整组清理）。<strong>定义文件里禁止出现任何激活边</strong>——出现即违宪。</p></blockquote>
+<p><span class="state">退役</span> 旧字段名 <code>continuousQuery</code>：装载即拒并提示改名（已落地）。</p>
+<hr>
+
+<h2>04. 挂载声明：bindInputs 与 applyOutputs<span class="state cut">切1/切2</span></h2>
+<p>挂载是 L1 的接线数据，只回答三个问题：<strong>调谁、输入从哪来、输出写到哪。</strong>挂载不做行为——行为在函数（L2）与编排 op（§05 包装图）里。</p>
+<h3>两种挂载形状（一个动作只有一个真相源）</h3>
+<table>
+<thead><tr><th></th><th>包装图挂载 <code>{ trigger, applyOutputs }</code></th><th>直挂 <code>{ action, function, bindInputs, applyOutputs }</code></th></tr></thead>
+<tbody>
+<tr><td>调谁</td><td>边沿包装图（带 <code>entries</code>，动作绑定在图内 <code>entries[].action</code>——<strong>动作的唯一真相在图里</strong>）</td><td>纯函数图（无 entries）；动作绑定在挂载上——<strong>唯一真相在挂载里</strong></td></tr>
+<tr><td>何时用</td><td>需要编排 op（切 context、写起角属性）或调多个函数</td><td>不需要任何编排，边沿直接算+写</td></tr>
+<tr><td>bindInputs</td><td>不适用（包装图经 <code>LoadEntryPayload*</code> 读事件载荷，属合法入口读取）</td><td>必填：签名每个参数一个来源表达式</td></tr>
+<tr><td>applyOutputs</td><td colspan="2">两种形状都必填：把签名输出物质化</td></tr>
+</tbody>
+</table>
+<blockquote><p>禁止同一动作在挂载与图内两处都写绑定——包装图挂载不写 <code>action</code> 字段，直挂不引用带 entries 的图。装载器按此校验，违者拒载。</p></blockquote>
+<h3>bindInputs：输入来源表达式</h3>
+<table>
+<thead><tr><th>表达式</th><th>含义</th><th>装载校验</th></tr></thead>
+<tbody>
+<tr><td><code>payload:&lt;载荷键&gt;</code></td><td>触发事件的载荷值</td><td>键必须在该动作的事件 schema 里</td></tr>
+<tr><td><code>attr:&lt;rep 属性&gt;</code></td><td>rep 实体当前属性值</td><td>属性 id 必须存在于属性约束表</td></tr>
+<tr><td><code>const:&lt;字面量&gt;</code></td><td>常量</td><td>类型必须与参数一致</td></tr>
+<tr><td><code>CollectionRef 参数</code></td><td>不必绑定：按签名里的 <code>key</code> 取 owner=rep 的集合</td><td>key 必须已注册</td></tr>
+</tbody>
+</table>
+<p>缺任何一个签名参数、类型不符、来源键不存在 → 装载即拒。<strong>没有迁移豁免。</strong></p>
+<h3>applyOutputs：输出物质化</h3>
+<table>
+<thead><tr><th>字段</th><th>取值</th><th>规则</th></tr></thead>
+<tbody>
+<tr><td><code>from</code></td><td>签名里的输出名</td><td>不存在 → 装载即拒</td></tr>
+<tr><td><code>collection</code></td><td>目标集合 key</td><td>必须已注册于集合 key 空间</td></tr>
+<tr><td><code>op</code></td><td><code>replace</code> / <code>add</code> / <code>subtract</code> / <code>modifierIntent</code></td><td><code>modifierIntent</code> = 运行时按 §01 解析表取 None/Add/Subtract；选它则 profile 必须绑全修饰动作</td></tr>
+<tr><td><code>capacity</code></td><td>正整数，默认 256</td><td>上限 = 引擎目标寄存器上限；写入选集超限 → <strong>运行时抛错，点名 key 与数量</strong>（不静默截断）。要更大走分页输出票，先声明先拒绝</td></tr>
+<tr><td><code>clearOnExit</code></td><td>bool，默认 false</td><td>true = context 退出时清空该集合并发成员移除事件。清空时 key 找不到 → 抛错</td></tr>
+</tbody>
+</table>
+<h3>运行时序（一条帧内的顺序，不可调换）</h3>
+<pre><code>① InputActionAttributeBindingSystem   活角属性先写（§02）
+② whileActive 宿主                      绑输入 → 调函数 → 逐条 applyOutputs
+③ 成员事件差分                          集合签名没变就不重发（表现不闪）
+④ 表现系统                              按成员事件开关行为槽
+边沿帧：触发动作 → 绑定 payload 输入 → 调函数（或包装图）→ applyOutputs
+        → 图内 DeactivateContext → 下一帧 whileActive 清 clearOnExit 集合</code></pre>
+<hr>
+
+<h2>05. 函数与签名 · GAS/graphs/*.json<span class="state cut">切1（签名）/ 切2（单门）</span></h2>
+<p>graph 是函数。<strong>凡被挂载（triggers / whileActive）或被调用（InvokeFunc）的图，必须声明签名</strong>；纯内部图（不被挂载不被调）不强制——签名范围是函数目录，不是全部图。</p>
+<pre><code>[
+  {
+    "id": "graph.case_e.box_hit",
+    "kind": "Query",
+    "entry": "filter_roster",
+    "signature": {
+      "inputs": [
+        { "name": "candidates", "type": "CollectionRef", "key": "case_e.selectable" },
+        { "name": "pressX", "type": "Float" },
+        { "name": "pressY", "type": "Float" },
+        { "name": "liveX",  "type": "Float" },
+        { "name": "liveY",  "type": "Float" }
+      ],
+      "outputs": [ { "name": "hits", "type": "EntitySet", "capacity": 256 } ]
+    },
+    "nodes": [ ... ], "controlEdges": [ ... ], "valueEdges": [ ... ]
+  }
+]</code></pre>
+<h3>类型表</h3>
+<table>
+<thead><tr><th>类型</th><th>含义</th><th>来源 / 去向</th></tr></thead>
+<tbody>
+<tr><td><code>Float</code> / <code>Int</code> / <code>Bool</code></td><td>标量</td><td>payload / attr / const / 上游输出</td></tr>
+<tr><td><code>CollectionRef</code></td><td>集合引用（带 key）</td><td>按 key 取 owner=rep 的集合，不必绑定</td></tr>
+<tr><td><code>EntitySet</code></td><td>实体名单（带 capacity）</td><td>只能作为输出，被 applyOutputs 物质化或被调用方按名路由</td></tr>
+</tbody>
+</table>
+<h3>编译期强制（签名与事实双向锁死）</h3>
+<ul>
+<li>函数体内出现任何集合写 op → <strong>编译错</strong>。<span class="state">退役</span> <code>DispatchCollectionEvent</code> 可创作面整体退役（切2）；事件系统只留纯通知。</li>
+<li>读宿主实体属性不经 <code>inputs</code> → 编译错。<code>LoadSelfAttribute</code> / <code>LoadCaster</code> 标记为迁移桥，禁用于签名函数。</li>
+<li>输出没有对应物质化声明、或声明引用不存在的输出 → 装载即拒。</li>
+<li>声明了却做不到、做到了却没声明——两类都在编译期死，不存在「允许迁移期不一致」。</li>
+</ul>
+<h3>两种形态（照概念宪法 §7.5）</h3>
+<table>
+<thead><tr><th></th><th>边沿包装图（TriggerGraph，带 entries）</th><th>纯函数图（无 entries）</th></tr></thead>
+<tbody>
+<tr><td>入口</td><td><code>entries[]: { label, action, start, refire: "restart" }</code></td><td><code>entry</code> 单入口，被调用才跑</td></tr>
+<tr><td>允许的 op</td><td>计算 + <strong>编排 op</strong>（<code>ActivateContext</code> / <code>DeactivateContext</code> / <code>ModifyAttributeSet</code>）</td><td>仅计算 op（过滤、几何、集合运算）</td></tr>
+<tr><td>签名</td><td>必须有（被挂载）</td><td>必须有（被挂载或被调用）</td></tr>
+</tbody>
+</table>
+<p>编排 op 留在包装图里、用既有 op 组合——<strong>挂载声明不做行为开关</strong>（GAS 组合门纪律）。其中 <code>ActivateContext(parentContext: ...)</code> 是激活边的<strong>唯一声明点</strong>：父子关系、scope 嵌套都在这一刻动态建立与校验（见 §03 动静分离）。<code>kind</code>（Query / Script / TriggerGraph…）只是编译与编辑器分组标签，<strong>永不作为挂载或调用的门闩</strong><span class="state cut">切3</span>。</p>
+<hr>
+
+<h2>06. 调用 · InvokeFunc 节点<span class="state cut">切1（改名）/ 切2（按名路由）</span></h2>
+<pre><code>{ "id": "run_hit", "op": "InvokeFunc", "functionName": "graph.case_e.box_hit" }</code></pre>
+<ul>
+<li>目标必须已登记签名且 <code>yield:false</code>（可挂起动作只有切片/叶子宿主可调，看登记表 hostAllowed）。</li>
+<li>输入按<strong>参数名</strong>经 valueEdges 绑定；返回按<strong>输出名</strong>路由进后续值边。位置式 TargetList 拷回特判删除。</li>
+<li>调用图 ↔ 被调图成环 → 登记时即拒。</li>
+<li>缺绑定、类型错、目标未登记 → 编译错。<span class="state">退役</span> 旧名 <code>InvokeGraph</code> 装载即拒。</li>
+</ul>
+<hr>
+
+<h2>07. 函数登记表 · 一表两列一签名<span class="state cut">切3</span></h2>
+<p>不设 FuncLib / 业务函数 / ActionLib 三个目录——一张表，行为靠列：</p>
+<pre><code>{ "name": "graph.case_e.box_hit", "graphRef": "...", "signature": {...}, "yield": false, "hostAllowed": [...] }</code></pre>
+<table>
+<thead><tr><th>视图</th><th>筛选条件</th><th>谁可调</th></tr></thead>
+<tbody>
+<tr><td>FuncLib（纯函数库）</td><td><code>yield:false</code> 且标量签名</td><td>任何图 / 宿主</td></tr>
+<tr><td>可调用业务函数</td><td><code>yield:false</code> 且带 EntitySet 签名</td><td>挂载与 InvokeFunc</td></tr>
+<tr><td>ActionLib（可挂起动作）</td><td><code>yield:true</code></td><td>仅 hostAllowed 列出的宿主</td></tr>
+</tbody>
+</table>
+<p>目录之争由行为列消解：作者从不选「放哪个目录」，只声明签名与 yield。<strong>纯度由签名推导，不设调用侧 Pure/WithEffects 开关。</strong></p>
+<hr>
+
+<h2>08. 集合 · 唯一写点与生命周期<span class="state cut">切2/切4</span></h2>
+<ul>
+<li><strong>key 空间</strong>：集合 key 在 EntityCollectionStore 的 key registry 注册，命名带 mod 前缀（<code>case_e.box_hover</code>、<code>selected</code> 为跨 mod 公共 key）。</li>
+<li><strong>owner = rep 实体</strong>。同一 key 不同 owner 互不干扰。</li>
+<li><strong>唯一写点 CollectionApplier</strong>（由 EventKeyedCollectionWriter 内核转正）：装载时吃挂载声明，运行时被宿主调用。全引擎没有第二个集合写入口。</li>
+<li><strong>容量 fail-loud</strong>：候选装载（CollectionRef 读取）与输出物质化超 capacity 一律抛错点名 key 与数量。<span class="state">退役</span> <code>Math.Min</code> 静默截断路径（切4）。</li>
+<li><strong>成员事件</strong>：<code>EntityCollectionMemberAdded / Removed</code>，按集合内容签名差分发布——集合没变不重发。</li>
+<li><strong>owner 死亡</strong>：L3 按 owner→key 索引清空其全部集合并发成员移除事件（teardown 是正常路径，不抛错）。表现层的环随成员事件熄灭，无孤儿。</li>
+</ul>
+<hr>
+
+<h2>09. 事件 · Events/custom_events.json<span class="state">纯通知面已落地；集合运输切2退役</span></h2>
+<pre><code>[ { "id": "gameplay.case_e.selection_committed", "description": "...", "scope": "map" } ]</code></pre>
+<ul>
+<li>事件只做<strong>纯通知</strong>：载荷 schema 在 <code>EventSchemaRegistry</code> 声明，缺键、未声明 id → 装载/派发即拒。</li>
+<li><span class="state">退役</span> 集合运输：<code>collection_event_writers.json</code> 删除，事件不再携带集合载荷——集合写只走 §08。</li>
+</ul>
+<hr>
+
+<h2>10. 表现 · Presentation/presenters.json<span class="state now">已落地</span></h2>
+<p>表现只订阅，不判命中、不写集合、不算集合成员。完整结构：</p>
+<pre><code>[
+  {
+    "id": "presenter.case_e.marine_root",
+    "bindSpawn": { "template": "case_e_marine", "scopeSource": "EventPayloadA" },
+    "behaviors": [
+      { "slot": "body",    "kind": "AssetBinding", "activeByDefault": true,  "assetBinding": { ... } },
+      { "slot": "preview", "kind": "AssetBinding", "activeByDefault": false, "assetBinding": { ... } }
+    ],
+    "rules": [
+      { "event": { "kind": "EntityCollectionMemberAdded",   "key": "case_e.box_hover" },
+        "command": { "kind": "ActivateBehavior",   "targetBehaviorSlot": "preview" } },
+      { "event": { "kind": "EntityCollectionMemberRemoved", "key": "case_e.box_hover" },
+        "command": { "kind": "DeactivateBehavior", "targetBehaviorSlot": "preview" } }
+    ]
+  },
+  {
+    "id": "presenter.case_e.boxing_marker",
+    "lifecycle": { "persistence": "Scoped" },
+    "rules": [ { "event": { "kind": "ContextActivated", "key": "interaction.context.case_e.boxing" },
+                 "command": { "kind": "CreatePresenter", "definitionId": "presenter.case_e.boxing_marker",
+                              "scopeSource": "EventPayloadA", "ownerSource": "EventSource" } } ],
+    "behaviors": [
+      { "slot": "screenRect", "kind": "ScreenRect", "activeByDefault": true,
+        "screenRect": { "corner0XParamKey": "case_e.rect.pressX", "...": "参数全部来自属性绑定" } }
+    ]
+  }
+]</code></pre>
+<table>
+<thead><tr><th>构件</th><th>规则</th></tr></thead>
+<tbody>
+<tr><td><code>bindSpawn</code></td><td>实体模板出生时绑定 presenter 实例；一模板一 presenter</td></tr>
+<tr><td><code>behaviors[].kind</code></td><td><code>AssetBinding</code>（网格/贴图）、<code>AttributeBinding</code>（属性→参数）、<code>ScreenRect</code>（屏幕空间矩形），以及世界空间几何指示器：<code>WorldCircle/WorldRing</code>（半径，地面锚或实体锚）、<code>Sector</code>（方向+张角+半径）、<code>Line/Arrow</code>（起点终点）、<code>Polyline</code>（有序集合成员位置连线，绑定源 <code>collectionPath</code>，供移动路径预览）、<code>ProgressArc/ProgressBar</code>（fill 比例参数，供蓄力）——参数全部走绑定源（ownerBlackboard / attribute / pointer / collectionPath），无硬编码数值</td></tr>
+<tr><td><code>rules[]</code></td><td>事件→命令。可订阅：成员增/减（集合 key）、ContextActivated、ContextDeactivated（对称事件，供非 scope 生命周期反应）。命令：开关行为槽、CreatePresenter；参数流动走绑定不走命令</td></tr>
+<tr><td><code>lifecycle.Scoped</code></td><td>生命周期绑 context scope：激活建、停用整组清（含子）——框选矩形随 boxing 生灭，作者不用手动清</td></tr>
+<tr><td>参数单真相</td><td>ScreenRect 四角来自 <code>AttributeBinding</code> 读 rep 属性——与命中函数读同一份属性，矩形「写一次、两边读」</td></tr>
+<tr><td><strong>指示器硬规则</strong></td><td>一切指示器（瞄准圈 / 扇形 / 方向线 / 蓄力条 / 地面标记 / 移动路径 / 选中与悬停环）必须是 presenter 定义 + 规则订阅 + 参数绑定。<strong>表现域零计算</strong>：不得调用瞄准、几何或判定内核，只读图写好的同一份黑板 / 集合参数。架构守卫与「模拟不得读视觉」守卫成对存在</td></tr>
+</tbody>
+</table>
+<hr>
+
+<h2>11. 实体模板 / 属性 / 资源 / 管线声明<span class="state now">已落地</span></h2>
+<table>
+<thead><tr><th>文件</th><th>管什么</th><th>关键约束</th></tr></thead>
+<tbody>
+<tr><td><code>Entities/templates.json</code></td><td>实体模板（指挥官 / 士兵 / 敌人）</td><td>模板 id 是过滤器与 presenter bindSpawn 的引用点</td></tr>
+<tr><td><code>GAS/attribute_constraints.json</code></td><td>属性域声明</td><td>挂载 <code>attr:</code> 来源引用的属性必须在此声明（CaseE.PressPx / PointerX…）</td></tr>
+<tr><td><code>Presentation/mesh_assets.json</code></td><td>网格资源登记</td><td>AssetBinding 的 assetId 引用点</td></tr>
+<tr><td><code>config_catalog.json</code></td><td>ConfigPipeline 装载声明：本 mod 每个配置文件走哪条管线、合并字段</td><td>新文件必须在此登记，漏登记 = 文件根本不装载</td></tr>
+<tr><td><code>Maps/*.json</code></td><td>地图与会话变量</td><td><strong>map var 不作交互状态载体</strong>——交互状态只在属性与集合里</td></tr>
+</tbody>
+</table>
+<hr>
+
+<h2>12. 出界引用：从选中集合到下令<span class="state">接口已落地；引擎特权键进入拆除排期</span></h2>
+<p>本系统与下令管线的<strong>唯一接口是「rep 活跃 context 的 <code>activeCollectionKey</code> 集合」</strong>：下令侧按活跃 context 找到集合，令下给成员，不碰本页任何输入配置。合同如下：</p>
+<ul>
+<li><strong>基础 context 由数据挂载</strong>：实体模板的 <code>initialInteractionContext</code>（spawn 时挂，不覆盖已有实例）或启动数据声明。引擎不安装任何保留 profile、不注册任何默认集合键——没有"稳态锚点"这回事，只有声明。派生 context 由图的 <code>ActivateContext</code> 挂载并声明父级。</li>
+<li><strong>路由只认声明</strong>：下单时在 rep 的活跃 context 链上按 LIFO 仲裁取「最近激活且声明了 <code>activeCollectionKey</code>」的 context，读其集合令下给成员。链上没有任何声明者 → 具名拒绝，无隐式键回退。</li>
+<li><strong>提交入口是图 op</strong>：边沿图调 <code>SubmitCommandIntent</code>（地物点 / 可选命中实体）或 <code>SubmitCast</code>（技能槽语义键、瞄准载荷、蓄力档位）把意图写进预分配意图缓冲（容量走 <code>gasRuntimeCapacity</code>，超限抛错点名）；下令域在自己的 SystemGroup 相位 drain 路由，相位与 <code>DispatchMapEvent</code> 同节奏，图执行期内不路由。replicated client 上该 op 经客户端命令端口转发，context 状态以服务器为权威。</li>
+<li><strong>直接占有是数据形态，不是内核规则</strong>：无选择中介的玩法（rep 即受控体）用 self-roster 图把 rep 写进自己 context 声明的活跃集——"谁下令"永远只是"活跃集成员"。</li>
+<li><strong>瞄准 / 蓄力是 context + 图</strong>：技能按下图读 InteractionPref（实体组件）分支——智能施法直接 <code>SubmitCast</code>；非智能 <code>ActivateContext</code>(瞄准, parent=战斗)，瞄准 context 挂 whileActive 瞄准图（aimsource 纯函数算方向 / 地面点 / 自动目标，结果写 context 黑板），确认边沿图 <code>SubmitCast</code>，取消边沿图 <code>DeactivateContext</code>。蓄力 = press 激活蓄力 context + whileActive 按激活 tick 差累计，抬起图按档位分发不同 <code>SubmitCast</code>，超时由 whileActive 图比较阈值后 <code>DeactivateContext</code>。档位判定按固定 tick 累计，回放确定。</li>
+<li><strong>一切指示器 presenter 化</strong>：瞄准圈 / 扇形 / 方向线 / 蓄力条 / 地面标记 / 移动路径 = presenter 定义 + 规则订阅 + 参数绑定（§10）。表现域零计算，只读图写好的同一份黑板 / 集合参数。</li>
+</ul>
+<p>概念见 <code>input-command-system.html</code> §5–§6（去向 B）；下令侧自己的配置（意图路由、扇出、派发）见其所属文档，本宪法不重复。Case E 全链下单（battle 声明 <code>activeCollectionKey</code> + 右键提交图）随迁移切1 落地。</p>
+<hr>
+
+<h2>13. 从零搭一遍：文件清单与顺序<span class="state">规范</span></h2>
+<p>按依赖序，从空 mod 到完整框选。每步的产物立即被下一步引用：</p>
+<table>
+<thead><tr><th>#</th><th>文件</th><th>写什么</th><th>校验时机</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><code>config_catalog.json</code></td><td>登记下面所有文件</td><td>装载</td></tr>
+<tr><td>2</td><td><code>Entities/templates.json</code></td><td>rep / 士兵 / 敌人模板</td><td>装载</td></tr>
+<tr><td>3</td><td><code>GAS/attribute_constraints.json</code></td><td>起角、指针属性</td><td>装载</td></tr>
+<tr><td>4</td><td><code>Input/default_input.json</code></td><td>动作（Begin/End/Pointer/修饰）、绑定、firesOn</td><td>装载（firesOn 冲突、interactions 拒绝）</td></tr>
+<tr><td>5</td><td><code>Input/action_attribute_bindings.json</code></td><td>Pointer → 活角属性</td><td>装载（action/attr 存在性）</td></tr>
+<tr><td>6</td><td><code>Events/custom_events.json</code></td><td>纯通知事件（如需要）</td><td>装载</td></tr>
+<tr><td>7</td><td><code>GAS/graphs/graph.*.box_hit.json</code></td><td>命中函数 + <strong>签名</strong>（candidates + 四角 → hits）</td><td>编译（签名一致性）</td></tr>
+<tr><td>8</td><td><code>GAS/graphs/graph.*.box_begin.json</code></td><td>边沿包装图：读 payload 起角写属性、算 roster、ActivateContext；签名输出 roster</td><td>编译</td></tr>
+<tr><td>9</td><td><code>GAS/graphs/graph.*.box_commit.json</code></td><td>边沿包装图：InvokeFunc(box_hit)、DeactivateContext；签名输出 hit</td><td>编译（调用绑定）</td></tr>
+<tr><td>10</td><td><code>Input/interaction_context_profiles.json</code></td><td>battle / boxing 两 profile + 挂载（§04）</td><td>装载（全矩阵见 §14）</td></tr>
+<tr><td>11</td><td><code>Presentation/mesh_assets.json</code></td><td>环 / 立方体网格</td><td>装载</td></tr>
+<tr><td>12</td><td><code>Presentation/presenters.json</code></td><td>士兵（成员事件→环）、指挥官、屏幕框（Scoped + 属性绑定）</td><td>装载（key 引用）</td></tr>
+<tr><td>13</td><td><code>mod.json</code> / <code>showcase.registry.json</code></td><td>mod 声明与 showcase 注册</td><td>装载</td></tr>
+</tbody>
+</table>
+<p>删掉的一代文件（对照，勿再创建）：<code>graph.case_e.tap_commit.json</code>（点选并入零位移框选）、<code>collection_event_writers.json</code>（集合运输退役）。</p>
+<hr>
+
+<h2>14. 装载校验总表（失败关闭矩阵）<span class="state">规范</span></h2>
+<table>
+<thead><tr><th>情形</th><th>拦截层</th><th>行为</th></tr></thead>
+<tbody>
+<tr><td>action id 重复 / 同 path 同 firesOn / 出现 interactions 字段</td><td>输入装载</td><td>拒载点名</td></tr>
+<tr><td>profile 引用未知动作 / 挂载引用的动作不在 bindings</td><td>profile 装载</td><td>拒载点名</td></tr>
+<tr><td><code>ActivateContext</code> 的 parentContext 此刻不活跃在该实体上 / 定义文件里出现激活边</td><td>运行时 / 装载</td><td>抛错 / 拒载</td></tr>
+<tr><td>挂载函数未登记签名 / bindInputs 缺项或来源键不存在 / applyOutputs 引用不存在的输出或 key / capacity 超寄存器上限 / modifierIntent 未绑全修饰</td><td>profile 装载</td><td>拒载点名</td></tr>
+<tr><td>包装图挂载写了 action / 直挂引用带 entries 的图（同一动作双绑定）</td><td>profile 装载</td><td>拒载点名</td></tr>
+<tr><td>签名函数体内集合写 op / 读宿主属性无引脚 / 输出无物质化</td><td>图编译</td><td>编译错</td></tr>
+<tr><td>InvokeFunc 目标未登记 / yield:true / 成环 / 按名绑定缺项错型</td><td>图编译与登记</td><td>编译错 / 登记拒</td></tr>
+<tr><td>事件未声明 / 载荷缺键</td><td>事件装载与派发</td><td>拒载 / 派发抛错</td></tr>
+<tr><td>候选或输出超 capacity</td><td>运行时（Applier / CollectionRef 读取）</td><td>抛错点名 key 与数量</td></tr>
+<tr><td>一 subject 多个 whileActive / clearOnExit 的 key 失踪</td><td>运行时</td><td>抛错点名</td></tr>
+<tr><td>owner 死亡</td><td>运行时（L3 销毁钩子）</td><td>清集合并发成员移除——正常路径不抛</td></tr>
+<tr><td>修饰位出现未映射语义动作</td><td>输入装载</td><td>拒载</td></tr>
+</tbody>
+</table>
+<hr>
+
+<h2>15. 退役面与硬禁令<span class="state">规范</span></h2>
+<table>
+<thead><tr><th>退役 / 禁令</th><th>状态</th></tr></thead>
+<tbody>
+<tr><td>InputActionFired 桥接器</td><td>已退役（#1441）</td></tr>
+<tr><td>Tap / Drag 交互类型与阈值参数面</td><td>#1447 退役用法；作者面与判定代码切3 前全部删除</td></tr>
+<tr><td><code>continuousQuery</code> 字段名</td><td>已退役（#1447，装载即拒）</td></tr>
+<tr><td><code>tap_commit</code> 双落定路径</td><td>已退役（#1447，点选 = 零位移框选）</td></tr>
+<tr><td><code>DispatchCollectionEvent</code> / <code>collection_event_writers.json</code></td><td>切2 退役（单门）</td></tr>
+<tr><td>第二扇集合写门（图内自写）</td><td>禁——要恢复先修本宪法</td></tr>
+<tr><td>运行期扫描字节码推导集合写</td><td>禁（切2 起无此代码）</td></tr>
+<tr><td>kind 作为任何运行期权限</td><td>禁（切3 全局归零）</td></tr>
+<tr><td>第二套 VM / <code>InvokeQuery</code> / 无引脚挂载 / <code>activeEntityViewKey</code> 当出参 / commit 手抄命中链 / Press 双写</td><td>禁（承远景正本 3.3）</td></tr>
+<tr><td>退役物留兼容层、静默双认旧名</td><td>禁——改名即拒旧名</td></tr>
+</tbody>
+</table>
+<blockquote><p>本宪法与以下文件互相咬合：概念宪法 <code>input-command-system.html</code>（语义分层）、<code>case-e-config-structure.html</code>（Case E 现网对照）、<code>gitbook/architecture/graph-callable-function-vision.md</code>（终态方案与切片节奏）、<code>gitbook/architecture/graph-capability-status.md</code>（进度唯一入口）。冲突时：进度听状态页，语义听概念宪法，<strong>配置结构听本页</strong>。</p></blockquote>
+</div>
+</body>
+</html>

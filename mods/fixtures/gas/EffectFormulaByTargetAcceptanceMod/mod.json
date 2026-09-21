@@ -1,0 +1,8 @@
+{
+  "name": "EffectFormulaByTargetAcceptanceMod",
+  "version": "1.0.0",
+  "description": "Q4 fixture: one effect template, settlement formula branches on the target's attributes.",
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  }
+}

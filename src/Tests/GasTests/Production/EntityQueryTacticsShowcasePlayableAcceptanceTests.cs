@@ -2250,7 +2250,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine($"- final threat max: `{final.ThreatMax}`");
             sb.AppendLine($"- final formation count: `{final.FormationCount}`");
             sb.AppendLine($"- final revisions: ui `{final.UiBoxRevision}`, command source `{final.CommandSourceRevision}`, formation `{final.FormationRevision}`, hostile `{final.HostileRevision}`");
-            sb.AppendLine("- reusable wiring: `ConfigPipeline`, `PlayerInputHandler`, `CommandSourceAcquisitionSystem`, `EntityCollectionStore`, `GraphReturnWriter`, `EntitySetQueryRuntime`, `RelationshipRuntime`, `NarrativeFrontendService`");
+            sb.AppendLine("- reusable wiring: `ConfigPipeline`, `PlayerInputHandler`, `EntityCollectionStore`, `GraphReturnWriter`, `EntitySetQueryRuntime`, `RelationshipRuntime`, `NarrativeFrontendService`");
             return sb.ToString();
         }
 
@@ -2371,7 +2371,7 @@ namespace Ludots.Tests.GAS.Production
                 "flowchart TD",
                 "    A[ConfigPipeline loads EntityQueryTacticsShowcaseMod] --> B[MapLoader spawns teams, templates, attrs, tags]",
                 "    B --> C[Player drags UI box selection]",
-                "    C --> D[CommandSourceAcquisitionSystem writes UI acquisition and command source]",
+                "    C --> D[graph.core.select_commit writes the declared active collection]",
                 "    D --> E[Configured commit action confirms command source]",
                 "    E --> F[Showcase publishes command and formation snapshots to EntityCollectionStore]",
                 "    F --> G[GraphReturnWriter executes graph ops through shared C# EntitySetQueryRuntime API]",

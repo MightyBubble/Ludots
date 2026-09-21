@@ -119,7 +119,7 @@ namespace CameraShowcaseMod.Runtime
             }
 
             var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
+                "collection.command.source",
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 contextEntity: owner,
@@ -193,7 +193,7 @@ namespace CameraShowcaseMod.Runtime
                 BlendDurationSeconds = 0f,
                 FollowTargetKindOverride = CameraFollowTargetKind.EntityCollectionPrimary,
                 FollowCollectionOwnerOverride = owner,
-                FollowCollectionKeyOverride = EntityCollectionKeys.CommandSource,
+                FollowCollectionKeyOverride = "collection.command.source",
                 SnapToFollowTargetWhenAvailable = definition.SnapToFollowTargetWhenAvailable,
                 ResetRuntimeState = true,
                 ReplaceActiveStack = true

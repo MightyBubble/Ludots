@@ -2411,14 +2411,6 @@
       }
     },
     {
-      "name": "capability_standard_graph_op_QueryFilterControllable",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryFilterControllableEntryMod",
-        "projectPath": "CapabilityStandardGraphOpQueryFilterControllableEntryMod.csproj"
-      }
-    },
-    {
       "name": "capability_standard_graph_op_CompleteActiveOrder",
       "target": {
         "type": "path",
@@ -2496,6 +2488,30 @@
         "type": "path",
         "value": "mods/showcases/eqs_influence/EqsInfluenceShowcaseMod",
         "projectPath": "EqsInfluenceShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_SubmitCommandIntent",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSubmitCommandIntentEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSubmitCommandIntentEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_SubmitCast",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSubmitCastEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSubmitCastEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryFilterKnowledgeVisible",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryFilterKnowledgeVisibleEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryFilterKnowledgeVisibleEntryMod.csproj"
       }
     }
   ],

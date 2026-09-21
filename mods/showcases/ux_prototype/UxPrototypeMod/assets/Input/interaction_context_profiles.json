@@ -1,0 +1,18 @@
+{
+  "profiles": [
+    {
+      "id": "interaction.context.ux.battle",
+      "activeCollectionKey": "collection.command.source",
+      "commandIntentId": "intent.command.default",
+      "bindings": [
+        "Select.Begin",
+        "Select.End"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.core.select_begin"
+        }
+      ]
+    }
+  ]
+}

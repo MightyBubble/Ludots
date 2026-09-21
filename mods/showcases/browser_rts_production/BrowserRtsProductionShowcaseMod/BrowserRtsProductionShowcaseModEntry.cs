@@ -72,7 +72,7 @@ public sealed class BrowserRtsProductionShowcaseModEntry : IMod
         GameEngine engine = context.Get(CoreServiceKeys.Engine)
             ?? throw new InvalidOperationException("GameEngine service is missing from ScriptContext.");
 
-        InstallLocalOrderSource(engine);
+        InstallInputSurfacePolicy(engine);
 
         if (!TryGetBrowserRuntime(context, out IBrowserRuntime runtime))
         {
@@ -100,15 +100,10 @@ public sealed class BrowserRtsProductionShowcaseModEntry : IMod
         await _surface.NavigateAsync(new BrowserNavigationRequest(new Uri("ludots-app://app/"))).ConfigureAwait(false);
     }
 
-    private void InstallLocalOrderSource(GameEngine engine)
+    private void InstallInputSurfacePolicy(GameEngine engine)
     {
-        OrderQueue orderQueue = engine.GetService(CoreServiceKeys.OrderQueue)
-            ?? throw new InvalidOperationException("BrowserRtsProductionShowcaseMod requires Core OrderQueue.");
-        IModContext modContext = _modContext
-            ?? throw new InvalidOperationException("BrowserRtsProductionShowcaseMod requires an active ModContext.");
-
         engine.RegisterSystem(
-            new BrowserRtsProductionLocalOrderSourceSystem(engine.World, engine.GlobalContext, orderQueue, modContext),
+            new BrowserRtsInputSurfacePolicySystem(engine.GlobalContext),
             SystemGroup.InputCollection);
     }
 

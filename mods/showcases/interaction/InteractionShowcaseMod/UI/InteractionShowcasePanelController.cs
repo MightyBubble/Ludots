@@ -634,7 +634,7 @@ namespace InteractionShowcaseMod.UI
             group4 = SelectionGroupSummary.Empty;
 
             liveCount = TryResolveCommandSourceOwner(engine, out Entity owner)
-                ? EntityCollectionContextRuntime.GetCount(engine.GlobalContext, owner, EntityCollectionKeys.CommandSource)
+                ? EntityCollectionContextRuntime.GetCount(engine.GlobalContext, owner, "collection.command.source")
                 : 0;
         }
 
@@ -660,14 +660,14 @@ namespace InteractionShowcaseMod.UI
                        engine.World,
                        engine.GlobalContext,
                        owner,
-                       EntityCollectionKeys.CommandSource,
+                       "collection.command.source",
                        out primary);
         }
 
         private static Entity[] SnapshotCommandSource(GameEngine engine)
         {
             return TryResolveCommandSourceOwner(engine, out Entity owner)
-                ? EntityCollectionContextRuntime.Snapshot(engine.GlobalContext, owner, EntityCollectionKeys.CommandSource)
+                ? EntityCollectionContextRuntime.Snapshot(engine.GlobalContext, owner, "collection.command.source")
                 : Array.Empty<Entity>();
         }
 
@@ -807,7 +807,7 @@ namespace InteractionShowcaseMod.UI
                        engine.World,
                        engine.GlobalContext,
                        owner,
-                       EntityCollectionKeys.HoveredEntity,
+                       "collection.ui.command.hover",
                        out Entity hovered) &&
                    hovered != Entity.Null &&
                    engine.World.IsAlive(hovered)

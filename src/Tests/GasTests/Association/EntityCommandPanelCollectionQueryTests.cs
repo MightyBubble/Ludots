@@ -38,9 +38,9 @@ namespace Ludots.Tests.GAS
                 ?? throw new InvalidOperationException("EntityCommandPanelCollectionQueryConfigRegistry missing.");
 
             Assert.That(sources.TryGet(CollectionSourceId, out _), Is.True);
-            Assert.That(queries.TryGet(EntityCollectionKeys.CommandSource, out EntityCommandPanelCollectionQueryConfig config), Is.True);
-            Assert.That(config.Id, Is.EqualTo(EntityCollectionKeys.CommandSource));
-            Assert.That(config.CollectionKey, Is.EqualTo(EntityCollectionKeys.CommandSource));
+            Assert.That(queries.TryGet("collection.command.source", out EntityCommandPanelCollectionQueryConfig config), Is.True);
+            Assert.That(config.Id, Is.EqualTo("collection.command.source"));
+            Assert.That(config.CollectionKey, Is.EqualTo("collection.command.source"));
             Assert.That(config.Sort, Is.EqualTo(EntityCommandPanelCollectionSortKind.SlotThenOwnerCountThenLabel));
         }
 
@@ -75,7 +75,7 @@ namespace Ludots.Tests.GAS
             RegisterQuery(engine, new EntityCommandPanelCollectionQueryConfig
             {
                 Id = SharedActionQueryId,
-                CollectionKey = EntityCollectionKeys.CommandSource,
+                CollectionKey = "collection.command.source",
                 Title = "Shared Q",
                 Filter = new EntityCommandPanelCollectionFilter(
                     EntityCommandPanelCollectionFilterKind.ActionId,
@@ -100,7 +100,7 @@ namespace Ludots.Tests.GAS
             RegisterQuery(engine, new EntityCommandPanelCollectionQueryConfig
             {
                 Id = OwnerCountQueryId,
-                CollectionKey = EntityCollectionKeys.CommandSource,
+                CollectionKey = "collection.command.source",
                 Title = "Owner Count",
                 Filter = EntityCommandPanelCollectionFilter.Any,
                 Sort = EntityCommandPanelCollectionSortKind.OwnerCountThenSlotThenLabel
@@ -134,7 +134,7 @@ namespace Ludots.Tests.GAS
             RegisterQuery(engine, new EntityCommandPanelCollectionQueryConfig
             {
                 Id = OwnerCountQueryId,
-                CollectionKey = EntityCollectionKeys.CommandSource,
+                CollectionKey = "collection.command.source",
                 Filter = EntityCommandPanelCollectionFilter.Any,
                 Sort = EntityCommandPanelCollectionSortKind.AbilityIdThenSlot
             });
@@ -183,7 +183,7 @@ namespace Ludots.Tests.GAS
             RegisterQuery(engine, new EntityCommandPanelCollectionQueryConfig
             {
                 Id = OwnerCountQueryId,
-                CollectionKey = EntityCollectionKeys.CommandSource,
+                CollectionKey = "collection.command.source",
                 Filter = EntityCommandPanelCollectionFilter.Any,
                 Sort = EntityCommandPanelCollectionSortKind.AbilityIdThenSlot
             });
@@ -271,7 +271,7 @@ namespace Ludots.Tests.GAS
             store.Replace(
                 owner,
                 EntityCollectionDescriptor.Create(
-                    EntityCollectionKeys.CommandSource,
+                    "collection.command.source",
                     EntityCollectionSourceKind.Explicit,
                     EntityCollectionRoleKind.CommandSource,
                     owner,

@@ -27,13 +27,13 @@ namespace Ludots.Tests.GAS
     [NonParallelizable]
     public sealed class CommandIntentProfileTests
     {
-        private const string GarrisonAbilityTag = "ability.catalog.garrison_enter";
-        private const string WeaponAbilityTag = "ability.catalog.weapon";
+        internal const string GarrisonAbilityTag = "ability.catalog.garrison_enter";
+        internal const string WeaponAbilityTag = "ability.catalog.weapon";
         private const string GarrisonableTag = "structure.garrisonable";
-        private const string DestructibleTag = "destructible";
-        private const string TestProfileId = "intent.command.test";
-        private const int GarrisonAbilityId = 1;
-        private const int WeaponAbilityId = 2;
+        internal const string DestructibleTag = "destructible";
+        internal const string TestProfileId = "intent.command.test";
+        internal const int GarrisonAbilityId = 1;
+        internal const int WeaponAbilityId = 2;
 
         [SetUp]
         public void SetUp()
@@ -455,6 +455,7 @@ namespace Ludots.Tests.GAS
             public StringIntRegistry ProfileIds = null!;
             public int HostileTypeId;
             public int FriendlyTypeId;
+            public Ludots.Core.Gameplay.GAS.AbilityDefinitionRegistry Abilities = null!;
             public int CastAbilityOrderId;
             public int MoveToOrderId;
 
@@ -512,6 +513,7 @@ namespace Ludots.Tests.GAS
                 return new Harness
                 {
                     World = world,
+                    Abilities = abilities,
                     Relationships = relationships,
                     Ownership = ownership,
                     Intents = intents,
@@ -620,7 +622,7 @@ namespace Ludots.Tests.GAS
                 return new CommandIntentProfilesConfig { Profiles = new List<CommandIntentProfileDefinition>(profiles) };
             }
 
-            private static void RegisterAbility(AbilityDefinitionRegistry registry, int abilityId, string catalogTag)
+            internal static void RegisterAbility(AbilityDefinitionRegistry registry, int abilityId, string catalogTag)
             {
                 var def = new AbilityDefinition { HasCategories = true };
                 def.Categories.AddTag(AbilityCategoryRegistry.Register(catalogTag));

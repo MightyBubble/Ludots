@@ -124,8 +124,7 @@ namespace CoreInputMod.Systems
             }
 
             int keyId;
-            if (world.IsAlive(owner) && world.TryGet(owner, out InteractionContextInstance context))
-            {
+            if (world.IsAlive(owner) && world.TryGet(owner, out InteractionContextInstance context))            {
                 keyId = context.ActiveCollectionKeyId;
             }
             else
@@ -284,7 +283,7 @@ namespace CoreInputMod.Systems
         public bool TryGetCommandSourcePrimary(Entity owner, out Entity entity)
         {
             entity = default;
-            if (!TryResolveCollection(owner, EntityCollectionKeys.CommandSource, out EntityCollectionHandle handle, out _) ||
+            if (!TryResolveCollection(owner, CoreInputCollectionKeys.CommandSource, out EntityCollectionHandle handle, out _) ||
                 _entityCollections == null ||
                 !_entityCollections.TryGetEntityAt(handle, 0, out Entity candidate) ||
                 !_world.IsAlive(candidate))
@@ -299,7 +298,7 @@ namespace CoreInputMod.Systems
         public bool TryCopyCommandSourceEntities(Entity owner, List<Entity> entities)
         {
             entities.Clear();
-            if (!TryResolveCollection(owner, EntityCollectionKeys.CommandSource, out EntityCollectionHandle handle, out EntityCollectionView view) ||
+            if (!TryResolveCollection(owner, CoreInputCollectionKeys.CommandSource, out EntityCollectionHandle handle, out EntityCollectionView view) ||
                 _entityCollections == null ||
                 view.Count <= 0)
             {
@@ -324,8 +323,22 @@ namespace CoreInputMod.Systems
         public bool TryGetHoveredEntity(Entity owner, out Entity entity)
         {
             entity = default;
+            string hoverKey = ResolveInputCollectionKey(
+                static keys => keys.Hover,
+                "hover");
             return _entityCollections != null &&
-                   EntityCollectionContextRuntime.TryGetHovered(_world, _entityCollections, owner, out entity);
+                   !string.IsNullOrWhiteSpace(hoverKey) &&
+                   EntityCollectionContextRuntime.TryGetHovered(_world, _entityCollections, owner, hoverKey, out entity);
+        }
+
+        private string ResolveInputCollectionKey(
+            System.Func<Ludots.Core.Input.Config.InputCollectionKeyDeclarations, string> select,
+            string role)
+        {
+            return _globals.TryGetValue(CoreServiceKeys.InputCollectionKeys.Name, out var keysObj) &&
+                   keysObj is Ludots.Core.Input.Config.InputCollectionKeyDeclarations keys
+                ? select(keys)
+                : string.Empty;
         }
 
         public bool TryGetAbilityDefinitionRegistry(out AbilityDefinitionRegistry registry)
@@ -350,6 +363,10 @@ namespace CoreInputMod.Systems
                 effectsObj is not EffectTemplateRegistry effects ||
                 !_globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var collectionsObj) ||
                 collectionsObj is not EntityCollectionStore collections ||
+                !_globals.TryGetValue(CoreServiceKeys.CollectionApplier.Name, out var applierObj) ||
+                applierObj is not Ludots.Core.EntityCollections.CollectionApplier collectionApplier ||
+                !_globals.TryGetValue(CoreServiceKeys.InputCollectionKeys.Name, out var inputKeysObj) ||
+                inputKeysObj is not Ludots.Core.Input.Config.InputCollectionKeyDeclarations inputCollectionKeys ||
                 !_globals.TryGetValue(CoreServiceKeys.SpatialQueryService.Name, out var spatialObj) ||
                 spatialObj is not ISpatialQueryService spatialQueries ||
                 !_globals.TryGetValue(CoreServiceKeys.PresentationEventStream.Name, out var eventsObj) ||
@@ -394,6 +411,9 @@ namespace CoreInputMod.Systems
                 abilities,
                 effects,
                 collections,
+                collectionApplier,
+                inputCollectionKeys.AbilityAimHoverKeyId,
+                inputCollectionKeys.AbilityAimAffectedKeyId,
                 spatialQueries,
                 events,
                 session,

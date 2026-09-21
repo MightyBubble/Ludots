@@ -1,6 +1,6 @@
 {
   "Id": "rts_entry",
-  "World": {
+"World": {
     "WidthCm": 1638400,
     "HeightCm": 1638400,
     "CellSizeCm": 100
@@ -292,5 +292,7 @@
         "Symmetric": false
       }
     ]
-  }
+  },
+  "ContinuousHeightmapAsset": "assets/terrain/rts_flat.height",
+  "HeartbeatIntervalTicks": 6
 }

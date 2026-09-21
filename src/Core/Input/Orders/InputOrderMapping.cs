@@ -518,5 +518,26 @@ namespace Ludots.Core.Input.Orders
         /// User override settings.
         /// </summary>
         public UserOverrideSettings UserOverrides { get; set; } = new();
+
+        /// <summary>
+        /// Optional skill-bar overlay authoring carried by this mod's input config. Published
+        /// by the auto-installed local order source; absent means the mapping install leaves
+        /// the overlay globals untouched.
+        /// </summary>
+        public SkillBarSettings SkillBar { get; set; } = new();
+    }
+
+    /// <summary>
+    /// Skill-bar overlay authoring riding the per-mod input-order mapping config: whether the
+    /// overlay is shown and which key captions it lists (presentation data only — no input
+    /// semantics).
+    /// </summary>
+    public sealed class SkillBarSettings
+    {
+        /// <summary>Declares the overlay on/off; null = not declared (globals untouched).</summary>
+        public bool? Enabled { get; set; }
+
+        /// <summary>Key captions in slot order; null = not declared (globals untouched).</summary>
+        public List<string> KeyLabels { get; set; }
     }
 }

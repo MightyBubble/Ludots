@@ -1,55 +1,49 @@
 # Case E 交接
 
 > 结构说明：[case-e-config-structure.html](./case-e-config-structure.html)  
+> 配置宪法：[input-config-constitution.html](./input-config-constitution.html)（§12 为下单合同）  
 > 图当可调用函数（另单方案正本）：[graph-callable-function-vision.md](../../../../../gitbook/architecture/graph-callable-function-vision.md)
 
 ## 1. 概述
 
-Case E 是框选演示：按下拖框，抬起落定。  
-合同纠偏已到位——起角落指挥官黑板，屏幕框直读黑板和活指针，不靠地图变量，开机不硬塞玩法键。  
-还欠一笔：**三份名单不该靠引擎特供通道写。**
+Case E 是框选演示：按下拖框，抬起落定。
+合同纠偏已到位——起角落指挥官黑板，屏幕框直读黑板和活指针，不靠地图变量，开机不硬塞玩法键。
+名单落账也已图化：三份名单（可框选 / 预览黄环 / 已选中）由图经 `WriteCollection` 写，引擎特供通道（`collection_event_writers.json`、`DispatchCollectionEvent`）已退役删除。
+
+当前欠的一笔：**Case E 还不下单。**§12 接口空置。
 
 ## 2. 结构
 
 ```text
 已按合同
-  起角 → 指挥官黑板
-  活角 → 本机指针
-  屏幕框 → 直读上面两个
-  关框选态 → 图听落定事件
-
-蠢决定（待拆）
-  可框选 / 预览黄环 / 已选中 → 现网不是图写的
+  起角 → 指挥官黑板（box_begin 边沿图）
+  活角 → 本机指针（LoadPointerScreenX/Y）
+  屏幕框 → presenter ScreenRect 直读黑板+指针
+  命中 → box_hit 查询函数（box_commit / box_hover_tick 复用同一张）
+  关框选态 → box_commit 图 DeactivateContext，scope 整组清
+  三份名单 → 图写集合（WriteCollection 单 op）
 ```
 
-## 3. 详情：名单这笔蠢决定
+## 3. 详情：下一步是全链下单（迁移切1）
 
-框选图算出「这些人」后，派一个自定义事件。  
-真正改三份名单的，**不是下一张图**，而是引擎里一段写死的代码。  
-Case E 还要在 `Input/collection_event_writers.json` 里把事件名登一遍，引擎才肯改名单；不登就当没听见。
+按宪法 §12：battle profile 声明 `activeCollectionKey: "selected"`；
+新增右键 Command 动作 + 提交图（ScreenPointToGround → `SubmitCommandIntent` op → 意图缓冲）；
+下令域按活跃 context 声明的键读集合，令下给成员。
 
-| 玩家看见 | 名单 |
-|---|---|
-| 谁能被框 | 可框选 |
-| 拖着时谁亮黄环 | 预览 |
-| 抬起后谁亮选中环 | 已选中 |
-
-关框选态已经有一张图在听落定事件。写名单本该同一套路：图听事件，图改名单。  
-硬走引擎特供，等于把 RTS 框选写名单焊进核心。射击玩法用不上；换玩法这份 Case E 配置就是死肉。
-
-事件名册只管「能发」。writers 那份配置才管「谁改名单」——结构说明里没写它，别当成作者必须填的字段去扩。
+验收目标：按下拖框 → 抬起选中 → 右键 → 选中的陆战队移动。
+headless + trace 入 `artifacts/acceptance/`。
 
 ## 4. 场景
 
-1. 接手 Case E：先读本页，知道合同已纠偏、名单落账仍是蠢决定。  
-2. 写「图当可调用函数」方案：必须写清这三份名单怎么改回图听事件写名单。  
-3. 别在 Case E 玩法单里再扩 writers 配置或引擎写名单特供。
+1. 接手 Case E：先读本页，再读宪法 §12。
+2. 切1 需要 `SubmitCommandIntent` op 与意图缓冲先落地（引擎侧）。
+3. 别在 Case E 玩法单里写 C#——下单触发也是图。
 
 ## 5. 边界
 
-- 本页只记 Case E。  
-- 合同纠偏别重做。  
-- 拆引擎特供另开基建；失败要报错，禁止静默空跑。  
+- 本页只记 Case E。
+- 合同纠偏与名单图化别重做。
+- 引擎零特权键：没有任何默认集合键或默认 profile 兜底，无声明路由的 context 下单即具名拒绝。
 - 本页不替代可调用函数远景正本；方案仍按正本模板交。
 
 ## 6. UAT
@@ -57,17 +51,18 @@ Case E 还要在 `Input/collection_event_writers.json` 里把事件名登一遍�
 ```gherkin
 Feature: Case E 交接说得清
 
-  Scenario: 我知道蠢决定是什么
+  Scenario: 我知道现状
     Given 我是接手 Case E 的人
     When 我读本页
-    Then 我知道三份名单现在不是图写的
-    And 我知道不该再扩那份事件白名单配置
+    Then 我知道三份名单已经由图写
+    And 我知道引擎特供通道已退役
 
-  Scenario: 方案要对准 Case E
-    Given 我要交「图当可调用函数」方案
-    When 我对照 Case E
-    Then 方案里写清名单改回图听事件落账
-    And 我不会把引擎特供当成正确合同
+  Scenario: 我知道下一步
+    Given 我要落切1 全链下单
+    When 我对照宪法 §12
+    Then battle 声明 activeCollectionKey
+    And 右键提交图经 SubmitCommandIntent 下单
+    And 全程没有 C# 玩法代码
 ```
 
 ---

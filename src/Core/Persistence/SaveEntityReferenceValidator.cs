@@ -30,6 +30,7 @@ namespace Ludots.Core.Persistence
             ValidateRelationshipKeys<RelationshipEdgeSet>(world, policy);
             ValidateRelationshipKeys<InRelationship>(world, policy);
             ValidateRelationshipInstances(world, policy);
+            ValidateInteractionContextInstances(world, policy);
         }
 
         private static void ValidateOrderBuffers(World world, SaveEntityInclusionPolicy policy)
@@ -264,6 +265,26 @@ namespace Ludots.Core.Persistence
                 throw new SaveContextException(
                     $"Save entity reference validation failed: {nameof(RelationshipInstanceCm)} on entity {owner.Id}:{owner.WorldId}:{owner.Version} has no matching relationship edge for type {relationship.TypeId}.");
             }
+        }
+
+        private static void ValidateInteractionContextInstances(World world, SaveEntityInclusionPolicy policy)
+        {
+            var query = new QueryDescription().WithAll<Ludots.Core.Input.Interaction.InteractionContextInstance>();
+            world.Query(in query, (Entity owner, ref Ludots.Core.Input.Interaction.InteractionContextInstance instance) =>
+            {
+                if (!policy.ShouldInclude(world, owner))
+                {
+                    return;
+                }
+
+                ValidateTarget(
+                    world,
+                    policy,
+                    owner,
+                    NormalizeOptionalEntity(instance.ContextEntity),
+                    nameof(Ludots.Core.Input.Interaction.InteractionContextInstance),
+                    nameof(Ludots.Core.Input.Interaction.InteractionContextInstance.ContextEntity));
+            });
         }
 
         private static void ValidateRelationshipKeys<T>(World world, SaveEntityInclusionPolicy policy)

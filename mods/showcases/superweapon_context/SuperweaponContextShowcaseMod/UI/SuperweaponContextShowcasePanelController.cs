@@ -240,7 +240,7 @@ namespace SuperweaponContextShowcaseMod.UI
                 ? EntityCollectionContextRuntime.GetCount(
                     engine.GlobalContext,
                     owner,
-                    EntityCollectionKeys.CommandSource)
+                    "collection.command.source")
                 : 0;
             if (count <= 0)
             {

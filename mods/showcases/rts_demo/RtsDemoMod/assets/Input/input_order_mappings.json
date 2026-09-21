@@ -2,46 +2,6 @@
   "interactionMode": "AimCast",
   "mappings": [
     {
-      "actionId": "SkillQ",
-      "trigger": "PressedThisFrame",
-      "orderTypeKey": "castAbility",
-      "argsTemplate": { "i0": 0 },
-      "requireTarget": false,
-      "targetType": "Position",
-      "isSkillMapping": true,
-      "modifierBehavior": "QueueOnModifier"
-    },
-    {
-      "actionId": "SkillW",
-      "trigger": "PressedThisFrame",
-      "orderTypeKey": "castAbility",
-      "argsTemplate": { "i0": 1 },
-      "requireTarget": false,
-      "targetType": "Entity",
-      "isSkillMapping": true,
-      "modifierBehavior": "QueueOnModifier"
-    },
-    {
-      "actionId": "SkillE",
-      "trigger": "PressedThisFrame",
-      "orderTypeKey": "castAbility",
-      "argsTemplate": { "i0": 2 },
-      "requireTarget": false,
-      "targetType": "None",
-      "isSkillMapping": true,
-      "modifierBehavior": "QueueOnModifier"
-    },
-    {
-      "actionId": "SkillR",
-      "trigger": "PressedThisFrame",
-      "orderTypeKey": "castAbility",
-      "argsTemplate": { "i0": 3 },
-      "requireTarget": false,
-      "targetType": "Position",
-      "isSkillMapping": true,
-      "modifierBehavior": "QueueOnModifier"
-    },
-    {
       "actionId": "Command",
       "actorCollectionKey": "collection.command.source",
       "trigger": "PressedThisFrame",
@@ -59,7 +19,9 @@
             "match": {
               "abilitySlotIndex": 2,
               "abilityIdKeySuffix": ".Train",
-              "blockedAnyTags": ["Progression.Rts.WarpGate"]
+              "blockedAnyTags": [
+                "Progression.Rts.WarpGate"
+              ]
             }
           },
           {
@@ -86,10 +48,22 @@
     "mode": "Grid",
     "assignment": "PreserveRelative",
     "spacingCm": 140,
-    "orderTypeKeys": ["moveTo", "attackTarget"]
+    "orderTypeKeys": [
+      "moveTo",
+      "attackTarget"
+    ]
   },
   "userOverrides": {
     "enabled": true,
     "persistPath": "user://RtsDemoMod/input_preferences.json"
+  },
+  "skillBar": {
+    "enabled": true,
+    "keyLabels": [
+      "Q",
+      "W",
+      "E",
+      "R"
+    ]
   }
 }

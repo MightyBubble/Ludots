@@ -145,6 +145,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private Ludots.Core.Input.Interaction.InteractionContextInstanceRuntime? _contextInstances;
         private Gameplay.MapTriggers.CustomEventNameRegistry? _customEvents;
         private Func<GameEngine?>? _engineResolver;
+        private Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmissionBuffer? _commandIntentSubmissions;
+        private Ludots.Core.EntityCollections.CollectionApplier? _collectionApplier;
 
         // ── Topology predicate services (RFC-0065 PROV-4b), bound post-construction ──
         private ControlDomainQuery? _controlDomains;
@@ -332,6 +334,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public void BindContextInstances(Ludots.Core.Input.Interaction.InteractionContextInstanceRuntime contextInstances)
         {
             _contextInstances = contextInstances ?? throw new ArgumentNullException(nameof(contextInstances));
+        }
+
+        /// <summary>
+        /// Binds the single collection write point (constitution §08) so the <c>WriteCollection</c>
+        /// op routes through the CollectionApplier; the applier owns all store mutations.
+        /// </summary>
+        public void BindCollectionApplier(Ludots.Core.EntityCollections.CollectionApplier collectionApplier)
+        {
+            _collectionApplier = collectionApplier ?? throw new ArgumentNullException(nameof(collectionApplier));
+        }
+
+        /// <summary>
+        /// Binds the per-tick command intent submission buffer (constitution §12) so the
+        /// <c>SubmitCommandIntent</c> op can queue intents; the order kernel owns the drain.
+        /// </summary>
+        public void BindCommandIntentSubmissions(Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmissionBuffer submissions)
+        {
+            _commandIntentSubmissions = submissions ?? throw new ArgumentNullException(nameof(submissions));
         }
 
         /// <summary>
@@ -945,13 +965,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         /// key must be a declared custom event (fail closed) and a map scope is required.
         /// </summary>
         /// <summary>
-        /// Direct owned-collection write (graph-side primitive): the caller computed owner, op,
-        /// and the entity set in-graph; set semantics execute in CollectionWrite and membership
-        /// change events fire from the store's presentation diff like any other writer.
+        /// Direct owned-collection write (graph bridge entry): the caller computed owner, op, and
+        /// the entity set in-graph; the set semantics execute in the CollectionApplier — the
+        /// engine's single collection write point (constitution §08) — and membership change events
+        /// fire from the store's presentation diff like any other writer.
         /// </summary>
         public void WriteCollection(int collectionKeyId, int opKind, Entity owner, Span<Entity> entities, int count)
         {
-            var store = _entityCollections
+            var applier = _collectionApplier
                 ?? throw new InvalidOperationException("GAS.GRAPH.ERR.EntityCollectionsUnavailable");
             if (count < 0 || count > entities.Length)
             {
@@ -959,7 +980,47 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     $"GAS.GRAPH.ERR.CollectionWriteCountInvalid: count {count} is outside entity list length {entities.Length}.");
             }
 
-            CollectionWrite.Apply(store, owner, collectionKeyId, (CollectionWriteOp)opKind, entities.Slice(0, count));
+            applier.Apply(owner, collectionKeyId, (CollectionWriteOp)opKind, entities.Slice(0, count));
+        }
+
+        /// <summary>
+        /// Pushes one command intent into the submission buffer; routing happens when the
+        /// order kernel drains the buffer in its own system-group phase (constitution §12).
+        /// </summary>
+        public void SubmitCommandIntent(Entity rep, Entity target, bool hasTarget, in Ludots.Platform.Abstractions.IntVector2 groundCm)
+        {
+            var submissions = _commandIntentSubmissions
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.CommandIntentBufferUnavailable");
+            submissions.Push(new Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmission(
+                rep,
+                hasTarget ? target : Entity.Null,
+                hasTarget,
+                groundCm));
+        }
+
+        /// <summary>
+        /// Pushes one cast intent into the submission buffer; the drain resolves actors from the
+        /// rep's active-context-declared collection and lands Args.I0 = slot (constitution §12).
+        /// </summary>
+        public void SubmitCastIntent(
+            Entity rep,
+            int slot,
+            Entity target,
+            bool hasTarget,
+            bool hasGround,
+            in Ludots.Platform.Abstractions.IntVector2 groundCm,
+            int orderTypeKeyId)
+        {
+            var submissions = _commandIntentSubmissions
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.CommandIntentBufferUnavailable");
+            submissions.PushCast(new Ludots.Core.Gameplay.GAS.Orders.CastIntentSubmission(
+                rep,
+                slot,
+                hasTarget ? target : Entity.Null,
+                hasTarget,
+                hasGround,
+                groundCm,
+                orderTypeKeyId));
         }
 
         /// <summary>
@@ -1829,20 +1890,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return RequireEntityQueries().FilterLayer(entities, count, requiredMask);
         }
 
-        public int FilterControllable(Span<Entity> entities, int count, Entity controller)
-        {
-            if ((uint)count > (uint)entities.Length) throw new ArgumentOutOfRangeException(nameof(count));
-            ControlDomainQuery domains = RequireControlDomains();
-            int written = 0;
-            for (int i = 0; i < count; i++)
-            {
-                Entity candidate = entities[i];
-                if (domains.IsControllableBy(controller, candidate))
-                    entities[written++] = candidate;
-            }
-            return written;
-        }
-
         public int FilterNotEntity(Span<Entity> entities, int count, Entity exclude)
         {
             return RequireEntityQueries().FilterNotEntity(entities, count, exclude);
@@ -2002,6 +2049,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         public bool HasKnowledgeProjection(Entity viewer, Entity target)
             => RequireKnowledgeProjections().CanKnowEntity(viewer, target, CurrentStepTick());
+
+        public int FilterKnowledgeVisible(Span<Entity> candidates, int count, Entity viewer)
+        {
+            var knowledge = RequireKnowledgeProjections();
+            int tick = CurrentStepTick();
+            int kept = 0;
+            for (int i = 0; i < count; i++)
+            {
+                if (knowledge.CanKnowEntity(viewer, candidates[i], tick))
+                {
+                    candidates[kept++] = candidates[i];
+                }
+            }
+
+            return kept;
+        }
 
         private ControlDomainQuery RequireControlDomains()
         {

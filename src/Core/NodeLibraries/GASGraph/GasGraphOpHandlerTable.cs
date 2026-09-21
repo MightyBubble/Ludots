@@ -278,7 +278,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.LoadEffectTiming or
                 GraphNodeOp.LoadEffectStack or
                 GraphNodeOp.QueryFilterTeam or
-                GraphNodeOp.QueryFilterControllable or
                 GraphNodeOp.QueryFilterTemplate or
                 GraphNodeOp.QueryFilterAttributeRange or
                 GraphNodeOp.QueryFilterTagAny or
@@ -359,13 +358,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.ScreenPointToGround or
                 GraphNodeOp.ScreenPointToEntity or
                 GraphNodeOp.ScreenRegionToEntities or
+                GraphNodeOp.QueryFilterKnowledgeVisible or
                 GraphNodeOp.PointToDirection or
                 GraphNodeOp.StickToDirection or
                 GraphNodeOp.LoadPointerScreenX or
                 GraphNodeOp.LoadPointerScreenY or
                 GraphNodeOp.ActivateContext or
                 GraphNodeOp.DeactivateContext or
-                GraphNodeOp.WriteCollection or GraphNodeOp.BindQueryCollection
+                GraphNodeOp.WriteCollection or
+                GraphNodeOp.SubmitCommandIntent or
+                GraphNodeOp.SubmitCast or
+                GraphNodeOp.BindQueryCollection
                     => EffectOperationMetadata.Pure(description),
 
                 GraphNodeOp.SubmitAssignedOrder or
@@ -802,7 +805,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.QueryLine, HandleQueryLine, "QueryLine graph opcode.");
             Register(GraphNodeOp.QueryFilterNotEntity, HandleQueryFilterNotEntity, "QueryFilterNotEntity graph opcode.");
             Register(GraphNodeOp.QueryFilterLayer, HandleQueryFilterLayer, "QueryFilterLayer graph opcode.");
-            Register(GraphNodeOp.QueryFilterControllable, HandleQueryFilterControllable, "QueryFilterControllable graph opcode.");
             Register(GraphNodeOp.QueryFilterRelationship, HandleQueryFilterRelationship, "QueryFilterRelationship graph opcode.");
             Register(GraphNodeOp.AggCount, HandleAggCount, "AggCount graph opcode.");
             Register(GraphNodeOp.AggMinByDistance, HandleAggMinByDistance, "AggMinByDistance graph opcode.");
@@ -945,6 +947,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.ActivateContext, HandleActivateContext, "ActivateContext graph opcode.");
             Register(GraphNodeOp.DeactivateContext, HandleDeactivateContext, "DeactivateContext graph opcode.");
             Register(GraphNodeOp.WriteCollection, HandleWriteCollection, "WriteCollection graph opcode.");
+            Register(GraphNodeOp.SubmitCommandIntent, HandleSubmitCommandIntent, "SubmitCommandIntent graph opcode.");
+            Register(GraphNodeOp.SubmitCast, HandleSubmitCast, "SubmitCast graph opcode.");
+            Register(GraphNodeOp.QueryFilterKnowledgeVisible, HandleQueryFilterKnowledgeVisible, "QueryFilterKnowledgeVisible graph opcode.");
             Register(GraphNodeOp.BindQueryCollection, HandleBindQueryCollection, "BindQueryCollection graph opcode.");
         Register(GraphNodeOp.SetPanelAudience, HandleSetPanelAudience, "SetPanelAudience graph opcode.");
             Register(GraphNodeOp.DestroyPanel, HandleDestroyPanel, "DestroyPanel graph opcode.");
@@ -1584,6 +1589,48 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 s.TargetList.Count);
         }
 
+        private static void HandleSubmitCommandIntent(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            if (!s.World.IsAlive(s.Caster))
+            {
+                throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.CommandIntentCasterDead: SubmitCommandIntent requires a living acting rep (the trigger mount subject).");
+            }
+
+            if (s.B[ins.B] == 0)
+            {
+                throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.CommandIntentGroundUnresolved: SubmitCommandIntent requires the ground point resolved this run; wire ScreenPointToGround and branch on its condition before submitting.");
+            }
+
+            bool hasTarget = ins.A != byte.MaxValue && s.E[ins.A] != Entity.Null && s.World.IsAlive(s.E[ins.A]);
+            s.Api.SubmitCommandIntent(
+                s.Caster,
+                hasTarget ? s.E[ins.A] : Entity.Null,
+                hasTarget,
+                s.TargetPosCm);
+        }
+
+        private static void HandleSubmitCast(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            if (!s.World.IsAlive(s.Caster))
+            {
+                throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.CastIntentCasterDead: SubmitCast requires a living acting rep (the trigger mount subject).");
+            }
+
+            bool hasTarget = ins.B != byte.MaxValue && s.E[ins.B] != Entity.Null && s.World.IsAlive(s.E[ins.B]);
+            bool hasGround = ins.C != byte.MaxValue && s.B[ins.C] != 0;
+            s.Api.SubmitCastIntent(
+                s.Caster,
+                s.I[ins.A],
+                hasTarget ? s.E[ins.B] : Entity.Null,
+                hasTarget,
+                hasGround,
+                s.TargetPosCm,
+                ins.Imm);
+        }
+
         private static void HandleBindQueryCollection(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.Api.BindQueryCollection(s.E[ins.A], BitConverter.SingleToInt32Bits(ins.ImmF), ins.Imm,
@@ -1772,6 +1819,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             s.TargetList.SetCount(s.Api.Limit(s.Targets, s.TargetList.Count, ins.Imm));
         }
 
+        private static void HandleQueryFilterKnowledgeVisible(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.TargetList.SetCount(s.Api.FilterKnowledgeVisible(s.Targets, s.TargetList.Count, s.E[ins.A]));
+        }
+
         private static void HandleQueryFilterNotEntity(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.TargetList.SetCount(s.Api.FilterNotEntity(s.Targets, s.TargetList.Count, s.E[ins.A]));
@@ -1780,11 +1832,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void HandleQueryFilterLayer(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.TargetList.SetCount(s.Api.FilterLayer(s.Targets, s.TargetList.Count, unchecked((uint)ins.Imm)));
-        }
-
-        private static void HandleQueryFilterControllable(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
-        {
-            s.TargetList.SetCount(s.Api.FilterControllable(s.Targets, s.TargetList.Count, s.E[ins.A]));
         }
 
         private static void HandleQueryFilterRelationship(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

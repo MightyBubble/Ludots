@@ -1,0 +1,17 @@
+{
+  "profiles": [
+    {
+      "id": "interaction.context.ballista",
+      "activeCollectionKey": "collection.command.source",
+      "bindings": [
+        "Ballista.Command"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.ballista.route"
+        }
+      ],
+      "commandIntentId": "intent.command.default"
+    }
+  ]
+}

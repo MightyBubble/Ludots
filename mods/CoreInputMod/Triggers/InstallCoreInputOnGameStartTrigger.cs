@@ -9,6 +9,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Gameplay.GAS.Input;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Systems;
 using Ludots.Core.Mathematics;
@@ -48,8 +49,6 @@ namespace CoreInputMod.Triggers
                 return Task.CompletedTask;
             engine.SetService(CoreInputServiceKeys.Installed, true);
 
-            var commandSourceAcquiredCallbacks = new List<Action<WorldCmInt2, Entity>>();
-            engine.SetService(CoreInputServiceKeys.CommandSourceAcquiredCallbacks, commandSourceAcquiredCallbacks);
             engine.SetService(
                 CoreServiceKeys.MinimapFocusCollectionProvider,
                 (Ludots.Core.Presentation.Minimap.MinimapFocusCollectionProvider)TryResolveMinimapFocusCollection);
@@ -59,27 +58,6 @@ namespace CoreInputMod.Triggers
 
             _ = engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore must be registered before CoreInputMod installs.");
-            var commandSourceAcquisitionConfig = engine.GetService(CoreServiceKeys.CommandSourceAcquisitionConfig)
-                ?? throw new InvalidOperationException("CommandSourceAcquisitionConfig must be registered before CoreInputMod installs.");
-
-            if (commandSourceAcquisitionConfig.Acquisition.Enabled)
-            {
-                var commandSourceAcquisition = new CommandSourceAcquisitionSystem(
-                    engine.World,
-                    engine.GlobalContext,
-                    (out Entity owner) => TryResolveLocalCommandSourceOwner(engine, out owner));
-                commandSourceAcquisition.OnEntityAcquired = (worldCm, entity) =>
-                {
-                    foreach (var cb in commandSourceAcquiredCallbacks) cb(worldCm, entity);
-                };
-                // Replicated clients execute only LocalInput, before pointer edges are consumed.
-                engine.InsertSystemBeforeRequired<AxisMoveOrderSystem>(commandSourceAcquisition, SystemGroup.LocalInput);
-                engine.RegisterPresentationSystem(new CommandSourceDragOverlaySystem(
-                    engine.World,
-                    engine.GlobalContext,
-                    (out Entity owner) => TryResolveLocalCommandSourceOwner(engine, out owner),
-                    commandSourceAcquisitionConfig));
-            }
 
             engine.RegisterSystem(new GasInputResponseSystem(engine.World, engine.GlobalContext), SystemGroup.InputCollection);
             engine.RegisterSystem(new AbilityExecAimSyncSystem(engine.World, new InputInteractionContextAccessor(engine.World, engine.GlobalContext)), SystemGroup.InputCollection);
@@ -98,10 +76,11 @@ namespace CoreInputMod.Triggers
             engine.SetService(CoreInputServiceKeys.ViewModeManager, vmManager);
             RegisterLoadedModViewModes(engine);
             engine.RegisterSystem(new ViewModeSwitchSystem(engine.GlobalContext), SystemGroup.LocalInput);
+            RegisterAutoLocalOrderSource(engine);
 
-            InstallDeclaredLocalOrderSources(engine);
+_ctx.Log("[CoreInputMod] GasInputResponse, SkillBar, AbilityAimPresentation, CommandActorMovePathPresentation, TabTarget, ViewMode registered");
 
-            _ctx.Log($"[CoreInputMod] Acquisition enabled: {commandSourceAcquisitionConfig.Acquisition.Enabled}; input and presentation systems registered.");
+InstallDeclaredLocalOrderSources(engine);
             return Task.CompletedTask;
         }
 
@@ -166,6 +145,49 @@ namespace CoreInputMod.Triggers
             bool found = TryResolveLocalCommandSourceOwner(engine, out owner);
             collectionKey = InputInteractionContextAccessor.RequireActiveActorCollectionKey(engine.World, engine.GlobalContext, owner);
             return found;
+        }
+
+        /// <summary>
+        /// Slice-2 auto assembly: exactly one loaded mod may ship the local order mapping
+        /// config; the shipping mod is resolved here (load-time, fail-fast on ambiguity) and
+        /// the shared config-installed order source replaces every per-mod installer.
+        /// </summary>
+        private void RegisterAutoLocalOrderSource(GameEngine engine)
+        {
+            string? sourceModId = null;
+            var loadedModIds = engine.ModLoader?.LoadedModIds;
+            if (loadedModIds != null)
+            {
+                for (int i = 0; i < loadedModIds.Count; i++)
+                {
+                    string modId = loadedModIds[i];
+                    string uri = $"{modId}:assets/Input/input_order_mappings.json";
+                    if (_ctx.VFS.TryResolveFullPath(uri, out string? path) && System.IO.File.Exists(path))
+                    {
+                        if (sourceModId != null)
+                        {
+                            throw new InvalidOperationException(
+                                $"[CoreInputMod] Both '{sourceModId}' and '{modId}' ship assets/Input/input_order_mappings.json; " +
+                                "exactly one gameplay mod may own the local order mapping per game set.");
+                        }
+
+                        sourceModId = modId;
+                    }
+                }
+            }
+
+            if (sourceModId == null)
+            {
+                _ctx.Log("[CoreInputMod] No loaded mod ships input_order_mappings.json; auto local order source stays uninstalled.");
+                return;
+            }
+
+            OrderQueue orders = engine.GetService(CoreServiceKeys.OrderQueue)
+                ?? throw new InvalidOperationException("[CoreInputMod] Auto local order source requires OrderQueue.");
+            var autoOrderSource = new AutoInstalledLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx, sourceModId);
+            engine.SetService(AutoInstalledLocalOrderSourceSystem.ServiceKey, autoOrderSource);
+            engine.RegisterSystem(autoOrderSource, SystemGroup.InputCollection);
+            _ctx.Log($"[CoreInputMod] Auto local order source installed from '{sourceModId}'.");
         }
 
         private void RegisterLoadedModViewModes(GameEngine engine)

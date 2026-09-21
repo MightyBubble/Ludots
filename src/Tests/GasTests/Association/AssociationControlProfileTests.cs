@@ -879,7 +879,7 @@ namespace Ludots.Tests.GAS
             public TagOps TagOps = null!;
             public AssociationControlProfileRuntime Runtime = null!;
             public EntityCollectionStore Store = null!;
-            public DomainRoutedCollectionWriter Writer = null!;
+            public Ludots.Core.EntityCollections.CollectionApplier Writer = null!;
             public ControlPlaneView View = null!;
             public Entity P1Rep;
             public Entity P2Rep;
@@ -930,6 +930,12 @@ namespace Ludots.Tests.GAS
                 var domains = new ControlDomainQuery(world, relationships, ownership, ownsTypeId, controlsTypeId);
                 var keyRegistry = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
                 var store = new EntityCollectionStore(keyRegistry, initialCollectionCapacity: 16, initialRowCapacity: 128);
+                var applier = new Ludots.Core.EntityCollections.CollectionApplier(world, store);
+                var filterProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+                applier.BindInputInteraction(
+                    new Ludots.Core.Input.Interaction.FilterProfileRegistry(filterProfileIds, world, tagOps),
+                    domains,
+                    keyRegistry.Register("collection.ui.cast.raw"));
                 return new Harness
                 {
                     World = world,
@@ -938,14 +944,14 @@ namespace Ludots.Tests.GAS
                     TagOps = tagOps,
                     Runtime = runtime,
                     Store = store,
-                    Writer = new DomainRoutedCollectionWriter(store, domains),
+                    Writer = applier,
                     View = new ControlPlaneView(store, domains),
                     P1Rep = p1Rep,
                     P2Rep = p2Rep,
                     ControlsTypeId = controlsTypeId,
                     AllyTypeId = allyTypeId,
                     GrantedFlagId = grantedFlagId,
-                    CommandSourceKeyId = keyRegistry.Register(EntityCollectionKeys.CommandSource),
+                    CommandSourceKeyId = keyRegistry.Register("collection.command.source"),
                 };
             }
 

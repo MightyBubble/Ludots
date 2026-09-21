@@ -1,0 +1,90 @@
+[
+  {
+    "id": "ballista_crew",
+    "components": {
+      "AttributeBuffer": {
+        "base": {
+          "Ballista.Health": 400,
+          "Ballista.Armor": 50
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Ballista.Shot",
+          "Ability.Ballista.SiegeBolt"
+        ]
+      },
+      "GameplayTagContainer": {
+        "tags": [
+          "Unit.Commandable"
+        ]
+      },
+      "OrderBuffer": {},
+      "BlackboardIntBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "DirtyFlags": {},
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "PlayerIdentity": {
+        "PlayerId": 1
+      }
+    },
+    "initialInteractionContext": "interaction.context.ballista"
+  },
+  {
+    "id": "ballista_wolf",
+    "components": {
+      "AttributeBuffer": {
+        "base": {
+          "Ballista.Health": 300,
+          "Ballista.Armor": 0
+        }
+      },
+      "GameplayTagContainer": {
+        "tags": [
+          "Unit.Biological"
+        ]
+      },
+      "DirtyFlags": {}
+    }
+  },
+  {
+    "id": "ballista_tower",
+    "components": {
+      "AttributeBuffer": {
+        "base": {
+          "Ballista.Health": 2000,
+          "Ballista.Armor": 300
+        }
+      },
+      "GameplayTagContainer": {
+        "tags": [
+          "Structure.Building"
+        ]
+      },
+      "SpatialFootprint2D": {
+        "vertices": [
+          {
+            "x": -190,
+            "y": -120
+          },
+          {
+            "x": 190,
+            "y": -120
+          },
+          {
+            "x": 190,
+            "y": 120
+          },
+          {
+            "x": -190,
+            "y": 120
+          }
+        ]
+      },
+      "DirtyFlags": {}
+    }
+  }
+]

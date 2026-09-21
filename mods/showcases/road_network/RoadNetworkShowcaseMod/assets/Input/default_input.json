@@ -1,10 +1,25 @@
 {
   "actions": [
-    { "id": "CommandSourceAcquire", "name": "Gameplay_CommandSourceAcquire", "type": "Button" },
-    { "id": "Command", "name": "Gameplay_Command", "type": "Button" },
-    { "id": "Stop", "name": "Gameplay_Stop", "type": "Button" },
-    { "id": "QueueModifier", "name": "Gameplay_QueueModifier", "type": "Button" },
-    { "id": "ResetCamera", "name": "Gameplay_ResetCamera", "type": "Button" }
+    {
+      "id": "Command",
+      "name": "Gameplay_Command",
+      "type": "Button"
+    },
+    {
+      "id": "Stop",
+      "name": "Gameplay_Stop",
+      "type": "Button"
+    },
+    {
+      "id": "QueueModifier",
+      "name": "Gameplay_QueueModifier",
+      "type": "Button"
+    },
+    {
+      "id": "ResetCamera",
+      "name": "Gameplay_ResetCamera",
+      "type": "Button"
+    }
   ],
   "contexts": [
     {
@@ -12,11 +27,22 @@
       "name": "Road Network Showcase",
       "priority": 50,
       "bindings": [
-        { "actionId": "CommandSourceAcquire", "path": "<Mouse>/LeftButton" },
-        { "actionId": "Command", "path": "<Mouse>/RightButton" },
-        { "actionId": "Stop", "path": "<Keyboard>/s" },
-        { "actionId": "QueueModifier", "path": "<Keyboard>/leftShift" },
-        { "actionId": "ResetCamera", "path": "<Keyboard>/home" }
+        {
+          "actionId": "Command",
+          "path": "<Mouse>/RightButton"
+        },
+        {
+          "actionId": "Stop",
+          "path": "<Keyboard>/s"
+        },
+        {
+          "actionId": "QueueModifier",
+          "path": "<Keyboard>/leftShift"
+        },
+        {
+          "actionId": "ResetCamera",
+          "path": "<Keyboard>/home"
+        }
       ]
     }
   ]

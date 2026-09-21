@@ -39,7 +39,8 @@
       "Overrides": {
         "Team": {
           "Id": 1
-        }
+        },
+        "initialInteractionContext": "interaction.context.formation.battle"
       }
     },
     {

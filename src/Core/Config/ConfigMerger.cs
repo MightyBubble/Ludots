@@ -17,7 +17,7 @@ namespace Ludots.Core.Config
                 case ConfigMergePolicy.Replace:
                     return fragments[^1].DeepClone();
                 case ConfigMergePolicy.DeepObject:
-                    return MergeDeepObject(fragments);
+                    return MergeDeepObject(fragments, entry.ArrayAppendFields ?? Array.Empty<string>());
                 case ConfigMergePolicy.ArrayReplace:
                     return MergeArrayReplace(fragments);
                 case ConfigMergePolicy.ArrayAppend:
@@ -51,12 +51,12 @@ namespace Ludots.Core.Config
             return MergeMany(nodes, in entry);
         }
 
-        private static JsonNode MergeDeepObject(IReadOnlyList<JsonNode> fragments)
+        private static JsonNode MergeDeepObject(IReadOnlyList<JsonNode> fragments, string[] arrayAppendFields)
         {
             var merged = new JsonObject();
             for (int i = 0; i < fragments.Count; i++)
             {
-                if (fragments[i] is JsonObject obj) ConfigPipeline.DeepMerge(merged, obj);
+                if (fragments[i] is JsonObject obj) MergeObject(merged, obj, arrayAppendFields);
             }
             return merged;
         }

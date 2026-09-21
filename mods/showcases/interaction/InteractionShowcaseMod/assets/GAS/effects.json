@@ -1074,9 +1074,6 @@
   },
   {
     "id": "Effect.Interaction.Lockout.Arcweaver.E",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1091,13 +1088,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Arcweaver.F",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1112,13 +1109,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Arcweaver.Q",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1133,13 +1130,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Arcweaver.R",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1154,13 +1151,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Arcweaver.Rune",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1175,13 +1172,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Arcweaver.W",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1196,13 +1193,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Arcweaver.Z",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1217,13 +1214,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Commander.E",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1238,13 +1235,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Commander.F",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1259,13 +1256,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Commander.Q",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1280,13 +1277,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Commander.R",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1301,13 +1298,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Commander.Rune",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1322,13 +1319,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Commander.W",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1343,13 +1340,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Commander.Z",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1364,13 +1361,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Stress.Fireball",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1385,13 +1382,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Vanguard.E",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1406,13 +1403,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Vanguard.F",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1427,13 +1424,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Vanguard.Q",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1448,13 +1445,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Vanguard.R",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1469,13 +1466,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Vanguard.Rune",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1490,13 +1487,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Vanguard.W",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1511,13 +1508,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   },
   {
     "id": "Effect.Interaction.Lockout.Vanguard.Z",
-    "tags": [
-      "Effect.Interaction.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1532,6 +1529,9 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Interaction.Lockout"
     ]
   }
 ]

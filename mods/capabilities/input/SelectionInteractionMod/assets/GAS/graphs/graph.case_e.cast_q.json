@@ -1,0 +1,44 @@
+[
+  {
+    "id": "graph.case_e.cast_q",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_cast_q",
+        "action": "CaseE.CastQ",
+        "start": "slot",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "slot",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "submit",
+        "op": "SubmitCast",
+        "orderTypeKey": "castAbility"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      { "from": "slot", "fromPort": "next", "to": "submit" },
+      { "from": "submit", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "slot", "fromPort": "value", "to": "submit", "toPort": "value" },
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  }
+]

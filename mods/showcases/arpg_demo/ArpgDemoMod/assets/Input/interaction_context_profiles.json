@@ -1,0 +1,40 @@
+{
+  "profiles": [
+    {
+      "id": "interaction.context.arpg.battle",
+      "inputContextId": "Arpg_Gameplay",
+      "activeCollectionKey": "arpg.active",
+      "bindings": [
+        "Arpg.Skill1",
+        "Arpg.Skill2",
+        "Arpg.Skill3",
+        "Arpg.Skill4",
+        "Arpg.Skill5",
+        "Arpg.Skill6"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.arpg.roster_sync"
+        },
+        {
+          "trigger": "graph.arpg.cast_slot0"
+        },
+        {
+          "trigger": "graph.arpg.cast_slot1"
+        },
+        {
+          "trigger": "graph.arpg.cast_slot2"
+        },
+        {
+          "trigger": "graph.arpg.cast_slot3"
+        },
+        {
+          "trigger": "graph.arpg.cast_slot4"
+        },
+        {
+          "trigger": "graph.arpg.cast_slot5"
+        }
+      ]
+    }
+  ]
+}

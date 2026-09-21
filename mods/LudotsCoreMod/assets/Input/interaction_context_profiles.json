@@ -1,0 +1,29 @@
+{
+  "profiles": [
+    {
+      "id": "interaction.context.moba.battle",
+      "activeCollectionKey": "collection.command.source",
+      "commandIntentId": "intent.command.default",
+      "bindings": [
+        "Select.Begin",
+        "Select.End"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.core.select_begin"
+        }
+      ]
+    },
+    {
+      "id": "interaction.context.core.selecting",
+      "bindings": [
+        "Select.End"
+      ],
+      "triggers": [
+        {
+          "trigger": "graph.core.select_commit"
+        }
+      ]
+    }
+  ]
+}

@@ -819,17 +819,17 @@ namespace Ludots.Core.Engine
             });
         }
 
-        private static void RegisterBuiltInEntityCollectionKeys(StringIntRegistry registry)
+        private Ludots.Core.Input.Config.InputCollectionKeyDeclarations LoadInputCollectionKeys(StringIntRegistry registry)
         {
-            registry.Register(EntityCollectionKeys.UiCommandAcquisition);
-            registry.Register(EntityCollectionKeys.HoveredEntity);
-            registry.Register(EntityCollectionKeys.AbilityAimHover);
-            registry.Register(EntityCollectionKeys.AbilityAimAffected);
-            registry.Register(EntityCollectionKeys.EntityInfoExplicit);
-            registry.Register(EntityCollectionKeys.CommandSource);
-            registry.Register(EntityCollectionKeys.UiCastRaw);
+            var declarations = Ludots.Core.Input.Config.InputCollectionKeyDeclarations.LoadAndRegister(
+                ConfigPipeline,
+                registry,
+                ConfigCatalog,
+                ConfigConflictReport);
+            // View materialization keys for the command deck / production overview projectors.
             registry.Register(EntityViewKeys.ControlPlaneCommand);
             registry.Register(EntityViewKeys.CommandDeckFiltered);
+            return declarations;
         }
 
         private void InitializeCoreSystems(GameConfig config)
@@ -877,7 +877,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.AttributeAggregateDirtyRegistry, aggregateDirtyRegistry);
             var tagOps = new TagOps(dirtyEntities, new TagRuleRegistry(), gasBudget, aggregateDirtyRegistry);
             var entityCollectionKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            RegisterBuiltInEntityCollectionKeys(entityCollectionKeyRegistry);
+            var inputCollectionKeyDeclarations = LoadInputCollectionKeys(entityCollectionKeyRegistry);
             var entityCollectionStore = new EntityCollectionStore(entityCollectionKeyRegistry, initialCollectionCapacity: 128, initialRowCapacity: 4096);
             var intIdCollectionStore = new IntIdCollectionStore(entityCollectionKeyRegistry, initialCollectionCapacity: 128, initialRowCapacity: 4096);
             var relationshipCatalog = new RelationshipCatalogPipelineLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
@@ -907,7 +907,6 @@ namespace Ludots.Core.Engine
                 relationshipRuntime,
                 memberOfRelationshipTypeId,
                 relationshipCatalog.Stance);
-            var domainRoutedCollectionWriter = new DomainRoutedCollectionWriter(entityCollectionStore, controlDomainQuery);
             var controlPlaneView = new ControlPlaneView(entityCollectionStore, controlDomainQuery);
             // Infrastructure flag marking profile-granted edges (RFC-0065 CTRL-4b); registration is idempotent.
             int grantedRelationshipFlagId = relationshipFlagRegistry.Register(AssociationControlProfileRuntime.GrantedFlagName);
@@ -1147,6 +1146,9 @@ namespace Ludots.Core.Engine
             gasGraphApi.AggregateDirty = aggregateDirtyRegistry;
             gasGraphApi.BindTriggerManager(TriggerManager);
             gasGraphApi.BindAimSource(new Ludots.Core.Input.AimSource.GraphAimSourceRuntime(World, GlobalContext));
+            var commandIntentSubmissions = new Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmissionBuffer(
+                gasRuntimeCapacity.CommandIntentScratchCapacity);
+            gasGraphApi.BindCommandIntentSubmissions(commandIntentSubmissions);
             gasGraphApi.BindEngineResolver(() => this);
             var graphCallbackService = new Ludots.Core.GraphRuntime.GraphCallbackService();
             SetService(CoreServiceKeys.GraphCallbackService, graphCallbackService);
@@ -1485,10 +1487,9 @@ namespace Ludots.Core.Engine
             // loading so presenter rules resolve ContextActivated/Deactivated keys.
             // The full install (row fill + bindings/triggers reference validation)
             // runs later in the input kernel where its graph/action catalogs exist; Register
-            // is idempotent and both passes agree on ids by construction (Default first,
-            // then config order).
+            // is idempotent and both passes agree on ids by construction (config order only
+            // — the engine contributes no profile ids of its own).
             var interactionContextProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            interactionContextProfileIds.Register(InteractionContextIds.Default);
             var interactionContextProfilesConfig = new InteractionContextProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             for (int i = 0; i < interactionContextProfilesConfig.Profiles.Count; i++)
             {
@@ -1738,25 +1739,9 @@ namespace Ludots.Core.Engine
             // Interaction context profiles + cast commit profiles (RFC-0065 CTX-6/CTX-7, DEC-13).
             // Id fields resolve at install: collection keys into the store's key space, filter and
             // command intent names against their kernel registries (installed above), so unknown
-            // references fail fast at startup. The engine-reserved steady-state profile (never
-            // mounted; absence of the mounted component is the steady state) installs first — an
-            // asset declaring the reserved id fails fast below.
+            // references fail fast at startup. The engine installs no profile of its own — the
+            // data-merged profiles (root assets + mod fragments) are the only source.
             var interactionContextProfileRegistry = new InteractionContextProfileRegistry(interactionContextProfileIds);
-            interactionContextProfileRegistry.Install(
-                new InteractionContextProfilesConfig
-                {
-                    Profiles = new List<InteractionContextProfileDefinition>
-                    {
-                        new()
-                        {
-                            Id = InteractionContextIds.Default,
-                            ActiveCollectionKey = EntityCollectionKeys.CommandSource,
-                        },
-                    },
-                },
-                entityCollectionKeyRegistry,
-                filterProfileIdRegistry,
-                commandIntentProfileIds);
             interactionContextProfileRegistry.Install(
                 interactionContextProfilesConfig,
                 entityCollectionKeyRegistry,
@@ -1777,12 +1762,9 @@ namespace Ludots.Core.Engine
             TemplateInteractionContextMounting.ValidateTemplates(MapLoader.TemplateRegistry.GetAll(), interactionContextProfileRegistry);
 
             gasGraphApi.BindCustomEvents(customEventCatalog.Names);
-            var contextBoundCollectionWriter = new ContextBoundCollectionWriter(
-                World,
-                interactionContextProfileRegistry,
-                filterProfileRegistry,
-                domainRoutedCollectionWriter,
-                entityCollectionStore);
+            var collectionApplier = new CollectionApplier(World, entityCollectionStore);
+            collectionApplier.BindInputInteraction(filterProfileRegistry, controlDomainQuery, inputCollectionKeyDeclarations.CastRawKeyId);
+            gasGraphApi.BindCollectionApplier(collectionApplier);
             var castCommitProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var castCommitActionIds = new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var castCommitProfileRegistry = new CastCommitProfileRegistry(castCommitProfileIds, castCommitActionIds, interactionContextProfileRegistry);
@@ -1965,7 +1947,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.LogicViewRegistry, logicViewRegistry);
             SetService(CoreServiceKeys.ClientLocalSeatDeviceBinding, new Client.ClientLocalSeatDeviceBinding(clientLocalSeatRegistry));
             SetService(CoreServiceKeys.ClientLocalSeatInputRuntime, clientLocalSeatInputRuntime);
-            SetService(CoreServiceKeys.DomainRoutedCollectionWriter, domainRoutedCollectionWriter);
+            SetService(CoreServiceKeys.CollectionApplier, collectionApplier);
+            SetService(CoreServiceKeys.InputCollectionKeys, inputCollectionKeyDeclarations);
             SetService(CoreServiceKeys.ControlPlaneView, controlPlaneView);
             SetService(CoreServiceKeys.KnowledgeProjectionStore, knowledgeProjectionStore);
             SetService(CoreServiceKeys.KnowledgeRelationCollectionProjector, knowledgeRelationCollectionProjector);
@@ -1991,7 +1974,6 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.CommandDeckProfileRegistry, commandDeckProfileRegistry);
             SetService(CoreServiceKeys.CommandDeckRouteResolver, commandDeckRouteResolver);
             SetService(CoreServiceKeys.ProductionOverviewProfileRegistry, productionOverviewProfileRegistry);
-            SetService(CoreServiceKeys.ContextBoundCollectionWriter, contextBoundCollectionWriter);
             RemoveService(CoreServiceKeys.ContinuousHeightmap);
             RemoveService(CoreServiceKeys.StructureCollisionAsset);
             RemoveService(CoreServiceKeys.StructureCollisionRuntimeState);
@@ -2243,6 +2225,24 @@ namespace Ludots.Core.Engine
             // snapshot still freezes before every InputCollection consumer.
             RegisterSystem(new AuthoritativeInputSnapshotSystem(authoritativeInput, authoritativeInputAccumulator, clientLocalSeatInputRuntime), SystemGroup.LocalInput);
             RegisterSystem(new AuthoritativePointerButtonSnapshotSystem(authoritativePointerButtons, authoritativePointerButtonsAccumulator), SystemGroup.LocalInput);
+            // Constitution §12 order bridge: graph-pushed command intents (SubmitCommandIntent
+            // op) drain here in the order kernel's phase — after last tick's trigger phase wrote
+            // them, before this tick's movement consumes the routed orders. No engine-reserved
+            // key: routing reads only the rep's active-context-declared activeCollectionKey.
+            var commandIntentBufferDrain = new Ludots.Core.Input.Orders.CommandIntentBufferDrainSystem(
+                World,
+                commandIntentSubmissions,
+                commandIntentProfileRegistry,
+                castDispatchProfileRegistry,
+                orderTypeRegistry,
+                entityCollectionStore,
+                orderQueue,
+                playerEntityLookup,
+                controlDomainQuery,
+                gasRuntimeCapacity.CommandIntentScratchCapacity);
+            SetService(CoreServiceKeys.CommandIntentSubmissions, commandIntentSubmissions);
+            SetService(CoreServiceKeys.CommandIntentBufferDrain, commandIntentBufferDrain);
+            RegisterSystem(commandIntentBufferDrain, SystemGroup.LocalInput);
             RegisterSystem(new SeatPossessionSyncSystem(World, GlobalContext), SystemGroup.InputCollection);
             // Local IMC projection: mode components on possessed reps and the mounted
             // active interaction context diff into per-seat (seatId, contextId, op) commands;

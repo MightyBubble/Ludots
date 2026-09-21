@@ -44,6 +44,9 @@ namespace Ludots.Tests.GAS
         private AbilityDefinitionRegistry _abilities = null!;
         private EffectTemplateRegistry _effects = null!;
         private EntityCollectionStore _collections = null!;
+        private Ludots.Core.EntityCollections.CollectionApplier _applier = null!;
+        private int _aimHoverKeyId;
+        private int _aimAffectedKeyId;
         private RecordingSpatialQueryService _spatialQueries = null!;
         private PresentationEventStream _events = null!;
         private AbilityAimPresentationRuntime _runtime = null!;
@@ -60,6 +63,9 @@ namespace Ludots.Tests.GAS
             _abilities = new AbilityDefinitionRegistry();
             _effects = new EffectTemplateRegistry();
             _collections = new EntityCollectionStore(new StringIntRegistry());
+            _applier = new Ludots.Core.EntityCollections.CollectionApplier(_world, _collections);
+            _aimHoverKeyId = _collections.KeyRegistry.Register("collection.ability.aim.hover");
+            _aimAffectedKeyId = _collections.KeyRegistry.Register("collection.ability.aim.affected");
             _spatialQueries = new RecordingSpatialQueryService();
             _events = new PresentationEventStream(512);
             _runtime = new AbilityAimPresentationRuntime(
@@ -67,6 +73,9 @@ namespace Ludots.Tests.GAS
                 _abilities,
                 _effects,
                 _collections,
+                _applier,
+                _aimHoverKeyId,
+                _aimAffectedKeyId,
                 _spatialQueries,
                 _events);
         }
@@ -109,19 +118,19 @@ namespace Ludots.Tests.GAS
             Assert.That(session.IsWithinCastRange, Is.True);
             Assert.That(session.CursorWorldCm, Is.EqualTo(new Vector3(300f, 0f, 400f)));
             Assert.That(session.OriginWorldCm, Is.EqualTo(Vector3.Zero));
-            Assert.That(_collections.TryGetView(actor, EntityCollectionKeys.AbilityAimHover, out EntityCollectionView hoverView), Is.True);
+            Assert.That(_collections.TryGetView(actor, "collection.ability.aim.hover", out EntityCollectionView hoverView), Is.True);
             Assert.That(hoverView.Role, Is.EqualTo(EntityCollectionRoleKind.AcquisitionPreview));
             Assert.That(hoverView.SourceKind, Is.EqualTo(EntityCollectionSourceKind.UiHover));
             Assert.That(hoverView.PrimaryEntity, Is.EqualTo(target));
-            Assert.That(_collections.TryGetView(actor, EntityCollectionKeys.AbilityAimAffected, out EntityCollectionView view), Is.True);
+            Assert.That(_collections.TryGetView(actor, "collection.ability.aim.affected", out EntityCollectionView view), Is.True);
             Assert.That(view.Role, Is.EqualTo(EntityCollectionRoleKind.AimAffected));
             Assert.That(view.SourceKind, Is.EqualTo(EntityCollectionSourceKind.SpatialQuery));
             Assert.That(view.PrimaryEntity, Is.EqualTo(target));
             Span<Entity> affected = stackalloc Entity[4];
-            Assert.That(_collections.CopyEntities(actor, EntityCollectionKeys.AbilityAimAffected, affected), Is.EqualTo(1));
+            Assert.That(_collections.CopyEntities(actor, "collection.ability.aim.affected", affected), Is.EqualTo(1));
             Assert.That(affected[0], Is.EqualTo(target));
             Assert.That(
-                _collections.TryGet(actor, EntityCollectionKeys.AbilityAimAffected, out EntityCollectionHandle handle),
+                _collections.TryGet(actor, "collection.ability.aim.affected", out EntityCollectionHandle handle),
                 Is.True);
             Assert.That(
                 _collections.TryGetRowAt(
@@ -313,7 +322,7 @@ namespace Ludots.Tests.GAS
                 CreateMapping(OrderTargetType.Position),
                 CreateInput(new Vector3(300f, 0f, 0f)));
 
-            Assert.That(_collections.TryGetView(actor, EntityCollectionKeys.AbilityAimAffected, out var view), Is.True);
+            Assert.That(_collections.TryGetView(actor, "collection.ability.aim.affected", out var view), Is.True);
             Assert.That(view.SourceKind, Is.EqualTo(EntityCollectionSourceKind.Explicit));
             Assert.That(view.Count, Is.EqualTo(0));
             Assert.That(view.PrimaryEntity, Is.EqualTo(Entity.Null));
@@ -358,6 +367,9 @@ namespace Ludots.Tests.GAS
                 _abilities,
                 _effects,
                 _collections,
+                _applier,
+                _aimHoverKeyId,
+                _aimAffectedKeyId,
                 _spatialQueries,
                 _events,
                 session: null,
@@ -385,16 +397,16 @@ namespace Ludots.Tests.GAS
                 CreateMapping(OrderTargetType.Entity),
                 CreateInput(new Vector3(250f, 0f, 0f)));
 
-            Assert.That(_collections.TryGetView(actor, EntityCollectionKeys.AbilityAimAffected, out EntityCollectionView view), Is.True);
+            Assert.That(_collections.TryGetView(actor, "collection.ability.aim.affected", out EntityCollectionView view), Is.True);
             Assert.That(view.Role, Is.EqualTo(EntityCollectionRoleKind.AimAffected));
             Assert.That(view.SourceKind, Is.EqualTo(EntityCollectionSourceKind.GasGraphResult));
             Assert.That(view.Count, Is.EqualTo(2));
             Assert.That(view.PrimaryEntity, Is.EqualTo(highPriority));
             Span<Entity> affected = stackalloc Entity[4];
-            Assert.That(_collections.CopyEntities(actor, EntityCollectionKeys.AbilityAimAffected, affected), Is.EqualTo(2));
+            Assert.That(_collections.CopyEntities(actor, "collection.ability.aim.affected", affected), Is.EqualTo(2));
             Assert.That(affected[0], Is.EqualTo(highPriority));
             Assert.That(affected[1], Is.EqualTo(lowPriority));
-            Assert.That(_collections.TryGet(actor, EntityCollectionKeys.AbilityAimAffected, out EntityCollectionHandle handle), Is.True);
+            Assert.That(_collections.TryGet(actor, "collection.ability.aim.affected", out EntityCollectionHandle handle), Is.True);
             Assert.That(
                 _collections.TryGetRowAt(
                     handle,
@@ -454,8 +466,8 @@ namespace Ludots.Tests.GAS
             _runtime.Clear(actor);
             fixture.Tick();
 
-            Assert.That(_collections.TryGet(actor, EntityCollectionKeys.AbilityAimAffected, out _), Is.False);
-            Assert.That(_collections.TryGet(actor, EntityCollectionKeys.AbilityAimHover, out _), Is.False);
+            Assert.That(_collections.TryGet(actor, "collection.ability.aim.affected", out _), Is.False);
+            Assert.That(_collections.TryGet(actor, "collection.ability.aim.hover", out _), Is.False);
             Assert.That(_world.Has<AbilityAimSessionState>(actor), Is.False);
             Assert.That(fixture.Runtime.ActiveCount, Is.EqualTo(0));
         }
@@ -478,7 +490,7 @@ namespace Ludots.Tests.GAS
             _collections.Replace(
                 actor,
                 EntityCollectionDescriptor.Create(
-                    EntityCollectionKeys.AbilityAimAffected,
+                    "collection.ability.aim.affected",
                     EntityCollectionSourceKind.SpatialQuery,
                     EntityCollectionRoleKind.AimAffected,
                     actor,
@@ -494,7 +506,7 @@ namespace Ludots.Tests.GAS
                 .Where(evt => evt.Kind == PresentationEventKind.EntityCollectionMemberAdded)
                 .ToArray();
             Assert.That(added.Length, Is.EqualTo(2));
-            Assert.That(added[0].KeyId, Is.EqualTo(_collections.KeyRegistry.GetId(EntityCollectionKeys.AbilityAimAffected)));
+            Assert.That(added[0].KeyId, Is.EqualTo(_collections.KeyRegistry.GetId("collection.ability.aim.affected")));
             Assert.That(added[0].Source, Is.EqualTo(first));
             Assert.That(added[0].Target, Is.EqualTo(actor));
             Assert.That(added[0].Viewer, Is.EqualTo(actor));
@@ -508,7 +520,7 @@ namespace Ludots.Tests.GAS
             _collections.Replace(
                 actor,
                 EntityCollectionDescriptor.Create(
-                    EntityCollectionKeys.AbilityAimAffected,
+                    "collection.ability.aim.affected",
                     EntityCollectionSourceKind.SpatialQuery,
                     EntityCollectionRoleKind.AimAffected,
                     actor,
@@ -519,7 +531,7 @@ namespace Ludots.Tests.GAS
 
             collectionEvents.Update(0.016f);
 
-            PresentationEvent removed = SingleEvent(PresentationEventKind.EntityCollectionMemberRemoved, EntityCollectionKeys.AbilityAimAffected);
+            PresentationEvent removed = SingleEvent(PresentationEventKind.EntityCollectionMemberRemoved, "collection.ability.aim.affected");
             Assert.That(removed.Source, Is.EqualTo(first));
             Assert.That(removed.Target, Is.EqualTo(actor));
             Assert.That(removed.PayloadA, Is.GreaterThan(0));
@@ -544,7 +556,7 @@ namespace Ludots.Tests.GAS
             _collections.Replace(
                 actor,
                 EntityCollectionDescriptor.Create(
-                    EntityCollectionKeys.AbilityAimAffected,
+                    "collection.ability.aim.affected",
                     EntityCollectionSourceKind.SpatialQuery,
                     EntityCollectionRoleKind.AimAffected,
                     actor,
@@ -575,7 +587,7 @@ namespace Ludots.Tests.GAS
             _collections.Replace(
                 actor,
                 EntityCollectionDescriptor.Create(
-                    EntityCollectionKeys.AbilityAimAffected,
+                    "collection.ability.aim.affected",
                     EntityCollectionSourceKind.SpatialQuery,
                     EntityCollectionRoleKind.AimAffected,
                     actor,
@@ -614,7 +626,7 @@ namespace Ludots.Tests.GAS
             _collections.Replace(
                 actor,
                 EntityCollectionDescriptor.Create(
-                    EntityCollectionKeys.AbilityAimAffected,
+                    "collection.ability.aim.affected",
                     EntityCollectionSourceKind.SpatialQuery,
                     EntityCollectionRoleKind.AimAffected,
                     actor,
@@ -623,7 +635,7 @@ namespace Ludots.Tests.GAS
 
             collectionEvents.Update(0.016f);
 
-            PresentationEvent added = SingleEvent(PresentationEventKind.EntityCollectionMemberAdded, EntityCollectionKeys.AbilityAimAffected);
+            PresentationEvent added = SingleEvent(PresentationEventKind.EntityCollectionMemberAdded, "collection.ability.aim.affected");
             Assert.That(added.Source, Is.EqualTo(target));
             Assert.That(added.Target, Is.EqualTo(actor));
             Assert.That(added.Viewer, Is.EqualTo(viewer));
@@ -664,7 +676,7 @@ namespace Ludots.Tests.GAS
 
                 _events.Clear();
                 _world.Set(actor, new AbilityAimSessionState { Actor = actor, Viewer = friendlyViewer, IsAiming = true });
-                _collections.Remove(actor, EntityCollectionKeys.AbilityAimAffected);
+                _collections.Remove(actor, "collection.ability.aim.affected");
                 collectionEvents.Update(0.016f);
                 fixture.Tick();
 
@@ -692,7 +704,7 @@ namespace Ludots.Tests.GAS
             _collections.Replace(
                 actor,
                 EntityCollectionDescriptor.Create(
-                    EntityCollectionKeys.AbilityAimAffected,
+                    "collection.ability.aim.affected",
                     EntityCollectionSourceKind.SpatialQuery,
                     EntityCollectionRoleKind.AimAffected,
                     actor,
@@ -931,7 +943,7 @@ namespace Ludots.Tests.GAS
                 int areaId = Definitions.GetOrRegisterId("test.aim.area.line");
                 int previewId = Definitions.GetOrRegisterId("test.aim.preview");
                 int highlightId = Definitions.GetOrRegisterId("test.collection.highlight");
-                int affectedCollectionKeyId = _entityCollectionKeyRegistry.Register(EntityCollectionKeys.AbilityAimAffected);
+                int affectedCollectionKeyId = _entityCollectionKeyRegistry.Register("collection.ability.aim.affected");
                 Definitions.Register("test.aim.area.line", new PresenterDefinition
                 {
                     DefaultLifetime = -1f,
