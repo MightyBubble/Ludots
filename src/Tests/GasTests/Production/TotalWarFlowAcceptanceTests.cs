@@ -156,7 +156,7 @@ namespace Ludots.Tests.GAS
             // ── 阶段四：TPS 瞄准射击——右键狼 = rep 单体开火（Q4 armor-0 平减 -80）──
             var wolfPos = engine.World.Get<WorldPositionCm>(wolf).Value;
             backend.SetMousePosition(Project(engine, wolfPos));
-            backend.SetButton("<Mouse>/rightButton", true);
+            backend.SetButton("<Mouse>/leftButton", true);
             engine.Tick(1f / 60f);
             backend.SetButton("<Mouse>/rightButton", false);
             TickUntil(engine, 30, () => drain.LastDrainedCount > 0);

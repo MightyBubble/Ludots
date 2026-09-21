@@ -6,8 +6,7 @@
   "windowResizable": true,
   "targetFps": 60,
   "startupInputContexts": [
-    "Default_Gameplay",
-    "default"
+    "Default_Gameplay"
   ],
   "startupLocalSeats": [
     {

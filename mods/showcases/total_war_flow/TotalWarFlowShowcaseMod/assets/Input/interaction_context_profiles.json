@@ -1,8 +1,21 @@
 {
   "profiles": [
     {
+      "id": "interaction.context.tw.controls",
+      "inputContextId": "Tw.Controls",
+      "bindings": [
+        "Tw.Campaign.Command",
+        "Tw.Deploy.Command",
+        "Tw.Rts.Command",
+        "Tw.Tps.Fire",
+        "Tw.Advance",
+        "CaseE.BoxSelectBegin",
+        "CaseE.BoxSelectEnd"
+      ],
+      "triggers": []
+    },
+    {
       "id": "interaction.context.tw.selection",
-      "inputContextId": "Tw.Selection",
       "bindings": [
         "CaseE.BoxSelectBegin",
         "CaseE.BoxSelectEnd"

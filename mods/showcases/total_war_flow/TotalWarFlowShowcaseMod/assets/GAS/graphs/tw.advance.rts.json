@@ -33,13 +33,18 @@
       {
         "id": "halt",
         "op": "HaltReturnInt"
+      },
+      {
+        "id": "offsel",
+        "op": "DeactivateContext",
+        "context": "interaction.context.tw.selection"
       }
     ],
     "controlEdges": [
       {
         "from": "caster",
         "fromPort": "next",
-        "to": "off"
+        "to": "offsel"
       },
       {
         "from": "off",
@@ -55,6 +60,11 @@
         "from": "ok",
         "fromPort": "next",
         "to": "halt"
+      },
+      {
+        "from": "offsel",
+        "fromPort": "next",
+        "to": "off"
       }
     ],
     "valueEdges": [
@@ -74,6 +84,12 @@
         "from": "caster",
         "fromPort": "value",
         "to": "on",
+        "toPort": "source"
+      },
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "offsel",
         "toPort": "source"
       }
     ]
