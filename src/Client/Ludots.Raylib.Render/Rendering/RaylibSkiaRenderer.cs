@@ -18,7 +18,8 @@ namespace Ludots.Raylib.Render
 
         public RaylibSkiaRenderer(int width, int height)
         {
-            RenderDiagnostics.Info("GPU Accelerated: False (raster UI compositor)");
+            // 光栅合成是 kill-switch 显式配置的回退路径；是否回退由宿主合成器
+            // LogConfiguredOverlayBackend 汇报，这里不再各自打 GPU Accelerated 旗标。
             Resize(width, height);
         }
 
