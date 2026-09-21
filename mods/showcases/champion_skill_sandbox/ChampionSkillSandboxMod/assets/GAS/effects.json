@@ -1540,9 +1540,6 @@
   },
   {
     "id": "Effect.Champion.Lockout.Ezreal.E",
-    "tags": [
-      "Effect.Champion.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1557,13 +1554,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Champion.Lockout"
     ]
   },
   {
     "id": "Effect.Champion.Lockout.Ezreal.Q",
-    "tags": [
-      "Effect.Champion.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1578,13 +1575,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Champion.Lockout"
     ]
   },
   {
     "id": "Effect.Champion.Lockout.Ezreal.R",
-    "tags": [
-      "Effect.Champion.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1599,13 +1596,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Champion.Lockout"
     ]
   },
   {
     "id": "Effect.Champion.Lockout.Ezreal.W",
-    "tags": [
-      "Effect.Champion.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1620,13 +1617,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Champion.Lockout"
     ]
   },
   {
     "id": "Effect.Champion.Lockout.Garen.E",
-    "tags": [
-      "Effect.Champion.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1641,13 +1638,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Champion.Lockout"
     ]
   },
   {
     "id": "Effect.Champion.Lockout.Garen.Q",
-    "tags": [
-      "Effect.Champion.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1662,13 +1659,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Champion.Lockout"
     ]
   },
   {
     "id": "Effect.Champion.Lockout.Garen.R",
-    "tags": [
-      "Effect.Champion.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1683,13 +1680,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Champion.Lockout"
     ]
   },
   {
     "id": "Effect.Champion.Lockout.Garen.W",
-    "tags": [
-      "Effect.Champion.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1704,13 +1701,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Champion.Lockout"
     ]
   },
   {
     "id": "Effect.Champion.Lockout.Geomancer.E",
-    "tags": [
-      "Effect.Champion.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1725,13 +1722,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Champion.Lockout"
     ]
   },
   {
     "id": "Effect.Champion.Lockout.Geomancer.Q",
-    "tags": [
-      "Effect.Champion.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1746,13 +1743,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Champion.Lockout"
     ]
   },
   {
     "id": "Effect.Champion.Lockout.Geomancer.R",
-    "tags": [
-      "Effect.Champion.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1767,13 +1764,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Champion.Lockout"
     ]
   },
   {
     "id": "Effect.Champion.Lockout.Geomancer.W",
-    "tags": [
-      "Effect.Champion.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1788,13 +1785,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Champion.Lockout"
     ]
   },
   {
     "id": "Effect.Champion.Lockout.Jayce.E",
-    "tags": [
-      "Effect.Champion.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1809,13 +1806,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Champion.Lockout"
     ]
   },
   {
     "id": "Effect.Champion.Lockout.Jayce.Q",
-    "tags": [
-      "Effect.Champion.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1830,13 +1827,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Champion.Lockout"
     ]
   },
   {
     "id": "Effect.Champion.Lockout.Jayce.R",
-    "tags": [
-      "Effect.Champion.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1851,13 +1848,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Champion.Lockout"
     ]
   },
   {
     "id": "Effect.Champion.Lockout.Jayce.W",
-    "tags": [
-      "Effect.Champion.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1872,13 +1869,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Champion.Lockout"
     ]
   },
   {
     "id": "Effect.Champion.Lockout.SpellEngineer.E",
-    "tags": [
-      "Effect.Champion.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1893,13 +1890,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Champion.Lockout"
     ]
   },
   {
     "id": "Effect.Champion.Lockout.SpellEngineer.Q",
-    "tags": [
-      "Effect.Champion.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1914,13 +1911,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Champion.Lockout"
     ]
   },
   {
     "id": "Effect.Champion.Lockout.SpellEngineer.R",
-    "tags": [
-      "Effect.Champion.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1935,13 +1932,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Champion.Lockout"
     ]
   },
   {
     "id": "Effect.Champion.Lockout.SpellEngineer.W",
-    "tags": [
-      "Effect.Champion.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1956,13 +1953,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.Champion.Lockout"
     ]
   },
   {
     "id": "Effect.ChampionStress.Lockout.FireMage.Q",
-    "tags": [
-      "Effect.ChampionStress.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1977,13 +1974,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.ChampionStress.Lockout"
     ]
   },
   {
     "id": "Effect.ChampionStress.Lockout.LaserMage.Q",
-    "tags": [
-      "Effect.ChampionStress.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -1998,13 +1995,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.ChampionStress.Lockout"
     ]
   },
   {
     "id": "Effect.ChampionStress.Lockout.Priest.Q",
-    "tags": [
-      "Effect.ChampionStress.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -2019,13 +2016,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.ChampionStress.Lockout"
     ]
   },
   {
     "id": "Effect.ChampionStress.Lockout.Warrior.Q",
-    "tags": [
-      "Effect.ChampionStress.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -2040,6 +2037,9 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.ChampionStress.Lockout"
     ]
   }
 ]

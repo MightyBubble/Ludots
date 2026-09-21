@@ -24,6 +24,10 @@ namespace Ludots.Core.Physics2D
         private readonly List<BoxShapeData> _boxShapes;
         private readonly List<PolygonShapeData> _polygonShapes;
         private readonly List<ShapeEntry> _entries;
+        // Identical shapes share one entry: repeated template application (N spawns of the
+        // same unit) must not consume N slots — the entry index is byte-ranged.
+        private readonly Dictionary<(Fix64 R, Fix64Vec2 C), int> _circleEntryByShape = new();
+        private readonly Dictionary<(Fix64 W, Fix64 H, Fix64Vec2 C), int> _boxEntryByShape = new();
 
         public ShapeDataStorage2D()
             : this(1024, 1024, 256)
@@ -42,9 +46,17 @@ namespace Ludots.Core.Physics2D
 
         public int RegisterCircle(Fix64 radius, Fix64Vec2 localCenter = default)
         {
+            var key = (radius, localCenter);
+            if (_circleEntryByShape.TryGetValue(key, out int existing))
+            {
+                return existing;
+            }
+
             int localIndex = _circleShapes.Count;
             _circleShapes.Add(new CircleShapeData { Radius = radius, LocalCenter = localCenter });
-            return AddEntry(ColliderType2D.Circle, localIndex);
+            int entry = AddEntry(ColliderType2D.Circle, localIndex);
+            _circleEntryByShape[key] = entry;
+            return entry;
         }
 
         public int RegisterCircle(float radius, float localCenterX = 0f, float localCenterY = 0f)
@@ -54,9 +66,17 @@ namespace Ludots.Core.Physics2D
 
         public int RegisterBox(Fix64 halfWidth, Fix64 halfHeight, Fix64Vec2 localCenter = default)
         {
+            var key = (halfWidth, halfHeight, localCenter);
+            if (_boxEntryByShape.TryGetValue(key, out int existing))
+            {
+                return existing;
+            }
+
             int localIndex = _boxShapes.Count;
             _boxShapes.Add(new BoxShapeData { HalfWidth = halfWidth, HalfHeight = halfHeight, LocalCenter = localCenter });
-            return AddEntry(ColliderType2D.Box, localIndex);
+            int entry = AddEntry(ColliderType2D.Box, localIndex);
+            _boxEntryByShape[key] = entry;
+            return entry;
         }
 
         public int RegisterBox(float halfWidth, float halfHeight, float localCenterX = 0f, float localCenterY = 0f)
