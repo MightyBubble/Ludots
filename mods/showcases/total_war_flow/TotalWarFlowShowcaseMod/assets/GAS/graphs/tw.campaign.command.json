@@ -48,6 +48,27 @@
       {
         "id": "halt",
         "op": "HaltReturnInt"
+      },
+      {
+        "id": "selguard_cnt",
+        "op": "AggCount"
+      },
+      {
+        "id": "selguard_cntf",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "selguard_zero",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "selguard_gt",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "selguard_br",
+        "op": "BranchBool"
       }
     ],
     "controlEdges": [
@@ -84,7 +105,7 @@
       {
         "from": "selq",
         "fromPort": "next",
-        "to": "submit"
+        "to": "selguard_cnt"
       },
       {
         "from": "submit",
@@ -95,6 +116,36 @@
         "from": "ok",
         "fromPort": "next",
         "to": "halt"
+      },
+      {
+        "from": "selguard_cnt",
+        "fromPort": "next",
+        "to": "selguard_cntf"
+      },
+      {
+        "from": "selguard_cntf",
+        "fromPort": "next",
+        "to": "selguard_zero"
+      },
+      {
+        "from": "selguard_gt",
+        "fromPort": "next",
+        "to": "selguard_br"
+      },
+      {
+        "from": "selguard_br",
+        "fromPort": "true",
+        "to": "submit"
+      },
+      {
+        "from": "selguard_br",
+        "fromPort": "false",
+        "to": "halt"
+      },
+      {
+        "from": "selguard_zero",
+        "fromPort": "next",
+        "to": "selguard_gt"
       }
     ],
     "valueEdges": [
@@ -133,6 +184,30 @@
         "fromPort": "value",
         "to": "halt",
         "toPort": "value"
+      },
+      {
+        "from": "selguard_cnt",
+        "fromPort": "value",
+        "to": "selguard_cntf",
+        "toPort": "a"
+      },
+      {
+        "from": "selguard_cntf",
+        "fromPort": "value",
+        "to": "selguard_gt",
+        "toPort": "a"
+      },
+      {
+        "from": "selguard_zero",
+        "fromPort": "value",
+        "to": "selguard_gt",
+        "toPort": "b"
+      },
+      {
+        "from": "selguard_gt",
+        "fromPort": "value",
+        "to": "selguard_br",
+        "toPort": "condition"
       }
     ]
   }

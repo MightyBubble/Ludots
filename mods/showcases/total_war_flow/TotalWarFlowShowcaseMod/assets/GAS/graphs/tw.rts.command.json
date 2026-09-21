@@ -154,6 +154,69 @@
       {
         "id": "halt_ng",
         "op": "HaltReturnInt"
+      },
+      {
+        "id": "sgc_cnt",
+        "op": "AggCount"
+      },
+      {
+        "id": "sgc_cntf",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "sgc_zero",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "sgc_gt",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "sgc_br",
+        "op": "BranchBool"
+      },
+      {
+        "id": "sge_cnt",
+        "op": "AggCount"
+      },
+      {
+        "id": "sge_cntf",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "sge_zero",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "sge_gt",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "sge_br",
+        "op": "BranchBool"
+      },
+      {
+        "id": "sgm_cnt",
+        "op": "AggCount"
+      },
+      {
+        "id": "sgm_cntf",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "sgm_zero",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "sgm_gt",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "sgm_br",
+        "op": "BranchBool"
       }
     ],
     "controlEdges": [
@@ -250,7 +313,7 @@
       {
         "from": "selc",
         "fromPort": "next",
-        "to": "cast0"
+        "to": "sgc_cnt"
       },
       {
         "from": "cast0",
@@ -300,7 +363,7 @@
       {
         "from": "selse",
         "fromPort": "next",
-        "to": "engage"
+        "to": "sge_cnt"
       },
       {
         "from": "engage",
@@ -310,12 +373,102 @@
       {
         "from": "selm",
         "fromPort": "next",
-        "to": "move"
+        "to": "sgm_cnt"
       },
       {
         "from": "move",
         "fromPort": "next",
         "to": "halt_ng"
+      },
+      {
+        "from": "sgc_cnt",
+        "fromPort": "next",
+        "to": "sgc_cntf"
+      },
+      {
+        "from": "sgc_cntf",
+        "fromPort": "next",
+        "to": "sgc_zero"
+      },
+      {
+        "from": "sgc_gt",
+        "fromPort": "next",
+        "to": "sgc_br"
+      },
+      {
+        "from": "sgc_br",
+        "fromPort": "true",
+        "to": "cast0"
+      },
+      {
+        "from": "sgc_br",
+        "fromPort": "false",
+        "to": "halt_ok0"
+      },
+      {
+        "from": "sge_cnt",
+        "fromPort": "next",
+        "to": "sge_cntf"
+      },
+      {
+        "from": "sge_cntf",
+        "fromPort": "next",
+        "to": "sge_zero"
+      },
+      {
+        "from": "sge_gt",
+        "fromPort": "next",
+        "to": "sge_br"
+      },
+      {
+        "from": "sge_br",
+        "fromPort": "true",
+        "to": "engage"
+      },
+      {
+        "from": "sge_br",
+        "fromPort": "false",
+        "to": "halt_ok1"
+      },
+      {
+        "from": "sgm_cnt",
+        "fromPort": "next",
+        "to": "sgm_cntf"
+      },
+      {
+        "from": "sgm_cntf",
+        "fromPort": "next",
+        "to": "sgm_zero"
+      },
+      {
+        "from": "sgm_gt",
+        "fromPort": "next",
+        "to": "sgm_br"
+      },
+      {
+        "from": "sgm_br",
+        "fromPort": "true",
+        "to": "move"
+      },
+      {
+        "from": "sgm_br",
+        "fromPort": "false",
+        "to": "halt_ng"
+      },
+      {
+        "from": "sgc_zero",
+        "fromPort": "next",
+        "to": "sgc_gt"
+      },
+      {
+        "from": "sge_zero",
+        "fromPort": "next",
+        "to": "sge_gt"
+      },
+      {
+        "from": "sgm_zero",
+        "fromPort": "next",
+        "to": "sgm_gt"
       }
     ],
     "valueEdges": [
@@ -450,6 +603,78 @@
         "fromPort": "value",
         "to": "selm",
         "toPort": "source"
+      },
+      {
+        "from": "sgc_cnt",
+        "fromPort": "value",
+        "to": "sgc_cntf",
+        "toPort": "a"
+      },
+      {
+        "from": "sgc_cntf",
+        "fromPort": "value",
+        "to": "sgc_gt",
+        "toPort": "a"
+      },
+      {
+        "from": "sgc_zero",
+        "fromPort": "value",
+        "to": "sgc_gt",
+        "toPort": "b"
+      },
+      {
+        "from": "sgc_gt",
+        "fromPort": "value",
+        "to": "sgc_br",
+        "toPort": "condition"
+      },
+      {
+        "from": "sge_cnt",
+        "fromPort": "value",
+        "to": "sge_cntf",
+        "toPort": "a"
+      },
+      {
+        "from": "sge_cntf",
+        "fromPort": "value",
+        "to": "sge_gt",
+        "toPort": "a"
+      },
+      {
+        "from": "sge_zero",
+        "fromPort": "value",
+        "to": "sge_gt",
+        "toPort": "b"
+      },
+      {
+        "from": "sge_gt",
+        "fromPort": "value",
+        "to": "sge_br",
+        "toPort": "condition"
+      },
+      {
+        "from": "sgm_cnt",
+        "fromPort": "value",
+        "to": "sgm_cntf",
+        "toPort": "a"
+      },
+      {
+        "from": "sgm_cntf",
+        "fromPort": "value",
+        "to": "sgm_gt",
+        "toPort": "a"
+      },
+      {
+        "from": "sgm_zero",
+        "fromPort": "value",
+        "to": "sgm_gt",
+        "toPort": "b"
+      },
+      {
+        "from": "sgm_gt",
+        "fromPort": "value",
+        "to": "sgm_br",
+        "toPort": "condition"
       }
     ]
   }
