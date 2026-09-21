@@ -59,6 +59,10 @@ namespace Ludots.Tests.GAS
 
             // ── 阶段一：战役大地图——右键空地 = 集结（marines 成员集 moveTo）──
             AssertTopContext(engine, profiles, commander, "interaction.context.tw.campaign");
+            // 拖框选中两台 marine（成员集改由 selected 集合供给，候选集=tw.candidates 只含 tw_marine）
+            DragSelectBox(engine, backend, new Vector2(-420f, -260f), new Vector2(-180f, 260f));
+
+
             backend.SetMousePosition(new Vector2(800f, 0f));
             backend.SetButton("<Mouse>/rightButton", true);
             engine.Tick(1f / 60f);
@@ -97,6 +101,8 @@ namespace Ludots.Tests.GAS
             // ── 阶段三：RTS 战斗——右键塔 = EQS 围城（三 marine 环位 moveTo → 到位开打）──
             var towerPos = engine.World.Get<WorldPositionCm>(tower).Value;
             var towerScreen = Project(engine, towerPos);
+            // 拖框选中三台 marine（2 台集结位 + 1 台增援位；狼/塔不在候选集，框住也无害）
+            DragSelectBox(engine, backend, new Vector2(-2000f, -2000f), new Vector2(2000f, 2000f));
             backend.SetMousePosition(towerScreen);
             backend.SetButton("<Mouse>/rightButton", true);
             engine.Tick(1f / 60f);
@@ -240,6 +246,28 @@ namespace Ludots.Tests.GAS
             return count;
         }
 
+        private static void DragSelectBox(
+            Ludots.Core.Engine.GameEngine engine,
+            TestBackend backend,
+            Vector2 cornerA,
+            Vector2 cornerB)
+        {
+            backend.SetMousePosition(cornerA);
+            backend.SetButton("<Mouse>/leftButton", true);
+            engine.Tick(1f / 60f);
+            backend.SetMousePosition(cornerB);
+            for (int i = 0; i < 10; i++)
+            {
+                engine.Tick(1f / 60f);
+            }
+
+            backend.SetButton("<Mouse>/leftButton", false);
+            for (int i = 0; i < 10; i++)
+            {
+                engine.Tick(1f / 60f);
+            }
+        }
+
         private static Vector2 Project(Ludots.Core.Engine.GameEngine engine, Ludots.Core.Mathematics.FixedPoint.Fix64Vec2 world)
         {
             return new Vector2((float)world.X, (float)world.Y);
@@ -254,7 +282,7 @@ namespace Ludots.Tests.GAS
         {
             var engine = new Ludots.Core.Engine.GameEngine();
             engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "BallistaRouteByTargetMod", "TotalWarFlowShowcaseMod" }),
+                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "SelectionInteractionMod", "BallistaRouteByTargetMod", "TotalWarFlowShowcaseMod" }),
                 Path.Combine(repoRoot, "assets"));
             var inputConfig = new Ludots.Core.Input.Config.InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var inputHandler = new PlayerInputHandler(backend, inputConfig);
@@ -298,7 +326,7 @@ namespace Ludots.Tests.GAS
 
         private sealed class WindowPointRay : Ludots.Platform.Abstractions.IScreenRayProvider, Ludots.Platform.Abstractions.IScreenProjector
         {
-            public Vector2 WorldToScreen(Vector3 position) => new(position.X, position.Z);
+            public Vector2 WorldToScreen(Vector3 position) => new(position.X * 100f, position.Z * 100f);
 
             public Ludots.Platform.Abstractions.ScreenRay GetRay(Vector2 screenPosition)
             {

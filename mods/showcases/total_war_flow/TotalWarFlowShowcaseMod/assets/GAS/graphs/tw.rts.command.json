@@ -114,13 +114,19 @@
         "op": "TargetListGet"
       },
       {
-        "id": "crewb",
-        "op": "QueryAllMapEntities"
+        "id": "selc",
+        "op": "QueryFromCollection",
+        "collectionKey": "selected"
       },
       {
-        "id": "crewfb",
-        "op": "QueryFilterTemplate",
-        "template": "tw_marine"
+        "id": "selse",
+        "op": "QueryFromCollection",
+        "collectionKey": "selected"
+      },
+      {
+        "id": "selm",
+        "op": "QueryFromCollection",
+        "collectionKey": "selected"
       },
       {
         "id": "cast0",
@@ -128,28 +134,10 @@
         "orderTypeKey": "castAbility"
       },
       {
-        "id": "crews",
-        "op": "QueryAllMapEntities"
-      },
-      {
-        "id": "crewfs",
-        "op": "QueryFilterTemplate",
-        "template": "tw_marine"
-      },
-      {
         "id": "engage",
         "op": "SubmitEngageBatch",
         "engageProfile": "engage.siege.ring",
         "orderTypeKey": "castAbility"
-      },
-      {
-        "id": "crewg",
-        "op": "QueryAllMapEntities"
-      },
-      {
-        "id": "crewfg",
-        "op": "QueryFilterTemplate",
-        "template": "tw_marine"
       },
       {
         "id": "move",
@@ -200,6 +188,26 @@
         "to": "halt_ng"
       },
       {
+        "from": "idx0",
+        "fromPort": "next",
+        "to": "slot0"
+      },
+      {
+        "from": "slot0",
+        "fromPort": "next",
+        "to": "slot1"
+      },
+      {
+        "from": "slot1",
+        "fromPort": "next",
+        "to": "zero"
+      },
+      {
+        "from": "zero",
+        "fromPort": "next",
+        "to": "qb"
+      },
+      {
         "from": "qb",
         "fromPort": "next",
         "to": "fb"
@@ -237,15 +245,10 @@
       {
         "from": "getb",
         "fromPort": "next",
-        "to": "crewb"
+        "to": "selc"
       },
       {
-        "from": "crewb",
-        "fromPort": "next",
-        "to": "crewfb"
-      },
-      {
-        "from": "crewfb",
+        "from": "selc",
         "fromPort": "next",
         "to": "cast0"
       },
@@ -287,20 +290,15 @@
       {
         "from": "brs",
         "fromPort": "false",
-        "to": "crewg"
+        "to": "selm"
       },
       {
         "from": "gets",
         "fromPort": "next",
-        "to": "crews"
+        "to": "selse"
       },
       {
-        "from": "crews",
-        "fromPort": "next",
-        "to": "crewfs"
-      },
-      {
-        "from": "crewfs",
+        "from": "selse",
         "fromPort": "next",
         "to": "engage"
       },
@@ -310,12 +308,7 @@
         "to": "halt_ok1"
       },
       {
-        "from": "crewg",
-        "fromPort": "next",
-        "to": "crewfg"
-      },
-      {
-        "from": "crewfg",
+        "from": "selm",
         "fromPort": "next",
         "to": "move"
       },
@@ -323,26 +316,6 @@
         "from": "move",
         "fromPort": "next",
         "to": "halt_ng"
-      },
-      {
-        "from": "idx0",
-        "fromPort": "next",
-        "to": "slot0"
-      },
-      {
-        "from": "slot0",
-        "fromPort": "next",
-        "to": "slot1"
-      },
-      {
-        "from": "slot1",
-        "fromPort": "next",
-        "to": "zero"
-      },
-      {
-        "from": "zero",
-        "fromPort": "next",
-        "to": "qb"
       }
     ],
     "valueEdges": [
@@ -459,6 +432,24 @@
         "fromPort": "value",
         "to": "move",
         "toPort": "target"
+      },
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "selc",
+        "toPort": "source"
+      },
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "selse",
+        "toPort": "source"
+      },
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "selm",
+        "toPort": "source"
       }
     ]
   }

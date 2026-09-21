@@ -53,6 +53,28 @@
           "path": "<Keyboard>/enter"
         }
       ]
+    },
+    {
+      "id": "Tw.Selection",
+      "bindings": [
+        {
+          "actionId": "CaseE.BoxSelectBegin",
+          "path": "<Mouse>/leftButton"
+        },
+        {
+          "actionId": "CaseE.BoxSelectEnd",
+          "path": "<Mouse>/leftButton"
+        },
+        {
+          "actionId": "PointerPos",
+          "path": "<Mouse>/Pos"
+        },
+        {
+          "actionId": "PointerMoved",
+          "path": "<Mouse>/Pos"
+        }
+      ],
+      "priority": 65
     }
   ]
 }

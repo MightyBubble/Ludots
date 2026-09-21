@@ -32,13 +32,9 @@
         "op": "JumpIfFalse"
       },
       {
-        "id": "allq",
-        "op": "QueryAllMapEntities"
-      },
-      {
-        "id": "marines",
-        "op": "QueryFilterTemplate",
-        "template": "tw_marine"
+        "id": "selq",
+        "op": "QueryFromCollection",
+        "collectionKey": "selected"
       },
       {
         "id": "submit",
@@ -78,7 +74,7 @@
       {
         "from": "gok",
         "fromPort": "true",
-        "to": "allq"
+        "to": "selq"
       },
       {
         "from": "gok",
@@ -86,12 +82,7 @@
         "to": "halt"
       },
       {
-        "from": "allq",
-        "fromPort": "next",
-        "to": "marines"
-      },
-      {
-        "from": "marines",
+        "from": "selq",
         "fromPort": "next",
         "to": "submit"
       },
@@ -132,16 +123,16 @@
         "toPort": "condition"
       },
       {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "selq",
+        "toPort": "source"
+      },
+      {
         "from": "ok",
         "fromPort": "value",
         "to": "halt",
         "toPort": "value"
-      },
-      {
-        "from": "caster",
-        "fromPort": "value",
-        "to": "submit",
-        "toPort": "target"
       }
     ]
   }

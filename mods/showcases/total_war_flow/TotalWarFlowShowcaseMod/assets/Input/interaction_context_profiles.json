@@ -1,6 +1,19 @@
 {
   "profiles": [
     {
+      "id": "interaction.context.tw.selection",
+      "inputContextId": "Tw.Selection",
+      "bindings": [
+        "CaseE.BoxSelectBegin",
+        "CaseE.BoxSelectEnd"
+      ],
+      "triggers": [
+        {
+          "trigger": "tw.box_begin"
+        }
+      ]
+    },
+    {
       "id": "interaction.context.tw.campaign",
       "bindings": [
         "Tw.Campaign.Command",
