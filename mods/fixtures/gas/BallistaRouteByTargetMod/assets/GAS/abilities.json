@@ -37,6 +37,10 @@
           "tick": 3
         }
       ]
+    },
+    "targeting": {
+      "castRangeCm": 900,
+      "impactEffect": "Effect.Ballista.Bolt"
     }
   }
 ]

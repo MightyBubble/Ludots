@@ -10398,6 +10398,33 @@
       "video": "artifacts/evidence/capability_standard_graph_op_QueryFilterKnowledgeVisible/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_SubmitEngageBatch",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSubmitEngageBatchEntryMod",
+      "projectPath": "CapabilityStandardGraphOpSubmitEngageBatchEntryMod.csproj",
+      "title": "围城令先进缓冲",
+      "summary": "图里认出目标，一声围城令交给缓冲，下令内核下一拍用 EQS 环位逐成员落位。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "SubmitEngageBatch"
+      ],
+      "binding": "capability_standard_graph_op_SubmitEngageBatch",
+      "preset": "capability_standard_graph_op_SubmitEngageBatch_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/SubmitEngageBatch.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_SubmitEngageBatch",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_SubmitEngageBatch/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_SubmitEngageBatch/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ],
   "pathExemptions": [

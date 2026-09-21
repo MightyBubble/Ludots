@@ -194,6 +194,8 @@ namespace Ludots.Core.GraphRuntime
 
         /// <summary>Cast order-type key for SubmitCast (symbol; resolved against OrderTypeRegistry by the drain).</summary>
         public string? OrderTypeKey { get; set; }
+        /// <summary>Engage profile key for SubmitEngageBatch (symbol; resolved to an EQS query registry id at patch time).</summary>
+        public string? EngageProfile { get; set; }
         public string? EffectTemplate { get; set; }
         /// <summary>Order type key symbol for SubmitAssignedOrder; resolved to an order type id at patch time.</summary>
         public string? OrderType { get; set; }

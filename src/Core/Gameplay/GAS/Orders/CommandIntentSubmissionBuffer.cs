@@ -27,6 +27,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
             _submissions = new CommandIntentSubmission[capacity];
             _casts = new CastIntentSubmission[capacity];
+            _engages = new EngageIntentSubmission[capacity];
         }
 
         public int Capacity => _submissions.Length;
@@ -64,6 +65,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         {
             _count = 0;
             _castCount = 0;
+            _engageCount = 0;
         }
 
         private readonly CastIntentSubmission[] _casts;
@@ -93,6 +95,34 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
             _casts[_castCount++] = submission;
         }
+
+        private readonly EngageIntentSubmission[] _engages;
+        private int _engageCount;
+
+        /// <summary>Engage intents queued since the last drain (same tick contract as commands).</summary>
+        public int EngageCount => _engageCount;
+
+        public EngageIntentSubmission Engage(int index)
+        {
+            if ((uint)index >= (uint)_engageCount)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index));
+            }
+
+            return _engages[index];
+        }
+
+        public void PushEngage(in EngageIntentSubmission submission)
+        {
+            if (_engageCount >= _engages.Length)
+            {
+                throw new InvalidOperationException(
+                    $"ORDER.ENGAGE_INTENT.ERR.SubmissionBufferOverflow: engage intent submission buffer capacity {_engages.Length} exceeded; " +
+                    "raise gasRuntimeCapacity.commandIntentScratchCapacity or submit fewer intents per tick.");
+            }
+
+            _engages[_engageCount++] = submission;
+        }
     }
 
     public readonly record struct CommandIntentSubmission(
@@ -113,5 +143,19 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         bool HasTarget,
         bool HasGround,
         IntVector2 GroundCm,
+        int OrderTypeKeyId);
+
+    /// <summary>
+    /// One graph-submitted engage intent: the drain resolves actors from the rep's
+    /// active-context-declared collection, runs the profile's EQS query around the target
+    /// (in-batch exclusion + per-target slot claims), and submits per-actor move-then-cast
+    /// with the assigned ring point. ProfileKeyId indexes the EqsQueryRegistry;
+    /// OrderTypeKeyId is the follow-up cast order-type config-key symbol id.
+    /// </summary>
+    public readonly record struct EngageIntentSubmission(
+        Entity Rep,
+        int Slot,
+        Entity Target,
+        int ProfileKeyId,
         int OrderTypeKeyId);
 }

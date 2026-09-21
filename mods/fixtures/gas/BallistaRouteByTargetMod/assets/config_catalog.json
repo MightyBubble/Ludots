@@ -58,5 +58,11 @@
   {
     "Path": "Maps/ballista_route_field.json",
     "Policy": "DeepObject"
+  },
+  {
+    "Path": "Spatial/eqs_queries.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
   }
 ]

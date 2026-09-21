@@ -368,6 +368,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.WriteCollection or
                 GraphNodeOp.SubmitCommandIntent or
                 GraphNodeOp.SubmitCast or
+                GraphNodeOp.SubmitEngageBatch or
                 GraphNodeOp.BindQueryCollection
                     => EffectOperationMetadata.Pure(description),
 
@@ -949,6 +950,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.WriteCollection, HandleWriteCollection, "WriteCollection graph opcode.");
             Register(GraphNodeOp.SubmitCommandIntent, HandleSubmitCommandIntent, "SubmitCommandIntent graph opcode.");
             Register(GraphNodeOp.SubmitCast, HandleSubmitCast, "SubmitCast graph opcode.");
+            Register(GraphNodeOp.SubmitEngageBatch, HandleSubmitEngageBatch, "SubmitEngageBatch graph opcode.");
             Register(GraphNodeOp.QueryFilterKnowledgeVisible, HandleQueryFilterKnowledgeVisible, "QueryFilterKnowledgeVisible graph opcode.");
             Register(GraphNodeOp.BindQueryCollection, HandleBindQueryCollection, "BindQueryCollection graph opcode.");
         Register(GraphNodeOp.SetPanelAudience, HandleSetPanelAudience, "SetPanelAudience graph opcode.");
@@ -1629,6 +1631,28 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 hasGround,
                 s.TargetPosCm,
                 ins.Imm);
+        }
+
+        private static void HandleSubmitEngageBatch(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            if (!s.World.IsAlive(s.Caster))
+            {
+                throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.EngageIntentCasterDead: SubmitEngageBatch requires a living acting rep (the trigger mount subject).");
+            }
+
+            if (ins.B == byte.MaxValue || s.E[ins.B] == Entity.Null || !s.World.IsAlive(s.E[ins.B]))
+            {
+                throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.EngageIntentTargetMissing: SubmitEngageBatch requires a living engage target entity.");
+            }
+
+            s.Api.SubmitEngageBatchIntent(
+                s.Caster,
+                s.I[ins.A],
+                s.E[ins.B],
+                Ludots.Core.Gameplay.GAS.Orders.EngageOpEncoding.UnpackQueryKeyId(ins.Imm),
+                Ludots.Core.Gameplay.GAS.Orders.EngageOpEncoding.UnpackOrderTypeKeyId(ins.Imm));
         }
 
         private static void HandleBindQueryCollection(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

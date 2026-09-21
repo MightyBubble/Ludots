@@ -5,7 +5,8 @@
       "AttributeBuffer": {
         "base": {
           "Ballista.Health": 400,
-          "Ballista.Armor": 50
+          "Ballista.Armor": 50,
+          "MoveSpeed": 300
         }
       },
       "AbilityStateBuffer": {
@@ -25,9 +26,6 @@
       "BlackboardSpatialBuffer": {},
       "DirtyFlags": {},
       "PlayerOwner": {
-        "PlayerId": 1
-      },
-      "PlayerIdentity": {
         "PlayerId": 1
       }
     },

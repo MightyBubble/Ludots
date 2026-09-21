@@ -1,7 +1,20 @@
 [
-  { "id": "Event.DamageDealt" },
-  { "id": "Enemy" },
-  { "id": "Dead" },
-  { "id": "State.Sandbox.Burning" },
-  { "id": "State.Sandbox.Marked" }
+  {
+    "id": "Event.DamageDealt"
+  },
+  {
+    "id": "Enemy"
+  },
+  {
+    "id": "Dead"
+  },
+  {
+    "id": "State.Sandbox.Burning"
+  },
+  {
+    "id": "State.Sandbox.Marked"
+  },
+  {
+    "id": "Gallery.EngageTarget"
+  }
 ]

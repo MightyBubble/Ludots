@@ -50,6 +50,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.SubmitCast:
                         ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
                         break;
+                    case GraphNodeOp.SubmitEngageBatch:
+                        ins.Imm = Ludots.Core.Gameplay.GAS.Orders.EngageOpEncoding.Pack(
+                            symbolResolver.ResolveEqsQuery(ResolveSymbol(symbols, ins.Imm)),
+                            ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Dst)));
+                        ins.Dst = 0;
+                        break;
                     case GraphNodeOp.OfferActivity:
                     case GraphNodeOp.OfferTask:
                         _ = ResolveSymbol(symbols, ins.Imm);

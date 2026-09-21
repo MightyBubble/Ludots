@@ -44,23 +44,70 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void RightClickTower_RoutesSiegeCast_AndFormulaMitigates()
+        public void RightClickTower_EngageBatchRingsAroundTarget_AndSiegeSettlesAfterArrival()
         {
             using var ctx = Boot(out var backend);
-            Entity ballista = ctx.Resolve("ballista_1");
+            Entity ballista1 = ctx.Resolve("ballista_1");
+            Entity ballista2 = ctx.Resolve("ballista_2");
+            Entity ballista3 = ctx.Resolve("ballista_3");
             Entity tower = ctx.Resolve("tower_1");
+            ctx.SeedAllActiveCollections(ballista1, ballista2, ballista3);
             ctx.Tick(10);
 
             ctx.ClickAt(ctx.Project(tower));
             ctx.TickUntilDrain();
 
-            Order order = ctx.LatestOrder(ballista, "castAbility");
-            Assert.That(order.Args.I0, Is.EqualTo(1), "tower (building) routes to siege slot 1");
-            Assert.That(order.Target, Is.EqualTo(tower));
-            ctx.Tick(8);
+            // EQS ring assignment: three distinct moveTo anchors, all on the 800cm ring
+            // around the tower (profile engage.siege.ring), none inside the footprint.
+            var ballistas = new[] { ballista1, ballista2, ballista3 };
+            var anchors = new System.Numerics.Vector3[3];
+            var towerPos = ctx.Engine.World.Get<Ludots.Core.Components.WorldPositionCm>(tower).Value;
+            for (int i = 0; i < ballistas.Length; i++)
+            {
+                Order move = ctx.LatestOrder(ballistas[i], "moveTo");
+                Assert.That(move.Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.WorldCm), "engage lands a moveTo anchor");
+                anchors[i] = move.Args.Spatial.WorldCm;
+                float dx = anchors[i].X - (float)towerPos.X;
+                float dy = anchors[i].Z - (float)towerPos.Y;
+                float radius = MathF.Sqrt(dx * dx + dy * dy);
+                TestContext.Out.WriteLine($"[S3] ballista_{i + 1} anchor=({anchors[i].X:F0},{anchors[i].Z:F0}) ringRadius={radius:F0}");
+                Assert.That(radius, Is.EqualTo(800f).Within(2f), "engage anchor sits on the EQS ring (800cm)");
+            }
+
+            for (int a = 0; a < anchors.Length; a++)
+            {
+                for (int b = a + 1; b < anchors.Length; b++)
+                {
+                    float sep = System.Numerics.Vector3.Distance(anchors[a], anchors[b]);
+                    Assert.That(sep, Is.GreaterThan(100f), "engage anchors are distinct ring slots");
+                }
+            }
+
+            // Staggered arrivals (different travel distances) → one bolt per ballista from
+            // its move-then-cast continuation; Q4 formula with armor 300 settles exactly
+            // -80*100/400 = -20 per bolt. First observed drop is the fastest ballista's
+            // single bolt; the stable terminal state is all three bolts landed.
+            float firstBoltHealth = -1f;
+            for (int frame = 0; frame < 1200 && firstBoltHealth < 0f; frame++)
+            {
+                ctx.Tick(1);
+                if (ctx.Health(tower) < 2000f)
+                {
+                    firstBoltHealth = ctx.Health(tower);
+                }
+            }
+
+            Assert.That(firstBoltHealth, Is.EqualTo(1980f).Within(0.01f), "first arrival lands exactly one siege bolt (Q4 armor-300 mitigation -20)");
+
             float towerHealth = ctx.Health(tower);
-            TestContext.Out.WriteLine($"[S3] tower 2000 -> {towerHealth} (siege bolt, armor 300, mitigated -20)");
-            Assert.That(towerHealth, Is.EqualTo(1980f).Within(0.01f), "Q4 formula: armor 300 → -80*100/400");
+            for (int frame = 0; frame < 1200 && towerHealth > 1940f; frame++)
+            {
+                ctx.Tick(1);
+                towerHealth = ctx.Health(tower);
+            }
+
+            TestContext.Out.WriteLine($"[S3] tower 2000 -> {firstBoltHealth} (first bolt) -> {towerHealth} (all three engaged)");
+            Assert.That(towerHealth, Is.EqualTo(1940f).Within(0.01f), "each ballista lands exactly one bolt: 3 × -20, stable terminal state");
         }
 
         [Test]
@@ -98,6 +145,20 @@ namespace Ludots.Tests.GAS
                     SeedActiveCollection(e);
                 }
                 return e;
+            }
+
+            /// <summary>Seeds the command-source collection with every ballista (engage fixture).</summary>
+            public void SeedAllActiveCollections(params Entity[] ballistas)
+            {
+                var store = Engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                    as Ludots.Core.EntityCollections.EntityCollectionStore
+                    ?? throw new InvalidOperationException("collection store missing");
+                int keyId = store.KeyRegistry.Register("collection.command.source");
+                var descriptor = Ludots.Core.EntityCollections.EntityCollectionDescriptor.Create(
+                    "collection.command.source",
+                    Ludots.Core.EntityCollections.EntityCollectionSourceKind.Explicit,
+                    Ludots.Core.EntityCollections.EntityCollectionRoleKind.CommandSource);
+                store.Replace(ballistas[0], keyId, in descriptor, ballistas, ballistas[0]);
             }
 
             private void SeedActiveCollection(Entity ballista)

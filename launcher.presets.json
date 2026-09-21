@@ -3422,6 +3422,15 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SubmitEngageBatch_raylib",
+      "name": "Graph Op SubmitEngageBatch Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SubmitEngageBatch"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

@@ -4,6 +4,14 @@
 
 生成器：`scripts/generate-graph-op-node-wiki.py`（从 vignette 与引擎描述表生成，勿手改正文）。
 
+## commandIntent
+
+> 作者语义与全量字段见手册分册 [命令意图 · input-01](../mod-editor-prd/config/input-01-command-intent.md)。
+
+- [一声令下先进缓冲](SubmitCommandIntent.md) — 图里定好落点，一声令下交给缓冲，下令内核下一拍再路由。
+- [围城令先进缓冲](SubmitEngageBatch.md) — 图里认出目标，一声围城令交给缓冲，下令内核下一拍用 EQS 环位逐成员落位。
+- [施法令先进缓冲](SubmitCast.md) — 图里定好槽位，一声施法交给缓冲，下令内核下一拍按活跃集成员扇出。
+
 ## 事件与吸附
 
 > 作者语义与全量字段见手册分册 [事件与情境 · gr-op-01](../mod-editor-prd/config/gr-op-01-context.md)。
@@ -82,6 +90,7 @@
 - [翻开效果图鉴](QueryCollectEffectTemplates.md) — 墙上贴着一批效果说明书。
 - [翻开物品图鉴](QueryCollectItemDefinitions.md) — 物品说明书贴在墙上。
 - [翻开背包](QueryCollectInventoryItems.md) — 背包里的物被点名线牵住。
+- [认知筛只留看得见的](QueryFilterKnowledgeVisible.md) — 名单先问观察者认不认识：认识的留下，不认识的当场划掉，顺序不变。
 - [谁会这招](QueryCollectAbilityHolders.md) — 会这招的人被点名线牵住。
 
 ## 子图调用与事件派发

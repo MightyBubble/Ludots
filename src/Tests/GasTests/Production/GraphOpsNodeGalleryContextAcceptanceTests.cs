@@ -213,6 +213,20 @@ public sealed class GraphOpsNodeGalleryContextAcceptanceTests
     }
 
     [Test]
+    public void SubmitEngageBatchVignette_PushesIntoTheEngageSubmissionBuffer()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("SubmitEngageBatch");
+        runtime.EnsureWorld();
+        runtime.Tick(0.35f);
+
+        foreach (string phrase in runtime.Vignette.AssertDetailContains)
+        {
+            Assert.That(runtime.Metrics.Detail, Does.Contain(phrase), runtime.Metrics.Detail);
+        }
+    }
+
+    [Test]
     public void SubmitCastVignette_PushesIntoTheCastSubmissionBuffer()
     {
         using var runtime = new GraphOpsNodeGalleryRuntime();

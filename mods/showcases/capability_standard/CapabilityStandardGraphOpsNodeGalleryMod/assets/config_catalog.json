@@ -62,5 +62,11 @@
     "Path": "GAS/abilities.json",
     "Policy": "ArrayById",
     "IdField": "id"
+  },
+  {
+    "Path": "Spatial/eqs_queries.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
   }
 ]

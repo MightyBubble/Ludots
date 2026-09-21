@@ -168,6 +168,30 @@ namespace Ludots.Core.Spatial.Eqs.Config
             return list.ToArray();
         }
 
+        /// <summary>Parses one Spatial/eqs_queries.json fragment body; engine assembly merges fragments ArrayById before this.</summary>
+        public static EqsQueryConfig[] ParseQueriesDocument(string json)
+        {
+            return ParseQueries(ParseArray(json, "Spatial/eqs_queries.json"));
+        }
+
+        /// <summary>Parses one merged ArrayById entry (engine registry install path).</summary>
+        public static EqsQueryConfig ParseQueryEntry(JsonObject obj, string path)
+        {
+            string id = RequireString(obj, "id", path);
+            EqsGeneratorConfig generator = ParseGenerator(RequireObject(obj["generator"], $"{path}.generator"), $"{path}.generator");
+            JsonArray testsArr = RequireArray(obj, "tests", path);
+            var tests = new EqsTestConfig[testsArr.Count];
+            for (int t = 0; t < testsArr.Count; t++)
+            {
+                tests[t] = ParseTest(RequireObject(testsArr[t], $"{path}.tests[{t}]"), $"{path}.tests[{t}]");
+            }
+
+            EqsSelectionConfig selection = ParseSelection(
+                RequireObject(obj["selection"], $"{path}.selection"),
+                $"{path}.selection");
+            return new EqsQueryConfig(id, generator, tests, selection);
+        }
+
         private static EqsQueryConfig[] ParseQueries(JsonArray arr)
         {
             var list = new List<EqsQueryConfig>(arr.Count);

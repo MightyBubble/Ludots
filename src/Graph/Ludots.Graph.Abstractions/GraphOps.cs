@@ -449,6 +449,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         QueryFilterKnowledgeVisible = 485,
 
+        /// <summary>
+        /// Submit one engage intent into the order pipeline's per-tick submission buffer
+        /// (constitution §12). Caster = the acting rep; I[A] = ability slot index; E[B] =
+        /// the engage target entity (required). Imm = engage profile key symbol resolved to
+        /// an EQS query registry id at patch time. The drain resolves actors from the rep's
+        /// active-context-declared collection, runs the profile's EQS query around the target
+        /// (in-batch exclusion + slot claims), and submits per-actor move-then-cast through the
+        /// composite order planner: moveTo the assigned ring point with the cast as an order
+        /// continuation — the op never routes inline.
+        /// </summary>
+        SubmitEngageBatch = 486,
+
     }
 
     public static class GraphNodeOpParser
