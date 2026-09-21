@@ -1,209 +1,491 @@
 [
-  {
-    "id": "ballista.fixture.crew",
-    "behaviors": [
-      {
-        "slot": "body",
-        "kind": "AssetBinding",
-        "activeByDefault": true,
-        "assetBinding": {
-          "assetKind": "Mesh",
-          "assetId": "ballista.fixture.knight",
-          "materialId": "default_surface",
-          "renderPath": "InstancedStaticMesh",
-          "mobility": "Movable",
-          "localScale": [
-            1,
-            1,
-            1
-          ]
-        },
-        "style": {
-          "color": [
-            0.36,
-            0.62,
-            1,
-            1
-          ]
-        }
-      },
-      {
-        "slot": "grounding",
-        "kind": "Grounding",
-        "activeByDefault": true,
-        "grounding": {
-          "mode": "SnapToGround",
-          "offset": 0,
-          "updatePolicy": "EveryFrame"
-        }
-      }
-    ]
-  },
-  {
-    "id": "ballista.fixture.wolf",
-    "behaviors": [
-      {
-        "slot": "body",
-        "kind": "AssetBinding",
-        "activeByDefault": true,
-        "assetBinding": {
-          "assetKind": "Mesh",
-          "assetId": "ballista.fixture.knight",
-          "materialId": "default_surface",
-          "renderPath": "InstancedStaticMesh",
-          "mobility": "Movable",
-          "localScale": [
-            0.62,
-            0.62,
-            0.62
-          ]
-        },
-        "style": {
-          "color": [
-            1,
-            0.32,
-            0.22,
-            1
-          ]
-        }
-      },
-      {
-        "slot": "grounding",
-        "kind": "Grounding",
-        "activeByDefault": true,
-        "grounding": {
-          "mode": "SnapToGround",
-          "offset": 0,
-          "updatePolicy": "EveryFrame"
-        }
-      }
-    ]
-  },
-  {
-    "id": "ballista.fixture.tower",
-    "behaviors": [
-      {
-        "slot": "body",
-        "kind": "AssetBinding",
-        "activeByDefault": true,
-        "assetBinding": {
-          "assetKind": "Mesh",
-          "assetId": "ballista.fixture.obelisk",
-          "materialId": "default_surface",
-          "renderPath": "InstancedStaticMesh",
-          "mobility": "Movable",
-          "localScale": [
-            2.4,
-            2.4,
-            2.4
-          ]
-        },
-        "style": {
-          "color": [
-            0.78,
-            0.74,
-            0.66,
-            1
-          ]
-        }
-      },
-      {
-        "slot": "grounding",
-        "kind": "Grounding",
-        "activeByDefault": true,
-        "grounding": {
-          "mode": "SnapToGround",
-          "offset": 0,
-          "updatePolicy": "EveryFrame"
-        }
-      }
-    ]
-  },
-  {
-    "id": "ballista.fixture.crew_bootstrap",
-    "rules": [
-      {
-        "event": {
-          "kind": "EntitySpawned",
-          "key": "ballista_crew"
-        },
-        "condition": {
-          "inline": "SourceHasVisualTransform"
-        },
-        "command": {
-          "kind": "CreatePresenter",
-          "definitionId": "ballista.fixture.crew",
-          "scopeSource": "EventPayloadA"
-        }
-      },
-      {
-        "event": {
-          "kind": "EntityDestroyed",
-          "key": "ballista_crew"
-        },
-        "command": {
-          "kind": "DestroyPresenterScope",
-          "scopeSource": "EventPayloadA"
-        }
-      }
-    ]
-  },
-  {
-    "id": "ballista.fixture.wolf_bootstrap",
-    "rules": [
-      {
-        "event": {
-          "kind": "EntitySpawned",
-          "key": "ballista_wolf"
-        },
-        "condition": {
-          "inline": "SourceHasVisualTransform"
-        },
-        "command": {
-          "kind": "CreatePresenter",
-          "definitionId": "ballista.fixture.wolf",
-          "scopeSource": "EventPayloadA"
-        }
-      },
-      {
-        "event": {
-          "kind": "EntityDestroyed",
-          "key": "ballista_wolf"
-        },
-        "command": {
-          "kind": "DestroyPresenterScope",
-          "scopeSource": "EventPayloadA"
-        }
-      }
-    ]
-  },
-  {
-    "id": "ballista.fixture.tower_bootstrap",
-    "rules": [
-      {
-        "event": {
-          "kind": "EntitySpawned",
-          "key": "ballista_tower"
-        },
-        "condition": {
-          "inline": "SourceHasVisualTransform"
-        },
-        "command": {
-          "kind": "CreatePresenter",
-          "definitionId": "ballista.fixture.tower",
-          "scopeSource": "EventPayloadA"
-        }
-      },
-      {
-        "event": {
-          "kind": "EntityDestroyed",
-          "key": "ballista_tower"
-        },
-        "command": {
-          "kind": "DestroyPresenterScope",
-          "scopeSource": "EventPayloadA"
-        }
-      }
-    ]
+ {
+  "id": "ballista.fixture.crew",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "ballista.fixture.knight",
+     "materialId": "default_surface",
+     "renderPath": "InstancedStaticMesh",
+     "mobility": "Movable",
+     "localScale": [
+      1,
+      1,
+      1
+     ]
+    },
+    "style": {
+     "color": [
+      0.36,
+      0.62,
+      1,
+      1
+     ]
+    }
+   },
+   {
+    "slot": "grounding",
+    "kind": "Grounding",
+    "activeByDefault": true,
+    "grounding": {
+     "mode": "SnapToGround",
+     "offset": 0,
+     "updatePolicy": "EveryFrame"
+    }
+   }
+  ]
+ },
+ {
+  "id": "ballista.fixture.wolf",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "ballista.fixture.knight",
+     "materialId": "default_surface",
+     "renderPath": "InstancedStaticMesh",
+     "mobility": "Movable",
+     "localScale": [
+      0.62,
+      0.62,
+      0.62
+     ]
+    },
+    "style": {
+     "color": [
+      1,
+      0.32,
+      0.22,
+      1
+     ]
+    }
+   },
+   {
+    "slot": "grounding",
+    "kind": "Grounding",
+    "activeByDefault": true,
+    "grounding": {
+     "mode": "SnapToGround",
+     "offset": 0,
+     "updatePolicy": "EveryFrame"
+    }
+   }
+  ]
+ },
+ {
+  "id": "ballista.fixture.tower",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "ballista.fixture.obelisk",
+     "materialId": "default_surface",
+     "renderPath": "InstancedStaticMesh",
+     "mobility": "Movable",
+     "localScale": [
+      2.4,
+      2.4,
+      2.4
+     ]
+    },
+    "style": {
+     "color": [
+      0.78,
+      0.74,
+      0.66,
+      1
+     ]
+    }
+   },
+   {
+    "slot": "grounding",
+    "kind": "Grounding",
+    "activeByDefault": true,
+    "grounding": {
+     "mode": "SnapToGround",
+     "offset": 0,
+     "updatePolicy": "EveryFrame"
+    }
+   }
+  ]
+ },
+ {
+  "id": "ballista.fixture.crew_bootstrap",
+  "rules": [
+   {
+    "event": {
+     "kind": "EntitySpawned",
+     "key": "ballista_crew"
+    },
+    "condition": {
+     "inline": "SourceHasVisualTransform"
+    },
+    "command": {
+     "kind": "CreatePresenter",
+     "definitionId": "ballista.fixture.crew",
+     "scopeSource": "EventPayloadA"
+    }
+   },
+   {
+    "event": {
+     "kind": "EntityDestroyed",
+     "key": "ballista_crew"
+    },
+    "command": {
+     "kind": "DestroyPresenterScope",
+     "scopeSource": "EventPayloadA"
+    }
+   }
+  ]
+ },
+ {
+  "id": "ballista.fixture.wolf_bootstrap",
+  "rules": [
+   {
+    "event": {
+     "kind": "EntitySpawned",
+     "key": "ballista_wolf"
+    },
+    "condition": {
+     "inline": "SourceHasVisualTransform"
+    },
+    "command": {
+     "kind": "CreatePresenter",
+     "definitionId": "ballista.fixture.wolf",
+     "scopeSource": "EventPayloadA"
+    }
+   },
+   {
+    "event": {
+     "kind": "EntityDestroyed",
+     "key": "ballista_wolf"
+    },
+    "command": {
+     "kind": "DestroyPresenterScope",
+     "scopeSource": "EventPayloadA"
+    }
+   }
+  ]
+ },
+ {
+  "id": "ballista.fixture.tower_bootstrap",
+  "rules": [
+   {
+    "event": {
+     "kind": "EntitySpawned",
+     "key": "ballista_tower"
+    },
+    "condition": {
+     "inline": "SourceHasVisualTransform"
+    },
+    "command": {
+     "kind": "CreatePresenter",
+     "definitionId": "ballista.fixture.tower",
+     "scopeSource": "EventPayloadA"
+    }
+   },
+   {
+    "event": {
+     "kind": "EntityDestroyed",
+     "key": "ballista_tower"
+    },
+    "command": {
+     "kind": "DestroyPresenterScope",
+     "scopeSource": "EventPayloadA"
+    }
+   }
+  ]
+ },
+ {
+  "id": "ballista.projectile.bolt",
+  "rules": [
+   {
+    "event": {
+     "kind": "ProjectileSpawned",
+     "key": "Effect.Ballista.BoltProjectile"
+    },
+    "condition": {
+     "inline": "SourceHasVisualTransform"
+    },
+    "command": {
+     "kind": "CreatePresenter",
+     "scopeSource": "EventPayloadA",
+     "definitionId": "ballista.projectile.bolt"
+    }
+   },
+   {
+    "event": {
+     "kind": "EntityDestroyed",
+     "key": "*"
+    },
+    "command": {
+     "kind": "DestroyPresenterScope",
+     "scopeSource": "EventPayloadA"
+    }
+   }
+  ],
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "sphere",
+     "renderPath": "StaticMesh",
+     "mobility": "Movable",
+     "localScale": [
+      0.2,
+      0.2,
+      0.2
+     ]
+    },
+    "style": {
+     "color": [
+      0.98,
+      0.72,
+      0.32,
+      0.94
+     ]
+    }
+   }
+  ],
+  "lifecycle": {
+   "persistence": "Scoped"
   }
+ },
+ {
+  "id": "ballista.projectile.siege",
+  "rules": [
+   {
+    "event": {
+     "kind": "ProjectileSpawned",
+     "key": "Effect.Ballista.SiegeProjectile"
+    },
+    "condition": {
+     "inline": "SourceHasVisualTransform"
+    },
+    "command": {
+     "kind": "CreatePresenter",
+     "scopeSource": "EventPayloadA",
+     "definitionId": "ballista.projectile.siege"
+    }
+   },
+   {
+    "event": {
+     "kind": "EntityDestroyed",
+     "key": "*"
+    },
+    "command": {
+     "kind": "DestroyPresenterScope",
+     "scopeSource": "EventPayloadA"
+    }
+   }
+  ],
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "sphere",
+     "renderPath": "StaticMesh",
+     "mobility": "Movable",
+     "localScale": [
+      0.32,
+      0.32,
+      0.32
+     ]
+    },
+    "style": {
+     "color": [
+      1,
+      0.45,
+      0.28,
+      0.94
+     ]
+    }
+   }
+  ],
+  "lifecycle": {
+   "persistence": "Scoped"
+  }
+ },
+ {
+  "id": "ballista.cue.shot_cast",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "sphere",
+     "renderPath": "StaticMesh",
+     "mobility": "Movable",
+     "localScale": [
+      0.3,
+      0.3,
+      0.3
+     ]
+    },
+    "style": {
+     "color": [
+      0.98,
+      0.78,
+      0.42,
+      0.86
+     ],
+     "alphaPolicy": "FadeOverLifetime"
+    }
+   }
+  ],
+  "lifecycle": {
+   "durationSeconds": 0.18
+  },
+  "anchor": {
+   "offset": [
+    0,
+    0.72,
+    0
+   ]
+  }
+ },
+ {
+  "id": "ballista.cue.siege_cast",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "Mesh",
+     "assetId": "sphere",
+     "renderPath": "StaticMesh",
+     "mobility": "Movable",
+     "localScale": [
+      0.5,
+      0.5,
+      0.5
+     ]
+    },
+    "style": {
+     "color": [
+      1,
+      0.55,
+      0.3,
+      0.86
+     ],
+     "alphaPolicy": "FadeOverLifetime"
+    }
+   }
+  ],
+  "lifecycle": {
+   "durationSeconds": 0.24
+  },
+  "anchor": {
+   "offset": [
+    0,
+    0.9,
+    0
+   ]
+  }
+ },
+ {
+  "id": "ballista.cue.bolt_hit",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "GroundOverlay",
+     "assetId": "Circle",
+     "renderPath": "None",
+     "mobility": "Movable",
+     "localScale": [
+      1.4,
+      1.4,
+      1.4
+     ]
+    },
+    "style": {
+     "color": [
+      1,
+      0.5,
+      0.3,
+      0.2
+     ]
+    }
+   }
+  ],
+  "lifecycle": {
+   "durationSeconds": 0.26
+  },
+  "anchor": {
+   "offset": [
+    0,
+    0.06,
+    0
+   ]
+  }
+ },
+ {
+  "id": "ballista.cast_cues",
+  "rules": [
+   {
+    "event": {
+     "kind": "CastCommitted",
+     "key": "Ability.Ballista.Shot"
+    },
+    "condition": {
+     "inline": "SourceHasVisualTransform"
+    },
+    "command": {
+     "kind": "CreatePresenter",
+     "definitionId": "ballista.cue.shot_cast",
+     "scopeSource": "Fixed"
+    }
+   },
+   {
+    "event": {
+     "kind": "CastCommitted",
+     "key": "Ability.Ballista.SiegeBolt"
+    },
+    "condition": {
+     "inline": "SourceHasVisualTransform"
+    },
+    "command": {
+     "kind": "CreatePresenter",
+     "definitionId": "ballista.cue.siege_cast",
+     "scopeSource": "Fixed"
+    }
+   },
+   {
+    "event": {
+     "kind": "EffectApplied",
+     "key": "Effect.Ballista.Bolt"
+    },
+    "condition": {
+     "inline": "SourceHasVisualTransform"
+    },
+    "command": {
+     "kind": "CreatePresenter",
+     "definitionId": "ballista.cue.bolt_hit",
+     "scopeSource": "Fixed"
+    }
+   }
+  ]
+ }
 ]
