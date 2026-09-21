@@ -53,9 +53,29 @@ public sealed class FieldEastAsiaCountryAcceptanceTests
         "country.vietnam",
     };
 
+
+    private static void RequireLudotsSampleSubmodule()
+    {
+        // East-asia acceptance reads a real-scale heightmap from the LudotsSample
+        // submodule (external sample repo). Missing checkout is an environment gap,
+        // not a product failure — skip loudly instead of failing the gate.
+        string sample = Path.Combine(
+            FindRepoRoot(),
+            "mods", "showcases", "east_asia_playable_terrain", "EastAsiaPlayableTerrainMod",
+            "assets", "samples", "LudotsSample", "east_asia", "east_asia_continuous.height");
+        if (!File.Exists(sample))
+        {
+            Assert.Ignore(
+                "LudotsSample submodule not initialized; run " +
+                "'git submodule update --init mods/showcases/east_asia_playable_terrain/EastAsiaPlayableTerrainMod/assets/samples/LudotsSample' " +
+                "to run east-asia acceptance.");
+        }
+    }
+
     [Test]
     public void EastAsiaCountry_LoadsMaterializesAndProjectsDiscreteOwnership()
     {
+        RequireLudotsSampleSubmodule();
         using GameEngine engine = CreateEngine(Mods);
         engine.Start();
         engine.LoadMap(MapId);
@@ -104,6 +124,7 @@ public sealed class FieldEastAsiaCountryAcceptanceTests
     [Test]
     public void EastAsiaCountryMod_IsDataOnly()
     {
+        RequireLudotsSampleSubmodule();
         string modRoot = Path.Combine(
             FindRepoRoot(),
             "mods",
