@@ -77,17 +77,19 @@ public sealed class UiCommandPanelsShowcaseAcceptanceTests
         (float chipX, float chipY) = FindButtonPointByText(root, "Ability.Ucp.Fireball")
             ?? FindButtonPointByTip(root, "Ability.Ucp.Fireball")
             ?? throw new AssertionException("fireball chip not found in the mounted scene");
+        Entity dummy = FindEntityByName(engine, "靶子");
+        float dummyHealthBefore = CurrentHealth(engine, dummy);
         Click(root, chipX, chipY);
-        Tick(engine, 6);
+        Tick(engine, 10);
         var drain = engine.GetService(CoreServiceKeys.CommandIntentBufferDrain);
         Assert.That(drain?.LastDrainedCount, Is.GreaterThan(0), "the chip's cast intent must reach the drain");
         Assert.That(drain?.LastRejectionReason, Is.Null, $"cast intent rejected: {drain?.LastRejectionReason}");
-        // The line's own acceptance bar (mirrors Case E cast_q): the cast intent drains
-        // accepted for the roster actor. Slot identity rode the chip payload (the counter
-        // graph node proves the companion event carried it). Ability execution to damage
-        // rides the aiming slice's target resolution (#1398), not the SubmitCast contract.
-        Assert.That(drain?.LastAcceptedCount, Is.EqualTo(1),
-            $"cast intent must be accepted for the roster actor (rejected: {drain?.LastRejectionReason})");
+        // Full real-cast loop: chip payload carries the slot, the consumption graph resolves
+        // the target from the maintained enemies collection (QueryFromCollection + team
+        // filter + TargetListGet), SubmitCast drains accepted with target, the fireball's
+        // InstantDamage lands on the dummy.
+        Assert.That(CurrentHealth(engine, dummy), Is.LessThan(dummyHealthBefore),
+            "clicking the chip must cast for real — target resolved in-graph, damage lands");
 
         // ── tip leaves with the pointer ──
         Move(root, 40f, 40f);
