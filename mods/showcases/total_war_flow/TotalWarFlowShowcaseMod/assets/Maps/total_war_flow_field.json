@@ -1,98 +1,147 @@
 {
-  "Id": "total_war_flow_field",
-  "World": {
-    "WidthCm": 1638400,
-    "HeightCm": 1638400,
-    "CellSizeCm": 100
-  },
-  "DefaultCamera": {
-    "TargetXCm": 0,
-    "TargetYCm": 0,
-    "Yaw": 0,
-    "Pitch": 58,
-    "DistanceCm": 16000,
-    "FovYDeg": 48
-  },
-  "Tags": [
-    "showcase",
-    "input",
-    "total-war",
-    "context-flow"
-  ],
-  "HeartbeatIntervalTicks": 6,
-  "ContinuousHeightmapAsset": "assets/terrain/tw_flat.height",
-  "Entities": [
-    {
-      "template": "tw_commander",
-      "instanceId": "tw-commander",
-      "PositionXCm": 0,
-      "PositionYCm": 0,
-      "Overrides": {
-        "PlayerIdentity": {
-          "PlayerId": 1
-        },
-        "Team": {
-          "Id": 1
-        }
-      }
+ "Id": "total_war_flow_field",
+ "World": {
+  "WidthCm": 1638400,
+  "HeightCm": 1638400,
+  "CellSizeCm": 100
+ },
+ "DefaultCamera": {
+  "TargetXCm": 0,
+  "TargetYCm": 0,
+  "Yaw": 0,
+  "Pitch": 58,
+  "DistanceCm": 16000,
+  "FovYDeg": 48
+ },
+ "Tags": [
+  "showcase",
+  "input",
+  "total-war",
+  "context-flow"
+ ],
+ "HeartbeatIntervalTicks": 6,
+ "ContinuousHeightmapAsset": "assets/terrain/tw_flat.height",
+ "Entities": [
+  {
+   "template": "tw_commander",
+   "instanceId": "tw-commander",
+   "PositionXCm": 0,
+   "PositionYCm": 0,
+   "Overrides": {
+    "PlayerIdentity": {
+     "PlayerId": 1
     },
-    {
-      "template": "tw_marine",
-      "instanceId": "tw-marine-1",
-      "PositionXCm": -300,
-      "PositionYCm": 100,
-      "Overrides": {
-        "Team": {
-          "Id": 1
-        }
-      }
-    },
-    {
-      "template": "tw_marine",
-      "instanceId": "tw-marine-2",
-      "PositionXCm": -300,
-      "PositionYCm": -100,
-      "Overrides": {
-        "Team": {
-          "Id": 1
-        }
-      }
-    },
-    {
-      "template": "ballista_wolf",
-      "instanceId": "wolf_1",
-      "PositionXCm": 400,
-      "PositionYCm": 0
-    },
-    {
-      "template": "ballista_tower",
-      "instanceId": "tower_1",
-      "PositionXCm": 400,
-      "PositionYCm": 600
+    "Team": {
+     "Id": 1
     }
-  ],
+   }
+  },
+  {
+   "template": "tw_marine",
+   "instanceId": "tw-marine-1",
+   "PositionXCm": -300,
+   "PositionYCm": 100,
+   "Overrides": {
+    "Team": {
+     "Id": 1
+    }
+   }
+  },
+  {
+   "template": "tw_marine",
+   "instanceId": "tw-marine-2",
+   "PositionXCm": -300,
+   "PositionYCm": -100,
+   "Overrides": {
+    "Team": {
+     "Id": 1
+    }
+   }
+  },
+  {
+   "template": "ballista_wolf",
+   "instanceId": "wolf_1",
+   "PositionXCm": 400,
+   "PositionYCm": 0
+  },
+  {
+   "template": "ballista_tower",
+   "instanceId": "tower_1",
+   "PositionXCm": 400,
+   "PositionYCm": 600
+  },
+  {
+   "Template": "ballista_team_anchor",
+   "InstanceId": "tw-hostiles-anchor",
+   "PositionXCm": 2000,
+   "PositionYCm": 2000,
+   "Overrides": {
+    "Name": {
+     "Value": "Hostiles Anchor"
+    }
+   }
+  }
+ ],
+ "Teams": [
+  {
+   "TeamId": 1,
+   "Name": "Player",
+   "RepresentativeInstanceId": "tw-commander"
+  },
+  {
+   "TeamId": 2,
+   "RepresentativeInstanceId": "tw-hostiles-anchor"
+  }
+ ],
+ "Players": [
+  {
+   "PlayerId": 1,
+   "TeamId": 1,
+   "RepresentativeInstanceId": "tw-commander"
+  }
+ ],
+ "TriggerGraphs": [
+  {
+   "graph": "tw.startup",
+   "scopeInstanceId": "tw-commander"
+  },
+  {
+   "graph": "tw.roster_sync",
+   "scopeInstanceId": "tw-commander"
+  }
+ ],
+ "ParticipantRelationships": {
   "Teams": [
-    {
-      "TeamId": 1,
-      "Name": "Player",
-      "RepresentativeInstanceId": "tw-commander"
-    }
+   {
+    "TeamA": 1,
+    "TeamB": 1,
+    "TypeId": "LudotsCore.Participant",
+    "Attitude": "Friendly",
+    "Symmetric": true
+   },
+   {
+    "TeamA": 2,
+    "TeamB": 2,
+    "TypeId": "LudotsCore.Participant",
+    "Attitude": "Friendly",
+    "Symmetric": true
+   },
+   {
+    "TeamA": 1,
+    "TeamB": 2,
+    "TypeId": "LudotsCore.Participant",
+    "Attitude": "Hostile",
+    "Symmetric": true
+   }
   ],
-  "Players": [
-    {
-      "PlayerId": 1,
-      "TeamId": 1,
-      "RepresentativeInstanceId": "tw-commander"
-    }
-  ],
-  "TriggerGraphs": [
-    {
-      "graph": "tw.startup",
-      "scopeInstanceId": "tw-commander"
-    },
-    {
-      "graph": "tw.roster_sync",
-      "scopeInstanceId": "tw-commander"
-    }
+  "Players": [],
+  "PlayerTeams": [
+   {
+    "PlayerId": 1,
+    "TeamId": 1,
+    "TypeId": "LudotsCore.Participant",
+    "Symmetric": false
+   }
   ]
+ }
 }

@@ -37,9 +37,15 @@ namespace Ludots.Tests.GAS
             Order order = ctx.LatestOrder(ballista, "castAbility");
             Assert.That(order.Args.I0, Is.EqualTo(0), "wolf (biological) routes to weapon slot 0");
             Assert.That(order.Target, Is.EqualTo(wolf), "cast carries the hit entity");
-            ctx.Tick(8);
+            // 弹道化后伤害随飞行时间到达：轮询到血量稳定
             float wolfHealth = ctx.Health(wolf);
-            TestContext.Out.WriteLine($"[S3] wolf 300 -> {wolfHealth} (weapon bolt, armor 0, flat -80)");
+            for (int frame = 0; frame < 120 && wolfHealth >= 300f; frame++)
+            {
+                ctx.Tick(1);
+                wolfHealth = ctx.Health(wolf);
+            }
+
+            TestContext.Out.WriteLine($"[S3] wolf first bolt lands -> {wolfHealth} (weapon bolt, armor 0, flat -80)");
             Assert.That(wolfHealth, Is.EqualTo(220f).Within(0.01f), "Q4 formula: armor 0 → flat -80");
         }
 
