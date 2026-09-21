@@ -63,3 +63,15 @@
 - `gpu-default/`：entity_command_panel preset 启动计划录证（launcher-recorder-artifacts 模式）
 - `artifacts/benchmarks/skia-gpu-ui-compositor/*.json`：基准原始数据
 - `artifacts/evidence/engine_raylib_skia_overlay/{play.mp4,poster.png}`：官方 showcase 证据（GPU 路径重录）
+
+## 补充：AgentBridge 真游戏现场验收（2026-09-21）
+
+- 启动：手动 bootstrap（9 mod 链：Core/CoreInput/CameraProfiles/DiagnosticsOverlay/EntityCommandPanel/AgentBridge/EntityInfoPanels/InteractionShowcase/EntityCommandPanelShowcase，ultralight provider 平铺 staging，`LUDOTS_AGENT_BRIDGE_PORT=47922`）
+- 桥活体：`session.info` tick 推进；`ui.tree` 挂载 `EntityCommandPanel-Showcase-WebUI`（浏览器表面画布 1600×356 @ y=544，经 GPU UI 层上屏）
+- 决定性日志（`logs.tail`，Presentation 通道）：
+  - `GPU Accelerated: True (Raylib Skia render-texture UI compositor)`
+  - `GPU Accelerated: True (Raylib Skia direct framebuffer overlay)`
+- 驱动→验证：`input.raw click` 选中实体后，世界/HUD 区（y<544）16.4% 采样像素变化（选中表现经 GPU HUD 路径更新），浏览器面板带保持稳定渲染；`time.pause`→`screenshot` 产物 `live_game_ui_mounted.png` / `live_game_after_selection.png`
+- 过程中发现的 main 陈旧 mod（与本 PR 无关，阻塞 agent-demo 演示链）：
+  - `ChampionSkillSandboxMod` effects.json 使用已改名的 `tags` 字段（应为 `categories`），config 加载即抛
+  - `RtsDemoMod` 交互上下文图 `graph.rts.roster_sync` 引用未声明事件 `MapHeartbeat`，游戏循环未处理异常退出
