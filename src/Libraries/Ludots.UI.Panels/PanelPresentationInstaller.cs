@@ -72,7 +72,8 @@ public static class PanelPresentationInstaller
             imageSizeProvider,
             displayResolver,
             seats,
-            eventBridge));
+            eventBridge,
+            new PanelTipOverlay((UiSurfaceHost)surfaceHost)));
     }
 
     /// <summary>

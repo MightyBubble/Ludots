@@ -10,7 +10,7 @@ internal sealed class PanelLayoutControlJsonContext
     {
         "type", "class", "text", "bind", "prefix", "current", "max", "showWhen",
         "viewportHeight", "itemExtent", "virtualize", "overscan", "present",
-        "columns", "aggregate", "src", "width", "height", "control", "payload"
+        "columns", "aggregate", "src", "width", "height", "control", "payload", "tip"
     };
 
     private static readonly HashSet<string> LayoutTemplateFields = new(StringComparer.Ordinal)
@@ -19,7 +19,7 @@ internal sealed class PanelLayoutControlJsonContext
         "children", "gap", "align", "justify", "width", "height", "widthBind", "heightBind",
         "fontSize", "bold", "textRunsBind", "objectFit", "visibleWhenNotEmpty", "classBind",
         "colorBind", "backgroundBind", "viewportHeight", "itemExtent", "virtualize", "overscan",
-        "control", "payload"
+        "control", "payload", "tip"
     };
 
     private static readonly HashSet<PanelLayoutControlType> PanelTypes = new()
@@ -231,7 +231,42 @@ internal static class PanelLayoutControlJsonParser
             colorBind,
             backgroundBind,
             ParseControlName(control, type, context),
-            ParseEventPayload(control, type, context));
+            ParseEventPayload(control, type, context),
+            ParseTip(control, context));
+    }
+
+    private static readonly HashSet<string> TipFields = new(StringComparer.Ordinal)
+    {
+        "title", "text", "titleBind", "textBind"
+    };
+
+    private static PanelControlTipSpec? ParseTip(JsonObject control, PanelLayoutControlJsonContext context)
+    {
+        if (control["tip"] is null)
+        {
+            return null;
+        }
+
+        if (control["tip"] is not JsonObject tipObject)
+        {
+            throw new InvalidOperationException($"{context.Description} 'tip' must be an object.");
+        }
+
+        RejectUnknownFields(tipObject, TipFields, $"{context.Description} tip");
+        string? title = OptionalString(tipObject, "title", context);
+        string? text = OptionalString(tipObject, "text", context);
+        string? titleBind = OptionalString(tipObject, "titleBind", context);
+        string? textBind = OptionalString(tipObject, "textBind", context);
+        context.ValidateBinding("tip.titleBind", titleBind, PanelLayoutControlType.Label);
+        context.ValidateBinding("tip.textBind", textBind, PanelLayoutControlType.Label);
+        if (string.IsNullOrWhiteSpace(title) && string.IsNullOrWhiteSpace(text) &&
+            string.IsNullOrWhiteSpace(titleBind) && string.IsNullOrWhiteSpace(textBind))
+        {
+            throw new InvalidOperationException(
+                $"{context.Description} tip declares no content — at least one of title/text/titleBind/textBind is required.");
+        }
+
+        return new PanelControlTipSpec(title, text, titleBind, textBind);
     }
 
     private static string? ParseControlName(JsonObject control, PanelLayoutControlType type, PanelLayoutControlJsonContext context)

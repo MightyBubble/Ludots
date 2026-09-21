@@ -170,6 +170,97 @@ namespace Ludots.Tests.GasTests.UI
             Assert.That(fired, Is.Zero, "clicks off the button must not reach the binder");
         }
 
+        [Test]
+        public void HoverOverButtonWithTip_PublishesTipOverlay_NodeDisappearsOnLeave()
+        {
+            string json = TipTemplateJson();
+            var composer = new PanelLayoutComposer();
+            UiElementBuilder root = composer.ComposeControls(
+                PanelTemplateLoader.Load(json).Layout!.Controls,
+                new PanelBindingScope(new PanelVariableSet("tests.panel.tip", new Dictionary<string, float> { ["title"] = 0f }, revision: 0)),
+                static _ => throw new InvalidOperationException("no images expected"));
+
+            var uiRoot = new UIRoot(new SkiaUiRenderer());
+            uiRoot.Resize(800f, 600f);
+            var surfaceHost = new UiSurfaceHost(uiRoot, new SkiaTextMeasurer(), new SkiaImageSizeProvider());
+            UiSurfaceLeaseHandle lease = surfaceHost.Acquire(new UiSurfaceLeaseRequest(
+                "test:tip-panel", UiSurfaceSegment.Main, priority: 0));
+            surfaceHost.Publish(lease, UiSurfaceContribution.FromBuilder(
+                () => new UiElementBuilder(UiNodeKind.Container)
+                    .Width(300f)
+                    .Height(120f)
+                    .Absolute(0f, 0f)
+                    .Children(root)));
+
+            using var overlay = new PanelTipOverlay(surfaceHost);
+            overlay.Update();
+
+            // Force layout, then find the button and hover it.
+            uiRoot.HandleInput(new PointerEvent { DeviceType = InputDeviceType.Mouse, PointerId = 0, Action = PointerAction.Move, X = 1f, Y = 1f });
+            (float x, float y) = FindButtonPoint(uiRoot);
+            uiRoot.HandleInput(new PointerEvent { DeviceType = InputDeviceType.Mouse, PointerId = 0, Action = PointerAction.Move, X = x, Y = y });
+            uiRoot.HandleInput(new PointerEvent { DeviceType = InputDeviceType.Mouse, PointerId = 0, Action = PointerAction.Move, X = x + 1f, Y = y + 1f });
+
+            UiNode? tipTitle = FindNodeByClass(uiRoot.Scene, "ui-tip-title");
+            Assert.That(tipTitle, Is.Not.Null, "hovering a tipped control publishes the tip overlay");
+            Assert.That(tipTitle!.TextContent, Is.EqualTo("火球术"));
+
+            uiRoot.HandleInput(new PointerEvent { DeviceType = InputDeviceType.Mouse, PointerId = 0, Action = PointerAction.Move, X = 500f, Y = 500f });
+            uiRoot.HandleInput(new PointerEvent { DeviceType = InputDeviceType.Mouse, PointerId = 0, Action = PointerAction.Move, X = 501f, Y = 501f });
+            Assert.That(FindNodeByClass(uiRoot.Scene, "ui-tip"), Is.Null, "leaving the control releases the tip");
+        }
+
+        private static UiNode? FindNodeByClass(UiScene? scene, string className)
+        {
+            return scene == null ? null : FindByClass(scene.Root, className);
+        }
+
+        private static UiNode? FindByClass(UiNode? node, string className)
+        {
+            if (node == null)
+            {
+                return null;
+            }
+
+            for (int i = 0; i < node.ClassNames.Count; i++)
+            {
+                if (string.Equals(node.ClassNames[i], className, StringComparison.Ordinal))
+                {
+                    return node;
+                }
+            }
+
+            for (int i = 0; i < node.Children.Count; i++)
+            {
+                UiNode? hit = FindByClass(node.Children[i], className);
+                if (hit != null)
+                {
+                    return hit;
+                }
+            }
+
+            return null;
+        }
+
+        private static string TipTemplateJson() => """
+        {
+          "id": "tests.panel.tip",
+          "graph": "tests.graph.tip",
+          "pins": [
+            { "name": "title", "key": "tests.panel.tip.title", "mode": "realtime", "default": 0 }
+          ],
+          "events": [
+            { "eventId": "Ui.DialogChoose", "control": "choose", "gesture": "tap", "payload": { "option": "Int" } }
+          ],
+          "layout": {
+            "controls": [
+              { "type": "button", "control": "choose", "text": "选项", "payload": { "option": "2" },
+                "tip": { "title": "火球术", "textBind": "title" } }
+            ]
+          }
+        }
+        """;
+
         private static PanelLayoutControl FindButton(PanelTemplate template)
         {
             foreach (PanelLayoutControl control in template.Layout!.Controls)

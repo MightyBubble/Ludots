@@ -461,6 +461,16 @@ public sealed class PanelLayoutComposer
             scope);
     }
 
+    private static string? ResolveTipText(string? literal, string? bind, IPanelLayoutBindingScope scope)
+    {
+        if (!string.IsNullOrWhiteSpace(bind))
+        {
+            return scope.ReadText(bind);
+        }
+
+        return string.IsNullOrWhiteSpace(literal) ? null : literal;
+    }
+
     private static UiElementBuilder ApplyCommon(
         UiElementBuilder builder,
         PanelLayoutControl control,
@@ -477,6 +487,21 @@ public sealed class PanelLayoutComposer
             builder = builder.Classes(control.ClassName.Split(
                 ' ',
                 StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        }
+
+        if (control.Tip != null)
+        {
+            string? tipTitle = ResolveTipText(control.Tip.Title, control.Tip.TitleBind, scope);
+            string? tipText = ResolveTipText(control.Tip.Text, control.Tip.TextBind, scope);
+            if (tipTitle != null)
+            {
+                builder = builder.Attribute("data-tip-title", tipTitle);
+            }
+
+            if (tipText != null)
+            {
+                builder = builder.Attribute("data-tip-text", tipText);
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(control.ClassBind))

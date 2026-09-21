@@ -45,6 +45,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
     private readonly PresentationDisplayResolver? _displayResolver;
     private readonly ClientLocalSeatRegistry? _seats;
     private readonly PanelEventActionBridge? _eventBridge;
+    private readonly PanelTipOverlay? _tipOverlay;
     private readonly PanelLayoutComposer _layoutComposer = new();
 
     private readonly Dictionary<string, MountedPanel> _mounted = new(StringComparer.Ordinal);
@@ -62,7 +63,8 @@ public sealed class PanelPresentationSystem : ISystem<float>
         IUiImageSizeProvider? imageSizeProvider = null,
         PresentationDisplayResolver? displayResolver = null,
         ClientLocalSeatRegistry? seats = null,
-        PanelEventActionBridge? eventBridge = null)
+        PanelEventActionBridge? eventBridge = null,
+        PanelTipOverlay? tipOverlay = null)
     {
         _panelHost = panelHost ?? throw new ArgumentNullException(nameof(panelHost));
         _templates = templates ?? throw new ArgumentNullException(nameof(templates));
@@ -79,6 +81,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
         _displayResolver = displayResolver;
         _seats = seats;
         _eventBridge = eventBridge;
+        _tipOverlay = tipOverlay;
     }
 
     public void Initialize() { }
@@ -95,6 +98,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
         }
 
         _eventBridge?.Update();
+        _tipOverlay?.Update();
 
         List<(string SeatId, PresentBinding Binding)>? bindings = null;
         if (_seats is { PresentBindingCount: > 0 })
@@ -269,6 +273,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
         }
 
         _disposed = true;
+        _tipOverlay?.Dispose();
         foreach (MountedPanel mounted in _mounted.Values)
         {
             _surfaceHost.Release(mounted.Lease);
@@ -386,7 +391,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
             controls,
             new PanelBindingScope(values, item),
             ResolvePanelImageSource,
-            control => BuildList(template, control, values, lists, item, handle, reactiveContext),
+            control => BuildList(template, control, values, lists, item, handle, reactiveContext, seatId),
             interactionBinder);
     }
 
@@ -442,7 +447,8 @@ public sealed class PanelPresentationSystem : ISystem<float>
         IReadOnlyList<PanelListProjection> lists,
         PanelListItemProjection? parentItem,
         PanelInstanceHandle handle,
-        ReactiveContext<PanelUiState>? reactiveContext)
+        ReactiveContext<PanelUiState>? reactiveContext,
+        string? seatId = null)
     {
         PanelCollectionBinding collection = FindCollection(template, control.Bind!)
             ?? throw new InvalidOperationException(
@@ -550,7 +556,8 @@ public sealed class PanelPresentationSystem : ISystem<float>
                     item.NestedLists,
                     item,
                     handle,
-                    reactiveContext: null)
+                    reactiveContext: null,
+                    seatId: seatId)
             };
             if (control.Present == PanelPresentMode.Aggregate)
             {

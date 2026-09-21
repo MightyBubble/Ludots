@@ -1,0 +1,4 @@
+[
+  { "id": "Ability.Ucp.Fireball", "exec": { "clockId": "FixedFrame", "items": [{ "kind": "End", "tick": 0 }] } },
+  { "id": "Ability.Ucp.Rally", "exec": { "clockId": "FixedFrame", "items": [{ "kind": "End", "tick": 0 }] } }
+]

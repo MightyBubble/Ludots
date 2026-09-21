@@ -162,7 +162,8 @@ namespace Ludots.Core.UI.PanelProjection
             string? colorBind = null,
             string? backgroundBind = null,
             string? controlName = null,
-            IReadOnlyDictionary<string, string>? eventPayload = null)
+            IReadOnlyDictionary<string, string>? eventPayload = null,
+            PanelControlTipSpec? tip = null)
         {
             Type = type;
             ClassName = className;
@@ -198,6 +199,7 @@ namespace Ludots.Core.UI.PanelProjection
             BackgroundBind = backgroundBind;
             ControlName = controlName;
             EventPayload = eventPayload ?? new Dictionary<string, string>(StringComparer.Ordinal);
+            Tip = tip;
         }
 
         public PanelLayoutControlType Type { get; }
@@ -263,6 +265,30 @@ namespace Ludots.Core.UI.PanelProjection
         /// field in repeater scope, or literal). Values bake at compose time and refresh on re-compose.
         /// </summary>
         public IReadOnlyDictionary<string, string> EventPayload { get; }
+
+        /// <summary>Optional hover tooltip content for this control; any control may declare one.</summary>
+        public PanelControlTipSpec? Tip { get; }
+    }
+
+    /// <summary>
+    /// Generic control-level tooltip declaration: literal or bound title/text resolved from the
+    /// same binding scope as the label (panel pins or repeater item fields). Applies to any
+    /// control — content is the author's data, the hover surface is engine plumbing.
+    /// </summary>
+    public sealed class PanelControlTipSpec
+    {
+        public PanelControlTipSpec(string? title, string? text, string? titleBind, string? textBind)
+        {
+            Title = title;
+            Text = text;
+            TitleBind = titleBind;
+            TextBind = textBind;
+        }
+
+        public string? Title { get; }
+        public string? Text { get; }
+        public string? TitleBind { get; }
+        public string? TextBind { get; }
     }
 
     public sealed class PanelLayout

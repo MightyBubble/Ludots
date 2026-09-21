@@ -1,0 +1,10 @@
+{
+  "startupMapId": "ucp_arena",
+  "windowTitle": "Ludots - 指令面板（技能排 + 全局命令）",
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "startupPresentLayout": "fullscreen",
+  "startupLocalSeats": [
+    { "seatId": "seat.0", "playerId": 1 }
+  ]
+}

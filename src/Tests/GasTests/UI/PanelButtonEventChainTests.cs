@@ -200,6 +200,35 @@ namespace Ludots.Tests.GasTests.UI
             Assert.That(error!.Message, Does.Contain("PANEL.EVENT.ERR.ActionNotDeclared"));
         }
 
+        // ── generic control tooltips ──
+
+        [Test]
+        public void Loader_TipLiteralAndBind_ParseAndAttach()
+        {
+            PanelTemplate template = PanelTemplateLoader.Load(ButtonTemplateJson(
+                tip: "{ \"title\": \"火球术\", \"textBind\": \"title\" }"));
+            PanelLayoutControl button = RequireButton(template);
+            Assert.That(button.Tip, Is.Not.Null);
+            Assert.That(button.Tip!.Title, Is.EqualTo("火球术"));
+            Assert.That(button.Tip.TextBind, Is.EqualTo("title"));
+        }
+
+        [Test]
+        public void Loader_TipWithoutAnyContent_FailsClosed()
+        {
+            Assert.That(
+                () => PanelTemplateLoader.Load(ButtonTemplateJson(tip: "{ }")),
+                Throws.InvalidOperationException.With.Message.Contains("at least one of title/text/titleBind/textBind"));
+        }
+
+        [Test]
+        public void Loader_TipUnknownBind_FailsClosed()
+        {
+            Assert.That(
+                () => PanelTemplateLoader.Load(ButtonTemplateJson(tip: "{ \"titleBind\": \"missing\" }")),
+                Throws.InvalidOperationException.With.Message.Contains("tip.titleBind"));
+        }
+
         // ── companion payload events (in-tick dispatch) ──
 
         [Test]
@@ -269,10 +298,12 @@ namespace Ludots.Tests.GasTests.UI
             string audience = "\"all-seats\"",
             string labelExtra = "",
             string buttonExtra = null!,
-            string extraControls = "")
+            string extraControls = "",
+            string tip = null!)
         {
             string payloadJson = payload ?? "{ \"option\": \"1\" }";
             string resolvedEventControl = eventControl ?? control;
+            string tipJson = tip == null! ? "" : ", \"tip\": " + tip;
             string eventsJson = events ?? $$"""
             [
               { "eventId": "{{ChooseActionId}}", "control": "{{resolvedEventControl}}", "gesture": "{{gesture}}", "payload": { "option": "Int" } }
@@ -291,7 +322,7 @@ namespace Ludots.Tests.GasTests.UI
               "layout": {
                 "controls": [
                   {{extraControls}}
-                  { "type": "button", "control": "{{control}}"{{buttonLabel}}, "payload": {{payloadJson}}{{labelExtra}} }
+                  { "type": "button", "control": "{{control}}"{{buttonLabel}}, "payload": {{payloadJson}}{{labelExtra}}{{tipJson}} }
                 ]
               }
             }

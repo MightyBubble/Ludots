@@ -1,0 +1,12 @@
+{
+  "profiles": [
+    {
+      "id": "interaction.context.ucp.battle",
+      "bindings": ["Ui.CastFire", "Ui.CmdBuild"],
+      "triggers": [
+        { "trigger": "Graph.Ucp.Cast" },
+        { "trigger": "Graph.Ucp.Build" }
+      ]
+    }
+  ]
+}

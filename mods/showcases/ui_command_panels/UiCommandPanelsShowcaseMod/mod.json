@@ -1,0 +1,15 @@
+{
+  "name": "UiCommandPanelsShowcaseMod",
+  "version": "1.0.0",
+  "description": "UI command panels showcase: 0-encode skill-row panel over the caster's ability slots (context-gated click casts) + C&C-style right-side global command panel. Panel = view/controller; the interaction context permits the operations (#1585/#1609).",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "tags": [
+    "showcase",
+    "panel",
+    "button-events",
+    "command-deck"
+  ]
+}
