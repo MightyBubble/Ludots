@@ -392,7 +392,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(engine.MergedConfig.BrowserRuntime.Enabled, Is.True,
                 "EntityCommandPanelShowcaseMod game.json should require the host BrowserRuntime path.");
             Assert.That(engine.MergedConfig.BrowserRuntime.Required, Is.True);
-            Assert.That(engine.MergedConfig.BrowserRuntime.Provider, Is.EqualTo("cef"));
+            Assert.That(engine.MergedConfig.BrowserRuntime.Provider, Is.EqualTo("ultralight"));
         }
 
         private static void AssertShowcaseCameraLocked(GameEngine engine)
