@@ -71,7 +71,8 @@
 - 决定性日志（`logs.tail`，Presentation 通道）：
   - `GPU Accelerated: True (Raylib Skia render-texture UI compositor)`
   - `GPU Accelerated: True (Raylib Skia direct framebuffer overlay)`
-- 驱动→验证：`input.raw click` 选中实体后，世界/HUD 区（y<544）16.4% 采样像素变化（选中表现经 GPU HUD 路径更新），浏览器面板带保持稳定渲染；`time.pause`→`screenshot` 产物 `live_game_ui_mounted.png` / `live_game_after_selection.png`
+- 驱动→验证：`input.raw click` 选中实体后，世界/HUD 区（y<544）16.4% 采样像素变化（选中表现经 GPU HUD 路径更新）；`time.pause`→`screenshot` 产物 `live_game_ui_mounted.png` / `live_game_after_selection.png`
+- 浏览器 provider 对照（后续用户现场反馈补验）：ultralight provider（云 Linux 目标）在本机 Windows 手动 staging 下页面空白，面板带呈均匀 (5,5,4) 黑带——GPU 合成器仍把该表面稳定上屏（无闪烁/镜像/穿透）；换 CEF provider（主树 `BrowserRuntime/cef`，gitignore 包）后面板带内容占比 75.7%（采样命中命令卡金/状态蓝绿），完整 UI 经 GPU UI 合成器渲染。证据 `live_game_cef_panel.png`
 - 过程中发现的 main 陈旧 mod（与本 PR 无关，阻塞 agent-demo 演示链）：
   - `ChampionSkillSandboxMod` effects.json 使用已改名的 `tags` 字段（应为 `categories`），config 加载即抛
   - `RtsDemoMod` 交互上下文图 `graph.rts.roster_sync` 引用未声明事件 `MapHeartbeat`，游戏循环未处理异常退出
