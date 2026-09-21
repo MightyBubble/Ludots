@@ -18,8 +18,8 @@ namespace Ludots.Adapter.Raylib
         private readonly SkiaRasterLayer _uiLayer = new();
         private readonly SkiaRasterLayer _overlayLayer = new();
         private readonly SkiaOverlayRenderer _overlayRenderer = new();
-        private RaylibSkiaGpuOverlaySurface? _gpuUnderlaySurface;
-        private RaylibSkiaGpuOverlaySurface? _gpuTopOverlaySurface;
+        private RaylibSkiaGpuCanvasSurface? _gpuUnderlaySurface;
+        private RaylibSkiaGpuCanvasSurface? _gpuTopOverlaySurface;
         private RaylibSkiaFramebufferOverlaySurface? _framebufferUnderlaySurface;
         private RaylibSkiaFramebufferOverlaySurface? _framebufferTopOverlaySurface;
 
@@ -177,13 +177,11 @@ namespace Ludots.Adapter.Raylib
                 {
                     if (hasTopOverlay)
                     {
-                        _gpuTopOverlaySurface ??= new RaylibSkiaGpuOverlaySurface();
+                        _gpuTopOverlaySurface ??= new RaylibSkiaGpuCanvasSurface("overlay");
                         if (!_gpuTopOverlaySurface.TryRender(
-                            scene!,
-                            _overlayRenderer,
-                            PresentationOverlayLayer.TopMost,
                             _compositeRenderer.Width,
-                            _compositeRenderer.Height))
+                            _compositeRenderer.Height,
+                            surface => _overlayRenderer.Render(scene!, surface.Canvas, PresentationOverlayLayer.TopMost)))
                         {
                             throw new InvalidOperationException("Raylib Skia GPU top overlay is required for this production path but could not render.");
                         }
@@ -407,14 +405,12 @@ namespace Ludots.Adapter.Raylib
 
                 if (gpuDirectUnderlay)
                 {
-                    _gpuUnderlaySurface ??= new RaylibSkiaGpuOverlaySurface();
+                    _gpuUnderlaySurface ??= new RaylibSkiaGpuCanvasSurface("overlay");
+                    PresentationOverlayLanePacer.LaneRefreshPlan plan = refreshPlan;
                     if (!_gpuUnderlaySurface.TryRender(
-                        scene,
-                        _overlayRenderer,
-                        PresentationOverlayLayer.UnderUi,
-                        refreshPlan,
                         _compositeRenderer.Width,
-                        _compositeRenderer.Height))
+                        _compositeRenderer.Height,
+                        surface => _overlayRenderer.Render(scene, surface.Canvas, PresentationOverlayLayer.UnderUi, plan)))
                     {
                         throw new InvalidOperationException("Raylib Skia GPU underlay is required for this production path but could not render.");
                     }

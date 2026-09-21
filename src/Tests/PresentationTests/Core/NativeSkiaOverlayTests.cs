@@ -384,8 +384,14 @@ public sealed class NativeSkiaOverlayTests
             "Adapters",
             "Raylib",
             "Ludots.Adapter.Raylib");
-        string glContext = File.ReadAllText(Path.Combine(adapterDir, "RaylibSkiaGlContext.cs"));
-        string gpuOverlay = File.ReadAllText(Path.Combine(adapterDir, "RaylibSkiaGpuOverlaySurface.cs"));
+        string renderDir = Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "Client",
+            "Ludots.Raylib.Render",
+            "Rendering");
+        string glContext = File.ReadAllText(Path.Combine(renderDir, "RaylibSkiaGlContext.cs"));
+        string gpuOverlay = File.ReadAllText(Path.Combine(renderDir, "RaylibSkiaGpuCanvasSurface.cs"));
         string framebufferOverlay = File.ReadAllText(Path.Combine(adapterDir, "RaylibSkiaFramebufferOverlaySurface.cs"));
 
         Assert.That(

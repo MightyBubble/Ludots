@@ -136,8 +136,8 @@ UE 是 C++ 宿主，不建议嵌 .NET 跑 SkiaSharp 再跨语言共享纹理—�
 
 ## 参考实现导航
 
-- GL 上下文工厂：`src/Adapters/Raylib/Ludots.Adapter.Raylib/RaylibSkiaGlContext.cs`
-- GPU render-texture 表面：`src/Adapters/Raylib/Ludots.Adapter.Raylib/RaylibSkiaGpuOverlaySurface.cs`
+- GL 上下文工厂：`src/Client/Ludots.Raylib.Render/Rendering/RaylibSkiaGlContext.cs`
+- GPU render-texture 画布表面：`src/Client/Ludots.Raylib.Render/Rendering/RaylibSkiaGpuCanvasSurface.cs`
 - 默认帧缓冲直写表面：`src/Adapters/Raylib/Ludots.Adapter.Raylib/RaylibSkiaFramebufferOverlaySurface.cs`
 - 分层合成器：`src/Adapters/Raylib/Ludots.Adapter.Raylib/RaylibOverlayCompositor.cs`
 - UI 场景渲染（直渲目标面 + backdrop blur Snapshot）：`src/Libraries/Ludots.UI.Skia/UiSceneRenderer.cs`
