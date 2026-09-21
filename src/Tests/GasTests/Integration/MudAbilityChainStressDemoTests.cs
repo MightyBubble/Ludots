@@ -154,7 +154,8 @@ namespace Ludots.Tests.GAS
                 world.Get<AttributeBuffer>(goblinA).SetBase(attrHealth, 100f);
                 world.Get<AttributeBuffer>(goblinB).SetBase(attrHealth, 100f);
 
-                var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+                var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry());
+                var presentationEvents = new Ludots.Core.Gameplay.GAS.Presentation.GasPresentationEventBuffer(4096);
                 var abilitySystem = new AbilitySystem(world, requests, abilityDefs, tagOps);
                 var processing = new EffectProcessingLoopSystem(
                     world,
@@ -170,6 +171,7 @@ namespace Ludots.Tests.GAS
                     new ResponseChainTelemetryBuffer(),
                     new OrderRequestQueue(),
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    presentationEvents: presentationEvents,
                     tagOps: tagOps)
                 {
                     MaxWorkUnitsPerSlice = 2048
@@ -209,6 +211,7 @@ namespace Ludots.Tests.GAS
                     }
 
                     processing.Update(dt);
+                    presentationEvents.Clear();
                     clocks.AdvanceFixedFrame();
 
                     float hpA = world.Get<AttributeBuffer>(goblinA).GetCurrent(attrHealth);
@@ -331,7 +334,8 @@ namespace Ludots.Tests.GAS
                 abilityDefs.RegisterFromEntity(world, abilityVolley, 7001);
                 abilities.AddAbility(7001);
 
-                var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+                var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry());
+                var presentationEvents = new Ludots.Core.Gameplay.GAS.Presentation.GasPresentationEventBuffer(4096);
                 var abilitySystem = new AbilitySystem(world, requests, abilityDefs, tagOps);
                 var processing = new EffectProcessingLoopSystem(
                     world,
@@ -347,6 +351,7 @@ namespace Ludots.Tests.GAS
                     new ResponseChainTelemetryBuffer(),
                     new OrderRequestQueue(),
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    presentationEvents: presentationEvents,
                     tagOps: tagOps)
                 {
                     MaxWorkUnitsPerSlice = int.MaxValue
@@ -359,6 +364,7 @@ namespace Ludots.Tests.GAS
                 {
                     abilitySystem.TryActivateAbility(player, 0, in args);
                     processing.Update(dt);
+                    presentationEvents.Clear();
                     clocks.AdvanceFixedFrame();
                     clocks.AdvanceStep();
                 }
@@ -395,6 +401,7 @@ namespace Ludots.Tests.GAS
 
                     t0 = Stopwatch.GetTimestamp();
                     processing.Update(dt);
+                    presentationEvents.Clear();
                     ticksProcess += Stopwatch.GetTimestamp() - t0;
                     totalWindows += budget.ResponseWindows;
                     totalSteps += budget.ResponseSteps;

@@ -346,9 +346,6 @@
   },
   {
     "id": "Effect.ItemShowcase.Lockout.MythicPulse",
-    "tags": [
-      "Effect.ItemShowcase.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -363,13 +360,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.ItemShowcase.Lockout"
     ]
   },
   {
     "id": "Effect.ItemShowcase.Lockout.RifleFire",
-    "tags": [
-      "Effect.ItemShowcase.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -384,13 +381,13 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.ItemShowcase.Lockout"
     ]
   },
   {
     "id": "Effect.ItemShowcase.Lockout.SecondWind",
-    "tags": [
-      "Effect.ItemShowcase.Lockout"
-    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
@@ -405,6 +402,9 @@
         "formula": "Fixed",
         "amount": 1
       }
+    ],
+    "categories": [
+      "Effect.ItemShowcase.Lockout"
     ]
   }
 ]
