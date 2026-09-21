@@ -29,5 +29,10 @@
   {
     "Path": "Maps/total_war_flow_field.json",
     "Policy": "DeepObject"
+  },
+  {
+    "Path": "Presentation/presenters.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
   }
 ]

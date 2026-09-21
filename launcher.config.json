@@ -26,6 +26,20 @@
       }
     },
     {
+      "name": "ballista_route_by_target",
+      "target": {
+        "type": "path",
+        "value": "mods/fixtures/gas/BallistaRouteByTargetMod"
+      }
+    },
+    {
+      "name": "total_war_flow",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/total_war_flow/TotalWarFlowShowcaseMod"
+      }
+    },
+    {
       "name": "save_panel",
       "target": {
         "type": "path",
