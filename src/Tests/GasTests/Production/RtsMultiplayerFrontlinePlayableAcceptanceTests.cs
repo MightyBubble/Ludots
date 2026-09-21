@@ -531,7 +531,8 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
             Assert.That(world.Get<OrderBuffer>(core).QueuedCount, Is.EqualTo(1));
         });
 
-        AdvanceCommittedTicks(engine, 239);
+        // Admission-to-observation is one committed tick; budget from the observation anchor.
+        AdvanceCommittedTicks(engine, 238);
         Assert.That(CountTemplateEntities(engine, "rts_frontline_infantry"), Is.EqualTo(startingInfantry),
             "The first squad must not finish before eight seconds.");
 
@@ -553,7 +554,8 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
             Assert.That(world.Get<OrderBuffer>(core).ActiveOrder.Order.OrderId, Is.EqualTo(second.OrderId));
         });
 
-        AdvanceCommittedTicks(engine, 239);
+        // Admission-to-observation is one committed tick; budget from the observation anchor.
+        AdvanceCommittedTicks(engine, 238);
         Assert.That(CountNamed(world, "Infantry"), Is.EqualTo(startingInfantry + 1));
         TickUntil(engine, () => CountNamed(world, "Infantry") == startingInfantry + 2, 8,
             "The second squad should finish after its own eight-second training time.");
@@ -595,7 +597,9 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
             () => ReadAttribute(world, core, crystalAttributeId) == 0f,
             20,
             "An admitted training order should charge exactly 60 crystals.");
-        AdvanceCommittedTicks(engine, 239);
+        // Charge is observed one committed tick after admission (snapshot lag); anchoring
+        // 239 on the observation tick lands exactly on the admission+240 completion tick.
+        AdvanceCommittedTicks(engine, 238);
         Assert.That(CountNamed(world, "Infantry"), Is.EqualTo(startingInfantry),
             "The squad must not arrive before the configured training time.");
 
@@ -637,7 +641,8 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
             () => ReadAttribute(world, core, crystalAttributeId) == 0f,
             20,
             "An admitted southern training order should charge exactly 60 crystals.");
-        AdvanceCommittedTicks(engine, 239);
+        // Admission-to-observation is one committed tick; budget from the observation anchor.
+        AdvanceCommittedTicks(engine, 238);
         Assert.That(CountTemplateEntities(engine, "rts_frontline_infantry"), Is.EqualTo(startingInfantry),
             "The southern squad must not arrive before the configured training time.");
 
