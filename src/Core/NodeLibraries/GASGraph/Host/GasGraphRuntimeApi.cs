@@ -1024,6 +1024,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         }
 
         /// <summary>
+        /// Pushes one engage intent into the submission buffer; the drain runs the profile's
+        /// EQS query around the target and lands per-actor move-then-cast (constitution §12).
+        /// </summary>
+        public void SubmitEngageBatchIntent(Entity rep, int slot, Entity target, int profileKeyId, int orderTypeKeyId)
+        {
+            var submissions = _commandIntentSubmissions
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.CommandIntentBufferUnavailable");
+            submissions.PushEngage(new Ludots.Core.Gameplay.GAS.Orders.EngageIntentSubmission(
+                rep,
+                slot,
+                target,
+                profileKeyId,
+                orderTypeKeyId));
+        }
+
+        /// <summary>
         /// Enqueues a template entity spawn on the runtime spawn queue. Fail-closed on
         /// unknown template symbols, unmapped spawn anchors, and queue capacity.
         /// </summary>

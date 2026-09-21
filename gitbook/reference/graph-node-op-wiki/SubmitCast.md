@@ -2,9 +2,7 @@
 
 图里定好槽位，一声施法交给缓冲，下令内核下一拍按活跃集成员扇出。
 
-<video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_SubmitCast/poster.png" src="artifacts/evidence/capability_standard_graph_op_SubmitCast/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 artifacts/evidence/capability_standard_graph_op_SubmitCast/play.mp4。
-</video>
+本页演示录像尚未录制，可用下方启动命令运行场景。
 
 ## 作者写法
 
@@ -17,7 +15,7 @@
 | 输入端口（值边 toPort） | `value`（数值）、`target`（目标实体）、`condition`（条件） |
 | 特殊写法 | imm 填符号名（编译期解析） |
 
-手册分册（全量字段与语义）：[地图触发器 · map-02](../mod-editor-prd/config/map-02-triggers.md)
+手册分册（全量字段与语义）：[命令意图 · input-01](../mod-editor-prd/config/input-01-command-intent.md)
 
 真实用例（摘自 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/SubmitCast.json`）：
 
@@ -33,7 +31,7 @@
 
 ## 这场是怎么搭出来的
 
-上面的录像不是特效，是画廊里一张真实可跑的图（作者图 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/SubmitCast.json`，共 4 个节点）。照抄这张图，你就能在自家 mod 里得到同样的效果：
+这场演示使用画廊里的作者图 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/SubmitCast.json`，共 4 个节点。下列调用顺序可供编写自己的图时参考：
 
 ConstInt → **SubmitCast**（本篇） → ConstInt → HaltReturnInt
 

@@ -161,6 +161,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("GAS.GRAPH.ERR.CommandIntentBufferUnavailable");
         }
 
+        /// <summary>
+        /// Pushes one engage intent into the per-tick submission buffer (constitution §12);
+        /// the drain runs the profile's EQS query around the target and lands per-actor
+        /// move-then-cast with the assigned ring point.
+        /// </summary>
+        void SubmitEngageBatchIntent(Entity rep, int slot, Entity target, int profileKeyId, int orderTypeKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CommandIntentBufferUnavailable");
+        }
+
         /// <summary>Enqueues a template entity spawn (runtime spawn queue; explicit position optional).</summary>
         void SpawnTemplate(int templateKeyId, Entity source, float xCm, float yCm, bool hasPosition);
 
@@ -764,6 +774,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         int ResolveRngDistribution(string name)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.RngDistributionUnavailable");
+        }
+
+        int ResolveEqsQuery(string name)
+        {
+            throw new InvalidOperationException(
+                $"Graph references EQS query '{name}', but no EqsQueryRegistry resolver is available.");
         }
 
         int ResolveGraphLookupTable(string name)

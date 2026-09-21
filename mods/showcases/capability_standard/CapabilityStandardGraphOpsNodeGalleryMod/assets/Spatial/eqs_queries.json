@@ -1,0 +1,24 @@
+[
+  {
+    "id": "gallery.engage.ring",
+    "generator": {
+      "kind": "Ring",
+      "radiusCm": 300,
+      "count": 8
+    },
+    "tests": [
+      {
+        "kind": "Distance",
+        "preferNear": true,
+        "weight": 1,
+        "reference": {
+          "xCm": 0,
+          "yCm": 0
+        }
+      }
+    ],
+    "selection": {
+      "kind": "Best"
+    }
+  }
+]

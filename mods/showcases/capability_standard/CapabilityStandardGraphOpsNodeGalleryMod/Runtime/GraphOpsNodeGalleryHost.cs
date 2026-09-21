@@ -87,6 +87,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             ?? throw new InvalidOperationException(
                 $"Node gallery map '{mapId}' is not loaded. EnsureWorld must run after MapLoaded.");
         host.FinishResolver(
+            assetsRoot,
             Path.Combine(assetsRoot, "GraphTables"),
             engine.GetService(CoreServiceKeys.RngPickService),
             engine.GetService(CoreServiceKeys.PresentationTextCatalog));
@@ -284,6 +285,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
     }
 
     private void FinishResolver(
+        string assetsRoot,
         string? graphTablesDir,
         Ludots.Core.Gameplay.Rng.RngPickService? rngPicks = null,
         Ludots.Core.Presentation.Hud.PresentationTextCatalog? presentationTextCatalog = null)
@@ -297,7 +299,28 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             graphTablesDir == null ? null : GraphOpsNodeGallerySymbolResolver.LoadLookupTables(graphTablesDir),
             rngPicks,
             presentationTextCatalog,
-            OrderTypes);
+            OrderTypes,
+            LoadEqsQueryRegistry(assetsRoot));
+    }
+
+    private static Ludots.Core.Spatial.Eqs.EqsQueryRegistry? LoadEqsQueryRegistry(string assetsRoot)
+    {
+        string path = System.IO.Path.Combine(assetsRoot, "Spatial", "eqs_queries.json");
+        if (!System.IO.File.Exists(path))
+        {
+            return null;
+        }
+
+        var ids = new Ludots.Core.Registry.StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: System.StringComparer.Ordinal);
+        var registry = new Ludots.Core.Spatial.Eqs.EqsQueryRegistry(ids, capacity: 16);
+        var configs = Ludots.Core.Spatial.Eqs.Config.EqsInfluenceConfigLoader.ParseQueriesDocument(
+            System.IO.File.ReadAllText(path));
+        for (int i = 0; i < configs.Length; i++)
+        {
+            registry.Install(configs[i].Id, Ludots.Core.Spatial.Eqs.Config.EqsInfluenceConfigLoader.CreateQuery(configs[i]));
+        }
+
+        return registry;
     }
 
     private Entity[] BindMapActors(GraphOpsNodeVignette vignette, string mapId)

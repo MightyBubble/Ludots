@@ -40,6 +40,10 @@ namespace Ludots.Core.Input.Orders
         private readonly Entity[] _dispatchScratch;
         private readonly Order[] _orderScratch;
         private readonly Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry? _orderTypes;
+        private readonly Ludots.Core.Spatial.Eqs.EqsQueryRegistry? _eqsQueries;
+        private readonly Ludots.Core.Gameplay.GAS.Orders.CompositeOrderPlanner? _engage;
+        private readonly Ludots.Core.Spatial.Eqs.EqsItem[] _eqsScratch = new Ludots.Core.Spatial.Eqs.EqsItem[256];
+        private readonly bool[] _eqsCandidateUsed = new bool[256];
 
         /// <summary>Diagnostic counters from the last drain; not world state, never persisted.</summary>
         public int LastDrainedCount;
@@ -57,7 +61,11 @@ namespace Ludots.Core.Input.Orders
             OrderQueue orders,
             PlayerEntityLookup players,
             ControlDomainQuery controlDomains,
-            int scratchCapacity)
+            int scratchCapacity,
+            Ludots.Core.Spatial.Eqs.EqsQueryRegistry? eqsQueries = null,
+            Ludots.Core.Gameplay.GAS.AbilityDefinitionRegistry? abilities = null,
+            int castAbilityOrderTypeId = 0,
+            int moveToOrderTypeId = 0)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _submissions = submissions ?? throw new ArgumentNullException(nameof(submissions));
@@ -77,6 +85,10 @@ namespace Ludots.Core.Input.Orders
             _routeScratch = new CommandIntentRoute[scratchCapacity];
             _dispatchScratch = new Entity[scratchCapacity];
             _orderScratch = new Order[scratchCapacity];
+            _eqsQueries = eqsQueries;
+            _engage = eqsQueries != null && abilities != null && castAbilityOrderTypeId > 0 && moveToOrderTypeId > 0
+                ? new Ludots.Core.Gameplay.GAS.Orders.CompositeOrderPlanner(world, orders, abilities, castAbilityOrderTypeId, moveToOrderTypeId)
+                : null;
         }
 
         public void Initialize() { }
@@ -84,7 +96,7 @@ namespace Ludots.Core.Input.Orders
         public void Update(in float dt)
         {
             int count = _submissions.Count;
-            if (count == 0 && _submissions.CastCount == 0)
+            if (count == 0 && _submissions.CastCount == 0 && _submissions.EngageCount == 0)
             {
                 return;
             }
@@ -117,7 +129,20 @@ namespace Ludots.Core.Input.Orders
                 }
             }
 
+            for (int i = 0; i < _submissions.EngageCount; i++)
+            {
+                if (TryRouteEngageSubmission(_submissions.Engage(i)))
+                {
+                    LastAcceptedCount++;
+                }
+                else
+                {
+                    LastRejectedCount++;
+                }
+            }
+
             LastDrainedCount += _submissions.CastCount;
+            LastDrainedCount += _submissions.EngageCount;
             _submissions.Clear();
         }
 
@@ -216,6 +241,176 @@ namespace Ludots.Core.Input.Orders
                     LastRejectionReason = $"cast: order submit returned {result}";
                     allAccepted = false;
                 }
+            }
+
+            return allAccepted;
+        }
+
+        /// <summary>
+        /// Engage side of the §12 bridge: actors are the active-context-declared collection
+        /// members (same resolution as casts); the profile's EQS query runs around the target
+        /// and each authorized member gets a move-then-cast plan — moveTo its assigned ring
+        /// point with the cast as an order continuation, plus a per-target slot claim so a
+        /// later batch excludes occupied points.
+        /// </summary>
+        private bool TryRouteEngageSubmission(in Ludots.Core.Gameplay.GAS.Orders.EngageIntentSubmission submission)
+        {
+            if (!_world.IsAlive(submission.Rep))
+            {
+                return Reject("engage acting rep is dead");
+            }
+
+            if (!_world.TryGet<PlayerOwner>(submission.Rep, out PlayerOwner owner) || owner.PlayerId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"ORDER.ENGAGE_INTENT.ERR.RepHasNoPlayerOwner: rep {submission.Rep} submitted an engage intent but carries no PlayerOwner.");
+            }
+
+            if (_engage == null)
+            {
+                return Reject("engage: composite order planner unavailable (missing EQS registry, abilities, or cast/move order type ids)");
+            }
+
+            if (_eqsQueries == null ||
+                !_eqsQueries.TryGet(submission.ProfileKeyId, out var query))
+            {
+                throw new InvalidOperationException(
+                    $"ORDER.ENGAGE_INTENT.ERR.UnknownProfile: engage profile key id {submission.ProfileKeyId} is not registered; declare the query in Spatial/eqs_queries.json.");
+            }
+
+            var orderTypes = _orderTypes
+                ?? throw new InvalidOperationException(
+                    "ORDER.ENGAGE_INTENT.ERR.OrderTypeRegistryUnavailable: engage intent drain requires the OrderTypeRegistry.");
+            string orderTypeKey = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(submission.OrderTypeKeyId);
+            if (string.IsNullOrWhiteSpace(orderTypeKey) ||
+                !orderTypes.TryGetId(orderTypeKey, out int orderTypeId) ||
+                orderTypeId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"ORDER.ENGAGE_INTENT.ERR.UnknownCastOrderType: SubmitEngageBatch references order type key '{orderTypeKey}' which is not registered.");
+            }
+
+            if (!_world.IsAlive(submission.Target) ||
+                !_world.Has<Ludots.Core.Components.WorldPositionCm>(submission.Target))
+            {
+                return Reject("engage: target is dead or carries no world position");
+            }
+
+            if (!TryResolveRoutingContext(submission.Rep, out InteractionContextInstance routingContext))
+            {
+                return Reject("engage: no active context declares activeCollectionKey");
+            }
+
+            if (!_world.IsAlive(routingContext.ContextEntity))
+            {
+                return Reject("engage: routing context carrier is dead");
+            }
+
+            if (!_entityCollections.TryGet(routingContext.ContextEntity, routingContext.ActiveCollectionKeyId, out EntityCollectionHandle handle) ||
+                !_entityCollections.TryGetView(handle, out EntityCollectionView view))
+            {
+                return Reject("engage: active collection is not mounted");
+            }
+
+            if (view.Count > _actorScratch.Length)
+            {
+                throw new InvalidOperationException(
+                    $"ORDER.ENGAGE_INTENT.ERR.ActorScratchCapacityExceeded: active collection holds {view.Count} actors, capacity {_actorScratch.Length}.");
+            }
+
+            int actorCount = _entityCollections.CopyEntities(handle, 0, _actorScratch);
+            if (actorCount <= 0)
+            {
+                return Reject("engage: active collection is empty");
+            }
+
+            var targetPos = _world.Get<Ludots.Core.Components.WorldPositionCm>(submission.Target).Value.ToWorldCmInt2();
+            var eqsContext = new Ludots.Core.Spatial.Eqs.EqsContext(targetPos, _world);
+            int candidateCount = query.Run(eqsContext, _eqsScratch);
+            if (candidateCount <= 0)
+            {
+                return Reject("engage: EQS profile produced no candidates");
+            }
+
+            if (candidateCount > _eqsScratch.Length)
+            {
+                candidateCount = _eqsScratch.Length;
+            }
+
+            System.Array.Clear(_eqsCandidateUsed, 0, candidateCount);
+
+            if (!_world.Has<Ludots.Core.Gameplay.GAS.Components.EngageSlotClaims>(submission.Target))
+            {
+                _world.Add(submission.Target, new Ludots.Core.Gameplay.GAS.Components.EngageSlotClaims());
+            }
+
+            ref var claims = ref _world.Get<Ludots.Core.Gameplay.GAS.Components.EngageSlotClaims>(submission.Target);
+
+            bool allAccepted = true;
+            for (int i = 0; i < actorCount; i++)
+            {
+                Entity actor = _actorScratch[i];
+                if (!InputOrderActorAuthorization.IsAuthorized(_world, _players, _controlDomains, actor, owner.PlayerId))
+                {
+                    LastRejectionReason = "engage: actor failed authorization";
+                    allAccepted = false;
+                    continue;
+                }
+
+                int best = -1;
+                float bestScore = float.MinValue;
+                for (int c = 0; c < candidateCount; c++)
+                {
+                    if (_eqsScratch[c].Filtered || _eqsCandidateUsed[c])
+                    {
+                        continue;
+                    }
+
+                    if (claims.IsClaimed(_world, _eqsScratch[c].Position.X, _eqsScratch[c].Position.Y, claimRadiusCm: 32))
+                    {
+                        continue;
+                    }
+
+                    if (_eqsScratch[c].Score > bestScore)
+                    {
+                        bestScore = _eqsScratch[c].Score;
+                        best = c;
+                    }
+                }
+
+                if (best < 0)
+                {
+                    LastRejectionReason = "engage: no unclaimed EQS candidate left for actor";
+                    allAccepted = false;
+                    continue;
+                }
+
+                _eqsCandidateUsed[best] = true;
+                int pointX = _eqsScratch[best].Position.X;
+                int pointY = _eqsScratch[best].Position.Y;
+
+                var order = new Order
+                {
+                    OrderTypeId = orderTypeId,
+                    PlayerId = owner.PlayerId,
+                    Actor = actor,
+                    CommandSource = Entity.Null,
+                    Target = submission.Target,
+                    Args = new OrderArgs { I0 = submission.Slot },
+                };
+
+                Ludots.Core.Gameplay.GAS.Orders.OrderContinuationStateInstaller.EnsureInstalled(_world, actor);
+
+                var anchor = new Vector3(pointX, 0f, pointY);
+                OrderSubmitResult result = _engage.SubmitWithMoveAnchor(order, anchor);
+                if (!OrderSubmitResultSemantics.IsAccepted(result))
+                {
+                    LastRejectionReason = $"engage: planner returned {result}";
+                    allAccepted = false;
+                    continue;
+                }
+
+                claims.Claim(_world, pointX, pointY, actor);
             }
 
             return allAccepted;

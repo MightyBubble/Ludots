@@ -413,6 +413,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                     break;
 
+                case GraphNodeOp.SubmitEngageBatch:
+                    RequireNonEmpty(node.EngageProfile, "engageProfile", node, graphId, diagnostics);
+                    RequireNonEmpty(node.OrderTypeKey, "orderTypeKey", node, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
                 case GraphNodeOp.SubmitCast:
                     RequireNonEmpty(node.OrderTypeKey, "orderTypeKey", node, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
@@ -1458,6 +1465,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                             node, GraphControlFlowPorts.Target, GraphValueType.Entity,
                             valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics)
                         : byte.MaxValue;
+                    break;
+
+                case GraphNodeOp.SubmitEngageBatch:
+                    instruction.Imm = RequireSymbol(node.EngageProfile, "engageProfile", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.Dst = EncodeByteSymbol(node.OrderTypeKey, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.Target, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.SubmitCast:

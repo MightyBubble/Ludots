@@ -997,6 +997,20 @@ namespace Ludots.Core.Engine
             var rngPickService = new Gameplay.Rng.RngPickService(rngStreams, rngTables);
             var graphLookupTables = new GraphLookupTableLoader(ConfigPipeline, presentationTextCatalog)
                 .Load(ConfigCatalog, ConfigConflictReport);
+            var eqsQueryIds = new Ludots.Core.Registry.StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var eqsQueryRegistry = new Ludots.Core.Spatial.Eqs.EqsQueryRegistry(eqsQueryIds, capacity: 64);
+            var eqsQueriesEntry = Ludots.Core.Config.ConfigPipeline.RequireEntry(ConfigCatalog, "Spatial/eqs_queries.json", Ludots.Core.Config.ConfigMergePolicy.ArrayById, "id");
+            var eqsQueriesMerged = ConfigPipeline.MergeArrayByIdFromCatalog(in eqsQueriesEntry, ConfigConflictReport);
+            for (int eqsIndex = 0; eqsIndex < eqsQueriesMerged.Count; eqsIndex++)
+            {
+                var eqsEntryNode = eqsQueriesMerged[eqsIndex].Node as System.Text.Json.Nodes.JsonObject;
+                var eqsConfig = eqsEntryNode == null
+                    ? throw new InvalidOperationException($"Spatial/eqs_queries.json[{eqsIndex}]: entry must be an object.")
+                    : Ludots.Core.Spatial.Eqs.Config.EqsInfluenceConfigLoader.ParseQueryEntry(eqsEntryNode, $"Spatial/eqs_queries.json[{eqsIndex}]");
+                eqsQueryRegistry.Install(eqsConfig.Id, Ludots.Core.Spatial.Eqs.Config.EqsInfluenceConfigLoader.CreateQuery(eqsConfig));
+            }
+
+            SetService(CoreServiceKeys.EqsQueries, eqsQueryRegistry);
             var graphSymbolResolver = new GasGraphSymbolResolver(
                 relationshipTypeRegistry,
                 relationshipMetricRegistry,
@@ -1006,7 +1020,8 @@ namespace Ludots.Core.Engine
                 lookupTables: graphLookupTables,
                 rngPicks: rngPickService,
                 presentationTextCatalog: presentationTextCatalog,
-                orderTypes: orderTypeRegistry);
+                orderTypes: orderTypeRegistry,
+                eqsQueries: eqsQueryRegistry);
             var graphConfigLoader = new GraphProgramConfigLoader(
                 ConfigPipeline,
                 graphProgramRegistry,
@@ -2239,7 +2254,11 @@ namespace Ludots.Core.Engine
                 orderQueue,
                 playerEntityLookup,
                 controlDomainQuery,
-                gasRuntimeCapacity.CommandIntentScratchCapacity);
+                gasRuntimeCapacity.CommandIntentScratchCapacity,
+                eqsQueries: eqsQueryRegistry,
+                abilities: abilityDefinitions,
+                castAbilityOrderTypeId: cfgCastAbility,
+                moveToOrderTypeId: cfgMoveTo);
             SetService(CoreServiceKeys.CommandIntentSubmissions, commandIntentSubmissions);
             SetService(CoreServiceKeys.CommandIntentBufferDrain, commandIntentBufferDrain);
             RegisterSystem(commandIntentBufferDrain, SystemGroup.LocalInput);

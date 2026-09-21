@@ -454,6 +454,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<ISpatialCoordinateConverter> SpatialCoordinateConverter = new("SpatialCoordinateConverter");
         public static readonly ServiceKey<ISpatialQueryService> SpatialQueryService = new("SpatialQueryService");
         public static readonly ServiceKey<ISpatialPartitionMembership> SpatialPartitionMembership = new("SpatialPartitionMembership");
+        public static readonly ServiceKey<Ludots.Core.Spatial.Eqs.EqsQueryRegistry> EqsQueries = new("EqsQueries");
         public static readonly ServiceKey<HexMetrics> HexMetrics = new("HexMetrics");
         public static readonly ServiceKey<ILoadedChunks> LoadedChunks = new("LoadedChunks");
 

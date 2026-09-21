@@ -542,5 +542,11 @@
     "Policy": "ArrayById",
     "IdField": "id",
     "AllowEmpty": true
+  },
+  {
+    "Path": "Spatial/eqs_queries.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
   }
 ]
