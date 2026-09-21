@@ -122,8 +122,9 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         Assert.Multiple(() =>
         {
             Assert.That(input.Actions.Any(action => action.Id == "SkillQ"), Is.True);
-            Assert.That(input.Actions.Any(action => action.Id == "CommandSourceAcquire"), Is.True);
             Assert.That(input.Actions.Any(action => action.Id == "Command"), Is.True);
+            Assert.That(input.Actions.Any(action => action.Id == "Select.Begin"), Is.True);
+            Assert.That(input.Actions.Any(action => action.Id == "Select.End"), Is.True);
             Assert.That(frontlinePaths, Does.Contain("<Keyboard>/q"));
             Assert.That(frontlinePaths, Does.Contain("<Mouse>/LeftButton"));
             Assert.That(frontlinePaths, Does.Contain("<Mouse>/RightButton"));

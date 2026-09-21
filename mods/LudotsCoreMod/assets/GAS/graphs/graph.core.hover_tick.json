@@ -1,0 +1,220 @@
+[
+  {
+    "id": "graph.core.hover_tick",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_pointer_moved",
+        "action": "PointerMoved",
+        "start": "px",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "px",
+        "op": "LoadPointerScreenX"
+      },
+      {
+        "id": "py",
+        "op": "LoadPointerScreenY"
+      },
+      {
+        "id": "half",
+        "op": "ConstFloat",
+        "floatValue": 12
+      },
+      {
+        "id": "minX",
+        "op": "SubFloat"
+      },
+      {
+        "id": "minY",
+        "op": "SubFloat"
+      },
+      {
+        "id": "maxX",
+        "op": "AddFloat"
+      },
+      {
+        "id": "maxY",
+        "op": "AddFloat"
+      },
+      {
+        "id": "all",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "region",
+        "op": "ScreenRegionToEntities"
+      },
+      {
+        "id": "op_replace",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "write",
+        "op": "WriteCollection",
+        "collectionKey": "collection.ui.command.hover"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "px",
+        "fromPort": "next",
+        "to": "py"
+      },
+      {
+        "from": "py",
+        "fromPort": "next",
+        "to": "half"
+      },
+      {
+        "from": "half",
+        "fromPort": "next",
+        "to": "minX"
+      },
+      {
+        "from": "minX",
+        "fromPort": "next",
+        "to": "minY"
+      },
+      {
+        "from": "minY",
+        "fromPort": "next",
+        "to": "maxX"
+      },
+      {
+        "from": "maxX",
+        "fromPort": "next",
+        "to": "maxY"
+      },
+      {
+        "from": "maxY",
+        "fromPort": "next",
+        "to": "all"
+      },
+      {
+        "from": "all",
+        "fromPort": "next",
+        "to": "region"
+      },
+      {
+        "from": "region",
+        "fromPort": "next",
+        "to": "op_replace"
+      },
+      {
+        "from": "op_replace",
+        "fromPort": "next",
+        "to": "write"
+      },
+      {
+        "from": "write",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "px",
+        "fromPort": "value",
+        "to": "minX",
+        "toPort": "a"
+      },
+      {
+        "from": "py",
+        "fromPort": "value",
+        "to": "minY",
+        "toPort": "a"
+      },
+      {
+        "from": "px",
+        "fromPort": "value",
+        "to": "maxX",
+        "toPort": "a"
+      },
+      {
+        "from": "py",
+        "fromPort": "value",
+        "to": "maxY",
+        "toPort": "a"
+      },
+      {
+        "from": "half",
+        "fromPort": "value",
+        "to": "minX",
+        "toPort": "b"
+      },
+      {
+        "from": "half",
+        "fromPort": "value",
+        "to": "minY",
+        "toPort": "b"
+      },
+      {
+        "from": "half",
+        "fromPort": "value",
+        "to": "maxX",
+        "toPort": "b"
+      },
+      {
+        "from": "half",
+        "fromPort": "value",
+        "to": "maxY",
+        "toPort": "b"
+      },
+      {
+        "from": "minX",
+        "fromPort": "value",
+        "to": "region",
+        "toPort": "a"
+      },
+      {
+        "from": "minY",
+        "fromPort": "value",
+        "to": "region",
+        "toPort": "b"
+      },
+      {
+        "from": "maxX",
+        "fromPort": "value",
+        "to": "region",
+        "toPort": "c"
+      },
+      {
+        "from": "maxY",
+        "fromPort": "value",
+        "to": "region",
+        "toPort": "max"
+      },
+      {
+        "from": "op_replace",
+        "fromPort": "value",
+        "to": "write",
+        "toPort": "value"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]
