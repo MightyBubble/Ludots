@@ -10,14 +10,50 @@ namespace Ludots.UI.Skia;
 public sealed class SkiaUiRenderer : IUiRenderer
 {
 	private SKCanvas? _canvas;
+	private SKSurface? _target;
 
-	public void SetCanvas(SKCanvas canvas) => _canvas = canvas ?? throw new ArgumentNullException(nameof(canvas));
+	public void SetCanvas(SKCanvas canvas)
+	{
+		_target = null;
+		_canvas = canvas ?? throw new ArgumentNullException(nameof(canvas));
+	}
+
+	/// <summary>
+	/// 直渲目标表面（GPU 或光栅）：无整窗中间面，backdrop blur 在目标面上 Snapshot。
+	/// 帧路径（宿主合成器）必须走这条；SetCanvas 保留给无 GL 的离线证据工具。
+	/// </summary>
+	public void SetTarget(SKSurface surface)
+	{
+		_canvas = null;
+		_target = surface ?? throw new ArgumentNullException(nameof(surface));
+	}
 
 	public void Render(UiScene scene, float width, float height)
 	{
 		ArgumentNullException.ThrowIfNull(scene, "scene");
-		SKCanvas canvas = _canvas ?? throw new InvalidOperationException("SetCanvas must be called before Render.");
+		if (_target != null)
+		{
+			RenderToSurface(scene, _target, width, height);
+			return;
+		}
+
+		SKCanvas canvas = _canvas ?? throw new InvalidOperationException("SetCanvas or SetTarget must be called before Render.");
 		RenderToCanvas(scene, canvas, width, height);
+	}
+
+	public void RenderToSurface(UiScene scene, SKSurface surface, float width, float height)
+	{
+		ArgumentNullException.ThrowIfNull(scene, "scene");
+		ArgumentNullException.ThrowIfNull(surface, "surface");
+		scene.Layout(width, height);
+		if (scene.Root == null)
+		{
+			return;
+		}
+		SKCanvas canvas = surface.Canvas;
+		canvas.ResetMatrix();
+		canvas.Clear(SKColors.Transparent);
+		RenderNode(scene.Root, canvas, surface);
 	}
 
 	public void RenderToCanvas(UiScene scene, SKCanvas canvas, float width, float height)
@@ -58,7 +94,7 @@ public sealed class SkiaUiRenderer : IUiRenderer
 		{
 			if (renderStyle.FilterBlurRadius > 0.01f)
 			{
-				RenderFilteredNode(node, canvas);
+				RenderFilteredNode(node, canvas, surface);
 			}
 			else
 			{
@@ -176,27 +212,23 @@ public sealed class SkiaUiRenderer : IUiRenderer
 		canvas.RestoreToCount(count);
 	}
 
-	private void RenderFilteredNode(UiNode node, SKCanvas canvas)
+	private void RenderFilteredNode(UiNode node, SKCanvas canvas, SKSurface surface)
 	{
 		UiStyle renderStyle = node.RenderStyle;
 		SKRect sKRect = new SKRect(node.LayoutRect.X, node.LayoutRect.Y, node.LayoutRect.Right, node.LayoutRect.Bottom);
-		int num = (int)Math.Ceiling(Math.Max(2f, renderStyle.FilterBlurRadius * 3f));
-		int num2 = (int)Math.Floor(sKRect.Left) - num;
-		int num3 = (int)Math.Floor(sKRect.Top) - num;
-		int width = Math.Max(1, (int)Math.Ceiling(sKRect.Width) + num * 2);
-		int height = Math.Max(1, (int)Math.Ceiling(sKRect.Height) + num * 2);
-		using SKSurface sKSurface = SKSurface.Create(new SKImageInfo(width, height));
-		SKCanvas canvas2 = sKSurface.Canvas;
-		canvas2.Clear(SKColors.Transparent);
-		canvas2.Translate(-num2, -num3);
-		RenderNodeCore(node, canvas2, sKSurface);
-		using SKImage image = sKSurface.Snapshot();
+		float padding = Math.Max(2f, renderStyle.FilterBlurRadius * 3f);
+		SKRect layerBounds = new SKRect(
+			sKRect.Left - padding,
+			sKRect.Top - padding,
+			sKRect.Right + padding,
+			sKRect.Bottom + padding);
 		using SKPaint paint = new SKPaint
 		{
-			IsAntialias = true,
 			ImageFilter = SKImageFilter.CreateBlur(ToSigma(renderStyle.FilterBlurRadius), ToSigma(renderStyle.FilterBlurRadius))
 		};
-		canvas.DrawImage(image, num2, num3, paint);
+		int count = canvas.SaveLayer(layerBounds, paint);
+		RenderNodeCore(node, canvas, surface);
+		canvas.RestoreToCount(count);
 	}
 
 	private static void DrawRect(SKCanvas canvas, SKRect rect, float radius, SKPaint paint)
