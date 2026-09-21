@@ -117,6 +117,8 @@ namespace Ludots.Core.UI.PanelProjection
             {
                 // Sole-seat clients keep the global handler/snapshot chain (no per-seat channels);
                 // only the sole seat may fall back to it — anything else is an attribution bug.
+                // Policy twin: TriggerGraphActionBindingSystem (read side) routes multi-seat
+                // per channel and sole-seat through the global reader — keep the two in lockstep.
                 ClientLocalSeatRegistry? seats = _seats();
                 PlayerInputHandler? global = _globalHandler();
                 if (seats != null && global != null && seats.Count == 1 && seats.SeatIds[0] == seatId)

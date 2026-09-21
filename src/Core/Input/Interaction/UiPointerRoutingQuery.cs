@@ -4,6 +4,7 @@ using Ludots.Core.Client;
 
 namespace Ludots.Core.Input.Interaction
 {
+
     /// <summary>
     /// Read-only projection answering one host question: "does this seat's input context
     /// route the device pointer to UI right now?" The answer reads entity state (active
@@ -38,21 +39,14 @@ namespace Ludots.Core.Input.Interaction
             }
 
             Entity rep = seat.PossessedRep;
-            if (world.TryGet<InteractionContextInstances>(rep, out InteractionContextInstances chain) && chain.Count > 0)
+            Span<int> chain = stackalloc int[InteractionContextInstances.Capacity + 1];
+            int count = InteractionContextInstanceRuntime.CopyActiveContextIdsNewestFirst(world, rep, chain);
+            for (int i = 0; i < count; i++)
             {
-                for (int i = chain.Count - 1; i >= 0; i--)
+                if (TryResolveRouting(profiles, chain[i], out bool routesToUi))
                 {
-                    if (TryResolveRouting(profiles, chain[i].ContextId, out bool routesToUi))
-                    {
-                        return routesToUi;
-                    }
+                    return routesToUi;
                 }
-            }
-
-            if (world.TryGet<InteractionContextInstance>(rep, out InteractionContextInstance mounted) &&
-                TryResolveRouting(profiles, mounted.ContextId, out bool mountedRoutesToUi))
-            {
-                return mountedRoutesToUi;
             }
 
             return false;
