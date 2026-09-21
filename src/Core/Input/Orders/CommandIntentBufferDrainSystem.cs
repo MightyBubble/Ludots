@@ -176,6 +176,10 @@ namespace Ludots.Core.Input.Orders
             }
 
             int actorCount = ResolveActors(submission.Rep, submission.MemberOffset, submission.MemberCount);
+            if (actorCount <= 0)
+            {
+                return Reject("cast: intent carries no actors — the graph must attach its actor set");
+            }
 
             bool allAccepted = true;
             for (int i = 0; i < actorCount; i++)
@@ -272,7 +276,7 @@ namespace Ludots.Core.Input.Orders
             int actorCount = ResolveActors(submission.Rep, submission.MemberOffset, submission.MemberCount);
             if (actorCount <= 0)
             {
-                return Reject("engage: no actors");
+                return Reject("engage: intent carries no actors — the graph must attach its actor set");
             }
 
             var targetPos = _world.Get<Ludots.Core.Components.WorldPositionCm>(submission.Target).Value.ToWorldCmInt2();
@@ -390,7 +394,7 @@ namespace Ludots.Core.Input.Orders
             int actorCount = ResolveActors(submission.Rep, submission.MemberOffset, submission.MemberCount);
             if (actorCount <= 0)
             {
-                return Reject("no actors");
+                return Reject("intent carries no actors — the graph must attach its actor set");
             }
 
             var facts = new CommandIntentTargetFacts(
@@ -508,16 +512,16 @@ namespace Ludots.Core.Input.Orders
         /// pre-reclaim window must not silently route through a dead carrier's collections).
         /// </summary>
         /// <summary>
-        /// v2: intents carry their own actor set — an empty member range means the acting rep
-        /// alone. The submitting graph owns fan-out membership; the drain never resolves
-        /// actors from context-declared collections.
+        /// v2: intents carry their own actor set. The actor span is exactly what the submitting
+        /// graph attached (constitution §12 — direct possession is a data shape expressed by a
+        /// self-roster graph, never a kernel rule); an empty span routes nothing and each lane
+        /// rejects by name.
         /// </summary>
         private int ResolveActors(Entity rep, int memberOffset, int memberCount)
         {
             if (memberCount == 0)
             {
-                _actorScratch[0] = rep;
-                return 1;
+                return 0;
             }
 
             if (memberCount > _actorScratch.Length)
