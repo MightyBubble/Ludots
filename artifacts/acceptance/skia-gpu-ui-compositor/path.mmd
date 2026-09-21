@@ -1,0 +1,10 @@
+flowchart TD
+    A[SkiaUiRenderer SetTarget 直渲目标面] --> B{gpuUiCompositor 默认开}
+    B -- 是 --> C[RaylibSkiaGpuCanvasSurface\nResetContext→BeginTextureMode→绘制→Flush+Submit]
+    C --> D[GPU render-texture 缓存\nIsDirty 脏门控复用]
+    D --> E[终绘: UnderUi→UI→TopMost\npremultiplied+负高度翻转]
+    B -- "LUDOTS_RAYLIB_DISABLE_SKIA_GPU_UI=1" --> F[SkiaRasterLayer 光栅\nUpdateTexture 整窗上传回退]
+    F --> E
+    C -- 创建失败 --> G[一次性 Warn + production 抛 InvalidOperationException]
+    E --> H[真机像素验证 GPU/回退对照]
+    H --> I[基准 GPU 0.554ms vs 光栅 3.614ms avg]

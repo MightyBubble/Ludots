@@ -34,7 +34,7 @@ GRContext context = GRContext.CreateGl(glInterface)
     ?? throw new InvalidOperationException(...);
 ```
 
-参考实现：`src/Adapters/Raylib/Ludots.Adapter.Raylib/RaylibSkiaGlContext.cs`。函数解析必须走 SkiaSharp 原生 GL 接口，禁止 pinvoke `opengl32.dll` 或任何平台 WGL 路径（`NativeSkiaOverlayTests.RaylibSkiaOverlay_UsesNativeGlInterfaceInsteadOfWindowsWgl` 钉住这条）。
+参考实现：`src/Client/Ludots.Raylib.Render/Rendering/RaylibSkiaGlContext.cs`。函数解析必须走 SkiaSharp 原生 GL 接口，禁止 pinvoke `opengl32.dll` 或任何平台 WGL 路径（`NativeSkiaOverlayTests.RaylibSkiaOverlay_UsesNativeGlInterfaceInsteadOfWindowsWgl` 钉住这条）。
 
 非 GL 宿主（Unity D3D11、UE RHI）用对应 `GRContext.CreateDirect3D / CreateVulkan / CreateMetal`，上下文与纹理都来自宿主设备，见下文分引擎路线。
 
