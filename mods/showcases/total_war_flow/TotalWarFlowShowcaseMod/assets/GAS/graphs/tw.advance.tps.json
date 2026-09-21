@@ -1,0 +1,40 @@
+[
+  {
+    "id": "tw.advance.tps",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_action",
+        "action": "Tw.Advance",
+        "start": "ok",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

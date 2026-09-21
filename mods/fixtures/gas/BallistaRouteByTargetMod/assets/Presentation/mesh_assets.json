@@ -1,0 +1,10 @@
+[
+  {
+    "id": "ballista.fixture.knight",
+    "type": "Model"
+  },
+  {
+    "id": "ballista.fixture.obelisk",
+    "type": "Model"
+  }
+]

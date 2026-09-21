@@ -1,0 +1,64 @@
+[
+  {
+    "id": "tw_commander",
+    "components": {
+      "AttributeBuffer": {
+        "base": {
+          "Ballista.Health": 400,
+          "Ballista.Armor": 50,
+          "MoveSpeed": 300
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Ballista.Shot",
+          "Ability.Ballista.SiegeBolt"
+        ]
+      },
+      "GameplayTagContainer": {
+        "tags": [
+          "Unit.Commandable"
+        ]
+      },
+      "OrderBuffer": {},
+      "BlackboardIntBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "DirtyFlags": {},
+      "PlayerOwner": {
+        "PlayerId": 1
+      }
+    }
+  },
+  {
+    "id": "tw_marine",
+    "components": {
+      "AttributeBuffer": {
+        "base": {
+          "Ballista.Health": 400,
+          "Ballista.Armor": 50,
+          "MoveSpeed": 300
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Ballista.Shot",
+          "Ability.Ballista.SiegeBolt"
+        ]
+      },
+      "GameplayTagContainer": {
+        "tags": [
+          "Unit.Commandable"
+        ]
+      },
+      "OrderBuffer": {},
+      "BlackboardIntBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "DirtyFlags": {},
+      "PlayerOwner": {
+        "PlayerId": 1
+      }
+    }
+  }
+]
