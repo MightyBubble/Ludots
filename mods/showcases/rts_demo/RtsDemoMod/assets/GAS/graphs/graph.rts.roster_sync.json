@@ -4,8 +4,14 @@
     "kind": "TriggerGraph",
     "entries": [
       {
-        "label": "on_heartbeat",
-        "event": "MapHeartbeat",
+        "label": "on_unit_spawned",
+        "event": "EntitySpawned",
+        "start": "map_units",
+        "refire": "restart"
+      },
+      {
+        "label": "on_unit_died",
+        "event": "EntityDied",
         "start": "map_units",
         "refire": "restart"
       }

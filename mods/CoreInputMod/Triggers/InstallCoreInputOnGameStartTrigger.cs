@@ -53,6 +53,16 @@ namespace CoreInputMod.Triggers
                 CoreServiceKeys.MinimapFocusCollectionProvider,
                 (Ludots.Core.Presentation.Minimap.MinimapFocusCollectionProvider)TryResolveMinimapFocusCollection);
 
+            // The acquisition system that fired these retired with the input→order graph line;
+            // the registration point stays so dependent mods (camera follow, VFX hooks) can
+            // attach, and the graph selection commit path can invoke them once it lands.
+            if (!engine.TryGetService(CoreInputServiceKeys.CommandSourceAcquiredCallbacks, out var _))
+            {
+                engine.SetService(
+                    CoreInputServiceKeys.CommandSourceAcquiredCallbacks,
+                    new System.Collections.Generic.List<System.Action<Ludots.Platform.Abstractions.WorldCmInt2, Arch.Core.Entity>>());
+            }
+
             _ = engine.GetService(CoreServiceKeys.InteractionActionBindings)
                 ?? throw new InvalidOperationException("InteractionActionBindings must be registered before CoreInputMod installs.");
 
