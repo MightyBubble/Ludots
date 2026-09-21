@@ -136,10 +136,12 @@ namespace Ludots.Raylib.Render
                     sampleCount: 0,
                     stencilBits: 8,
                     glInfo: new GRGlFramebufferInfo(_target.id, GlRgba8));
+                // GL render texture 的行序是 bottom-left；Skia 必须按 BottomLeft 解释，
+                // 上屏时 DrawTextureRec 的负高度翻转才能把内容摆正（两次取向缺一不可）。
                 _surface = SKSurface.Create(
                     _context,
                     _renderTarget,
-                    GRSurfaceOrigin.TopLeft,
+                    GRSurfaceOrigin.BottomLeft,
                     SKColorType.Rgba8888);
                 if (_surface == null)
                 {
