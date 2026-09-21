@@ -28,7 +28,7 @@
   ],
   "contexts": [
     {
-      "id": "default",
+      "id": "Tw.Controls",
       "name": "Total War Flow Controls",
       "priority": 60,
       "bindings": [
@@ -46,17 +46,12 @@
         },
         {
           "actionId": "Tw.Tps.Fire",
-          "path": "<Mouse>/rightButton"
+          "path": "<Mouse>/leftButton"
         },
         {
           "actionId": "Tw.Advance",
           "path": "<Keyboard>/enter"
-        }
-      ]
-    },
-    {
-      "id": "Tw.Selection",
-      "bindings": [
+        },
         {
           "actionId": "CaseE.BoxSelectBegin",
           "path": "<Mouse>/leftButton"
@@ -73,8 +68,7 @@
           "actionId": "PointerMoved",
           "path": "<Mouse>/Pos"
         }
-      ],
-      "priority": 65
+      ]
     }
   ]
 }

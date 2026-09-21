@@ -29,7 +29,7 @@
         "PlayerId": 1
       }
     },
-    "initialInteractionContext": "interaction.context.tw.selection"
+    "initialInteractionContext": "interaction.context.tw.controls"
   },
   {
     "id": "tw_marine",
