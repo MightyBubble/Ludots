@@ -47,8 +47,10 @@ var target = new GRBackendRenderTarget(width, height,
     sampleCount: 0, stencilBits: 8,
     new GRGlFramebufferInfo(hostTextureId, 0x8058 /* GL_RGBA8 */));
 SKSurface surface = SKSurface.Create(context, target,
-    GRSurfaceOrigin.TopLeft, SKColorType.Rgba8888);
+    GRSurfaceOrigin.BottomLeft, SKColorType.Rgba8888);
 ```
+
+GL render texture 的行序是 bottom-left，Skia 必须按 `BottomLeft` 解释；上屏时宿主的负高度采样翻转才能把内容摆正。两处取向缺一不可，只做一边会把整层上下镜像。
 
 默认帧缓冲直写形态：`GRGlFramebufferInfo(0, 0x8058)` + `GRSurfaceOrigin.BottomLeft`，不经过中间纹理。参考实现：`RaylibSkiaGpuOverlaySurface`（render-texture）与 `RaylibSkiaFramebufferOverlaySurface`（直写）。
 
