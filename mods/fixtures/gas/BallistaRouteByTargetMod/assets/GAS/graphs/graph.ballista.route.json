@@ -6,11 +6,30 @@
       {
         "label": "on_command",
         "action": "Ballista.Command",
-        "start": "px",
+        "start": "all_units",
         "refire": "restart"
       }
     ],
     "nodes": [
+      {
+        "id": "all_units",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "crews",
+        "op": "QueryFilterTemplate",
+        "template": "ballista_crew"
+      },
+      {
+        "id": "replace",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "write_active",
+        "op": "WriteCollection",
+        "collectionKey": "collection.command.source"
+      },
       {
         "id": "px",
         "op": "LoadPointerScreenX"
@@ -138,6 +157,26 @@
       }
     ],
     "controlEdges": [
+      {
+        "from": "all_units",
+        "fromPort": "next",
+        "to": "crews"
+      },
+      {
+        "from": "crews",
+        "fromPort": "next",
+        "to": "replace"
+      },
+      {
+        "from": "replace",
+        "fromPort": "next",
+        "to": "write_active"
+      },
+      {
+        "from": "write_active",
+        "fromPort": "next",
+        "to": "px"
+      },
       {
         "from": "px",
         "fromPort": "next",
@@ -387,6 +426,12 @@
         "fromPort": "value",
         "to": "engage",
         "toPort": "target"
+      },
+      {
+        "from": "replace",
+        "fromPort": "value",
+        "to": "write_active",
+        "toPort": "value"
       }
     ]
   }
