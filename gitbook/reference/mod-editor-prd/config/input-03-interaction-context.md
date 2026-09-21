@@ -15,7 +15,7 @@
 ```json
 { "profiles": [
   { "id": "ctx.guided",
-    "activeCollectionKey": "collection.guided.targets",
+    "activeCollectionKey（已退役：意图自带成员集，v2）": "collection.guided.targets",
     "activeEntityViewKey": "view.enemies.visible",
     "filterProfileId": "filter.controllable.default",
     "inputContextId": "GuidedAim",
@@ -27,7 +27,7 @@
 | 字段 | 这样配会产生什么效果 |
 |---|---|
 | `id` | 档案标识；能力 exec 声明 `interactionContextProfile` 时引用 |
-| `activeCollectionKey` | 上下文激活期间生效的实体集合键 |
+| `activeCollectionKey（已退役：意图自带成员集，v2）` | 上下文激活期间生效的实体集合键 |
 | `activeEntityViewKey` | 上下文激活期间生效的实体视图键（声明数据，运行期暂无 id 消费方） |
 | `filterProfileId` | 过滤档案（input-05）；可空 = 不过滤直通 |
 | `inputContextId` | 上下文激活期间该座位应激活的输入上下文（default_input 的 contexts，input-05）；由 `InputContextProjectionSystem` 每 tick 按座位 diff 派生 push/pop，上下文回收后下一 tick 弹出 |

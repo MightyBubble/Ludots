@@ -31,7 +31,6 @@ namespace Ludots.Core.Input.Interaction
         public string Id { get; set; } = string.Empty;
 
         /// <summary>Collection key context-bound cast commits write while the context is active.</summary>
-        public string ActiveCollectionKey { get; set; } = string.Empty;
 
         /// <summary>Optional filter profile applied to cast commits (empty = pass-through).</summary>
         public string FilterProfileId { get; set; }

@@ -176,14 +176,13 @@ namespace Ludots.Core.EntityCollections
         /// Commit one cast batch for the local anchor (constitution §12 cast commit): store the raw
         /// hits verbatim under the data-declared cast-raw key, evaluate the anchor's active
         /// context's filter profile, and domain-route the survivors into the active collection key.
-        /// The anchor's active interaction context must declare activeCollectionKey — there is no
-        /// steady-state fallback. Routed writes use
+        /// Routed writes use
         /// <see cref="DomainRoutingUnresolvedPolicy.Reject"/>: an entity without a control domain
         /// reaching the routed command source is a pipeline error. Contexts with
         /// <c>FilterProfileId == 0</c> pass the raw hits through unfiltered, so their configurers
         /// must guarantee the cast result is routable (RFC-0065 DEC-4).
         /// </summary>
-        public void CommitCast(Entity localAnchorRep, ReadOnlySpan<Entity> rawHits, EntityCollectionSourceKind sourceKind)
+        public void CommitCast(Entity localAnchorRep, int collectionKeyId, ReadOnlySpan<Entity> rawHits, EntityCollectionSourceKind sourceKind)
         {
             RequireRoutedBound();
             if (localAnchorRep == Entity.Null)
@@ -199,15 +198,9 @@ namespace Ludots.Core.EntityCollections
                 EntityCollectionRoleKind.AcquisitionPreview);
             _store.Replace(localAnchorRep, _castRawCollectionKeyId, in rawDescriptor, rawHits, localAnchorRep);
 
-            if (!_world.TryGet<InteractionContextInstance>(localAnchorRep, out InteractionContextInstance context) ||
-                context.ActiveCollectionKeyId == 0)
-            {
-                throw new InvalidOperationException(
-                    "COLLECTION.COMMIT_CAST.ActiveKeyMissing: the anchor rep's active interaction context must declare activeCollectionKey (constitution §12: no steady-state fallback).");
-            }
-
-            int filterProfileId = context.FilterProfileId;
-            int collectionKeyId = context.ActiveCollectionKeyId;
+            int filterProfileId = _world.TryGet<InteractionContextInstance>(localAnchorRep, out InteractionContextInstance context)
+                ? context.FilterProfileId
+                : 0;
 
             ReadOnlySpan<Entity> routed = rawHits;
             if (filterProfileId != 0)

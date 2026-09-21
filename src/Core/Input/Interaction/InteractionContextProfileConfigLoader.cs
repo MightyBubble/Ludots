@@ -113,9 +113,7 @@ namespace Ludots.Core.Input.Interaction
                 }
 
                 // Collection/view keys are optional: cast/command routing contexts declare
-                // activeCollectionKey; entity-mounted play contexts (Case E battle/boxing) omit both.
                 // activeEntityViewKey has no runtime consumer (input-03 stack retirement).
-                RequireTrimmedWhenPresent(profile.ActiveCollectionKey, $"{path}.activeCollectionKey");
                 RequireTrimmedWhenPresent(profile.FilterProfileId, $"{path}.filterProfileId");
                 RequireTrimmedWhenPresent(profile.InputContextId, $"{path}.inputContextId");
                 RequireTrimmedWhenPresent(profile.CommandIntentId, $"{path}.commandIntentId");

@@ -26,7 +26,7 @@ Case E 是框选演示：按下拖框，抬起落定。
 
 ## 3. 详情：下一步是全链下单（迁移切1）
 
-按宪法 §12：battle profile 声明 `activeCollectionKey: "selected"`；
+按宪法 §12：battle profile 声明 `activeCollectionKey（已退役：意图自带成员集，v2）: "selected"`；
 新增右键 Command 动作 + 提交图（ScreenPointToGround → `SubmitCommandIntent` op → 意图缓冲）；
 下令域按活跃 context 声明的键读集合，令下给成员。
 
@@ -60,7 +60,7 @@ Feature: Case E 交接说得清
   Scenario: 我知道下一步
     Given 我要落切1 全链下单
     When 我对照宪法 §12
-    Then battle 声明 activeCollectionKey
+    Then battle 声明 activeCollectionKey（已退役：意图自带成员集，v2）
     And 右键提交图经 SubmitCommandIntent 下单
     And 全程没有 C# 玩法代码
 ```
