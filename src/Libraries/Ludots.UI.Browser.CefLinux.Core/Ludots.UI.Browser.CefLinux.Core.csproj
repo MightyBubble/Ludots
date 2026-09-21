@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>Ludots.UI.Browser.CefLinux.Core</AssemblyName>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CefNet" Version="105.3.22248.142" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ludots.UI.Browser\Ludots.UI.Browser.csproj" />
+  </ItemGroup>
+</Project>

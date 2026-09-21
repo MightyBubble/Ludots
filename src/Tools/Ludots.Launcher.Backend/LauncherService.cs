@@ -1530,6 +1530,15 @@ public sealed class LauncherService
                 "Disable browserRuntime on this host, or register a Linux-capable provider such as Ultralight.");
         }
 
+        if (string.Equals(runtime.Provider, "ceflinux", StringComparison.OrdinalIgnoreCase) &&
+            !OperatingSystem.IsLinux())
+        {
+            throw new PlatformNotSupportedException(
+                "browserRuntime provider 'ceflinux' requires Linux (CefNet + CEF linux-x64 natives). " +
+                $"Current OS '{System.Runtime.InteropServices.RuntimeInformation.OSDescription}' is unsupported. " +
+                "Disable browserRuntime on this host, or use provider 'cef' on Windows.");
+        }
+
         if (!string.IsNullOrWhiteSpace(provider.ProjectPath))
         {
             runtime.ProviderProjectPath = ResolveRepoRelativePath(provider.ProjectPath);
@@ -2345,6 +2354,33 @@ public sealed class LauncherService
                 message =
                     $"Ultralight browser runtime package is incomplete. Missing native Ultralight libraries under '{browserRuntime.RuntimeRootPath}'.";
                 return false;
+            }
+        }
+        else if (string.Equals(browserRuntime.Provider, "ceflinux", StringComparison.OrdinalIgnoreCase))
+        {
+            string[] requiredFiles =
+            {
+                "Ludots.UI.Browser.CefLinux.deps.json",
+                "Ludots.UI.Browser.CefLinux.dll",
+                "Ludots.UI.Browser.CefLinux.Core.dll",
+                "CefNet.dll",
+                "Ludots.UI.Browser.CefLinux.Subprocess",
+                "Ludots.UI.Browser.CefLinux.Subprocess.dll",
+                "Ludots.UI.Browser.CefLinux.Subprocess.runtimeconfig.json",
+                "libcef.so",
+                "resources.pak",
+                "icudtl.dat",
+                Path.Combine("locales", "en-US.pak")
+            };
+
+            foreach (string file in requiredFiles)
+            {
+                string path = Path.Combine(browserRuntime.RuntimeRootPath, file);
+                if (!File.Exists(path))
+                {
+                    message = $"CEF Linux browser runtime package is incomplete. Missing: {path}";
+                    return false;
+                }
             }
         }
 

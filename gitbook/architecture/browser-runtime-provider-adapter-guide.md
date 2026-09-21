@@ -27,7 +27,7 @@ Adapters do not add a parallel provider registry, a second browser runtime servi
 
 1. Resolve `browserRuntime` from the host's already-resolved app/runtime config.
 2. If `enabled=false` and `required=true`, fail fast.
-3. If `enabled=true`, require a known provider id. Built-in providers: `cef` (Windows Chromium compatibility) and `ultralight` (cross-platform lightweight game UI; use this on cloud Linux).
+3. If `enabled=true`, require a known provider id. Built-in providers: `cef` (Windows Chromium compatibility), `ceflinux` (Linux Chromium compatibility; CefNet binding + CEF linux-x64 natives), and `ultralight` (cross-platform lightweight game UI).
 4. Resolve `providerAssemblyPath` relative to the host base directory when it is not rooted.
 5. Resolve `runtimeRootPath` relative to the host base directory when it is not rooted. For provider-loader installs it is required and must be the provider package root or a child of that package.
 6. Verify the provider assembly exists. Missing provider assemblies fail fast.
@@ -128,6 +128,7 @@ Recommended regression tests:
 ```text
 dotnet test src\Tests\RaylibAdapterTests\RaylibAdapterTests.csproj --filter BrowserRuntimeProviderLoaderTests
 dotnet test src\Tests\BrowserCefTests\BrowserCefTests.csproj --filter "CefBrowserRuntimeHostTests|CefBrowserRuntimeArchitectureTests|CefBrowserRuntimeAssemblyResolutionTests"
+dotnet test src\Tests\BrowserCefLinuxTests\BrowserCefLinuxTests.csproj
 dotnet test src\Tests\BrowserUltralightTests\BrowserUltralightTests.csproj
 dotnet test src\Tests\GasTests\GasTests.csproj --filter "RaylibHost_OwnsTerminalBrowserRuntimeShutdown|RaylibBrowserRuntimeInstaller_ResolvesProviderDependenciesThroughProviderPackage"
 ```
@@ -141,3 +142,16 @@ dotnet test src\Tests\GasTests\GasTests.csproj --filter "RaylibHost_OwnsTerminal
 - Local `ludots-app://` pages are staged to disk and loaded via absolute `file://` URLs. AppCore FileSystem is rooted at the OS volume root with a relative `ResourcePathPrefix` so ICU data and staged apps both resolve.
 - JS facades must stay ES5-compatible for Ultralight's JavaScriptCore (no `??` / `?.`).
 - Do not silently fall back from `cef` to `ultralight`; configure the provider explicitly.
+
+### CefLinux provider notes
+
+- Package: CefNet 105.3.22248.142 (MIT, CEF C API mirror binding) + CEF 105 linux-x64 standard distribution natives. CefNet's upstream repository is dormant; the binding is pinned by exact NuGet version.
+- Host type: `Ludots.UI.Browser.CefLinux.CefLinuxBrowserRuntimeHost`. Provider id: `ceflinux`.
+- Non-collectible provider ALC (`useCollectibleLoadContext: false`); `CefNet` is the process-shared assembly prefix.
+- The launcher rejects `ceflinux` resolution on non-Linux hosts with `PlatformNotSupportedException`. CEF init loads `libcef.so` from the provider package root via `NativeLibrary.Load` before any CefNet P/Invoke.
+- Linux CEF has no multi-threaded message loop. The provider owns a dedicated `Ludots.CefLinux.MessagePump` thread that drives `CefApi.DoMessageLoopWork` with `ExternalMessagePump = true` (`OnScheduleMessagePumpWork` wake-ups plus a 16 ms fallback tick). All browser host calls are marshaled to the CEF UI thread via `CefApi.PostTask`.
+- Subprocess: a dedicated `Ludots.UI.Browser.CefLinux.Subprocess` exe ships in the provider package (pulled in through a `ReferenceOutputAssembly=false` project reference) and is set as `CefSettings.BrowserSubprocessPath`. `NoSandbox = true` because game hosts do not ship a setuid `chrome-sandbox`.
+- Packaging: `dotnet publish` of the provider project (what the launcher provider build step runs) produces the managed layout. The CEF linux-x64 natives must be staged separately: download the CEF 105 branch linux64 standard distribution from cef-builds.spotifycdn.com and copy `Release/` contents (`libcef.so`, `libEGL.so`, `libGLESv2.so`, `icudtl.dat`, `resources.pak`, `chrome_100_percent.pak`, `chrome_200_percent.pak`, `v8_context_snapshot.bin`, `locales/`) into `BrowserRuntime/ceflinux`. Package on a Linux host; a Windows publish emits the subprocess apphost as `.exe`.
+- Renderer bridge: the V8 extension `v8/ludots-native-bridge` exposes `__ludotsNativeBridge.postHostMessage`; renderer-to-browser messages travel as the `ludots:host-message` process message. Page code still only sees `window.ludotsBrowser` / `window.ludotsDataplane`.
+- The DataPlane shared-buffer lane is not implemented in this provider (`mode: 'message-only'`, no `readSharedBuffer`). Topics that require shared buffers fail explicit capability negotiation instead of silently falling back.
+- Linux runtime acceptance (end-to-end with real CEF natives) is not yet covered by evidence in this repository; it requires a cloud Linux runner battle-report before the provider is called production-ready.

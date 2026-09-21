@@ -1341,6 +1341,71 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void Launcher_ResolvesCefLinuxBrowserRuntime_FromProviderPackageRoot()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-ceflinux-runtime-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            var graphPath = Path.Combine(repoRoot, "artifacts", "launcher", "raylib.launch.graph.json");
+            var originalGraph = CaptureFile(graphPath);
+
+            try
+            {
+                var preferencesPath = Path.Combine(tempDirectory, "preferences.json");
+                var userConfigPath = Path.Combine(tempDirectory, "config.overlay.json");
+                File.WriteAllText(preferencesPath, "{}");
+                File.WriteAllText(userConfigPath, "{}");
+
+                var launcher = new LauncherService(
+                    repoRoot,
+                    Path.Combine(repoRoot, "launcher.config.json"),
+                    Path.Combine(repoRoot, "launcher.presets.json"),
+                    preferencesPath,
+                    userConfigPath);
+
+                if (OperatingSystem.IsLinux())
+                {
+                    var plan = launcher.Resolve(
+                        new[] { "preset:browser_react_flow_ceflinux_raylib" },
+                        LauncherPlatformIds.Raylib,
+                        LauncherBuildMode.Never).Plan;
+                    var runtime = plan.BrowserRuntime;
+                    string packageRootPath = Path.Combine(repoRoot, "BrowserRuntime", "ceflinux");
+
+                    Assert.That(runtime, Is.Not.Null);
+                    Assert.That(runtime!.Provider, Is.EqualTo("ceflinux"));
+                    Assert.That(runtime.ProviderAssemblyPath, Is.EqualTo(Path.Combine(packageRootPath, "Ludots.UI.Browser.CefLinux.dll")));
+                    Assert.That(runtime.RuntimeRootPath, Is.EqualTo(packageRootPath));
+                    Assert.That(runtime.ProviderProjectPath, Is.EqualTo(Path.Combine(
+                        repoRoot,
+                        "src",
+                        "Libraries",
+                        "Ludots.UI.Browser.CefLinux",
+                        "Ludots.UI.Browser.CefLinux.csproj")));
+                }
+                else
+                {
+                    PlatformNotSupportedException exception = Assert.Throws<PlatformNotSupportedException>(() =>
+                        launcher.Resolve(
+                            new[] { "preset:browser_react_flow_ceflinux_raylib" },
+                            LauncherPlatformIds.Raylib,
+                            LauncherBuildMode.Never))!;
+
+                    Assert.That(exception.Message, Does.Contain("provider 'ceflinux' requires Linux"));
+                }
+            }
+            finally
+            {
+                RestoreFile(graphPath, originalGraph);
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
         public void Launcher_ResolvesCapabilityStandardShowcases_AsOnlyAcceptanceRoots()
         {
             var repoRoot = FindRepoRoot();
