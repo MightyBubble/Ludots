@@ -3,22 +3,83 @@
     "id": "graph.rts.cast_e",
     "kind": "TriggerGraph",
     "entries": [
-      { "label": "on_skill_e", "action": "SkillE", "start": "slot", "refire": "restart" }
+      {
+        "label": "on_skill_e",
+        "action": "SkillE",
+        "start": "slot",
+        "refire": "restart"
+      }
     ],
     "nodes": [
-      { "id": "slot", "op": "ConstInt", "intValue": 2 },
-      { "id": "submit", "op": "SubmitCast", "orderTypeKey": "castAbility" },
-      { "id": "ok", "op": "ConstInt", "intValue": 1 },
-      { "id": "halt", "op": "HaltReturnInt" }
+      {
+        "id": "slot",
+        "op": "ConstInt",
+        "intValue": 2
+      },
+      {
+        "id": "submit",
+        "op": "SubmitCast",
+        "orderTypeKey": "castAbility"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "roster_q",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "roster_f",
+        "op": "QueryFilterTemplate",
+        "template": "rts_war3_peasant"
+      }
     ],
     "controlEdges": [
-      { "from": "slot", "fromPort": "next", "to": "submit" },
-      { "from": "submit", "fromPort": "next", "to": "ok" },
-      { "from": "ok", "fromPort": "next", "to": "halt" }
+      {
+        "from": "slot",
+        "fromPort": "next",
+        "to": "roster_q"
+      },
+      {
+        "from": "submit",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      },
+      {
+        "from": "roster_q",
+        "fromPort": "next",
+        "to": "roster_f"
+      },
+      {
+        "from": "roster_f",
+        "fromPort": "next",
+        "to": "submit"
+      }
     ],
     "valueEdges": [
-      { "from": "slot", "fromPort": "value", "to": "submit", "toPort": "value" },
-      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+      {
+        "from": "slot",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "value"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
     ]
   }
 ]
