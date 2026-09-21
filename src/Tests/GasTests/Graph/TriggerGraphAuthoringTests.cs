@@ -720,6 +720,7 @@ namespace Ludots.Tests.Gas.Graph
                 // design (Script graphs have no action edges to fire them from).
                 GraphNodeOp.SubmitCommandIntent,
                 GraphNodeOp.SubmitCast,
+                GraphNodeOp.SubmitEngageBatch,
                 GraphNodeOp.QueryFilterKnowledgeVisible,
             };
             foreach (GraphNodeOp op in GraphOpDescriptorTable.EnumerateAuthorable(GraphKind.TriggerGraph))
