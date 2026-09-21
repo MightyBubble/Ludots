@@ -5,6 +5,14 @@
     "HeightCm": 1638400,
     "CellSizeCm": 100
   },
+  "DefaultCamera": {
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "Yaw": 0,
+    "Pitch": 58,
+    "DistanceCm": 16000,
+    "FovYDeg": 48
+  },
   "Tags": [
     "showcase",
     "input",
@@ -80,6 +88,10 @@
   "TriggerGraphs": [
     {
       "graph": "tw.startup",
+      "scopeInstanceId": "tw-commander"
+    },
+    {
+      "graph": "tw.roster_sync",
       "scopeInstanceId": "tw-commander"
     }
   ]

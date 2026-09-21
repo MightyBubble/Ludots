@@ -28,7 +28,8 @@
       "PlayerOwner": {
         "PlayerId": 1
       }
-    }
+    },
+    "initialInteractionContext": "interaction.context.tw.selection"
   },
   {
     "id": "tw_marine",
