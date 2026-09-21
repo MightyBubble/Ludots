@@ -192,6 +192,30 @@
       ]
     },
     {
+      "id": "ballista_route_by_target",
+      "path": "mods/fixtures/gas/BallistaRouteByTargetMod",
+      "projectPath": null,
+      "title": "弩车按目标路由：一击三路 + EQS 围城",
+      "summary": "右键一次按目标类型分流：生物→全员直射（Q4 平减）、建筑→EQS 800cm 环位围城到位续接开火、空地→moveTo 集结；意图自带成员集，§12 图下单。",
+      "tier": "T2",
+      "category": "capability",
+      "binding": "ballista_route_by_target",
+      "preset": "ballista_route_by_target_raylib",
+      "docsPath": null,
+      "readmePath": null,
+      "acceptanceTest": "BallistaRouteByTargetAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/ballista-route-by-target",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "input",
+        "engage",
+        "eqs",
+        "routing",
+        "q4"
+      ]
+    },
+    {
       "id": "blacksmith_test",
       "path": "mods/fixtures/blacksmith/BlacksmithTestMod",
       "projectPath": null,
@@ -6607,6 +6631,30 @@
       "tags": [
         "terrain",
         "benchmark"
+      ]
+    },
+    {
+      "id": "total_war_flow",
+      "path": "mods/showcases/total_war_flow/TotalWarFlowShowcaseMod",
+      "projectPath": null,
+      "title": "全战四阶段：战役→备置→RTS→TPS",
+      "summary": "单地图四交互上下文迁移：战役右键集结、备置右键增援放置、RTS 右键 EQS 围城、TPS 右键瞄准射击；Enter 推进阶段，成员装载全走 v2 图自取。",
+      "tier": "T2",
+      "category": "capability",
+      "binding": "total_war_flow",
+      "preset": "total_war_flow_raylib",
+      "docsPath": null,
+      "readmePath": null,
+      "acceptanceTest": "TotalWarFlowAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/total-war-flow",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "input",
+        "engage",
+        "eqs",
+        "context-flow",
+        "total-war"
       ]
     },
     {
