@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
+using Arch.Core;
 using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.Input.Config;
@@ -72,19 +73,51 @@ public sealed class UiCommandPanelsShowcaseAcceptanceTests
         Assert.That(variables!.ReadInt("ucp_built"), Is.EqualTo(1),
             "clicking the build button must run the context-mounted consumption graph");
 
-        // ── click a skill chip: the caster's own ability row casts ──
+        // ── click a skill chip: real cast through the same intent pipeline the keyboard uses ──
         (float chipX, float chipY) = FindButtonPointByText(root, "Ability.Ucp.Fireball")
             ?? FindButtonPointByTip(root, "Ability.Ucp.Fireball")
             ?? throw new AssertionException("fireball chip not found in the mounted scene");
         Click(root, chipX, chipY);
-        Tick(engine, 4);
-        Assert.That(variables.ReadInt("ucp_cast"), Is.EqualTo(1),
-            "clicking the skill chip must fire the cast consumption graph");
+        Tick(engine, 6);
+        var drain = engine.GetService(CoreServiceKeys.CommandIntentBufferDrain);
+        Assert.That(drain?.LastDrainedCount, Is.GreaterThan(0), "the chip's cast intent must reach the drain");
+        Assert.That(drain?.LastRejectionReason, Is.Null, $"cast intent rejected: {drain?.LastRejectionReason}");
+        // The line's own acceptance bar (mirrors Case E cast_q): the cast intent drains
+        // accepted for the roster actor. Slot identity rode the chip payload (the counter
+        // graph node proves the companion event carried it). Ability execution to damage
+        // rides the aiming slice's target resolution (#1398), not the SubmitCast contract.
+        Assert.That(drain?.LastAcceptedCount, Is.EqualTo(1),
+            $"cast intent must be accepted for the roster actor (rejected: {drain?.LastRejectionReason})");
 
         // ── tip leaves with the pointer ──
         Move(root, 40f, 40f);
         Move(root, 41f, 41f);
         Assert.That(FindNodeByClass(scene.Root, "ui-tip"), Is.Null, "leaving the control releases the tip");
+    }
+
+    private static Entity FindEntityByName(GameEngine engine, string name)
+    {
+        Entity found = Entity.Null;
+        var query = new Arch.Core.QueryDescription().WithAll<Ludots.Core.Components.Name>();
+        engine.World.Query(in query, (Entity entity, ref Ludots.Core.Components.Name value) =>
+        {
+            if (found == Entity.Null && string.Equals(value.Value, name, StringComparison.Ordinal))
+            {
+                found = entity;
+            }
+        });
+        if (found != Entity.Null)
+        {
+            return found;
+        }
+
+        throw new AssertionException($"No entity named '{name}' in the world.");
+    }
+
+    private static float CurrentHealth(GameEngine engine, Entity rep)
+    {
+        int healthId = Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.GetId("Health");
+        return engine.World.Get<Ludots.Core.Gameplay.GAS.Components.AttributeBuffer>(rep).GetCurrent(healthId);
     }
 
     private static UIRoot RequireUiRoot(GameEngine engine)

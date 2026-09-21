@@ -427,6 +427,9 @@ namespace Ludots.Core.UI.PanelProjection
         /// <summary>Entity / effect-instance subject surface available to layout binds (not graph pins).</summary>
         public const string EntityDisplayName = "displayName";
 
+        /// <summary>Float field on AbilitySlot list items: the slot's index in the owner's buffer (generic slot data).</summary>
+        public const string AbilitySlotIndex = "slotIndex";
+
         /// <summary>
         /// Presentation imageId surface for <c>type: image</c> binds (not graph pins).
         /// Portrait / standing / buff icon are all the same control — only the id differs.

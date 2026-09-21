@@ -51,7 +51,10 @@
       {
         "eventId": "Ui.CastFire",
         "control": "cast",
-        "gesture": "tap"
+        "gesture": "tap",
+        "payload": {
+          "Ucp.Slot": "Int"
+        }
       }
     ],
     "layout": {
@@ -63,6 +66,9 @@
           "tip": {
             "titleBind": "displayName",
             "text": "点击下令施放"
+          },
+          "payload": {
+            "Ucp.Slot": "slotIndex"
           }
         }
       ]
@@ -78,12 +84,6 @@
         "key": "ucp.command.built",
         "mode": "realtime",
         "default": 0
-      },
-      {
-        "name": "cast",
-        "key": "ucp.command.cast",
-        "mode": "realtime",
-        "default": 0
       }
     ],
     "width": 220,
@@ -96,7 +96,10 @@
       {
         "eventId": "Ui.CastFire",
         "control": "super",
-        "gesture": "tap"
+        "gesture": "tap",
+        "payload": {
+          "Ucp.Slot": "Int"
+        }
       }
     ],
     "layout": {
@@ -121,17 +124,15 @@
           "tip": {
             "title": "超级武器",
             "text": "发射超级武器（火球）"
+          },
+          "payload": {
+            "Ucp.Slot": "0"
           }
         },
         {
           "type": "label",
           "bind": "built",
           "prefix": "已建造: "
-        },
-        {
-          "type": "label",
-          "bind": "cast",
-          "prefix": "已施放: "
         }
       ]
     }

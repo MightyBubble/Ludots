@@ -379,6 +379,11 @@ namespace Ludots.Core.UI.PanelProjection
 
             (Dictionary<string, float> floats, Dictionary<string, bool> bools) =
                 ReadPins(owner, element);
+            if (element.Subject == PanelSubjectKind.AbilitySlot)
+            {
+                floats[PanelSubjectKinds.AbilitySlotIndex] = memberIntId;
+            }
+
             var strings = new Dictionary<string, string>(StringComparer.Ordinal)
             {
                 [PanelSubjectKinds.EntityDisplayName] =
