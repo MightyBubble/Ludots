@@ -1,0 +1,20 @@
+[
+  {
+    "id": "ballista.fixture.knight.raylib",
+    "assetKind": "Mesh",
+    "assetId": "ballista.fixture.knight",
+    "backendId": "raylib",
+    "sourceUris": [
+      "BallistaRouteByTargetMod:assets/Models/Knight.glb"
+    ]
+  },
+  {
+    "id": "ballista.fixture.obelisk.raylib",
+    "assetKind": "Mesh",
+    "assetId": "ballista.fixture.obelisk",
+    "backendId": "raylib",
+    "sourceUris": [
+      "BallistaRouteByTargetMod:assets/Models/tower_obelisk.obj"
+    ]
+  }
+]

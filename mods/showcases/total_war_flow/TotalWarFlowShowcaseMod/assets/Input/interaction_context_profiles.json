@@ -1,0 +1,68 @@
+{
+  "profiles": [
+    {
+      "id": "interaction.context.tw.campaign",
+      "bindings": [
+        "Tw.Campaign.Command",
+        "Tw.Advance"
+      ],
+      "triggers": [
+        {
+          "trigger": "tw.campaign.command"
+        },
+        {
+          "trigger": "tw.advance.campaign"
+        }
+      ],
+      "commandIntentId": "intent.command.default"
+    },
+    {
+      "id": "interaction.context.tw.deployment",
+      "bindings": [
+        "Tw.Deploy.Command",
+        "Tw.Advance"
+      ],
+      "triggers": [
+        {
+          "trigger": "tw.deployment.command"
+        },
+        {
+          "trigger": "tw.advance.deployment"
+        }
+      ],
+      "commandIntentId": "intent.command.default"
+    },
+    {
+      "id": "interaction.context.tw.rts",
+      "bindings": [
+        "Tw.Rts.Command",
+        "Tw.Advance"
+      ],
+      "triggers": [
+        {
+          "trigger": "tw.rts.command"
+        },
+        {
+          "trigger": "tw.advance.rts"
+        }
+      ],
+      "commandIntentId": "intent.command.default"
+    },
+    {
+      "id": "interaction.context.tw.tps",
+      "bindings": [
+        "Tw.Tps.Fire",
+        "Tw.Advance"
+      ],
+      "triggers": [
+        {
+          "trigger": "tw.tps.fire"
+        },
+        {
+          "trigger": "tw.advance.tps"
+        }
+      ],
+      "commandIntentId": "intent.command.default"
+    }
+  ]
+}

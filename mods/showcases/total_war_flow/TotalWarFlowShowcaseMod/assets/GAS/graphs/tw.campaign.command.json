@@ -1,0 +1,148 @@
+[
+  {
+    "id": "tw.campaign.command",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_action",
+        "action": "Tw.Campaign.Command",
+        "start": "caster",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "px",
+        "op": "LoadPointerScreenX"
+      },
+      {
+        "id": "py",
+        "op": "LoadPointerScreenY"
+      },
+      {
+        "id": "gnd",
+        "op": "ScreenPointToGround"
+      },
+      {
+        "id": "gok",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "allq",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "marines",
+        "op": "QueryFilterTemplate",
+        "template": "tw_marine"
+      },
+      {
+        "id": "submit",
+        "op": "SubmitCommandIntent"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "px"
+      },
+      {
+        "from": "px",
+        "fromPort": "next",
+        "to": "py"
+      },
+      {
+        "from": "py",
+        "fromPort": "next",
+        "to": "gnd"
+      },
+      {
+        "from": "gnd",
+        "fromPort": "next",
+        "to": "gok"
+      },
+      {
+        "from": "gok",
+        "fromPort": "true",
+        "to": "allq"
+      },
+      {
+        "from": "gok",
+        "fromPort": "false",
+        "to": "halt"
+      },
+      {
+        "from": "allq",
+        "fromPort": "next",
+        "to": "marines"
+      },
+      {
+        "from": "marines",
+        "fromPort": "next",
+        "to": "submit"
+      },
+      {
+        "from": "submit",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "px",
+        "fromPort": "value",
+        "to": "gnd",
+        "toPort": "a"
+      },
+      {
+        "from": "py",
+        "fromPort": "value",
+        "to": "gnd",
+        "toPort": "b"
+      },
+      {
+        "from": "gnd",
+        "fromPort": "value",
+        "to": "gok",
+        "toPort": "condition"
+      },
+      {
+        "from": "gnd",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "condition"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      },
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "target"
+      }
+    ]
+  }
+]

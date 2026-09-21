@@ -64,5 +64,24 @@
     "Policy": "ArrayById",
     "IdField": "id",
     "AllowEmpty": true
+  },
+  {
+    "Path": "Maps/ballista_engage_field.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Presentation/mesh_assets.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Presentation/host_assets.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Presentation/presenters.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
   }
 ]
