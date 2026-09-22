@@ -582,8 +582,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         }
 
         public int FilterScreenRegionEntities(Span<Entity> entities, int count, in ScreenRect rect, string? seatId)
+            => FilterScreenRegionEntities(entities, count, in rect, seatId, tolerancePixels: 0f);
+
+        public int FilterScreenRegionEntities(Span<Entity> entities, int count, in ScreenRect rect, string? seatId, float tolerancePixels)
         {
-            return RequireAimSource().FilterScreenRegionEntities(entities, count, in rect, seatId);
+            return RequireAimSource().FilterScreenRegionEntities(entities, count, in rect, seatId, tolerancePixels);
         }
 
         public bool TryReadLivePointerScreen(out float screenX, out float screenY)

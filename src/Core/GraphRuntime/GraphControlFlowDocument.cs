@@ -357,6 +357,7 @@ namespace Ludots.Core.GraphRuntime
         public const string Source = "source";
         public const string Min = "min";
         public const string Max = "max";
+        public const string Tolerance = "tolerance";
         public const string A = "a";
         public const string B = "b";
         public const string C = "c";

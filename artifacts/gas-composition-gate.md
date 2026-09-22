@@ -1,46 +1,42 @@
 # GAS Composition Gate — Self Review
 
-- **Task / Issue**: 共享选中链补 `QueryFilterSelectable` 门——切3（1462574fc3）删除 C# CommandSourceAcquisitionSystem 后，`CommandSourceSelectableTag ∧ CommandSourceSelectableState.Enabled` 的可选性合同在图链（graph.core.select_begin/hit/commit）上无人执行，框选把 `IsEnabled=false` 的演示实体选进来（InteractionShowcase_SingleClickReselect×2 红）。
+- **Task / Issue**: ScreenRegionToEntities 增加可选 `tolerance` 显式传参端口；`graph.core.select_hit` 明文接线 ConstFloat(20)。owner 裁定：点击宽容应完全图化或明文传参组装，几何过滤器不得内部读配置（#1634 剥离判断语义的后续收口）。
 - **Date**: 2026-09-22
 - **Agent / Author**: ZCode（test-red-clearing session）
 
 ## 1. Core judgment
 
-新变体主要交付物是（A/B/C/D）: **A**（新 graph 查询过滤节点 + graph.core.select_hit 连线）
+新变体主要交付物是（A/B/C/D）: **A**（既有 op 增加一个显式可选值输入端口 + 一条图数据接线）
 
 结论: **PASS**
 
-一句话理由: 交付物是单一职责的 TargetList 原位过滤 op（镜像同链 QueryFilterKnowledgeVisible(485) 先例）加一条图连线，无新 enum/开关/profile DSL。
+一句话理由: 拾取宽容从几何过滤器内部配置读取改为调用方显式传参（op 可选引脚 + 图内明文 ConstFloat），零新 enum/开关/管线。
 
 ## 2. Layer assignment
 
-| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
-|-----------|-----------------|----------|
-| 候选原位过滤 op | 0 | GraphNodeOp.QueryFilterSelectable(487) + handler + descriptor + 编译器 case |
-| 可选性判定复用 | 0（既有） | CommandSourceEligibility.IsSelectableNow（不动） |
-| Api 面 | 0 | IGraphRuntimeApi.FilterCommandSourceSelectable + GasGraphRuntimeApi 实现 |
-| 选中链接线 | 2 | mods/LudotsCoreMod graph.core.select_hit.json 加过滤节点 |
-| 画廊/覆盖工件 | 3 | vignette + 生成器 upsert（registry/maps/entry mods/launcher/wiki） |
+| 步骤/能力 | Layer | 实现载体 |
+|-----------|-------|----------|
+| 几何过滤签名 | 0 | FilterScreenRegionEntities(…, float tolerancePixels) 纯函数参数 |
+| op 可选端口 | 0 | ScreenRegionToEntities tolerance 引脚（缺省 0xFF→0），描述表/校验/发射 |
+| 图接线 | 2 | graph.core.select_hit + ConstFloat(20)→tolerance（数据） |
+| 文档 | 3 | wiki 端口表 |
 
 ## 3. Reuse list
 
-- Handlers: GasGraphOpHandlerTable 既有注册面；HandleQueryFilterKnowledgeVisible 处理器模式
-- Queues / Systems: 无新系统
-- Resolvers / Registries: CommandSourceEligibility.IsSelectableNow（唯一判定入口，不重写）；GraphOpDescriptorTable；graph_node_op_coverage.registry.json
-- Existing presets / graphs: graph.core.select_begin/hit/commit 既有链
+- 既有 byte.MaxValue 可选哨兵模式（SubmitCast B/C 同款）
+- 既有 ValueInputKey 可选边校验模式（ReadMapVar source 同款）
+- 既有接口默认重载模式（旧 4 参签名全兼容，测试直调不受影响）
 
 ## 4. New Layer 0 ops (if any)
 
-| Op 名 | 单一职责 | 为何不能组合现有 op |
-|-------|----------|---------------------|
-| QueryFilterSelectable(487) | TargetList 原位剔除非（CommandSourceSelectableTag ∧ State.Enabled）候选，保序 | 现有过滤 op（Team/Template/AttributeRange/TagAny/TagNone/KnowledgeVisible/NotEntity/Layer）无一读 CommandSourceSelectableState；用 Template 过滤是数据 hack 且 fork 合同 |
+N/A（无新 op，仅既有 op 加可选参数）
 
 ## 5. Transaction boundary
 
-必须原子 rollback 的步骤: 无（纯查询过滤，无副作用，无写面）
+无（纯查询过滤参数化，无副作用）
 
 ## 6. Config SSOT
 
-行为配置落在: graph JSON（mods/LudotsCoreMod/assets/GAS/graphs/graph.core.select_hit.json + 画廊 vignette）
+行为配置落在: graph JSON（graph.core.select_hit 的 ConstFloat(20) 明文值）
 
 是否新增 JSON schema: **NO**

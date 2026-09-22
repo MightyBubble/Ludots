@@ -31,6 +31,11 @@
     "op": "QueryAllMapEntities"
    },
    {
+    "id": "pick_tolerance",
+    "op": "ConstFloat",
+    "floatValue": 20.0
+   },
+   {
     "id": "rect_hits",
     "op": "ScreenRegionToEntities"
    },
@@ -87,6 +92,11 @@
    {
     "from": "selectable_gate",
     "fromPort": "next",
+    "to": "pick_tolerance"
+   },
+   {
+    "from": "pick_tolerance",
+    "fromPort": "next",
     "to": "rect_hits"
    },
    {
@@ -137,6 +147,12 @@
     "fromPort": "value",
     "to": "knowledge_visible",
     "toPort": "source"
+   },
+   {
+    "from": "pick_tolerance",
+    "fromPort": "value",
+    "to": "rect_hits",
+    "toPort": "tolerance"
    }
   ]
  }

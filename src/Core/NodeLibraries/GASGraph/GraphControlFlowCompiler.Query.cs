@@ -186,6 +186,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.C, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Max, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Tolerance)))
+                    {
+                        RequireValueInput(node, GraphControlFlowPorts.Tolerance, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    }
+
                     break;
                 case GraphNodeOp.PointToDirection:
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
@@ -560,6 +565,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     instruction.Flags = ResolveValueInput(
                         node, GraphControlFlowPorts.Max, GraphValueType.Float,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    if (op.NodeOp == GraphNodeOp.ScreenRegionToEntities)
+                    {
+                        instruction.Dst = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Tolerance))
+                            ? ResolveValueInput(
+                                node, GraphControlFlowPorts.Tolerance, GraphValueType.Float,
+                                valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics)
+                            : byte.MaxValue;
+                    }
                     instruction.Imm = InternOptional(symbolToIndex, symbols, node.Seat);
                     break;
                 case GraphNodeOp.PointToDirection:

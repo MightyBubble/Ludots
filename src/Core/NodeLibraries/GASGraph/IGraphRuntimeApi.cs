@@ -577,6 +577,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             return 0;
         }
 
+        int FilterScreenRegionEntities(Span<Entity> entities, int count, in ScreenRect rect, string? seatId, float tolerancePixels)
+        {
+            return FilterScreenRegionEntities(entities, count, in rect, seatId);
+        }
+
         int FilterCommandSourceSelectable(Span<Entity> candidates, int count)
         {
             return 0;

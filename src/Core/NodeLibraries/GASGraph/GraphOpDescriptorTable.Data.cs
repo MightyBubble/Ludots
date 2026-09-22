@@ -95,6 +95,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphControlFlowPorts.List, GraphControlFlowPorts.A, GraphControlFlowPorts.B,
                 GraphControlFlowPorts.C, GraphControlFlowPorts.Max
             };
+            string[] portRectPick =
+            {
+                GraphControlFlowPorts.List, GraphControlFlowPorts.A, GraphControlFlowPorts.B,
+                GraphControlFlowPorts.C, GraphControlFlowPorts.Max, GraphControlFlowPorts.Tolerance
+            };
             string[] portRectCorners =
             {
                 GraphControlFlowPorts.A, GraphControlFlowPorts.B, GraphControlFlowPorts.C, GraphControlFlowPorts.Max
@@ -250,7 +255,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.ScreenPointToEntity, QueryAndTriggerGraph, GraphValueType.Entity, queryOut: GraphValueType.Entity, queryPorts: portSourceAB, scriptPorts: portSourceAB, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.LoadPointerScreenX, LinearQueryScript, GraphValueType.Float, queryOut: GraphValueType.Float, scriptOut: GraphValueType.Float);
             Add(rows, GraphNodeOp.LoadPointerScreenY, LinearQueryScript, GraphValueType.Float, queryOut: GraphValueType.Float, scriptOut: GraphValueType.Float);
-            Add(rows, GraphNodeOp.ScreenRegionToEntities, QueryAndTriggerGraph, GraphValueType.Void, queryPorts: portRect, scriptPorts: portRectCorners, queryOut: GraphValueType.TargetList, flags: GraphOperandRole.SrcRegisterFlags);
+            Add(rows, GraphNodeOp.ScreenRegionToEntities, QueryAndTriggerGraph, GraphValueType.Void, queryPorts: portRectPick, scriptPorts: portRectCorners, queryOut: GraphValueType.TargetList, flags: GraphOperandRole.SrcRegisterFlags);
             Add(rows, GraphNodeOp.QueryScreenRegionCollection, QueryAndTriggerGraph, GraphValueType.Void,
                 queryPorts: new[] { GraphControlFlowPorts.Source, GraphControlFlowPorts.A, GraphControlFlowPorts.B, GraphControlFlowPorts.C, GraphControlFlowPorts.Max },
                 scriptPorts: new[] { GraphControlFlowPorts.Source, GraphControlFlowPorts.A, GraphControlFlowPorts.B, GraphControlFlowPorts.C, GraphControlFlowPorts.Max },
