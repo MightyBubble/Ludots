@@ -1995,8 +1995,9 @@ namespace Ludots.Tests.GAS.Production
         {
             var hoveredSamples = new List<string>(HoverProbeOffsets.Length);
             // hover 重算由 PointerMoved 驱动：指针若已停在探测点上，零偏移探测不产生移动事件，
-            // hover 集合停留在上一次结果。先挪到屏角兜一圈，保证首个探测点必然是一次指针移动。
-            backend.SetMousePosition(new Vector2(4f, 4f));
+            // hover 集合停留在上一次结果。先挪到屏幕中心（远离 10px 边缘滚动带，避免相机被 pan 走），
+            // 保证首个探测点必然是一次指针移动。
+            backend.SetMousePosition(new Vector2(960f, 540f));
             TickUntilFixedTickAdvances(engine, frameTimesMs);
             for (int i = 0; i < HoverProbeOffsets.Length; i++)
             {
