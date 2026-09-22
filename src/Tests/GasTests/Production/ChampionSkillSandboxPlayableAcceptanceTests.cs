@@ -369,7 +369,7 @@ namespace Ludots.Tests.GAS.Production
                 frameTimesMs,
                 () => string.Equals(GetSelectedEntityName(engine), "Runic Beacon", StringComparison.Ordinal),
                 maxFrames: 12,
-                describeFailure: () => $"selected={GetSelectedEntityName(engine)} || {BuildSelectionStateDiagnostics(engine)} || hovered={ReadHoveredEntityName(engine)}");
+                describeFailure: () => $"selected={GetSelectedEntityName(engine)} || triggerErrors={engine.TriggerManager.Errors.Count} || hovered={ReadHoveredEntityName(engine)}");
             Assert.That(CountOverlays(overlays, GroundOverlayShape.Ring), Is.GreaterThan(0), "Spawned summon should be formally selectable.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "summon_beacon_selected");
             timeline.Add("[T+013] Geomancer Alpha.Cast(Runic Beacon) -> summon spawned | hover-selectable | owner-parent link copied");
@@ -1924,42 +1924,8 @@ namespace Ludots.Tests.GAS.Production
                 return point;
             }
 
-            string comps;
-            try
-            {
-                Entity pe = FindEntityByName(engine.World, entityName);
-                var w = engine.World;
-                comps = $"alive={w.IsAlive(pe)} mapEntity={w.Has<MapEntity>(pe)}";
-                if (w.TryGet(pe, out MapEntity me))
-                {
-                    comps += $" mapId={me.MapId.Value ?? "<null>"}";
-                }
-                comps += $" selectableTag={w.Has<CommandSourceSelectableTag>(pe)}";
-                if (w.TryGet(pe, out Ludots.Core.Spatial.SpatialCellRef cell))
-                {
-                    comps += $" cellState={cell.State}";
-                }
-                else
-                {
-                    comps += " cell=<missing>";
-                }
-                comps += $" suspended={w.Has<Ludots.Core.Components.SuspendedTag>(pe)} static={w.Has<PresentationStaticTransform>(pe)} excluded={w.Has<SpatialPartitionExcluded>(pe)}";
-                if (w.TryGet(pe, out VisualTransform vt))
-                {
-                    comps += $" vtPos=({vt.Position.X:0.##},{vt.Position.Y:0.##},{vt.Position.Z:0.##})";
-                }
-                if (w.TryGet(pe, out WorldPositionCm wpc))
-                {
-                    var groundScreen2 = GetGroundScreenFromWorld(engine, new Vector2((float)wpc.Value.X, (float)wpc.Value.Y));
-                    comps += $" groundScreen=({groundScreen2.X:0.#},{groundScreen2.Y:0.#})";
-                }
-            }
-            catch (Exception ex)
-            {
-                comps = $"probe-error={ex.GetType().Name}";
-            }
-            Assert.Fail(
-                $"Failed to hover '{entityName}' near projected point ({projectedScreenPoint.X:0.0},{projectedScreenPoint.Y:0.0}). Comps: {comps}. Samples: {samples}");
+Assert.Fail(
+                $"Failed to hover '{entityName}' near projected point ({projectedScreenPoint.X:0.0},{projectedScreenPoint.Y:0.0}). Samples: {samples}");
             return projectedScreenPoint;
         }
 
