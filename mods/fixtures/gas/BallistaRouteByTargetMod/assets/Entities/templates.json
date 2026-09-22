@@ -27,7 +27,8 @@
    "DirtyFlags": {},
    "PlayerOwner": {
     "PlayerId": 1
-   }
+   },
+   "CommandSourceSelectableTag": {}
   },
   "initialInteractionContext": "interaction.context.ballista"
  },
@@ -48,7 +49,8 @@
    "DirtyFlags": {},
    "Team": {
     "Id": 2
-   }
+   },
+   "CommandSourceSelectableTag": {}
   }
  },
  {
@@ -88,7 +90,8 @@
    "DirtyFlags": {},
    "Team": {
     "Id": 2
-   }
+   },
+   "CommandSourceSelectableTag": {}
   }
  },
  {
