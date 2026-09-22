@@ -1218,7 +1218,8 @@ internal sealed class FrontlineStandaloneOpeningRevealSystem : BaseSystem<World,
 {
     private static readonly QueryDescription Query = new QueryDescription()
         .WithAll<FrontlineParticipant, PlayerOwner, ReplicationSchemaRef>()
-        .WithAny<FrontlineCore, FrontlineHarvester, FrontlineInfantry>();
+        .WithAny<FrontlineCore, FrontlineHarvester, FrontlineInfantry>()
+        .WithNone<ReplicationMirrorIdentity>();
 
     private static readonly KnowledgeIdMask256 EmptyRelationshipTypeMask = KnowledgeIdMask256.Empty;
     private static readonly KnowledgeIdMask256 EmptyTagMask = KnowledgeIdMask256.Empty;
