@@ -36,9 +36,10 @@ namespace Ludots.Core.EntityCollections
             for (int slot = 0; slot < _active.Length; slot++)
             {
                 if (_active[slot] &&
-                    _collections.TryGetSlot(slot, out _, out EntityCollectionPayload payload, out _))
+                    _collections.TryGetSlot(slot, out _, out EntityCollectionPayload payload, out _) &&
+                    _owners[slot] != Entity.Null)
                 {
-                    Remove(payload.Owner, payload.KeyId);
+                    Remove(_owners[slot], payload.KeyId);
                 }
             }
         }
