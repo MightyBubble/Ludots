@@ -1,0 +1,34 @@
+[
+  {
+    "id": "showcase.graph_op.QueryFilterSelectable",
+    "kind": "Query",
+    "entry": "caster",
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "all_units",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "selectable_filter",
+        "op": "QueryFilterSelectable"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "all_units"
+      },
+      {
+        "from": "all_units",
+        "fromPort": "next",
+        "to": "selectable_filter"
+      }
+    ],
+    "valueEdges": []
+  }
+]

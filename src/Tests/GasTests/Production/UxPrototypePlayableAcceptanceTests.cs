@@ -843,6 +843,7 @@ namespace Ludots.Tests.GAS.Production
             }
 
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
+            engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)backend);
             engine.SetService(CoreServiceKeys.UiCaptured, false);
             backend.SetMousePosition(new Vector2(960f, 540f));
             engine.GlobalContext[TestInputBackendKey] = backend;

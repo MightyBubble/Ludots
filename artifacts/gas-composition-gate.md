@@ -1,54 +1,46 @@
 # GAS Composition Gate — Self Review
 
-- **Task / Issue**: Epic #1196 / RFC-0067 **收口**：P2 标签世界位列（256→4096）+ P3 跨域守卫与 presenter 高槽读 + P4-lite 拆 T16 + P5 全量对照
-- **Date**: 2026-09-20
-- **Agent / Author**: ZCode（分支 feat/gas-tag-capacity-closeout）
+- **Task / Issue**: 共享选中链补 `QueryFilterSelectable` 门——切3（1462574fc3）删除 C# CommandSourceAcquisitionSystem 后，`CommandSourceSelectableTag ∧ CommandSourceSelectableState.Enabled` 的可选性合同在图链（graph.core.select_begin/hit/commit）上无人执行，框选把 `IsEnabled=false` 的演示实体选进来（InteractionShowcase_SingleClickReselect×2 红）。
+- **Date**: 2026-09-22
+- **Agent / Author**: ZCode（test-red-clearing session）
 
 ## 1. Core judgment
 
-新变体主要交付物是（A/B/C/D）: 均不是——标签位列进既有 `WorldAttributeStore`（行共享、容量计划唯一真相）；TagOps 高车道（位 [256,Plan) 列存唯一真相）；presenter/exchange/query 读路由；`ExtensionAttributeRegistry` 删除（T16 唯一出口：死代码拆除）。无新 enum/preset/管线。
+新变体主要交付物是（A/B/C/D）: **A**（新 graph 查询过滤节点 + graph.core.select_hit 连线）
 
-结论: PASS
+结论: **PASS**
 
-一句话理由: 标签写入口径唯一（TagOps 世界级入口）；高 id 规则在注册期即被既有 256 守卫拒绝（失败关闭不降级）；跨域未对齐面全部显式失败关闭并指明 P3 边界；活差分门两轮全过零新增分配。
+一句话理由: 交付物是单一职责的 TargetList 原位过滤 op（镜像同链 QueryFilterKnowledgeVisible(485) 先例）加一条图连线，无新 enum/开关/profile DSL。
 
 ## 2. Layer assignment
 
-| 步骤/能力 | Layer | 实现载体 |
-|-----------|-------|----------|
-| 标签位列（镜像 + 高位真相） | 0 | `WorldAttributeStore`（tagBits/tagLastSnapshot/tagDirtyRows 列） |
-| TagOps 高车道（含稀疏计数） | 0 | `TagOps.AddTagHigh/RemoveTagHigh/HasTagRouted/MirrorTagLow` |
-| 高标签延迟触发 | 2 | `AttributeHighLane.CollectHighTagChanges` |
-| 标签 authoring 种子 | 3 | ComponentRegistry.SetGameplayTagContainer 高 id 建行 |
-| presenter/exchange/query 高槽读 | 2 | PresenterBehaviorSystem 路由；内联初始/定义条件高 id 显式失败关闭 |
-| T16 拆除 | — | ExtensionAttributeRegistry/AttributeSchemaUpdateSystem/接线/测试 删除 |
-| 活差分对比门 | 测试设施 | LUDOTS_COMPARE_LIVE=1（同进程背靠背双测，抗外部负载） |
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| 候选原位过滤 op | 0 | GraphNodeOp.QueryFilterSelectable(487) + handler + descriptor + 编译器 case |
+| 可选性判定复用 | 0（既有） | CommandSourceEligibility.IsSelectableNow（不动） |
+| Api 面 | 0 | IGraphRuntimeApi.FilterCommandSourceSelectable + GasGraphRuntimeApi 实现 |
+| 选中链接线 | 2 | mods/LudotsCoreMod graph.core.select_hit.json 加过滤节点 |
+| 画廊/覆盖工件 | 3 | vignette + 生成器 upsert（registry/maps/entry mods/launcher/wiki） |
 
 ## 3. Reuse list
 
-P1 全套基建（store/ambient/reads/highlane）；TagCountContainer 稀疏表（任意 id 天然支持）；TagRuleRegistry 既有 256 注册守卫（高 id 规则失败关闭由此免费获得）；DirtyEntityQueue 既有脏通道。
+- Handlers: GasGraphOpHandlerTable 既有注册面；HandleQueryFilterKnowledgeVisible 处理器模式
+- Queues / Systems: 无新系统
+- Resolvers / Registries: CommandSourceEligibility.IsSelectableNow（唯一判定入口，不重写）；GraphOpDescriptorTable；graph_node_op_coverage.registry.json
+- Existing presets / graphs: graph.core.select_begin/hit/commit 既有链
 
-## 4. New Layer 0 ops
+## 4. New Layer 0 ops (if any)
 
-N/A
+| Op 名 | 单一职责 | 为何不能组合现有 op |
+|-------|----------|---------------------|
+| QueryFilterSelectable(487) | TargetList 原位剔除非（CommandSourceSelectableTag ∧ State.Enabled）候选，保序 | 现有过滤 op（Team/Template/AttributeRange/TagAny/TagNone/KnowledgeVisible/NotEntity/Layer）无一读 CommandSourceSelectableState；用 Template 过滤是数据 hack 且 fork 合同 |
 
 ## 5. Transaction boundary
 
-标签事务沿用 TagRuleTransaction 既有合同；高 id 规则不存在故事务不触高车道。
+必须原子 rollback 的步骤: 无（纯查询过滤，无副作用，无写面）
 
 ## 6. Config SSOT
 
-容量真相唯一：`GasLoadTimeCapacityPlan`（GameEngine 传参升级为绝对天花板 4096）。基准入库 `benchmark-baseline.json` + `benchmark-final.json`。
+行为配置落在: graph JSON（mods/LudotsCoreMod/assets/GAS/graphs/graph.core.select_hit.json + 画廊 vignette）
 
-是否新增 JSON schema: NO。
-
-## 7. Red flag scan
-
-- [x] 未新增 profile enum/开关
-- [x] 未新建平行管线（标签写仍 TagOps 单口）
-- [x] 高 id 规则/未对齐跨域全部显式失败关闭（TagRuleNotAligned / RequiredAttributeHighSlot / InlineInitialHighAttribute / HighLaneUnavailable）
-- [x] 计数叠层语义与内嵌对齐（重复 Add 叠层不丢）
-
-## 8. Next variant test
-
-下一个变体（第 300 个标签名/第 200 个属性名）零代码改动：注册窗口直接登记，UAT `GasTagCapacityTests`/`GasWorldAttributeStoreTests` 钉死全链。
+是否新增 JSON schema: **NO**

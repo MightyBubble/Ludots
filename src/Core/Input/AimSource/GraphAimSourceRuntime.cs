@@ -226,6 +226,18 @@ namespace Ludots.Core.Input.AimSource
             }
         }
 
+        private float RequireCommandPickRadiusPixels()
+        {
+            if (!_globals.TryGetValue(CoreServiceKeys.CommandSourceAcquisitionConfig.Name, out object? configObj) ||
+                configObj is not CommandSourceAcquisitionConfig config)
+            {
+                throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.CommandPickRadiusConfigMissing: degenerate screen-region picks require the command-source acquisition config.");
+            }
+
+            return config.ClickPickRadiusPixels;
+        }
+
         public Entity PickScreenPointEntity(
             ReadOnlySpan<Entity> candidates,
             int count,
@@ -259,11 +271,22 @@ namespace Ludots.Core.Input.AimSource
                 return 0;
             }
 
+            float extentX = rect.MaxX - rect.MinX;
+            float extentY = rect.MaxY - rect.MinY;
+            float inflate = 0f;
+            if (extentX <= 0f && extentY <= 0f)
+            {
+                // A zero-extent rect is a click, not a marquee; point-bounds entities only hit an
+                // exact projection otherwise. Restore the retired acquisition system's pick radius
+                // contract from the command-source acquisition config.
+                inflate = RequireCommandPickRadiusPixels();
+            }
+
             var localRect = new ScreenRect(
-                localOrigin.X,
-                localOrigin.Y,
-                localOrigin.X + (rect.MaxX - rect.MinX),
-                localOrigin.Y + (rect.MaxY - rect.MinY));
+                localOrigin.X - inflate,
+                localOrigin.Y - inflate,
+                localOrigin.X + extentX + inflate,
+                localOrigin.Y + extentY + inflate);
             ScreenProjectionPoseContext projectionPose = ScreenProjectionGrounding.Resolve(_world, _globals);
             int kept = 0;
             for (int i = 0; i < count; i++)
@@ -274,7 +297,99 @@ namespace Ludots.Core.Input.AimSource
                 }
             }
 
+            if (inflate <= 0f && kept > 1)
+            {
+                // Marquee results read deterministically: top-most (then left-most) projection
+                // first, so the selection primary is stable regardless of chunk iteration order.
+                for (int i = 1; i < kept; i++)
+                {
+                    Entity current = entities[i];
+                    (float cy, float cx) = ScreenPointYX(_world, current, projector);
+                    int j = i - 1;
+                    while (j >= 0)
+                    {
+                        (float py, float px) = ScreenPointYX(_world, entities[j], projector);
+                        if (py <= cy && (py < cy || px <= cx))
+                        {
+                            break;
+                        }
+
+                        entities[j + 1] = entities[j];
+                        j--;
+                    }
+
+                    entities[j + 1] = current;
+                }
+            }
+
+            if (inflate > 0f && kept > 1)
+            {
+                Vector2 click = new Vector2(localOrigin.X, localOrigin.Y);
+                int nearest = 0;
+                float nearestDistance = ScreenPointDistanceSquared(_world, entities[0], projector, click);
+                for (int i = 1; i < kept; i++)
+                {
+                    float distance = ScreenPointDistanceSquared(_world, entities[i], projector, click);
+                    if (distance < nearestDistance)
+                    {
+                        nearestDistance = distance;
+                        nearest = i;
+                    }
+                }
+
+                entities[0] = entities[nearest];
+                return 1;
+            }
+
             return kept;
+        }
+
+        private static (float Y, float X) ScreenPointYX(World world, Entity entity, IScreenProjector projector)
+        {
+            Vector2 projected;
+            if (world.TryGet(entity, out Ludots.Core.Presentation.Components.VisualTransform transform))
+            {
+                projected = projector.WorldToScreen(transform.Position);
+            }
+            else if (world.TryGet(entity, out Ludots.Core.Components.WorldPositionCm worldPosition))
+            {
+                projected = projector.WorldToScreen(Ludots.Core.Mathematics.WorldUnitsFix64.WorldCmToVisualMeters(worldPosition.Value, yMeters: 0f));
+            }
+            else
+            {
+                return (float.MaxValue, float.MaxValue);
+            }
+
+            if (!float.IsFinite(projected.X) || !float.IsFinite(projected.Y))
+            {
+                return (float.MaxValue, float.MaxValue);
+            }
+
+            return (projected.Y, projected.X);
+        }
+
+        private static float ScreenPointDistanceSquared(World world, Entity entity, IScreenProjector projector, Vector2 screenPoint)
+        {
+            Vector2 projected;
+            if (world.TryGet(entity, out Ludots.Core.Presentation.Components.VisualTransform transform))
+            {
+                projected = projector.WorldToScreen(transform.Position);
+            }
+            else if (world.TryGet(entity, out Ludots.Core.Components.WorldPositionCm worldPosition))
+            {
+                projected = projector.WorldToScreen(Ludots.Core.Mathematics.WorldUnitsFix64.WorldCmToVisualMeters(worldPosition.Value, yMeters: 0f));
+            }
+            else
+            {
+                return float.MaxValue;
+            }
+
+            if (float.IsFinite(projected.X) && float.IsFinite(projected.Y))
+            {
+                return Vector2.DistanceSquared(projected, screenPoint);
+            }
+
+            return float.MaxValue;
         }
 
         public bool TryReadLivePointerScreen(out float screenX, out float screenY)

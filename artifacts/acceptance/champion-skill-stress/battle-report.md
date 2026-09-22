@@ -4,7 +4,7 @@
 - build: GasTests / ChampionSkillStress_PlayableFlow_WritesAcceptanceArtifacts
 - map: champion_skill_stress
 - clock: FixedFrame @ 60 Hz
-- execution_timestamp_utc: 2026-09-14T14:32:53.5526665Z
+- execution_timestamp_utc: 2026-09-22T09:32:32.8078162Z
 - screenshots: `screens/*.svg`, `screens/timeline.svg`
 
 ## Timeline
@@ -14,7 +14,7 @@
 [T+004] View=P1 Formation | formation container exposes 48 allied units through the same selection SSOT
 [T+005] View=AI Targets | team-B commander publishes 48 focused enemy targets via selection containers
 [T+006] View=Command Snapshot | command preview mirrors the current command-source entity after self-contained move order enqueue
-[T+007] Frontline melee plus fireball/laser volleys engaged | peak_projectiles=21 | peak_primitives=192 | peak_world_text=377 | heal_observed=True
+[T+007] Frontline melee plus fireball/laser volleys engaged | peak_projectiles=21 | peak_primitives=191 | peak_world_text=377 | heal_observed=True
 [T+008] Toolbar scale-up converged | A=56 | B=56 | injured A/B=22/20
 
 ## Outcome
@@ -35,8 +35,8 @@
 - selection_view_switches: 4
 - command_snapshot_checks: 1
 - peak_projectiles: 21
-- peak_primitives: 192
+- peak_primitives: 191
 - peak_world_text: 377
 - heal_observed: True
-- median_tick_ms: 1.792
-- max_tick_ms: 20.975
+- median_tick_ms: 0.919
+- max_tick_ms: 16.11

@@ -10425,6 +10425,33 @@
       "video": "artifacts/evidence/capability_standard_graph_op_SubmitEngageBatch/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_QueryFilterSelectable",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryFilterSelectableEntryMod",
+      "projectPath": "CapabilityStandardGraphOpQueryFilterSelectableEntryMod.csproj",
+      "title": "可选筛只留能点的",
+      "summary": "名单过一道可选门：带可选标记且开关打开的留下，关掉的当场划掉，顺序不变。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "QueryFilterSelectable"
+      ],
+      "binding": "capability_standard_graph_op_QueryFilterSelectable",
+      "preset": "capability_standard_graph_op_QueryFilterSelectable_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/QueryFilterSelectable.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_QueryFilterSelectable",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_QueryFilterSelectable/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_QueryFilterSelectable/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ],
   "pathExemptions": [
