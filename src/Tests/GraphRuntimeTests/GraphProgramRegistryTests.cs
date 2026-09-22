@@ -15,7 +15,8 @@ namespace Ludots.Tests.GraphRuntime
 
             Assert.That(
                 () => registry.Register(1, Array.Empty<GraphInstruction>(), GraphKind.Effect),
-                Throws.TypeOf<ArgumentException>());
+                Throws.InvalidOperationException.With.Message.StartsWith(
+                    GraphKindOperationPolicy.MissingHaltError));
         }
 
         [Test]
