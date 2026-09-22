@@ -73,10 +73,7 @@ namespace Ludots.Core.Knowledge
                 IReadOnlyList<int> ids = presenters.RegisteredIds;
                 for (int i = 0; i < ids.Count; i++)
                 {
-                    if (presenters.TryGet(ids[i], out PresenterDefinition definition))
-                    {
-                        mask = mask.Union(ResolveHudAttributeMask(presenters, definition));
-                    }
+                    mask = mask.Union(ResolveHudAttributeMask(presenters, ids[i]));
                 }
 
                 return mask;
@@ -91,20 +88,34 @@ namespace Ludots.Core.Knowledge
                         : 0);
             }
 
+            // Child links are authored mod data the registry does not cycle-check,
+            // so the walk is iterative with a visited guard: a cyclic child chain
+            // must not recurse without bound.
             private static KnowledgeIdMask256 ResolveHudAttributeMask(
                 PresenterDefinitionRegistry presenters,
-                PresenterDefinition definition)
+                int rootDefinitionId)
             {
-                KnowledgeIdMask256 mask = HasHudAssetBinding(definition)
-                    ? BuildMask(definition.RequiredAttributeIds)
-                    : KnowledgeIdMask256.Empty;
-
-                ChildPresenterRef[] children = definition.Children;
-                for (int i = 0; i < children.Length; i++)
+                KnowledgeIdMask256 mask = KnowledgeIdMask256.Empty;
+                var visited = new HashSet<int>();
+                var pending = new Stack<int>();
+                pending.Push(rootDefinitionId);
+                while (pending.Count > 0)
                 {
-                    if (presenters.TryGet(children[i].DefinitionId, out PresenterDefinition child))
+                    int definitionId = pending.Pop();
+                    if (!visited.Add(definitionId) || !presenters.TryGet(definitionId, out PresenterDefinition definition))
                     {
-                        mask = mask.Union(ResolveHudAttributeMask(presenters, child));
+                        continue;
+                    }
+
+                    if (HasHudAssetBinding(definition))
+                    {
+                        mask = mask.Union(BuildMask(definition.RequiredAttributeIds));
+                    }
+
+                    ChildPresenterRef[] children = definition.Children;
+                    for (int i = 0; i < children.Length; i++)
+                    {
+                        pending.Push(children[i].DefinitionId);
                     }
                 }
 
