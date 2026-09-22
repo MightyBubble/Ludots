@@ -192,6 +192,16 @@ InstallDeclaredLocalOrderSources(engine);
                 return;
             }
 
+            // A mod that ships local_order_source.json gets its mapping installed by the declared
+            // path below; auto-installing it too mounts a second mapping on the same actions and
+            // every press submits twice (fireball double mana cost).
+            string declaredUri = $"{sourceModId}:assets/Input/local_order_source.json";
+            if (_ctx.VFS.TryResolveFullPath(declaredUri, out string? declaredPath) && System.IO.File.Exists(declaredPath))
+            {
+                _ctx.Log($"[CoreInputMod] '{sourceModId}' declares its own local order source; auto install skipped.");
+                return;
+            }
+
             OrderQueue orders = engine.GetService(CoreServiceKeys.OrderQueue)
                 ?? throw new InvalidOperationException("[CoreInputMod] Auto local order source requires OrderQueue.");
             var autoOrderSource = new AutoInstalledLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx, sourceModId);

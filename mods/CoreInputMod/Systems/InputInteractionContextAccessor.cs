@@ -109,10 +109,25 @@ namespace CoreInputMod.Systems
 
         public Entity GetControlledActor(int playerId)
         {
-            return TryGetSolePossessedPlayerId(out int possessedPlayerId) &&
-                   possessedPlayerId == playerId
-                ? GetSolePossessedRepOrNull()
-                : Entity.Null;
+            if (!TryGetSolePossessedPlayerId(out int possessedPlayerId) || possessedPlayerId != playerId)
+            {
+                return Entity.Null;
+            }
+
+            // Selection-routed casts act on the command-source primary (the selected entity);
+            // sessions without a selection (massnav-style camera seats) fall back to the
+            // possessed rep. fe1dae22d6 dropped the first arm, sending showcase casts to the
+            // seat rep instead of the selected unit.
+            if (TryGetCommandSourceOwner(out Entity commandOwner) &&
+                TryGetCommandSourcePrimary(commandOwner, out Entity selected) &&
+                _world.IsAlive(selected) &&
+                _world.TryGet(selected, out Ludots.Core.Gameplay.Components.PlayerOwner owner) &&
+                owner.PlayerId == playerId)
+            {
+                return selected;
+            }
+
+            return GetSolePossessedRepOrNull();
         }
 
         internal static string RequireActiveActorCollectionKey(World world, Dictionary<string, object> globals, Entity owner)
