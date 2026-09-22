@@ -226,18 +226,6 @@ namespace Ludots.Core.Input.AimSource
             }
         }
 
-        private float RequireCommandPickRadiusPixels()
-        {
-            if (!_globals.TryGetValue(CoreServiceKeys.CommandSourceAcquisitionConfig.Name, out object? configObj) ||
-                configObj is not CommandSourceAcquisitionConfig config)
-            {
-                throw new InvalidOperationException(
-                    "GAS.GRAPH.ERR.CommandPickRadiusConfigMissing: degenerate screen-region picks require the command-source acquisition config.");
-            }
-
-            return config.ClickPickRadiusPixels;
-        }
-
         public Entity PickScreenPointEntity(
             ReadOnlySpan<Entity> candidates,
             int count,
