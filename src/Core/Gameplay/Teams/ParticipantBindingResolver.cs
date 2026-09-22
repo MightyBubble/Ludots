@@ -258,6 +258,14 @@ namespace Ludots.Core.Gameplay.Teams
                     $"{CoreServiceKeys.LogicViewRegistry.Name} must be registered before publishing focused participants.");
             }
 
+            // 空座位且无既有座位可替换时不清 seats/views：装载链会先以空座位发布、
+            // 再随实体阶段发布真实座位，过早清空会把 bootstrap 呈现眼连同相机实例
+            // 一起丢掉（DefaultCamera 随后只能落到新相机上，旧实例成为孤儿）。
+            if (localSeats.Count == 0 && seats.Count == 0)
+            {
+                return;
+            }
+
             // 重建 views 前收养既有呈现相机：地图 DefaultCamera 位姿可能已落在 bootstrap
             // 或既有参与者视图上，重建实例会把作者取景连同实例丢弃——与 sole-seat
             // 绑定（ClientLocalSeatBindings.BindSoleSeat）同一合同。
