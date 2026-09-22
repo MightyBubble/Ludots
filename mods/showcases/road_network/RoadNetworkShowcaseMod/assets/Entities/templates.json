@@ -110,7 +110,6 @@
   },
   {
     "id": "road_fort_blue",
-    "initialInteractionContext": "interaction.context.road.battle",
     "components": {
       "Name": {
         "Value": "Blue Fort"
