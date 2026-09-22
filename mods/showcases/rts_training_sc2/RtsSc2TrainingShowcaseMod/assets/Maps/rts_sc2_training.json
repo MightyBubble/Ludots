@@ -67,6 +67,12 @@
       "RepresentativeInstanceId": "sc2_training_gateway"
     }
   ],
+  "TriggerGraphs": [
+    {
+      "graph": "graph.rts_training_sc2.seed_command_source",
+      "scopeInstanceId": "sc2_training_gateway"
+    }
+  ],
   "ParticipantRelationships": {
     "Teams": [
       {

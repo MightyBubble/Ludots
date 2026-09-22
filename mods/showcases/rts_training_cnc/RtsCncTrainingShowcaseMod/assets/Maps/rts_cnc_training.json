@@ -67,6 +67,12 @@
       "RepresentativeInstanceId": "cnc_training_war_factory"
     }
   ],
+  "TriggerGraphs": [
+    {
+      "graph": "graph.rts_training_cnc.seed_command_source",
+      "scopeInstanceId": "cnc_training_war_factory"
+    }
+  ],
   "ParticipantRelationships": {
     "Teams": [
       {

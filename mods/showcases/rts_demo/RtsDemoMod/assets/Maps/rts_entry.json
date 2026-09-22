@@ -207,6 +207,12 @@
       "RepresentativeInstanceId": "rts_entry_sc2_gateway"
     }
   ],
+  "TriggerGraphs": [
+    {
+      "graph": "graph.rts_entry.seed_command_source",
+      "scopeInstanceId": "rts_entry_war3_peasant"
+    }
+  ],
   "ParticipantRelationships": {
     "Teams": [
       {

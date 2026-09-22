@@ -1,0 +1,85 @@
+[
+  {
+    "id": "graph.rts_entry.seed_command_source",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "seed_command_source",
+        "event": "MapLoaded",
+        "start": "all_map_entities",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "all_map_entities",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "producer",
+        "op": "QueryFilterTemplate",
+        "template": "rts_war3_peasant"
+      },
+      {
+        "id": "replace",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "seed",
+        "op": "WriteCollection",
+        "collectionKey": "collection.command.source"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "all_map_entities",
+        "fromPort": "next",
+        "to": "producer"
+      },
+      {
+        "from": "producer",
+        "fromPort": "next",
+        "to": "replace"
+      },
+      {
+        "from": "replace",
+        "fromPort": "next",
+        "to": "seed"
+      },
+      {
+        "from": "seed",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "replace",
+        "fromPort": "value",
+        "to": "seed",
+        "toPort": "value"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

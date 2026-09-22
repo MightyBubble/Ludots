@@ -67,6 +67,12 @@
       "RepresentativeInstanceId": "war3_training_barracks"
     }
   ],
+  "TriggerGraphs": [
+    {
+      "graph": "graph.rts_training_war3.seed_command_source",
+      "scopeInstanceId": "war3_training_barracks"
+    }
+  ],
   "ParticipantRelationships": {
     "Teams": [
       {
