@@ -8,6 +8,8 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Activities;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Tasks;
+using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Presenters;
 
 namespace Ludots.Core.Persistence
 {
@@ -34,6 +36,68 @@ namespace Ludots.Core.Persistence
             NormalizeRelationshipInstances(world, canonicalWorldId);
             NormalizeRelationshipKeys<RelationshipEdgeSet>(world, canonicalWorldId);
             NormalizeRelationshipKeys<InRelationship>(world, canonicalWorldId);
+            NormalizePresenterReferences(world, canonicalWorldId);
+        }
+
+        private static unsafe void NormalizePresenterReferences(World world, int worldId)
+        {
+            var stateQuery = new QueryDescription().WithAll<PresenterState>();
+            world.Query(in stateQuery, (ref PresenterState state) =>
+            {
+                if (state.OwnerEntity != Entity.Null)
+                {
+                    state.OwnerEntity = EntityUtil.Reconstruct(state.OwnerEntity.Id, worldId, state.OwnerEntity.Version);
+                }
+            });
+
+            var parentQuery = new QueryDescription().WithAll<PresenterParent>();
+            world.Query(in parentQuery, (ref PresenterParent parent) =>
+            {
+                if (parent.Parent != Entity.Null)
+                {
+                    parent.Parent = EntityUtil.Reconstruct(parent.Parent.Id, worldId, parent.Parent.Version);
+                }
+            });
+
+            var childrenQuery = new QueryDescription().WithAll<PresenterChildren>();
+            world.Query(in childrenQuery, (ref PresenterChildren children) =>
+            {
+                fixed (int* ids = children.ChildIds)
+                fixed (int* worldIds = children.ChildWorldIds)
+                {
+                    for (int i = 0; i < children.Count; i++)
+                    {
+                        if (ids[i] >= 0)
+                        {
+                            worldIds[i] = worldId;
+                        }
+                    }
+                }
+            });
+
+            var payloadQuery = new QueryDescription().WithAll<PresentationOwnerHasPresenterPayload>();
+            world.Query(in payloadQuery, (ref PresentationOwnerHasPresenterPayload payload) =>
+            {
+                if (payload.SingleRootPresenter != Entity.Null)
+                {
+                    payload.SingleRootPresenter = EntityUtil.Reconstruct(
+                        payload.SingleRootPresenter.Id, worldId, payload.SingleRootPresenter.Version);
+                }
+            });
+
+            var relationQuery = new QueryDescription().WithAll<PresenterRelationContext>();
+            world.Query(in relationQuery, (ref PresenterRelationContext context) =>
+            {
+                if (context.Viewer != Entity.Null)
+                {
+                    context.Viewer = EntityUtil.Reconstruct(context.Viewer.Id, worldId, context.Viewer.Version);
+                }
+
+                if (context.Target != Entity.Null)
+                {
+                    context.Target = EntityUtil.Reconstruct(context.Target.Id, worldId, context.Target.Version);
+                }
+            });
         }
 
         private static void NormalizeOrderBuffers(World world, int worldId)
