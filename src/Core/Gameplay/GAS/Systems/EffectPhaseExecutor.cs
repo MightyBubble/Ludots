@@ -452,7 +452,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     var builtinParams = mergedParams.Count > 0 ? mergedParams : tplData.ConfigParams;
                     _builtinHandlers.Invoke(
                         handler.HandlerId,
-                        world, default, ref context, in builtinParams, in tplData, builtinRuntime);
+                        world, Entity.Null, ref context, in builtinParams, in tplData, builtinRuntime);
                     break;
                 }
                 case PhaseHandlerKind.Graph:
