@@ -776,7 +776,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 targetPos,
                 phase,
                 in tpl.PhaseGraphBindings,
-                tpl.PresetTypeId,
+                tpl.EffectivePresetTypeId,
                 tpl.CategoryId,
                 templateId,
                 in mergedConfig,
