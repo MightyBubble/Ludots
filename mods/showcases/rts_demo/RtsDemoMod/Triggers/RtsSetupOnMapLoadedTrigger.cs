@@ -68,7 +68,38 @@ namespace RtsDemoMod.Triggers
             }
 
             RtsShowcaseCommandSourceHelper.EnsureCommandSourceBinding(engine);
+            SeedInitialCommandSourceSelection(engine, world);
             return Task.CompletedTask;
+        }
+
+        private static void SeedInitialCommandSourceSelection(GameEngine engine, World world)
+        {
+            // Training and entry maps expect the local player's map-declared representative
+            // (producer or worker) selected on load so the first-contact command panel is
+            // coherent. The retired name-based seeding chain is replaced by this write through
+            // the collection single write point.
+            var applier = engine.GetService(CoreServiceKeys.CollectionApplier);
+            var store = engine.GetService(CoreServiceKeys.EntityCollectionStore);
+            var players = engine.GetService(CoreServiceKeys.PlayerEntityLookup);
+            var seats = engine.GetService(CoreServiceKeys.ClientLocalSeatRegistry);
+            if (applier == null || store == null || players == null || seats == null ||
+                !seats.TryGetSolePossessedRep(out Entity owner))
+            {
+                return;
+            }
+
+            if (!world.TryGet(owner, out PlayerIdentity identity) ||
+                identity.PlayerId <= 0 ||
+                !players.TryGet(identity.PlayerId, out Entity representative) ||
+                !world.IsAlive(representative))
+            {
+                return;
+            }
+
+            int keyId = store.KeyRegistry.GetId("collection.command.source");
+            Span<Entity> members = stackalloc Entity[1];
+            members[0] = representative;
+            applier.Apply(owner, keyId, Ludots.Core.EntityCollections.CollectionWriteOp.Replace, members);
         }
 
         private static void RequirePlayerOwnership(World world)
