@@ -249,7 +249,7 @@ namespace Ludots.Tests.GAS.Production
             toolbar.Activate(IndicatorModeId);
             Tick(engine, 1, frameTimesMs);
             Assert.That(GetActiveModeId(engine), Is.EqualTo(IndicatorModeId));
-            Vector2 indicatorHoverPoint = FindHoverScreenPoint(engine, backend, "Target Dummy A", GetEntityScreen(engine, "Target Dummy A"), frameTimesMs);
+            Vector2 indicatorHoverPoint = FindHoverScreenPoint(engine, backend, "Target Dummy A", GetGroundScreenFromWorld(engine, ReadPosition(engine.World, "Target Dummy A")), frameTimesMs);
             backend.SetMousePosition(indicatorHoverPoint);
             Tick(engine, 1, frameTimesMs);
             int baselineIndicatorLines = CountOverlays(overlays, GroundOverlayShape.Line);
@@ -361,7 +361,7 @@ namespace Ludots.Tests.GAS.Production
                 () => EntityExists(engine.World, "Runic Beacon"),
                 maxFrames: 12);
             AssertManifestationOwnership(engine.World, "Runic Beacon", "Geomancer Alpha");
-            Vector2 beaconHoverPoint = FindHoverScreenPoint(engine, backend, "Runic Beacon", GetEntityScreen(engine, "Runic Beacon"), frameTimesMs);
+            Vector2 beaconHoverPoint = FindHoverScreenPoint(engine, backend, "Runic Beacon", GetGroundScreenFromWorld(engine, ReadPosition(engine.World, "Runic Beacon")), frameTimesMs);
             Assert.That(ReadHoveredEntityName(engine), Is.EqualTo("Runic Beacon"));
             LeftClickScreen(engine, backend, beaconHoverPoint, frameTimesMs);
             TickUntil(
@@ -421,7 +421,7 @@ namespace Ludots.Tests.GAS.Production
                 maxFrames: 12);
             AssertManifestationOwnership(engine.World, "Stone Pillar", "Geomancer Alpha");
             AssertBlockerManifestationBridge(engine.World, "Stone Pillar");
-            Vector2 pillarHoverPoint = FindHoverScreenPoint(engine, backend, "Stone Pillar", GetEntityScreen(engine, "Stone Pillar"), frameTimesMs);
+            Vector2 pillarHoverPoint = FindHoverScreenPoint(engine, backend, "Stone Pillar", GetGroundScreenFromWorld(engine, ReadPosition(engine.World, "Stone Pillar")), frameTimesMs);
             Assert.That(ReadHoveredEntityName(engine), Is.EqualTo("Stone Pillar"));
             LeftClickScreen(engine, backend, pillarHoverPoint, frameTimesMs);
             TickUntil(
@@ -1971,7 +1971,7 @@ namespace Ludots.Tests.GAS.Production
             var samples = new List<string>();
             foreach (string candidateName in GetPreferredHoverCandidates(engine.World, excludedEntityName))
             {
-                Vector2 projectedScreenPoint = GetEntityScreen(engine, candidateName);
+                Vector2 projectedScreenPoint = GetGroundScreenFromWorld(engine, ReadPosition(engine.World, candidateName));
                 if (TryFindHoverScreenPoint(engine, backend, candidateName, projectedScreenPoint, frameTimesMs, out Vector2 point, out string candidateSamples))
                 {
                     return (candidateName, point);
