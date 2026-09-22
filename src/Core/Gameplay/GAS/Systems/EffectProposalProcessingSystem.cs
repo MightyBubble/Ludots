@@ -82,6 +82,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi? _graphApiHost;
         private readonly BuiltinHandlerExecutionContext _builtinRuntime = new();
         private readonly EffectPhaseSideEffectTransaction _instantPhaseTransaction;
+
+        /// <summary>
+        /// 共享到期时间轮；注入后 Instant 相位监听（如命中消耗标记的 RemoveEffectTemplate）
+        /// 提交的取消经 ForceVisit 保持 next-slice 销毁语义，与持久相位事务一致。
+        /// </summary>
+        internal EffectDueWheel? DueWheel
+        {
+            set => _instantPhaseTransaction.DueWheel = value;
+        }
+
         private readonly RootBudgetTable _fanOutBudget;
         // An injected budget is advanced by the effect-loop owner once per processing transaction.
         private readonly bool _ownsFanOutBudget;
