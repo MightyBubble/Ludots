@@ -9,6 +9,8 @@ using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
@@ -138,7 +140,11 @@ namespace Ludots.Tests.GAS
                 PeriodTicks = 0,
                 Modifiers = modifiers,
             });
-            FinalizeBuffTemplates(templates);
+            FinalizeBuffTemplates(
+                templates,
+                out GraphProgramRegistry programs,
+                out PresetTypeRegistry presetTypes,
+                out BuiltinHandlerRegistry builtinHandlers);
 
             var requests = new EffectRequestQueue();
             var aggregateDirty = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
@@ -152,7 +158,23 @@ namespace Ludots.Tests.GAS
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                 tagOps: tagOps,
                 aggregateDirty: aggregateDirty);
-            var application = new EffectApplicationSystem(world, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, new Ludots.Core.Engine.DiscreteClock(), requests, templates: templates, tagOps: tagOps, aggregateDirty: aggregateDirty);
+            var graphApi = new GasGraphRuntimeApi(world, tagOps: tagOps) { AggregateDirty = aggregateDirty };
+            var phaseExecutor = new EffectPhaseExecutor(
+                programs,
+                presetTypes,
+                builtinHandlers,
+                GasGraphOpHandlerTable.Instance,
+                templates);
+            var application = new EffectApplicationSystem(
+                world,
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new Ludots.Core.Engine.DiscreteClock(),
+                requests,
+                templates: templates,
+                phaseExecutor: phaseExecutor,
+                graphApi: graphApi,
+                tagOps: tagOps,
+                aggregateDirty: aggregateDirty);
             var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps, aggregateDirty: tagOps.AggregateDirty);
 
             requests.Publish(new EffectRequest
@@ -406,9 +428,14 @@ namespace Ludots.Tests.GAS
                 new RelationshipReverseIndex(world));
         }
 
-        private static void FinalizeBuffTemplates(EffectTemplateRegistry templates)
+        private static void FinalizeBuffTemplates(
+            EffectTemplateRegistry templates,
+            out GraphProgramRegistry programs,
+            out PresetTypeRegistry presetTypes,
+            out BuiltinHandlerRegistry builtinHandlers)
         {
-            var presetTypes = new PresetTypeRegistry();
+            programs = new GraphProgramRegistry();
+            presetTypes = new PresetTypeRegistry();
             var buff = new PresetTypeDefinition
             {
                 Type = EffectPresetType.Buff,
@@ -420,13 +447,13 @@ namespace Ludots.Tests.GAS
                 PhaseHandler.Builtin(BuiltinHandlerId.ApplyModifiers);
             presetTypes.Register(in buff);
 
-            var builtinHandlers = new BuiltinHandlerRegistry();
+            builtinHandlers = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(builtinHandlers);
             GasTestEffectExecutionPlanFinalizer.FinalizeAll(
                 templates,
                 presetTypes,
                 builtinHandlers,
-                new GraphProgramRegistry(),
+                programs,
                 "Test/RelationshipCoreTests.json");
         }
 
