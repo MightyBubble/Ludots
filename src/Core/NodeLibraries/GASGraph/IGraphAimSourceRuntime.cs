@@ -31,6 +31,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         int FilterScreenRegionEntities(Span<Entity> entities, int count, in ScreenRect rect, string? seatId);
 
+        int FilterScreenRegionEntities(Span<Entity> entities, int count, in ScreenRect rect, string? seatId, float tolerancePixels)
+            => FilterScreenRegionEntities(entities, count, in rect, seatId);
+
         /// <summary>
         /// Live window-pixel pointer from the authoritative input snapshot (PointerPos).
         /// False when the snapshot is unavailable; callers fail closed.
