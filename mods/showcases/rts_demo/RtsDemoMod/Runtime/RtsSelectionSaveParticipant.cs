@@ -4,6 +4,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Input.CommandSources;
+using Ludots.Core.Client;
 using Ludots.Core.Persistence;
 using Ludots.Core.Scripting;
 
@@ -54,7 +55,8 @@ public sealed class RtsSelectionSaveParticipant : ISaveParticipant
         if (string.IsNullOrWhiteSpace(primaryName) ||
             !ClientLocalSeatAccess.RequireRegistry(_engine).TryGetSolePossessedRep(out Entity owner) ||
             !_engine.TryGetService(CoreServiceKeys.CollectionApplier, out CollectionApplier applier) ||
-            !_engine.TryGetService(CoreServiceKeys.EntityCollectionStore, out EntityCollectionStore store))
+            !_engine.TryGetService(CoreServiceKeys.EntityCollectionStore, out EntityCollectionStore? store) ||
+            store == null)
         {
             return;
         }
