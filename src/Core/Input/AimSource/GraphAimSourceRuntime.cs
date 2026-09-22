@@ -264,6 +264,9 @@ namespace Ludots.Core.Input.AimSource
         }
 
         public int FilterScreenRegionEntities(Span<Entity> entities, int count, in ScreenRect rect, string? seatId)
+            => FilterScreenRegionEntities(entities, count, in rect, seatId, tolerancePixels: 0f);
+
+        public int FilterScreenRegionEntities(Span<Entity> entities, int count, in ScreenRect rect, string? seatId, float tolerancePixels)
         {
             if (!TryResolveProjector(seatId, rect.MinX, rect.MinY, out IScreenProjector projector, out Vector2 localOrigin) ||
                 count <= 0)
@@ -273,14 +276,9 @@ namespace Ludots.Core.Input.AimSource
 
             float extentX = rect.MaxX - rect.MinX;
             float extentY = rect.MaxY - rect.MinY;
-            float inflate = 0f;
-            if (extentX <= 0f && extentY <= 0f)
-            {
-                // A zero-extent rect is a click, not a marquee; point-bounds entities only hit an
-                // exact projection otherwise. Restore the retired acquisition system's pick radius
-                // contract from the command-source acquisition config.
-                inflate = RequireCommandPickRadiusPixels();
-            }
+            float inflate = extentX <= 0f && extentY <= 0f
+                ? tolerancePixels
+                : 0f;
 
             var localRect = new ScreenRect(
                 localOrigin.X - inflate,
