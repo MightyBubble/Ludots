@@ -1,0 +1,150 @@
+[
+ {
+  "id": "tw.death.fx",
+  "kind": "TriggerGraph",
+  "entries": [
+   {
+    "label": "on_hostile_died",
+    "event": "EntityDied",
+    "start": "owner",
+    "refire": "restart",
+    "filters": {
+     "team": 2
+    }
+   }
+  ],
+  "nodes": [
+   {
+    "id": "owner",
+    "op": "LoadPlacedEntity",
+    "instanceId": "tw-commander"
+   },
+   {
+    "id": "dead",
+    "op": "LoadExplicitTarget"
+   },
+   {
+    "id": "px",
+    "op": "LoadEntityPosX"
+   },
+   {
+    "id": "py",
+    "op": "LoadEntityPosY"
+   },
+   {
+    "id": "pxf",
+    "op": "IntToFloat"
+   },
+   {
+    "id": "pyf",
+    "op": "IntToFloat"
+   },
+   {
+    "id": "spawn",
+    "op": "SpawnTemplate",
+    "template": "tw_death_burst"
+   },
+   {
+    "id": "ok",
+    "op": "ConstInt",
+    "intValue": 1
+   },
+   {
+    "id": "halt",
+    "op": "HaltReturnInt"
+   }
+  ],
+  "controlEdges": [
+   {
+    "from": "owner",
+    "fromPort": "next",
+    "to": "dead"
+   },
+   {
+    "from": "dead",
+    "fromPort": "next",
+    "to": "px"
+   },
+   {
+    "from": "px",
+    "fromPort": "next",
+    "to": "py"
+   },
+   {
+    "from": "py",
+    "fromPort": "next",
+    "to": "pxf"
+   },
+   {
+    "from": "pxf",
+    "fromPort": "next",
+    "to": "pyf"
+   },
+   {
+    "from": "pyf",
+    "fromPort": "next",
+    "to": "spawn"
+   },
+   {
+    "from": "spawn",
+    "fromPort": "next",
+    "to": "ok"
+   },
+   {
+    "from": "ok",
+    "fromPort": "next",
+    "to": "halt"
+   }
+  ],
+  "valueEdges": [
+   {
+    "from": "dead",
+    "fromPort": "value",
+    "to": "px",
+    "toPort": "source"
+   },
+   {
+    "from": "dead",
+    "fromPort": "value",
+    "to": "py",
+    "toPort": "source"
+   },
+   {
+    "from": "px",
+    "fromPort": "value",
+    "to": "pxf",
+    "toPort": "a"
+   },
+   {
+    "from": "py",
+    "fromPort": "value",
+    "to": "pyf",
+    "toPort": "a"
+   },
+   {
+    "from": "pxf",
+    "fromPort": "value",
+    "to": "spawn",
+    "toPort": "a"
+   },
+   {
+    "from": "pyf",
+    "fromPort": "value",
+    "to": "spawn",
+    "toPort": "b"
+   },
+   {
+    "from": "ok",
+    "fromPort": "value",
+    "to": "halt",
+    "toPort": "value"
+   },
+   {
+    "from": "owner",
+    "fromPort": "value",
+    "to": "spawn",
+    "toPort": "source"
+   }
+  ]
+ }
+]

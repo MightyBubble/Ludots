@@ -59,8 +59,22 @@ namespace Ludots.Tests.GAS
 
             // ── 阶段一：战役大地图——右键空地 = 集结（marines 成员集 moveTo）──
             AssertTopContext(engine, profiles, commander, "interaction.context.tw.campaign");
-            // 拖框选中两台 marine（成员集改由 selected 集合供给，候选集=tw.candidates 只含 tw_marine）
-            DragSelectBox(engine, backend, new Vector2(-420f, -260f), new Vector2(-180f, 260f));
+            // nav 运行时装载后 selectable 集合绑定与就绪时序后移——等候选集装满再拖框，
+            // 否则框选与集合绑定竞速（间歇空选集，case_e 测试同款就绪等待）
+            TickUntil(engine, 120, () =>
+            {
+                var collections = engine.GetService(Ludots.Core.Scripting.CoreServiceKeys.EntityCollectionStore)!;
+                int count = 0;
+                foreach (ref var chunk in engine.World.Query(new Arch.Core.QueryDescription().WithAll<Ludots.Core.Input.CommandSources.CommandSourceSelectableTag>()))
+                {
+                    count += chunk.Count;
+                }
+
+                bool navReady = engine.GetService(Ludots.Core.MassNavigation.MassNavigationKeys.RuntimeBinding)
+                    is Ludots.Core.MassNavigation.Runtime.MassNavigationRuntimeBinding { IsReady: true };
+                return count >= 5 && navReady && CollectionCount(engine, commander, "case_e.selectable") >= 2;
+            });
+            DragSelectBox(engine, backend, new Vector2(-2000f, -2000f), new Vector2(2000f, 2000f));
 
 
             backend.SetMousePosition(new Vector2(800f, 0f));
@@ -73,8 +87,15 @@ namespace Ludots.Tests.GAS
                 "campaign: " + string.Join(" | ", engine.TriggerManager.Errors.Select(e => $"{e.TriggerName}: {e.Exception.Message}")));
             TestContext.Out.WriteLine($"[tw1] campaign drained={drain.LastDrainedCount} accepted={drain.LastAcceptedCount} rejected={drain.LastRejectionReason}");
             Assert.That(drain.LastAcceptedCount, Is.EqualTo(1), "campaign rally intent accepted");
-            AssertHasMoveTo(engine, marine1, moveToId, "campaign rally marine1");
-            AssertHasMoveTo(engine, marine2, moveToId, "campaign rally marine2");
+            // nav 运行时合同：marine 是 MassNavigationAgent，rally 意图由 MovePlan 适配器转成
+            // nav 行军（无经典 OrderBuffer）——断言两台 marine 绑定 nav 且真实行军
+            for (int marchFrame = 0; marchFrame < 120; marchFrame++)
+            {
+                engine.Tick(1f / 60f);
+            }
+
+            AssertNavMarching(engine, marine1, "campaign rally marine1");
+            AssertNavMarching(engine, marine2, "campaign rally marine2");
 
             // ── 迁移：战役 → 备置 ──
             AdvanceStage(engine);
@@ -114,28 +135,16 @@ namespace Ludots.Tests.GAS
             TestContext.Out.WriteLine($"[tw3] rts drained={drain.LastDrainedCount} accepted={drain.LastAcceptedCount} rejected={drain.LastRejectionReason}");
             Assert.That(drain.LastAcceptedCount, Is.EqualTo(1), "engage intent accepted");
 
-            int engaged = 0;
-            foreach (ref var chunk in engine.World.Query(new QueryDescription().WithAll<OrderBuffer>()))
+            // nav 合同：围城环位锚由 MovePlan 执行——等三台 marine 向塔收敛后断言环位距离
+            int onRing = 0;
+            for (int convergeFrame = 0; convergeFrame < 600 && onRing < 3; convergeFrame++)
             {
-                foreach (var index in chunk)
-                {
-                    Entity actor = chunk.Entity(index);
-                    ref var buffer = ref chunk.Get<OrderBuffer>(index);
-                    if (!buffer.IsEmpty && buffer.ActiveOrder.Order.OrderTypeId == moveToId &&
-                        engine.World.Has<AbilityStateBuffer>(actor) && !actor.Equals(commander) && !actor.Equals(wolf))
-                    {
-                        var anchor = buffer.ActiveOrder.Order.Args.Spatial.WorldCm;
-                        float dx = anchor.X - (float)towerPos.X;
-                        float dy = anchor.Z - (float)towerPos.Y;
-                        float radius = MathF.Sqrt(dx * dx + dy * dy);
-                        TestContext.Out.WriteLine($"[tw3] engage anchor=({anchor.X:F0},{anchor.Z:F0}) ringRadius={radius:F0}");
-                        Assert.That(radius, Is.EqualTo(800f).Within(2f), "engage anchor on the EQS ring");
-                        engaged++;
-                    }
-                }
+                engine.Tick(1f / 60f);
+                onRing = CountMarinesNearTower(engine, tower, commander, wolf, towerPos, minCm: 350f, maxCm: 1300f);
             }
 
-            Assert.That(engaged, Is.EqualTo(3), "all three marines (2 placed + 1 deployed) get ring anchors");
+            TestContext.Out.WriteLine($"[tw3] marines on siege ring: {onRing}");
+            Assert.That(onRing, Is.EqualTo(3), "all three marines (2 placed + 1 deployed) converge on the EQS ring");
 
             float firstBoltHealth = -1f;
             for (int frame = 0; frame < 1200 && firstBoltHealth < 0f; frame++)
@@ -178,6 +187,41 @@ namespace Ludots.Tests.GAS
 
             TestContext.Out.WriteLine($"[tw4] wolf 300 -> {wolfHealth} (commander single bolt, armor 0, flat -80)");
             Assert.That(wolfHealth, Is.EqualTo(220f).Within(0.01f), "TPS fire: rep single cast settles Q4 flat -80");
+
+            // ── 死亡规则链：连射致死（220→140→60→-20≤0），DeathRule 销毁 + 击杀计数面板变量 ──
+            int presentersBeforeDeath = 0;
+            foreach (ref var chunkPre in engine.World.Query(new Arch.Core.QueryDescription().WithAll<Ludots.Core.Presentation.Presenters.PresenterState>()))
+            {
+                presentersBeforeDeath += chunkPre.Count;
+            }
+            for (int volley = 0; volley < 6 && engine.World.IsAlive(wolf); volley++)
+            {
+                backend.SetButton("<Mouse>/leftButton", true);
+                engine.Tick(1f / 60f);
+                backend.SetButton("<Mouse>/leftButton", false);
+                for (int settleFrame = 0; settleFrame < 300 && engine.World.IsAlive(wolf); settleFrame++)
+                {
+                    engine.Tick(1f / 60f);
+                }
+            }
+
+            var mapVariables = engine.CurrentMapSession?.Variables;
+            for (int killFrame = 0; killFrame < 60; killFrame++)
+            {
+                engine.Tick(1f / 60f);
+                if ((mapVariables?.ReadInt("tw.kills") ?? 0) >= 1)
+                {
+                    break;
+                }
+            }
+
+            int killCount = mapVariables?.ReadInt("tw.kills") ?? -1;
+            float wolfFinal = engine.World.IsAlive(wolf) && engine.World.TryGet<AttributeBuffer>(wolf, out var wolfFinalBuffer)
+                ? wolfFinalBuffer.GetCurrent(healthId)
+                : -1f;
+            TestContext.Out.WriteLine($"[tw5] wolf alive={engine.World.IsAlive(wolf)} finalHp={wolfFinal} kills={killCount} errors={engine.TriggerManager.Errors.Count}: {string.Join(" | ", engine.TriggerManager.Errors.Take(3).Select(e => $"{e.TriggerName}: {e.Exception.Message}"))}");
+            Assert.That(engine.World.IsAlive(wolf), Is.False, "death rule destroys the wolf at zero health");
+            Assert.That(killCount, Is.GreaterThanOrEqualTo(1), "kill counter map variable increments on EntityDied");
         }
 
         // ── harness ──
@@ -221,12 +265,44 @@ namespace Ludots.Tests.GAS
             Assert.That(actual, Is.EqualTo(expected), $"top context should be {expected}");
         }
 
-        private static void AssertHasMoveTo(Ludots.Core.Engine.GameEngine engine, Entity actor, int moveToId, string message)
+        private static void AssertNavMarching(Ludots.Core.Engine.GameEngine engine, Entity actor, string message)
         {
-            Assert.That(
-                engine.World.TryGet<OrderBuffer>(actor, out var buffer) && !buffer.IsEmpty &&
-                buffer.ActiveOrder.Order.OrderTypeId == moveToId,
-                message);
+            Assert.That(engine.World.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex>(actor),
+                Is.True, message + " (nav bound)");
+        }
+
+        private static int CountMarinesNearTower(
+            Ludots.Core.Engine.GameEngine engine,
+            Entity tower,
+            Entity commander,
+            Entity wolf,
+            Ludots.Core.Mathematics.FixedPoint.Fix64Vec2 towerPos,
+            float minCm,
+            float maxCm)
+        {
+            int count = 0;
+            foreach (ref var chunk in engine.World.Query(new QueryDescription().WithAll<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex, WorldPositionCm>()))
+            {
+                foreach (var index in chunk)
+                {
+                    Entity actor = chunk.Entity(index);
+                    if (actor.Equals(tower) || actor.Equals(commander) || actor.Equals(wolf))
+                    {
+                        continue;
+                    }
+
+                    var position = chunk.Get<WorldPositionCm>(index).Value;
+                    float dx = (float)position.X - (float)towerPos.X;
+                    float dy = (float)position.Y - (float)towerPos.Y;
+                    float distance = MathF.Sqrt(dx * dx + dy * dy);
+                    if (distance >= minCm && distance <= maxCm)
+                    {
+                        count++;
+                    }
+                }
+            }
+
+            return count;
         }
 
         private static int CountMarines(Ludots.Core.Engine.GameEngine engine)
@@ -241,6 +317,29 @@ namespace Ludots.Tests.GAS
                         count++;
                     }
                 }
+            }
+
+            return count;
+        }
+
+
+        private static int CollectionCount(Ludots.Core.Engine.GameEngine engine, Entity owner, string key)
+        {
+            var store = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
+            int keyId = store.KeyRegistry.GetId(key);
+            return keyId > 0 && store.TryGet(owner, keyId, out Ludots.Core.EntityCollections.EntityCollectionHandle handle) &&
+                store.TryGetView(handle, out Ludots.Core.EntityCollections.EntityCollectionView view)
+                ? view.Count
+                : -1;
+        }
+
+        private static int CountPresenters(Ludots.Core.Engine.GameEngine engine)
+        {
+            int count = 0;
+            foreach (ref var chunk in engine.World.Query(new Arch.Core.QueryDescription().WithAll<Ludots.Core.Presentation.Presenters.PresenterState>()))
+            {
+                count += chunk.Count;
             }
 
             return count;

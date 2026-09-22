@@ -50,7 +50,19 @@
    "Team": {
     "Id": 2
    },
-   "CommandSourceSelectableTag": {}
+   "CommandSourceSelectableTag": {},
+   "ContinuousHeightmapSampleState": {},
+   "MassNavigationAgent": {
+    "profileId": "tw.agent"
+   },
+   "EntityLayer": {
+    "category": [
+     "massNavigation.agent"
+    ],
+    "mask": [
+     "massNavigation.agent"
+    ]
+   }
   }
  },
  {
@@ -91,7 +103,17 @@
    "Team": {
     "Id": 2
    },
-   "CommandSourceSelectableTag": {}
+   "CommandSourceSelectableTag": {},
+   "ContinuousHeightmapSampleState": {},
+   "ManifestationObstacleIntent2D": {
+    "shape": "Circle",
+    "sinkPhysicsCollider": false,
+    "sinkNavigationObstacle": true,
+    "navRadiusCm": 200,
+    "radiusCm": 200,
+    "localOffsetXCm": 0,
+    "localOffsetYCm": 0
+   }
   }
  },
  {

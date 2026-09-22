@@ -1,0 +1,15 @@
+[
+ {
+  "id": "Effect.Tw.DeathBurst.SelfDestruct",
+  "presetType": "InstantDamage",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "modifiers": [
+   {
+    "attribute": "Ballista.Health",
+    "op": "Add",
+    "value": -10
+   }
+  ]
+ }
+]

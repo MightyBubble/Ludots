@@ -156,5 +156,83 @@
     }
    }
   ]
+ },
+ {
+  "id": "tw.fx.death_explosion",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "VFX",
+     "assetId": "tw.death_explosion.effect",
+     "renderPath": "StaticMesh",
+     "mobility": "Movable",
+     "localScale": [
+      2.2,
+      2.2,
+      2.2
+     ]
+    }
+   }
+  ],
+  "anchor": {
+   "offset": [
+    0,
+    0.6,
+    0
+   ]
+  },
+  "lifecycle": {
+   "durationSeconds": 0.9
+  }
+ },
+ {
+  "id": "tw.fx.death_smoke",
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "VFX",
+     "assetId": "tw.death_smoke.effect",
+     "renderPath": "StaticMesh",
+     "mobility": "Movable",
+     "localScale": [
+      2.0,
+      2.0,
+      2.0
+     ]
+    }
+   }
+  ],
+  "anchor": {
+   "offset": [
+    0,
+    0.6,
+    0
+   ]
+  },
+  "lifecycle": {
+   "durationSeconds": 1.4
+  }
+ },
+ {
+  "id": "tw.fixture.death_fx_bootstrap",
+  "rules": [
+   {
+    "event": {
+     "kind": "EntitySpawned",
+     "key": "tw_death_burst"
+    },
+    "command": {
+     "kind": "CreatePresenter",
+     "definitionId": "tw.fx.death_explosion",
+     "scopeSource": "EventPayloadA"
+    }
+   }
+  ]
  }
 ]

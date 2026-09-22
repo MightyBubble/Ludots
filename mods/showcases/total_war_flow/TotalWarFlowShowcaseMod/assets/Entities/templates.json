@@ -28,7 +28,19 @@
    "PlayerOwner": {
     "PlayerId": 1
    },
-   "CommandSourceSelectableTag": {}
+   "CommandSourceSelectableTag": {},
+   "ContinuousHeightmapSampleState": {},
+   "MassNavigationAgent": {
+    "profileId": "tw.agent"
+   },
+   "EntityLayer": {
+    "category": [
+     "massNavigation.agent"
+    ],
+    "mask": [
+     "massNavigation.agent"
+    ]
+   }
   },
   "initialInteractionContext": "interaction.context.tw.controls"
  },
@@ -61,7 +73,36 @@
    "PlayerOwner": {
     "PlayerId": 1
    },
-   "CommandSourceSelectableTag": {}
+   "CommandSourceSelectableTag": {},
+   "ContinuousHeightmapSampleState": {},
+   "MassNavigationAgent": {
+    "profileId": "tw.agent"
+   },
+   "EntityLayer": {
+    "category": [
+     "massNavigation.agent"
+    ],
+    "mask": [
+     "massNavigation.agent"
+    ]
+   }
+  }
+ },
+ {
+  "id": "tw_death_burst",
+  "onSpawnEffect": "Effect.Tw.DeathBurst.SelfDestruct",
+  "components": {
+   "AttributeBuffer": {
+    "base": {
+     "Ballista.Health": 1
+    }
+   },
+   "GameplayTagContainer": {
+    "tags": [
+     "Fx.DeathBurst"
+    ]
+   },
+   "DirtyFlags": {}
   }
  }
 ]

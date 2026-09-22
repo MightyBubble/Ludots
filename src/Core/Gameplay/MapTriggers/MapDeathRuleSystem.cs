@@ -84,13 +84,25 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 }
             });
 
-            // Direct authoritative destroy: the Arch EntityDestroyed callback feeds the
-            // heartbeat death ring (EntityDied / EntityAliveCountChanged) immediately.
-            // Presentation-layer presenter teardown for rule-killed entities is a tracked
-            // follow-up; map death must never hinge on the presentation pipeline.
+            // Presentation-aware destroy: presented entities go two-phase (Pending here,
+            // lifecycle publishes EntityDestroyed for presenter observers, finalize destroys
+            // next frame) so death presentation (e.g. explosion presenter rules) can react.
+            // Entities without a stable presented identity destroy directly — the two-phase
+            // finalize requires PresentationDestroyEventPublished, which the lifecycle
+            // emitter only stamps for PresentationStableId holders.
+            // Both paths end in Arch destroy: the EntityDestroyed callback feeds the
+            // heartbeat death ring (EntityDied / EntityAliveCountChanged) either way.
             for (int i = 0; i < _doomed.Count; i++)
             {
-                _world.Destroy(_doomed[i]);
+                Entity entity = _doomed[i];
+                if (_world.Has<PresentationStableId>(entity))
+                {
+                    _world.Add<PresentationDestroyPending>(entity);
+                }
+                else
+                {
+                    _world.Destroy(entity);
+                }
             }
         }
     }
