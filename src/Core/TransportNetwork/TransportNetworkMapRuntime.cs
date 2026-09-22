@@ -55,47 +55,56 @@ namespace Ludots.Core.TransportNetwork
                     $"Map '{session.MapId.Value}' cannot install transport networks: the map declares no boards.");
             }
 
-            foreach (var boardConfig in mapConfig.Boards)
+            try
             {
-                if (boardConfig?.TransportNetwork is not { } declaration)
+                foreach (var boardConfig in mapConfig.Boards)
                 {
-                    continue;
+                    if (boardConfig?.TransportNetwork is not { } declaration)
+                    {
+                        continue;
+                    }
+
+                    if (session.GetBoard(boardConfig.Name) is not INodeGraphBoard graphBoard)
+                    {
+                        throw new InvalidOperationException(
+                            $"Map '{session.MapId.Value}' board '{boardConfig.Name}' declares TransportNetwork but the session board is not a NodeGraph board.");
+                    }
+
+                    if (graphBoard.LoadedChunks is not WorldGridLoadedChunks loadedChunks)
+                    {
+                        throw new InvalidOperationException(
+                            $"Map '{session.MapId.Value}' board '{boardConfig.Name}' declares TransportNetwork but its loaded-chunks source is not WorldGridLoadedChunks.");
+                    }
+
+                    string relativePath = string.IsNullOrWhiteSpace(declaration.AssetPath)
+                        ? TransportNetworkAssetLoader.DefaultRelativePath
+                        : declaration.AssetPath;
+                    TransportNetworkAsset asset = new TransportNetworkAssetLoader(pipeline)
+                        .Load(catalog, conflictReport, relativePath);
+                    TransportNetworkBakedAsset baked = new TransportNetworkBaker().Bake(asset, loadedChunks.ChunkSizeCm);
+
+                    var graphSource = new TransportNetworkChunkGraphSource(graphBoard.GraphStore, loadedChunks, baked);
+                    foreach (long chunkKey in baked.GraphChunks.Keys)
+                    {
+                        loadedChunks.SetLoaded(chunkKey, loaded: true);
+                    }
+
+                    graphSource.LoadActiveChunks();
+
+                    var ribbonSource = new TransportNetworkRibbonSource(baked);
+                    ribbonSource.SyncPayloads(loadedChunks.ActiveChunkKeys, _payloads, ComposeSurfaceScopeId);
+
+                    _installed.Add(new InstalledBoardNetwork(graphSource, ribbonSource));
+                    Ludots.Core.Diagnostics.Log.Info(
+                        in Ludots.Core.Diagnostics.LogChannels.Map,
+                        $"Installed transport network '{asset.Id}' on board '{boardConfig.Name}' (chunks: {baked.GraphChunks.Count}).");
                 }
-
-                if (session.GetBoard(boardConfig.Name) is not INodeGraphBoard graphBoard)
-                {
-                    throw new InvalidOperationException(
-                        $"Map '{session.MapId.Value}' board '{boardConfig.Name}' declares TransportNetwork but the session board is not a NodeGraph board.");
-                }
-
-                if (graphBoard.LoadedChunks is not WorldGridLoadedChunks loadedChunks)
-                {
-                    throw new InvalidOperationException(
-                        $"Map '{session.MapId.Value}' board '{boardConfig.Name}' declares TransportNetwork but its loaded-chunks source is not WorldGridLoadedChunks.");
-                }
-
-                string relativePath = string.IsNullOrWhiteSpace(declaration.AssetPath)
-                    ? TransportNetworkAssetLoader.DefaultRelativePath
-                    : declaration.AssetPath;
-                TransportNetworkAsset asset = new TransportNetworkAssetLoader(pipeline)
-                    .Load(catalog, conflictReport, relativePath);
-                TransportNetworkBakedAsset baked = new TransportNetworkBaker().Bake(asset, loadedChunks.ChunkSizeCm);
-
-                var graphSource = new TransportNetworkChunkGraphSource(graphBoard.GraphStore, loadedChunks, baked);
-                foreach (long chunkKey in baked.GraphChunks.Keys)
-                {
-                    loadedChunks.SetLoaded(chunkKey, loaded: true);
-                }
-
-                graphSource.LoadActiveChunks();
-
-                var ribbonSource = new TransportNetworkRibbonSource(baked);
-                ribbonSource.SyncPayloads(loadedChunks.ActiveChunkKeys, _payloads, ComposeSurfaceScopeId);
-
-                _installed.Add(new InstalledBoardNetwork(graphSource, ribbonSource));
-                Ludots.Core.Diagnostics.Log.Info(
-                    in Ludots.Core.Diagnostics.LogChannels.Map,
-                    $"Installed transport network '{asset.Id}' on board '{boardConfig.Name}' (chunks: {baked.GraphChunks.Count}).");
+            }
+            catch
+            {
+                // Fail-fast must not leave half-installed boards (subscribed sources, written payloads).
+                Dispose();
+                throw;
             }
         }
 

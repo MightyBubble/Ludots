@@ -95,6 +95,96 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void Install_RollsBackAlreadyInstalledBoards_WhenALaterBoardFails()
+        {
+            string tempRoot = Path.Combine(Path.GetTempPath(), "ludots-transport-rollback-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(Path.Combine(tempRoot, "TransportNetwork"));
+            File.WriteAllText(Path.Combine(tempRoot, "config_catalog.json"),
+                """
+                [
+                  { "Path": "TransportNetwork/transport_network.json", "Policy": "Replace" }
+                ]
+                """);
+            File.WriteAllText(Path.Combine(tempRoot, "TransportNetwork", "transport_network.json"),
+                """
+                {
+                  "id": "rollback.network",
+                  "sampleStepCm": 500,
+                  "defaultVisualWidthMeters": 2.0,
+                  "nodes": [
+                    { "id": "west", "xcm": -2400, "ycm": 0, "kind": "Normal", "tags": [] },
+                    { "id": "east", "xcm": 2400, "ycm": 0, "kind": "Normal", "tags": [] }
+                  ],
+                  "segments": [
+                    {
+                      "id": "link",
+                      "points": [ { "nodeId": "west" }, { "nodeId": "east" } ],
+                      "sampleStepCm": 0,
+                      "direction": "Bidirectional",
+                      "flowDirection": "None",
+                      "areaId": "Transport.Area.Land",
+                      "tags": [],
+                      "depthCm": 0,
+                      "widthCm": 0,
+                      "laneCount": 0,
+                      "visualWidthMeters": 1.5
+                    }
+                  ]
+                }
+                """);
+
+            try
+            {
+                var vfs = new VirtualFileSystem();
+                vfs.Mount("Core", tempRoot);
+                var pipeline = new ConfigPipeline(vfs, modLoader: null!);
+                ConfigCatalog catalog = ConfigCatalogLoader.Load(pipeline);
+                var payloads = new SurfaceSourcePayloadRegistry();
+
+                var goodBoard = new BoardConfig
+                {
+                    Name = "good",
+                    SpatialType = "NodeGraph",
+                    WidthCells = 512,
+                    HeightCells = 512,
+                    GridCellSizeCm = 100,
+                    LoadedChunkCapacity = 64,
+                    TransportNetwork = new TransportNetworkBoardDeclaration()
+                };
+                var missingBoard = new BoardConfig
+                {
+                    Name = "missing",
+                    SpatialType = "NodeGraph",
+                    TransportNetwork = new TransportNetworkBoardDeclaration()
+                };
+                var mapConfig = new MapConfig { Id = "assembly.rollback", Boards = { goodBoard, missingBoard } };
+
+                var session = new MapSession(new MapId(mapConfig.Id), mapConfig);
+                INodeGraphBoard board = (INodeGraphBoard)BoardFactory.Create(goodBoard, new BoardIdRegistry());
+                session.AddBoard(board);
+                var loadedChunks = (WorldGridLoadedChunks)board.LoadedChunks;
+
+                TransportNetworkAsset expectedAsset = new TransportNetworkAssetLoader(pipeline).Load(catalog);
+                TransportNetworkBakedAsset expectedBake = new TransportNetworkBaker().Bake(expectedAsset, loadedChunks.ChunkSizeCm);
+
+                var runtime = new TransportNetworkMapRuntime(payloads);
+                var ex = Assert.Throws<InvalidOperationException>(() =>
+                    runtime.Install(session, mapConfig, pipeline, catalog, new ConfigConflictReport()));
+                Assert.That(ex!.Message, Does.Contain("board 'missing'"));
+
+                foreach (long chunkKey in expectedBake.RibbonChunks.Keys)
+                {
+                    Assert.That(payloads.TryGet(ComposeExpectedScopeId(chunkKey), out _), Is.False,
+                        $"rollback must clear the ribbon payload installed for board 'good' (chunk {chunkKey})");
+                }
+            }
+            finally
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+        }
+
+        [Test]
         public void MapJson_BindsTransportNetworkDeclaration_WithMapManagerOptions()
         {
             // Same options MapManager.LoadMapInternal uses for map fragments.
