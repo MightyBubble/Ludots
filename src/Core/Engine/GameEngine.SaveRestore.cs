@@ -45,6 +45,20 @@ namespace Ludots.Core.Engine
             registry.RestoreDomains(domains);
             admissionResults.ResetForWorldRestore();
 
+            // Presentation-side mirror of the collection store: the event system's per-collection
+            // baselines are engine-local state that never rode the snapshot. Re-baseline them
+            // against the participant-rebound store so the first post-restore tick publishes no
+            // phantom collection member events (same boundary contract as the admission reset).
+            if (_presentationSystems != null)
+            {
+                for (int i = 0; i < _presentationSystems.Count; i++)
+                {
+                    (_presentationSystems[i] as Ludots.Core.Presentation.Systems.EntityCollectionPresentationEventSystem)
+                        ?.ResetForWorldRestore();
+                }
+            }
+
+
             // Cross-tick pending work must not straddle the restore boundary in either direction:
             // orders queued pre-restore would replay against the restored world as ghosts, and
             // orders queued by the live session after the checkpoint would leak into the replay.

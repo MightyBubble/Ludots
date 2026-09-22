@@ -89,6 +89,45 @@ namespace Ludots.Core.Presentation.Systems
             }
         }
 
+
+        /// <summary>
+        /// Restore-boundary re-baseline (mirrors OrderAdmissionResults.ResetForWorldRestore):
+        /// adopt the post-restore collection store contents as the already-announced baseline
+        /// without publishing member events. The restored world snapshot already carries the
+        /// presentation state those events materialize; leaving the baseline empty would replay
+        /// EntityCollectionMemberAdded on the first post-restore tick and duplicate presenter
+        /// lifecycle against the continuous session.
+        /// </summary>
+        public void ResetForWorldRestore()
+        {
+            _snapshots.Clear();
+            EnsureHandleCapacity(_collections.CollectionCount);
+            int handleCount = _collections.CopyActiveHandles(_handles);
+            for (int i = 0; i < handleCount; i++)
+            {
+                EntityCollectionHandle handle = _handles[i];
+                if (!_collections.TryGetView(handle, out EntityCollectionView view))
+                {
+                    continue;
+                }
+
+                EnsureRowCapacity(view.Count);
+                int count = view.Count == 0
+                    ? 0
+                    : _collections.CopyWindow(
+                        handle,
+                        0,
+                        _entities.AsSpan(0, view.Count),
+                        _ordinals.AsSpan(0, view.Count),
+                        _roleIds.AsSpan(0, view.Count),
+                        _flags.AsSpan(0, view.Count));
+
+                _snapshots.Add(
+                    new CollectionKey(view.Owner, view.KeyId),
+                    new CollectionSnapshot(view.Revision, view.Signature, _entities, _ordinals, _roleIds, _flags, count));
+            }
+        }
+
         private void PublishDiff(
             EntityCollectionHandle handle,
             in EntityCollectionView view,
