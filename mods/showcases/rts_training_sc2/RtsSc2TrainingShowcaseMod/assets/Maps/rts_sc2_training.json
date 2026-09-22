@@ -36,6 +36,12 @@
         },
         "Name": {
           "Value": "Gateway"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
         }
       }
     },
@@ -50,28 +56,34 @@
         },
         "Name": {
           "Value": "Frontline Vanguard"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
         }
       }
     }
   ],
   "Teams": [
     {
-      "TeamId": 3,
+      "TeamId": 1,
       "RepresentativeInstanceId": "sc2_training_gateway"
     }
   ],
   "Players": [
     {
       "PlayerId": 1,
-      "TeamId": 3,
+      "TeamId": 1,
       "RepresentativeInstanceId": "sc2_training_gateway"
     }
   ],
   "ParticipantRelationships": {
     "Teams": [
       {
-        "TeamA": 3,
-        "TeamB": 3,
+        "TeamA": 1,
+        "TeamB": 1,
         "TypeId": "RtsDemo.Participant",
         "Attitude": "Friendly",
         "Symmetric": true
@@ -81,7 +93,7 @@
     "PlayerTeams": [
       {
         "PlayerId": 1,
-        "TeamId": 3,
+        "TeamId": 1,
         "TypeId": "RtsDemo.Participant",
         "Symmetric": false
       }
