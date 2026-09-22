@@ -13,6 +13,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Attachment;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.Config;
@@ -59,25 +60,46 @@ namespace Ludots.Tests.GAS.Production
             using var engine = CreateEngine();
             LoadMap(engine, MapId, frameTimesMs);
             World world = engine.World;
+            // Since #1064 the relation runtime delegates per-frame position following to the Core
+            // attachment sink (AttachmentPositionSyncSystem, PostMovement group); the mod runtime
+            // only decides who enters or leaves. The fixture therefore drives both halves: the
+            // runtime's >legacy scratch pass (301 constructing hosts into a 512 buffer) and the
+            // sink's parent pose composition for every attached child.
+            int constructingTagId = TagRegistry.GetId("State.Rts.Constructing");
+            Assert.That(constructingTagId, Is.GreaterThan(0), "RtsDemoMod must register State.Rts.Constructing.");
+
             Entity parent = world.Create(
                 WorldPositionCm.FromCm(100, 200),
                 new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(90, 190) });
             var children = new Entity[300];
             for (int i = 0; i < children.Length; i++)
             {
+                var constructing = new GameplayTagContainer();
+                constructing.AddTag(constructingTagId);
                 children[i] = world.Create(
                     new ChildOf { Parent = parent },
+                    new AttachedLocalPose
+                    {
+                        OffsetCm = Fix64Vec2.Zero,
+                        LocalFacingRad = Fix64.Zero,
+                        InheritParentFacing = 0,
+                        OffsetRotation = AttachedOffsetRotation.None,
+                    },
+                    constructing,
                     WorldPositionCm.FromCm(i, i),
                     new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(i, i) });
             }
 
             using var runtime = new RtsRelationRuntimeSystem(engine, 512);
+            using var attachmentSync = new AttachmentPositionSyncSystem(world, scratchCapacity: 512);
             runtime.Update(DeltaTime);
+            attachmentSync.Update(DeltaTime);
             long before = GC.GetAllocatedBytesForCurrentThread();
             runtime.Update(DeltaTime);
+            attachmentSync.Update(DeltaTime);
             long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
 
-            Assert.That(allocated, Is.Zero, "The steady-state RTS relation pass must not allocate.");
+            Assert.That(allocated, Is.Zero, "The steady-state RTS relation pass and attachment position sink must not allocate.");
             for (int i = 0; i < children.Length; i++)
             {
                 Assert.That(world.Get<ChildOf>(children[i]).Parent, Is.EqualTo(parent));
