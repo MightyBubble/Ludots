@@ -58,6 +58,14 @@ namespace Ludots.Core.Engine
                 }
             }
 
+            // The presenter runtime's indexes also mirror world entities that the restore just
+            // replaced; re-baseline them from the restored world on the same boundary contract.
+            if (TryGetService(CoreServiceKeys.PresenterEntityRuntime, out Presentation.Presenters.PresenterEntityRuntime? presenterRuntime) &&
+                presenterRuntime != null)
+            {
+                presenterRuntime.ResetForWorldRestore();
+            }
+
 
             // Cross-tick pending work must not straddle the restore boundary in either direction:
             // orders queued pre-restore would replay against the restored world as ghosts, and

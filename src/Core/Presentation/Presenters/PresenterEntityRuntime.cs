@@ -3107,6 +3107,49 @@ namespace Ludots.Core.Presentation.Presenters
                 : throw new InvalidOperationException($"Presenter entity references unknown definition id={defId}.");
         }
 
+
+        /// <summary>
+        /// Restore-boundary re-baseline (mirrors OrderAdmissionResults.ResetForWorldRestore): the
+        /// presenter indexes mirror world entities that the world restore just replaced. Rebuild
+        /// them from the restored world (index + owner-payload marker path of
+        /// indexes only; owner payload markers and definition-driven markers rode the snapshot)
+        /// so scoped-instance lookups resolve imported
+        /// presenters instead of re-materializing duplicates on the first post-restore tick.
+        /// </summary>
+        public void ResetForWorldRestore()
+        {
+            _byDefinition.Clear();
+            _byOwner.Clear();
+            _byOwnerDefinition.Clear();
+            _byScope.Clear();
+            _scopedInstances.Clear();
+            _activeCount = 0;
+            _nonRootCount = 0;
+            var query = new QueryDescription().WithAll<PresenterState>();
+            _suppressOwnerPayloadMarkerWrites = true;
+            try
+            {
+                _world.Query(in query, (Entity entity, ref PresenterState state) =>
+                {
+                    PresenterDefinition definition = ResolveDefinition(state.DefId, null);
+                    AddIndexes(entity, in state, definition);
+                    _activeCount++;
+                    if (_world.TryGet(entity, out PresenterParent parent) && parent.Parent != Entity.Null)
+                    {
+                        _nonRootCount++;
+                    }
+                });
+            }
+            finally
+            {
+                _suppressOwnerPayloadMarkerWrites = false;
+            }
+
+            SortEntityIndexesByStableId(_byDefinition);
+            SortOwnerDefinitionIndexesByStableId();
+            _structureVersion++;
+        }
+
         private void ReconcileBoundDefinitions()
         {
             if (_definitions == null)
