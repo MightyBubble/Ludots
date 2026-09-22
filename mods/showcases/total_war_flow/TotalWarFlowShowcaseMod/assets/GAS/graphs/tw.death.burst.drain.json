@@ -1,0 +1,49 @@
+[
+ {
+  "id": "tw.death.burst.drain",
+  "kind": "Effect",
+  "entry": "target",
+  "nodes": [
+   {
+    "id": "target",
+    "op": "LoadContextTarget"
+   },
+   {
+    "id": "drain",
+    "op": "ConstFloat",
+    "floatValue": -20.0
+   },
+   {
+    "id": "modify",
+    "op": "ModifyAttributeAdd",
+    "attribute": "Ballista.Health"
+   }
+  ],
+  "controlEdges": [
+   {
+    "from": "target",
+    "fromPort": "next",
+    "to": "drain"
+   },
+   {
+    "from": "drain",
+    "fromPort": "next",
+    "to": "modify"
+   }
+  ],
+  "valueEdges": [
+   {
+    "from": "target",
+    "fromPort": "value",
+    "to": "modify",
+    "toPort": "target"
+   },
+   {
+    "from": "drain",
+    "fromPort": "value",
+    "to": "modify",
+    "toPort": "value"
+   }
+  ]
+ }
+]

@@ -1,15 +1,21 @@
 [
  {
   "id": "Effect.Tw.DeathBurst.SelfDestruct",
-  "presetType": "InstantDamage",
-  "lifetime": "Instant",
+  "presetType": "Buff",
+  "lifetime": "Infinite",
   "participatesInResponse": false,
-  "modifiers": [
-   {
-    "attribute": "Ballista.Health",
-    "op": "Add",
-    "value": -10
+  "duration": {
+   "durationTicks": 0,
+   "periodTicks": 60,
+   "clockId": "FixedFrame"
+  },
+  "phaseGraphs": {
+   "OnPeriod": {
+    "post": "tw.death.burst.drain"
    }
+  },
+  "categories": [
+   "Effect.Tw.DeathBurst"
   ]
  }
 ]

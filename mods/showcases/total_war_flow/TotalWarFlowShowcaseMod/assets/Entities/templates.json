@@ -94,7 +94,7 @@
   "components": {
    "AttributeBuffer": {
     "base": {
-     "Ballista.Health": 1
+     "Ballista.Health": 100
     }
    },
    "GameplayTagContainer": {
