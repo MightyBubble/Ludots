@@ -11,6 +11,7 @@ using Arch.Core.Extensions;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.Gameplay.Attachment;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
@@ -67,17 +68,28 @@ namespace Ludots.Tests.GAS.Production
             {
                 children[i] = world.Create(
                     new ChildOf { Parent = parent },
+                    new AttachedLocalPose
+                    {
+                        OffsetCm = Fix64Vec2.Zero,
+                        LocalFacingRad = Fix64.Zero,
+                        InheritParentFacing = 0,
+                        OffsetRotation = AttachedOffsetRotation.None,
+                    },
                     WorldPositionCm.FromCm(i, i),
                     new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(i, i) });
             }
 
+            var attachmentSync = engine.GetService(CoreServiceKeys.AttachmentPositionSync)
+                ?? throw new InvalidOperationException("AttachmentPositionSync service missing.");
             using var runtime = new RtsRelationRuntimeSystem(engine, 512);
             runtime.Update(DeltaTime);
+            attachmentSync.Update(DeltaTime);
             long before = GC.GetAllocatedBytesForCurrentThread();
             runtime.Update(DeltaTime);
+            attachmentSync.Update(DeltaTime);
             long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
 
-            Assert.That(allocated, Is.Zero, "The steady-state RTS relation pass must not allocate.");
+            Assert.That(allocated, Is.Zero, "The steady-state RTS relation pass (relation runtime + attachment sync) must not allocate.");
             for (int i = 0; i < children.Length; i++)
             {
                 Assert.That(world.Get<ChildOf>(children[i]).Parent, Is.EqualTo(parent));
