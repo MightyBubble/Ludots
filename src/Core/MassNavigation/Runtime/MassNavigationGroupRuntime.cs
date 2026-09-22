@@ -194,7 +194,17 @@ internal sealed class MassNavigationGroupRuntime
                 _orderTokenToGroupId[captured.CommandToken] = captured.GroupId;
             }
 
-            if (group.MemberCount == 1)
+            // Arrived groups restore as holds: reassigning targets to the captured
+            // destination would yank settled formations (and freshly appended members)
+            // back across the field on every authored structural change.
+            if (captured.Arrived)
+            {
+                for (int member = 0; member < group.MemberCount; member++)
+                {
+                    simulation.HoldUnitAtCurrentPosition(group.MemberIndices[member]);
+                }
+            }
+            else if (group.MemberCount == 1)
             {
                 AssignLooseOrderTargets(simulation, captured.GroupId, group, resetRecovery: true);
             }

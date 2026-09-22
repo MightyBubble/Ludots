@@ -109,8 +109,8 @@
     "shape": "Circle",
     "sinkPhysicsCollider": false,
     "sinkNavigationObstacle": true,
-    "navRadiusCm": 200,
-    "radiusCm": 200,
+    "navRadiusCm": 500,
+    "radiusCm": 500,
     "localOffsetXCm": 0,
     "localOffsetYCm": 0
    }
