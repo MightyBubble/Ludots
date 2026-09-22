@@ -58,9 +58,9 @@ namespace Ludots.Core.TransportNetwork
 
             List<NavPointCm> polygon = rule.Geometry switch
             {
-                TransportNavObstacleGeometryKind.Corridor => BuildCorridorPolygon(
+                TransportNavObstacleGeometryKind.Stripline => BuildStriplinePolygon(
                     centerline,
-                    ResolveCorridorWidthCm(segment, rule, obstacleId),
+                    ResolveStriplineWidthCm(segment, rule, obstacleId),
                     rule.SampleStepCm,
                     rule.CapEnds,
                     obstacleId),
@@ -78,7 +78,7 @@ namespace Ludots.Core.TransportNetwork
             };
         }
 
-        private static int ResolveCorridorWidthCm(
+        private static int ResolveStriplineWidthCm(
             TransportNetworkSegment segment,
             TransportNavObstacleSinkRule rule,
             string obstacleId)
@@ -92,13 +92,13 @@ namespace Ludots.Core.TransportNetwork
             if (segment.WidthCm <= 0)
             {
                 throw new InvalidOperationException(
-                    $"Transport nav obstacle '{obstacleId}' requires widthCm > 0 for Corridor geometry.");
+                    $"Transport nav obstacle '{obstacleId}' requires widthCm > 0 for Stripline geometry.");
             }
 
             return segment.WidthCm;
         }
 
-        private static List<NavPointCm> BuildCorridorPolygon(
+        private static List<NavPointCm> BuildStriplinePolygon(
             IReadOnlyList<NavPointCm> centerline,
             int widthCm,
             int sampleStepCm,
@@ -108,13 +108,13 @@ namespace Ludots.Core.TransportNetwork
             List<NavPointCm> samples = DensifyLinear(centerline, sampleStepCm);
             if (samples.Count < 2)
             {
-                throw new InvalidOperationException($"Transport nav obstacle '{obstacleId}' corridor requires at least two distinct samples.");
+                throw new InvalidOperationException($"Transport nav obstacle '{obstacleId}' stripline requires at least two distinct samples.");
             }
 
             int halfWidth = widthCm / 2;
             if (halfWidth <= 0)
             {
-                throw new InvalidOperationException($"Transport nav obstacle '{obstacleId}' widthCm={widthCm} is too small to form a corridor.");
+                throw new InvalidOperationException($"Transport nav obstacle '{obstacleId}' widthCm={widthCm} is too small to form a stripline.");
             }
 
             if (capEnds)
@@ -270,7 +270,7 @@ namespace Ludots.Core.TransportNetwork
             double len = Math.Sqrt(tx * tx + tz * tz);
             if (len <= 1e-9)
             {
-                throw new InvalidOperationException("Cannot normalize a zero-length transport corridor tangent.");
+                throw new InvalidOperationException("Cannot normalize a zero-length transport stripline tangent.");
             }
 
             ux = tx / len;

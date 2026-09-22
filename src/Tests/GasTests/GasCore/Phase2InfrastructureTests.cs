@@ -610,9 +610,12 @@ namespace GasTests
     {
         public static void InitializeMinimal(this GameEngine engine)
         {
-            // Minimal setup: just create ECS world so RegisterSystem works
+            // Minimal setup: ECS world + the trigger manager that map-entity suspension
+            // touches (SetMapEntitiesSuspended dereferences TriggerManager for global
+            // subscription detachment).
             var world = Arch.Core.World.Create();
             typeof(GameEngine).GetProperty("World")?.SetValue(engine, world);
+            typeof(GameEngine).GetProperty("TriggerManager")?.SetValue(engine, new Ludots.Core.Scripting.TriggerManager());
         }
     }
 }
