@@ -566,7 +566,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                     prepared.Entity.Remove(activeConfig.EntityBlackboardKey);
                 }
 
-                if (order.Target != default)
+                if (order.Target != Entity.Null)
                 {
                     if (!prepared.Entity.HasKey(config.EntityBlackboardKey) &&
                         prepared.Entity.Count >= BlackboardEntityBuffer.MAX_ENTRIES)
