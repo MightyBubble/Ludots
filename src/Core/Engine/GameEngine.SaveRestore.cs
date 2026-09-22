@@ -31,6 +31,17 @@ namespace Ludots.Core.Engine
             _cooperativeSimulation?.Reset();
             LudotsWorldStateImporter.ImportOwnedSnapshotInto(restoredWorld, World);
             SetService(CoreServiceKeys.World, World);
+
+            // Collection sources hold entity references into the replaced world; without this
+            // reset a restored session would reconcile selections against dead entities. The
+            // reset must precede domain restore: save participants rebind collections (e.g. the
+            // command-source selection) into the now-clean store, and clearing afterwards would
+            // wipe the rebind and desynchronize the restored session from the checkpoint.
+            if (TryGetService(CoreServiceKeys.EntityCollectionStore, out EntityCollections.EntityCollectionStore? collectionStore))
+            {
+                collectionStore!.Clear();
+            }
+
             registry.RestoreDomains(domains);
             admissionResults.ResetForWorldRestore();
 
@@ -45,13 +56,6 @@ namespace Ludots.Core.Engine
             if (TryGetService(CoreServiceKeys.ChainOrderQueue, out Ludots.Core.Gameplay.GAS.Orders.OrderQueue? chainOrderQueue))
             {
                 chainOrderQueue!.Clear();
-            }
-
-            // Collection sources hold entity references into the replaced world; without this
-            // reset a restored session would reconcile selections against dead entities.
-            if (TryGetService(CoreServiceKeys.EntityCollectionStore, out EntityCollections.EntityCollectionStore? collectionStore))
-            {
-                collectionStore!.Clear();
             }
 
             // Determinism basis: elapsed engine time is simulation state, not wall time. Rewind it
