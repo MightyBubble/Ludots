@@ -29,6 +29,7 @@ namespace Ludots.Core.Systems
 {
     public class MapLoader
     {
+        private const string InitialInteractionContextOverrideKey = "initialInteractionContext";
         private const int TemplateBatchScratchCapacity = 4096;
 
         private readonly World _world;
@@ -807,7 +808,10 @@ namespace Ludots.Core.Systems
                 {
                     foreach (var kvp in entityData.Overrides)
                     {
-                        builder.WithOverride(kvp.Key, kvp.Value);
+                        if (!string.Equals(kvp.Key, InitialInteractionContextOverrideKey, System.StringComparison.Ordinal))
+                        {
+                            builder.WithOverride(kvp.Key, kvp.Value);
+                        }
                     }
                 }
 
@@ -877,7 +881,7 @@ namespace Ludots.Core.Systems
         {
             string? profileName = template.InitialInteractionContext;
             if (overrides != null &&
-                overrides.TryGetValue("initialInteractionContext", out JsonNode? overrideNode) &&
+                overrides.TryGetValue(InitialInteractionContextOverrideKey, out JsonNode? overrideNode) &&
                 overrideNode.GetValueKind() == JsonValueKind.String)
             {
                 string? overrideName = overrideNode.GetValue<string>();
