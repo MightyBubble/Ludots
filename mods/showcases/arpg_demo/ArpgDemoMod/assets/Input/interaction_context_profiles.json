@@ -33,6 +33,9 @@
         {
           "trigger": "graph.arpg.cast_slot5"
         }
+      ],
+      "onActivated": [
+        "graph.arpg.roster_sync"
       ]
     }
   ]

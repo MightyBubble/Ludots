@@ -50,7 +50,7 @@ namespace Ludots.Tests.GAS
         private const int EliteTemplateKeyId = 12;
         private const int TankTemplateKeyId = 21;
 
-        private const string ByTemplateProfileId = "aggregation.by_template";
+        private const string ByTemplateProfileId = "aggregation.tests.by_template";
         private const string ByFamilyProfileId = "aggregation.tests.by_family";
 
         [SetUp]
@@ -412,11 +412,13 @@ namespace Ludots.Tests.GAS
             AbilityCategoryRegistry.Register(StimFamilyCategory);
             AbilityCategoryRegistry.Register(ChargeFamilyCategory);
 
-            var profileIds = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var registry = new AbilityAggregationProfileRegistry(profileIds);
+            // Add test profiles into the engine registry instead of replacing the service —
+            // the EntityCommandPanelMod GameStart source resolves its own default profile from it.
+            var registry = engine.GetService(CoreServiceKeys.AbilityAggregationProfileRegistry)
+                ?? throw new InvalidOperationException("AbilityAggregationProfileRegistry missing.");
             registry.Install(new AbilityAggregationProfilesConfig
             {
-                Profiles =
+                Profiles = new List<AbilityAggregationProfileDefinition>
                 {
                     new AbilityAggregationProfileDefinition
                     {
@@ -433,7 +435,6 @@ namespace Ludots.Tests.GAS
                 }
             });
 
-            engine.SetService(CoreServiceKeys.AbilityAggregationProfileRegistry, registry);
         }
 
         private static void RegisterAbility(GameEngine engine, int abilityId, string label, string detail, string? categoryName)

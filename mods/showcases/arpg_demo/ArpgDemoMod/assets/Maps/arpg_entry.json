@@ -73,5 +73,12 @@
     ],
     "Players": [],
     "PlayerTeams": []
-  }
+  },
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "arpg-entry-hero"
+    }
+  ]
 }

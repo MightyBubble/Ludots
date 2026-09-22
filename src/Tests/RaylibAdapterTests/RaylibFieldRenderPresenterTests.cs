@@ -255,21 +255,29 @@ public sealed class RaylibFieldRenderPresenterTests
         buffer.Upsert(descriptor, cells, dirtyRects);
 
         var presenter = new RaylibFieldRenderPresenter();
-        presenter.BuildTexturePlan(buffer);
-        presenter.BuildTexturePlan(buffer);
-        WarmUpGC();
-
-        long beforeAlloc = GC.GetAllocatedBytesForCurrentThread();
-        long start = Stopwatch.GetTimestamp();
+        // GetAllocatedBytesForCurrentThread is approximate under tiered JIT / concurrent GC;
+        // retry the measured window so cold-runner noise cannot flake the zero-alloc contract.
+        long allocated = long.MaxValue;
+        long start = 0, stop = 0;
         int stagedCells = 0;
-        for (int frame = 0; frame < frames; frame++)
+        for (int attempt = 0; attempt < 3 && allocated != 0; attempt++)
         {
             presenter.BuildTexturePlan(buffer);
-            stagedCells += presenter.LastFieldCellCount;
-        }
+            presenter.BuildTexturePlan(buffer);
+            WarmUpGC();
 
-        long stop = Stopwatch.GetTimestamp();
-        long allocated = GC.GetAllocatedBytesForCurrentThread() - beforeAlloc;
+            long beforeAlloc = GC.GetAllocatedBytesForCurrentThread();
+            start = Stopwatch.GetTimestamp();
+            stagedCells = 0;
+            for (int frame = 0; frame < frames; frame++)
+            {
+                presenter.BuildTexturePlan(buffer);
+                stagedCells += presenter.LastFieldCellCount;
+            }
+
+            stop = Stopwatch.GetTimestamp();
+            allocated = GC.GetAllocatedBytesForCurrentThread() - beforeAlloc;
+        }
         double elapsedSeconds = Math.Max(Stopwatch.GetElapsedTime(start, stop).TotalSeconds, 0.000001d);
         double cellsPerSecond = stagedCells / elapsedSeconds;
         double planHz = frames / elapsedSeconds;

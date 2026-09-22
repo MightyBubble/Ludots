@@ -44,25 +44,35 @@ namespace Ludots.Tests.GAS.Production
     {
         private const float DeltaTime = 1f / 60f;
         private const string TestInputBackendKey = "Tests.UxPrototype.InputBackend";
+        // Hover trigger picks within a ±12px rect of the pointer; probe with a 6px-step spiral
+        // so every sample moves the pointer (PointerMoved only dispatches on change) and the
+        // target's projected center lands inside at least one probe rect.
         private static readonly Vector2[] HoverProbeOffsets =
         {
-            Vector2.Zero,
-            new Vector2(0f, -24f),
-            new Vector2(0f, 24f),
-            new Vector2(-24f, 0f),
-            new Vector2(24f, 0f),
-            new Vector2(-36f, -36f),
-            new Vector2(36f, -36f),
-            new Vector2(-36f, 36f),
-            new Vector2(36f, 36f),
-            new Vector2(0f, -48f),
-            new Vector2(0f, 48f),
-            new Vector2(-48f, 0f),
-            new Vector2(48f, 0f),
-            new Vector2(-64f, -24f),
-            new Vector2(64f, -24f),
-            new Vector2(-64f, 24f),
-            new Vector2(64f, 24f)
+            new Vector2(0f, -6f),
+            new Vector2(6f, 0f),
+            new Vector2(0f, 6f),
+            new Vector2(-6f, 0f),
+            new Vector2(-6f, -6f),
+            new Vector2(6f, -6f),
+            new Vector2(-6f, 6f),
+            new Vector2(6f, 6f),
+            new Vector2(0f, -18f),
+            new Vector2(0f, 18f),
+            new Vector2(-18f, 0f),
+            new Vector2(18f, 0f),
+            new Vector2(-18f, -18f),
+            new Vector2(18f, -18f),
+            new Vector2(-18f, 18f),
+            new Vector2(18f, 18f),
+            new Vector2(0f, -36f),
+            new Vector2(0f, 36f),
+            new Vector2(-36f, 0f),
+            new Vector2(36f, 0f),
+            new Vector2(-48f, -24f),
+            new Vector2(48f, -24f),
+            new Vector2(-48f, 24f),
+            new Vector2(48f, 24f)
         };
         private static readonly string[] AcceptanceMods =
         {
@@ -620,7 +630,9 @@ namespace Ludots.Tests.GAS.Production
             {
                 Vector2 candidate = projectedScreenPoint + HoverProbeOffsets[i];
                 backend.SetMousePosition(candidate);
-                Tick(engine, 1);
+                // Pointer-motion trigger dispatch runs on the fixed step (two frames per
+                // committed tick under the manual clock); give the move a full step.
+                Tick(engine, 2);
 
                 string hovered = ReadHoveredEntityName(engine);
                 hoveredSamples.Add($"{candidate.X:F1},{candidate.Y:F1}->{hovered}");

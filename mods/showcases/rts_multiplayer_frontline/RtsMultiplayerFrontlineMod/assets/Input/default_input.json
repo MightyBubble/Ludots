@@ -4,6 +4,16 @@
       "id": "Frontline.ToggleReady",
       "name": "Frontline_ToggleReady",
       "type": "Button"
+    },
+    {
+      "id": "Select.Begin",
+      "name": "Select_Begin",
+      "type": "Button"
+    },
+    {
+      "id": "Select.End",
+      "name": "Select_End",
+      "type": "Button"
     }
   ],
   "contexts": [
@@ -12,6 +22,14 @@
       "name": "Frontline Gameplay",
       "priority": 50,
       "bindings": [
+        {
+          "actionId": "Select.Begin",
+          "path": "<Mouse>/LeftButton"
+        },
+        {
+          "actionId": "Select.End",
+          "path": "<Mouse>/LeftButton"
+        },
         {
           "actionId": "SkillQ",
           "path": "<Keyboard>/q"

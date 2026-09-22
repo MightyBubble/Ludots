@@ -22,6 +22,9 @@
         },
         {
           "trigger": "graph.case_e.cast_q"
+        },
+        {
+          "trigger": "graph.core.hover_tick"
         }
       ]
     },

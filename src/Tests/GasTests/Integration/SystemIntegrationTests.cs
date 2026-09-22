@@ -18,7 +18,7 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public class SystemIntegrationTests
     {
-        private readonly TagOps _tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+        private readonly TagOps _tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry());
         private World _world;
         private GameplayEventBus _eventBus;
         private PhysicsWorld _physicsWorld;
@@ -80,7 +80,7 @@ namespace Ludots.Tests.GAS
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                 tagOps: _tagOps);
             var appSystem = new EffectApplicationSystem(_world, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, clock, effectRequests, tagOps: _tagOps);
-            var aggSystem = new AttributeAggregatorSystem(_world, tagOps: _tagOps);
+            var aggSystem = new AttributeAggregatorSystem(_world, tagOps: _tagOps, aggregateDirty: _tagOps.AggregateDirty);
             var lifetimeSystem = new EffectLifetimeSystem(_world, clock, conditions, snapshotCapacity: 4096, fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, effectRequests: effectRequests, tagOps: _tagOps);
             
             // Act: 按Phase顺序执行

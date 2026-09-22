@@ -53,6 +53,16 @@ namespace CoreInputMod.Triggers
                 CoreServiceKeys.MinimapFocusCollectionProvider,
                 (Ludots.Core.Presentation.Minimap.MinimapFocusCollectionProvider)TryResolveMinimapFocusCollection);
 
+            // The acquisition system that fired these retired with the input→order graph line;
+            // the registration point stays so dependent mods (camera follow, VFX hooks) can
+            // attach, and the graph selection commit path can invoke them once it lands.
+            if (!engine.TryGetService(CoreInputServiceKeys.CommandSourceAcquiredCallbacks, out var _))
+            {
+                engine.SetService(
+                    CoreInputServiceKeys.CommandSourceAcquiredCallbacks,
+                    new System.Collections.Generic.List<System.Action<Ludots.Platform.Abstractions.WorldCmInt2, Arch.Core.Entity>>());
+            }
+
             _ = engine.GetService(CoreServiceKeys.InteractionActionBindings)
                 ?? throw new InvalidOperationException("InteractionActionBindings must be registered before CoreInputMod installs.");
 
@@ -179,6 +189,16 @@ InstallDeclaredLocalOrderSources(engine);
             if (sourceModId == null)
             {
                 _ctx.Log("[CoreInputMod] No loaded mod ships input_order_mappings.json; auto local order source stays uninstalled.");
+                return;
+            }
+
+            // A mod that ships local_order_source.json gets its mapping installed by the declared
+            // path below; auto-installing it too mounts a second mapping on the same actions and
+            // every press submits twice (fireball double mana cost).
+            string declaredUri = $"{sourceModId}:assets/Input/local_order_source.json";
+            if (_ctx.VFS.TryResolveFullPath(declaredUri, out string? declaredPath) && System.IO.File.Exists(declaredPath))
+            {
+                _ctx.Log($"[CoreInputMod] '{sourceModId}' declares its own local order source; auto install skipped.");
                 return;
             }
 

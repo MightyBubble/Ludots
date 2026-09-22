@@ -511,6 +511,9 @@ namespace Ludots.Tests.GAS
         public void CommandSourcePointerHitResolver_UsesWorldPositionCm_NotVisualTransformOrCull()
         {
             using var world = World.Create();
+            world.Create(
+                new Ludots.Core.Presentation.Components.PresentationFrameState { Enabled = true, InterpolationAlpha = 1f },
+                new Ludots.Core.Presentation.Components.PresentationFrameStateTag());
             var local = world.Create();
             var actor = world.Create(
                 WorldPositionCm.FromCm(1600, 1200),

@@ -1338,6 +1338,12 @@ namespace Ludots.Tests.GAS.Production
 
             details.Add($"displacements={displacementCount}");
             details.Add($"actorDisplacement={actorDisplacementFound}");
+            engine.World.Query(new QueryDescription().WithAll<DisplacementState>(), (Entity de, ref DisplacementState ds) =>
+            {
+                string dn = engine.World.TryGet(de, out Name dn2) ? dn2.Value : "?";
+                string tn = engine.World.IsAlive(ds.TargetEntity) && engine.World.TryGet(ds.TargetEntity, out Name tn2) ? tn2.Value : ds.TargetEntity.Id.ToString();
+                details.Add($"dispEntity={dn}->target={tn}");
+            });
             details.Add($"activeMode={GetActiveModeId(engine)}");
             return string.Join(" | ", details);
         }

@@ -2495,6 +2495,9 @@ namespace Ludots.Core.Engine
                 triggerGraphActionBindings,
                 pointerLifecycleActionIds);
             RegisterSystem(
+                Ludots.Core.Knowledge.VisionlessMapDisclosure.Create(this, visionFogLayerRegistry),
+                SystemGroup.DeferredTriggerCollection);
+            RegisterSystem(
                 new Ludots.Core.Gameplay.MapTriggers.TriggerGraphActionBindingSystem(
                     () => CurrentMapSession,
                     TriggerManager,
