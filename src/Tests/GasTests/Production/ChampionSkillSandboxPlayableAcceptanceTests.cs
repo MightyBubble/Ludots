@@ -2655,12 +2655,38 @@ namespace Ludots.Tests.GAS.Production
             string localOrderSource = engine.GlobalContext.TryGetValue("CoreInputMod.Debug.LocalOrderSource", out var localOrderSourceObj)
                 ? localOrderSourceObj?.ToString() ?? "<null>"
                 : "<missing>";
+            string activationResult = "<none>";
+            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.ActiveInputOrderMapping.Name, out var mappingObj) &&
+                mappingObj is InputOrderMappingSystem mappingSystem)
+            {
+                var last = mappingSystem.LastActivationResult;
+                activationResult = $"{last.State} actor={last.Actor.Id}:{last.Actor.Version} rejection={last.Rejection}";
+            }
+            string seatState;
+            try
+            {
+                Entity rep = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+                var world = engine.World;
+                string ctx = world.TryGet<InteractionContextInstance>(rep, out InteractionContextInstance inst)
+                    ? $"ctxEntity={inst.ContextEntity.Id}:{inst.ContextEntity.Version} activeKey={inst.ActiveCollectionKeyId}"
+                    : "ctx=<none>";
+                string view = Ludots.Tests.EntityCollectionTestAccess.TryDescribeCommandSourceView(engine, out EntityCollectionView v)
+                    ? $"view owner={v.Owner.Id} key={v.Key} count={v.Count} primary={v.PrimaryEntity.Id}"
+                    : "view=<none>";
+                seatState = $"rep={rep.Id}:{rep.Version} alive={world.IsAlive(rep)} {ctx} {view}";
+            }
+            catch (Exception ex)
+            {
+                seatState = $"probe-error={ex.GetType().Name}";
+            }
 
             return string.Join(" || ",
                 $"actor={actorName}",
                 $"actorPos=({actorPosition.X:0.##},{actorPosition.Y:0.##})",
                 $"targetScreen=({targetScreen.X:0.##},{targetScreen.Y:0.##})",
                 BuildInputActionDiagnostics(engine, "Command"),
+                $"activation={activationResult}",
+                $"seat={seatState}",
                 $"rightClickPressFrame={pressFrame}",
                 $"localOrderSource={localOrderSource}",
                 BuildAbilityDiagnostics(engine, actorName),
