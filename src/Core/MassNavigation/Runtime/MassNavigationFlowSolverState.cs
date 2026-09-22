@@ -2170,15 +2170,12 @@ public sealed partial class MassNavigationFlowSolverState
                 else
                 {
                     // No unit target and no scenario-authored team target: idle agents
-                    // hold position. Separation and hard resolve still displace them —
-                    // avoidance is the solver's whole job for idle units; self-powered
-                    // motion requires an explicit request.
-                    if (_unitSettledFlags[i] == 0)
-                    {
-                        EnterSettledState(i, px, py);
-                    }
-
-                    suppressTargetMotion = true;
+                    // contribute no self-powered desired velocity (defaults above) and
+                    // fall through to normal integration, so separation and obstacle
+                    // pushes still displace them — avoidance is the solver's whole job
+                    // for idle units; self-powered motion requires an explicit request.
+                    // Deliberately NOT suppressTargetMotion: suppression pins velocity
+                    // and position, which would also freeze separation response.
                 }
             }
 

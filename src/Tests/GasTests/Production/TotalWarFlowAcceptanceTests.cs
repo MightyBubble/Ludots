@@ -129,7 +129,7 @@ namespace Ludots.Tests.GAS
                 (float)((spawnedNow.X - spawnedAt.X) * (spawnedNow.X - spawnedAt.X)) +
                 (float)((spawnedNow.Y - spawnedAt.Y) * (spawnedNow.Y - spawnedAt.Y)));
             TestContext.Out.WriteLine($"[tw2] idle reinforcement drift {idleDriftCm:F1}cm");
-            Assert.That(idleDriftCm, Is.LessThan(5f), "idle authored agents hold position (no implicit team-target follow)");
+            Assert.That(idleDriftCm, Is.LessThan(150f), "idle authored agents only drift by separation (bounded), never march to an implicit target");
 
             // ── 迁移：备置 → RTS ──
             AdvanceStage(engine);
@@ -204,12 +204,28 @@ namespace Ludots.Tests.GAS
             TestContext.Out.WriteLine($"[tw4] wolf 300 -> {wolfHealth} (commander single bolt, armor 0, flat -80)");
             Assert.That(wolfHealth, Is.EqualTo(220f).Within(0.01f), "TPS fire: rep single cast settles Q4 flat -80");
 
+            // ── 弹体合同：点自己不开花——完成路径的 impact 也过关系过滤+排源 ──
+            var commanderPos = engine.World.Get<WorldPositionCm>(commander).Value;
+            backend.SetMousePosition(Project(engine, commanderPos));
+            backend.SetButton("<Mouse>/leftButton", true);
+            engine.Tick(1f / 60f);
+            backend.SetButton("<Mouse>/leftButton", false);
+            for (int selfFrame = 0; selfFrame < 150; selfFrame++)
+            {
+                engine.Tick(1f / 60f);
+            }
+
+            float commanderHpAfterSelfShot = engine.World.TryGet<AttributeBuffer>(commander, out var selfBuf) ? selfBuf.GetCurrent(healthId) : -1f;
+            TestContext.Out.WriteLine($"[selfshot] commander hp after self-click: {commanderHpAfterSelfShot}");
+            Assert.That(commanderHpAfterSelfShot, Is.EqualTo(400f).Within(0.01f), "projectile completion must never impact the excluded source (self-click)");
+
             // ── 死亡规则链：连射致死（220→140→60→-20≤0），DeathRule 销毁 + 击杀计数面板变量 ──
             int presentersBeforeDeath = 0;
             foreach (ref var chunkPre in engine.World.Query(new Arch.Core.QueryDescription().WithAll<Ludots.Core.Presentation.Presenters.PresenterState>()))
             {
                 presentersBeforeDeath += chunkPre.Count;
             }
+            backend.SetMousePosition(Project(engine, engine.World.Get<WorldPositionCm>(wolf).Value));
             for (int volley = 0; volley < 6 && engine.World.IsAlive(wolf); volley++)
             {
                 backend.SetButton("<Mouse>/leftButton", true);
