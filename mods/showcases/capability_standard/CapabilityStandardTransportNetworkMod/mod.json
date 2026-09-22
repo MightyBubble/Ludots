@@ -1,13 +1,17 @@
 {
   "name": "CapabilityStandardTransportNetworkMod",
   "version": "1.0.0",
-  "description": "Capability Standard Transport Network SSOT showcase for asset-authored NodeGraph chunks and ribbon payloads.",
-  "main": "bin/net9.0/CapabilityStandardTransportNetworkMod.dll",
+  "description": "Capability Standard Transport Network SSOT showcase: board-declared transport network, asset-authored only (engine installs the baked graph and ribbons).",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",
     "CoreInputMod": "^1.0.0"
   },
   "author": "OpenAI Codex",
-  "tags": ["showcase", "capability-standard", "transport-network", "node-graph"]
+  "tags": [
+    "showcase",
+    "capability-standard",
+    "transport-network",
+    "node-graph"
+  ]
 }
