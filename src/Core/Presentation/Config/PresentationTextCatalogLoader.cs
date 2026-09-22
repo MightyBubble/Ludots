@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Registry;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Config
 {
@@ -34,6 +35,43 @@ namespace Ludots.Core.Presentation.Config
                 return PresentationTextCatalog.Empty;
             }
 
+            return AssembleCatalog(OrderTokenNodes(tokenNodes), localeRoot);
+        }
+
+        /// <summary>
+        /// Loads a catalog from already-merged token/locale JSON, running the exact same
+        /// validation as the pipeline path. Editors use this so their save-time checks cannot
+        /// drift from engine load-time checks.
+        /// </summary>
+        public static PresentationTextCatalog LoadStandalone(JsonArray tokenNodes, JsonObject localeRoot)
+        {
+            if ((tokenNodes == null || tokenNodes.Count == 0) && (localeRoot == null || localeRoot.Count == 0))
+            {
+                return PresentationTextCatalog.Empty;
+            }
+
+            var orderedTokenNodes = new List<(string Key, JsonNode Node)>(tokenNodes?.Count ?? 0);
+            if (tokenNodes != null)
+            {
+                for (int i = 0; i < tokenNodes.Count; i++)
+                {
+                    string key = tokenNodes[i]?["id"]?.GetValue<string>() ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(key))
+                    {
+                        throw new InvalidOperationException("Presentation text token is missing required 'id'.");
+                    }
+
+                    orderedTokenNodes.Add((key, tokenNodes[i]!));
+                }
+
+                orderedTokenNodes.Sort((left, right) => StringComparer.Ordinal.Compare(left.Key, right.Key));
+            }
+
+            return AssembleCatalog(orderedTokenNodes, localeRoot);
+        }
+
+        private static List<(string Key, JsonNode Node)> OrderTokenNodes(IReadOnlyList<MergedConfigEntry> tokenNodes)
+        {
             var orderedTokenNodes = new List<(string Key, JsonNode Node)>(tokenNodes.Count);
             for (int i = 0; i < tokenNodes.Count; i++)
             {
@@ -47,7 +85,13 @@ namespace Ludots.Core.Presentation.Config
             }
 
             orderedTokenNodes.Sort((left, right) => StringComparer.Ordinal.Compare(left.Key, right.Key));
+            return orderedTokenNodes;
+        }
 
+        private static PresentationTextCatalog AssembleCatalog(
+            List<(string Key, JsonNode Node)> orderedTokenNodes,
+            JsonObject localeRoot)
+        {
             var tokenIds = new StringIntRegistry(
                 capacity: Math.Max(16, orderedTokenNodes.Count + 1),
                 startId: 1,

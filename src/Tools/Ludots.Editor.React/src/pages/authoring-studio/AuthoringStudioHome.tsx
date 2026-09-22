@@ -27,7 +27,7 @@ export function AuthoringStudioHome() {
         <p className="text-xs uppercase tracking-widest text-studio-muted">Ludots</p>
         <h1 className="mt-1 text-3xl font-semibold text-studio-label">作者工作室</h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-studio-secondary">
-          写蓝图、行为树、状态机、对话和时间轴。一键进来，顶栏五个房间来回切。地图、面板、场图层、技能数值不在这扇门里。
+          写蓝图、行为树、状态机、对话、文本和时间轴。一键进来，顶栏六个房间来回切。地图、面板、场图层、技能数值不在这扇门里。
         </p>
         {bridgeUp === false ? (
           <p className="mt-4 rounded-md border border-studio-red/40 bg-studio-red/10 px-3 py-2 text-sm text-studio-red">
