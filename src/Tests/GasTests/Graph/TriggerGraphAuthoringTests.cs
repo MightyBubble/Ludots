@@ -722,6 +722,7 @@ namespace Ludots.Tests.Gas.Graph
                 GraphNodeOp.SubmitCast,
                 GraphNodeOp.SubmitEngageBatch,
                 GraphNodeOp.QueryFilterKnowledgeVisible,
+                GraphNodeOp.QueryFilterSelectable,
             };
             foreach (GraphNodeOp op in GraphOpDescriptorTable.EnumerateAuthorable(GraphKind.TriggerGraph))
             {
