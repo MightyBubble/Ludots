@@ -21,6 +21,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.FileProviders;
 using System.Diagnostics;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Linq;
@@ -649,7 +650,11 @@ app.MapPut("/api/mods/{modId}/story/catalogs/{catalogId}", async (string modId, 
     {
         File.WriteAllText(
             path,
-            items.ToJsonString(new JsonSerializerOptions { WriteIndented = true }),
+            items.ToJsonString(new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+            }).Replace("\r\n", "\n"),
             new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         return Results.Ok(new { ok = true, id = catalogId, relativePath = relative, path });
     }
@@ -661,6 +666,39 @@ app.MapPut("/api/mods/{modId}/story/catalogs/{catalogId}", async (string modId, 
         }
 
         return Results.BadRequest(new { ok = false, error = ex.Message, path });
+    }
+});
+
+// Text bank save gate: runs the exact engine load validation (token registry, locale coverage,
+// template markup) so the editor never writes a bank the game would refuse to boot.
+app.MapPost("/api/mods/{modId}/story/text/validate", async (string modId, HttpRequest req) =>
+{
+    using var reader = new StreamReader(req.Body, Encoding.UTF8, leaveOpen: false);
+    string body = await reader.ReadToEndAsync();
+    JsonNode? root;
+    try { root = JsonNode.Parse(string.IsNullOrWhiteSpace(body) ? "null" : body); }
+    catch (JsonException ex) { return Results.BadRequest(new { ok = false, error = $"Malformed JSON: {ex.Message}" }); }
+
+    if (root is not JsonObject payload ||
+        payload["tokens"] is not { } tokensNode ||
+        payload["locales"] is not JsonObject localeRoot)
+    {
+        return Results.BadRequest(new { ok = false, error = "Body must be { tokens: <array>, locales: <object> }." });
+    }
+
+    if (tokensNode is not JsonArray tokens)
+    {
+        return Results.BadRequest(new { ok = false, error = "tokens must be a JSON array." });
+    }
+
+    try
+    {
+        Ludots.Core.Presentation.Config.PresentationTextCatalogLoader.LoadStandalone(tokens, localeRoot);
+        return Results.Ok(new { ok = true });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
     }
 });
 
@@ -4599,6 +4637,7 @@ static class EditorRepo
         ["dialogues"] = "Dialogue/dialogues.json",
         ["sequences"] = "Sequencer/sequences.json",
         ["text_tokens"] = "Presentation/text_tokens.json",
+        ["text_locales"] = "Presentation/text_locales.json",
         ["semantic_maps"] = "Presentation/semantic_maps.json",
         ["image_assets"] = "Presentation/image_assets.json",
     };
