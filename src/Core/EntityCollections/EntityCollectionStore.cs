@@ -29,6 +29,21 @@ namespace Ludots.Core.EntityCollections
             }
         }
 
+        /// <summary>Removes every bound collection; used at world-restore boundaries where all
+        /// entity references the sources held belong to the replaced world.</summary>
+        public void Clear()
+        {
+            for (int slot = 0; slot < _active.Length; slot++)
+            {
+                if (_active[slot] &&
+                    _collections.TryGetSlot(slot, out _, out EntityCollectionPayload payload, out _) &&
+                    _owners[slot] != Entity.Null)
+                {
+                    Remove(_owners[slot], payload.KeyId);
+                }
+            }
+        }
+
         public void RemoveOwner(Entity owner)
         {
             for (int slot = 0; slot < _active.Length; slot++)
