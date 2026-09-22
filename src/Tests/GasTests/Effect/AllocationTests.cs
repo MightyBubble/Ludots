@@ -386,6 +386,7 @@ namespace Ludots.Tests.GAS
             gameplayEffect.AggregatesModifiers = true;
             GameplayEffectFactory.AddModifier(world, effect, attrId, ModifierOp.Add, 7f);
             That(world.Get<ActiveEffectContainer>(target).Add(effect), Is.True);
+            tagOps.AggregateDirty.MarkDirty(target);
 
             const int timedTagId = 7;
             ref var tags = ref world.Get<GameplayTagContainer>(target);

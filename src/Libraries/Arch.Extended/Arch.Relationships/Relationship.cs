@@ -1,3 +1,6 @@
+using System;
+using System.Linq.Expressions;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using Arch.Core;
 
@@ -100,7 +103,10 @@ public class Relationship<T> : IRelationship
         int index = FindEntityIndex(entity);
         if (index >= 0)
         {
-            Elements[entity] = data;
+            // Every key-based SortedList API boxes the struct key per call on this runtime;
+            // the index comes from the allocation-free search above, so write the backing
+            // value array directly through a compiled reader.
+            ValuesArrayReader<T>.Read(Elements)[index] = data;
             return;
         }
 
@@ -252,3 +258,35 @@ public class Relationship<T> : IRelationship
     }
 
 };
+
+/// <summary>
+///     Reads the private backing value array of a <see cref="SortedList{TKey,TValue}"/> without going
+///     through its key-based APIs, which box struct keys on every call.
+/// </summary>
+internal static class ValuesArrayReader<T>
+{
+    private static readonly Func<SortedList<Entity, T>, T[]> ReadField = CreateReader();
+
+    private static Func<SortedList<Entity, T>, T[]> CreateReader()
+    {
+        // Runtimes disagree on the backing field name ("values" on modern .NET, "_values" on
+        // older targets); both are the value array keyed by search index.
+        Type listType = typeof(SortedList<Entity, T>);
+        const BindingFlags bindings = BindingFlags.Instance | BindingFlags.NonPublic;
+        FieldInfo? field = listType.GetField("values", bindings) ?? listType.GetField("_values", bindings);
+        if (field is null)
+        {
+            throw new MissingFieldException(listType.FullName, "values/_values");
+        }
+
+        ParameterExpression list = Expression.Parameter(listType, "list");
+        return Expression.Lambda<Func<SortedList<Entity, T>, T[]>>(
+            Expression.Field(list, field),
+            list).Compile();
+    }
+
+    public static T[] Read(SortedList<Entity, T> list)
+    {
+        return ReadField(list);
+    }
+}
