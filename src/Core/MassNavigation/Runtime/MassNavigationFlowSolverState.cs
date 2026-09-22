@@ -281,6 +281,9 @@ public sealed partial class MassNavigationFlowSolverState
         return new Vector2(localCm.X + _worldOriginXCm, localCm.Y + _worldOriginYcm);
     }
 
+    public float LocalToWorldXCm(float localXCm) => localXCm + _worldOriginXCm;
+    public float LocalToWorldYCm(float localYCm) => localYCm + _worldOriginYcm;
+
     public float GetPositionX(int index) => _positionsCm[index << 1];
     public float GetPositionY(int index) => _positionsCm[(index << 1) + 1];
 
@@ -493,6 +496,10 @@ public sealed partial class MassNavigationFlowSolverState
             _arrivalEventEmittedFlags[unitIndex] = 0;
             _unitRetryCounts[unitIndex] = 0;
             _unitStuckSeconds[unitIndex] = 0f;
+            if (!_teamStates[teamStateIndex].HasAuthoredTarget)
+            {
+                AnchorUnitToCurrentPosition(unitIndex);
+            }
         }
 
         UnitCount = newTotal;
@@ -712,7 +719,21 @@ public sealed partial class MassNavigationFlowSolverState
             MarkEntityDirty(index);
         }
 
-        if (resetRecovery || wasInactive)
+        // A settled (held or arrived) unit must mobilize when the incoming
+        // target sits beyond its stop threshold — an explicit far target is a
+        // move request, and per-frame slot drift past the threshold means the
+        // formation left the unit behind. Within-threshold drift keeps it
+        // settled, so gliding slots do not churn the arrival machinery.
+        float effectiveStopThresholdCm = stopThresholdCm > 0f
+            ? stopThresholdCm
+            : Semantics.Group.UnitTargetStopThresholdCm;
+        float wakeDx = xCm - _positionsCm[offset];
+        float wakeDy = yCm - _positionsCm[offset + 1];
+        bool wakesSettledUnit =
+            targetChanged &&
+            _unitSettledFlags[index] != 0 &&
+            ((wakeDx * wakeDx) + (wakeDy * wakeDy)) > effectiveStopThresholdCm * effectiveStopThresholdCm;
+        if (resetRecovery || wasInactive || wakesSettledUnit)
         {
             ResetUnitArrivalState(index, clearRetryCount: true);
         }
@@ -839,10 +860,20 @@ public sealed partial class MassNavigationFlowSolverState
                 $"MassNavigationFlow release target index {index} exceeds current unit count {UnitCount}.");
         }
 
-        ResetUnitArrivalState(index, clearRetryCount: true);
-        _hasUnitTarget[index] = 0;
-        _unitTargetStopThresholdsCm[index] = 0f;
-        _arrivalEventEmittedFlags[index] = 0;
+        if (_teamStates[_teamRuntimeIndices[index]].HasAuthoredTarget)
+        {
+            ResetUnitArrivalState(index, clearRetryCount: true);
+            _hasUnitTarget[index] = 0;
+            _unitTargetStopThresholdsCm[index] = 0f;
+            _arrivalEventEmittedFlags[index] = 0;
+        }
+        else
+        {
+            // No team sink to fall back to: the released unit holds where it
+            // stands instead of drifting as a free body.
+            AnchorUnitToCurrentPosition(index);
+        }
+
         MarkEntityDirty(index);
     }
 
@@ -854,6 +885,18 @@ public sealed partial class MassNavigationFlowSolverState
                 $"MassNavigationFlow hold target index {index} exceeds current unit count {UnitCount}.");
         }
 
+        AnchorUnitToCurrentPosition(index);
+        EnqueueArrivalEvent(index);
+        MarkEntityDirty(index);
+    }
+
+    // Parallel-step-safe hold core: only per-agent slots, no arrival event and no
+    // shared dirty marking, so it can run inside StepRange jobs. Held units stay
+    // in the separation/obstacle scans (hard-resolve candidates keep getting
+    // marked) and wake to walk back to the anchor when pushed past the
+    // arrival-recovery threshold.
+    private void AnchorUnitToCurrentPosition(int index)
+    {
         int offset = index << 1;
         float x = _positionsCm[offset];
         float y = _positionsCm[offset + 1];
@@ -864,8 +907,6 @@ public sealed partial class MassNavigationFlowSolverState
         _unitRetryCounts[index] = 0;
         _arrivalEventEmittedFlags[index] = 0;
         EnterSettledState(index, x, y);
-        EnqueueArrivalEvent(index);
-        MarkEntityDirty(index);
     }
 
     public Vector2 ResolveUnitNavigableTarget(
@@ -1762,6 +1803,10 @@ public sealed partial class MassNavigationFlowSolverState
             _unitProgressAnchorCm[i2 + 1] = _positionsCm[i2 + 1];
             _unitSettledAnchorCm[i2] = _positionsCm[i2];
             _unitSettledAnchorCm[i2 + 1] = _positionsCm[i2 + 1];
+            if (!_teamStates[teamStateIndex].HasAuthoredTarget)
+            {
+                AnchorUnitToCurrentPosition(unitIndex);
+            }
         }
 
         _maxInteractingBodyRadiiDirty = true;
@@ -2169,13 +2214,16 @@ public sealed partial class MassNavigationFlowSolverState
                 }
                 else
                 {
-                    // No unit target and no scenario-authored team target: idle agents
-                    // contribute no self-powered desired velocity (defaults above) and
-                    // fall through to normal integration, so separation and obstacle
-                    // pushes still displace them — avoidance is the solver's whole job
-                    // for idle units; self-powered motion requires an explicit request.
-                    // Deliberately NOT suppressTargetMotion: suppression pins velocity
-                    // and position, which would also freeze separation response.
+                    // No unit target and no scenario-authored team target: hold
+                    // position at an anchor planted where idleness began. The
+                    // separation/obstacle scans below still run (hard-resolve
+                    // candidates keep getting marked), and a push past the
+                    // arrival-recovery threshold wakes the unit to walk back —
+                    // the same contract as released order members. A free-body
+                    // fall-through here lets obstacle soft-push and crowd shoves
+                    // displace idle agents with nothing pulling them home.
+                    AnchorUnitToCurrentPosition(i);
+                    suppressTargetMotion = true;
                 }
             }
 

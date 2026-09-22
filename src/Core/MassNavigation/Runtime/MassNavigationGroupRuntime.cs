@@ -626,10 +626,13 @@ internal sealed class MassNavigationGroupRuntime
             // Per-member slot arrival, not centroid-vs-destination: engage profiles
             // fan members out on a ring AROUND the destination (their slots never
             // cluster near it), so centroid distance can never reach ArrivedRadiusCm
-            // and the order would never complete. A group is arrived when every live
-            // member is within the grouped arrive threshold of its own slot target —
-            // identical semantics for point moves (slots hug the destination).
-            float maxSlotDistanceSq = 0f;
+            // and the order would never complete. A member is done when it is within
+            // the grouped arrive threshold of its own slot OR the solver has settled
+            // it (reached stop threshold, timed out stuck, or exhausted push
+            // retries) — one blocked member must not pin the whole order forever.
+            float groupedThresholdSq = simulation.Semantics.Group.GroupedAgentArriveThresholdCm *
+                simulation.Semantics.Group.GroupedAgentArriveThresholdCm;
+            bool arrived = true;
             for (int i = 0; i < group.MemberCount; i++)
             {
                 int unitIndex = group.MemberIndices[i];
@@ -638,15 +641,16 @@ internal sealed class MassNavigationGroupRuntime
                     continue;
                 }
 
-                float dx = group.MemberOrderTargetWorldX[i] - simulation.LocalToWorldCm(
-                    new Vector2(simulation.GetPositionX(unitIndex), simulation.GetPositionY(unitIndex))).X;
-                float dy = group.MemberOrderTargetWorldY[i] - simulation.LocalToWorldCm(
-                    new Vector2(simulation.GetPositionX(unitIndex), simulation.GetPositionY(unitIndex))).Y;
-                maxSlotDistanceSq = MathF.Max(maxSlotDistanceSq, (dx * dx) + (dy * dy));
+                float dx = group.MemberOrderTargetWorldX[i] - simulation.LocalToWorldXCm(simulation.GetPositionX(unitIndex));
+                float dy = group.MemberOrderTargetWorldY[i] - simulation.LocalToWorldYCm(simulation.GetPositionY(unitIndex));
+                if (((dx * dx) + (dy * dy)) > groupedThresholdSq && !simulation.IsUnitSettled(unitIndex))
+                {
+                    arrived = false;
+                    break;
+                }
             }
 
-            float groupedThreshold = simulation.Semantics.Group.GroupedAgentArriveThresholdCm;
-            group.Arrived = maxSlotDistanceSq <= groupedThreshold * groupedThreshold;
+            group.Arrived = arrived;
         }
 
         ActiveGroupCount = CountActiveGroups();
