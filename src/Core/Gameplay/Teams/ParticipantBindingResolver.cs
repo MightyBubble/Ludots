@@ -258,6 +258,10 @@ namespace Ludots.Core.Gameplay.Teams
                     $"{CoreServiceKeys.LogicViewRegistry.Name} must be registered before publishing focused participants.");
             }
 
+            // 重建 views 前收养既有呈现相机：地图 DefaultCamera 位姿可能已落在 bootstrap
+            // 或既有参与者视图上，重建实例会把作者取景连同实例丢弃——与 sole-seat
+            // 绑定（ClientLocalSeatBindings.BindSoleSeat）同一合同。
+            Gameplay.Camera.CameraManager? adoptedPresentCamera = Client.ClientLocalSeatBindings.ResolveAdoptablePresentCamera(views);
             seats.Clear();
             views.Clear();
             string? declaredPresentLayout = ClientLocalSeatAccess.ResolveDeclaredPresentLayout(globals);
@@ -271,7 +275,9 @@ namespace Ludots.Core.Gameplay.Teams
                     PossessedPlayerId = possession.PlayerId,
                     PossessedRep = possession.RepEntity,
                 };
-                string viewId = views.EnsureDefaultView(possession.RepEntity);
+                string viewId = views.EnsureDefaultView(
+                    possession.RepEntity,
+                    camera: i == 0 ? adoptedPresentCamera : null);
                 if (TryResolvePresentResolutionPx(globals, out System.Numerics.Vector2 presentResolutionPx))
                 {
                     seat.PresentBinding = PresentBinding.FromDeclaredLayout(
