@@ -262,6 +262,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.QueryFilterTeam, ScriptTriggerQuery, queryOut: GraphValueType.TargetList, queryPorts: portListTeamId, scriptPorts: portTeamId, flags: GraphOperandRole.TeamIdSourceFlags);
             Add(rows, GraphNodeOp.QueryFilterTemplate, ScriptTriggerQuery, queryOut: GraphValueType.TargetList, queryPorts: portList, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.QueryFilterKnowledgeVisible, QueryAndTriggerGraph, queryOut: GraphValueType.TargetList, queryPorts: portSource);
+            Add(rows, GraphNodeOp.QueryFilterSelectable, QueryAndTriggerGraph, queryOut: GraphValueType.TargetList);
             Add(rows, GraphNodeOp.QueryFilterAttributeRange, ScriptTriggerQuery, queryOut: GraphValueType.TargetList, queryPorts: portListMinMax, scriptPorts: portMinMax, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.QueryFilterTagAny, ScriptTriggerQuery, queryOut: GraphValueType.TargetList, queryPorts: portList, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.QueryFilterTagNone, ScriptTriggerQuery, queryOut: GraphValueType.TargetList, queryPorts: portList, imm: GraphOperandRole.SymbolImm);

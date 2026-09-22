@@ -492,6 +492,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                     break;
 
+                case GraphNodeOp.QueryFilterSelectable:
+                    break;
+
                 case GraphNodeOp.TargetListGet:
                     RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
@@ -1583,6 +1586,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.QueryFilterSelectable:
                     break;
 
                 case GraphNodeOp.QueryFilterRelationship:

@@ -576,6 +576,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             return 0;
         }
+
+        int FilterCommandSourceSelectable(Span<Entity> candidates, int count)
+        {
+            return 0;
+        }
         /// Behavior-side order submission (issue #1536): the acting unit enqueues an assigned
         /// order. Separate contract from the input-side command-intent buffer.
         void SubmitAssignedOrder(Entity actor, Entity target, int orderTypeId, int xCm, int yCm)

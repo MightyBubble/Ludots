@@ -450,6 +450,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         QueryFilterKnowledgeVisible = 485,
 
         /// <summary>
+        /// TargetList := candidates that are command-source selectable now: CommandSourceSelectableTag
+        /// present and CommandSourceSelectableState, when present, enabled. Candidates order preserved;
+        /// viewer-independent. Restores the selectable gate the retired CommandSourceAcquisitionSystem
+        /// enforced for click and box acquisition.
+        /// </summary>
+        QueryFilterSelectable = 487,
+
+        /// <summary>
         /// Submit one engage intent into the order pipeline's per-tick submission buffer
         /// (constitution §12). Caster = the acting rep; I[A] = ability slot index; E[B] =
         /// the engage target entity (required). Imm = engage profile key symbol resolved to

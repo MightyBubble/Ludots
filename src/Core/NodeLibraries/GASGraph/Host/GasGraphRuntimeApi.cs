@@ -2082,6 +2082,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return kept;
         }
 
+        public int FilterCommandSourceSelectable(Span<Entity> candidates, int count)
+        {
+            int kept = 0;
+            for (int i = 0; i < count; i++)
+            {
+                if (Ludots.Core.Input.CommandSources.CommandSourceEligibility.IsSelectableNow(_world, candidates[i]))
+                {
+                    candidates[kept++] = candidates[i];
+                }
+            }
+
+            return kept;
+        }
+
         private ControlDomainQuery RequireControlDomains()
         {
             return _controlDomains ?? throw new InvalidOperationException("GAS.GRAPH.ERR.MissingControlDomainQuery");

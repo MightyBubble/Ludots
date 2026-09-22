@@ -359,6 +359,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.ScreenPointToEntity or
                 GraphNodeOp.ScreenRegionToEntities or
                 GraphNodeOp.QueryFilterKnowledgeVisible or
+                GraphNodeOp.QueryFilterSelectable or
                 GraphNodeOp.PointToDirection or
                 GraphNodeOp.StickToDirection or
                 GraphNodeOp.LoadPointerScreenX or
@@ -952,6 +953,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.SubmitCast, HandleSubmitCast, "SubmitCast graph opcode.");
             Register(GraphNodeOp.SubmitEngageBatch, HandleSubmitEngageBatch, "SubmitEngageBatch graph opcode.");
             Register(GraphNodeOp.QueryFilterKnowledgeVisible, HandleQueryFilterKnowledgeVisible, "QueryFilterKnowledgeVisible graph opcode.");
+            Register(GraphNodeOp.QueryFilterSelectable, HandleQueryFilterSelectable, "QueryFilterSelectable graph opcode.");
             Register(GraphNodeOp.BindQueryCollection, HandleBindQueryCollection, "BindQueryCollection graph opcode.");
         Register(GraphNodeOp.SetPanelAudience, HandleSetPanelAudience, "SetPanelAudience graph opcode.");
             Register(GraphNodeOp.DestroyPanel, HandleDestroyPanel, "DestroyPanel graph opcode.");
@@ -1846,6 +1848,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void HandleQueryFilterKnowledgeVisible(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.TargetList.SetCount(s.Api.FilterKnowledgeVisible(s.Targets, s.TargetList.Count, s.E[ins.A]));
+        }
+
+        private static void HandleQueryFilterSelectable(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.TargetList.SetCount(s.Api.FilterCommandSourceSelectable(s.Targets, s.TargetList.Count));
         }
 
         private static void HandleQueryFilterNotEntity(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

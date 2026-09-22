@@ -3975,6 +3975,23 @@
         "GraphOpsNodeGalleryContextAcceptanceTests.SubmitEngageBatchVignette_PushesIntoTheEngageSubmissionBuffer"
       ],
       "codegenStatus": "covered"
+    },
+    {
+      "op": "QueryFilterSelectable",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Query"
+      ],
+      "showcaseId": "capability_standard_graph_op_QueryFilterSelectable",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFilterSelectable_KeepsOnlySelectableCandidatesInOrder"
+      ],
+      "codegenStatus": "covered"
     }
   ]
 }
