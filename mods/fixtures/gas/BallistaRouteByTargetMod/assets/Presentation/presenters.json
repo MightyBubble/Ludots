@@ -37,6 +37,16 @@
      "updatePolicy": "EveryFrame"
     }
    }
+  ],
+  "children": [
+   {
+    "definitionId": "ballista.hud.health_bar",
+    "scopeTag": "hud"
+   },
+   {
+    "definitionId": "ballista.hud.health_text",
+    "scopeTag": "hud-text"
+   }
   ]
  },
  {
@@ -77,6 +87,16 @@
      "updatePolicy": "EveryFrame"
     }
    }
+  ],
+  "children": [
+   {
+    "definitionId": "ballista.hud.health_bar",
+    "scopeTag": "hud"
+   },
+   {
+    "definitionId": "ballista.hud.health_text",
+    "scopeTag": "hud-text"
+   }
   ]
  },
  {
@@ -116,6 +136,16 @@
      "offset": 0,
      "updatePolicy": "EveryFrame"
     }
+   }
+  ],
+  "children": [
+   {
+    "definitionId": "ballista.hud.health_bar",
+    "scopeTag": "hud"
+   },
+   {
+    "definitionId": "ballista.hud.health_text",
+    "scopeTag": "hud-text"
    }
   ]
  },
@@ -487,5 +517,148 @@
     }
    }
   ]
+ },
+ {
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "AssetBinding",
+    "activeByDefault": true,
+    "assetBinding": {
+     "assetKind": "WorldHud",
+     "materialParamKey": "ballista.hud.health.ratio",
+     "renderPath": "None",
+     "mobility": "Movable",
+     "localScale": [
+      46,
+      6,
+      1
+     ]
+    },
+    "style": {
+     "color": [
+      0.12,
+      0.92,
+      0.3,
+      0.96
+     ]
+    }
+   },
+   {
+    "slot": "attachment",
+    "kind": "Attachment",
+    "activeByDefault": true,
+    "attachment": {
+     "target": "Parent",
+     "offset": [
+      0,
+      1.35,
+      0
+     ],
+     "rotationOffset": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "inheritScale": false
+    }
+   },
+   {
+    "slot": "attributeRatio",
+    "kind": "AttributeBinding",
+    "activeByDefault": true,
+    "attributeBinding": {
+     "attributeId": "Ballista.Health",
+     "targetParamKey": "ballista.hud.health.ratio",
+     "mode": "AttributeRatio"
+    }
+   }
+  ],
+  "paramDefaults": [
+   {
+    "paramKey": "ballista.hud.health.ratio",
+    "lane": "Float",
+    "floatValue": 1
+   }
+  ],
+  "id": "ballista.hud.health_bar"
+ },
+ {
+  "behaviors": [
+   {
+    "slot": "body",
+    "kind": "WorldText",
+    "activeByDefault": true,
+    "worldText": {
+     "textToken": "hud.attribute.current_over_base",
+     "mode": "AttributeCurrentOverBase",
+     "fontSize": 14,
+     "valueParamKey": "ballista.hud.health.current",
+     "secondaryValueParamKey": "ballista.hud.health.base"
+    },
+    "style": {
+     "color": [
+      1,
+      0.98,
+      0.92,
+      1
+     ]
+    }
+   },
+   {
+    "slot": "attachment",
+    "kind": "Attachment",
+    "activeByDefault": true,
+    "attachment": {
+     "target": "Parent",
+     "offset": [
+      0,
+      1.6,
+      0
+     ],
+     "rotationOffset": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "inheritScale": false
+    }
+   },
+   {
+    "slot": "attributeCurrent",
+    "kind": "AttributeBinding",
+    "activeByDefault": true,
+    "attributeBinding": {
+     "attributeId": "Ballista.Health",
+     "targetParamKey": "ballista.hud.health.current",
+     "mode": "Attribute"
+    }
+   },
+   {
+    "slot": "attributeBase",
+    "kind": "AttributeBinding",
+    "activeByDefault": true,
+    "attributeBinding": {
+     "attributeId": "Ballista.Health",
+     "targetParamKey": "ballista.hud.health.base",
+     "mode": "AttributeBase"
+    }
+   }
+  ],
+  "paramDefaults": [
+   {
+    "paramKey": "ballista.hud.health.current",
+    "lane": "Float",
+    "floatValue": 400
+   },
+   {
+    "paramKey": "ballista.hud.health.base",
+    "lane": "Float",
+    "floatValue": 400
+   }
+  ],
+  "id": "ballista.hud.health_text"
  }
 ]

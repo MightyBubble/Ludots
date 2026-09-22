@@ -37,6 +37,16 @@
      "updatePolicy": "EveryFrame"
     }
    }
+  ],
+  "children": [
+   {
+    "definitionId": "ballista.hud.health_bar",
+    "scopeTag": "hud"
+   },
+   {
+    "definitionId": "ballista.hud.health_text",
+    "scopeTag": "hud-text"
+   }
   ]
  },
  {
@@ -76,6 +86,16 @@
      "offset": 0,
      "updatePolicy": "EveryFrame"
     }
+   }
+  ],
+  "children": [
+   {
+    "definitionId": "ballista.hud.health_bar",
+    "scopeTag": "hud"
+   },
+   {
+    "definitionId": "ballista.hud.health_text",
+    "scopeTag": "hud-text"
    }
   ]
  },
