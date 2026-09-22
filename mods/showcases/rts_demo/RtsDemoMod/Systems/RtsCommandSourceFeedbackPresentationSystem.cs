@@ -30,7 +30,6 @@ namespace RtsDemoMod.Systems
         private int _activePrimaryScope;
         private int _activeQueueScope;
         private int _activeProgressScope;
-        private float _elapsedSeconds;
 
         public RtsCommandSourceFeedbackPresentationSystem(GameEngine engine)
         {
@@ -53,7 +52,6 @@ namespace RtsDemoMod.Systems
 
         public void Update(in float dt)
         {
-            _elapsedSeconds += MathF.Max(0f, dt);
             if (!IsRtsMapActive() ||
                 !RtsShowcaseCommandSourceHelper.TryGetCommandSourcePrimary(_engine, out Entity commandSource) ||
                 !_engine.World.IsAlive(commandSource) ||
@@ -97,9 +95,11 @@ namespace RtsDemoMod.Systems
         private void EmitCommandSourceRing(Entity owner, Vector3 center, string key, ref Entity activeOwner, ref int activeScope, float pulseScale)
         {
             EndIfOwnerChanged(key, owner, ref activeOwner, ref activeScope, isHud: false);
-            float pulse = 1f + 0.06f * MathF.Sin(_elapsedSeconds * 5.4f);
+            // Pulse phase must derive from simulation time (session tick), not engine-local
+            // wall accumulation, or a restored session desynchronizes the animation.
+            float pulse = 1f + 0.06f * MathF.Sin((_engine.GameSession.CurrentTick * Time.FixedDeltaTime) * 5.4f);
             activeOwner = owner;
-            activeScope = PresentationWorldFactPublisher.ComposeScope(key, owner);
+            activeScope = ComposeStableScope(key, owner);
             _facts.PublishWorldOverlayUpdated(
                 key,
                 owner,
@@ -114,7 +114,7 @@ namespace RtsDemoMod.Systems
         {
             EndIfOwnerChanged(ProgressBarKey, owner, ref _activeProgressOwner, ref _activeProgressScope, isHud: true);
             _activeProgressOwner = owner;
-            _activeProgressScope = PresentationWorldFactPublisher.ComposeScope(ProgressBarKey, owner, discriminator: 1);
+            _activeProgressScope = ComposeStableScope(ProgressBarKey, owner, discriminator: 1);
             _facts.PublishWorldHudUpdated(
                 ProgressBarKey,
                 owner,
@@ -202,6 +202,19 @@ namespace RtsDemoMod.Systems
 
             center = default;
             return false;
+        }
+
+        private int ComposeStableScope(string key, Entity owner, int discriminator = 0)
+        {
+            // Fact scopes must survive save/restore: entity-reference scopes embed the
+            // process-global Arch WorldId, so a restored session re-keys every fact and the
+            // scoped-presenter dedup re-materializes duplicates. PresentationStableId rides
+            // the world snapshot; entities without one keep the engine-local entity scope.
+            return _engine.World.IsAlive(owner) &&
+                   _engine.World.TryGet(owner, out PresentationStableId stable) &&
+                   stable.Value > 0
+                ? PresentationWorldFactPublisher.ComposeScope(key, stable.Value, discriminator)
+                : PresentationWorldFactPublisher.ComposeScope(key, owner, discriminator);
         }
 
         private void EndAllActiveFacts()
