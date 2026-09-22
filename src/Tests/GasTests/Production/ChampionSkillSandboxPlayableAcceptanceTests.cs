@@ -851,7 +851,7 @@ namespace Ludots.Tests.GAS.Production
                 healthAfterQ,
                 Is.EqualTo(healthBeforeQ - 27f).Within(0.001f),
                 $"{BuildEzrealMarkDiagnostics(engine.World, "Target Dummy A")} || {BuildEzrealQRuntimeDiagnostics(engine, "Ezreal Alpha")} || {BuildGasPresentationDiagnostics(engine)}");
-            Assert.That(EntityHasTag(engine.World, "Target Dummy A", "State.Champion.Ezreal.WMark"), Is.False, "Ezreal Q should consume the W mark.");
+            Assert.That(EntityHasTag(engine.World, "Target Dummy A", "State.Champion.Ezreal.WMark"), Is.False, $"{BuildEzrealMarkDiagnostics(engine.World, "Target Dummy A")} || {BuildEzrealQRuntimeDiagnostics(engine, "Ezreal Alpha")}");
 
             TickUntil(
                 engine,
@@ -968,7 +968,14 @@ namespace Ludots.Tests.GAS.Production
             engine.SetService(CoreServiceKeys.ScreenProjector, screenProjector);
             engine.SetService(CoreServiceKeys.ScreenRayProvider, screenRayProvider);
 
-            var culling = new CameraCullingSystem(engine.World, engine.AuthorityCamera(), engine.SpatialQueries, view, cullingConfig: engine.MergedConfig.Presentation.CameraCulling, timingDiagnostics: timingDiagnostics);
+            var culling = new CameraCullingSystem(
+                engine.World,
+                engine.AuthorityCamera(),
+                engine.SpatialQueries,
+                view,
+                cullingConfig: engine.MergedConfig.Presentation.CameraCulling,
+                presenters: engine.GetService(CoreServiceKeys.PresenterEntityRuntime),
+                timingDiagnostics: timingDiagnostics);
             engine.RegisterPresentationSystem(culling);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
             engine.GlobalContext[HeadlessCameraKey] = new HeadlessCameraRuntime(
@@ -1916,8 +1923,42 @@ namespace Ludots.Tests.GAS.Production
                 return point;
             }
 
+            string comps;
+            try
+            {
+                Entity pe = FindEntityByName(engine.World, entityName);
+                var w = engine.World;
+                comps = $"alive={w.IsAlive(pe)} mapEntity={w.Has<MapEntity>(pe)}";
+                if (w.TryGet(pe, out MapEntity me))
+                {
+                    comps += $" mapId={me.MapId.Value ?? "<null>"}";
+                }
+                comps += $" selectableTag={w.Has<CommandSourceSelectableTag>(pe)}";
+                if (w.TryGet(pe, out Ludots.Core.Spatial.SpatialCellRef cell))
+                {
+                    comps += $" cellState={cell.State}";
+                }
+                else
+                {
+                    comps += " cell=<missing>";
+                }
+                comps += $" suspended={w.Has<Ludots.Core.Components.SuspendedTag>(pe)} static={w.Has<PresentationStaticTransform>(pe)} excluded={w.Has<SpatialPartitionExcluded>(pe)}";
+                if (w.TryGet(pe, out VisualTransform vt))
+                {
+                    comps += $" vtPos=({vt.Position.X:0.##},{vt.Position.Y:0.##},{vt.Position.Z:0.##})";
+                }
+                if (w.TryGet(pe, out WorldPositionCm wpc))
+                {
+                    var groundScreen2 = GetGroundScreenFromWorld(engine, new Vector2((float)wpc.Value.X, (float)wpc.Value.Y));
+                    comps += $" groundScreen=({groundScreen2.X:0.#},{groundScreen2.Y:0.#})";
+                }
+            }
+            catch (Exception ex)
+            {
+                comps = $"probe-error={ex.GetType().Name}";
+            }
             Assert.Fail(
-                $"Failed to hover '{entityName}' near projected point ({projectedScreenPoint.X:0.0},{projectedScreenPoint.Y:0.0}). Samples: {samples}");
+                $"Failed to hover '{entityName}' near projected point ({projectedScreenPoint.X:0.0},{projectedScreenPoint.Y:0.0}). Comps: {comps}. Samples: {samples}");
             return projectedScreenPoint;
         }
 
@@ -1953,6 +1994,10 @@ namespace Ludots.Tests.GAS.Production
             out string samples)
         {
             var hoveredSamples = new List<string>(HoverProbeOffsets.Length);
+            // hover 重算由 PointerMoved 驱动：指针若已停在探测点上，零偏移探测不产生移动事件，
+            // hover 集合停留在上一次结果。先挪到屏角兜一圈，保证首个探测点必然是一次指针移动。
+            backend.SetMousePosition(new Vector2(4f, 4f));
+            TickUntilFixedTickAdvances(engine, frameTimesMs);
             for (int i = 0; i < HoverProbeOffsets.Length; i++)
             {
                 Vector2 candidate = projectedScreenPoint + HoverProbeOffsets[i];
@@ -2950,6 +2995,7 @@ namespace Ludots.Tests.GAS.Production
                 : 0;
 
             bool hasActiveMarkEffect = false;
+            string markCancelState = "no-mark-effect";
             int activeEffectCount = 0;
             if (world.Has<ActiveEffectContainer>(entity))
             {
@@ -2966,6 +3012,9 @@ namespace Ludots.Tests.GAS.Production
                     if (world.Get<EffectTemplateRef>(effectEntity).TemplateId == wMarkEffectTemplateId)
                     {
                         hasActiveMarkEffect = true;
+                        markCancelState = world.Has<GameplayEffect>(effectEntity)
+                            ? $"markCancelRequested={world.Get<GameplayEffect>(effectEntity).CancelRequested}"
+                            : "markCancelRequested=<no-component>";
                         break;
                     }
                 }
@@ -3010,7 +3059,7 @@ namespace Ludots.Tests.GAS.Production
                 }
             }
 
-            return $"wMark=tag:{EntityHasTag(world, entityName, "State.Champion.Ezreal.WMark")},count:{tagCount},effect:{hasActiveMarkEffect},activeEffects:{activeEffectCount},listeners:{listenerCount},wildcards:{wildcardListenerCount},listenQ:{listensQ},listenE:{listensE},listenR:{listensR},samples:[{string.Join(";", listenerSamples)}]";
+            return $"wMark=tag:{EntityHasTag(world, entityName, "State.Champion.Ezreal.WMark")},count:{tagCount},effect:{hasActiveMarkEffect},{markCancelState},activeEffects:{activeEffectCount},listeners:{listenerCount},wildcards:{wildcardListenerCount},listenQ:{listensQ},listenE:{listensE},listenR:{listensR},samples:[{string.Join(";", listenerSamples)}]";
         }
 
         private static string BuildGasPresentationDiagnostics(GameEngine engine)
