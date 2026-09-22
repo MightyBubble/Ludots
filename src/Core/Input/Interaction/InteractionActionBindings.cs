@@ -2,7 +2,9 @@
 {
     public sealed class InteractionActionBindings
     {
-        public const string DefaultConfirmActionId = "CommandSourceAcquire";
+        // CommandSourceAcquire was retired with the acquisition system; the left button's
+        // live contract is Select.Begin (Default_Gameplay binding) — confirm rides it.
+        public const string DefaultConfirmActionId = "Select.Begin";
         public const string DefaultCancelActionId = "Cancel";
         public const string DefaultCommandActionId = "Command";
         public const string DefaultPointerPositionActionId = "PointerPos";

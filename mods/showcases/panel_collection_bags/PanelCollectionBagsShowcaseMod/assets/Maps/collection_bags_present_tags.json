@@ -1,5 +1,10 @@
 {
   "Id": "collection_bags_present_tags",
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  },
   "Tags": [
     "showcase",
     "panel",
