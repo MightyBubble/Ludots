@@ -28,6 +28,30 @@
       "interruptsActiveOrderTypeKeys": [
         "attackTarget"
       ]
+    },
+    "castAbility": {
+      "orderTypeKey": "castAbility",
+      "blockedActiveOrderTypeKeys": [],
+      "interruptsActiveOrderTypeKeys": [
+        "moveTo",
+        "massNavigationMove"
+      ]
+    },
+    "castAbility.Start": {
+      "orderTypeKey": "castAbility.Start",
+      "blockedActiveOrderTypeKeys": [],
+      "interruptsActiveOrderTypeKeys": [
+        "moveTo",
+        "massNavigationMove"
+      ]
+    },
+    "attackTarget": {
+      "orderTypeKey": "attackTarget",
+      "blockedActiveOrderTypeKeys": [],
+      "interruptsActiveOrderTypeKeys": [
+        "moveTo",
+        "massNavigationMove"
+      ]
     }
   }
 }
