@@ -1,10 +1,13 @@
 using System;
+using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Engine;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
 using Ludots.Core.Components;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Vision;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Knowledge
 {
@@ -61,12 +64,78 @@ namespace Ludots.Core.Knowledge
 
             public KnowledgeIdMask256 ResolveAttributeMask(GameEngine engine)
             {
-                return KnowledgeIdMask256.Empty;
+                if (engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry) is not PresenterDefinitionRegistry presenters)
+                {
+                    return KnowledgeIdMask256.Empty;
+                }
+
+                KnowledgeIdMask256 mask = KnowledgeIdMask256.Empty;
+                IReadOnlyList<int> ids = presenters.RegisteredIds;
+                for (int i = 0; i < ids.Count; i++)
+                {
+                    if (presenters.TryGet(ids[i], out PresenterDefinition definition))
+                    {
+                        mask = mask.Union(ResolveHudAttributeMask(presenters, definition));
+                    }
+                }
+
+                return mask;
             }
 
             public LocalDisclosureChangeStamp ResolveChangeStamp(GameEngine engine)
             {
-                return new LocalDisclosureChangeStamp(CountSelectable(engine), 0);
+                return new LocalDisclosureChangeStamp(
+                    CountSelectable(engine),
+                    engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry) is PresenterDefinitionRegistry presenters
+                        ? presenters.Version
+                        : 0);
+            }
+
+            private static KnowledgeIdMask256 ResolveHudAttributeMask(
+                PresenterDefinitionRegistry presenters,
+                PresenterDefinition definition)
+            {
+                KnowledgeIdMask256 mask = HasHudAssetBinding(definition)
+                    ? BuildMask(definition.RequiredAttributeIds)
+                    : KnowledgeIdMask256.Empty;
+
+                ChildPresenterRef[] children = definition.Children;
+                for (int i = 0; i < children.Length; i++)
+                {
+                    if (presenters.TryGet(children[i].DefinitionId, out PresenterDefinition child))
+                    {
+                        mask = mask.Union(ResolveHudAttributeMask(presenters, child));
+                    }
+                }
+
+                return mask;
+            }
+
+            private static bool HasHudAssetBinding(PresenterDefinition definition)
+            {
+                BehaviorSlot[] behaviors = definition.Behaviors;
+                for (int i = 0; i < behaviors.Length; i++)
+                {
+                    if ((behaviors[i].Kind == BehaviorKind.AssetBinding ||
+                         behaviors[i].Kind == BehaviorKind.WorldText) &&
+                        behaviors[i].AssetBinding.AssetKind is AssetKind.WorldHud or AssetKind.WorldText)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            private static KnowledgeIdMask256 BuildMask(ReadOnlySpan<int> attributeIds)
+            {
+                KnowledgeIdMask256 mask = KnowledgeIdMask256.Empty;
+                for (int i = 0; i < attributeIds.Length; i++)
+                {
+                    mask = mask.WithId(attributeIds[i]);
+                }
+
+                return mask;
             }
 
             private static bool HasVisionEmitter(World world)

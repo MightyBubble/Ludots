@@ -14,5 +14,6 @@
       "playerId": 1,
       "controlSchemeId": "scheme.default"
     }
-  ]
+  ],
+  "panelSkin": "markup"
 }
