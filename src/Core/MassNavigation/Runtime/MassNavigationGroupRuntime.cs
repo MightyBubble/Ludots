@@ -623,7 +623,30 @@ internal sealed class MassNavigationGroupRuntime
 
             group.CenterX = centerX;
             group.CenterY = centerY;
-            group.Arrived = distance < simulation.Semantics.Group.ArrivedRadiusCm;
+            // Per-member slot arrival, not centroid-vs-destination: engage profiles
+            // fan members out on a ring AROUND the destination (their slots never
+            // cluster near it), so centroid distance can never reach ArrivedRadiusCm
+            // and the order would never complete. A group is arrived when every live
+            // member is within the grouped arrive threshold of its own slot target —
+            // identical semantics for point moves (slots hug the destination).
+            float maxSlotDistanceSq = 0f;
+            for (int i = 0; i < group.MemberCount; i++)
+            {
+                int unitIndex = group.MemberIndices[i];
+                if ((uint)unitIndex >= (uint)simulation.UnitCount)
+                {
+                    continue;
+                }
+
+                float dx = group.MemberOrderTargetWorldX[i] - simulation.LocalToWorldCm(
+                    new Vector2(simulation.GetPositionX(unitIndex), simulation.GetPositionY(unitIndex))).X;
+                float dy = group.MemberOrderTargetWorldY[i] - simulation.LocalToWorldCm(
+                    new Vector2(simulation.GetPositionX(unitIndex), simulation.GetPositionY(unitIndex))).Y;
+                maxSlotDistanceSq = MathF.Max(maxSlotDistanceSq, (dx * dx) + (dy * dy));
+            }
+
+            float groupedThreshold = simulation.Semantics.Group.GroupedAgentArriveThresholdCm;
+            group.Arrived = maxSlotDistanceSq <= groupedThreshold * groupedThreshold;
         }
 
         ActiveGroupCount = CountActiveGroups();

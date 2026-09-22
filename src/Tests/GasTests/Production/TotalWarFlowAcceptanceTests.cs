@@ -96,6 +96,18 @@ namespace Ludots.Tests.GAS
 
             AssertNavMarching(engine, marine1, "campaign rally marine1");
             AssertNavMarching(engine, marine2, "campaign rally marine2");
+            var m1Pos = engine.World.Get<WorldPositionCm>(marine1).Value;
+            var m2Pos = engine.World.Get<WorldPositionCm>(marine2).Value;
+            float spreadCm = MathF.Sqrt((float)((m1Pos.X - m2Pos.X) * (m1Pos.X - m2Pos.X) + (m1Pos.Y - m2Pos.Y) * (m1Pos.Y - m2Pos.Y)));
+            TestContext.Out.WriteLine($"[tw1-spread] marine1=({(float)m1Pos.X:F0},{(float)m1Pos.Y:F0}) marine2=({(float)m2Pos.X:F0},{(float)m2Pos.Y:F0}) spread={spreadCm:F0}cm");
+            if (Ludots.Core.MassNavigation.MassNavigationIds.TryGetCurrentNavigationRuntime(engine, out var simProbe) &&
+                simProbe.AgentState.TryGetControllableIndex(marine1, out int idxA) &&
+                simProbe.AgentState.TryGetControllableIndex(marine2, out int idxB))
+            {
+                simProbe.TryGetAgentNavigationTargetWorldCm(idxA, out float taX, out float taY);
+                simProbe.TryGetAgentNavigationTargetWorldCm(idxB, out float tbX, out float tbY);
+                TestContext.Out.WriteLine($"[tw1-targets] A({taX:F0},{taY:F0}) B({tbX:F0},{tbY:F0}) groupA={simProbe.NavGroupRuntime.HasGroup(idxA)} groupB={simProbe.NavGroupRuntime.HasGroup(idxB)}");
+            }
 
             // ── 迁移：战役 → 备置 ──
             AdvanceStage(engine);
