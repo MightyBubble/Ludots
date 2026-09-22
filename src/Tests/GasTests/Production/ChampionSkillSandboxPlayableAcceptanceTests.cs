@@ -368,7 +368,8 @@ namespace Ludots.Tests.GAS.Production
                 engine,
                 frameTimesMs,
                 () => string.Equals(GetSelectedEntityName(engine), "Runic Beacon", StringComparison.Ordinal),
-                maxFrames: 12);
+                maxFrames: 12,
+                describeFailure: () => $"selected={GetSelectedEntityName(engine)} || {BuildSelectionStateDiagnostics(engine)} || hovered={ReadHoveredEntityName(engine)}");
             Assert.That(CountOverlays(overlays, GroundOverlayShape.Ring), Is.GreaterThan(0), "Spawned summon should be formally selectable.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "summon_beacon_selected");
             timeline.Add("[T+013] Geomancer Alpha.Cast(Runic Beacon) -> summon spawned | hover-selectable | owner-parent link copied");
