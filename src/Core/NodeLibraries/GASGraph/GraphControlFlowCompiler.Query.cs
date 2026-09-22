@@ -565,6 +565,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     instruction.Flags = ResolveValueInput(
                         node, GraphControlFlowPorts.Max, GraphValueType.Float,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Dst = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Tolerance))
+                        ? ResolveValueInput(
+                            node, GraphControlFlowPorts.Tolerance, GraphValueType.Float,
+                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics)
+                        : byte.MaxValue;
                     instruction.Imm = InternOptional(symbolToIndex, symbols, node.Seat);
                     break;
                 case GraphNodeOp.PointToDirection:
