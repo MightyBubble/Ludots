@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Spawning;
@@ -137,10 +138,7 @@ namespace Ludots.Tests.Gas
                     NavRadiusCm = 1200,
                 });
 
-            for (int i = 0; i < 30; i++)
-            {
-                engine.Tick(1f / 60f);
-            }
+            TickUntilRevisionAdvances(engine, store, storeRevisionBefore, timeoutMs: 20000);
 
             NavTile after = store.GetOrLoad(new NavTileId(0, 0));
             NavTile farAfter = store.GetOrLoad(new NavTileId(3, 3));
@@ -161,6 +159,20 @@ namespace Ludots.Tests.Gas
 
             Assert.That(farAfter.Checksum, Is.EqualTo(farBefore.Checksum), "远离障碍的瓦片不应被重烤");
             Assert.That(farAfter.TileVersion, Is.EqualTo(farBefore.TileVersion), "远离障碍的瓦片版本不应变化");
+        }
+
+        /// <summary>
+        /// 增量重烤在后台线程执行（单瓦片 Recast 可达秒级），发布依赖后续 tick 泵送；
+        /// 固定帧数窗口会在烘焙完成前耗尽——与 NavGate 引擎合同同款墙钟等待。
+        /// </summary>
+        private static void TickUntilRevisionAdvances(GameEngine engine, NavTileStore store, uint revisionBefore, double timeoutMs)
+        {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            while (store.Revision <= revisionBefore && stopwatch.Elapsed.TotalMilliseconds < timeoutMs)
+            {
+                engine.Tick(1f / 60f);
+                Thread.Sleep(20);
+            }
         }
 
         private static void AssertReliefProjectedIntoLogicTerrain(GameEngine engine)
