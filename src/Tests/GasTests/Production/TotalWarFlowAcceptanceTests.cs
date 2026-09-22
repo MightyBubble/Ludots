@@ -115,6 +115,21 @@ namespace Ludots.Tests.GAS
             TestContext.Out.WriteLine($"[tw2] deployment marines {marinesBefore} -> {marinesAfter}");
             Assert.That(marinesAfter, Is.EqualTo(marinesBefore + 1), "deployment spawns one reinforcement");
 
+            // 无令不动：增援出生后不给指令，位置必须保持。
+            var spawnedMarine = FindNewestMarine(engine, commander);
+            var spawnedAt = engine.World.Get<WorldPositionCm>(spawnedMarine).Value;
+            for (int idleFrame = 0; idleFrame < 120; idleFrame++)
+            {
+                engine.Tick(1f / 60f);
+            }
+
+            var spawnedNow = engine.World.Get<WorldPositionCm>(spawnedMarine).Value;
+            float idleDriftCm = MathF.Sqrt(
+                (float)((spawnedNow.X - spawnedAt.X) * (spawnedNow.X - spawnedAt.X)) +
+                (float)((spawnedNow.Y - spawnedAt.Y) * (spawnedNow.Y - spawnedAt.Y)));
+            TestContext.Out.WriteLine($"[tw2] idle reinforcement drift {idleDriftCm:F1}cm");
+            Assert.That(idleDriftCm, Is.LessThan(150f), "idle authored agents hold their spawn and do not march to an implicit target");
+
             // ── 迁移：备置 → RTS ──
             AdvanceStage(engine);
             AssertTopContext(engine, profiles, commander, "interaction.context.tw.rts");
@@ -188,12 +203,28 @@ namespace Ludots.Tests.GAS
             TestContext.Out.WriteLine($"[tw4] wolf 300 -> {wolfHealth} (commander single bolt, armor 0, flat -80)");
             Assert.That(wolfHealth, Is.EqualTo(220f).Within(0.01f), "TPS fire: rep single cast settles Q4 flat -80");
 
+            // ── 弹体合同：点自己不开花——完成路径的 impact 也过关系过滤+排源 ──
+            var commanderPos = engine.World.Get<WorldPositionCm>(commander).Value;
+            backend.SetMousePosition(Project(engine, commanderPos));
+            backend.SetButton("<Mouse>/leftButton", true);
+            engine.Tick(1f / 60f);
+            backend.SetButton("<Mouse>/leftButton", false);
+            for (int selfFrame = 0; selfFrame < 150; selfFrame++)
+            {
+                engine.Tick(1f / 60f);
+            }
+
+            float commanderHpAfterSelfShot = engine.World.TryGet<AttributeBuffer>(commander, out var selfBuf) ? selfBuf.GetCurrent(healthId) : -1f;
+            TestContext.Out.WriteLine($"[selfshot] commander hp after self-click: {commanderHpAfterSelfShot}");
+            Assert.That(commanderHpAfterSelfShot, Is.EqualTo(400f).Within(0.01f), "projectile completion must never impact the excluded source (self-click)");
+
             // ── 死亡规则链：连射致死（220→140→60→-20≤0），DeathRule 销毁 + 击杀计数面板变量 ──
             int presentersBeforeDeath = 0;
             foreach (ref var chunkPre in engine.World.Query(new Arch.Core.QueryDescription().WithAll<Ludots.Core.Presentation.Presenters.PresenterState>()))
             {
                 presentersBeforeDeath += chunkPre.Count;
             }
+            backend.SetMousePosition(Project(engine, engine.World.Get<WorldPositionCm>(wolf).Value));
             for (int volley = 0; volley < 6 && engine.World.IsAlive(wolf); volley++)
             {
                 backend.SetButton("<Mouse>/leftButton", true);
@@ -343,6 +374,28 @@ namespace Ludots.Tests.GAS
             }
 
             return count;
+        }
+
+        private static Entity FindNewestMarine(Ludots.Core.Engine.GameEngine engine, Entity commander)
+        {
+            Entity newest = Entity.Null;
+            int maxId = -1;
+            foreach (ref var chunk in engine.World.Query(new QueryDescription().WithAll<WorldPositionCm>()))
+            {
+                foreach (var index in chunk)
+                {
+                    Entity candidate = chunk.Entity(index);
+                    if (engine.World.Has<AbilityStateBuffer>(candidate) &&
+                        !candidate.Equals(commander) &&
+                        candidate.Id > maxId)
+                    {
+                        maxId = candidate.Id;
+                        newest = candidate;
+                    }
+                }
+            }
+
+            return newest;
         }
 
         private static void DragSelectBox(
