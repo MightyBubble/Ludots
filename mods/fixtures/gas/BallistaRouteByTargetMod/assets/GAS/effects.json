@@ -11,7 +11,7 @@
    "impactEffect": "Effect.Ballista.Bolt",
    "hitEffect": "Effect.Ballista.Bolt",
    "presentationEffect": "Effect.Ballista.BoltProjectile",
-   "travelMode": "TrackTarget",
+   "travelMode": "Direction",
    "impactPolicy": "DestroyOnFirstHit",
    "collisionHalfWidth": 70,
    "collisionRelationFilter": "Hostile",
