@@ -722,7 +722,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 new GasConditionRegistry(),
                 snapshotCapacity: 4,
                 fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
-                aggregateDirty: new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry())
+                aggregateDirty: registry)
             {
                 MaxWorkUnitsPerSlice = 2,
             };
