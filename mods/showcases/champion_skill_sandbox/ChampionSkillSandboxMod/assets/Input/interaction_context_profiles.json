@@ -11,6 +11,9 @@
       "triggers": [
         {
           "trigger": "graph.core.select_begin"
+        },
+        {
+          "trigger": "graph.core.hover_tick"
         }
       ]
     }
