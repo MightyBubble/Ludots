@@ -2306,7 +2306,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             var rect = ScreenRect.FromPoints(
                 new System.Numerics.Vector2(s.F[ins.A], s.F[ins.B]),
                 new System.Numerics.Vector2(s.F[ins.C], s.F[ins.Flags]));
-            s.TargetList.SetCount(s.Api.FilterScreenRegionEntities(s.Targets, s.TargetList.Count, in rect, seatId));
+            float tolerancePixels = ins.Dst != byte.MaxValue ? s.F[ins.Dst] : 0f;
+            s.TargetList.SetCount(s.Api.FilterScreenRegionEntities(s.Targets, s.TargetList.Count, in rect, seatId, tolerancePixels));
         }
 
         private static void HandleQueryScreenRegionCollection(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
