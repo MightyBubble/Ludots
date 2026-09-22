@@ -115,6 +115,22 @@ namespace Ludots.Tests.GAS
             TestContext.Out.WriteLine($"[tw2] deployment marines {marinesBefore} -> {marinesAfter}");
             Assert.That(marinesAfter, Is.EqualTo(marinesBefore + 1), "deployment spawns one reinforcement");
 
+            // 无令不动（#nav authored 合同）：增援出生后不给任何指令，位置必须保持——
+            // 曾经的病根是 authored 队目标占位为队长出生点，闲兵全速流向占位目标
+            var spawnedMarine = FindNewestMarine(engine, commander);
+            var spawnedAt = engine.World.Get<WorldPositionCm>(spawnedMarine).Value;
+            for (int idleFrame = 0; idleFrame < 120; idleFrame++)
+            {
+                engine.Tick(1f / 60f);
+            }
+
+            var spawnedNow = engine.World.Get<WorldPositionCm>(spawnedMarine).Value;
+            float idleDriftCm = MathF.Sqrt(
+                (float)((spawnedNow.X - spawnedAt.X) * (spawnedNow.X - spawnedAt.X)) +
+                (float)((spawnedNow.Y - spawnedAt.Y) * (spawnedNow.Y - spawnedAt.Y)));
+            TestContext.Out.WriteLine($"[tw2] idle reinforcement drift {idleDriftCm:F1}cm");
+            Assert.That(idleDriftCm, Is.LessThan(5f), "idle authored agents hold position (no implicit team-target follow)");
+
             // ── 迁移：备置 → RTS ──
             AdvanceStage(engine);
             AssertTopContext(engine, profiles, commander, "interaction.context.tw.rts");
@@ -343,6 +359,28 @@ namespace Ludots.Tests.GAS
             }
 
             return count;
+        }
+
+        private static Entity FindNewestMarine(Ludots.Core.Engine.GameEngine engine, Entity commander)
+        {
+            Entity newest = Entity.Null;
+            int maxId = -1;
+            foreach (ref var chunk in engine.World.Query(new QueryDescription().WithAll<WorldPositionCm>()))
+            {
+                foreach (var index in chunk)
+                {
+                    Entity candidate = chunk.Entity(index);
+                    if (engine.World.Has<AbilityStateBuffer>(candidate) &&
+                        !candidate.Equals(commander) &&
+                        candidate.Id > maxId)
+                    {
+                        maxId = candidate.Id;
+                        newest = candidate;
+                    }
+                }
+            }
+
+            return newest;
         }
 
         private static void DragSelectBox(

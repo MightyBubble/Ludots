@@ -440,14 +440,12 @@ public sealed partial class MassNavigationFlowSolverState
         for (int i = 0; i < newAgentSeeds.Length; i++)
         {
             MassNavigationAgentSeed seed = newAgentSeeds[i];
-            int teamId = seed.TeamId;
+            int teamId = seed.RelationshipDomainId;
             if (!_teamStateIndexById.TryGetValue(teamId, out _))
             {
                 var state = new TeamRuntimeState(teamId)
                 {
                     UnitCount = 0,
-                    TargetX = seed.LocalPositionXCm,
-                    TargetY = seed.LocalPositionYCm,
                 };
                 _teamStateIndexById[teamId] = _teamStates.Count;
                 _teamStates.Add(state);
@@ -458,16 +456,16 @@ public sealed partial class MassNavigationFlowSolverState
         for (int unitIndex = startIndex; unitIndex < newTotal; unitIndex++)
         {
             MassNavigationAgentSeed seed = newAgentSeeds[unitIndex - startIndex];
-            if (!_teamStateIndexById.TryGetValue(seed.TeamId, out int teamStateIndex))
+            if (!_teamStateIndexById.TryGetValue(seed.RelationshipDomainId, out int teamStateIndex))
             {
-                throw new InvalidOperationException($"MassNavigationFlow append references unregistered team {seed.TeamId}.");
+                throw new InvalidOperationException($"MassNavigationFlow append references unregistered team {seed.RelationshipDomainId}.");
             }
 
             int localIndex = _teamStates[teamStateIndex].UnitCount;
             _teamStates[teamStateIndex].UnitCount++;
             int i2 = unitIndex << 1;
             ValidateRuntimeProfile(unitIndex, seed.NavMass, seed.VisualScale, seed.BodyRadiusCm, seed.SpeedCmPerSecond);
-            _teams[unitIndex] = seed.TeamId;
+            _teams[unitIndex] = seed.RelationshipDomainId;
             _teamRuntimeIndices[unitIndex] = teamStateIndex;
             _teamLocalIndices[unitIndex] = localIndex;
             _flowRuntimeIndices[unitIndex] = ResolveFlowStateIndex(teamStateIndex, seed.Layer, allowCreate: true);
@@ -1213,6 +1211,21 @@ public sealed partial class MassNavigationFlowSolverState
             {
                 FlowRuntimeState flowState = _flowStates[i];
                 TeamRuntimeState team = _teamStates[flowState.TeamStateIndex];
+                if (!team.HasAuthoredTarget)
+                {
+                    // No scenario-authored sink: idle authored agents hold position and
+                    // never sample the flow, so the field stays zeroed.
+                    if (flowState.LastComputedCostRevision != -1)
+                    {
+                        Array.Clear(flowState.Flow, 0, flowState.Flow.Length);
+                        flowState.LastComputedCostRevision = -1;
+                        flowState.LastComputedTargetX = float.NaN;
+                        flowState.LastComputedTargetY = float.NaN;
+                    }
+
+                    continue;
+                }
+
                 if (crowdStampBudgetUnits == 0 &&
                     flowState.LastComputedCostRevision == _staticCostRevision &&
                     flowState.LastComputedTargetX == team.TargetX &&
@@ -1373,6 +1386,7 @@ public sealed partial class MassNavigationFlowSolverState
             {
                 TargetX = target.X,
                 TargetY = target.Y,
+                HasAuthoredTarget = true,
             };
             _teamStateIndexById[teamId] = _teamStates.Count;
             _teamStates.Add(state);
@@ -1440,6 +1454,7 @@ public sealed partial class MassNavigationFlowSolverState
             {
                 TargetX = target.X,
                 TargetY = target.Y,
+                HasAuthoredTarget = true,
             };
             _teamStateIndexById[teamId] = _teamStates.Count;
             _teamStates.Add(state);
@@ -1453,7 +1468,7 @@ public sealed partial class MassNavigationFlowSolverState
         _teamStateIndexById.Clear();
         for (int i = 0; i < agentSeeds.Length; i++)
         {
-            int teamId = agentSeeds[i].TeamId;
+            int teamId = agentSeeds[i].RelationshipDomainId;
             if (_teamStateIndexById.TryGetValue(teamId, out int teamStateIndex))
             {
                 _teamStates[teamStateIndex].UnitCount++;
@@ -1463,8 +1478,6 @@ public sealed partial class MassNavigationFlowSolverState
             var state = new TeamRuntimeState(teamId)
             {
                 UnitCount = 1,
-                TargetX = agentSeeds[i].LocalPositionXCm,
-                TargetY = agentSeeds[i].LocalPositionYCm,
             };
             _teamStateIndexById[teamId] = _teamStates.Count;
             _teamStates.Add(state);
@@ -1588,6 +1601,15 @@ public sealed partial class MassNavigationFlowSolverState
         {
             FlowRuntimeState flowState = _flowStates[i];
             TeamRuntimeState team = _teamStates[flowState.TeamStateIndex];
+            if (!team.HasAuthoredTarget)
+            {
+                Array.Clear(flowState.Flow, 0, flowState.Flow.Length);
+                flowState.LastComputedCostRevision = -1;
+                flowState.LastComputedTargetX = float.NaN;
+                flowState.LastComputedTargetY = float.NaN;
+                continue;
+            }
+
             RebuildFlowCostForState(flowState, crowdStampBudgetUnits);
             ComputeFlow(flowState.Flow, team.TargetX, team.TargetY);
         }
@@ -1715,14 +1737,14 @@ public sealed partial class MassNavigationFlowSolverState
         for (int unitIndex = 0; unitIndex < agentSeeds.Length; unitIndex++)
         {
             MassNavigationAgentSeed seed = agentSeeds[unitIndex];
-            if (!_teamStateIndexById.TryGetValue(seed.TeamId, out int teamStateIndex))
+            if (!_teamStateIndexById.TryGetValue(seed.RelationshipDomainId, out int teamStateIndex))
             {
-                throw new InvalidOperationException($"MassNavigationFlow agent seed references unregistered team {seed.TeamId}.");
+                throw new InvalidOperationException($"MassNavigationFlow agent seed references unregistered team {seed.RelationshipDomainId}.");
             }
 
             int i2 = unitIndex << 1;
             ValidateRuntimeProfile(unitIndex, seed.NavMass, seed.VisualScale, seed.BodyRadiusCm, seed.SpeedCmPerSecond);
-            _teams[unitIndex] = seed.TeamId;
+            _teams[unitIndex] = seed.RelationshipDomainId;
             _teamRuntimeIndices[unitIndex] = teamStateIndex;
             _teamLocalIndices[unitIndex] = teamLocalWriteCursor[teamStateIndex]++;
             _flowRuntimeIndices[unitIndex] = ResolveFlowStateIndex(teamStateIndex, seed.Layer, allowCreate: true);
@@ -2069,7 +2091,7 @@ public sealed partial class MassNavigationFlowSolverState
                         unitArrivalFactor = 0f;
                     }
                 }
-                else
+                else if (team.HasAuthoredTarget)
                 {
                     hasGoalTarget = true;
                     int gx = (int)(px / _flowCellSizeCm);
@@ -2144,6 +2166,19 @@ public sealed partial class MassNavigationFlowSolverState
                         desiredX = flowX;
                         desiredY = flowY;
                     }
+                }
+                else
+                {
+                    // No unit target and no scenario-authored team target: idle agents
+                    // hold position. Separation and hard resolve still displace them —
+                    // avoidance is the solver's whole job for idle units; self-powered
+                    // motion requires an explicit request.
+                    if (_unitSettledFlags[i] == 0)
+                    {
+                        EnterSettledState(i, px, py);
+                    }
+
+                    suppressTargetMotion = true;
                 }
             }
 

@@ -81,6 +81,13 @@ public sealed partial class MassNavigationFlowSolverState
         public float TangentY { get; }
         public float TargetX { get; set; }
         public float TargetY { get; set; }
+
+        /// <summary>
+        /// Only scenario spawn layouts (QuadrantSpread / OrbitOpposedTargets) author a real
+        /// convergence target. Authored-map teams carry no implicit target — their idle
+        /// agents hold position instead of following a flow field toward an arbitrary point.
+        /// </summary>
+        public bool HasAuthoredTarget { get; set; }
     }
 
     private sealed class FlowRuntimeState
