@@ -1425,12 +1425,13 @@ internal sealed class LiveMapEditorRuntime : IDisposable
             MapSession session = engine.CurrentMapSession
                 ?? throw new InvalidOperationException("Save requires a focused map session.");
             var writer = new MapAuthoringAssetWriter(engine);
+            bool writeNavTiles = ShouldWriteNavTiles(session);
             MapAuthoringSaveResult result = writer.Save(new MapAuthoringSaveRequest
             {
                 Session = session,
                 LogicTerrain = engine.LogicTerrain,
                 Entities = BuildEntitySaveList(session),
-                WriteNavTiles = true,
+                WriteNavTiles = writeNavTiles,
             });
             string transportMessage = "transport unchanged";
             if (Transport.Available)
@@ -2062,6 +2063,24 @@ internal sealed class LiveMapEditorRuntime : IDisposable
             Entities = BuildEntitySaveList(session),
             WriteNavTiles = false
         });
+    }
+
+    private static bool ShouldWriteNavTiles(MapSession session)
+    {
+        if (session.MapConfig.Boards == null || session.MapConfig.Boards.Count == 0)
+        {
+            throw new InvalidOperationException("Save requires at least one authored board.");
+        }
+
+        for (int i = 0; i < session.MapConfig.Boards.Count; i++)
+        {
+            if (session.MapConfig.Boards[i].NavigationEnabled)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void ClearLoadedNavTilesIfAvailable(GameEngine engine)

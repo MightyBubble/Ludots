@@ -189,6 +189,77 @@ public sealed class LiveMapEditorPhase2AcceptanceTests
     }
 
     [Test]
+    public async Task EastAsiaLiveGrid_EditsAndPersistsLogicTerrain()
+    {
+        string repoRoot = FindRepoRoot();
+        string root = CreateTempDir("east_asia_live_grid");
+        try
+        {
+            string sourceMod = Path.Combine(
+                repoRoot,
+                "mods",
+                "showcases",
+                "east_asia_playable_terrain",
+                "EastAsiaPlayableTerrainMod");
+            string tempMod = Path.Combine(root, "EastAsiaPlayableTerrainMod");
+            CopyDirectory(sourceMod, tempMod);
+
+            using GameEngine engine = CreateEngine(repoRoot, tempMod);
+            engine.LoadMap("east_asia_live_grid");
+            IWebUiCommandHandler handler = CreateCommandHandler(engine);
+
+            Assert.That(engine.LogicTerrain, Is.Not.Null);
+            Assert.Multiple(() =>
+            {
+                Assert.That(engine.LogicTerrain.WidthCells, Is.EqualTo(2048));
+                Assert.That(engine.LogicTerrain.HeightCells, Is.EqualTo(1536));
+                Assert.That(engine.LogicTerrain.HorizontalStepCm, Is.EqualTo(100));
+                Assert.That(engine.CurrentMapSession?.VisualHeightmap, Is.TypeOf(GetCoreType("Ludots.Core.Presentation.Terrain.LogicTerrainVisualHeightmapAdapter")));
+            });
+
+            const int col = 1024;
+            const int row = 768;
+            LogicTerrainCell before = engine.LogicTerrain.GetCell(col, row);
+            byte editedHeight = before.HeightLevel == 14 ? (byte)13 : (byte)14;
+
+            await Ok(handler, "setBrush", new
+            {
+                mode = "set",
+                target = "all",
+                radiusCells = 0,
+                heightLevel = editedHeight,
+                waterHeightLevel = 0,
+                areaId = 77,
+                cost = 1.5f,
+                blocked = true,
+                water = false,
+                ramp = false
+            });
+            await Ok(handler, "paintTerrain", new { col, row, radiusCells = 0 });
+            await Ok(handler, "saveMap", new { });
+
+            string savedPath = Path.Combine(tempMod, "assets", "Data", "Maps", "east_asia_live_grid.ltrn");
+            using FileStream stream = File.OpenRead(savedPath);
+            LogicTerrainField saved = LogicTerrainBinary.Read(stream);
+            LogicTerrainCell persisted = saved.GetCell(col, row);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(persisted.HeightLevel, Is.EqualTo(editedHeight));
+                Assert.That(persisted.WaterHeightLevel, Is.EqualTo(0));
+                Assert.That(persisted.AreaId, Is.EqualTo(77));
+                Assert.That(persisted.Cost, Is.EqualTo(1.5f).Within(0.0001f));
+                Assert.That(persisted.SurfaceFlags.HasFlag(LogicTerrainSurfaceFlags.Blocked), Is.True);
+                Assert.That(persisted.SurfaceFlags.HasFlag(LogicTerrainSurfaceFlags.Water), Is.False);
+            });
+        }
+        finally
+        {
+            TryDelete(root);
+        }
+    }
+
+    [Test]
     public async Task Phase2MapLifecycle_CreatesHexBoardAndPreviewsHugeMapWithoutManualSteps()
     {
         string root = CreateTempDir("phase2_map_lifecycle");
@@ -398,6 +469,22 @@ public sealed class LiveMapEditorPhase2AcceptanceTests
         }
         """);
         return modRoot;
+    }
+
+    private static void CopyDirectory(string source, string destination)
+    {
+        Directory.CreateDirectory(destination);
+        foreach (string directory in Directory.EnumerateDirectories(source, "*", SearchOption.AllDirectories))
+        {
+            string relative = Path.GetRelativePath(source, directory);
+            Directory.CreateDirectory(Path.Combine(destination, relative));
+        }
+
+        foreach (string file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
+        {
+            string relative = Path.GetRelativePath(source, file);
+            File.Copy(file, Path.Combine(destination, relative), overwrite: true);
+        }
     }
 
     private static void AssertNavTilesAreValid(GameEngine engine)

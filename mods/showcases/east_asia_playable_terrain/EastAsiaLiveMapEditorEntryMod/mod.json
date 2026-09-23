@@ -1,0 +1,12 @@
+{
+  "name": "EastAsiaLiveMapEditorEntryMod",
+  "version": "1.0.0",
+  "description": "Direct launcher entry for editing the East Asia Grid terrain in the CEF live map editor.",
+  "priority": 0,
+  "dependencies": {
+    "EastAsiaPlayableTerrainMod": "^1.0.0",
+    "LiveMapEditorMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["east_asia", "terrain", "grid", "live-map-editor", "entry"]
+}

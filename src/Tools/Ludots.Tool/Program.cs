@@ -78,6 +78,25 @@ namespace Ludots.Tool
             });
             mapCommand.AddCommand(importReactCommand);
 
+            var importReactGridCommand = new Command("import-react-grid-ltrn", "Convert React web editor map_data.bin to Grid LogicTerrain .ltrn");
+            var logicInputBinOption = new Option<string>("--in", "Input React map_data.bin path") { IsRequired = true };
+            var logicOutOption = new Option<string>("--out", "Output .ltrn file path") { IsRequired = true };
+            var logicCellSizeOption = new Option<int>("--cellSizeCm", () => SpatialScaleDefaults.CellCm, "Grid cell size in centimeters");
+            var logicForceOption = new Option<bool>("--force", () => false, "Overwrite output file if it exists");
+            importReactGridCommand.AddOption(logicInputBinOption);
+            importReactGridCommand.AddOption(logicOutOption);
+            importReactGridCommand.AddOption(logicCellSizeOption);
+            importReactGridCommand.AddOption(logicForceOption);
+            importReactGridCommand.SetHandler((InvocationContext ctx) =>
+            {
+                var inputPath = ctx.ParseResult.GetValueForOption(logicInputBinOption) ?? string.Empty;
+                var outputPath = ctx.ParseResult.GetValueForOption(logicOutOption) ?? string.Empty;
+                var cellSizeCm = ctx.ParseResult.GetValueForOption(logicCellSizeOption);
+                var force = ctx.ParseResult.GetValueForOption(logicForceOption);
+                ctx.ExitCode = ImportReactGridLogicTerrain(inputPath, outputPath, cellSizeCm, force);
+            });
+            mapCommand.AddCommand(importReactGridCommand);
+
             var genVtxmCommand = new Command("gen-vtxm", "Generate a VertexMap v2 .vtxm test map");
             var genOutOption = new Option<string>("--out", "Output .vtxm file path") { IsRequired = true };
             var genWidthOption = new Option<int>("--widthChunks", () => 16, "Map width in chunks");
@@ -488,6 +507,48 @@ namespace {modId}
             File.WriteAllText(outJson, JsonSerializer.Serialize(summary, jsonOptions));
 
             Console.WriteLine($"Converted React map to VertexMap binary:\n  In : {inputPath}\n  Out: {outBin}\n  Info: {outJson}");
+            return 0;
+        }
+
+        static int ImportReactGridLogicTerrain(string inputPath, string outputPath, int cellSizeCm, bool force)
+        {
+            if (string.IsNullOrWhiteSpace(inputPath) || !File.Exists(inputPath))
+            {
+                Console.WriteLine($"Error: Input file not found: {inputPath}");
+                return 1;
+            }
+
+            if (string.IsNullOrWhiteSpace(outputPath))
+            {
+                Console.WriteLine("Error: Output .ltrn path is required.");
+                return 1;
+            }
+
+            if (cellSizeCm <= 0)
+            {
+                Console.WriteLine("Error: --cellSizeCm must be greater than 0.");
+                return 1;
+            }
+
+            string fullOutputPath = Path.GetFullPath(outputPath);
+            if (File.Exists(fullOutputPath) && !force)
+            {
+                Console.WriteLine($"Error: Output exists. Use --force to overwrite.\n  {fullOutputPath}");
+                return 1;
+            }
+
+            string? outputDir = Path.GetDirectoryName(fullOutputPath);
+            if (!string.IsNullOrWhiteSpace(outputDir))
+            {
+                Directory.CreateDirectory(outputDir);
+            }
+
+            using FileStream input = File.OpenRead(inputPath);
+            LogicTerrainField terrain = ReactMapDataBinConverter.ReadGridLogicTerrainField(inputPath, input, cellSizeCm);
+            using FileStream output = File.Create(fullOutputPath);
+            LogicTerrainBinary.Write(output, terrain);
+            Console.WriteLine(
+                $"Converted React grid map to LogicTerrain:\n  In : {inputPath}\n  Out: {fullOutputPath}\n  Cells: {terrain.WidthCells}x{terrain.HeightCells}\n  Chunks: {terrain.WidthChunks}x{terrain.HeightChunks}");
             return 0;
         }
 

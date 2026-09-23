@@ -56,6 +56,7 @@ target/
 .tmp/
 .trae/
 raylib_temp/
+BrowserRuntime/
 
 # ----- 构建日志与调试输出 -----
 build_*.log

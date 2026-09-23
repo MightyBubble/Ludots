@@ -1,0 +1,30 @@
+{
+  "Id": "east_asia_visual_heightmap",
+  "VisualHeightmapAsset": "assets/terrain/east_asia_continuous.vhtm",
+  "Tags": [
+    "east_asia",
+    "terrain",
+    "continuous",
+    "visual-heightmap",
+    "playable",
+    "editable",
+    "visual_terrain_editable"
+  ],
+  "Metadata": {
+    "terrainProfile": "assets/terrain/east_asia_terrain_profile.json",
+    "playableSurface": "Continuous VisualHeightmap",
+    "projection": "Equirectangular at 30N standard latitude",
+    "coverage": "East Asia with complete Vietnam coverage; India is intentionally outside the primary frame."
+  },
+  "Entities": [],
+  "TriggerTypes": [],
+  "DefaultCamera": {
+    "VirtualCameraId": "EastAsia.Camera.PlayableTerrain",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "Yaw": 225,
+    "Pitch": 50,
+    "DistanceCm": 120000,
+    "FovYDeg": 55
+  }
+}

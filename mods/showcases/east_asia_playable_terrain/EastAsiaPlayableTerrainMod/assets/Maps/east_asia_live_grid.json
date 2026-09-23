@@ -1,0 +1,44 @@
+{
+  "Id": "east_asia_live_grid",
+  "Tags": [
+    "east_asia",
+    "terrain",
+    "grid",
+    "playable",
+    "editable",
+    "live_map_editor"
+  ],
+  "Metadata": {
+    "liveMapEditor": {
+      "saveTarget": true
+    },
+    "terrainProfile": "assets/terrain/east_asia_terrain_profile.json",
+    "playableSurface": "Grid",
+    "projection": "Equirectangular at 30N standard latitude",
+    "coverage": "East Asia with complete Vietnam coverage; India is intentionally outside the primary frame.",
+    "authoringNote": "This map uses LogicTerrain .ltrn as the editable source of truth for the CEF live map editor."
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 8,
+      "HeightInMacroTiles": 6,
+      "GridCellSizeCm": 100,
+      "ChunkSizeCells": 64,
+      "DataFile": "east_asia_live_grid.ltrn",
+      "NavigationEnabled": false
+    }
+  ],
+  "Entities": [],
+  "TriggerTypes": [],
+  "DefaultCamera": {
+    "VirtualCameraId": "EastAsia.Camera.LiveMapEditor",
+    "TargetXCm": 102400,
+    "TargetYCm": 76800,
+    "Yaw": 225,
+    "Pitch": 55,
+    "DistanceCm": 220000,
+    "FovYDeg": 55
+  }
+}

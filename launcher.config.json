@@ -194,6 +194,38 @@
       }
     },
     {
+      "name": "east_asia_grid",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/east_asia_playable_terrain/EastAsiaGridEntryMod",
+        "projectPath": null
+      }
+    },
+    {
+      "name": "east_asia_hex",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/east_asia_playable_terrain/EastAsiaHexEntryMod",
+        "projectPath": null
+      }
+    },
+    {
+      "name": "east_asia_visual_heightmap",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/east_asia_playable_terrain/EastAsiaVisualHeightmapEntryMod",
+        "projectPath": null
+      }
+    },
+    {
+      "name": "east_asia_live_map_editor",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/east_asia_playable_terrain/EastAsiaLiveMapEditorEntryMod",
+        "projectPath": null
+      }
+    },
+    {
       "name": "utility_autocast_showcase",
       "target": {
         "type": "path",
@@ -233,7 +265,11 @@
     {
       "id": "cef",
       "projectPath": "src/Libraries/Ludots.UI.Browser.Cef/Ludots.UI.Browser.Cef.csproj",
-      "assemblyPath": "src/Libraries/Ludots.UI.Browser.Cef/bin/Release/net8.0-windows/Ludots.UI.Browser.Cef.dll"
+      "packageRootPath": "BrowserRuntime/cef",
+      "assemblyPath": "BrowserRuntime/cef/Ludots.UI.Browser.Cef.dll",
+      "hostTypeName": "Ludots.UI.Browser.Cef.CefBrowserRuntimeHost",
+      "useCollectibleLoadContext": false,
+      "processSharedAssemblyNamePrefixes": ["CefSharp"]
     }
   ],
   "projectHints": []

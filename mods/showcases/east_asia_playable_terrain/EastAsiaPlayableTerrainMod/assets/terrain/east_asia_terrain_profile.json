@@ -1,0 +1,33 @@
+{
+  "id": "east_asia_playable_terrain_v1",
+  "projection": {
+    "kind": "equirectangular",
+    "standardLatitudeDeg": 30,
+    "longitudeMin": 73,
+    "longitudeMax": 150,
+    "latitudeMin": 5,
+    "latitudeMax": 55,
+    "note": "Extent includes Vietnam and East Asia while avoiding a westward India-first frame; map dimensions preserve projected aspect ratio."
+  },
+  "grid": {
+    "widthChunks": 32,
+    "heightChunks": 24,
+    "chunkSizeCells": 64
+  },
+  "hex": {
+    "widthChunks": 32,
+    "heightChunks": 24,
+    "chunkSizeCells": 64
+  },
+  "visualHeightmap": {
+    "sampleColumns": 2049,
+    "sampleRows": 1537,
+    "worldWidthCm": 204800,
+    "worldHeightCm": 153600,
+    "seaLevelCm": 0,
+    "minOceanCm": -1350,
+    "maxLandCm": 2250,
+    "editorDefaultHeight01": 0.45,
+    "editorHeightAmplitudeCm": 6000
+  }
+}

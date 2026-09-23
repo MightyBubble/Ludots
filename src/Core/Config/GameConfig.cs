@@ -82,11 +82,17 @@ namespace Ludots.Core.Config
 
         public string ProviderAssemblyPath { get; set; } = string.Empty;
 
+        public string ProviderHostTypeName { get; set; } = string.Empty;
+
         public string ProviderProjectPath { get; set; } = string.Empty;
 
         public string RuntimeRootPath { get; set; } = string.Empty;
 
         public string CacheRootPath { get; set; } = string.Empty;
+
+        public bool? UseCollectibleLoadContext { get; set; }
+
+        public string[] ProcessSharedAssemblyNamePrefixes { get; set; } = Array.Empty<string>();
     }
 
     /// <summary>

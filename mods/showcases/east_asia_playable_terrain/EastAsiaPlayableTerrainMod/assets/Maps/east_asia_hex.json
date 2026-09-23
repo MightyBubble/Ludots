@@ -1,0 +1,42 @@
+{
+  "Id": "east_asia_hex",
+  "VisualHeightmapAsset": "assets/terrain/east_asia_continuous.vhtm",
+  "Tags": [
+    "east_asia",
+    "terrain",
+    "hex",
+    "playable",
+    "editable",
+    "visual_terrain_editable"
+  ],
+  "Metadata": {
+    "terrainProfile": "assets/terrain/east_asia_terrain_profile.json",
+    "playableSurface": "HexGrid",
+    "projection": "Equirectangular at 30N standard latitude",
+    "coverage": "East Asia with complete Vietnam coverage; India is intentionally outside the primary frame."
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "HexGrid",
+      "WidthInMacroTiles": 8,
+      "HeightInMacroTiles": 6,
+      "GridCellSizeCm": 100,
+      "HexEdgeLengthCm": 100,
+      "ChunkSizeCells": 64,
+      "DataFile": "east_asia_hex.vtxm",
+      "NavigationEnabled": false
+    }
+  ],
+  "Entities": [],
+  "TriggerTypes": [],
+  "DefaultCamera": {
+    "VirtualCameraId": "EastAsia.Camera.PlayableTerrain",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "Yaw": 225,
+    "Pitch": 50,
+    "DistanceCm": 120000,
+    "FovYDeg": 55
+  }
+}
