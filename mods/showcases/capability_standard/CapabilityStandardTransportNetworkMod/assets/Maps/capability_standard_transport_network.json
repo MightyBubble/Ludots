@@ -14,7 +14,8 @@
       "SpatialType": "NodeGraph",
       "WidthCells": 512,
       "HeightCells": 512,
-      "GridCellSizeCm": 100
+      "GridCellSizeCm": 100,
+      "TransportNetwork": {}
     }
   ],
   "Entities": []

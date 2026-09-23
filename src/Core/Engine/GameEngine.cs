@@ -253,6 +253,7 @@ namespace Ludots.Core.Engine
         private WorldToGridSyncSystem _worldToGridSyncSystem;
         private SpatialPartitionUpdateSystem _spatialPartitionUpdateSystem;
         private readonly MassNavigationRuntime _massNavigationRuntime = new();
+        private readonly Dictionary<MapId, Ludots.Core.TransportNetwork.TransportNetworkMapRuntime> _transportNetworkRuntimes = new();
 
         // Multithreading
         private JobScheduler _jobScheduler;
@@ -2941,6 +2942,7 @@ namespace Ludots.Core.Engine
                 }
 
                 LoadNavForMap(mapId, mapConfig);
+                LoadTransportNetworkForSession(session, mapConfig);
                 LoadPathingForSession(session);
                 Diagnostics.Log.Info(in LogChannels.Engine, "Creating Entities from MapConfig...");
                 var entityIndex = MapLoader.LoadEntitiesAndIndex(mapConfig);
@@ -3004,6 +3006,7 @@ namespace Ludots.Core.Engine
             var unloadCtx = CreateMapEventContext(session);
             CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(mid, GameEvents.MapUnloaded, unloadCtx));
             _massNavigationRuntime.HandleMapUnloaded(this, mid);
+            UnloadTransportNetworkForMap(mid);
             TriggerManager.UnregisterMapTriggers(mid, unloadCtx);
             RemoveRuntimeEntitySpawnRequestsForMap(mid);
 
@@ -3115,6 +3118,8 @@ namespace Ludots.Core.Engine
                 LoadBoardTerrainData(session, mapConfig);
                 LoadNavForMap(innerMapId, mapConfig);
             }
+
+            LoadTransportNetworkForSession(session, mapConfig);
             LoadPathingForSession(session);
 
             var entityIndex = MapLoader.LoadEntitiesAndIndex(mapConfig);
@@ -3175,6 +3180,7 @@ namespace Ludots.Core.Engine
                 var unloadCtx = CreateMapEventContext(innerSession);
                 CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(innerSession.MapId, GameEvents.MapUnloaded, unloadCtx));
                 _massNavigationRuntime.HandleMapUnloaded(this, innerSession.MapId);
+                UnloadTransportNetworkForMap(innerSession.MapId);
                 TriggerManager.UnregisterMapTriggers(innerSession.MapId, unloadCtx);
                 RemoveRuntimeEntitySpawnRequestsForMap(innerSession.MapId);
             }
@@ -4407,6 +4413,35 @@ namespace Ludots.Core.Engine
             }
 
             return new NavObstacleSet();
+        }
+
+        /// <summary>
+        /// Installs declared board transport networks for a freshly created map session
+        /// (graph chunks into the board's NodeGraph store + ribbon payloads). No-op when
+        /// no board declares TransportNetwork; fails fast on declared-but-unsatisfiable boards.
+        /// </summary>
+        internal void LoadTransportNetworkForSession(MapSession session, MapConfig mapConfig)
+        {
+            UnloadTransportNetworkForMap(session.MapId);
+            if (!Ludots.Core.TransportNetwork.TransportNetworkMapRuntime.AnyBoardDeclares(mapConfig))
+            {
+                return;
+            }
+
+            var payloads = GetService(CoreServiceKeys.SurfaceSourcePayloadRegistry)
+                ?? throw new InvalidOperationException(
+                    $"Map '{session.MapId.Value}' declares board transport networks but SurfaceSourcePayloadRegistry is unavailable.");
+            var runtime = new Ludots.Core.TransportNetwork.TransportNetworkMapRuntime(payloads);
+            runtime.Install(session, mapConfig, ConfigPipeline, ConfigCatalog, ConfigConflictReport);
+            _transportNetworkRuntimes[session.MapId] = runtime;
+        }
+
+        internal void UnloadTransportNetworkForMap(MapId mapId)
+        {
+            if (_transportNetworkRuntimes.Remove(mapId, out var runtime))
+            {
+                runtime.Dispose();
+            }
         }
 
         private void ClearNavServices()

@@ -419,8 +419,7 @@
       "name": "capability_standard_transport_network",
       "target": {
         "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardTransportNetworkMod",
-        "projectPath": "CapabilityStandardTransportNetworkMod.csproj"
+        "value": "mods/showcases/capability_standard/CapabilityStandardTransportNetworkMod"
       }
     },
     {

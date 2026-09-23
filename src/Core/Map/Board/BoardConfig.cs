@@ -72,6 +72,11 @@ namespace Ludots.Core.Map.Board
 
         public int? TerrainBlockedAtOrBelowHeightCm { get; set; }
 
+        /// <summary>Declared asset-authored transport network for this board. NodeGraph boards
+        /// only (rejected elsewhere); presence makes the engine install the baked network
+        /// (graph chunks + ribbon payloads) on map load, so mods carry data only.</summary>
+        public Ludots.Core.TransportNetwork.TransportNetworkBoardDeclaration TransportNetwork { get; set; }
+
 
         /// <summary>
         /// The board's effective world extent — hex footprint when WidthHexes/HeightHexes
@@ -116,7 +121,8 @@ namespace Ludots.Core.Map.Board
                 StructureCollisionAsset = StructureCollisionAsset,
                 StructureAwareGrounding = StructureAwareGrounding,
                 TerrainHeightStepCm = TerrainHeightStepCm,
-                TerrainBlockedAtOrBelowHeightCm = TerrainBlockedAtOrBelowHeightCm
+                TerrainBlockedAtOrBelowHeightCm = TerrainBlockedAtOrBelowHeightCm,
+                TransportNetwork = TransportNetwork
             };
         }
     }
