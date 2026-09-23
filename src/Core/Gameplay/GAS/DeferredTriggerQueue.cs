@@ -6,14 +6,32 @@ namespace Ludots.Core.Gameplay.GAS
     {
         public const string CapacityExceededError = "GAS.DEFERRED_TRIGGER.ERR.CapacityExceeded";
 
-        private static readonly int Capacity = GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME;
+        private readonly int _capacity;
 
-        private AttributeChangedTrigger[] _attributeTriggers = new AttributeChangedTrigger[Capacity];
-        private AttributeChangedTrigger[] _attributeOverflow = new AttributeChangedTrigger[Capacity];
-        private TagChangedTrigger[] _tagTriggers = new TagChangedTrigger[Capacity];
-        private TagChangedTrigger[] _tagOverflow = new TagChangedTrigger[Capacity];
-        private TagCountChangedTrigger[] _tagCountTriggers = new TagCountChangedTrigger[Capacity];
-        private TagCountChangedTrigger[] _tagCountOverflow = new TagCountChangedTrigger[Capacity];
+        private AttributeChangedTrigger[] _attributeTriggers;
+        private AttributeChangedTrigger[] _attributeOverflow;
+        private TagChangedTrigger[] _tagTriggers;
+        private TagChangedTrigger[] _tagOverflow;
+        private TagCountChangedTrigger[] _tagCountTriggers;
+        private TagCountChangedTrigger[] _tagCountOverflow;
+
+        public DeferredTriggerQueue(int capacity = GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME)
+        {
+            if (capacity <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(capacity), "DeferredTriggerQueue capacity must be positive.");
+            }
+
+            _capacity = capacity;
+            _attributeTriggers = new AttributeChangedTrigger[capacity];
+            _attributeOverflow = new AttributeChangedTrigger[capacity];
+            _tagTriggers = new TagChangedTrigger[capacity];
+            _tagOverflow = new TagChangedTrigger[capacity];
+            _tagCountTriggers = new TagCountChangedTrigger[capacity];
+            _tagCountOverflow = new TagCountChangedTrigger[capacity];
+        }
+
+        public int Capacity => _capacity;
 
         private int _attributeCount = 0;
         private int _tagCount = 0;
@@ -24,16 +42,16 @@ namespace Ludots.Core.Gameplay.GAS
 
         public void EnqueueAttributeChanged(AttributeChangedTrigger trigger)
         {
-            if (_attributeCount < Capacity)
+            if (_attributeCount < _capacity)
             {
                 _attributeTriggers[_attributeCount++] = trigger;
                 return;
             }
 
-            if (_attributeOverflowCount >= Capacity)
+            if (_attributeOverflowCount >= _capacity)
             {
                 throw new System.InvalidOperationException(
-                    $"{CapacityExceededError}: source=AttributeChanged, capacity={Capacity}, overflowCapacity={Capacity}, attributeId={trigger.AttributeId}.");
+                    $"{CapacityExceededError}: source=AttributeChanged, capacity={_capacity}, overflowCapacity={_capacity}, attributeId={trigger.AttributeId}.");
             }
 
             _attributeOverflow[_attributeOverflowCount++] = trigger;
@@ -41,16 +59,16 @@ namespace Ludots.Core.Gameplay.GAS
 
         public void EnqueueTagChanged(TagChangedTrigger trigger)
         {
-            if (_tagCount < Capacity)
+            if (_tagCount < _capacity)
             {
                 _tagTriggers[_tagCount++] = trigger;
                 return;
             }
 
-            if (_tagOverflowCount >= Capacity)
+            if (_tagOverflowCount >= _capacity)
             {
                 throw new System.InvalidOperationException(
-                    $"{CapacityExceededError}: source=TagChanged, capacity={Capacity}, overflowCapacity={Capacity}, tagId={trigger.TagId}.");
+                    $"{CapacityExceededError}: source=TagChanged, capacity={_capacity}, overflowCapacity={_capacity}, tagId={trigger.TagId}.");
             }
 
             _tagOverflow[_tagOverflowCount++] = trigger;
@@ -58,16 +76,16 @@ namespace Ludots.Core.Gameplay.GAS
 
         public void EnqueueTagCountChanged(TagCountChangedTrigger trigger)
         {
-            if (_tagCountTriggerCount < Capacity)
+            if (_tagCountTriggerCount < _capacity)
             {
                 _tagCountTriggers[_tagCountTriggerCount++] = trigger;
                 return;
             }
 
-            if (_tagCountOverflowCount >= Capacity)
+            if (_tagCountOverflowCount >= _capacity)
             {
                 throw new System.InvalidOperationException(
-                    $"{CapacityExceededError}: source=TagCountChanged, capacity={Capacity}, overflowCapacity={Capacity}, tagId={trigger.TagId}.");
+                    $"{CapacityExceededError}: source=TagCountChanged, capacity={_capacity}, overflowCapacity={_capacity}, tagId={trigger.TagId}.");
             }
 
             _tagCountOverflow[_tagCountOverflowCount++] = trigger;
