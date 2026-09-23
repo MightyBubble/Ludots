@@ -94,4 +94,12 @@ namespace Ludots.Core.Components
     {
         public string Value; // Note: String in component is not ideal for ECS performance but okay for identifiers
     }
+
+    /// <summary>
+    /// 玩家在实体信息里看见的名字。系统身份仍是 <see cref="Name"/>。
+    /// </summary>
+    public struct EntityInfoName
+    {
+        public string Value;
+    }
 }

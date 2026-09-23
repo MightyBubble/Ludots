@@ -710,6 +710,7 @@ namespace Ludots.Core.Systems
                 for (int i = 0; i < created.Length; i++)
                 {
                     entityIndex.Register(mapConfig.Id, pendingBatchEntityData[i].InstanceId, created[i]);
+                    AttachBatchEntityInfoName(mapConfig.Id, pendingBatchEntityData[i], created[i]);
                     PublishTemplateOnSpawnEffect(created[i], activeBatchTemplateId);
                     MountInitialInteractionContext(
                         created[i], activeBatchTemplateId, activeBatchTemplate, pendingBatchEntityData[i].Overrides);
@@ -815,8 +816,14 @@ namespace Ludots.Core.Systems
                 
                 if (entityData.Overrides != null)
                 {
+                    string entityContext = $"Map '{mapConfig.Id}' entity '{ResolveMapEntityContextId(entityData)}'";
                     foreach (var kvp in entityData.Overrides)
                     {
+                        if (string.Equals(kvp.Key, "EntityInfoName", StringComparison.Ordinal))
+                        {
+                            ParseEntityInfoName(entityContext, kvp.Value);
+                        }
+
                         if (!string.Equals(kvp.Key, InitialInteractionContextOverrideKey, System.StringComparison.Ordinal))
                         {
                             builder.WithOverride(kvp.Key, kvp.Value);
@@ -1092,7 +1099,7 @@ namespace Ludots.Core.Systems
                     childNames.TryGetValue(relativePath, out instanceName);
                 }
 
-                names[offset] = TemplateEntityBatchSpawner.ResolveAuthoredName(context, template, childName, instanceName);
+                names[offset] = TemplateEntityBatchSpawner.ResolveAuthoredName(context, template, childName, instanceNameOverride: null);
                 templateKeyIds[offset] = ResolveTemplateKeyId(child.Template);
                 addressablePaths[offset] = relativePath;
             }
@@ -1108,6 +1115,13 @@ namespace Ludots.Core.Systems
                 if (!string.IsNullOrEmpty(childLocalPath))
                 {
                     entityIndex.RegisterLocalPath(mapId, childLocalPath, childEntity);
+                }
+
+                if (childLocalPath != null &&
+                    childNames != null &&
+                    childNames.TryGetValue(childLocalPath, out JsonNode infoNode))
+                {
+                    _world.Add(childEntity, ParseEntityInfoName(context, infoNode));
                 }
 
                 Ludots.Core.Gameplay.Attachment.AttachmentOps.Attach(
@@ -1169,7 +1183,7 @@ namespace Ludots.Core.Systems
             {
                 foreach (var kvp in child.Overrides)
                 {
-                    if (string.Equals(kvp.Key, "Name", StringComparison.Ordinal) && instanceName != null)
+                    if (string.Equals(kvp.Key, "EntityInfoName", StringComparison.Ordinal) && instanceName != null)
                     {
                         continue;
                     }
@@ -1180,16 +1194,16 @@ namespace Ludots.Core.Systems
 
             if (instanceName != null)
             {
-                JsonNode childName = null;
+                JsonNode childInfo = null;
                 if (child.Overrides != null)
                 {
-                    child.Overrides.TryGetValue("Name", out childName);
+                    child.Overrides.TryGetValue("EntityInfoName", out childInfo);
                 }
 
-                JsonNode nameOverride = childName == null
+                JsonNode infoOverride = childInfo == null
                     ? instanceName
-                    : EntityBuilder.MergeComponentOverride(childName, instanceName);
-                builder.WithOverride("Name", nameOverride);
+                    : EntityBuilder.MergeComponentOverride(childInfo, instanceName);
+                builder.WithOverride("EntityInfoName", infoOverride);
             }
 
             var childEntity = builder.Build();
@@ -1284,24 +1298,24 @@ namespace Ludots.Core.Systems
 
                 if (entry.Set == null || entry.Set.Count == 0)
                 {
-                    throw new InvalidOperationException($"{context}.set requires Name.");
+                    throw new InvalidOperationException($"{context}.set requires EntityInfoName.");
                 }
 
                 foreach (string key in entry.Set.Keys)
                 {
-                    if (!string.Equals(key, "Name", StringComparison.Ordinal))
+                    if (!string.Equals(key, "EntityInfoName", StringComparison.Ordinal))
                     {
-                        throw new InvalidOperationException($"{context}.set only accepts Name.");
+                        throw new InvalidOperationException($"{context}.set only accepts EntityInfoName.");
                     }
                 }
 
-                if (!entry.Set.TryGetValue("Name", out JsonNode nameNode) || nameNode == null)
+                if (!entry.Set.TryGetValue("EntityInfoName", out JsonNode nameNode) || nameNode == null)
                 {
-                    throw new InvalidOperationException($"{context}.set requires Name.");
+                    throw new InvalidOperationException($"{context}.set requires EntityInfoName.");
                 }
 
                 string fullPath = string.IsNullOrEmpty(rootPath) ? entry.Path : rootPath + "." + entry.Path;
-                if (!addressed.TryGetValue(fullPath, out string childTemplateId))
+                if (!addressed.TryGetValue(fullPath, out _))
                 {
                     throw new InvalidOperationException($"{context}.path '{entry.Path}' does not address a child.");
                 }
@@ -1311,11 +1325,7 @@ namespace Ludots.Core.Systems
                     throw new InvalidOperationException($"{context}.path '{entry.Path}' is duplicated.");
                 }
 
-                TemplateEntityBatchSpawner.ResolveAuthoredName(
-                    context,
-                    templates[childTemplateId],
-                    childNameOverride: null,
-                    instanceNameOverride: nameNode);
+                ParseEntityInfoName(context, nameNode);
                 names.Add(fullPath, nameNode);
             }
 
@@ -1395,6 +1405,11 @@ namespace Ludots.Core.Systems
                             }
 
                             break;
+                        case "EntityInfoName":
+                            ParseEntityInfoName(
+                                $"Map '{mapId}' entity '{ResolveMapEntityContextId(entityData)}'",
+                                entityData.Overrides[key]);
+                            break;
                         default:
                             return false;
                     }
@@ -1421,7 +1436,8 @@ namespace Ludots.Core.Systems
 
             // Placement yaw stays FacingDirection. Per-instance Name / Team / PlayerOwner /
             // AttributeBuffer stay on this lane when the template already has that component,
-            // so the row archetype does not change. Any other component still leaves the lane.
+            // so the row archetype does not change. EntityInfoName is not a row fill: the
+            // batch create attaches it afterwards. Any other component still leaves the lane.
             request = TemplateEntityBatchSpawner.CreatePlacementRequest(
                 $"Map '{mapId}' entity template '{entityData.Template}'",
                 template,
@@ -1616,6 +1632,43 @@ namespace Ludots.Core.Systems
             }
 
             return angleNode.GetValue<float>();
+        }
+
+        private static EntityInfoName ParseEntityInfoName(string context, JsonNode node)
+        {
+            if (node is not JsonObject obj)
+            {
+                throw new InvalidOperationException($"{context} EntityInfoName requires an object payload.");
+            }
+
+            ValidateProperties(obj, $"{context} EntityInfoName", "Value");
+            JsonNode valueNode = RequireProperty(obj, "Value", $"{context} EntityInfoName");
+            if (valueNode.GetValueKind() != JsonValueKind.String)
+            {
+                throw new InvalidOperationException($"{context} EntityInfoName.Value requires a string value.");
+            }
+
+            string value = valueNode.GetValue<string>();
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidOperationException($"{context} EntityInfoName.Value requires a non-empty string value.");
+            }
+
+            return new EntityInfoName { Value = value };
+        }
+
+        private void AttachBatchEntityInfoName(string mapId, EntitySpawnData entityData, Entity entity)
+        {
+            if (entityData.Overrides == null ||
+                !entityData.Overrides.TryGetValue("EntityInfoName", out JsonNode node) ||
+                node == null)
+            {
+                return;
+            }
+
+            _world.Add(
+                entity,
+                ParseEntityInfoName($"Map '{mapId}' entity '{ResolveMapEntityContextId(entityData)}'", node));
         }
 
         private static void ValidateProperties(JsonObject obj, string context, params string[] allowedNames)

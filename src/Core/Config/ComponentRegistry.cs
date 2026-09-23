@@ -60,6 +60,7 @@ namespace Ludots.Core.Config
             Register<Velocity>("Velocity");
             Register<Health>("Health");
             Register<Name>("Name");
+            Register<EntityInfoName>("EntityInfoName");
             Register<FacingDirection>("FacingDirection");
             Register<MapEntity>("MapEntity");
             Register("WorldPositionCm", SetWorldPositionCm);

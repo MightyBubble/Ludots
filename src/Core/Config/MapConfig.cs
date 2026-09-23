@@ -180,7 +180,7 @@ namespace Ludots.Core.Config
         public List<ParamOverrideData> PresenterParamOverrides { get; set; } = new List<ParamOverrideData>();
 
         /// <summary>
-        /// 后代名字。path 是实例内的 localId 路径（不含 instanceId）；set 目前只认 Name。
+        /// 后代的实体信息。path 是实例内的 localId 路径（不含 instanceId）；set 目前只认 EntityInfoName。
         /// </summary>
         [JsonPropertyName("overridePaths")]
         public List<EntityPathNameOverride> OverridePaths { get; set; }

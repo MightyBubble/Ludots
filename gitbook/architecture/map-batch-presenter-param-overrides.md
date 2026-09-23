@@ -27,6 +27,8 @@
 
 模板上没有的组件，以及上面名单以外的组件，离开这条路径，改走 `EntityBuilder`。`PresenterParamOverrides` 仍然只能走批量路径，所以它可以和名单内的覆盖写在同一条布阵上；和会离开这条路径的覆盖写在一起时，加载直接失败。
 
+`EntityInfoName` 不在批量填充名单里，也不改系统 `Name`。实例在 `overrides` 里写了它时，批量生成之后再把这个组件挂上，因此它可以和 `PresenterParamOverrides` 写在同一条布阵上。`Value` 必须是非空字符串，空值在进入批量生成前失败。模板自己声明了 `EntityInfoName` 的，离开批量路径。
+
 ## Validation
 
 Core 必须拒绝以下情况：

@@ -88,7 +88,7 @@ overrides 只有一个封闭开放集（5 种），一律按**绝对 localId 路
 
 两者都是"这个实例的一份差异"，区别只是**命中的目标是谁**（自身 vs 后代）。这是同一套差别账的两个抽屉，不是第二套模板类型、不是双轨。
 
-地图装载目前只落地了后代的名字。`overridePaths` 的 `path` 写实例里面的 localId 路径，不带 instanceId；`set` 只接受 `Name`。名字按这个顺序叠：模板名字，再叠模板子节点自己的 `overrides.Name`，最后叠实例路径。没写进 `overridePaths` 的子实体就停在前两层。只带名字、没有别的组件的同一层子实体一次生成；带了别的组件的子实体仍逐个装配，名字按同样的顺序写上。路径对不上、名字空着，或 `set` 里写了名字以外的组件，加载直接失败。加子、删子、加组件、删组件还没进装载。
+地图装载目前只落地了后代的实体信息名字。`overridePaths` 的 `path` 写实例里面的 localId 路径，不带 instanceId；`set` 只接受 `EntityInfoName`，`Value` 必须是非空字符串。玩家看见的名字写在这个组件上，系统身份仍是 `Name`。根实体的实体信息名字写在自己的 `overrides.EntityInfoName`，不写进 `overridePaths`。没点到的子实体不挂 `EntityInfoName`，面板标题继续读 `Name`。只带 `Name`、没有别的组件的同一层子实体一次生成；这次生成只填模板 `Name` 和子节点自己的 `overrides.Name`，实例上的实体信息名字在生成之后单独挂上。带了别的组件的子实体仍逐个装配，`EntityInfoName` 先取子节点自己的覆盖，再叠实例路径。路径对不上、`Value` 空着，或 `set` 里写了 `EntityInfoName` 以外的键（包括 `Name`），加载直接失败。加子、删子、加组件、删组件还没进装载。
 
 ### 5a. 改字段（Property modification，deep-merge）
 

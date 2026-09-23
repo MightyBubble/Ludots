@@ -395,9 +395,9 @@ namespace GasTests
                 new WorldSizeSpec(new Ludots.Platform.Abstractions.WorldAabbCm(-10_000, -10_000, 20_000, 20_000), 100));
 
             var map = new MapConfig { Id = MapId };
-            map.Entities.Add(CreateSpawnWithPresenterParam(
-                CreateOverrides("position-facing"),
-                -0.375f));
+            Dictionary<string, JsonNode> firstOverrides = CreateOverrides("position-facing");
+            firstOverrides["EntityInfoName"] = JsonNode.Parse(@"{ ""Value"": ""刘备"" }")!;
+            map.Entities.Add(CreateSpawnWithPresenterParam(firstOverrides, -0.375f));
             map.Entities.Add(CreateSpawnWithPresenterParam(
                 new Dictionary<string, JsonNode>
                 {
@@ -420,6 +420,25 @@ namespace GasTests
             That(presenterRuntime.TryResolveFloat(rootB, slopeParamKey, out float slopeB), Is.True);
             That(slopeA, Is.EqualTo(-0.375f).Within(0.0001f));
             That(slopeB, Is.EqualTo(0.875f).Within(0.0001f));
+            That(world.Get<Name>(owners[0]).Value, Is.EqualTo(TemplateName));
+            That(world.Get<EntityInfoName>(owners[0]).Value, Is.EqualTo("刘备"));
+            That(world.Get<Name>(owners[1]).Value, Is.EqualTo(TemplateName));
+            That(world.Has<EntityInfoName>(owners[1]), Is.False);
+        }
+
+        [Test]
+        public void LoadEntities_EmptyEntityInfoName_FailsOnBatchPath()
+        {
+            using var world = World.Create();
+            var loader = CreateLoader(world);
+            var map = new MapConfig { Id = MapId };
+            map.Entities.Add(CreateSpawn(new Dictionary<string, JsonNode>
+            {
+                ["EntityInfoName"] = JsonNode.Parse(@"{ ""Value"": "" "" }")!,
+            }));
+
+            InvalidOperationException ex = Throws<InvalidOperationException>(() => loader.LoadEntities(map))!;
+            That(ex.Message, Does.Contain("EntityInfoName.Value requires a non-empty string value"));
         }
 
         [Test]

@@ -406,6 +406,7 @@ public sealed class EntityInfoPanelServiceTests
         Entity owner = world.Create();
         Entity entity = world.Create(
             new Name { Value = "Templated Vanguard" },
+            new EntityInfoName { Value = "刘备" },
             new EntityTemplateKeyRef { TemplateKeyId = templateKeyId },
             attributes,
             abilities,
@@ -468,13 +469,15 @@ public sealed class EntityInfoPanelServiceTests
             });
 
         Assert.That(service.GetTemplateId(standalone.Slot), Is.EqualTo("tests.entityinfo.template.compact"));
-        Assert.That(service.GetTitle(standalone.Slot), Is.EqualTo("Templated Vanguard"));
+        Assert.That(world.Get<Name>(entity).Value, Is.EqualTo("Templated Vanguard"));
+        Assert.That(service.GetTitle(standalone.Slot), Is.EqualTo("刘备"));
         Assert.That(service.GetSubtitle(standalone.Slot), Is.EqualTo("Profile subtitle"));
         Assert.That(service.GetInsightStatCount(standalone.Slot), Is.EqualTo(1));
         Assert.That(service.GetInsightActionCount(standalone.Slot), Is.EqualTo(1));
         Assert.That(service.IsInsightActionPresent(standalone.Slot, 0), Is.True,
             "Entity insight must resolve the item-granted effective ability, not only base/form/granted layers.");
         Assert.That(service.TryGetEntityCollectionRow(collection.Slot, 0, out EntityCollectionPanelRow row), Is.True);
+        Assert.That(row.Name, Is.EqualTo("刘备"));
         Assert.That(row.TemplateId, Is.EqualTo("tests.entityinfo.template.compact"));
         Assert.That(row.TemplateSubtitle, Is.EqualTo("Profile subtitle"));
         Assert.That(row.TemplateBody, Is.EqualTo("Profile body"));

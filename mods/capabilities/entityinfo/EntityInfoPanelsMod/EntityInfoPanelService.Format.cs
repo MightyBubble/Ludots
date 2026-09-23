@@ -254,6 +254,16 @@ public sealed partial class EntityInfoPanelService
 
     private static string ResolveEntityDisplayName(World world, Entity entity)
     {
+        return ResolveEntityInfoTitle(world, entity);
+    }
+
+    private static string ResolveEntityInfoTitle(World world, Entity entity)
+    {
+        if (world.TryGet(entity, out EntityInfoName info) && !string.IsNullOrWhiteSpace(info.Value))
+        {
+            return info.Value;
+        }
+
         if (world.TryGet(entity, out Name name) && !string.IsNullOrWhiteSpace(name.Value))
         {
             return name.Value;
