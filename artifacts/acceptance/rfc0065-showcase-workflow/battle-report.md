@@ -4,7 +4,7 @@
 - build: GasTests / Show5Show6Workflow_PointerCommandRoutesThroughIntentDispatchAndOrderBuffer
 - seed: interaction_showcase_hub deterministic headless run
 - clock: engine fixed step sampled through 1/60s test ticks
-- execution timestamp UTC: 2026-08-17T05:56:52.5674586+00:00
+- execution timestamp UTC: 2026-08-20T12:10:54.4025521+00:00
 
 ## Scenario Card
 - Player goal: issue a ground pointer command with three command-source actors active.

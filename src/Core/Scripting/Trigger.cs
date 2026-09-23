@@ -12,6 +12,12 @@ namespace Ludots.Core.Scripting
         public EventKey EventKey { get; set; }
         public int Priority { get; set; }
 
+        /// <summary>Dependency-order rank of the owning mod (0 = map-owned); deterministic arbitration tie-break after Priority.</summary>
+        public int ModRank { get; set; }
+
+        /// <summary>Declaration order within the owner; deterministic arbitration tie-break after ModRank.</summary>
+        public int DeclarationIndex { get; set; }
+
         public List<GameCommand> Actions { get; } = new List<GameCommand>();
         public List<Func<ScriptContext, bool>> Conditions { get; } = new List<Func<ScriptContext, bool>>();
 
