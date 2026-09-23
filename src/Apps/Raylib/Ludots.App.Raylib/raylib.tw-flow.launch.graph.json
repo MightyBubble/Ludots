@@ -4,9 +4,11 @@
   "orderedModIds": [
     "LudotsCoreMod",
     "CoreInputMod",
+    "CameraProfilesMod",
     "SelectionInteractionMod",
     "BallistaRouteByTargetMod",
     "MassNavigationMod",
+    "NavMeshDebugLaunchMod",
     "TotalWarFlowShowcaseMod",
     "AgentBridgeMod"
   ],
@@ -20,6 +22,10 @@
       "rootPath": "../../../../../../../mods/CoreInputMod"
     },
     {
+      "id": "CameraProfilesMod",
+      "rootPath": "../../../../../../../mods/capabilities/camera/CameraProfilesMod"
+    },
+    {
       "id": "SelectionInteractionMod",
       "rootPath": "../../../../../../../mods/capabilities/input/SelectionInteractionMod"
     },
@@ -30,6 +36,10 @@
     {
       "id": "MassNavigationMod",
       "rootPath": "../../../../../../../mods/capabilities/navigation/MassNavigationMod"
+    },
+    {
+      "id": "NavMeshDebugLaunchMod",
+      "rootPath": "../../../../../../../mods/showcases/navmesh_debug/NavMeshDebugLaunchMod"
     },
     {
       "id": "TotalWarFlowShowcaseMod",

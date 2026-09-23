@@ -1,13 +1,13 @@
 {
   "mapId": "total_war_flow_field",
   "world": {
-    "solverWindowWidthCm": 10000,
-    "solverWindowHeightCm": 10000,
+    "solverWindowWidthCm": 20000,
+    "solverWindowHeightCm": 20000,
     "streamingChunkSizeCm": 6400,
     "commandFocusHoldTicks": 90,
     "workAreaPaddingCm": 2000,
-    "workAreaMaxWidthCm": 10000,
-    "workAreaMaxHeightCm": 10000,
+    "workAreaMaxWidthCm": 20000,
+    "workAreaMaxHeightCm": 20000,
     "activeHotZoneId": "central",
     "hotZones": [
       {
@@ -15,14 +15,14 @@
         "label": "Battlefield",
         "centerXCm": 0,
         "centerYCm": 0,
-        "widthCm": 10000,
-        "heightCm": 10000
+        "widthCm": 20000,
+        "heightCm": 20000
       }
     ]
   },
   "solver": {
-    "fieldWidthCm": 10000,
-    "fieldHeightCm": 10000,
+    "fieldWidthCm": 20000,
+    "fieldHeightCm": 20000,
     "flowCellSizeCm": 100,
     "maxObstacleCount": 64,
     "parallelWorkerCount": 1,
@@ -31,9 +31,9 @@
     "hardResolveHashCellSizeCm": 50,
     "hardResolveHashMinSearchRadiusCells": 1,
     "playAreaMinXCm": 50,
-    "playAreaMaxXCm": 9950,
+    "playAreaMaxXCm": 19950,
     "playAreaMinYCm": 50,
-    "playAreaMaxYCm": 9950
+    "playAreaMaxYCm": 19950
   },
   "presentation": {
     "requiredMeshAssetIds": [],
@@ -64,17 +64,17 @@
   "scenarioRuntime": {
     "autoSpawnConfiguredScenario": false,
     "runtimeCapacity": {
-      "navigationGroupCapacity": 16,
-      "groupMembershipAgentCapacity": 64,
-      "movePlanExecutionGroupCapacity": 16,
-      "routeStateCapacity": 64,
+      "navigationGroupCapacity": 256,
+      "groupMembershipAgentCapacity": 160000,
+      "movePlanExecutionGroupCapacity": 256,
+      "routeStateCapacity": 1024,
       "routeMaxExpandedPerRequest": 2048,
       "routeWaypointCapacityPerAgent": 64,
-      "loadedChunkCapacity": 64,
-      "displacedAgentCapacity": 16,
-      "groupMemberCapacity": 64,
-      "movePlanExecutionMemberCapacity": 64,
-      "relationshipDomainCapacity": 2
+      "loadedChunkCapacity": 256,
+      "displacedAgentCapacity": 64,
+      "groupMemberCapacity": 16384,
+      "movePlanExecutionMemberCapacity": 16384,
+      "relationshipDomainCapacity": 4
     }
   },
   "cadence": {

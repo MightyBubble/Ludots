@@ -8,7 +8,14 @@ namespace Ludots.Core.Navigation.NavMesh
         Ok = 0,
         NotReady = 1,
         NotReachable = 2,
-        InvalidInput = 3
+        InvalidInput = 3,
+
+        /// <summary>
+        /// A walkable prefix of the route was solved, but the requested goal is not
+        /// reachable from the start. The path is the furthest reachable segment; its
+        /// endpoint is the nearest legal stand point toward the goal.
+        /// </summary>
+        Partial = 4
     }
 
     public readonly struct NavLocation
@@ -36,12 +43,33 @@ namespace Ludots.Core.Navigation.NavMesh
         public readonly int[] PathZcm;
         public readonly Fix64 TravelCost;
 
+        /// <summary>
+        /// World-space end point of the returned path. For <see cref="NavPathStatus.Ok"/> this is
+        /// the requested goal; for <see cref="NavPathStatus.Partial"/> it is the nearest legal
+        /// stand point the query could reach toward the goal. Undefined when no path was produced.
+        /// </summary>
+        public readonly int ResolvedGoalXcm;
+        public readonly int ResolvedGoalZcm;
+
         public NavPathResult(NavPathStatus status, int[] pathXcm, int[] pathZcm, Fix64 travelCost)
+            : this(status, pathXcm, pathZcm, travelCost, 0, 0)
+        {
+        }
+
+        public NavPathResult(
+            NavPathStatus status,
+            int[] pathXcm,
+            int[] pathZcm,
+            Fix64 travelCost,
+            int resolvedGoalXcm,
+            int resolvedGoalZcm)
         {
             Status = status;
             PathXcm = pathXcm ?? Array.Empty<int>();
             PathZcm = pathZcm ?? Array.Empty<int>();
             TravelCost = travelCost;
+            ResolvedGoalXcm = resolvedGoalXcm;
+            ResolvedGoalZcm = resolvedGoalZcm;
         }
     }
 
@@ -54,24 +82,44 @@ namespace Ludots.Core.Navigation.NavMesh
         private readonly NavAreaCostTable _areaCosts;
         private readonly Fix64 _tileWidthCm;
         private readonly Fix64 _tileHeightCm;
+        private readonly int _originXcm;
+        private readonly int _originZcm;
 
-        public NavQueryService(NavTileStore store, int layer, NavAreaCostTable areaCosts, int tileWidthCm, int tileHeightCm)
+        public NavQueryService(
+            NavTileStore store,
+            int layer,
+            NavAreaCostTable areaCosts,
+            int tileWidthCm,
+            int tileHeightCm,
+            int originXcm = 0,
+            int originZcm = 0)
             : this(
                 store,
                 layer,
                 areaCosts,
                 Fix64.FromInt(RequirePositive(tileWidthCm, nameof(tileWidthCm))),
-                Fix64.FromInt(RequirePositive(tileHeightCm, nameof(tileHeightCm))))
+                Fix64.FromInt(RequirePositive(tileHeightCm, nameof(tileHeightCm))),
+                originXcm,
+                originZcm)
         {
         }
 
-        private NavQueryService(NavTileStore store, int layer, NavAreaCostTable areaCosts, Fix64 tileWidthCm, Fix64 tileHeightCm)
+        private NavQueryService(
+            NavTileStore store,
+            int layer,
+            NavAreaCostTable areaCosts,
+            Fix64 tileWidthCm,
+            Fix64 tileHeightCm,
+            int originXcm,
+            int originZcm)
         {
             _store = store ?? throw new ArgumentNullException(nameof(store));
             _layer = layer;
             _areaCosts = areaCosts ?? NavAreaCostTable.CreateDefault();
             _tileWidthCm = tileWidthCm;
             _tileHeightCm = tileHeightCm;
+            _originXcm = originXcm;
+            _originZcm = originZcm;
         }
 
         public bool TryProject(int worldXcm, int worldZcm, out NavLocation loc)
@@ -94,6 +142,85 @@ namespace Ludots.Core.Navigation.NavMesh
             if (triId < 0) return false;
 
             loc = new NavLocation(tile.TileId, tile.TileVersion, triId, localXcm, localZcm);
+            return true;
+        }
+
+        /// <summary>
+        /// Snaps a world point back onto the walkable navigation surface. A point already inside a
+        /// walkable polygon is returned unchanged; a point outside every walkable polygon (the far
+        /// side of a gap, a slope too steep to climb, or anywhere an agent's local steering drifted
+        /// to) is pulled to the closest point on the nearest walkable polygon boundary.
+        /// <para>
+        /// This is the corridor correction primitive: callers constrain a desired position to the
+        /// navigation surface instead of validating afterwards. It returns false only when no
+        /// walkable surface exists at all near the point, in which case <paramref name="outXcm"/> /
+        /// <paramref name="outZcm"/> are left untouched.
+        /// </para>
+        /// </summary>
+        public bool TrySnapToSurface(int worldXcm, int worldZcm, out int outXcm, out int outZcm)
+        {
+            outXcm = worldXcm;
+            outZcm = worldZcm;
+
+            if (!TryProject(worldXcm, worldZcm, out NavLocation loc))
+            {
+                return false;
+            }
+
+            NavTile tile;
+            try
+            {
+                tile = _store.GetOrLoad(loc.TileId);
+            }
+            catch
+            {
+                return false;
+            }
+
+            if (_store.SnapshotLoadedTiles() is not { Length: > 0 } tiles)
+            {
+                return false;
+            }
+
+            var navMesh = DetourNavQueryEngine.BuildNavMeshForSurfaceQueries(
+                tiles,
+                _layer,
+                _tileWidthCm.RoundToInt(),
+                _tileHeightCm.RoundToInt());
+            if (navMesh == null)
+            {
+                return false;
+            }
+
+            var query = new DotRecast.Detour.DtNavMeshQuery(navMesh);
+            var filter = DetourNavQueryEngine.BuildDefaultFilter(_areaCosts);
+
+            float tileWidthM = _tileWidthCm.RoundToInt() / 100f;
+            float tileHeightM = _tileHeightCm.RoundToInt() / 100f;
+            var extents = new DotRecast.Core.Numerics.RcVec3f(
+                MathF.Max(1f, tileWidthM * 0.5f),
+                256f,
+                MathF.Max(1f, tileHeightM * 0.5f));
+
+            var probe = new DotRecast.Core.Numerics.RcVec3f(worldXcm / 100f, 0f, worldZcm / 100f);
+            var status = query.FindNearestPoly(probe, extents, filter, out long polyRef, out _, out _);
+            if (status.Failed() || polyRef == 0)
+            {
+                return false;
+            }
+
+            // ClosestPointOnPoly (not ...Boundary): the boundary variant always projects onto the
+            // polygon edge, which would drag every agent to a triangle edge and break formation
+            // spacing. This variant returns the point unchanged when it already lies inside the
+            // polygon, and only pulls it to the closest point when it is genuinely outside.
+            status = query.ClosestPointOnPoly(polyRef, probe, out var closest, out _);
+            if (status.Failed())
+            {
+                return false;
+            }
+
+            outXcm = (int)MathF.Round(closest.X * 100f);
+            outZcm = (int)MathF.Round(closest.Z * 100f);
             return true;
         }
 
@@ -141,17 +268,16 @@ namespace Ludots.Core.Navigation.NavMesh
 
         private NavTileId LocateTile(int worldXcm, int worldZcm)
         {
-            var xFix = Fix64.FromInt(worldXcm);
-            var zFix = Fix64.FromInt(worldZcm);
-            int cx = (xFix / _tileWidthCm).ToInt();
-            int cz = (zFix / _tileHeightCm).ToInt();
-
-            if (xFix < Fix64.Zero && xFix % _tileWidthCm != Fix64.Zero) cx--;
-            if (zFix < Fix64.Zero && zFix % _tileHeightCm != Fix64.Zero) cz--;
-            if (cx < 0) cx = 0;
-            if (cz < 0) cz = 0;
-
+            int cx = FloorDiv(worldXcm - _originXcm, _tileWidthCm.RoundToInt());
+            int cz = FloorDiv(worldZcm - _originZcm, _tileHeightCm.RoundToInt());
             return new NavTileId(cx, cz, _layer);
+        }
+
+        private static int FloorDiv(int value, int divisor)
+        {
+            int quotient = value / divisor;
+            int remainder = value % divisor;
+            return remainder < 0 ? quotient - 1 : quotient;
         }
 
         private static int RequirePositive(int value, string name)

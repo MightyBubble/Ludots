@@ -70,6 +70,15 @@ namespace Ludots.Core.Map.Board
         /// </summary>
         public int TerrainHeightStepCm { get; set; }
 
+        /// <summary>
+        /// Marks continuous-heightmap projection output as ramp surface rather than discrete-step
+        /// floor. Set this for relief maps whose slopes are meant to be judged by agent
+        /// <c>maxSlopeDeg</c>: without it, a slope spanning more than one
+        /// <see cref="TerrainHeightStepCm"/> step is treated as a cliff and the slope limit never
+        /// applies.
+        /// </summary>
+        public bool TerrainProjectAsRamp { get; set; }
+
         public int? TerrainBlockedAtOrBelowHeightCm { get; set; }
 
 
@@ -116,6 +125,7 @@ namespace Ludots.Core.Map.Board
                 StructureCollisionAsset = StructureCollisionAsset,
                 StructureAwareGrounding = StructureAwareGrounding,
                 TerrainHeightStepCm = TerrainHeightStepCm,
+                TerrainProjectAsRamp = TerrainProjectAsRamp,
                 TerrainBlockedAtOrBelowHeightCm = TerrainBlockedAtOrBelowHeightCm
             };
         }

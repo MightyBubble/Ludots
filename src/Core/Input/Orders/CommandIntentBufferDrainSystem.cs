@@ -8,6 +8,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Interaction;
+using Ludots.Core.Navigation.Pathing;
 
 namespace Ludots.Core.Input.Orders
 {
@@ -41,6 +42,8 @@ namespace Ludots.Core.Input.Orders
         private readonly Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry? _orderTypes;
         private readonly Ludots.Core.Spatial.Eqs.EqsQueryRegistry? _eqsQueries;
         private readonly Ludots.Core.Gameplay.GAS.Orders.CompositeOrderPlanner? _engage;
+        private readonly Func<IPathService?>? _pathServiceAccessor;
+        private readonly Func<PathStore?>? _pathStoreAccessor;
         private readonly Ludots.Core.Spatial.Eqs.EqsItem[] _eqsScratch = new Ludots.Core.Spatial.Eqs.EqsItem[256];
         private readonly bool[] _eqsCandidateUsed = new bool[256];
 
@@ -64,7 +67,9 @@ namespace Ludots.Core.Input.Orders
             Ludots.Core.Spatial.Eqs.EqsQueryRegistry? eqsQueries = null,
             Ludots.Core.Gameplay.GAS.AbilityDefinitionRegistry? abilities = null,
             int castAbilityOrderTypeId = 0,
-            int moveToOrderTypeId = 0)
+            int moveToOrderTypeId = 0,
+            Func<IPathService?>? pathServiceAccessor = null,
+            Func<PathStore?>? pathStoreAccessor = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _submissions = submissions ?? throw new ArgumentNullException(nameof(submissions));
@@ -75,6 +80,8 @@ namespace Ludots.Core.Input.Orders
             _orders = orders ?? throw new ArgumentNullException(nameof(orders));
             _players = players ?? throw new ArgumentNullException(nameof(players));
             _controlDomains = controlDomains ?? throw new ArgumentNullException(nameof(controlDomains));
+            _pathServiceAccessor = pathServiceAccessor;
+            _pathStoreAccessor = pathStoreAccessor;
             if (scratchCapacity <= 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(scratchCapacity), "Command intent scratch capacity must be positive.");
@@ -280,19 +287,8 @@ namespace Ludots.Core.Input.Orders
             }
 
             var targetPos = _world.Get<Ludots.Core.Components.WorldPositionCm>(submission.Target).Value.ToWorldCmInt2();
-            var eqsContext = new Ludots.Core.Spatial.Eqs.EqsContext(targetPos, _world);
-            int candidateCount = query.Run(eqsContext, _eqsScratch);
-            if (candidateCount <= 0)
-            {
-                return Reject("engage: EQS profile produced no candidates");
-            }
-
-            if (candidateCount > _eqsScratch.Length)
-            {
-                candidateCount = _eqsScratch.Length;
-            }
-
-            System.Array.Clear(_eqsCandidateUsed, 0, candidateCount);
+            IPathService? pathService = _pathServiceAccessor?.Invoke();
+            PathStore? pathStore = _pathStoreAccessor?.Invoke();
 
             if (!_world.Has<Ludots.Core.Gameplay.GAS.Components.EngageSlotClaims>(submission.Target))
             {
@@ -311,6 +307,35 @@ namespace Ludots.Core.Input.Orders
                     allAccepted = false;
                     continue;
                 }
+
+                if (!_world.TryGet<Ludots.Core.Components.WorldPositionCm>(actor, out var actorPosition))
+                {
+                    LastRejectionReason = "engage: actor carries no world position";
+                    allAccepted = false;
+                    continue;
+                }
+
+                var eqsContext = new Ludots.Core.Spatial.Eqs.EqsContext(
+                    targetPos,
+                    _world,
+                    pathService: pathService,
+                    pathStore: pathStore,
+                    sourceWorldCm: actorPosition.Value.ToWorldCmInt2(),
+                    sourceEntity: actor);
+                int candidateCount = query.Run(eqsContext, _eqsScratch);
+                if (candidateCount <= 0)
+                {
+                    LastRejectionReason = "engage: EQS profile produced no candidates";
+                    allAccepted = false;
+                    continue;
+                }
+
+                if (candidateCount > _eqsScratch.Length)
+                {
+                    candidateCount = _eqsScratch.Length;
+                }
+
+                System.Array.Clear(_eqsCandidateUsed, 0, candidateCount);
 
                 int best = -1;
                 float bestScore = float.MinValue;

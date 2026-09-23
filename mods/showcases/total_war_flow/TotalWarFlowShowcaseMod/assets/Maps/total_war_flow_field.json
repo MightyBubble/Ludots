@@ -18,7 +18,9 @@
    "SpatialType": "Grid",
    "WidthCells": 200,
    "HeightCells": 200,
-   "GridCellSizeCm": 100
+   "GridCellSizeCm": 100,
+   "TerrainHeightStepCm": 250,
+   "TerrainProjectAsRamp": true
   }
  ],
  "DefaultCamera": {

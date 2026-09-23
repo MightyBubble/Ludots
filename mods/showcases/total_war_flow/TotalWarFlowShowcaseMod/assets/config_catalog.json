@@ -35,6 +35,15 @@
   "Policy": "DeepObject"
  },
  {
+  "Path": "Spatial/eqs_queries.json",
+  "Policy": "ArrayById",
+  "IdField": "id"
+ },
+ {
+  "Path": "Navigation/pathing.json",
+  "Policy": "DeepObject"
+ },
+ {
   "Path": "Presentation/presenters.json",
   "Policy": "ArrayById",
   "IdField": "id"

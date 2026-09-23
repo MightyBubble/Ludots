@@ -2258,7 +2258,9 @@ namespace Ludots.Core.Engine
                 eqsQueries: eqsQueryRegistry,
                 abilities: abilityDefinitions,
                 castAbilityOrderTypeId: cfgCastAbility,
-                moveToOrderTypeId: cfgMoveTo);
+                moveToOrderTypeId: cfgMoveTo,
+                pathServiceAccessor: () => GetService(CoreServiceKeys.PathService),
+                pathStoreAccessor: () => GetService(CoreServiceKeys.PathStore));
             SetService(CoreServiceKeys.CommandIntentSubmissions, commandIntentSubmissions);
             SetService(CoreServiceKeys.CommandIntentBufferDrain, commandIntentBufferDrain);
             RegisterSystem(commandIntentBufferDrain, SystemGroup.LocalInput);
@@ -3849,7 +3851,8 @@ namespace Ludots.Core.Engine
                     heightStepCm,
                     blockedAtOrBelowHeightCm: authoredBounds ? boardConfig.TerrainBlockedAtOrBelowHeightCm : null,
                     originXcm: originXcm,
-                    originZcm: originZcm));
+                    originZcm: originZcm,
+                    markAsRamp: boardConfig.TerrainProjectAsRamp));
         }
 
         private LogicTerrainField LoadGridTerrainFromFile(string dataFile, BoardConfig boardConfig)
@@ -4290,6 +4293,15 @@ namespace Ludots.Core.Engine
             var participatingBoards = mapConfig.Boards
                 .Where(b => TryGetBoardNavTileGrid(bakeConfig, mapId, b.Name, out var g) && g != null)
                 .ToList();
+            int navOriginXcm = int.MaxValue;
+            int navOriginYcm = int.MaxValue;
+            for (int i = 0; i < participatingBoards.Count; i++)
+            {
+                var aabb = participatingBoards[i].ResolveExtent().ToWorldAabb();
+                navOriginXcm = Math.Min(navOriginXcm, aabb.Left);
+                navOriginYcm = Math.Min(navOriginYcm, aabb.Top);
+            }
+
             int widthChunks = participatingBoards
                 .Select(b => CeilDiv(b.ResolveExtent().WidthCm, TryGetBoardNavTileGrid(bakeConfig, mapId, b.Name, out var tg) ? tg!.TileWorldWidthCm : 1))
                 .DefaultIfEmpty(0)
@@ -4333,7 +4345,7 @@ namespace Ludots.Core.Engine
                 }
             }
 
-            var navRegistry = new NavQueryServiceRegistry(stores, tileWidthCm, tileHeightCm);
+            var navRegistry = new NavQueryServiceRegistry(stores, tileWidthCm, tileHeightCm, navOriginXcm, navOriginYcm);
             SetService(CoreServiceKeys.NavQueryServices, navRegistry);
             if (bakeConfig.ParsedMode == NavBakeMode.RuntimeIncremental)
             {
@@ -4486,7 +4498,7 @@ namespace Ludots.Core.Engine
                 }
                 else
                 {
-                    pathService = navMeshService;
+                    pathService = new AutoPathService(navRegistry, navProfiles, agentProfiles, pathStore, pathingConfig, graphEdgeCostOverlay);
                 }
             }
             else if (loadedGraphRuntime != null)
