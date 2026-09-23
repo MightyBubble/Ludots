@@ -7,8 +7,9 @@ namespace Ludots.Core.UI.PanelProjection
     /// <summary>
     /// Pin reader: panel pins read exactly one thing — their graph's output for
     /// the owning scope, materialized in <see cref="GraphOutputValueStore"/> by
-    /// GraphReturnWriter. Missing output resolves to the pin default (no error,
-    /// no empty); structural errors were rejected at load.
+    /// GraphReturnWriter. Missing output is an explicit failure (no default
+    /// fallback, no empty); structural errors were rejected at load. Values keep
+    /// the graph output's actual kind — Int stays Int, Bool stays Bool.
     /// </summary>
     public sealed class PanelProjectionReader
     {
@@ -28,19 +29,37 @@ namespace Ludots.Core.UI.PanelProjection
 
         public PanelProjectionValue Resolve(Entity owner, PanelPin pin)
         {
-            if (_values.TryGet(owner, pin.Key, out GraphOutputValueHandle handle) &&
-                _values.TryGetView(handle, out GraphOutputValueView view))
+            if (pin == null)
             {
-                float value = view.Kind switch
-                {
-                    GraphOutputValueKind.Int => view.IntValue,
-                    GraphOutputValueKind.Bool => view.BoolValue ? 1f : 0f,
-                    _ => view.FloatValue,
-                };
-                return new PanelProjectionValue(pin.Name, value, view.Revision, fromGraph: true);
+                throw new ArgumentNullException(nameof(pin));
             }
 
-            return new PanelProjectionValue(pin.Name, pin.Default, revision: 0, fromGraph: false);
+            if (!_values.TryGet(owner, pin.Key, out GraphOutputValueHandle handle) ||
+                !_values.TryGetView(handle, out GraphOutputValueView view))
+            {
+                throw new InvalidOperationException(
+                    $"Panel pin '{pin.Name}' key '{pin.Key}' has no graph output for owner {owner.Id}; " +
+                    "the graph must materialize every declared pin output (no default fallback).");
+            }
+
+            PanelValueKind kind = view.Kind switch
+            {
+                GraphOutputValueKind.Bool => PanelValueKind.Bool,
+                GraphOutputValueKind.Int => PanelValueKind.Int,
+                GraphOutputValueKind.Float => PanelValueKind.Float,
+                GraphOutputValueKind.Entity => PanelValueKind.Entity,
+                _ => throw new InvalidOperationException(
+                    $"Panel pin '{pin.Name}' key '{pin.Key}' graph output has unsupported kind '{view.Kind}'."),
+            };
+
+            return new PanelProjectionValue(
+                pin.Name,
+                kind,
+                view.Revision,
+                boolValue: view.BoolValue,
+                intValue: view.IntValue,
+                floatValue: view.FloatValue,
+                entityValue: view.EntityValue);
         }
     }
 }

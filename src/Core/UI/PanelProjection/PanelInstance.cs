@@ -24,12 +24,12 @@ namespace Ludots.Core.UI.PanelProjection
         {
             ArgumentNullException.ThrowIfNull(reader);
 
-            var values = new Dictionary<string, float>(Template.Pins.Count, StringComparer.Ordinal);
+            var values = new Dictionary<string, PanelProjectionValue>(Template.Pins.Count, StringComparer.Ordinal);
             uint revision = 0;
             foreach (PanelPin pin in Template.Pins)
             {
                 PanelProjectionValue value = reader.Resolve(Scope, pin);
-                values[pin.Name] = value.FloatValue;
+                values[pin.Name] = value;
                 revision ^= value.Revision;
             }
 
@@ -38,12 +38,13 @@ namespace Ludots.Core.UI.PanelProjection
     }
 
     /// <summary>
-    /// Evaluated pin values for one instance. Reads of unknown names fail loudly;
-    /// missing graph outputs already resolved to pin defaults by the reader.
+    /// Evaluated pin values for one instance, each carrying its kind plus the typed
+    /// value. Reads of unknown names fail loudly; missing graph outputs failed
+    /// already at the reader, so every value here is graph-sourced.
     /// </summary>
     public sealed class PanelVariableSet
     {
-        public PanelVariableSet(string templateId, Dictionary<string, float> values, uint revision)
+        public PanelVariableSet(string templateId, Dictionary<string, PanelProjectionValue> values, uint revision)
         {
             TemplateId = templateId;
             Values = values ?? throw new ArgumentNullException(nameof(values));
@@ -51,17 +52,17 @@ namespace Ludots.Core.UI.PanelProjection
         }
 
         public string TemplateId { get; }
-        public Dictionary<string, float> Values { get; }
+        public Dictionary<string, PanelProjectionValue> Values { get; }
         public uint Revision { get; }
 
-        public float Get(string pinName)
+        public PanelProjectionValue Get(string pinName)
         {
-            return Values.TryGetValue(pinName, out float value)
+            return Values.TryGetValue(pinName, out PanelProjectionValue value)
                 ? value
                 : throw new InvalidOperationException($"Panel '{TemplateId}' has no pin '{pinName}'.");
         }
 
-        public bool TryGet(string pinName, out float value)
+        public bool TryGet(string pinName, out PanelProjectionValue value)
         {
             return Values.TryGetValue(pinName, out value);
         }

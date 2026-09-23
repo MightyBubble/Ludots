@@ -331,12 +331,12 @@ public sealed class PanelFireballShowcaseAcceptanceTests
         Assert.That(host.TryGetValues(handle, out PanelVariableSet values), Is.True);
         Assert.Multiple(() =>
         {
-            Assert.That(values.Get("health"), Is.EqualTo(health).Within(0.001f));
-            Assert.That(values.Get("mana"), Is.EqualTo(mana).Within(0.001f));
-            Assert.That(values.Get("attack"), Is.EqualTo(attack).Within(0.001f));
-            Assert.That(values.Get("healthBase"), Is.EqualTo(100f).Within(0.001f),
+            Assert.That(values.Get("health").NumericValue, Is.EqualTo(health).Within(0.001f));
+            Assert.That(values.Get("mana").NumericValue, Is.EqualTo(mana).Within(0.001f));
+            Assert.That(values.Get("attack").NumericValue, Is.EqualTo(attack).Within(0.001f));
+            Assert.That(values.Get("healthBase").NumericValue, Is.EqualTo(100f).Within(0.001f),
                 "Display denominators must project the hero template base, never a presentation constant.");
-            Assert.That(values.Get("manaBase"), Is.EqualTo(80f).Within(0.001f),
+            Assert.That(values.Get("manaBase").NumericValue, Is.EqualTo(80f).Within(0.001f),
                 "The mana pool must stay 80 while the current value drains.");
         });
     }

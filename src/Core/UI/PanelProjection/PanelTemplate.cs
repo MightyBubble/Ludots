@@ -8,8 +8,9 @@ namespace Ludots.Core.UI.PanelProjection
     /// output-pin set of ONE graph (ShaderGraph analogy). The template declares pins
     /// plus the graph id; all dataflow — attribute loads, table lookups, aggregation,
     /// nested func graphs — lives inside the graph VM. Pins carry the data contract:
-    /// structure errors fail closed at load; missing data resolves to the pin's
-    /// declared default (no error, no empty).
+    /// structure errors fail closed at load; each pin reads exactly one graph output
+    /// of its declared kind, and a graph that has not materialized an output fails
+    /// explicitly at read time (no silent default fallback).
     /// </summary>
     public sealed class PanelTemplate
     {
@@ -122,12 +123,20 @@ namespace Ludots.Core.UI.PanelProjection
 
     /// <summary>
     /// One output pin: name on the panel side, key into the graph's output schema,
-    /// pull mode, and the default shown whenever the graph has not (yet) produced a
-    /// value for the owning scope.
+    /// pull mode, declared value kind, and the typed default kept for schema
+    /// compatibility. The default is never substituted at read time — a graph that
+    /// has not materialized the pin's key fails explicitly instead.
     /// </summary>
     public sealed class PanelPin
     {
-        public PanelPin(string name, string key, bool realtime, float defaultValue)
+        public PanelPin(
+            string name,
+            string key,
+            bool realtime,
+            PanelValueKind kind,
+            bool boolDefault = false,
+            int intDefault = 0,
+            float floatDefault = 0f)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -142,7 +151,10 @@ namespace Ludots.Core.UI.PanelProjection
             Name = name.Trim();
             Key = key.Trim();
             Realtime = realtime;
-            Default = defaultValue;
+            Kind = kind;
+            BoolDefault = boolDefault;
+            IntDefault = intDefault;
+            FloatDefault = floatDefault;
         }
 
         public string Name { get; }
@@ -151,7 +163,16 @@ namespace Ludots.Core.UI.PanelProjection
         /// <summary>True = re-evaluated every realtime refresh pass; False = evaluated once at instantiate (snapshot).</summary>
         public bool Realtime { get; }
 
-        /// <summary>Data contract: graph missing/not yet run/failed → this value. No error, no empty.</summary>
-        public float Default { get; }
+        /// <summary>The declared value kind; the resolved value carries the graph output's actual kind.</summary>
+        public PanelValueKind Kind { get; }
+
+        /// <summary>Declared default for Bool pins; retained in the schema, never substituted at read time.</summary>
+        public bool BoolDefault { get; }
+
+        /// <summary>Declared default for Int pins; retained in the schema, never substituted at read time.</summary>
+        public int IntDefault { get; }
+
+        /// <summary>Declared default for Float pins; retained in the schema, never substituted at read time.</summary>
+        public float FloatDefault { get; }
     }
 }

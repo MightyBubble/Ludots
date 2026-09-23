@@ -485,11 +485,25 @@ internal sealed class PanelWebSkinSystem : ISystem<float>
 
             foreach (PanelPin pin in template.Pins)
             {
-                payload[pin.Name] = values.Get(pin.Name);
+                payload[pin.Name] = ToPayloadValue(values.Get(pin.Name));
             }
 
             packet = CreatePacket(payload, in context);
             return true;
+        }
+
+        private static object? ToPayloadValue(PanelProjectionValue value)
+        {
+            return value.Kind switch
+            {
+                PanelValueKind.Bool => value.BoolValue,
+                PanelValueKind.Int => value.IntValue,
+                PanelValueKind.Float => value.FloatValue,
+                PanelValueKind.Entity => throw new InvalidOperationException(
+                    $"Panel web topic cannot serialize entity value for pin '{value.PinName}'; web payloads support Bool/Int/Float only."),
+                _ => throw new InvalidOperationException(
+                    $"Panel pin '{value.PinName}' has unsupported kind '{value.Kind}' for the web topic."),
+            };
         }
 
         private PanelInstanceHandle FindVisibleInstance()

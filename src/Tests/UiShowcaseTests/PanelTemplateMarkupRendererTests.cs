@@ -14,10 +14,10 @@ public sealed class PanelTemplateMarkupRendererTests
     {
         var variables = new PanelVariableSet(
             "tests.panel.resource_bar",
-            new Dictionary<string, float>(StringComparer.Ordinal)
+            new Dictionary<string, PanelProjectionValue>(StringComparer.Ordinal)
             {
-                ["ore.total"] = 1200f,
-                ["gas.total"] = 450.5f,
+                ["ore.total"] = new PanelProjectionValue("ore.total", PanelValueKind.Float, revision: 7, floatValue: 1200f),
+                ["gas.total"] = new PanelProjectionValue("gas.total", PanelValueKind.Float, revision: 7, floatValue: 450.5f),
             },
             revision: 7);
 
@@ -39,7 +39,10 @@ public sealed class PanelTemplateMarkupRendererTests
     {
         var variables = new PanelVariableSet(
             "tests.panel.resource_bar",
-            new Dictionary<string, float>(StringComparer.Ordinal) { ["ore.total"] = 1f },
+            new Dictionary<string, PanelProjectionValue>(StringComparer.Ordinal)
+            {
+                ["ore.total"] = new PanelProjectionValue("ore.total", PanelValueKind.Float, revision: 1, floatValue: 1f),
+            },
             revision: 1);
 
         Assert.That(

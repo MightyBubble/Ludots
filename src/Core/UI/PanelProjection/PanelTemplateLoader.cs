@@ -12,7 +12,7 @@ namespace Ludots.Core.UI.PanelProjection
     public static class PanelTemplateLoader
     {
         private static readonly HashSet<string> RootFields = new(StringComparer.Ordinal) { "id", "skin", "graph", "pins", "events", "intents" };
-        private static readonly HashSet<string> PinFields = new(StringComparer.Ordinal) { "name", "key", "mode", "default" };
+        private static readonly HashSet<string> PinFields = new(StringComparer.Ordinal) { "name", "key", "mode", "type", "default" };
 
         public static PanelTemplate Load(string json)
         {
@@ -78,20 +78,17 @@ namespace Ludots.Core.UI.PanelProjection
                         $"Panel template '{id}' pin '{pinName}' mode must be realtime or snapshot, got '{modeText}'.");
                 }
 
-                float defaultValue = 0f;
-                if (pinObject["default"] is { } defaultValueNode)
-                {
-                    if (defaultValueNode is not JsonValue defaultValueValue ||
-                        !defaultValueValue.TryGetValue<double>(out double defaultValueRaw))
-                    {
-                        throw new InvalidOperationException(
-                            $"Panel template '{id}' pin '{pinName}' default must be a number.");
-                    }
+                PanelValueKind kind = ParsePinKind(id, pinName, pinObject);
+                ParsePinDefault(id, pinName, kind, pinObject, out bool boolDefault, out int intDefault, out float floatDefault);
 
-                    defaultValue = (float)defaultValueRaw;
-                }
-
-                pins.Add(new PanelPin(pinName, pinKey, realtime: string.Equals(modeText, "realtime", StringComparison.Ordinal), defaultValue));
+                pins.Add(new PanelPin(
+                    pinName,
+                    pinKey,
+                    realtime: string.Equals(modeText, "realtime", StringComparison.Ordinal),
+                    kind,
+                    boolDefault,
+                    intDefault,
+                    floatDefault));
             }
 
             List<PanelTemplateEvent> events = ParseEvents(id, rootObject);
@@ -202,6 +199,97 @@ namespace Ludots.Core.UI.PanelProjection
             }
 
             return intents;
+        }
+
+        private static PanelValueKind ParsePinKind(string templateId, string pinName, JsonObject pinObject)
+        {
+            string? typeText = OptionalString(pinObject, "type");
+            if (typeText == null)
+            {
+                return PanelValueKind.Float;
+            }
+
+            if (!Enum.TryParse<PanelValueKind>(typeText, ignoreCase: false, out PanelValueKind kind) ||
+                !Enum.IsDefined(typeof(PanelValueKind), kind))
+            {
+                throw new InvalidOperationException(
+                    $"Panel template '{templateId}' pin '{pinName}' type must be Bool, Int, Float or Entity, got '{typeText}'.");
+            }
+
+            return kind;
+        }
+
+        private static void ParsePinDefault(
+            string templateId,
+            string pinName,
+            PanelValueKind kind,
+            JsonObject pinObject,
+            out bool boolDefault,
+            out int intDefault,
+            out float floatDefault)
+        {
+            boolDefault = false;
+            intDefault = 0;
+            floatDefault = 0f;
+            if (pinObject["default"] is not { } defaultNode)
+            {
+                return;
+            }
+
+            if (defaultNode is not JsonValue defaultValue)
+            {
+                throw new InvalidOperationException(
+                    $"Panel template '{templateId}' pin '{pinName}' default must be a {KindName(kind)} literal.");
+            }
+
+            switch (kind)
+            {
+                case PanelValueKind.Bool:
+                    if (!defaultValue.TryGetValue<bool>(out bool boolRaw))
+                    {
+                        throw new InvalidOperationException(
+                            $"Panel template '{templateId}' pin '{pinName}' default must be a boolean for type Bool.");
+                    }
+
+                    boolDefault = boolRaw;
+                    break;
+                case PanelValueKind.Int:
+                    if (!defaultValue.TryGetValue<int>(out int intRaw))
+                    {
+                        throw new InvalidOperationException(
+                            $"Panel template '{templateId}' pin '{pinName}' default must be an integer for type Int.");
+                    }
+
+                    intDefault = intRaw;
+                    break;
+                case PanelValueKind.Float:
+                    if (!defaultValue.TryGetValue<double>(out double floatRaw))
+                    {
+                        throw new InvalidOperationException(
+                            $"Panel template '{templateId}' pin '{pinName}' default must be a number for type Float.");
+                    }
+
+                    floatDefault = (float)floatRaw;
+                    break;
+                case PanelValueKind.Entity:
+                    throw new InvalidOperationException(
+                        $"Panel template '{templateId}' pin '{pinName}' type Entity cannot declare a default; entity values come only from the graph output.");
+                default:
+                    throw new InvalidOperationException(
+                        $"Panel template '{templateId}' pin '{pinName}' has unsupported type '{kind}'.");
+            }
+        }
+
+        private static string KindName(PanelValueKind kind)
+        {
+            return kind switch
+            {
+                PanelValueKind.Bool => "boolean",
+                PanelValueKind.Int => "integer",
+                PanelValueKind.Float => "number",
+                PanelValueKind.Entity => "entity",
+                _ => kind.ToString(),
+            };
         }
 
         private static string RequireString(JsonObject obj, string field, string context)

@@ -40,7 +40,8 @@ namespace Ludots.Core.UI.PanelHosting
 
         /// <summary>
         /// Creates a live instance and evaluates it once, so authoring mistakes
-        /// (missing attributes, ghost output keys) fail here — not on first paint.
+        /// (missing graph outputs, ghost output keys) fail here loudly — not on
+        /// first paint.
         /// </summary>
         public PanelInstanceHandle Instantiate(string templateId, string anchor, Entity scope)
         {
@@ -139,7 +140,7 @@ namespace Ludots.Core.UI.PanelHosting
                     uint previous = entry.Revisions[pin.Name];
                     if (previous != value.Revision)
                     {
-                        entry.Values[pin.Name] = value.FloatValue;
+                        entry.Values[pin.Name] = value;
                         entry.Revisions[pin.Name] = value.Revision;
                         entry.Revision = (entry.Revision ^ previous ^ value.Revision) * 16777619;
                         changed = true;
@@ -257,7 +258,7 @@ namespace Ludots.Core.UI.PanelHosting
             foreach (PanelPin pin in entry.Template.Pins)
             {
                 PanelProjectionValue value = _reader.Resolve(entry.Scope, pin);
-                entry.Values[pin.Name] = value.FloatValue;
+                entry.Values[pin.Name] = value;
                 revision = (revision ^ value.Revision) * 16777619;
                 entry.Revisions[pin.Name] = value.Revision;
                 entry.HasRealtime |= pin.Realtime;
@@ -267,15 +268,18 @@ namespace Ludots.Core.UI.PanelHosting
         }
 
         /// <summary>
-        /// Data-plane contract: graph execution failure logs and leaves previous/default
-        /// values standing — the panel keeps rendering; structural failures were rejected
-        /// at load. No evaluator (lightweight hosts) means read-only against the store.
+        /// Data-plane contract: graph execution failure logs and leaves previous
+        /// values standing — the panel keeps rendering; structural failures were
+        /// rejected at load. No evaluator (lightweight hosts) means read-only
+        /// against the store.
         /// </summary>
         /// <summary>
         /// Returns false when this pass's evaluation FAILED — the realtime sweep then
         /// skips re-reading pins so externally written store values cannot leak through
         /// a failed evaluation. No evaluator (lightweight hosts) or an unregistered
         /// graph means "the store is the source": not a failure, returns true.
+        /// Missing outputs are read-time failures, not evaluation failures: the
+        /// reader throws and the failure is explicit.
         /// </summary>
         private bool EvaluateGraph(Entry entry)
         {
@@ -305,7 +309,7 @@ namespace Ludots.Core.UI.PanelHosting
         {
             return new PanelVariableSet(
                 entry.Template.Id,
-                new Dictionary<string, float>(entry.Values, StringComparer.Ordinal),
+                new Dictionary<string, PanelProjectionValue>(entry.Values, StringComparer.Ordinal),
                 entry.Revision);
         }
 
@@ -338,7 +342,7 @@ namespace Ludots.Core.UI.PanelHosting
                 Scope = scope;
                 Skin = skin;
                 ZOrder = zOrder;
-                Values = new Dictionary<string, float>(template.Pins.Count, StringComparer.Ordinal);
+                Values = new Dictionary<string, PanelProjectionValue>(template.Pins.Count, StringComparer.Ordinal);
                 Revisions = new Dictionary<string, uint>(template.Pins.Count, StringComparer.Ordinal);
             }
 
@@ -347,7 +351,7 @@ namespace Ludots.Core.UI.PanelHosting
             public Entity Scope { get; }
             public string? Skin { get; }
             public int ZOrder { get; }
-            public Dictionary<string, float> Values { get; }
+            public Dictionary<string, PanelProjectionValue> Values { get; }
             public Dictionary<string, uint> Revisions { get; }
             public uint Revision { get; set; }
             public int Generation { get; set; }

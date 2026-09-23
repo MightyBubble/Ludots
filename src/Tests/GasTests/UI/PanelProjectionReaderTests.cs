@@ -31,24 +31,75 @@ public sealed class PanelProjectionReaderTests
     }
 
     [Test]
-    public void Resolve_GraphOutput_ReadsMaterializedValue()
+    public void Resolve_FloatOutput_MaterializesFloatValue()
     {
-        _store.SetFloat(_owner, "panel.hp", 42f);
-        PanelProjectionValue value = _reader.Resolve(_owner, new PanelPin("hp", "panel.hp", realtime: true, defaultValue: 0f));
+        _store.SetFloat(_owner, "panel.hp", 42.5f);
+        PanelProjectionValue value = _reader.Resolve(_owner, new PanelPin("hp", "panel.hp", realtime: true, kind: PanelValueKind.Float));
 
-        Assert.That(value.FloatValue, Is.EqualTo(42f));
-        Assert.That(value.FromGraph, Is.True);
+        Assert.That(value.Kind, Is.EqualTo(PanelValueKind.Float));
+        Assert.That(value.FloatValue, Is.EqualTo(42.5f));
         Assert.That(value.Revision, Is.GreaterThan(0u));
     }
 
     [Test]
-    public void Resolve_MissingOutput_FallsBackToPinDefault_NoError()
+    public void Resolve_IntOutput_MaterializesIntValue()
     {
-        PanelProjectionValue value = _reader.Resolve(_owner, new PanelPin("hp", "panel.hp", realtime: true, defaultValue: 7.5f));
+        _store.SetInt(_owner, "panel.tier", 7);
+        PanelProjectionValue value = _reader.Resolve(_owner, new PanelPin("tier", "panel.tier", realtime: true, kind: PanelValueKind.Int));
 
-        Assert.That(value.FloatValue, Is.EqualTo(7.5f));
-        Assert.That(value.FromGraph, Is.False);
-        Assert.That(value.Revision, Is.EqualTo(0u));
+        Assert.That(value.Kind, Is.EqualTo(PanelValueKind.Int));
+        Assert.That(value.IntValue, Is.EqualTo(7));
+        Assert.That(value.NumericValue, Is.EqualTo(7f), "Int widens to float only through the explicit numeric projection");
+    }
+
+    [Test]
+    public void Resolve_BoolOutput_MaterializesBoolValue()
+    {
+        _store.SetBool(_owner, "panel.ready", true);
+        PanelProjectionValue value = _reader.Resolve(_owner, new PanelPin("ready", "panel.ready", realtime: true, kind: PanelValueKind.Bool));
+
+        Assert.That(value.Kind, Is.EqualTo(PanelValueKind.Bool));
+        Assert.That(value.BoolValue, Is.True);
+        Assert.That(
+            () => value.NumericValue,
+            Throws.InvalidOperationException, "Bool has no numeric form; no silent 1f/0f coercion");
+    }
+
+    [Test]
+    public void Resolve_EntityOutput_MaterializesEntityValue()
+    {
+        Entity selected = _world.Create();
+        _store.SetEntity(_owner, "panel.selection", selected);
+        PanelProjectionValue value = _reader.Resolve(_owner, new PanelPin("selection", "panel.selection", realtime: true, kind: PanelValueKind.Entity));
+
+        Assert.That(value.Kind, Is.EqualTo(PanelValueKind.Entity));
+        Assert.That(value.EntityValue, Is.EqualTo(selected));
+        Assert.That(
+            () => value.NumericValue,
+            Throws.InvalidOperationException, "Entity has no numeric form; no silent id coercion");
+    }
+
+    [Test]
+    public void Resolve_KindFollowsGraphOutput_NoCoercion()
+    {
+        // Int graph output stays Int even when the pin declares Float (legacy templates
+        // omit "type"); the value carries the graph's actual kind, never a flattened float.
+        _store.SetInt(_owner, "panel.stage", 5);
+        PanelProjectionValue value = _reader.Resolve(_owner, new PanelPin("stage", "panel.stage", realtime: true, kind: PanelValueKind.Float));
+
+        Assert.That(value.Kind, Is.EqualTo(PanelValueKind.Int));
+        Assert.That(value.IntValue, Is.EqualTo(5));
+    }
+
+    [Test]
+    public void Resolve_MissingOutput_FailsLoudly_NamingPinAndKey()
+    {
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+            () => _reader.Resolve(_owner, new PanelPin("hp", "panel.hp", realtime: true, kind: PanelValueKind.Float)))!;
+
+        Assert.That(error.Message, Does.Contain("hp"));
+        Assert.That(error.Message, Does.Contain("panel.hp"));
+        Assert.That(error.Message, Does.Contain(_owner.Id.ToString()), "the failing owner is named");
     }
 
     [Test]
@@ -57,8 +108,21 @@ public sealed class PanelProjectionReaderTests
         Entity other = _world.Create();
         _store.SetFloat(other, "panel.hp", 99f);
 
-        PanelProjectionValue value = _reader.Resolve(_owner, new PanelPin("hp", "panel.hp", realtime: true, defaultValue: 1f));
-        Assert.That(value.FloatValue, Is.EqualTo(1f), "outputs are owner-scoped; other scopes resolve to defaults");
+        Assert.That(
+            () => _reader.Resolve(_owner, new PanelPin("hp", "panel.hp", realtime: true, kind: PanelValueKind.Float)),
+            Throws.InvalidOperationException, "outputs are owner-scoped; the owner without output fails explicitly");
+    }
+
+    [Test]
+    public void Resolve_RemovedOwnerOutput_FailsLoudly()
+    {
+        _store.SetFloat(_owner, "panel.hp", 42f);
+        Assert.That(_reader.Resolve(_owner, new PanelPin("hp", "panel.hp", realtime: true, kind: PanelValueKind.Float)).FloatValue, Is.EqualTo(42f));
+
+        _store.RemoveOwner(_owner);
+        Assert.That(
+            () => _reader.Resolve(_owner, new PanelPin("hp", "panel.hp", realtime: true, kind: PanelValueKind.Float)),
+            Throws.InvalidOperationException, "owner output retirement is an explicit failure, not a default");
     }
 
     [Test]

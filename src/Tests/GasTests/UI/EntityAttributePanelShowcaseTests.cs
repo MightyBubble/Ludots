@@ -133,14 +133,14 @@ namespace Ludots.Tests.GasTests.UI
             var reader = new PanelProjectionReader(_world, outputs);
             PanelVariableSet values = new PanelInstance(template, _soldier).Evaluate(reader);
 
-            Assert.That(values.Get("hp"), Is.EqualTo(87f));
-            Assert.That(values.Get("attack"), Is.EqualTo(12f));
-            Assert.That(values.Get("squadAttack"), Is.EqualTo(36f));
-            Assert.That(values.Get("rank.badge"), Is.EqualTo(11f));
+            Assert.That(values.Get("hp").NumericValue, Is.EqualTo(87f));
+            Assert.That(values.Get("attack").NumericValue, Is.EqualTo(12f));
+            Assert.That(values.Get("squadAttack").NumericValue, Is.EqualTo(36f));
+            Assert.That(values.Get("rank.badge").NumericValue, Is.EqualTo(11f));
 
             // 4) same template serves the collection scope (#1012).
             PanelVariableSet collectionScope = new PanelInstance(template, factionOwner).Evaluate(reader);
-            Assert.That(collectionScope.Get("squadAttack"), Is.EqualTo(36f));
+            Assert.That(collectionScope.Get("squadAttack").NumericValue, Is.EqualTo(36f));
 
             // 5) the declared event resolves to a seat-attributed intent (#1013).
             var intentResolver = new PanelIntentResolver(template);

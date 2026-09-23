@@ -33,13 +33,22 @@ public static class PanelTemplateMarkupRenderer
         string resolved = TokenPattern.Replace(html, match =>
         {
             string name = match.Groups[1].Value;
-            if (!variables.TryGet(name, out float value))
+            if (!variables.TryGet(name, out PanelProjectionValue value))
             {
                 throw new System.InvalidOperationException(
                     $"Panel '{variables.TemplateId}' markup references unknown variable '{name}'.");
             }
 
-            return value.ToString("0.##", CultureInfo.InvariantCulture);
+            return value.Kind switch
+            {
+                PanelValueKind.Float => value.FloatValue.ToString("0.##", CultureInfo.InvariantCulture),
+                PanelValueKind.Int => value.IntValue.ToString(CultureInfo.InvariantCulture),
+                PanelValueKind.Bool => value.BoolValue ? "true" : "false",
+                PanelValueKind.Entity => throw new System.InvalidOperationException(
+                    $"Panel '{variables.TemplateId}' markup cannot render entity variable '{name}'."),
+                _ => throw new System.InvalidOperationException(
+                    $"Panel '{variables.TemplateId}' variable '{name}' has unsupported kind '{value.Kind}'."),
+            };
         });
 
         return new UiMarkupLoader().LoadScene(textMeasurer, imageSizeProvider, resolved, css);

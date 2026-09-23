@@ -15,14 +15,14 @@ namespace Ludots.Tests.GasTests.UI
           "id": "tests.panel.resource_bar",
           "graph": "tests.graph.resource_bar",
           "pins": [
-            { "name": "ore.total", "key": "tests.panel.ore.total", "mode": "realtime", "default": 0 },
-            { "name": "gas.total", "key": "tests.panel.gas.total", "mode": "snapshot", "default": -1 }
+            { "name": "ore.total", "key": "tests.panel.ore.total", "mode": "realtime", "type": "Float", "default": 0 },
+            { "name": "gas.total", "key": "tests.panel.gas.total", "mode": "snapshot", "type": "Float", "default": -1 }
           ]
         }
         """;
 
         [Test]
-        public void Load_ValidTemplate_CarriesGraphAndPins()
+        public void Load_ValidTemplate_CarriesGraphAndTypedPins()
         {
             PanelTemplate template = PanelTemplateLoader.Load(AggregateTemplateJson);
 
@@ -31,8 +31,84 @@ namespace Ludots.Tests.GasTests.UI
             Assert.That(template.Pins.Count, Is.EqualTo(2));
             Assert.That(template.Pins[0].Key, Is.EqualTo("tests.panel.ore.total"));
             Assert.That(template.Pins[0].Realtime, Is.True);
+            Assert.That(template.Pins[0].Kind, Is.EqualTo(PanelValueKind.Float));
+            Assert.That(template.Pins[0].FloatDefault, Is.EqualTo(0f));
             Assert.That(template.Pins[1].Realtime, Is.False);
-            Assert.That(template.Pins[1].Default, Is.EqualTo(-1f));
+            Assert.That(template.Pins[1].FloatDefault, Is.EqualTo(-1f));
+        }
+
+        [Test]
+        public void Load_PinWithoutType_DefaultsToFloat()
+        {
+            const string json = """
+            { "id": "tests.panel.notype", "graph": "g",
+              "pins": [ { "name": "hp", "key": "k", "mode": "realtime", "default": 5 } ] }
+            """;
+
+            PanelTemplate template = PanelTemplateLoader.Load(json);
+            Assert.That(template.Pins[0].Kind, Is.EqualTo(PanelValueKind.Float), "absent type keeps legacy templates readable as Float");
+            Assert.That(template.Pins[0].FloatDefault, Is.EqualTo(5f));
+        }
+
+        [Test]
+        public void Load_TypedDefaults_IntAndBoolAndEntity()
+        {
+            const string json = """
+            {
+              "id": "tests.panel.typed", "graph": "g",
+              "pins": [
+                { "name": "stage", "key": "k1", "type": "Int", "default": 7 },
+                { "name": "ready", "key": "k2", "type": "Bool", "default": true },
+                { "name": "selection", "key": "k3", "type": "Entity" }
+              ]
+            }
+            """;
+
+            PanelTemplate template = PanelTemplateLoader.Load(json);
+            Assert.That(template.Pins[0].Kind, Is.EqualTo(PanelValueKind.Int));
+            Assert.That(template.Pins[0].IntDefault, Is.EqualTo(7));
+            Assert.That(template.Pins[1].Kind, Is.EqualTo(PanelValueKind.Bool));
+            Assert.That(template.Pins[1].BoolDefault, Is.True);
+            Assert.That(template.Pins[2].Kind, Is.EqualTo(PanelValueKind.Entity));
+        }
+
+        [Test]
+        public void Load_UnknownType_FailsNamingType()
+        {
+            const string json = """
+            { "id": "tests.panel.badtype", "graph": "g",
+              "pins": [ { "name": "hp", "key": "k", "type": "Decimal" } ] }
+            """;
+
+            Assert.That(
+                () => PanelTemplateLoader.Load(json),
+                Throws.InvalidOperationException.With.Message.Contains("Decimal"));
+        }
+
+        [Test]
+        public void Load_DefaultTypeMismatch_FailsClosed()
+        {
+            Assert.That(
+                () => PanelTemplateLoader.Load("""
+                { "id": "tests.panel.bad_int_default", "graph": "g",
+                  "pins": [ { "name": "stage", "key": "k", "type": "Int", "default": 1.5 } ] }
+                """),
+                Throws.InvalidOperationException.With.Message.Contains("Int"));
+
+            Assert.That(
+                () => PanelTemplateLoader.Load("""
+                { "id": "tests.panel.bad_bool_default", "graph": "g",
+                  "pins": [ { "name": "ready", "key": "k", "type": "Bool", "default": 1 } ] }
+                """),
+                Throws.InvalidOperationException.With.Message.Contains("Bool"));
+
+            Assert.That(
+                () => PanelTemplateLoader.Load("""
+                { "id": "tests.panel.bad_entity_default", "graph": "g",
+                  "pins": [ { "name": "selection", "key": "k", "type": "Entity", "default": 0 } ] }
+                """),
+                Throws.InvalidOperationException.With.Message.Contains("Entity"),
+                "Entity pins cannot declare a default; entity values come only from the graph output");
         }
 
         [Test]
@@ -106,7 +182,7 @@ namespace Ludots.Tests.GasTests.UI
         }
 
         [Test]
-        public void Evaluate_PinsReadGraphOutputs()
+        public void Evaluate_PinsReadTypedGraphOutputs()
         {
             PanelTemplate template = PanelTemplateLoader.Load(AggregateTemplateJson);
             using World world = World.Create();
@@ -120,12 +196,13 @@ namespace Ludots.Tests.GasTests.UI
             var reader = new PanelProjectionReader(world, outputs);
             PanelVariableSet result = new PanelInstance(template, owner).Evaluate(reader);
 
-            Assert.That(result.Get("ore.total"), Is.EqualTo(1200f));
-            Assert.That(result.Get("gas.total"), Is.EqualTo(450.5f).Within(0.0001f));
+            Assert.That(result.Get("ore.total").Kind, Is.EqualTo(PanelValueKind.Float));
+            Assert.That(result.Get("ore.total").FloatValue, Is.EqualTo(1200f));
+            Assert.That(result.Get("gas.total").FloatValue, Is.EqualTo(450.5f).Within(0.0001f));
         }
 
         [Test]
-        public void Evaluate_MissingGraphOutput_ShowsDeclaredDefault()
+        public void Evaluate_MissingGraphOutput_FailsLoudly()
         {
             PanelTemplate template = PanelTemplateLoader.Load(AggregateTemplateJson);
             using World world = World.Create();
@@ -135,10 +212,10 @@ namespace Ludots.Tests.GasTests.UI
             var outputs = new GraphOutputValueStore(keys, initialCapacity: 8);
 
             var reader = new PanelProjectionReader(world, outputs);
-            PanelVariableSet result = new PanelInstance(template, owner).Evaluate(reader);
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+                () => new PanelInstance(template, owner).Evaluate(reader))!;
 
-            Assert.That(result.Get("ore.total"), Is.EqualTo(0f), "missing output shows pin default, no error");
-            Assert.That(result.Get("gas.total"), Is.EqualTo(-1f));
+            Assert.That(error.Message, Does.Contain("ore.total"), "the first missing pin is named; no silent default");
         }
 
         [Test]
@@ -160,8 +237,8 @@ namespace Ludots.Tests.GasTests.UI
             PanelVariableSet setA = new PanelInstance(template, ownerA).Evaluate(reader);
             PanelVariableSet setB = new PanelInstance(template, ownerB).Evaluate(reader);
 
-            Assert.That(setA.Get("ore.total"), Is.EqualTo(100f));
-            Assert.That(setB.Get("ore.total"), Is.EqualTo(900f));
+            Assert.That(setA.Get("ore.total").FloatValue, Is.EqualTo(100f));
+            Assert.That(setB.Get("ore.total").FloatValue, Is.EqualTo(900f));
         }
     }
 }

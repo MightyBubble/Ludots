@@ -291,7 +291,7 @@ public sealed class MapTriggerNightRaidAcceptanceTests
             if (string.Equals(info.TemplateId, templateId, StringComparison.Ordinal) &&
                 panelHost.TryGetValues(info.Handle, out PanelVariableSet values))
             {
-                return values.Get(variable);
+                return values.Get(variable).NumericValue;
             }
         }
 
@@ -305,7 +305,7 @@ public sealed class MapTriggerNightRaidAcceptanceTests
             if (string.Equals(info.TemplateId, VictoryPanelTemplateId, StringComparison.Ordinal) &&
                 panelHost.TryGetValues(info.Handle, out PanelVariableSet values))
             {
-                return values.Get("heroHealth") > 0f;
+                return values.Get("heroHealth").NumericValue > 0f;
             }
         }
 

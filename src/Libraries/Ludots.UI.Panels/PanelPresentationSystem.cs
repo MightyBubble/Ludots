@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
+using Arch.Core;
 using Arch.System;
 using Ludots.Core.UI.PanelActivation;
 using Ludots.Core.UI.PanelHosting;
@@ -197,14 +199,14 @@ public sealed class PanelPresentationSystem : ISystem<float>
             var color = new UiColor(230, 230, 230);
             if (HasPin(template, pin.Name + "Base"))
             {
-                float current = values.Get(pin.Name);
-                float maximum = values.Get(pin.Name + "Base");
-                text = $"{pin.Name.ToUpperInvariant()}  {current:F0} / {maximum:F0}";
+                PanelProjectionValue current = values.Get(pin.Name);
+                PanelProjectionValue maximum = values.Get(pin.Name + "Base");
+                text = $"{pin.Name.ToUpperInvariant()}  {FormatRowValue(current)} / {FormatRowValue(maximum)}";
                 color = PairRowColor(pin.Name);
             }
             else
             {
-                text = $"{pin.Name.ToUpperInvariant()}  {values.Get(pin.Name):F0}";
+                text = $"{pin.Name.ToUpperInvariant()}  {FormatRowValue(values.Get(pin.Name))}";
             }
 
             rows.Add(new UiElementBuilder(UiNodeKind.Text)
@@ -230,6 +232,20 @@ public sealed class PanelPresentationSystem : ISystem<float>
         }
 
         return false;
+    }
+
+    private static string FormatRowValue(PanelProjectionValue value)
+    {
+        return value.Kind switch
+        {
+            PanelValueKind.Float => value.FloatValue.ToString("F0", CultureInfo.InvariantCulture),
+            PanelValueKind.Int => value.IntValue.ToString(CultureInfo.InvariantCulture),
+            PanelValueKind.Bool => value.BoolValue ? "true" : "false",
+            PanelValueKind.Entity => value.EntityValue == Entity.Null
+                ? "none"
+                : value.EntityValue.Id.ToString(CultureInfo.InvariantCulture),
+            _ => throw new InvalidOperationException($"Panel pin '{value.PinName}' has unsupported kind '{value.Kind}'."),
+        };
     }
 
     private static UiColor PairRowColor(string variableName)

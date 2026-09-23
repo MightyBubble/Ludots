@@ -30,8 +30,8 @@ namespace Ludots.Tests.GasTests.UI
           "id": "tests.panel.host",
           "graph": "tests.graph.panel.values",
           "pins": [
-            { "name": "hp", "key": "tests.panel.hp", "mode": "realtime", "default": 0 },
-            { "name": "attack", "key": "tests.panel.attack", "mode": "snapshot", "default": 12 }
+            { "name": "hp", "key": "tests.panel.hp", "mode": "realtime", "type": "Float", "default": 0 },
+            { "name": "attack", "key": "tests.panel.attack", "mode": "snapshot", "type": "Float", "default": 12 }
           ]
         }
         """;
@@ -110,8 +110,8 @@ namespace Ludots.Tests.GasTests.UI
             Assert.That(_host.TryGetScope(handle, out Entity scope), Is.True);
             Assert.That(scope, Is.EqualTo(_caster));
             Assert.That(_host.TryGetValues(handle, out PanelVariableSet values), Is.True);
-            Assert.That(values.Get("hp"), Is.EqualTo(87f));
-            Assert.That(values.Get("attack"), Is.EqualTo(12f));
+            Assert.That(values.Get("hp").NumericValue, Is.EqualTo(87f));
+            Assert.That(values.Get("attack").NumericValue, Is.EqualTo(12f));
         }
 
         [Test]
@@ -131,13 +131,13 @@ namespace Ludots.Tests.GasTests.UI
         }
 
         [Test]
-        public void Instantiate_ScopeWithoutGraphOutput_ShowsPinDefaults()
+        public void Instantiate_ScopeWithoutGraphOutput_FailsLoudly()
         {
             Entity bare = _world.Create();
-            PanelInstanceHandle handle = _host.Instantiate(TemplateId, AnchorId, bare);
-            Assert.That(_host.TryGetValues(handle, out PanelVariableSet values), Is.True);
-            Assert.That(values.Get("hp"), Is.EqualTo(0f), "missing graph output resolves to the pin default");
-            Assert.That(values.Get("attack"), Is.EqualTo(12f));
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+                () => _host.Instantiate(TemplateId, AnchorId, bare))!;
+            Assert.That(error.Message, Does.Contain("tests.panel.hp"),
+                "a scope without graph outputs must fail naming the missing pin, not show a default");
         }
 
         [Test]
@@ -152,8 +152,8 @@ namespace Ludots.Tests.GasTests.UI
             Assert.That(FindByScope(_caster, out PanelInstanceHandle viaOp), Is.True);
             Assert.That(_host.TryGetValues(viaOp, out PanelVariableSet opValues), Is.True);
             Assert.That(_host.TryGetValues(direct, out PanelVariableSet directValues), Is.True);
-            Assert.That(opValues.Get("hp"), Is.EqualTo(directValues.Get("hp")));
-            Assert.That(opValues.Get("attack"), Is.EqualTo(directValues.Get("attack")));
+            Assert.That(opValues.Get("hp").NumericValue, Is.EqualTo(directValues.Get("hp").NumericValue));
+            Assert.That(opValues.Get("attack").NumericValue, Is.EqualTo(directValues.Get("attack").NumericValue));
             Assert.That(opValues.Revision, Is.EqualTo(directValues.Revision));
             Assert.That(_host.TryGetAnchor(viaOp, out string opAnchor), Is.True);
             Assert.That(opAnchor, Is.EqualTo(AnchorId));
@@ -173,7 +173,7 @@ namespace Ludots.Tests.GasTests.UI
 
             Assert.That(FindByScope(_target, out PanelInstanceHandle handle), Is.True);
             Assert.That(_host.TryGetValues(handle, out PanelVariableSet values), Is.True);
-            Assert.That(values.Get("hp"), Is.EqualTo(41f));
+            Assert.That(values.Get("hp").NumericValue, Is.EqualTo(41f));
         }
 
         [Test]
@@ -212,7 +212,7 @@ namespace Ludots.Tests.GasTests.UI
             Assert.That(_host.RefreshRealtime(), Is.EqualTo(1));
 
             PanelVariableSet values = _host.Refresh(handle);
-            Assert.That(values.Get("hp"), Is.EqualTo(50f), "realtime pin follows the graph output revision");
+            Assert.That(values.Get("hp").NumericValue, Is.EqualTo(50f), "realtime pin follows the graph output revision");
         }
 
         [Test]
@@ -257,7 +257,7 @@ namespace Ludots.Tests.GasTests.UI
             Assert.That(host.RefreshRealtime(), Is.EqualTo(0), "snapshot-only templates are skipped by realtime refresh");
             Assert.That(host.TryGetValues(
                 FindSingle(host), out PanelVariableSet values), Is.True);
-            Assert.That(values.Get("hp"), Is.EqualTo(5f), "snapshot pin keeps its instantiated value");
+            Assert.That(values.Get("hp").NumericValue, Is.EqualTo(5f), "snapshot pin keeps its instantiated value");
         }
 
         [Test]
@@ -346,15 +346,15 @@ namespace Ludots.Tests.GasTests.UI
         }
 
         [Test]
-        public void UnregisteredGraph_PinsStayOnDefaults()
+        public void UnregisteredGraph_MissingOutput_FailsLoudly()
         {
             const string json = """
             {
               "id": "tests.panel.ungraph",
               "graph": "tests.graph.not.registered",
               "pins": [
-                { "name": "hp", "key": "tests.panel.ungraph.hp", "mode": "realtime", "default": 42 },
-                { "name": "tier", "key": "tests.panel.ungraph.tier", "mode": "snapshot", "default": 7 }
+                { "name": "hp", "key": "tests.panel.ungraph.hp", "mode": "realtime", "type": "Float" },
+                { "name": "tier", "key": "tests.panel.ungraph.tier", "mode": "snapshot", "type": "Int" }
               ]
             }
             """;
@@ -367,15 +367,10 @@ namespace Ludots.Tests.GasTests.UI
             localTemplates.Freeze();
             var host = new PanelHost(localTemplates, new PanelProjectionReader(_world, _store));
 
-            PanelInstanceHandle handle = host.Instantiate("tests.panel.ungraph", AnchorId, _caster);
-            Assert.That(host.TryGetValues(handle, out PanelVariableSet values), Is.True);
-            Assert.That(values.Get("hp"), Is.EqualTo(42f), "unregistered graph falls to the pin default");
-            Assert.That(values.Get("tier"), Is.EqualTo(7f), "unregistered graph falls to the pin default");
-
-            // GraphId = -1 skips evaluation entirely, so the realtime sweep changes nothing.
-            Assert.That(host.RefreshRealtime(), Is.EqualTo(0));
-            Assert.That(host.TryGetValues(handle, out values), Is.True);
-            Assert.That(values.Get("hp"), Is.EqualTo(42f), "defaults survive the realtime sweep");
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+                () => host.Instantiate("tests.panel.ungraph", AnchorId, _caster))!;
+            Assert.That(error.Message, Does.Contain("tests.panel.ungraph.hp"),
+                "a graph with no materialized output is a read-time failure, never a silent default");
         }
 
         [Test]
@@ -405,15 +400,15 @@ namespace Ludots.Tests.GasTests.UI
             // but pins read the store, so the pre-written values still land.
             PanelInstanceHandle handle = host.Instantiate("tests.panel.thrower", AnchorId, _caster);
             Assert.That(host.TryGetValues(handle, out PanelVariableSet first), Is.True);
-            Assert.That(first.Get("hp"), Is.EqualTo(87f));
-            Assert.That(first.Get("attack"), Is.EqualTo(12f));
+            Assert.That(first.Get("hp").NumericValue, Is.EqualTo(87f));
+            Assert.That(first.Get("attack").NumericValue, Is.EqualTo(12f));
             Assert.That(thrower.Calls, Is.EqualTo(1));
 
             // A failed evaluation must leave previous pin values standing, even if the store moved.
             _store.SetFloat(_caster, "tests.panel.hp", 50f);
             Assert.That(host.RefreshRealtime(), Is.EqualTo(0), "failed evaluation touches no instance");
             Assert.That(host.TryGetValues(handle, out PanelVariableSet second), Is.True);
-            Assert.That(second.Get("hp"), Is.EqualTo(87f), "evaluator failure keeps the previous value");
+            Assert.That(second.Get("hp").NumericValue, Is.EqualTo(87f), "evaluator failure keeps the previous value");
             Assert.That(thrower.Calls, Is.EqualTo(2));
         }
 
@@ -438,15 +433,15 @@ namespace Ludots.Tests.GasTests.UI
             _store.SetFloat(_caster, "tests.panel.snapshot.tier", 3f);
             PanelInstanceHandle handle = host.Instantiate("tests.panel.snapshot_only", AnchorId, _caster);
             Assert.That(host.TryGetValues(handle, out PanelVariableSet first), Is.True);
-            Assert.That(first.Get("tier"), Is.EqualTo(3f), "snapshot pin captures the value at instantiate");
+            Assert.That(first.Get("tier").NumericValue, Is.EqualTo(3f), "snapshot pin captures the value at instantiate");
 
             _store.SetFloat(_caster, "tests.panel.snapshot.tier", 9f);
             Assert.That(host.RefreshRealtime(), Is.EqualTo(0), "snapshot-only template is skipped by the realtime sweep");
             Assert.That(host.TryGetValues(handle, out PanelVariableSet second), Is.True);
-            Assert.That(second.Get("tier"), Is.EqualTo(3f), "realtime sweep leaves the snapshot pin untouched");
+            Assert.That(second.Get("tier").NumericValue, Is.EqualTo(3f), "realtime sweep leaves the snapshot pin untouched");
 
             PanelVariableSet third = host.Refresh(handle);
-            Assert.That(third.Get("tier"), Is.EqualTo(9f), "explicit Refresh re-evaluates the snapshot pin");
+            Assert.That(third.Get("tier").NumericValue, Is.EqualTo(9f), "explicit Refresh re-evaluates the snapshot pin");
         }
 
         [Test]
@@ -455,7 +450,7 @@ namespace Ludots.Tests.GasTests.UI
             const string badDefault = """
             {
               "id": "tests.panel.bad_default", "graph": "g",
-              "pins": [ { "name": "hp", "key": "k", "default": "many" } ]
+              "pins": [ { "name": "hp", "key": "k", "type": "Float", "default": "many" } ]
             }
             """;
             Assert.That(
@@ -485,6 +480,47 @@ namespace Ludots.Tests.GasTests.UI
             Assert.That(
                 () => PanelTemplateLoader.Load(badPayload),
                 Throws.Exception.With.Message.Contains("payload"));
+        }
+
+        [Test]
+        public void Instantiate_TypedPins_IntAndBoolFlowThrough()
+        {
+            const string json = """
+            {
+              "id": "tests.panel.typed",
+              "graph": "tests.graph.typed.values",
+              "pins": [
+                { "name": "stage", "key": "tests.panel.typed.stage", "mode": "realtime", "type": "Int" },
+                { "name": "ready", "key": "tests.panel.typed.ready", "mode": "realtime", "type": "Bool" },
+                { "name": "selection", "key": "tests.panel.typed.selection", "mode": "snapshot", "type": "Entity" }
+              ]
+            }
+            """;
+
+            var localTemplates = new PanelTemplateRegistry();
+            localTemplates.Register(PanelTemplateLoader.Load(json));
+            localTemplates.Freeze();
+            var host = new PanelHost(localTemplates, new PanelProjectionReader(_world, _store));
+
+            Entity selected = _world.Create();
+            _store.SetInt(_caster, "tests.panel.typed.stage", 3);
+            _store.SetBool(_caster, "tests.panel.typed.ready", true);
+            _store.SetEntity(_caster, "tests.panel.typed.selection", selected);
+
+            PanelInstanceHandle handle = host.Instantiate("tests.panel.typed", AnchorId, _caster);
+            Assert.That(host.TryGetValues(handle, out PanelVariableSet values), Is.True);
+            Assert.That(values.Get("stage").Kind, Is.EqualTo(PanelValueKind.Int));
+            Assert.That(values.Get("stage").IntValue, Is.EqualTo(3));
+            Assert.That(values.Get("ready").Kind, Is.EqualTo(PanelValueKind.Bool));
+            Assert.That(values.Get("ready").BoolValue, Is.True);
+            Assert.That(values.Get("selection").Kind, Is.EqualTo(PanelValueKind.Entity));
+            Assert.That(values.Get("selection").EntityValue, Is.EqualTo(selected));
+
+            // Int moves follow the realtime sweep like any other typed value.
+            _store.SetInt(_caster, "tests.panel.typed.stage", 5);
+            Assert.That(host.RefreshRealtime(), Is.EqualTo(1));
+            Assert.That(host.TryGetValues(handle, out values), Is.True);
+            Assert.That(values.Get("stage").IntValue, Is.EqualTo(5));
         }
 
         // ── helpers ──
@@ -570,24 +606,3 @@ namespace Ludots.Tests.GasTests.UI
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// FINDING — contract test that currently FAILS against src/Core/UI/PanelHosting/PanelHost.cs
-// (no product code was changed; per task instructions the finding is documented here instead).
-//
-// Test: EvaluatorThrows_PinsKeepPreviousValues
-// Contract: when the graph evaluator throws, pins must keep their previous values
-// (合同基准: “evaluator 抛异常保持旧值”). The test proves the thrower IS invoked on both
-// Instantiate and RefreshRealtime (Calls 1 → 2) and that Instantiate still reads the
-// pre-seeded store (hp=87), so the test setup is sound.
-//
-// Gap: PanelHost.RefreshRealtime calls EvaluateGraph(entry) (which swallows the thrower's
-// exception) and then unconditionally reads the store via _reader.Resolve(...) in the pin
-// loop. A store write that is independent of the failed evaluation therefore leaks through:
-// after _store.SetFloat(hp, 50f) the sweep reports touched=1 and the pin moves to 50,
-// instead of keeping the previous value 87.
-//
-// The “keep previous values” contract is only honored incidentally today — when the store
-// happens not to have moved. A failed evaluation must suppress the pin re-read for that
-// instance (e.g. EvaluateGraph returns success, and RefreshRealtime skips the pin loop on
-// failure) for this test to go green. No src/ change was made.
-// ─────────────────────────────────────────────────────────────────────────────
