@@ -34,6 +34,41 @@
     "sourceUris": [
       "MassNavigationMod:assets/Models/mass_navigation_hotspot_obelisk.obj"
     ]
+  },
+  {
+    "id": "mass_navigation.agent.soldier.webgpu",
+    "assetKind": "Mesh",
+    "assetId": "mass_navigation.agent.soldier",
+    "backendId": "webgpu",
+    "sourceUris": [
+      "MassNavigationMod:assets/Models/mass_navigation_agent_soldier_webgpu_lod.obj"
+    ]
+  },
+  {
+    "id": "mass_navigation.command.marker.webgpu",
+    "assetKind": "Mesh",
+    "assetId": "mass_navigation.command.marker",
+    "backendId": "webgpu",
+    "sourceUris": [
+      "MassNavigationMod:assets/Models/mass_navigation_command_marker.obj"
+    ]
+  },
+  {
+    "id": "mass_navigation.blocker.rock.webgpu",
+    "assetKind": "Mesh",
+    "assetId": "mass_navigation.blocker.rock",
+    "backendId": "webgpu",
+    "sourceUris": [
+      "MassNavigationMod:assets/Models/mass_navigation_blocker_rock.obj"
+    ]
+  },
+  {
+    "id": "mass_navigation.hotspot.obelisk.webgpu",
+    "assetKind": "Mesh",
+    "assetId": "mass_navigation.hotspot.obelisk",
+    "backendId": "webgpu",
+    "sourceUris": [
+      "MassNavigationMod:assets/Models/mass_navigation_hotspot_obelisk.obj"
+    ]
   }
 ]
-

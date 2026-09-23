@@ -1,0 +1,97 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-browser</TargetFramework>
+    <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <SelfContained>true</SelfContained>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>full</TrimMode>
+    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+    <RunAOTCompilation>true</RunAOTCompilation>
+
+    <WasmBuildNative>true</WasmBuildNative>
+    <WasmEnableThreads>true</WasmEnableThreads>
+    <WasmEnableSIMD>true</WasmEnableSIMD>
+    <WasmEnableJiterpreter>false</WasmEnableJiterpreter>
+    <WasmNativeStrip>true</WasmNativeStrip>
+    <WasmInitialHeapSize>536870912</WasmInitialHeapSize>
+    <_WasmPThreadPoolInitialSize>16</_WasmPThreadPoolInitialSize>
+    <_WasmPThreadPoolUnusedSize>16</_WasmPThreadPoolUnusedSize>
+    <WasmMainHTMLPath>www\index.html</WasmMainHTMLPath>
+    <WasmMainJSPath>www\main.js</WasmMainJSPath>
+            <EmccExtraFlags>-O2</EmccExtraFlags>
+            <EmccExtraLDFlags>-sUSE_WEBGPU=1 -sOFFSCREENCANVAS_SUPPORT=1 -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=3221225472</EmccExtraLDFlags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <WasmEnvironmentVariable Include="MONO_GC_PARAMS" Value="max-heap-size=2600m" />
+
+    <ProjectReference Include="..\..\..\Client\Ludots.Client.WebGpu\Ludots.Client.WebGpu.csproj" />
+    <ProjectReference Include="..\..\..\Adapters\WebGpu\Ludots.Adapter.WebGpu\Ludots.Adapter.WebGpu.csproj" />
+    <ProjectReference Include="..\..\..\..\mods\LudotsCoreMod\LudotsCoreMod.csproj" />
+    <ProjectReference Include="..\..\..\..\mods\CoreInputMod\CoreInputMod.csproj" />
+    <ProjectReference Include="..\..\..\..\mods\capabilities\navigation\MassNavigationMod\MassNavigationMod.csproj" />
+    <ProjectReference Include="..\..\..\..\mods\showcases\capability_standard\CapabilityStandardMassNavigationLargeWorld10kMod\CapabilityStandardMassNavigationLargeWorld10kMod.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <WasmExtraFilesToDeploy Include="www\app.css" />
+
+    <WasmFilesToIncludeInFileSystem Include="Assets\DroidSans.webgpu-font">
+      <TargetPath>fonts\DroidSans.webgpu-font</TargetPath>
+    </WasmFilesToIncludeInFileSystem>
+
+    <WasmFilesToIncludeInFileSystem Include="..\..\..\..\assets\Configs\**\*">
+      <TargetPath>assets\Configs\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
+    </WasmFilesToIncludeInFileSystem>
+
+    <WasmFilesToIncludeInFileSystem Include="..\..\..\..\mods\LudotsCoreMod\mod.json">
+      <TargetPath>mods\LudotsCoreMod\mod.json</TargetPath>
+    </WasmFilesToIncludeInFileSystem>
+    <WasmFilesToIncludeInFileSystem Include="..\..\..\..\mods\LudotsCoreMod\assets\**\*"
+                                    Exclude="..\..\..\..\mods\LudotsCoreMod\assets\Data\Maps\*.bin">
+      <TargetPath>mods\LudotsCoreMod\assets\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
+    </WasmFilesToIncludeInFileSystem>
+
+    <WasmFilesToIncludeInFileSystem Include="..\..\..\..\mods\CoreInputMod\mod.json">
+      <TargetPath>mods\CoreInputMod\mod.json</TargetPath>
+    </WasmFilesToIncludeInFileSystem>
+    <WasmFilesToIncludeInFileSystem Include="..\..\..\..\mods\CoreInputMod\assets\**\*">
+      <TargetPath>mods\CoreInputMod\assets\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
+    </WasmFilesToIncludeInFileSystem>
+
+    <WasmFilesToIncludeInFileSystem Include="..\..\..\..\mods\capabilities\navigation\MassNavigationMod\mod.json">
+      <TargetPath>mods\MassNavigationMod\mod.json</TargetPath>
+    </WasmFilesToIncludeInFileSystem>
+    <WasmFilesToIncludeInFileSystem Include="..\..\..\..\mods\capabilities\navigation\MassNavigationMod\assets\**\*">
+      <TargetPath>mods\MassNavigationMod\assets\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
+    </WasmFilesToIncludeInFileSystem>
+
+    <WasmFilesToIncludeInFileSystem Include="..\..\..\..\mods\showcases\capability_standard\CapabilityStandardMassNavigationLargeWorld10kMod\mod.json">
+      <TargetPath>mods\CapabilityStandardMassNavigationLargeWorld10kMod\mod.json</TargetPath>
+    </WasmFilesToIncludeInFileSystem>
+    <WasmFilesToIncludeInFileSystem Include="..\..\..\..\mods\showcases\capability_standard\CapabilityStandardMassNavigationLargeWorld10kMod\assets\**\*">
+      <TargetPath>mods\CapabilityStandardMassNavigationLargeWorld10kMod\assets\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
+    </WasmFilesToIncludeInFileSystem>
+
+    <TrimmerRootAssembly Include="LudotsCoreMod" />
+    <TrimmerRootAssembly Include="Ludots.Core" />
+    <TrimmerRootAssembly Include="CoreInputMod" />
+    <TrimmerRootAssembly Include="MassNavigationMod" />
+    <TrimmerRootAssembly Include="CapabilityStandardMassNavigationLargeWorld10kMod" />
+  </ItemGroup>
+
+  <Target Name="AddBrowserNativeModules" BeforeTargets="_GenerateManagedToNative" DependsOnTargets="PrepareForWasmBuildNative">
+    <ItemGroup>
+      <_WasmPInvokeModules Include="__Internal_emscripten" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="RejectNonAotBrowserBuild" BeforeTargets="Build" Condition="'$(Configuration)' != 'Release'">
+    <Error Text="Ludots WebGPU requires a Release AOT publish. Debug native relinking is incompatible with the threaded browser runtime." />
+  </Target>
+</Project>

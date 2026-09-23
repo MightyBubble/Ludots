@@ -130,6 +130,9 @@ namespace Ludots.Core.Presentation.Performers
         internal int[] StaticVisualVectorParamKeys = System.Array.Empty<int>();
         internal bool SupportsSingleVisualProxyFastEmit;
         internal int SingleVisualProxyFastBehaviorIndex;
+        internal int RetainedHudBarBehaviorIndex = -1;
+        internal int RetainedHudTextBehaviorIndex = -1;
+        internal bool HasRetainedWorldHudLanes;
         internal bool SupportsSingleAnimatorFastUpdate;
         internal int SingleAnimatorFastBehaviorIndex;
         internal bool SupportsFastParentAttachmentTick;
@@ -317,6 +320,9 @@ namespace Ludots.Core.Presentation.Performers
             StaticVisualVectorParamKeys = System.Array.Empty<int>();
             SupportsSingleVisualProxyFastEmit = false;
             SingleVisualProxyFastBehaviorIndex = -1;
+            RetainedHudBarBehaviorIndex = -1;
+            RetainedHudTextBehaviorIndex = -1;
+            HasRetainedWorldHudLanes = false;
             SupportsSingleAnimatorFastUpdate = false;
             SingleAnimatorFastBehaviorIndex = -1;
             System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>? attributeParamBindingMap = null;
@@ -561,21 +567,11 @@ namespace Ludots.Core.Presentation.Performers
                 AssetBehaviorIndices.Length == 1 &&
                 SupportsReplayableSingleRequest(Behaviors[AssetBehaviorIndices[0]].AssetBinding.AssetKind) &&
                 !RequestOutputDependsOnElapsed();
-            UsesRetainedPresentationRequest =
-                (SupportsSingleRequestReplay || HasSurfaceAuthoring) &&
-                DefaultLifetime <= 0f &&
-                PositionYDriftPerSecond == 0f &&
-                VisibilityCondition.GraphProgramId <= 0;
-            NeedsRetainedPresentationRequestLifecycleTick = UsesRetainedPresentationRequest;
-            SupportsSingleVisualProxyFastEmit =
-                AssetBehaviorIndices.Length == 1 &&
-                SupportsVisualProxyFastEmitFor(Behaviors[AssetBehaviorIndices[0]].AssetBinding);
-            SingleVisualProxyFastBehaviorIndex = SupportsSingleVisualProxyFastEmit
-                ? AssetBehaviorIndices[0]
-                : -1;
-            SupportsVisualProxyFastEmit =
-                AssetBehaviorIndices.Length != 0 &&
-                SupportsVisualProxyFastEmitForAll(Behaviors, AssetBehaviorIndices);
+            FinalizeCaches(
+                hasCacheableVisual,
+                hasDynamicVisualLane,
+                blocksEventDrivenStaticEmit,
+                ref SupportsSingleRequestReplay);
             SupportsSingleAnimatorFastUpdate =
                 HasAnimatorBehavior &&
                 AnimatorSlotMask != 0u &&
@@ -587,6 +583,105 @@ namespace Ludots.Core.Presentation.Performers
             SupportsFastParentAttachmentTick =
                 SupportsRetainedParentAttachmentFastTick(Behaviors, TickBehaviorIndices, out int fastParentAttachmentBehaviorIndex);
             FastParentAttachmentBehaviorIndex = fastParentAttachmentBehaviorIndex;
+        }
+
+        private void FinalizeCaches(
+            bool hasCacheableVisual,
+            bool hasDynamicVisualLane,
+            bool blocksEventDrivenStaticEmit,
+            ref bool supportsSingleRequestReplay)
+        {
+            RetainedHudBarBehaviorIndex = -1;
+            RetainedHudTextBehaviorIndex = -1;
+            HasRetainedWorldHudLanes = false;
+
+            int fastVisualCount = 0;
+            int fastVisualBehaviorIndex = -1;
+            int hudLaneCount = 0;
+            int nonHudNonFastVisualCount = 0;
+            for (int i = 0; i < AssetBehaviorIndices.Length; i++)
+            {
+                int behaviorIndex = AssetBehaviorIndices[i];
+                ref readonly AssetBindingConfig asset = ref Behaviors[behaviorIndex].AssetBinding;
+                switch (asset.AssetKind)
+                {
+                    case AssetKind.WorldHud:
+                        hudLaneCount++;
+                        if (RetainedHudBarBehaviorIndex < 0)
+                        {
+                            RetainedHudBarBehaviorIndex = behaviorIndex;
+                        }
+                        break;
+
+                    case AssetKind.WorldText:
+                        hudLaneCount++;
+                        if (RetainedHudTextBehaviorIndex < 0)
+                        {
+                            RetainedHudTextBehaviorIndex = behaviorIndex;
+                        }
+                        break;
+
+                    default:
+                        if (SupportsVisualProxyFastEmitFor(in asset))
+                        {
+                            fastVisualCount++;
+                            fastVisualBehaviorIndex = behaviorIndex;
+                        }
+                        else
+                        {
+                            nonHudNonFastVisualCount++;
+                        }
+                        break;
+                }
+            }
+
+            HasRetainedWorldHudLanes = RetainedHudBarBehaviorIndex >= 0 || RetainedHudTextBehaviorIndex >= 0;
+            bool hudLanesOnlyExtras = nonHudNonFastVisualCount == 0 &&
+                                      hudLaneCount + fastVisualCount == AssetBehaviorIndices.Length;
+
+            SupportsSingleVisualProxyFastEmit =
+                fastVisualCount == 1 &&
+                hudLanesOnlyExtras;
+            SingleVisualProxyFastBehaviorIndex = SupportsSingleVisualProxyFastEmit
+                ? fastVisualBehaviorIndex
+                : -1;
+
+            SupportsVisualProxyFastEmit =
+                AssetBehaviorIndices.Length != 0 &&
+                nonHudNonFastVisualCount == 0 &&
+                fastVisualCount + hudLaneCount == AssetBehaviorIndices.Length &&
+                (fastVisualCount == 0 || SupportsVisualProxyFastEmitForAllVisualAssets(Behaviors, AssetBehaviorIndices));
+
+            if (HasRetainedWorldHudLanes && fastVisualCount > 0)
+            {
+                supportsSingleRequestReplay = false;
+            }
+
+            UsesRetainedPresentationRequest =
+                (supportsSingleRequestReplay || HasSurfaceAuthoring) &&
+                DefaultLifetime <= 0f &&
+                PositionYDriftPerSecond == 0f &&
+                VisibilityCondition.GraphProgramId <= 0;
+            NeedsRetainedPresentationRequestLifecycleTick = UsesRetainedPresentationRequest;
+        }
+
+        private static bool SupportsVisualProxyFastEmitForAllVisualAssets(BehaviorSlot[] behaviors, int[] assetBehaviorIndices)
+        {
+            for (int i = 0; i < assetBehaviorIndices.Length; i++)
+            {
+                ref readonly AssetBindingConfig asset = ref behaviors[assetBehaviorIndices[i]].AssetBinding;
+                if (asset.AssetKind is AssetKind.WorldHud or AssetKind.WorldText)
+                {
+                    continue;
+                }
+
+                if (!SupportsVisualProxyFastEmitFor(in asset))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private bool RequestOutputDependsOnElapsed()

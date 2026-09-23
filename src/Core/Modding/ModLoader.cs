@@ -197,8 +197,6 @@ namespace Ludots.Core.Modding
             }
 
             ConfigureProcessSharedAssemblies(validatedMods.Select(item => item.Manifest));
-            _activePlanLoadContext = new ModLoadContext(ResolveSharedAssembly, _processSharedAssemblyNames);
-            _loadContexts.Add(_activePlanLoadContext);
 
             foreach (var item in validatedMods)
             {
@@ -358,10 +356,13 @@ namespace Ludots.Core.Modding
             if (!_modDirectories.TryGetValue(manifest.Name, out var modDir))
                 return;
 
-            // Look for DLL
+            bool hasPreloadedAssembly = TryResolvePreloadedAssembly(manifest.Name, out Assembly? preloadedAssembly);
+
+            // A statically linked host has no loose mod DLL. The manifest and mounted asset root
+            // remain authoritative; only the assembly source differs from a dynamic desktop host.
             var hasDll = TryResolveMainAssemblyPath(manifest, modDir, out var dllPath);
 
-            if (!hasDll)
+            if (!hasPreloadedAssembly && !hasDll)
             {
                 if (string.IsNullOrWhiteSpace(manifest.Main))
                 {
@@ -387,9 +388,9 @@ namespace Ludots.Core.Modding
                 {
                     dllPath = Path.GetFullPath(dllPath);
                     Assembly assembly;
-                    if (TryResolvePreloadedAssembly(manifest.Name, out Assembly? preloadedAssembly))
+                    if (hasPreloadedAssembly)
                     {
-                        assembly = preloadedAssembly;
+                        assembly = preloadedAssembly!;
                         CacheSharedAssembly(assembly);
                         Log.Info(in LogChannels.ModLoader, $"Reusing preloaded assembly for {manifest.Name}: {assembly.Location}");
                     }

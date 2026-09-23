@@ -81,11 +81,11 @@ namespace Ludots.Core.Presentation.Systems
                     return;
 
                 case AssetKind.WorldHud:
-                    EmitWorldHudAsset(entity, state.DefId, in state, in definition, in asset, lod, position, performerWorldScale, alpha);
+                    EmitWorldHudAsset(entity, state.DefId, in state, in definition, in asset, lod, position, performerWorldRotation, performerWorldScale, alpha);
                     return;
 
                 case AssetKind.WorldText:
-                    EmitWorldTextAsset(entity, state.DefId, in state, in definition, in asset, lod, position, performerWorldScale, alpha);
+                    EmitWorldTextAsset(entity, state.DefId, in state, in definition, in asset, lod, position, performerWorldRotation, performerWorldScale, alpha);
                     return;
 
                 case AssetKind.GroundOverlay:
@@ -454,7 +454,7 @@ namespace Ludots.Core.Presentation.Systems
             }, lod));
         }
 
-        private void EmitWorldHudAsset(Entity entity, int definitionId, in PerformerState state, in PerformerDefinition definition, in AssetBindingConfig asset, LODLevel lod, Vector3 position, Vector3 performerWorldScale, float alpha)
+        private void EmitWorldHudAsset(Entity entity, int definitionId, in PerformerState state, in PerformerDefinition definition, in AssetBindingConfig asset, LODLevel lod, Vector3 position, Quaternion performerWorldRotation, Vector3 performerWorldScale, float alpha)
         {
             if (TryGetRenderDebugState(out var debug) && !debug.DrawWorldHudBars)
             {
@@ -481,13 +481,14 @@ namespace Ludots.Core.Presentation.Systems
                 : 1f;
             float width = scale.X > 0f ? scale.X : 40f;
             float height = scale.Y > 0f ? scale.Y : 6f;
+            Vector3 assetPosition = ResolveAssetPosition(position, performerWorldRotation, performerWorldScale, in asset);
 
             _requests.Add(PresentationRequest.FromWorldHud(state.OwnerEntity, new WorldHudItem
             {
                 StableId = HudItemIdentity.ComposeStableId(state.StableId, WorldHudItemKind.Bar, definitionId),
                 DirtySerial = HudItemIdentity.ComposeBarDirtySerial(width, height, value, background, foreground),
                 Kind = WorldHudItemKind.Bar,
-                WorldPosition = position,
+                WorldPosition = assetPosition,
                 Value0 = value,
                 Width = width,
                 Height = height,
@@ -496,7 +497,7 @@ namespace Ludots.Core.Presentation.Systems
             }, phaseResult.LOD));
         }
 
-        private void EmitWorldTextAsset(Entity entity, int definitionId, in PerformerState state, in PerformerDefinition definition, in AssetBindingConfig asset, LODLevel lod, Vector3 position, Vector3 performerWorldScale, float alpha)
+        private void EmitWorldTextAsset(Entity entity, int definitionId, in PerformerState state, in PerformerDefinition definition, in AssetBindingConfig asset, LODLevel lod, Vector3 position, Quaternion performerWorldRotation, Vector3 performerWorldScale, float alpha)
         {
             if (TryGetRenderDebugState(out var debug) && !debug.DrawWorldHudText)
             {
@@ -533,13 +534,14 @@ namespace Ludots.Core.Presentation.Systems
             int fontSize = definition.DefaultFontSize > 0 ? definition.DefaultFontSize : 16;
             int stringTableId = valueMode == WorldHudValueMode.None ? tokenId : 0;
             PresentationTextPacket packet = PresentationTextPacket.FromWorldHudValueMode(tokenId, valueMode, value0, value1);
+            Vector3 assetPosition = ResolveAssetPosition(position, performerWorldRotation, performerWorldScale, in asset);
 
             _requests.Add(PresentationRequest.FromWorldHud(state.OwnerEntity, new WorldHudItem
             {
                 StableId = HudItemIdentity.ComposeStableId(state.StableId, WorldHudItemKind.Text, definitionId),
                 DirtySerial = HudItemIdentity.ComposeTextDirtySerial(fontSize, stringTableId, (int)valueMode, value0, value1, color, packet),
                 Kind = WorldHudItemKind.Text,
-                WorldPosition = position,
+                WorldPosition = assetPosition,
                 Value0 = value0,
                 Value1 = value1,
                 Id0 = stringTableId,

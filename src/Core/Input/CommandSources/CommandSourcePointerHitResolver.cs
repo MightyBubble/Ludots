@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using Arch.Core;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Scripting;
@@ -37,47 +38,86 @@ namespace Ludots.Core.Input.CommandSources
             Entity best = Entity.Null;
             ScreenRect bestBounds = default;
             bool hasBestBounds = false;
+            bool requiresKnowledgeProjection = Ludots.Core.Knowledge.KnowledgeProjectionConsumer.HasResolver(globals);
+            ProjectionSnapshot projectionSnapshot = default;
+            bool hasProjectionSnapshot = projector is IProjectionSnapshotProvider snapshotProvider &&
+                                         snapshotProvider.TryGetProjectionSnapshot(out projectionSnapshot);
+            float radiusSquared = radiusPixels * radiusPixels;
 
-            world.Query(in SelectableQuery, (Entity entity, ref VisualTransform transform, ref CullState cull, ref CommandSourceSelectableTag selectable) =>
+            foreach (ref var chunk in world.Query(in SelectableQuery))
             {
-                if (!cull.IsVisible)
-                {
-                    return;
-                }
+                ref Entity entityFirst = ref chunk.Entity(0);
+                Span<VisualTransform> transforms = chunk.GetSpan<VisualTransform>();
+                Span<CullState> culls = chunk.GetSpan<CullState>();
+                bool hasSelectableState = chunk.Has<CommandSourceSelectableState>();
+                Span<CommandSourceSelectableState> selectableStates = hasSelectableState
+                    ? chunk.GetSpan<CommandSourceSelectableState>()
+                    : default;
+                bool hasSpatialBounds = chunk.Has<SpatialBounds>();
 
-                if (!CommandSourceEligibility.CanInspectLive(world, globals, owner, entity))
+                foreach (int index in chunk)
                 {
-                    return;
-                }
+                    if (!culls[index].IsVisible ||
+                        (hasSelectableState && !selectableStates[index].Enabled))
+                    {
+                        continue;
+                    }
 
-                if (!SpatialBoundsUtility.PointerHitsEntity(world, entity, projector, pointer, radiusPixels))
-                {
-                    return;
-                }
+                    Entity entity = Unsafe.Add(ref entityFirst, index);
+                    if (requiresKnowledgeProjection &&
+                        !CommandSourceEligibility.CanInspectLive(world, globals, owner, entity))
+                    {
+                        continue;
+                    }
 
-                if (!SpatialBoundsUtility.TryProjectScreenBounds(world, entity, projector, out ScreenRect candidateBounds))
-                {
-                    return;
-                }
+                    ScreenRect candidateBounds;
+                    if (!hasSpatialBounds)
+                    {
+                        Vector3 worldPosition = transforms[index].Position;
+                        Vector2 projected = hasProjectionSnapshot
+                            ? ProjectionSnapshotMath.WorldToScreen(in projectionSnapshot, in worldPosition)
+                            : projector.WorldToScreen(worldPosition);
+                        if (!IsFinite(projected) || Vector2.DistanceSquared(projected, pointer) > radiusSquared)
+                        {
+                            continue;
+                        }
 
-                if (!hasBestBounds)
-                {
-                    best = entity;
-                    bestBounds = candidateBounds;
-                    hasBestBounds = true;
-                    return;
-                }
+                        candidateBounds = new ScreenRect(projected.X, projected.Y, projected.X, projected.Y);
+                    }
+                    else
+                    {
+                        if (!SpatialBoundsUtility.PointerHitsEntity(world, entity, projector, pointer, radiusPixels) ||
+                            !SpatialBoundsUtility.TryProjectScreenBounds(world, entity, projector, out candidateBounds))
+                        {
+                            continue;
+                        }
+                    }
 
-                int boundsComparison = CompareProjectedBounds(candidateBounds, bestBounds, pointer);
-                if (boundsComparison < 0 ||
-                    (boundsComparison == 0 && (best == Entity.Null || Compare(entity, best) < 0)))
-                {
-                    best = entity;
-                    bestBounds = candidateBounds;
+                    if (!hasBestBounds)
+                    {
+                        best = entity;
+                        bestBounds = candidateBounds;
+                        hasBestBounds = true;
+                        continue;
+                    }
+
+                    int boundsComparison = CompareProjectedBounds(candidateBounds, bestBounds, pointer);
+                    if (boundsComparison < 0 ||
+                        (boundsComparison == 0 && (best == Entity.Null || Compare(entity, best) < 0)))
+                    {
+                        best = entity;
+                        bestBounds = candidateBounds;
+                    }
                 }
-            });
+            }
 
             return best;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool IsFinite(Vector2 value)
+        {
+            return float.IsFinite(value.X) && float.IsFinite(value.Y);
         }
 
         private static int CompareProjectedBounds(in ScreenRect candidate, in ScreenRect best, Vector2 pointer)

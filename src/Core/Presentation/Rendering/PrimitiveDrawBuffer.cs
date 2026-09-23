@@ -53,7 +53,10 @@ namespace Ludots.Core.Presentation.Rendering
             if (item.RenderPath.IsStaticInstanceLane())
             {
                 _staticMeshLaneItemCount++;
-                _staticSlotByStableId[item.StableId] = slot;
+                if (item.Mobility == VisualMobility.Static)
+                {
+                    _staticSlotByStableId[item.StableId] = slot;
+                }
             }
             else if (item.RenderPath.IsSkinnedLane())
             {
@@ -115,7 +118,7 @@ namespace Ludots.Core.Presentation.Rendering
             {
                 PrimitiveDrawItem moved = _buffer[last];
                 _buffer[slot] = moved;
-                if (moved.RenderPath.IsStaticInstanceLane())
+                if (moved.RenderPath.IsStaticInstanceLane() && moved.Mobility == VisualMobility.Static)
                 {
                     _staticSlotByStableId[moved.StableId] = slot;
                 }

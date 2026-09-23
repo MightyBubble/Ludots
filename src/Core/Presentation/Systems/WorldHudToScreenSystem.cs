@@ -104,12 +104,6 @@ namespace Ludots.Core.Presentation.Systems
             ProjectionSnapshot projectionSnapshot = default;
             bool hasProjectionSnapshot = _projector is IProjectionSnapshotProvider snapshotProvider &&
                                          snapshotProvider.TryGetProjectionSnapshot(out projectionSnapshot);
-            System.Numerics.Matrix4x4 viewProjection = hasProjectionSnapshot
-                ? projectionSnapshot.ViewProjection
-                : default;
-            float projectionWidth = hasProjectionSnapshot ? projectionSnapshot.Resolution.X : 0f;
-            float projectionHeight = hasProjectionSnapshot ? projectionSnapshot.Resolution.Y : 0f;
-
             bool useCoarseCull = _cullingDebug != null && _cullingDebug.MaxX > _cullingDebug.MinX && _cullingDebug.MaxY > _cullingDebug.MinY;
             float minX = useCoarseCull ? _cullingDebug!.MinX - ProjectionCoarseMarginCm : 0f;
             float maxX = useCoarseCull ? _cullingDebug!.MaxX + ProjectionCoarseMarginCm : 0f;
@@ -145,7 +139,7 @@ namespace Ludots.Core.Presentation.Systems
                 if (!TryGetOwnerFrameProjection(first.Owner, first.WorldPosition, out screen))
                 {
                     screen = hasProjectionSnapshot
-                        ? ProjectWorldToScreenFast(first.WorldPosition, in viewProjection, projectionWidth, projectionHeight)
+                        ? ProjectionSnapshotMath.WorldToScreen(in projectionSnapshot, in first.WorldPosition)
                         : _projector.WorldToScreen(first.WorldPosition);
                     if (!float.IsNaN(screen.X) &&
                         !float.IsNaN(screen.Y) &&
@@ -489,34 +483,6 @@ namespace Ludots.Core.Presentation.Systems
         private static bool IsAssignedOwner(Entity owner)
         {
             return owner.Id >= 0 && owner.Version > 0;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static System.Numerics.Vector2 ProjectWorldToScreenFast(
-            in System.Numerics.Vector3 worldPosition,
-            in System.Numerics.Matrix4x4 matrix,
-            float resolutionX,
-            float resolutionY)
-        {
-            float clipX = (worldPosition.X * matrix.M11) + (worldPosition.Y * matrix.M21) + (worldPosition.Z * matrix.M31) + matrix.M41;
-            float clipY = (worldPosition.X * matrix.M12) + (worldPosition.Y * matrix.M22) + (worldPosition.Z * matrix.M32) + matrix.M42;
-            float clipW = (worldPosition.X * matrix.M14) + (worldPosition.Y * matrix.M24) + (worldPosition.Z * matrix.M34) + matrix.M44;
-            if (clipW <= 0.001f)
-            {
-                return new System.Numerics.Vector2(float.NaN, float.NaN);
-            }
-
-            float invW = 1f / clipW;
-            float ndcX = clipX * invW;
-            float ndcY = clipY * invW;
-            if (ndcX < -1f || ndcX > 1f || ndcY < -1f || ndcY > 1f)
-            {
-                return new System.Numerics.Vector2(float.NaN, float.NaN);
-            }
-
-            float screenX = (ndcX + 1f) * 0.5f * resolutionX;
-            float screenY = (1f - ndcY) * 0.5f * resolutionY;
-            return new System.Numerics.Vector2(screenX, screenY);
         }
 
         private void AdvanceFrameCacheStamp()

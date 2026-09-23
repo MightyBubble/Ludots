@@ -7,6 +7,8 @@ namespace Ludots.Core.Presentation.Performers
     {
         public int CachedVersion;
         public Vector3 LastEmitPosition;
+        public int RetainedBarBufferIndexPlusOne;
+        public int RetainedTextBufferIndexPlusOne;
         public byte LastOwnerCullVisible;
         public byte LastDefinitionVisible;
         public byte StableVisualPresent;

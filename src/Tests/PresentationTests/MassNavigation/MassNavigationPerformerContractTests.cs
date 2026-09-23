@@ -73,39 +73,43 @@ namespace Ludots.Tests.Presentation
             string modRoot = MassNavigationModRoot();
             JsonArray performers = ReadArray(Path.Combine(modRoot, "assets", "Presentation", "performers.json"));
 
-            AssertDefinitionHasChild(
-                FindObjectById(performers, "mass_navigation_agent_light"),
+            JsonObject lightAgent = FindObjectById(performers, "mass_navigation_agent_light");
+            JsonObject heavyAgent = FindObjectById(performers, "mass_navigation_agent_heavy");
+            AssertDefinitionHasNoHealthHudChildren(lightAgent, "mass_navigation_agent_light");
+            AssertDefinitionHasNoHealthHudChildren(heavyAgent, "mass_navigation_agent_heavy");
+
+            AssertAgentParentHealthBarBinding(
+                lightAgent,
                 "mass_navigation_agent_light",
-                "mass_navigation_agent_health_hud_light");
-            AssertDefinitionHasChild(
-                FindObjectById(performers, "mass_navigation_agent_light"),
+                expectedWidth: 42f,
+                expectedHeight: 5f,
+                expectedOffsetY: 1.25f);
+            AssertAgentParentHealthTextBinding(
+                lightAgent,
                 "mass_navigation_agent_light",
-                "mass_navigation_agent_health_text_light");
-            AssertDefinitionHasChild(
-                FindObjectById(performers, "mass_navigation_agent_heavy"),
+                expectedFontSize: 11,
+                expectedOffsetY: 1.42f);
+            AssertAgentParentHealthBindings(lightAgent, "mass_navigation_agent_light");
+
+            AssertAgentParentHealthBarBinding(
+                heavyAgent,
                 "mass_navigation_agent_heavy",
-                "mass_navigation_agent_health_hud_heavy");
-            AssertDefinitionHasChild(
-                FindObjectById(performers, "mass_navigation_agent_heavy"),
+                expectedWidth: 58f,
+                expectedHeight: 6f,
+                expectedOffsetY: 1.55f);
+            AssertAgentParentHealthTextBinding(
+                heavyAgent,
                 "mass_navigation_agent_heavy",
-                "mass_navigation_agent_health_text_heavy");
+                expectedFontSize: 12,
+                expectedOffsetY: 1.76f);
+            AssertAgentParentHealthBindings(heavyAgent, "mass_navigation_agent_heavy");
 
-            JsonObject lightHud = FindObjectById(performers, "mass_navigation_agent_health_hud_light");
-            AssertHudDefinitionUsesHealthRatio(lightHud, "mass_navigation_agent_health_hud_light", expectedWidth: 42f, expectedHeight: 5f);
-
-            JsonObject heavyHud = FindObjectById(performers, "mass_navigation_agent_health_hud_heavy");
-            Assert.That(RequireString(heavyHud, "extends"), Is.EqualTo("mass_navigation_agent_health_hud_light"),
-                "Heavy HUD should inherit the same Health ratio binding instead of duplicating a second binding source.");
-            AssertHudWorldHudBinding(heavyHud, "mass_navigation_agent_health_hud_heavy", expectedWidth: 58f, expectedHeight: 6f);
-
-            AssertWorldTextDefinitionUsesHealthCurrentOverBase(
-                FindObjectById(performers, "mass_navigation_agent_health_text_light"),
-                "mass_navigation_agent_health_text_light",
-                expectedFontSize: 11);
-            JsonObject heavyText = FindObjectById(performers, "mass_navigation_agent_health_text_heavy");
-            Assert.That(RequireString(heavyText, "extends"), Is.EqualTo("mass_navigation_agent_health_text_light"),
-                "Heavy text should inherit the same Health current/base binding instead of duplicating a second binding source.");
-            AssertWorldTextBinding(heavyText, "mass_navigation_agent_health_text_heavy", expectedFontSize: 12);
+            Assert.That(
+                performers.Select(node => node?["id"]?.GetValue<string>()).ToArray(),
+                Does.Not.Contain("mass_navigation_agent_health_hud_light"));
+            Assert.That(
+                performers.Select(node => node?["id"]?.GetValue<string>()).ToArray(),
+                Does.Not.Contain("mass_navigation_agent_health_text_light"));
         }
 
         [Test]
@@ -697,6 +701,85 @@ namespace Ludots.Tests.Presentation
                 children.Select(node => node?["definitionId"]?.GetValue<string>()).ToArray(),
                 Does.Contain(childDefinitionId),
                 $"Performer '{definitionId}' must attach '{childDefinitionId}' through performer children.");
+        }
+
+        private static void AssertDefinitionHasNoHealthHudChildren(JsonObject definition, string definitionId)
+        {
+            JsonArray? children = definition["children"]?.AsArray();
+            if (children == null || children.Count == 0)
+            {
+                return;
+            }
+
+            string[] childIds = children
+                .Select(node => node?["definitionId"]?.GetValue<string>() ?? string.Empty)
+                .ToArray();
+            Assert.That(childIds, Does.Not.Contain("mass_navigation_agent_health_hud_light"));
+            Assert.That(childIds, Does.Not.Contain("mass_navigation_agent_health_text_light"));
+            Assert.That(childIds, Does.Not.Contain("mass_navigation_agent_health_hud_heavy"));
+            Assert.That(childIds, Does.Not.Contain("mass_navigation_agent_health_text_heavy"));
+        }
+
+        private static void AssertAgentParentHealthBindings(JsonObject definition, string definitionId)
+        {
+            JsonArray bindings = definition["bindings"]?.AsArray()
+                ?? throw new InvalidOperationException($"Agent performer '{definitionId}' must declare Health bindings.");
+            AssertBinding(bindings, HealthRatioParamKey, "attributeRatio", AgentHealthAttributeName);
+            AssertBinding(bindings, HealthCurrentParamKey, "attribute", AgentHealthAttributeName);
+            AssertBinding(bindings, HealthBaseParamKey, "attributeBase", AgentHealthAttributeName);
+        }
+
+        private static void AssertBinding(JsonArray bindings, string paramKey, string expectedSource, string expectedAttributeId)
+        {
+            JsonObject binding = bindings
+                .Select(node => node?.AsObject())
+                .FirstOrDefault(obj => obj?["paramKey"]?.GetValue<string>() == paramKey)
+                ?? throw new InvalidOperationException($"Expected binding for param '{paramKey}'.");
+            Assert.That(binding["source"]?.GetValue<string>(), Is.EqualTo(expectedSource));
+            Assert.That(binding["attributeId"]?.GetValue<string>(), Is.EqualTo(expectedAttributeId));
+        }
+
+        private static void AssertAgentParentHealthBarBinding(
+            JsonObject definition,
+            string definitionId,
+            float expectedWidth,
+            float expectedHeight,
+            float expectedOffsetY)
+        {
+            JsonObject assetBinding = FindAssetBindingBySlot(definition, definitionId, "hud_bar");
+            Assert.That(assetBinding["assetKind"]?.GetValue<string>(), Is.EqualTo("WorldHud"));
+            Assert.That(assetBinding["materialParamKey"]?.GetValue<string>(), Is.EqualTo(HealthRatioParamKey));
+            Assert.That(assetBinding["colorParamKey"]?.GetValue<string>(), Is.EqualTo("massNavigation.agent.health.barColor"));
+            AssertVector3(assetBinding["localScale"]?.AsArray(), expectedWidth, expectedHeight, 1f, $"Agent '{definitionId}' health bar scale");
+            AssertVector3(assetBinding["localOffset"]?.AsArray(), 0f, expectedOffsetY, 0f, $"Agent '{definitionId}' health bar offset");
+        }
+
+        private static void AssertAgentParentHealthTextBinding(
+            JsonObject definition,
+            string definitionId,
+            int expectedFontSize,
+            float expectedOffsetY)
+        {
+            Assert.That(definition["worldTextMode"]?.GetValue<string>(), Is.EqualTo("AttributeCurrentOverBase"));
+            Assert.That(definition["defaultFontSize"]?.GetValue<int>(), Is.EqualTo(expectedFontSize));
+
+            JsonObject assetBinding = FindAssetBindingBySlot(definition, definitionId, "hud_text");
+            Assert.That(assetBinding["assetKind"]?.GetValue<string>(), Is.EqualTo("WorldText"));
+            Assert.That(assetBinding["assetId"]?.GetValue<string>(), Is.EqualTo("hud.attribute.current_over_base"));
+            Assert.That(assetBinding["scaleParamKey"]?.GetValue<string>(), Is.EqualTo(HealthCurrentParamKey));
+            Assert.That(assetBinding["materialParamKey"]?.GetValue<string>(), Is.EqualTo(HealthBaseParamKey));
+            Assert.That(assetBinding["colorParamKey"]?.GetValue<string>(), Is.EqualTo("massNavigation.agent.health.textColor"));
+            AssertVector3(assetBinding["localOffset"]?.AsArray(), 0f, expectedOffsetY, 0f, $"Agent '{definitionId}' health text offset");
+        }
+
+        private static JsonObject FindAssetBindingBySlot(JsonObject definition, string definitionId, string slotName)
+        {
+            JsonArray behaviors = definition["behaviors"]?.AsArray()
+                ?? throw new InvalidOperationException($"Performer '{definitionId}' must declare behaviors.");
+            return behaviors
+                .Select(node => node?.AsObject())
+                .FirstOrDefault(obj => string.Equals(obj?["slot"]?.GetValue<string>(), slotName, StringComparison.Ordinal))?["assetBinding"]?.AsObject()
+                ?? throw new InvalidOperationException($"Performer '{definitionId}' must declare slot '{slotName}'.");
         }
 
         private static void AssertHudDefinitionUsesHealthRatio(JsonObject definition, string definitionId, float expectedWidth, float expectedHeight)

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080d11">
+  <title>Ludots WebGPU Native</title>
+  <link rel="stylesheet" href="./app.css">
+</head>
+<body>
+  <main>
+    <canvas id="canvas" width="1280" height="720" aria-label="Ludots WebGPU canvas"></canvas>
+    <header>
+      <strong>Ludots</strong>
+      <span>Native WebGPU</span>
+      <span id="boot-status" role="status">Starting C# runtime</span>
+    </header>
+  </main>
+  <noscript>This application requires WebAssembly and JavaScript to load the .NET runtime.</noscript>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

@@ -4171,6 +4171,11 @@ namespace Ludots.Core.Presentation.Performers
             }
 
             ref PerformerEmitCache emitCache = ref _world.Get<PerformerEmitCache>(performer);
+            ClearStaticDirty(ref emitCache);
+        }
+
+        public void ClearStaticDirty(ref PerformerEmitCache emitCache)
+        {
             if (emitCache.StaticDirty == 0)
             {
                 if (emitCache.RetainedDirty == 0)
@@ -4323,15 +4328,27 @@ namespace Ludots.Core.Presentation.Performers
                 MarkStaticDirty(ref emitCache);
             }
 
-            if (_world.Has<PerfRetainedPresentationRequest>(performer) &&
-                MarkRetainedPresentationRequestDirty(ref emitCache))
+            if (_world.Has<PerfRetainedPresentationRequest>(performer))
             {
-                AppendRetainedPresentationDirtyEntity(performer);
+                if (MarkRetainedPresentationRequestDirty(ref emitCache))
+                {
+                    AppendRetainedPresentationDirtyEntity(performer);
+                }
             }
 
             if (_world.Has<PerformerState>(performer))
             {
                 EnsureRequestBackedEmitWorkScheduled(performer);
+            }
+        }
+
+        public void MarkKnownRetainedTransformDrivenEmitDirty(
+            Entity performer,
+            ref PerformerEmitCache emitCache)
+        {
+            if (MarkRetainedPresentationRequestDirty(ref emitCache))
+            {
+                AppendRetainedPresentationDirtyEntity(performer);
             }
         }
 

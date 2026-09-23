@@ -77,23 +77,8 @@ namespace Ludots.Core.Presentation.Camera
         public Vector2 WorldToScreen(Vector3 worldPosition)
         {
             EnsureProjectionCache();
-
-            var clip = Vector4.Transform(new Vector4(worldPosition, 1f), _viewProjection);
-            if (clip.W <= 0.001f)
-            {
-                return new Vector2(float.NaN, float.NaN);
-            }
-
-            float ndcX = clip.X / clip.W;
-            float ndcY = clip.Y / clip.W;
-            if (ndcX < -1f || ndcX > 1f || ndcY < -1f || ndcY > 1f)
-            {
-                return new Vector2(float.NaN, float.NaN);
-            }
-
-            float screenX = (ndcX + 1f) * 0.5f * _cachedResolution.X;
-            float screenY = (1f - ndcY) * 0.5f * _cachedResolution.Y;
-            return new Vector2(screenX, screenY);
+            var snapshot = new ProjectionSnapshot(_viewProjection, _cachedResolution);
+            return ProjectionSnapshotMath.WorldToScreen(in snapshot, in worldPosition);
         }
 
         private void EnsureProjectionCache()

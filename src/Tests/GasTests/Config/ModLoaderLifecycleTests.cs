@@ -7,6 +7,7 @@ using System.Runtime.Loader;
 using NUnit.Framework;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
+using MassNavigationMod;
 
 namespace GasTests
 {
@@ -128,6 +129,41 @@ namespace GasTests
                 Assert.That(ex!.Message, Does.Contain("does not match manifest 'StrictCaseMod'"));
                 Assert.That(loader.LoadedModIds, Is.Empty);
                 Assert.That(vfs.TryResolveFullPath("StrictCaseMod:mod.json", out _), Is.False);
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
+        [Test]
+        public void LoadResolvedPlan_PreloadedCodeMod_DoesNotRequireLooseDll()
+        {
+            GC.KeepAlive(typeof(MassNavigationModEntry).Assembly);
+            var tempRoot = CreateTempDir();
+            try
+            {
+                var modDir = Path.Combine(tempRoot, "MassNavigationMod");
+                Directory.CreateDirectory(modDir);
+                File.WriteAllText(Path.Combine(modDir, "mod.json"), """
+                {
+                  "name": "MassNavigationMod",
+                  "version": "1.0.0",
+                  "main": "bin/net8.0/MassNavigationMod.dll",
+                  "dependencies": {}
+                }
+                """);
+
+                var vfs = new VirtualFileSystem();
+                var loader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+
+                loader.LoadResolvedPlan(new[]
+                {
+                    new Ludots.Core.Hosting.ResolvedModLoadEntry("MassNavigationMod", modDir)
+                });
+
+                Assert.That(loader.LoadedModIds, Is.EqualTo(new[] { "MassNavigationMod" }));
+                Assert.That(vfs.TryResolveFullPath("MassNavigationMod:mod.json", out _), Is.True);
             }
             finally
             {

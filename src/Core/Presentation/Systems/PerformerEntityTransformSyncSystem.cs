@@ -197,6 +197,7 @@ namespace Ludots.Core.Presentation.Systems
                      !World.Has<PerfHasAttachmentTick>(child)) ||
                     !World.Has<PerformerState>(child) ||
                     !World.Has<PerformerParent>(child) ||
+                    !World.Has<PerformerEmitCache>(child) ||
                     World.Get<PerformerParent>(child).Parent != parent)
                 {
                     continue;
@@ -216,14 +217,60 @@ namespace Ludots.Core.Presentation.Systems
                     continue;
                 }
 
+                bool markEmitDirty = ShouldMarkAttachedChildEmitDirty(child, in state, definition);
+                ref PerformerEmitCache emitCache = ref World.Get<PerformerEmitCache>(child);
                 ApplyFastParentAttachment(
                     child,
                     in slot.Attachment,
                     in parentPosition,
                     in parentRotation,
                     in parentFacing,
-                    in parentScale);
+                    in parentScale,
+                    ref emitCache,
+                    markEmitDirty);
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool ShouldMarkAttachedChildEmitDirty(
+            Entity child,
+            in PerformerState state,
+            PerformerDefinition definition)
+        {
+            if (!World.Has<PerformerCullState>(child))
+            {
+                return true;
+            }
+
+            ref readonly PerformerCullState cull = ref World.Get<PerformerCullState>(child);
+            if (!cull.OwnerCullVisible || cull.LOD == LODLevel.Culled)
+            {
+                return false;
+            }
+
+            int[] assetBehaviorIndices = definition.AssetBehaviorIndices;
+            if (assetBehaviorIndices.Length == 0)
+            {
+                return true;
+            }
+
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            for (int i = 0; i < assetBehaviorIndices.Length; i++)
+            {
+                ref readonly BehaviorSlot assetSlot = ref behaviors[assetBehaviorIndices[i]];
+                if (!IsBehaviorActive(state.BehaviorActiveMask, assetSlot.SlotIndex))
+                {
+                    continue;
+                }
+
+                ref readonly AssetBindingConfig asset = ref assetSlot.AssetBinding;
+                if (!asset.HasMaxLod || cull.LOD <= asset.MaxLod)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void ApplyFastParentAttachment(
@@ -232,7 +279,9 @@ namespace Ludots.Core.Presentation.Systems
             in Vector3 parentPosition,
             in Quaternion parentRotation,
             in PerformerWorldFacing parentFacing,
-            in Vector3 parentScale)
+            in Vector3 parentScale,
+            ref PerformerEmitCache emitCache,
+            bool markEmitDirty)
         {
             if (!World.Has<PerformerTransformSource>(child) ||
                 !World.Has<PerformerWorldPosition>(child) ||
@@ -244,16 +293,16 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            Quaternion normalizedParentRotation = WorldPlane2D.NormalizeOrIdentity(parentRotation);
-            Vector3 normalizedParentScale = WorldPlane2D.NormalizeScale(parentScale);
             Vector3 scaledOffset = config.InheritScale
-                ? normalizedParentScale * config.Offset
+                ? parentScale * config.Offset
                 : config.Offset;
-            Vector3 nextPosition = parentPosition + Vector3.Transform(scaledOffset, normalizedParentRotation);
+            Vector3 nextPosition = parentPosition + Vector3.Transform(scaledOffset, parentRotation);
             Vector2 nextPlanePosition = WorldPlane2D.VisualMetersToLogicCm(in nextPosition);
-            Quaternion nextRotation = WorldPlane2D.NormalizeOrIdentity(
-                normalizedParentRotation * WorldPlane2D.NormalizeOrIdentity(config.RotationOffset));
-            Vector3 nextScale = config.InheritScale ? normalizedParentScale : Vector3.One;
+            Quaternion nextRotation = config.RotationOffset == Quaternion.Identity
+                ? parentRotation
+                : WorldPlane2D.NormalizeOrIdentity(
+                    parentRotation * WorldPlane2D.NormalizeOrIdentity(config.RotationOffset));
+            Vector3 nextScale = config.InheritScale ? parentScale : Vector3.One;
 
             ref PerformerTransformSource source = ref World.Get<PerformerTransformSource>(child);
             ref PerformerWorldPosition position = ref World.Get<PerformerWorldPosition>(child);
@@ -280,7 +329,10 @@ namespace Ludots.Core.Presentation.Systems
             rotation.Value = nextRotation;
             facing = parentFacing;
             scale.Value = nextScale;
-            MarkEmitDirty(child);
+            if (markEmitDirty)
+            {
+                _runtime.MarkKnownRetainedTransformDrivenEmitDirty(child, ref emitCache);
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

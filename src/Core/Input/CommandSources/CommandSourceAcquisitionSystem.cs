@@ -29,8 +29,11 @@ namespace Ludots.Core.Input.CommandSources
         private readonly CommandSourceAcquisitionConfig _config;
         private readonly Ludots.Core.Gameplay.Teams.RelationshipFilter _targetRelationFilter;
         private readonly EntityCollectionStore _entityCollections;
+        private readonly string _hoverTitle;
         private Entity[] _boxAcquisitionScratch = new Entity[16];
         private Entity[] _commandSourceScratch = new Entity[16];
+        private Entity _lastHoverOwner = Entity.Null;
+        private Entity _lastHoveredEntity = Entity.Null;
         private bool _suppressConfirmRelease;
 
         public Action<WorldCmInt2, Entity>? OnEntityAcquired { get; set; }
@@ -49,6 +52,7 @@ namespace Ludots.Core.Input.CommandSources
             _targetRelationFilter = (_config.TargetFilter ?? throw new InvalidOperationException(
                 "commandSource.targetFilter must be explicitly configured.")).ParseRelationFilter();
             _entityCollections = entityCollections ?? throw new ArgumentNullException(nameof(entityCollections));
+            _hoverTitle = ResolveHoverTitle(_config);
         }
 
         public CommandSourceAcquisitionSystem(
@@ -72,6 +76,7 @@ namespace Ludots.Core.Input.CommandSources
             _targetRelationFilter = (_config.TargetFilter ?? throw new InvalidOperationException(
                 "commandSource.targetFilter must be explicitly configured.")).ParseRelationFilter();
             _entityCollections = ResolveEntityCollectionStore(globals);
+            _hoverTitle = ResolveHoverTitle(_config);
         }
 
         public void Initialize() { }
@@ -199,27 +204,34 @@ namespace Ludots.Core.Input.CommandSources
 
         private void UpdateHoveredEntity(Entity owner, Entity hovered)
         {
-            CommandSourceAcquisitionCollectionConfig acquisition = _config.Acquisition
-                ?? throw new InvalidOperationException("commandSource.acquisition must be explicitly configured.");
+            Entity liveHovered = _world.IsAlive(hovered) ? hovered : Entity.Null;
+            if (_lastHoverOwner == owner && _lastHoveredEntity == liveHovered)
+            {
+                return;
+            }
 
             var descriptor = EntityCollectionDescriptor.Create(
                 EntityCollectionKeys.HoveredEntity,
                 EntityCollectionSourceKind.UiHover,
                 EntityCollectionRoleKind.Display,
                 owner,
-                _world.IsAlive(hovered) ? hovered : Entity.Null,
-                string.IsNullOrWhiteSpace(acquisition.Title) ? "Hover target" : $"{acquisition.Title} hover",
-                _world.IsAlive(hovered) ? "hover" : "hover-empty");
+                liveHovered,
+                _hoverTitle,
+                liveHovered != Entity.Null ? "hover" : "hover-empty");
 
-            if (_world.IsAlive(hovered))
+            if (liveHovered != Entity.Null)
             {
                 Span<Entity> single = stackalloc Entity[1];
-                single[0] = hovered;
+                single[0] = liveHovered;
                 _entityCollections.Replace(owner, descriptor, single);
-                return;
+            }
+            else
+            {
+                _entityCollections.Replace(owner, descriptor, ReadOnlySpan<Entity>.Empty);
             }
 
-            _entityCollections.Replace(owner, descriptor, ReadOnlySpan<Entity>.Empty);
+            _lastHoverOwner = owner;
+            _lastHoveredEntity = liveHovered;
         }
 
         private void ApplyClickAcquisition(Entity owner, Entity clicked, CommandSourceAcquisitionMode acquisitionMode)
@@ -509,6 +521,15 @@ namespace Ludots.Core.Input.CommandSources
             }
 
             return value.Trim();
+        }
+
+        private static string ResolveHoverTitle(CommandSourceAcquisitionConfig config)
+        {
+            CommandSourceAcquisitionCollectionConfig acquisition = config.Acquisition
+                ?? throw new InvalidOperationException("commandSource.acquisition must be explicitly configured.");
+            return string.IsNullOrWhiteSpace(acquisition.Title)
+                ? "Hover target"
+                : string.Concat(acquisition.Title, " hover");
         }
     }
 }

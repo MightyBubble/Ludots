@@ -43,46 +43,38 @@ namespace Ludots.Core.Presentation.Hud
         {
             if (item.StableId > 0 && _retainedIndexByStableId.TryGetValue(item.StableId, out int existingIndex))
             {
-                if (WorldHudItemEquals(in _buffer[existingIndex], in item))
-                {
-                    return true;
-                }
-
-                if (!WorldHudProjectionEquals(in _buffer[existingIndex], in item))
-                {
-                    ProjectionRevision++;
-                }
-                else
-                {
-                    AddDirtyContent(in item);
-                    ContentOnlyRevision++;
-                }
-
-                _buffer[existingIndex] = item;
-                ContentRevision++;
-                return true;
+                return UpdateRetainedAt(existingIndex, in item);
             }
 
-            if (_count >= _buffer.Length)
+            return TryAppend(in item, out _);
+        }
+
+        public bool TryAdd(in WorldHudItem item, ref int retainedIndexPlusOne)
+        {
+            if (item.StableId <= 0)
             {
-                DroppedSinceClear++;
-                DroppedTotal++;
+                throw new ArgumentException("Hinted world HUD insertion requires a positive stable ID.", nameof(item));
+            }
+
+            int hintedIndex = retainedIndexPlusOne - 1;
+            if ((uint)hintedIndex < (uint)_count && _buffer[hintedIndex].StableId == item.StableId)
+            {
+                return UpdateRetainedAt(hintedIndex, in item);
+            }
+
+            if (_retainedIndexByStableId.TryGetValue(item.StableId, out int existingIndex))
+            {
+                retainedIndexPlusOne = existingIndex + 1;
+                return UpdateRetainedAt(existingIndex, in item);
+            }
+
+            if (!TryAppend(in item, out int appendedIndex))
+            {
+                retainedIndexPlusOne = 0;
                 return false;
             }
 
-            int index = _count++;
-            _buffer[index] = item;
-            if (item.StableId > 0)
-            {
-                _retainedIndexByStableId[item.StableId] = index;
-            }
-            else
-            {
-                _transientCount++;
-            }
-
-            ContentRevision++;
-            ProjectionRevision++;
+            retainedIndexPlusOne = appendedIndex + 1;
             return true;
         }
 
@@ -109,6 +101,12 @@ namespace Ludots.Core.Presentation.Hud
             AddRemovedStableId(stableId);
             ContentRevision++;
             ProjectionRevision++;
+        }
+
+        public void Remove(int stableId, ref int retainedIndexPlusOne)
+        {
+            Remove(stableId);
+            retainedIndexPlusOne = 0;
         }
 
         public void ClearTransient()
@@ -275,6 +273,57 @@ namespace Ludots.Core.Presentation.Hud
             }
 
             _removedStableIds[_removedStableIdCount++] = stableId;
+        }
+
+        private bool UpdateRetainedAt(int index, in WorldHudItem item)
+        {
+            if (WorldHudItemEquals(in _buffer[index], in item))
+            {
+                return true;
+            }
+
+            bool projectionChanged = !WorldHudProjectionEquals(in _buffer[index], in item);
+            bool contentChanged = _buffer[index].DirtySerial != item.DirtySerial;
+            if (projectionChanged)
+            {
+                ProjectionRevision++;
+            }
+
+            if (contentChanged || !projectionChanged)
+            {
+                AddDirtyContent(in item);
+                ContentOnlyRevision++;
+            }
+
+            _buffer[index] = item;
+            ContentRevision++;
+            return true;
+        }
+
+        private bool TryAppend(in WorldHudItem item, out int index)
+        {
+            if (_count >= _buffer.Length)
+            {
+                DroppedSinceClear++;
+                DroppedTotal++;
+                index = -1;
+                return false;
+            }
+
+            index = _count++;
+            _buffer[index] = item;
+            if (item.StableId > 0)
+            {
+                _retainedIndexByStableId[item.StableId] = index;
+            }
+            else
+            {
+                _transientCount++;
+            }
+
+            ContentRevision++;
+            ProjectionRevision++;
+            return true;
         }
 
         private void EnsureOwnerGroups()
