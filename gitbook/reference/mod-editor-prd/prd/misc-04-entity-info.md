@@ -20,6 +20,6 @@
 
 ## 4. 异常承诺
 
-templateIds 重复归属、token 解析失败、stats.source=attribute 的属性未注册、source/display 枚举外值、能力引用未注册、摆放编号重复或未修剪、实例条目出现 `instanceId` / `titleToken` 以外的字段——加载失败并指明档案与位置。摆放编号对上的档案不含该实体的模板时，打开面板失败。
+templateIds 重复归属、token 解析失败、stats.source=attribute 的属性未注册、source/display 枚举外值、能力引用未注册、档案写了 `instances`——加载失败并指明档案与位置。地图文案槽未登记时，打开面板失败。
 
 **相关文档**：[配置说明](../config/misc-04-entity-info.md) · [pres-04](pres-04-localization.md) · [attr-01](attr-01-definition.md)
