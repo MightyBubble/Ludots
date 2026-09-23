@@ -23,9 +23,17 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthCells": 16384,
-      "HeightCells": 16384,
-      "GridCellSizeCm": 400
+      "WidthCm": 6553600,
+      "HeightCm": 6553600,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 400
+      }
     }
   ],
   "Entities": [

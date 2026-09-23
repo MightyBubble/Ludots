@@ -63,8 +63,8 @@ namespace Ludots.Core.Map.Board
             WorldSize = BoardExtent.ToWorldSizeSpec();
             CoordinateConverter = new SpatialCoordinateConverter(
                 config.GridCellSizeCm,
-                BoardExtent.OriginXCm ?? 0,
-                BoardExtent.OriginYCm ?? 0);
+                BoardExtent.TopologyOriginXCm,
+                BoardExtent.TopologyOriginYCm);
             HexMetrics = new HexMetrics(config.HexEdgeLengthCm);
             _chunkSizeCells = config.ChunkSizeCells;
         }

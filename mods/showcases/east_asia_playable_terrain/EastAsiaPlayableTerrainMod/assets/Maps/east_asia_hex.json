@@ -33,15 +33,25 @@
     {
       "Name": "default",
       "SpatialType": "HexGrid",
-      "WidthCells": 7168,
-      "HeightCells": 4096,
-      "GridCellSizeCm": 125649,
-      "HexEdgeLengthCm": 125649,
       "DataFile": "samples/LudotsSample/east_asia/east_asia_hex.hex",
       "ContinuousHeightmapAsset": null,
       "StructureCollisionAsset": "",
       "StructureAwareGrounding": false,
-      "StructureAwareNavigation": false
+      "StructureAwareNavigation": false,
+      "WidthCm": 900652032,
+      "HeightCm": 514658304,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 125649
+      },
+      "Hex": {
+        "EdgeLengthCm": 125649
+      }
     }
   ],
   "ContinuousHeightmap": null,

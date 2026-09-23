@@ -1,22 +1,14 @@
-using System;
 using System.Collections.Generic;
 using Ludots.Core.Config;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
-using Ludots.Platform.Abstractions;
-using Ludots.Core.Spatial;
-using Ludots.Platform.Abstractions;
 using Ludots.Core.Map.Hex;
+using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
 namespace Ludots.Tests.GAS
 {
-    /// <summary>
-    /// #1567 slice 2b: declared board placement. Satellites anchor at a world min-corner,
-    /// the root board stays centered, anchored AABBs must sit fully inside the root frame,
-    /// and centered boards keep the legacy grid frame bit-for-bit (zero drift).
-    /// </summary>
     [TestFixture]
     public sealed class BoardPlacementOriginTests
     {
@@ -26,46 +18,58 @@ namespace Ludots.Tests.GAS
         }
 
         private static BoardConfig Board(string name, string type, int widthCells, int heightCells,
-            int cellSizeCm = 100, int? originX = null, int? originY = null)
+            int cellSizeCm = 100, int worldX = 0, int worldY = 0, int localX = 0, int localY = 0)
         {
-            return new BoardConfig
+            var config = new BoardConfig
             {
                 Name = name,
                 SpatialType = type,
-                WidthCells = widthCells,
-                HeightCells = heightCells,
-                GridCellSizeCm = cellSizeCm,
-                OriginXCm = originX,
-                OriginYcm = originY,
+                WidthCm = widthCells * cellSizeCm,
+                HeightCm = heightCells * cellSizeCm,
+                Grid = new BoardGridAuthoring { CellSizeCm = cellSizeCm },
+                Anchor = new BoardAnchor
+                {
+                    LocalXCm = localX,
+                    LocalYCm = localY,
+                    WorldXCm = worldX,
+                    WorldYCm = worldY,
+                },
                 LoadedChunkCapacity = 4096,
             };
+            if (type is "HexGrid" or "Hex")
+            {
+                config.Hex = new BoardHexAuthoring { EdgeLengthCm = 400 };
+            }
+
+            return config;
         }
 
         [Test]
-        public void RootBoardWithOriginIsRejected()
+        public void RootBoardWorldAnchorMustBeLudotsOrigin()
         {
             var config = ConfigWithBoards(
-                Board("default", "Grid", 100, 100, originX: -5000, originY: -5000));
+                Board("default", "Grid", 100, 100, worldX: -5000, worldY: -5000));
             var ex = Throws<InvalidOperationException>(() => MapManager.ValidateSpatialDeclaration(config, new MapId("dual-board-test")));
-            That(ex!.Message, Does.Contain("anchors the centered world"));
+            That(ex!.Message, Does.Contain("Ludots origin"));
         }
 
         [Test]
-        public void SingleAxisOriginIsRejected()
+        public void SatelliteMissingAnchorIsRejected()
         {
             var config = ConfigWithBoards(
                 Board("default", "Grid", 100, 100),
-                Board("arena", "Grid", 40, 40, originX: 0));
+                Board("arena", "Grid", 40, 40));
+            config.Boards[1].Anchor = null;
             var ex = Throws<InvalidOperationException>(() => MapManager.ValidateSpatialDeclaration(config, new MapId("dual-board-test")));
-            That(ex!.Message, Does.Contain("together"));
+            That(ex!.Message, Does.Contain("Anchor"));
         }
 
         [Test]
-        public void AnchoredSatelliteOutsideRootFrameIsRejected()
+        public void SatelliteOutsideRootFrameIsRejected()
         {
             var config = ConfigWithBoards(
                 Board("default", "Grid", 100, 100),
-                Board("arena", "Grid", 40, 40, originX: 7000, originY: 0));
+                Board("arena", "Grid", 40, 40, worldX: 7000, worldY: 0));
             var ex = Throws<InvalidOperationException>(() => MapManager.ValidateSpatialDeclaration(config, new MapId("dual-board-test")));
             That(ex!.Message, Does.Contain("exits the root board frame"));
         }
@@ -75,15 +79,15 @@ namespace Ludots.Tests.GAS
         {
             var config = ConfigWithBoards(
                 Board("world", "Grid", 8000, 8000, cellSizeCm: 100),
-                Board("arena", "Grid", 40, 40, originX: -100_000, originY: 200_000),
-                Board("harbor", "HexGrid", 24, 24, originX: 320_000, originY: -140_000));
+                Board("arena", "Grid", 40, 40, worldX: 10_000, worldY: 200_000),
+                Board("harbor", "HexGrid", 24, 24, worldX: 320_000, worldY: 140_000));
             MapManager.ValidateSpatialDeclaration(config, new MapId("dual-board-test"));
         }
 
         [Test]
-        public void AnchoredGridBoardPinsGridFrameToDeclaredOrigin()
+        public void AnchorPinsGridCornerAtWorldMinusLocal()
         {
-            var config = Board("arena", "Grid", 40, 40, cellSizeCm: 100, originX: 320_000, originY: -140_000);
+            var config = Board("arena", "Grid", 40, 40, cellSizeCm: 100, worldX: 320_000, worldY: -140_000);
             var board = new GridBoard(new BoardId("arena"), "arena", config);
 
             That(board.WorldSize.Bounds.Left, Is.EqualTo(320_000));
@@ -100,7 +104,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void AnchoredHexBoardOffsetsHexFrame()
         {
-            var config = Board("harbor", "HexGrid", 24, 24, cellSizeCm: 100, originX: 320_000, originY: -140_000);
+            var config = Board("harbor", "HexGrid", 24, 24, cellSizeCm: 100, worldX: 320_000, worldY: -140_000);
             var board = new HexGridBoard(new BoardId("harbor"), "harbor", config);
 
             var world = board.CoordinateConverter.HexToWorld(default(HexCoordinates));
@@ -115,20 +119,19 @@ namespace Ludots.Tests.GAS
         {
             var config = ConfigWithBoards(
                 Board("world", "Grid", 10000, 10000, cellSizeCm: 100),
-                Board("arena_west", "Grid", 40, 30, originX: -400_000, originY: 300_000),
-                Board("arena_east", "Grid", 64, 64, cellSizeCm: 200, originX: 200_000, originY: 350_000),
-                Board("harbor_south", "HexGrid", 24, 24, originX: 320_000, originY: -140_000),
-                Board("harbor_north", "HexGrid", 16, 32, cellSizeCm: 50, originX: -350_000, originY: -200_000));
+                Board("arena_west", "Grid", 40, 30, worldX: 10_000, worldY: 300_000),
+                Board("arena_east", "Grid", 64, 64, cellSizeCm: 200, worldX: 200_000, worldY: 350_000),
+                Board("harbor_south", "HexGrid", 24, 24, worldX: 320_000, worldY: 10_000),
+                Board("harbor_north", "HexGrid", 16, 32, cellSizeCm: 50, worldX: 10_000, worldY: 400_000));
             MapManager.ValidateSpatialDeclaration(config, new MapId("dual-board-test"));
 
-            var aabbByBoard = new System.Collections.Generic.Dictionary<string, WorldAabbCm>();
+            var aabbByBoard = new Dictionary<string, WorldAabbCm>();
             foreach (BoardConfig boardConfig in config.Boards)
             {
                 var board = BoardFactory.Create(boardConfig, new BoardIdRegistry());
                 aabbByBoard[boardConfig.Name] = board.WorldSize.Bounds;
             }
 
-            // 根板是画布：四块卫星全部落在根板内；卫星两两不重叠（本配置如此摆放）。
             WorldAabbCm root = aabbByBoard["world"];
             var satellites = new[] { "arena_west", "arena_east", "harbor_south", "harbor_north" };
             foreach (string name in satellites)
@@ -151,7 +154,6 @@ namespace Ludots.Tests.GAS
                 }
             }
 
-            // 异构度量共存：两块 grid 板不同 cell、两块 hex 板不同 cell，各自换算各自闭环。
             var west = aabbByBoard["arena_west"];
             That(west.Width, Is.EqualTo(4000));
             var east = aabbByBoard["arena_east"];
@@ -160,69 +162,58 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void HexBoardAuthoredInHexesDerivesNonSquareFootprint()
+        public void HexRectangleFloorsToWholeHexes()
         {
-            var config = Board("harbor", "HexGrid", 999, 999, cellSizeCm: 100);
-            config.WidthHexes = 24;
-            config.HeightHexes = 10;
-            config.HexEdgeLengthCm = 400;
+            var config = Board("harbor", "HexGrid", 1, 1, cellSizeCm: 100);
+            config.WidthCm = 19_800;
+            config.HeightCm = 6_200;
+            config.Hex = new BoardHexAuthoring { EdgeLengthCm = 400 };
             var board = new HexGridBoard(new BoardId("harbor"), "harbor", config);
 
-            // √3·400·(24 + 9/2) ≈ 19746cm → 198 cells；1.5·400·10 + 200 = 6200cm。
             That(board.WorldSize.Bounds.Width, Is.EqualTo(19_800));
             That(board.WorldSize.Bounds.Height, Is.EqualTo(6_200));
-            That(board.BoardExtent.WidthCm, Is.GreaterThan(19_700));
-            That(board.BoardExtent.HeightCm, Is.EqualTo(6_200));
+            That(board.HexMetrics.TryCountFittingHexes(19_800, 6_200, out int widthHexes, out int heightHexes), Is.True);
+            That(widthHexes, Is.EqualTo(24));
+            That(heightHexes, Is.EqualTo(10));
         }
 
         [Test]
-        public void HexBoardLegacyCellAuthoringStaysZeroDrift()
+        public void GridCellCountFloorsRemainderOntoTheFarSide()
         {
-            var config = Board("harbor", "HexGrid", 24, 10, cellSizeCm: 100);
-            var board = new HexGridBoard(new BoardId("harbor"), "harbor", config);
-            That(board.WorldSize.Bounds.Width, Is.EqualTo(2_400));
-            That(board.WorldSize.Bounds.Height, Is.EqualTo(1_000));
+            var config = Board("arena", "Grid", 1, 1, cellSizeCm: 100);
+            config.WidthCm = 4_050;
+            config.HeightCm = 4_050;
+            var board = new GridBoard(new BoardId("arena"), "arena", config);
+
+            That(board.BoardExtent.WidthCells, Is.EqualTo(40));
+            That(board.WorldSize.Bounds.Width, Is.EqualTo(4_050));
+            That(board.WorldSize.Bounds.Left, Is.EqualTo(0));
         }
 
         [Test]
-        public void HexMetricsOnNonHexBoardAreRejected()
+        public void HexOnGridBoardIsRejected()
         {
             var config = ConfigWithBoards(
                 Board("default", "Grid", 100, 100),
                 Board("arena", "Grid", 40, 40));
-            config.Boards[1].WidthHexes = 10;
-            config.Boards[1].HeightHexes = 10;
+            config.Boards[1].Hex = new BoardHexAuthoring { EdgeLengthCm = 400 };
             var ex = Throws<InvalidOperationException>(() => MapManager.ValidateSpatialDeclaration(config, new MapId("dual-board-test")));
             That(ex!.Message, Does.Contain("HexGrid-only"));
         }
 
         [Test]
-        public void SingleAxisHexAuthoringIsRejected()
-        {
-            var config = ConfigWithBoards(
-                Board("default", "Grid", 100, 100),
-                Board("harbor", "HexGrid", 40, 40));
-            config.Boards[1].WidthHexes = 24;
-            var ex = Throws<InvalidOperationException>(() => MapManager.ValidateSpatialDeclaration(config, new MapId("dual-board-test")));
-            That(ex!.Message, Does.Contain("together"));
-        }
-
-        [Test]
-        public void CenteredBoardsKeepLegacyFrameZeroDrift()
+        public void CellCornerStaysAtLudotsOriginWhenAnchorIsZero()
         {
             var config = Board("default", "Grid", 64, 32, cellSizeCm: 100);
             var board = new GridBoard(new BoardId("default"), "default", config);
 
-            That(board.WorldSize.Bounds.Left, Is.EqualTo(-3_200));
-            That(board.WorldSize.Bounds.Top, Is.EqualTo(-1_600));
+            That(board.WorldSize.Bounds.Left, Is.EqualTo(0));
+            That(board.WorldSize.Bounds.Top, Is.EqualTo(0));
             That(board.WorldSize.Bounds.Width, Is.EqualTo(6_400));
 
             var world = board.CoordinateConverter.GridToWorld(new IntVector2(0, 0));
             That(world.X, Is.EqualTo(50));
             That(world.Y, Is.EqualTo(50));
-            var negative = board.CoordinateConverter.GridToWorld(new IntVector2(-32, -16));
-            That(negative.X, Is.EqualTo(-3_150));
-            That(negative.Y, Is.EqualTo(-1_550));
         }
     }
 }

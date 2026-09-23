@@ -13,32 +13,32 @@
       {
         "id": "central",
         "label": "Central",
-        "centerXCm": 0,
-        "centerYCm": 0,
+        "centerXCm": 3200000,
+        "centerYCm": 3200000,
         "widthCm": 10000,
         "heightCm": 10000
       },
       {
         "id": "east_front",
         "label": "East Front",
-        "centerXCm": 1800000,
-        "centerYCm": 600000,
+        "centerXCm": 5000000,
+        "centerYCm": 3800000,
         "widthCm": 10000,
         "heightCm": 10000
       },
       {
         "id": "southwest",
         "label": "Southwest",
-        "centerXCm": -2100000,
-        "centerYCm": -1600000,
+        "centerXCm": 1100000,
+        "centerYCm": 1600000,
         "widthCm": 10000,
         "heightCm": 10000
       },
       {
         "id": "northeast",
         "label": "Northeast",
-        "centerXCm": 2400000,
-        "centerYCm": 2100000,
+        "centerXCm": 5600000,
+        "centerYCm": 5300000,
         "widthCm": 10000,
         "heightCm": 10000
       }

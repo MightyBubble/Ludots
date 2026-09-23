@@ -19,8 +19,8 @@
   ],
   "DefaultCamera": {
     "VirtualCameraId": "raylib_visual_atmosphere.camera.composition",
-    "TargetXCm": 0,
-    "TargetYCm": 0,
+    "TargetXCm": 1638400,
+    "TargetYCm": 1638400,
     "Yaw": 205,
     "Pitch": 48,
     "DistanceCm": 42000,
@@ -30,9 +30,17 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthCells": 32768,
-      "HeightCells": 32768,
-      "GridCellSizeCm": 100
+      "WidthCm": 3276800,
+      "HeightCm": 3276800,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      }
     }
   ],
   "Entities": [
@@ -41,8 +49,8 @@
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
-            "X": -4500,
-            "Y": -2800
+            "X": 1633900,
+            "Y": 1635600
           }
         }
       }
@@ -52,8 +60,8 @@
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
-            "X": -3200,
-            "Y": -3500
+            "X": 1635200,
+            "Y": 1634900
           }
         }
       }
@@ -63,8 +71,8 @@
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
-            "X": -1800,
-            "Y": -2200
+            "X": 1636600,
+            "Y": 1636200
           }
         }
       }
