@@ -48,7 +48,7 @@ SaveSlotStore.ReadSlot / SaveContainerCodec.Decode
 Arch.Persistence 的 contractless 反射不能正确覆盖 Ludots 的 fixed buffer 组件，所以 Core 不允许 persisted component 走 contractless fallback。当前 formatter 入口是 `LudotsCorePersistenceFormatters.CreateFormatters()`：
 
 - unmanaged 组件使用 `UnmanagedComponentFormatter<T>` 做整结构 raw-bytes 序列化；`AddAutoDiscoveredUnmanagedFormatters()` 扫描已加载的 `Ludots.*` 与 `*Mod` 程序集，自动为不含托管引用的 value type 注册，fixed buffer 组件不需要手写 formatter。
-- 含托管引用的组件必须手写 `IMessagePackFormatter<T>`，实现 `ILudotsPersistenceComponentFormatter`，并在 `CreateFormatters()` 中显式注册。目前 `Name` 使用 `NameFormatter`，`MapEntity` 使用 `MapEntityFormatter`。
+- 含托管引用的组件必须手写 `IMessagePackFormatter<T>`，实现 `ILudotsPersistenceComponentFormatter`，并在 `CreateFormatters()` 中显式注册。目前 `Name` 使用 `NameFormatter`，`MapEntity` 使用 `MapEntityFormatter`，地图摆放编号 `PlacedInstanceId` 使用 `PlacedInstanceIdFormatter`（空编号按 null 读写，不能收成空字符串）。
 - `LudotsBinaryWorldSerializer.EnsureWorldComponentFormatters()` 在写入前枚举所有纳入存档的实体组件；遇到没有 Ludots formatter 的组件立即抛 `SaveContextException`，不静默降级。
 - formatter 和组件类型集由 `LudotsCorePersistenceFormatters` 静态缓存，`ArchBinarySerializer` 以线程级缓存复用；一次进程内反射发现只应构建一次。
 
