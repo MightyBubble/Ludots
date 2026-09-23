@@ -38,6 +38,7 @@ public sealed class GenreInfoShowcasePlayableAcceptanceTests
         "CoreInputMod",
         "CameraProfilesMod",
         "FourXDemoMod",
+        "EntityCommandPanelMod",
         "RtsDemoMod",
         "MobaDemoMod",
         "EntityInfoPanelsMod",

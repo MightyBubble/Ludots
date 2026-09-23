@@ -60,7 +60,7 @@
   },
   {
     "id": "rts_barracks_profile",
-    "templateIds": ["rts_barracks"],
+    "templateIds": ["rts_war3_barracks"],
     "accentColorHex": "#D66F4D",
     "surfaceColorHex": "#231716",
     "genreGlyph": "RT",
@@ -81,13 +81,13 @@
       { "glyph": "S", "textToken": "genreinfo.profile.barracks.tip.2" }
     ],
     "actions": [
-      { "ability": "Ability.Rts.TrainMarine", "glyph": "MN", "titleToken": "genreinfo.profile.barracks.action.marine.title", "bodyToken": "genreinfo.profile.barracks.action.marine.body" },
-      { "ability": "Ability.Rts.ResearchStim", "glyph": "ST", "titleToken": "genreinfo.profile.barracks.action.stim.title", "bodyToken": "genreinfo.profile.barracks.action.stim.body" }
+      { "ability": "Ability.Rts.Strategy.War3.TrainFootman", "glyph": "FM", "titleToken": "genreinfo.profile.barracks.action.marine.title", "bodyToken": "genreinfo.profile.barracks.action.marine.body" },
+      { "ability": "Ability.Rts.Strategy.Shared.Hold", "glyph": "H", "titleToken": "genreinfo.profile.barracks.action.stim.title", "bodyToken": "genreinfo.profile.barracks.action.stim.body" }
     ]
   },
   {
     "id": "rts_marine_profile",
-    "templateIds": ["rts_marine"],
+    "templateIds": ["rts_war3_footman"],
     "accentColorHex": "#8FC4FF",
     "surfaceColorHex": "#162130",
     "genreGlyph": "RT",
@@ -108,12 +108,12 @@
       { "glyph": "K", "textToken": "genreinfo.profile.marine.tip.2" }
     ],
     "actions": [
-      { "ability": "Ability.Rts.StimPack", "glyph": "ST", "titleToken": "genreinfo.profile.marine.action.stim.title", "bodyToken": "genreinfo.profile.marine.action.stim.body" }
+      { "ability": "Ability.Rts.Strategy.Shared.GarrisonEnter", "glyph": "IN", "titleToken": "genreinfo.profile.marine.action.stim.title", "bodyToken": "genreinfo.profile.marine.action.stim.body" }
     ]
   },
   {
     "id": "rts_tank_profile",
-    "templateIds": ["rts_siege_tank"],
+    "templateIds": ["rts_ra2_rhino"],
     "accentColorHex": "#D7A95C",
     "surfaceColorHex": "#201E18",
     "genreGlyph": "RT",
@@ -134,12 +134,12 @@
       { "glyph": "P", "textToken": "genreinfo.profile.tank.tip.2" }
     ],
     "actions": [
-      { "ability": "Ability.Rts.SiegeModeAoe", "glyph": "AO", "titleToken": "genreinfo.profile.tank.action.aoe.title", "bodyToken": "genreinfo.profile.tank.action.aoe.body" }
+      { "ability": "Ability.Rts.Strategy.Shared.Hold", "glyph": "H", "titleToken": "genreinfo.profile.tank.action.aoe.title", "bodyToken": "genreinfo.profile.tank.action.aoe.body" }
     ]
   },
   {
     "id": "rts_vessel_profile",
-    "templateIds": ["rts_science_vessel"],
+    "templateIds": ["rts_sc2_probe"],
     "accentColorHex": "#7CE2C8",
     "surfaceColorHex": "#13221E",
     "genreGlyph": "RT",
@@ -160,8 +160,8 @@
       { "glyph": "D", "textToken": "genreinfo.profile.vessel.tip.2" }
     ],
     "actions": [
-      { "ability": "Ability.Rts.ShieldAura", "glyph": "AU", "titleToken": "genreinfo.profile.vessel.action.aura.title", "bodyToken": "genreinfo.profile.vessel.action.aura.body" },
-      { "ability": "Ability.Rts.Irradiate", "glyph": "IR", "titleToken": "genreinfo.profile.vessel.action.irradiate.title", "bodyToken": "genreinfo.profile.vessel.action.irradiate.body" }
+      { "ability": "Ability.Rts.Strategy.Shared.Hold", "glyph": "H", "titleToken": "genreinfo.profile.vessel.action.aura.title", "bodyToken": "genreinfo.profile.vessel.action.aura.body" },
+      { "ability": "Ability.Rts.Strategy.Shared.Hold", "glyph": "H", "titleToken": "genreinfo.profile.vessel.action.irradiate.title", "bodyToken": "genreinfo.profile.vessel.action.irradiate.body" }
     ]
   }
 ]

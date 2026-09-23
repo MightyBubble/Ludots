@@ -37,15 +37,15 @@ Terminology guard for this document:
 
 Recommended fixture:
 
-`mods/showcases/presentation_pipeline_uat/PresentationPipelineUatMod`
+mods/showcases/presentation_pipeline_uat/PresentationPipelineUatMod
 
 The mod should be config-driven and contain only deterministic UAT content:
 
-- `assets/Entities/templates.json` for test units, projectile carriers, and prefab carriers.
-- `assets/Presentation/performers.json` for performer rules, bindings, behavior, and prefab-producing performers.
-- `assets/Presentation/visual_templates.json` for primary entity visuals.
-- `assets/Presentation/meshes.json` for primitive mesh and prefab asset references.
-- `assets/Maps/presentation_pipeline_uat.json` for fixed spawn points, movement lanes, culling zones, and LOD zones.
+- assets/Entities/templates.json for test units, projectile carriers, and prefab carriers.
+- assets/Presentation/performers.json for performer rules, bindings, behavior, and prefab-producing performers.
+- assets/Presentation/visual_templates.json for primary entity visuals.
+- assets/Presentation/mesh_assets.json for primitive mesh and prefab asset references.
+- assets/Maps/presentation_pipeline_uat.json for fixed spawn points, movement lanes, culling zones, and LOD zones.
 
 ## 3. Scenario Matrix
 

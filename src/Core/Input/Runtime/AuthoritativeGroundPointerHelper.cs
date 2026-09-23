@@ -66,8 +66,6 @@ namespace Ludots.Core.Input.Runtime
             worldCm = default;
             if (!globals.TryGetValue(CoreServiceKeys.ScreenRayProvider.Name, out var rayProviderObj) ||
                 rayProviderObj is not IScreenRayProvider rayProvider ||
-                !globals.TryGetValue(CoreServiceKeys.VisualHeightmap.Name, out var heightmapObj) ||
-                heightmapObj is not IVisualHeightmap heightmap ||
                 !globals.TryGetValue(CoreServiceKeys.WorldSizeSpec.Name, out var worldSizeObj) ||
                 worldSizeObj is not WorldSizeSpec worldSize)
             {
@@ -77,7 +75,10 @@ namespace Ludots.Core.Input.Runtime
             try
             {
                 ScreenRay ray = rayProvider.GetRay(screenPosition);
-                return GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, heightmap, worldSize, out worldCm);
+                // Interaction SSOT is the bounded world ground plane. This keeps
+                // screen->ground projection identical across adapters and matches
+                // the acceptance/test contract used by gameplay input.
+                return GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, worldSize, out worldCm);
             }
             catch (ArgumentOutOfRangeException)
             {

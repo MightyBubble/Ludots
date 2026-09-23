@@ -25,10 +25,9 @@ namespace CameraAcceptanceMod
                     engine.SetService(CameraAcceptanceServiceKeys.DiagnosticsState, new CameraAcceptanceDiagnosticsState());
                     CameraAcceptanceRuntime.InitializeProjectionSpawnCount(engine);
                     engine.GlobalContext[CameraAcceptanceIds.ActiveBlendCameraIdKey] = CameraAcceptanceIds.BlendSmoothCameraId;
-                    runtime.InstallSelectionCallbacks(engine);
+                    engine.RegisterSystem(new CameraAcceptanceGroundClickSystem(engine, runtime), SystemGroup.InputCollection);
                     engine.RegisterSystem(new CameraAcceptanceDiagnosticsToggleSystem(engine), SystemGroup.InputCollection);
                     engine.RegisterSystem(new CameraAcceptanceProjectionSpawnControlSystem(engine), SystemGroup.InputCollection);
-                    engine.RegisterSystem(new CameraBlendAcceptanceSystem(engine), SystemGroup.InputCollection);
                     engine.RegisterSystem(new CameraStackAcceptanceSystem(engine), SystemGroup.InputCollection);
                     engine.RegisterPresentationSystem(new CameraAcceptancePanelPresentationSystem(engine, runtime));
                     engine.RegisterPresentationSystem(new CameraAcceptanceProjectionBoundsOverlaySystem(engine));

@@ -68,7 +68,13 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Assert.That(spawnBatch, Is.EqualTo(CameraAcceptanceIds.ProjectionSpawnCountDefault));
 
             int beforeDummyCount = CountEntitiesByName(engine.World, "Dummy");
-            ClickGround(engine, backend, new Vector2(3200f, 2000f));
+            var projector = engine.GetService(CoreServiceKeys.ScreenProjector);
+            Assert.That(projector, Is.Not.Null, "Headless acceptance runtime must expose a screen projector.");
+            Vector2 clickWorldPoint = new(3200f, 2000f);
+            Vector2 screenPosition = ProjectWorldPoint(engine, projector!, clickWorldPoint);
+            WorldCmInt2 expectedWorldCm = ResolveGroundPoint(engine, screenPosition, out bool wasClamped);
+            Assert.That(wasClamped, Is.False, "In-bounds projection click should not require Core bounds clamping.");
+            ClickScreen(engine, backend, screenPosition);
 
             int afterDummyCount = CountEntitiesByName(engine.World, "Dummy");
             Assert.That(afterDummyCount, Is.EqualTo(beforeDummyCount + spawnBatch), "Ground click should enqueue the configured runtime spawn batch.");
@@ -76,13 +82,13 @@ namespace Ludots.Tests.ThreeC.Acceptance
             List<WorldCmInt2> positions = GetNamedEntityPositions(engine.World, "Dummy");
             Assert.That(positions.Count, Is.EqualTo(spawnBatch));
             Assert.That(CountDistinctPositions(positions), Is.GreaterThan(spawnBatch / 2), "Projection batch should distribute entities across many distinct positions.");
-            Assert.That(HasNamedEntityAt(engine.World, "Dummy", new WorldCmInt2(3200, 2000)), Is.True, "Random scatter should still stay anchored to the clicked point.");
-            Assert.That(AllPositionsWithinRadius(positions, new WorldCmInt2(3200, 2000), 1800), Is.True, "Projection scatter should remain near the clicked point.");
+            Assert.That(HasNamedEntityAt(engine.World, "Dummy", expectedWorldCm), Is.True, "Random scatter should still stay anchored to the authoritative grounded click point.");
+            Assert.That(AllPositionsWithinRadius(positions, expectedWorldCm, 1800), Is.True, "Projection scatter should remain near the authoritative grounded click point.");
 
             var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
             Assert.That(primitives, Is.Not.Null);
             Assert.That(primitives!.Count, Is.GreaterThan(0), "Ground click should emit a transient performer marker.");
-            var cueMarkerPosition = WorldUnits.WorldCmToVisualMeters(new WorldCmInt2(3200, 2000), yMeters: 0.15f);
+            var cueMarkerPosition = WorldUnits.WorldCmToVisualMeters(expectedWorldCm, yMeters: 0.15f);
             bool foundCueMarker = false;
             foreach (ref readonly var primitive in primitives.GetSpan())
             {
@@ -704,7 +710,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 "Selection changes should advance the reactive panel scene version.");
 
             string sceneText = ExtractUiSceneText(scene);
-            Assert.That(sceneText, Does.Contain("Selection View"));
+            Assert.That(sceneText, Does.Contain("Selection Buffer"));
             Assert.That(sceneText, Does.Contain($"#{hero.Id}"));
             Assert.That(sceneText, Does.Contain($"#{scout.Id}"));
             Assert.That(sceneText, Does.Contain($"#{captain.Id}"));
@@ -1280,7 +1286,6 @@ namespace Ludots.Tests.ThreeC.Acceptance
         private static void ClickScreen(GameEngine engine, TestInputBackend backend, Vector2 screenPoint)
         {
             backend.SetMousePosition(screenPoint);
-            Tick(engine, 1);
             backend.SetButton("<Mouse>/LeftButton", true);
             Tick(engine, 2);
             backend.SetButton("<Mouse>/LeftButton", false);
@@ -1439,14 +1444,14 @@ namespace Ludots.Tests.ThreeC.Acceptance
         {
             SelectionRuntime selectionRuntime = engine.GetService(CoreServiceKeys.SelectionRuntime)
                 ?? throw new InvalidOperationException("SelectionRuntime is missing.");
-            int count = selectionRuntime.GetSelectionCount(owner, SelectionSetKeys.LivePrimary);
+            int count = selectionRuntime.GetSelectionCount(owner, SelectionSetKeys.Ambient);
             if (count <= 0)
             {
                 return Array.Empty<Entity>();
             }
 
             var members = new Entity[count];
-            int written = selectionRuntime.CopySelection(owner, SelectionSetKeys.LivePrimary, members);
+            int written = selectionRuntime.CopySelection(owner, SelectionSetKeys.Ambient, members);
             if (written == members.Length)
             {
                 return members;

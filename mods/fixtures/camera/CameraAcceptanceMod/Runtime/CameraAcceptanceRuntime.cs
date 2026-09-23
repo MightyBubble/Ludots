@@ -4,7 +4,6 @@ using Arch.Core;
 using CameraAcceptanceMod.UI;
 using CoreInputMod;
 using CoreInputMod.ViewMode;
-using CoreInputMod.Triggers;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Spawning;
@@ -30,7 +29,6 @@ namespace CameraAcceptanceMod.Runtime
         private const float ProjectionScatterJitterCm = 42f;
 
         private CameraAcceptancePanelController? _panelController;
-        private bool _selectionCallbacksInstalled;
         private const string ProjectionCueFixturePrefabKey = "camera_acceptance_projection_cue_fixture_prefab";
         private int _cueMarkerPrefabId;
         private string _lastConfiguredMapId = string.Empty;
@@ -62,23 +60,6 @@ namespace CameraAcceptanceMod.Runtime
 
             engine.GlobalContext[CameraAcceptanceIds.ProjectionSpawnCountKey] = next;
             return next;
-        }
-
-        public void InstallSelectionCallbacks(GameEngine engine)
-        {
-            if (_selectionCallbacksInstalled)
-            {
-                return;
-            }
-
-            if (!CoreInputRuntimeServices.TryGetEntitySelectionCallbacks(engine, out var callbacks))
-            {
-                throw new System.InvalidOperationException(
-                    "CameraAcceptanceMod requires CoreInputMod entity selection callbacks to be installed before GameStart handlers run.");
-            }
-
-            callbacks.Add((worldCm, entity) => HandleSelectionConfirmed(engine, worldCm, entity));
-            _selectionCallbacksInstalled = true;
         }
 
         public Task HandleMapFocusedAsync(ScriptContext context)
@@ -127,10 +108,7 @@ namespace CameraAcceptanceMod.Runtime
             {
                 if (isAcceptanceMap)
                 {
-                    if (input.HasContext(CameraAcceptanceIds.InputContextId))
-                    {
-                        input.PushContext(CameraAcceptanceIds.InputContextId);
-                    }
+                    input.PushContext(CameraAcceptanceIds.InputContextId);
                 }
                 else
                 {
@@ -243,29 +221,28 @@ namespace CameraAcceptanceMod.Runtime
             _lastConfiguredMapId = mapId;
         }
 
-        private void HandleSelectionConfirmed(GameEngine engine, in WorldCmInt2 worldCm, Entity selectedEntity)
+        public void HandleGroundClick(GameEngine engine, in WorldCmInt2 worldCm)
         {
             string? mapId = engine.CurrentMapSession?.MapId.Value;
             if (string.Equals(mapId, CameraAcceptanceIds.ProjectionMapId, System.StringComparison.OrdinalIgnoreCase))
             {
-                if (engine.World.IsAlive(selectedEntity))
-                {
-                    return;
-                }
-
                 EnqueueProjectionSpawnBatch(engine, worldCm);
                 EmitCueMarker(engine, worldCm);
-                return;
+            }
+        }
+
+        public void HandleBlendGroundClick(GameEngine engine, in WorldCmInt2 worldCm, string cameraId)
+        {
+            if (string.IsNullOrWhiteSpace(cameraId))
+            {
+                throw new System.InvalidOperationException("Blend acceptance requires an explicit active blend camera id.");
             }
 
-            if (string.Equals(mapId, CameraAcceptanceIds.BlendMapId, System.StringComparison.OrdinalIgnoreCase))
-            {
-                engine.GameSession.Camera.ActivateVirtualCamera(
-                    ResolveActiveBlendCameraId(engine),
-                    followTarget: new FixedPointFollowTarget(new Vector2(worldCm.X, worldCm.Y)),
-                    snapToFollowTargetWhenAvailable: true,
-                    resetRuntimeState: true);
-            }
+            engine.GameSession.Camera.ActivateVirtualCamera(
+                cameraId,
+                followTarget: new FixedPointFollowTarget(new Vector2(worldCm.X, worldCm.Y)),
+                snapToFollowTargetWhenAvailable: true,
+                resetRuntimeState: true);
         }
 
         private void EmitCueMarker(GameEngine engine, in WorldCmInt2 worldCm)
@@ -372,15 +349,6 @@ namespace CameraAcceptanceMod.Runtime
             }
 
             return _cueMarkerPrefabId;
-        }
-
-        private static string ResolveActiveBlendCameraId(GameEngine engine)
-        {
-            return engine.GlobalContext.TryGetValue(CameraAcceptanceIds.ActiveBlendCameraIdKey, out var value) &&
-                   value is string cameraId &&
-                   !string.IsNullOrWhiteSpace(cameraId)
-                ? cameraId
-                : CameraAcceptanceIds.BlendSmoothCameraId;
         }
 
         private sealed class FixedPointFollowTarget : ICameraFollowTarget

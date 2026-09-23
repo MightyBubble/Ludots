@@ -70,6 +70,7 @@ namespace Ludots.Tests.Presentation
                     "id": "test.prefab.rotated",
                     "parts": [
                       {
+                        "kind": "Mesh",
                         "meshAssetId": "test.mesh.base",
                         "localPosition": [100, 0, 0],
                         "localRotation": [0, 0.70710677, 0, 0.70710677],

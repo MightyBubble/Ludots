@@ -602,7 +602,7 @@ namespace Ludots.Core.Engine
             var deferredTriggerProcessSystem = new DeferredTriggerProcessSystem(World, deferredTriggerQueue, EventBus);
             var clearPresentationFlagsSystem = new ClearPresentationFlagsSystem(World);
             var gasPresentationEvents = new GasPresentationEventBuffer();
-            var presentationEventStream = new PresentationEventStream();
+            var presentationEventStream = new PresentationEventStream(16384);
             var presentationBridgeSystem = new PresentationBridgeSystem(World, EventBus, presentationEventStream, GameSession, gasPresentationEvents);
             var presentationCommandBuffer = new PresentationCommandBuffer();
             var presentationPrefabs = new PrefabRegistry();

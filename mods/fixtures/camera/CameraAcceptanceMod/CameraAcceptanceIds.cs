@@ -13,6 +13,7 @@ namespace CameraAcceptanceMod
         public const string StackMapId = "camera_acceptance_stack";
 
         public const string RtsCameraId = "Shared3C.Profile.RtsMoba";
+        public const string ProjectionCameraId = "Camera.Acceptance.Profile.Projection";
         public const string TpsCameraId = "Camera.Acceptance.Profile.TpsAim";
         public const string BlendBaseCameraId = "Camera.Acceptance.Profile.BlendBase";
         public const string FollowCloseCameraId = "Camera.Acceptance.Profile.FollowClose";

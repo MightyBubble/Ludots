@@ -68,7 +68,7 @@ flowchart LR
 
 代码入口：
 
-- [PresentationAuthoringContext.cs](C:\001_AI\LudotsProd_issue121_116_119\src\Core\Presentation\Config\PresentationAuthoringContext.cs)
+- [PresentationAuthoringContext.cs](../../src/Core/Presentation/Config/PresentationAuthoringContext.cs)
 
 ### 3.2 位置与朝向同步
 
@@ -87,7 +87,7 @@ flowchart LR
 
 代码入口：
 
-- [WorldToVisualSyncSystem.cs](C:\001_AI\LudotsProd_issue121_116_119\src\Core\Presentation\Systems\WorldToVisualSyncSystem.cs)
+- [WorldToVisualSyncSystem.cs](../../src/Core/Presentation/Systems/WorldToVisualSyncSystem.cs)
 
 ### 3.3 主动画推进
 
@@ -107,7 +107,7 @@ flowchart LR
 
 代码入口：
 
-- [AnimatorRuntimeSystem.cs](C:\001_AI\LudotsProd_issue121_116_119\src\Core\Presentation\Systems\AnimatorRuntimeSystem.cs)
+- [AnimatorRuntimeSystem.cs](../../src/Core/Presentation/Systems/AnimatorRuntimeSystem.cs)
 
 ### 3.4 主视觉发射
 
@@ -132,7 +132,7 @@ flowchart LR
 
 代码入口：
 
-- [EntityVisualEmitSystem.cs](C:\001_AI\LudotsProd_issue121_116_119\src\Core\Presentation\Systems\EntityVisualEmitSystem.cs)
+- [EntityVisualEmitSystem.cs](../../src/Core/Presentation/Systems/EntityVisualEmitSystem.cs)
 
 ## 4. Performer 这条线
 
@@ -165,9 +165,8 @@ performer 当前更像“附加表现对象”，常见用途有：
 
 代码入口：
 
-- [PresentationStartupPerformerSystem.cs](C:\001_AI\LudotsProd_issue121_116_119\src\Core\Presentation\Systems\PresentationStartupPerformerSystem.cs)
-- [PresentationBridgeSystem.cs](C:\001_AI\LudotsProd_issue121_116_119\src\Core\Presentation\Systems\PresentationBridgeSystem.cs)
-- [PerformerRuleSystem.cs](C:\001_AI\LudotsProd_issue121_116_119\src\Core\Presentation\Systems\PerformerRuleSystem.cs)
+- [PresentationBridgeSystem.cs](../../src/Core/Presentation/Systems/PresentationBridgeSystem.cs)
+- [PerformerRuleSystem.cs](../../src/Core/Presentation/Systems/PerformerRuleSystem.cs)
 
 ### 4.3 performer 运行时生命周期
 
@@ -184,9 +183,9 @@ performer 当前更像“附加表现对象”，常见用途有：
 
 代码入口：
 
-- [PerformerRuntimeSystem.cs](C:\001_AI\LudotsProd_issue121_116_119\src\Core\Presentation\Systems\PerformerRuntimeSystem.cs)
-- [PerformerInstanceBuffer.cs](C:\001_AI\LudotsProd_issue121_116_119\src\Core\Presentation\Performers\PerformerInstanceBuffer.cs)
-- [TransientMarkerBuffer.cs](C:\001_AI\LudotsProd_issue121_116_119\src\Core\Presentation\Rendering\TransientMarkerBuffer.cs)
+- [PerformerRuntimeSystem.cs](../../src/Core/Presentation/Systems/PerformerRuntimeSystem.cs)
+- [PerformerInstanceBuffer.cs](../../src/Core/Presentation/Performers/PerformerInstanceBuffer.cs)
+- [TransientMarkerBuffer.cs](../../src/Core/Presentation/Rendering/TransientMarkerBuffer.cs)
 
 ### 4.4 performer 发射
 
@@ -208,7 +207,7 @@ performer 当前更像“附加表现对象”，常见用途有：
 
 代码入口：
 
-- [PerformerEmitSystem.cs](C:\001_AI\LudotsProd_issue121_116_119\src\Core\Presentation\Systems\PerformerEmitSystem.cs)
+- [PerformerEmitSystem.cs](../../src/Core/Presentation/Systems/PerformerEmitSystem.cs)
 
 ## 5. 最终落到哪里
 
@@ -227,7 +226,7 @@ performer 当前更像“附加表现对象”，常见用途有：
 
 代码入口：
 
-- [PresentationRequestFlushSystem.cs](C:\001_AI\LudotsProd_issue121_116_119\src\Core\Presentation\Requests\PresentationRequestFlushSystem.cs)
+- [PresentationRequestFlushSystem.cs](../../src/Core/Presentation/Requests/PresentationRequestFlushSystem.cs)
 
 ## 6. 现在各层职责边界
 
