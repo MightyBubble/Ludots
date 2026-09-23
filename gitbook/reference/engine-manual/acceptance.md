@@ -1,6 +1,12 @@
 # 验收与证据
 
-"验收"在这套引擎里 = 用固定命令跑一关、留下截图和帧统计，作为"它长这样、跑得动"的证据。CI 也用同一套命令做门禁——本地怎么验收，云端就怎么复查。
+"验收"在这套引擎里 = 用固定命令跑一关、留下截图和帧统计，作为"它长这样、跑得动"的证据。
+CI 也用同一套命令做门禁——本地怎么验收，云端就怎么复查。
+
+> 例外：**engine 画廊（engine_raylib_*）不进云端门禁**。它需要真实 OpenGL 窗口，
+> 而 GitHub 的 windows runner 没有可用 WGL 驱动，`InitWindow` 必崩（`0xC0000005`）。
+> 这类条目在验收索引里归入 `local-only`：本地照常用 preset 取证，云端不执行，
+> 它们的回归覆盖由 `RaylibEngineGalleryTests`（solution-verify 的 `TestCategory=raylib-field`）承担。
 
 ## 标准跑法
 
@@ -41,4 +47,7 @@ python scripts/record-engine-galleries.py --scene composition
 
 ## 给新场景接上验收
 
-四件事，缺一不可：`showcase.registry.json` 加条目、`launcher.presets.json` 加 preset、跑一次 preset 落截图与 stats、`gitbook/reference/engine-gallery-wiki/` 加一页。然后跑 `python scripts/build-acceptance-index.py` 同步索引（CI 会校验同步，忘跑即红）。完整登记清单见[引擎画廊开发指南](../../architecture/raylib-engine-gallery-dev-guide.md)。
+四件事，缺一不可：`showcase.registry.json` 加条目、`launcher.presets.json` 加 preset、跑一次 preset 落截图与 stats、`gitbook/reference/engine-gallery-wiki/` 加一页。然后跑 `python scripts/build-acceptance-index.py` 同步索引（CI 会校验同步与 preset 存在性，忘跑或 preset 漏建即红）。完整登记清单见[引擎画廊开发指南](../../architecture/raylib-engine-gallery-dev-guide.md)。
+
+新场景同样归入 `local-only`：需要把 id 加进 `scripts/build-acceptance-index.py` 的 `LOCAL_ONLY_IDS`，
+并保证 `acceptanceTest` 指向的测试真的能执行到它。

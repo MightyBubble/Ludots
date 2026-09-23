@@ -9,9 +9,14 @@
   `scripts/run-mod-launcher.cmd cli launch preset:<preset> --adapter raylib --record <artifactDir>`。
 - **test-only**（`preset` 为空但有 `acceptanceTest`）：无 launcher 预设，仅通过
   `dotnet test --filter FullyQualifiedName~<testFilter>` 覆盖（见各测试项目与 solution-verify 流水线）。
+- **local-only**（`preset` 非空但需真实 OpenGL 窗口）：条目仍在注册表与 launcher preset 里，
+  可本地 `cli launch preset:<id> --record` 取证，但**不进云端门禁**。GitHub 的 windows runner
+  没有可用的 WGL/OpenGL 驱动，执行时在 raylib `InitWindow` 里直接崩（`0xC0000005`），
+  不是代码缺陷而是 runner 能力缺口。这类条目的回归覆盖由 `acceptanceTest` 经 solution-verify
+  的对应 `TestCategory` 切片承担（如画廊的 `raylib-field`）。
 
-当前索引统计：**runnable 52 条 / test-only 0 条 / 共 52 条**（以 `acceptance.index.json` 的
-`counts` 字段为准）。
+当前索引统计：**runnable 28 条 / test-only 0 条 / local-only 24 条 / 共 52 条**（以
+`acceptance.index.json` 的 `counts` 字段为准）。
 
 ## 索引条目结构
 
@@ -68,6 +73,9 @@ runnable 条目经 `--record` 录制后，产物目录下标准产出六件证�
 1. 在 `showcase.registry.json` 中把目标条目标为 `tier: "T1"`、`status: "active"`：
    - 填好 `preset` / `binding`（以及可选的 `artifactDir`、`screenshot`）→ 进入 **runnable**；
    - 只填 `acceptanceTest` → 进入 **test-only**。
+   - 需真实 OpenGL 窗口的条目（如 engine 画廊）把 id 列入 `scripts/build-acceptance-index.py`
+     的 `LOCAL_ONLY_IDS` → 进入 **local-only**，本地仍可取证但不进云端门禁；
+     名单写错（条目不存在 / 非 T1 active / 无 preset）会让 `--check` 直接失败。
 2. 运行 `python scripts/build-acceptance-index.py` 重新生成 `acceptance.index.json` 并一并提交。
 3. CI（`.github/workflows/ci-acceptance.yml`）会先跑 `build-acceptance-index.py --check`，
    索引与注册表漂移即失败，因此两者始终同步。
@@ -99,5 +107,6 @@ dotnet test src/Tests/GasTests/GasTests.csproj -c Debug --filter FullyQualifiedN
 
 步骤：checkout → 安装 .NET 8 + 9 SDK（globaljson pin 9.0.100）→ `--check` 校验索引 →
 编译 `GasTests` / `PresentationTests` / `UiShowcaseTests` → 逐条实跑 runnable 验收
-（单条 600s 超时，失败/超时不阻断后续条目）→ 上传 `artifacts/acceptance/` 产物 →
+（单条 600s 超时，失败/超时不阻断后续条目；`localOnly` 条目不执行，仅在日志与 job summary 里
+点名说明）→ 上传 `artifacts/acceptance/` 产物 →
 输出 job summary（成功/失败条目表）→ Gate 步骤统一判定（任一失败则工作流失败）。
