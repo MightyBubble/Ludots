@@ -48,5 +48,6 @@ Scope: Cross-layer
 ## Containment and Follow-up
 
 - Immediate containment: keep current debt inventory fixed; new entries fail the architecture ratchet.
+- Completed containment slice: #1646 moved MassNavigation presenter speed writing and local observer disclosure out of `src/Core/MassNavigation` into a MassNavigation presentation adapter used by the MassNavigation showcase mods. Core still keeps the remaining presentation debt tracked by the ratchet.
 - Permanent fix direction: follow #1644 and remove tracked entries as each seam is split.
 - Target milestone: close P0 split issues #1645, #1646 and #1647 before starting broad SimulationRuntime surgery.

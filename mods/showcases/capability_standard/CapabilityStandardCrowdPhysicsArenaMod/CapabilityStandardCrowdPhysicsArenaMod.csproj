@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\capabilities\navigation\MassNavigationPresentationAdapter\MassNavigationPresentationAdapter.csproj" />
     <ProjectReference Include="..\..\..\..\src\Core\Ludots.Core.csproj" />
     <ProjectReference Include="..\..\..\..\src\Core\Ludots.Physics2D\Ludots.Physics2D.csproj" />
     <ProjectReference Include="..\..\..\..\src\Core\Ludots.Movement.Physics2DBridge\Ludots.Movement.Physics2DBridge.csproj" />

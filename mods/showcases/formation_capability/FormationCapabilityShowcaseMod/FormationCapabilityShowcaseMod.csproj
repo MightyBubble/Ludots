@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\capabilities\navigation\MassNavigationPresentationAdapter\MassNavigationPresentationAdapter.csproj" />
     <ProjectReference Include="..\..\..\..\src\Core\Ludots.Core.csproj" />
     <ProjectReference Include="..\..\..\CoreInputMod\CoreInputMod.csproj" />
   </ItemGroup>

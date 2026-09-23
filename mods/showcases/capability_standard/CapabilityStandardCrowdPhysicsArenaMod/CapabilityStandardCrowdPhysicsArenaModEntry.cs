@@ -3,8 +3,8 @@ using System.Threading.Tasks;
 using CapabilityStandardCrowdPhysicsArenaMod.Runtime;
 using CapabilityStandardCrowdPhysicsArenaMod.Systems;
 using Ludots.Core.Engine;
-using Ludots.Core.MassNavigation.Systems;
 using Ludots.Core.Modding;
+using MassNavigationPresentationAdapter;
 using Ludots.Core.Movement.Physics2DBridge;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Scripting;
@@ -13,8 +13,6 @@ namespace CapabilityStandardCrowdPhysicsArenaMod;
 
 public sealed class CapabilityStandardCrowdPhysicsArenaModEntry : IMod
 {
-    private const string ObserverVisibilitySystemInstalledKey =
-        "CapabilityStandardCrowdPhysicsArena.ObserverVisibilitySystemInstalled";
     private const string PressurePlateDoorSystemInstalledKey =
         "CapabilityStandardCrowdPhysicsArena.PressurePlateDoorSystemInstalled";
 
@@ -46,7 +44,7 @@ public sealed class CapabilityStandardCrowdPhysicsArenaModEntry : IMod
         // 竞技场 Q/E 技能通过按键施放（input mapping），技能栏 overlay 是纯显示且无点击交互，
         // 在竞技场里没有信息增益——显式关闭（CoreInputMod.SkillBarEnabled）。
         engine.GlobalContext["CoreInputMod.SkillBarEnabled"] = false;
-        EnsureObserverVisibilitySystem(engine);
+        EnsureMassNavigationPresentationAdapter(engine);
         EnsurePressurePlateDoorSystem(engine);
         bool mapFocused = CapabilityStandardCrowdPhysicsArenaMapFocus.IsStartupMapFocused(engine);
         engine.SetService(CoreServiceKeys.PresentationAudienceRevealHidden, mapFocused);
@@ -65,17 +63,10 @@ public sealed class CapabilityStandardCrowdPhysicsArenaModEntry : IMod
         return Task.CompletedTask;
     }
 
-    private static void EnsureObserverVisibilitySystem(GameEngine engine)
+    private static void EnsureMassNavigationPresentationAdapter(GameEngine engine)
     {
-        if (engine.GlobalContext.ContainsKey(ObserverVisibilitySystemInstalledKey))
-        {
-            return;
-        }
-
-        engine.RegisterSystem(
-            MassNavigationObserverDisclosure.CreateLocalAgentDisclosure(engine),
-            SystemGroup.RuntimeEntityBinding);
-        engine.GlobalContext[ObserverVisibilitySystemInstalledKey] = true;
+        MassNavigationPresentationAdapterInstaller.EnsureLocalObserverDisclosure(engine);
+        MassNavigationPresentationAdapterInstaller.EnsureLocomotionAnimatorParams(engine);
     }
 
     private static void EnsurePressurePlateDoorSystem(GameEngine engine)

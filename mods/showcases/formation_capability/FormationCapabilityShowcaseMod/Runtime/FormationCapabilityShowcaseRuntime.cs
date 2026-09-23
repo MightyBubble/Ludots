@@ -30,6 +30,7 @@ using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
+using MassNavigationPresentationAdapter;
 using FormationCapabilityShowcaseMod.Systems;
 
 namespace FormationCapabilityShowcaseMod.Runtime;
@@ -175,6 +176,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
             _formationOutlinePresentationSystem = formationOutlinePresentationSystem;
             engine.InsertPresentationSystemBefore<PresenterRuleSystem>(obstacleOverlayPresentationSystem);
             _obstacleOverlayPresentationSystem = obstacleOverlayPresentationSystem;
+            MassNavigationPresentationAdapterInstaller.EnsureLocomotionAnimatorParams(engine);
             _systemsInstalled = true;
         }
         catch

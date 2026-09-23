@@ -1,14 +1,14 @@
 using System;
-using System.Numerics;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Engine;
-using Ludots.Core.Presentation.Presenters;
+using Ludots.Core.MassNavigation;
 using Ludots.Core.MassNavigation.Runtime;
+using Ludots.Core.Presentation.Presenters;
 
-namespace Ludots.Core.MassNavigation.Systems;
+namespace MassNavigationPresentationAdapter;
 
-internal sealed class MassNavigationLocomotionAnimatorParamSystem : BaseSystem<World, float>
+public sealed class MassNavigationLocomotionAnimatorParamSystem : BaseSystem<World, float>
 {
     private readonly GameEngine _engine;
     private readonly int _speedParamKey;
@@ -19,7 +19,7 @@ internal sealed class MassNavigationLocomotionAnimatorParamSystem : BaseSystem<W
         : base((engine ?? throw new ArgumentNullException(nameof(engine))).World)
     {
         _engine = engine;
-        _speedParamKey = MassNavigationSimulationRuntime.ResolveAgentLocomotionSpeedParamKey();
+        _speedParamKey = MassNavigationPresentationAdapterIds.AgentLocomotionSpeedParam;
     }
 
     public override void Update(in float dt)

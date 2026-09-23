@@ -8,7 +8,6 @@ using Ludots.Core.MovePlanning;
 using Ludots.Core.Movement;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.GraphWorld;
-using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
@@ -147,8 +146,6 @@ public sealed class MassNavigationRuntime
         engine.RegisterSystem(
             new MassNavigationMovePlanExecutionSystem(engine, config),
             SystemGroup.AbilityActivation);
-        engine.InsertPresentationSystemBefore<AnimatorRuntimeSystem>(
-            new MassNavigationLocomotionAnimatorParamSystem(engine));
         _systemsInstalled = true;
         Log.Info(in LogChannels.Engine, "[MassNavigation runtime] Installed mass-navigation runtime.");
     }

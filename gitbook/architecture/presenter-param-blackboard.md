@@ -70,7 +70,7 @@ JSON 规则里的 SetParam 命令（真实样例 `mods/fixtures/blacksmith/Black
 
 ### 2.5 其他写入方
 
-持有 chunk span 的系统可以直写组件：如 `MassNavigationLocomotionAnimatorParamSystem` 把寻路速度写进 `PresenterFloatParams` 并手推 `Version++`（`src/Core/MassNavigation/Systems/MassNavigationLocomotionAnimatorParamSystem.cs:45-52`）。直写绕过标脏与传播，只适合不影响静态视觉的参数。
+持有 chunk span 的系统可以直写组件：如 `MassNavigationLocomotionAnimatorParamSystem` 把寻路速度写进 `PresenterFloatParams` 并手推 `Version++`（`mods/capabilities/navigation/MassNavigationPresentationAdapter/MassNavigationLocomotionAnimatorParamSystem.cs:45-52`）。直写绕过标脏与传播，只适合不影响静态视觉的参数。
 
 ## 3 父→子继承链
 

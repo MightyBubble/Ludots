@@ -1,8 +1,8 @@
 using System;
 using System.Threading.Tasks;
 using Ludots.Core.Engine;
-using Ludots.Core.MassNavigation.Systems;
 using Ludots.Core.Modding;
+using MassNavigationPresentationAdapter;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Scripting;
 
@@ -10,10 +10,6 @@ namespace CapabilityStandardMassNavigationLargeWorld10kMod;
 
 public sealed class CapabilityStandardMassNavigationLargeWorld10kModEntry : IMod
 {
-    private const string ObserverVisibilitySystemInstalledKey =
-        "CapabilityStandardMassNavigationLargeWorld10k.ObserverVisibilitySystemInstalled";
-    private IModContext? _context;
-
     public void OnLoad(IModContext context)
     {
         context.Log("[CapabilityStandardMassNavigationLargeWorld10kMod] Loaded");
@@ -34,7 +30,7 @@ public sealed class CapabilityStandardMassNavigationLargeWorld10kModEntry : IMod
             return Task.CompletedTask;
         }
 
-        EnsureObserverVisibilitySystem(engine);
+        EnsureMassNavigationPresentationAdapter(engine);
         bool mapFocused = CapabilityStandardMassNavigationLargeWorld10kMapFocus.IsStartupMapFocused(engine);
         engine.SetService(CoreServiceKeys.PresentationAudienceRevealHidden, mapFocused);
         if (!mapFocused)
@@ -53,16 +49,9 @@ public sealed class CapabilityStandardMassNavigationLargeWorld10kModEntry : IMod
         return Task.CompletedTask;
     }
 
-    private static void EnsureObserverVisibilitySystem(GameEngine engine)
+    private static void EnsureMassNavigationPresentationAdapter(GameEngine engine)
     {
-        if (engine.GlobalContext.ContainsKey(ObserverVisibilitySystemInstalledKey))
-        {
-            return;
-        }
-
-        engine.RegisterSystem(
-            MassNavigationObserverDisclosure.CreateLocalAgentDisclosure(engine),
-            SystemGroup.RuntimeEntityBinding);
-        engine.GlobalContext[ObserverVisibilitySystemInstalledKey] = true;
+        MassNavigationPresentationAdapterInstaller.EnsureLocalObserverDisclosure(engine);
+        MassNavigationPresentationAdapterInstaller.EnsureLocomotionAnimatorParams(engine);
     }
 }

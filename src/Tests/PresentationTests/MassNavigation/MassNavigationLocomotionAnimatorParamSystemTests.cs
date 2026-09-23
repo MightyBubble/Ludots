@@ -2,13 +2,16 @@ using Arch.Core;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
+using Arch.System;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Map;
 using Ludots.Core.MassNavigation;
 using Ludots.Core.MassNavigation.Runtime;
-using Ludots.Core.MassNavigation.Systems;
+using MassNavigationPresentationAdapter;
 using Ludots.Core.Presentation.Presenters;
+using Ludots.Core.Presentation.Systems;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Presentation
@@ -65,7 +68,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void MassNavigationLocomotionAnimatorParamSystem_VisibleOwnedPresenter_WritesNormalizedSpeed()
+        public void MassNavigationPresentationAdapter_VisibleOwnedPresenter_WritesNormalizedSpeed()
         {
             using var engine = new GameEngine();
             string repoRoot = FindRepoRoot();
@@ -132,7 +135,7 @@ namespace Ludots.Tests.Presentation
             var system = new MassNavigationLocomotionAnimatorParamSystem(engine);
             system.Update(0f);
 
-            int speedParamKey = MassNavigationSimulationRuntime.ResolveAgentLocomotionSpeedParamKey();
+            int speedParamKey = MassNavigationPresentationAdapterIds.AgentLocomotionSpeedParam;
             ref PresenterFloatParams movingParams = ref world.Get<PresenterFloatParams>(movingPresenter);
             ref PresenterFloatParams idleParams = ref world.Get<PresenterFloatParams>(idlePresenter);
             ref PresenterFloatParams culledParams = ref world.Get<PresenterFloatParams>(culledPresenter);
@@ -149,6 +152,51 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(world.Get<PresenterState>(movingPresenter).Version, Is.EqualTo(11));
             Assert.That(world.Get<PresenterState>(idlePresenter).Version, Is.EqualTo(21));
+        }
+
+        [Test]
+        public void MassNavigationPresentationAdapter_Installer_IsIdempotentAndRunsBeforeAnimator()
+        {
+            using var engine = new GameEngine();
+            string repoRoot = FindRepoRoot();
+            engine.InitializeWithConfigPipeline(
+                new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") },
+                Path.Combine(repoRoot, "assets"));
+
+            MassNavigationPresentationAdapterInstaller.EnsureLocomotionAnimatorParams(engine);
+            MassNavigationPresentationAdapterInstaller.EnsureLocomotionAnimatorParams(engine);
+
+            IReadOnlyList<ISystem<float>> systems = GetPresentationSystems(engine);
+            int adapterCount = 0;
+            int adapterIndex = -1;
+            int animatorIndex = -1;
+            for (int i = 0; i < systems.Count; i++)
+            {
+                if (systems[i] is MassNavigationLocomotionAnimatorParamSystem)
+                {
+                    adapterCount++;
+                    adapterIndex = i;
+                }
+
+                if (systems[i] is AnimatorRuntimeSystem)
+                {
+                    animatorIndex = i;
+                }
+            }
+
+            Assert.That(adapterCount, Is.EqualTo(1));
+            Assert.That(adapterIndex, Is.GreaterThanOrEqualTo(0));
+            Assert.That(animatorIndex, Is.GreaterThanOrEqualTo(0));
+            Assert.That(adapterIndex, Is.LessThan(animatorIndex));
+        }
+
+        private static IReadOnlyList<ISystem<float>> GetPresentationSystems(GameEngine engine)
+        {
+            FieldInfo field = typeof(GameEngine).GetField(
+                "_presentationSystems",
+                BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("GameEngine._presentationSystems field missing.");
+            return (IReadOnlyList<ISystem<float>>)field.GetValue(engine)!;
         }
 
         private static string FindRepoRoot()
