@@ -56,3 +56,4 @@
 - Pacemaker 深度版：`docs/architecture/pacemaker.md`
 - ADR：`docs/adr/ADR-0004-time-system-entity-local-and-turn-semantics.md`
 - 历法与周期：`gitbook/architecture/calendar-system.md`
+- 图节点设计（尚未实现）：[时间流图节点](time-flow-graph-nodes.md)
