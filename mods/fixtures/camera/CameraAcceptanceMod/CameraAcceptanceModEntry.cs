@@ -36,6 +36,12 @@ namespace CameraAcceptanceMod
                     engine.RegisterSystem(new CameraAcceptanceLocalAvatarMoveSystem(engine), SystemGroup.InputCollection);
                     engine.RegisterSystem(new CameraAcceptanceDiagnosticsToggleSystem(engine), SystemGroup.InputCollection);
                     engine.RegisterSystem(new CameraAcceptanceProjectionSpawnControlSystem(engine), SystemGroup.InputCollection);
+                    var projectionClick = new CameraAcceptanceProjectionClickSystem(runtime);
+                    engine.RegisterSystem(projectionClick, SystemGroup.InputCollection);
+                    if (engine.GetService(CoreServiceKeys.InputFrameConsumers) is System.Collections.Generic.List<IInputFrameConsumer> clickConsumers)
+                    {
+                        clickConsumers.Add(projectionClick);
+                    }
                     engine.RegisterSystem(new CameraBlendAcceptanceSystem(engine), SystemGroup.InputCollection);
                     engine.RegisterSystem(new CameraStackAcceptanceSystem(engine), SystemGroup.InputCollection);
                     engine.RegisterPresentationSystem(new CameraAcceptancePanelPresentationSystem(engine, runtime));

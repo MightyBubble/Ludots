@@ -58,12 +58,22 @@ jobs:
           }
 
       # 单条失败/超时不阻断后续条目；结果写入 ci-acceptance-results.json，最后由 Gate 步骤统一判定。
+      # localOnly 条目（需真实 OpenGL 窗口，runner 无 WGL 驱动）不在本 runner 执行，
+      # 其覆盖由 solution-verify 的对应 TestCategory 切片承担。
       - name: Run runnable acceptance entries
         shell: pwsh
         run: |
           $index = Get-Content 'scripts/acceptance/acceptance.index.json' -Raw -Encoding UTF8 | ConvertFrom-Json
           $results = New-Object System.Collections.Generic.List[object]
           $timeoutSeconds = 600
+
+          $localOnly = @($index.localOnly)
+          if ($localOnly.Count -gt 0) {
+            Write-Host "[INFO] $($localOnly.Count) 条 localOnly 条目不在本 runner 执行（需真实 OpenGL 窗口）:"
+            foreach ($lo in $localOnly) {
+              Write-Host " - $($lo.id): $($lo.localOnly)"
+            }
+          }
 
           foreach ($entry in @($index.runnable)) {
             $startedAt = Get-Date
@@ -73,9 +83,26 @@ jobs:
             }
             New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
 
-            $selector = $entry.binding
-            if ([string]::IsNullOrWhiteSpace($selector)) {
-              $selector = $entry.preset
+            $selector = $null
+            if (-not [string]::IsNullOrWhiteSpace($entry.preset)) {
+              $selector = "preset:$($entry.preset)"
+            }
+            elseif (-not [string]::IsNullOrWhiteSpace($entry.binding)) {
+              $selector = $entry.binding
+            }
+            else {
+              $status = 'fail(no-selector)'
+              $elapsed = [int]((Get-Date) - $startedAt).TotalSeconds
+              Write-Host "=== [$($entry.id)] $status (${elapsed}s)"
+              $results.Add([pscustomobject]@{
+                id              = $entry.id
+                binding         = $null
+                artifactDir     = $artifactDir
+                status          = $status
+                exitCode        = $null
+                durationSeconds = $elapsed
+              })
+              continue
             }
 
             Write-Host "=== [$($entry.id)] cli launch $selector --adapter raylib --record $artifactDir"
@@ -159,7 +186,7 @@ jobs:
           $indexPath = 'scripts/acceptance/acceptance.index.json'
           if (Test-Path $indexPath) {
             $index = Get-Content $indexPath -Raw -Encoding UTF8 | ConvertFrom-Json
-            $lines.Add("- runnable 条目: $($index.counts.runnable)；test-only 条目: $($index.counts.testOnly)")
+            $lines.Add("- runnable 条目: $($index.counts.runnable)；test-only 条目: $($index.counts.testOnly)；local-only 条目: $($index.counts.localOnly)")
             $lines.Add('')
           }
 

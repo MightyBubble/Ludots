@@ -605,10 +605,11 @@ namespace Ludots.Core.Presentation.Presenters
             Entity owner = state.OwnerEntity;
             bool hasOwnerTransform = _world.IsAlive(owner) && _world.Has<VisualTransform>(owner);
             VisualTransform ownerTransform = hasOwnerTransform ? _world.Get<VisualTransform>(owner) : VisualTransform.Default;
+            bool useOwnerTransform = state.AnchorKind == PresentationAnchorKind.Entity && hasOwnerTransform;
 
-            Vector3 position = hasOwnerTransform ? ownerTransform.Position : _world.Get<PresenterWorldPosition>(presenter).Value;
-            Quaternion rotation = hasOwnerTransform ? ownerTransform.Rotation : Quaternion.Identity;
-            Vector3 scale = hasOwnerTransform ? ownerTransform.Scale : Vector3.One;
+            Vector3 position = useOwnerTransform ? ownerTransform.Position : _world.Get<PresenterWorldPosition>(presenter).Value;
+            Quaternion rotation = useOwnerTransform ? ownerTransform.Rotation : Quaternion.Identity;
+            Vector3 scale = useOwnerTransform ? ownerTransform.Scale : Vector3.One;
 
             position += definition.PositionOffset;
 
