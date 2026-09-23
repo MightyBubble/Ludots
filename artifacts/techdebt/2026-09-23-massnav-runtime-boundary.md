@@ -35,6 +35,13 @@ Scope: Cross-layer
 - Correctness/stability risk: Arch ECS is no longer the only entity lifecycle and identity truth for MassNavigation participants; route and order state can survive outside the canonical MovePlan/GAS/navigation seams.
 - Blast radius: Core, Navigation, MovePlanning, ScenarioPlan, Presentation, Physics2D bridge and showcase mods.
 
+## Presenter Boundary Finding
+
+- Presenter, Animator and param blackboard infrastructure already exist in Core Presentation. MassNavigation must not create a parallel presenter lifecycle or own Animator behavior.
+- The current `MassNavigationPresentationAdapter` is a narrow bridge: it copies MassNavigation solver-derived locomotion speed into the existing `PresenterFloatParams` key consumed by `AnimatorRuntimeSystem`, and it registers local observer disclosure for MassNavigation agents.
+- Removing that bridge without a replacement would leave authored animator defaults in place while agents move, stop or arrive. The existing generic bindings can read owner attributes, owner blackboard floats, facing, constants, graph results and pointer state; they cannot read MassNavigation solver SoA velocity directly.
+- The remaining debt is moving MassNavigation-owned presentation config, presenter/mesh validation, observer disclosure inputs, presentation lifecycle checks and presenter telemetry out of Core-owned solver/runtime code.
+
 ## Fuse Decision
 
 - Mode: hard-stop for new boundary debt through an architecture ratchet.
