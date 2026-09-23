@@ -423,7 +423,8 @@ namespace GasTests
             That(world.Get<Name>(owners[0]).Value, Is.EqualTo(TemplateName));
             That(world.Get<PlacedInstanceId>(owners[0]).Value, Is.EqualTo("batch.liu"));
             That(world.Get<Name>(owners[1]).Value, Is.EqualTo(TemplateName));
-            That(world.Has<PlacedInstanceId>(owners[1]), Is.False);
+            That(world.Has<PlacedInstanceId>(owners[1]), Is.True);
+            That(world.Get<PlacedInstanceId>(owners[1]).Value, Is.Null);
         }
 
         [Test]

@@ -657,7 +657,8 @@ namespace Ludots.Core.Systems
                 bool hasDirectBootstrap = HasDirectEntitySpawnBootstrap(templateKeyId);
                 bool publishSpawnedEvent = ShouldPublishSpawnedEvent(templateKeyId, hasDirectBootstrap);
 
-                TemplateBatchSpawnFeatures features = TemplateBatchSpawnFeatures.MapEntity;
+                TemplateBatchSpawnFeatures features =
+                    TemplateBatchSpawnFeatures.MapEntity | TemplateBatchSpawnFeatures.PlacedInstanceId;
                 if (_stableIds != null)
                 {
                     features |= TemplateBatchSpawnFeatures.PresentationStableId;
@@ -743,13 +744,6 @@ namespace Ludots.Core.Systems
                             _ownerBatchParamOverrides[i] = null!;
                         }
                     }
-                }
-
-                // 摆放编号不在批量行的原型里。表现引导还握着这行的组件跨度，
-                // 结构变更必须等引导结束。
-                for (int i = 0; i < created.Length; i++)
-                {
-                    StampPlacedInstanceId(created[i], pendingBatchEntityData[i].InstanceId);
                 }
 
                 pendingBatchRequests.Clear();
@@ -1096,7 +1090,7 @@ namespace Ludots.Core.Systems
             }
 
             var created = new Entity[run];
-            _templateBatchSpawner.CreateNameOnlyChildren(names, templateKeyIds, in mapEntityTag, created);
+            _templateBatchSpawner.CreateNameOnlyChildren(names, templateKeyIds, addressablePaths, in mapEntityTag, created);
             for (int offset = 0; offset < run; offset++)
             {
                 EntityTemplateChild child = children[start + offset];
@@ -1106,7 +1100,6 @@ namespace Ludots.Core.Systems
                 if (!string.IsNullOrEmpty(childLocalPath))
                 {
                     entityIndex.RegisterLocalPath(mapId, childLocalPath, childEntity);
-                    StampPlacedInstanceId(childEntity, childLocalPath);
                 }
 
                 Ludots.Core.Gameplay.Attachment.AttachmentOps.Attach(
@@ -1300,7 +1293,8 @@ namespace Ludots.Core.Systems
                 hasFacing,
                 mapEntity,
                 ParsePresenterParamOverrides(mapId, entityData),
-                entityData.Overrides);
+                entityData.Overrides,
+                entityData.InstanceId);
             return true;
         }
 
