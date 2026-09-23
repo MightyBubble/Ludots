@@ -73,9 +73,26 @@ jobs:
             }
             New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
 
-            $selector = $entry.binding
-            if ([string]::IsNullOrWhiteSpace($selector)) {
-              $selector = $entry.preset
+            $selector = $null
+            if (-not [string]::IsNullOrWhiteSpace($entry.preset)) {
+              $selector = "preset:$($entry.preset)"
+            }
+            elseif (-not [string]::IsNullOrWhiteSpace($entry.binding)) {
+              $selector = $entry.binding
+            }
+            else {
+              $status = 'fail(no-selector)'
+              $elapsed = [int]((Get-Date) - $startedAt).TotalSeconds
+              Write-Host "=== [$($entry.id)] $status (${elapsed}s)"
+              $results.Add([pscustomobject]@{
+                id              = $entry.id
+                binding         = $null
+                artifactDir     = $artifactDir
+                status          = $status
+                exitCode        = $null
+                durationSeconds = $elapsed
+              })
+              continue
             }
 
             Write-Host "=== [$($entry.id)] cli launch $selector --adapter raylib --record $artifactDir"

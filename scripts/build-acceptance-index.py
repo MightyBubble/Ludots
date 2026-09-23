@@ -2,7 +2,7 @@
 """从 showcase.registry.json 生成验收套件索引 scripts/acceptance/acceptance.index.json。
 
 筛选规则：tier == "T1" 且 status == "active" 的条目，分两级：
-- runnable : preset 非空，可通过 run-mod-launcher.cmd cli launch <binding> --adapter raylib --record <dir> 实跑；
+- runnable : preset 非空，可通过 run-mod-launcher.cmd cli launch preset:<preset> --adapter raylib --record <dir> 实跑；
 - test-only: preset 为空但有 acceptanceTest，仅通过 dotnet test 过滤器覆盖。
 
 用法：

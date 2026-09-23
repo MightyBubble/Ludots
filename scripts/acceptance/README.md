@@ -6,11 +6,11 @@
 
 - **选取范围**：注册表中 `tier = T1` 且 `status = active` 的条目。
 - **runnable**（`preset` 非空）：可通过 launcher 实跑录制，CI 逐条执行
-  `scripts/run-mod-launcher.cmd cli launch <binding> --adapter raylib --record <artifactDir>`。
+  `scripts/run-mod-launcher.cmd cli launch preset:<preset> --adapter raylib --record <artifactDir>`。
 - **test-only**（`preset` 为空但有 `acceptanceTest`）：无 launcher 预设，仅通过
   `dotnet test --filter FullyQualifiedName~<testFilter>` 覆盖（见各测试项目与 solution-verify 流水线）。
 
-当前索引统计：**runnable 9 条 / test-only 14 条 / 共 23 条**（以 `acceptance.index.json` 的
+当前索引统计：**runnable 52 条 / test-only 0 条 / 共 52 条**（以 `acceptance.index.json` 的
 `counts` 字段为准）。
 
 ## 索引条目结构
@@ -82,7 +82,7 @@ python scripts/build-acceptance-index.py
 python scripts/build-acceptance-index.py --check
 
 # 实跑某条 runnable 验收（以 camera_acceptance 为例）
-scripts/run-mod-launcher.cmd cli launch camera_acceptance --adapter raylib --record artifacts/acceptance/launcher-camera-acceptance-raylib
+scripts/run-mod-launcher.cmd cli launch preset:camera_acceptance_raylib --adapter raylib --record artifacts/acceptance/launcher-camera-acceptance-raylib
 
 # 跑某条 test-only 验收（以 fog_of_war 为例）
 dotnet test src/Tests/GasTests/GasTests.csproj -c Debug --filter FullyQualifiedName~FogOfWarShowcaseAcceptanceTests -v minimal
