@@ -9,7 +9,7 @@ using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 
-namespace MassNavigationPresentationAdapter;
+namespace Ludots.Core.Presentation.MassNavigation;
 
 public static class MassNavigationObserverDisclosure
 {

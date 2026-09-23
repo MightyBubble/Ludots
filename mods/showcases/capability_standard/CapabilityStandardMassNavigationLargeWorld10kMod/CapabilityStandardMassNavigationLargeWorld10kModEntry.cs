@@ -2,8 +2,8 @@ using System;
 using System.Threading.Tasks;
 using Ludots.Core.Engine;
 using Ludots.Core.Modding;
-using MassNavigationPresentationAdapter;
 using Ludots.Core.Presentation.Minimap;
+using Ludots.Core.Presentation.MassNavigation;
 using Ludots.Core.Scripting;
 
 namespace CapabilityStandardMassNavigationLargeWorld10kMod;

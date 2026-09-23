@@ -4,9 +4,9 @@ using CapabilityStandardCrowdPhysicsArenaMod.Runtime;
 using CapabilityStandardCrowdPhysicsArenaMod.Systems;
 using Ludots.Core.Engine;
 using Ludots.Core.Modding;
-using MassNavigationPresentationAdapter;
 using Ludots.Core.Movement.Physics2DBridge;
 using Ludots.Core.Presentation.Minimap;
+using Ludots.Core.Presentation.MassNavigation;
 using Ludots.Core.Scripting;
 
 namespace CapabilityStandardCrowdPhysicsArenaMod;
