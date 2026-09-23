@@ -14,6 +14,8 @@ namespace Ludots.Core.Gameplay.Relationships
     {
         private readonly GameEngine _engine;
         private readonly RelationshipChangeBuffer _changeBuffer;
+        private readonly RelationshipCallbackProcessor _callbackProcessor;
+        private readonly RelationshipSynergyProcessor _synergyProcessor;
 
         public RelationshipProcessingSystem(
             GameEngine engine,
@@ -23,6 +25,8 @@ namespace Ludots.Core.Gameplay.Relationships
         {
             _engine = engine;
             _changeBuffer = changeBuffer;
+            _callbackProcessor = new RelationshipCallbackProcessor(engine.World, tagOps, teamLookup);
+            _synergyProcessor = new RelationshipSynergyProcessor(engine.World, tagOps, teamLookup);
         }
 
         public void Initialize()
@@ -44,15 +48,32 @@ namespace Ludots.Core.Gameplay.Relationships
 
             if (_changeBuffer.Count > 0)
             {
+                RelationshipRuntime relationshipRuntime = _engine.GetService(CoreServiceKeys.RelationshipRuntime)
+                    ?? throw new InvalidOperationException("RelationshipProcessingSystem requires RelationshipRuntime.");
+                RelationshipBandRegistry bandRegistry = _engine.GetService(CoreServiceKeys.RelationshipBandRegistry)
+                    ?? throw new InvalidOperationException("RelationshipProcessingSystem requires RelationshipBandRegistry.");
+
                 // 前缀分批：图在事件回调里重入建边/改值会产生新记录，追加分批继续处理，
                 // 不得被一次 Clear 吞掉（重入变更是本能力的主用法）。上限防自激环。
                 int processed = 0;
                 int guard = _changeBuffer.Count * 8 + 1024;
                 while (processed < _changeBuffer.Count)
                 {
-                    ReadOnlySpan<RelationshipChangeRecord> batch = _changeBuffer.GetSpan().Slice(processed);
+                    int batchLength = _changeBuffer.Count - processed;
+                    ReadOnlySpan<RelationshipChangeRecord> batch = _changeBuffer.GetSpan().Slice(processed, batchLength);
+                    ApplyMetricBands(relationshipRuntime, bandRegistry, batch);
+                    if (catalogRuntime.Callbacks.Count > 0)
+                    {
+                        _callbackProcessor.Process(_engine, catalogRuntime, batch);
+                    }
+
                     PublishChangeEvents(batch);
-                    processed = _changeBuffer.Count;
+                    if (catalogRuntime.Synergies.Count > 0)
+                    {
+                        _synergyProcessor.Evaluate(_engine, catalogRuntime);
+                    }
+
+                    processed += batchLength;
                     if (processed > guard)
                     {
                         // 抛之前清空：宿主若按拍捕获异常继续跑，不清会导致已处理记录逐拍重放
@@ -75,6 +96,56 @@ namespace Ludots.Core.Gameplay.Relationships
 
         public void Dispose()
         {
+        }
+
+        private void ApplyMetricBands(
+            RelationshipRuntime relationshipRuntime,
+            RelationshipBandRegistry bandRegistry,
+            ReadOnlySpan<RelationshipChangeRecord> changes)
+        {
+            var bands = bandRegistry.Bands;
+            if (bands.Count == 0)
+            {
+                return;
+            }
+
+            for (int changeIndex = 0; changeIndex < changes.Length; changeIndex++)
+            {
+                ref readonly RelationshipChangeRecord change = ref changes[changeIndex];
+                if (change.Kind != RelationshipChangeKind.MetricChanged ||
+                    change.MetricId < 0 ||
+                    !_engine.World.IsAlive(change.Source) ||
+                    !_engine.World.IsAlive(change.Target))
+                {
+                    continue;
+                }
+
+                for (int bandIndex = 0; bandIndex < bands.Count; bandIndex++)
+                {
+                    RelationshipBandDefinition band = bands[bandIndex];
+                    if (band.TypeId != change.TypeId || band.MetricId != change.MetricId)
+                    {
+                        continue;
+                    }
+
+                    bool oldMatches = MatchesBand(change.OldValue, band);
+                    bool newMatches = MatchesBand(change.NewValue, band);
+                    if (oldMatches != newMatches)
+                    {
+                        relationshipRuntime.SetFlag(change.Source, change.Target, change.TypeId, band.FlagId, newMatches);
+                    }
+                }
+            }
+        }
+
+        private static bool MatchesBand(short value, in RelationshipBandDefinition band)
+        {
+            return band.Comparison switch
+            {
+                RelationshipBandComparison.GreaterOrEqual => value >= band.Threshold,
+                RelationshipBandComparison.LessOrEqual => value <= band.Threshold,
+                _ => throw new InvalidOperationException($"Unknown relationship band comparison '{band.Comparison}'."),
+            };
         }
 
         /// <summary>

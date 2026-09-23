@@ -242,8 +242,17 @@ namespace Ludots.Tests.GAS.Production
             screenRayProvider.BindPresenter(cameraPresenter);
             engine.SetService(CoreServiceKeys.ScreenProjector, screenProjector);
             engine.SetService(CoreServiceKeys.ScreenRayProvider, screenRayProvider);
+            var presenterRuntime = engine.GetService(CoreServiceKeys.PresenterEntityRuntime)
+                ?? throw new InvalidOperationException("PresenterEntityRuntime missing.");
 
-            var culling = new CameraCullingSystem(engine.World, engine.AuthorityCamera(), engine.SpatialQueries, view, cullingConfig: engine.MergedConfig.Presentation.CameraCulling, timingDiagnostics: timingDiagnostics);
+            var culling = new CameraCullingSystem(
+                engine.World,
+                engine.AuthorityCamera(),
+                engine.SpatialQueries,
+                view,
+                cullingConfig: engine.MergedConfig.Presentation.CameraCulling,
+                presenters: presenterRuntime,
+                timingDiagnostics: timingDiagnostics);
             engine.RegisterPresentationSystem(culling);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
             engine.GlobalContext[HeadlessCameraKey] = new HeadlessCameraRuntime(
