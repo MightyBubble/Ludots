@@ -4316,6 +4316,20 @@ namespace Ludots.Core.Engine
             var tileWidthCm = tileGrids.Max(g => g!.TileWorldWidthCm);
             var tileHeightCm = tileGrids.Max(g => g!.TileWorldHeightCm);
 
+            // 瓦片网格原点 = 地形 cell(0,0) 的世界位置，与烘焙切瓦片时用的是同一个基准
+            // (烘焙侧同样取 (0,0)，见 RecastDirectFeedHeightfield)。板锚定居中世界时首个瓦片
+            // 落在负半轴，不传原点会把负半轴坐标钳到 chunk 0 而指向错误瓦片。
+            int gridOriginXcm = 0;
+            int gridOriginYcm = 0;
+            if (participatingBoards.Count > 0 &&
+                CurrentMapSession?.GetBoard(participatingBoards[0].Name) is ITerrainBoard originTerrainBoard &&
+                originTerrainBoard.LogicTerrain != null)
+            {
+                originTerrainBoard.LogicTerrain.GetWorldPositionMeters(0, 0, out float originXm, out float originZm);
+                gridOriginXcm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(originXm));
+                gridOriginYcm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(originZm));
+            }
+
             for (int li = 0; li < bakeConfig.Layers.Count; li++)
             {
                 int layer = bakeConfig.Layers[li].Layer;
@@ -4348,7 +4362,7 @@ namespace Ludots.Core.Engine
                 }
             }
 
-            var navRegistry = new NavQueryServiceRegistry(stores, tileWidthCm, tileHeightCm);
+            var navRegistry = new NavQueryServiceRegistry(stores, tileWidthCm, tileHeightCm, gridOriginXcm, gridOriginYcm);
             SetService(CoreServiceKeys.NavQueryServices, navRegistry);
             if (bakeConfig.ParsedMode == NavBakeMode.RuntimeIncremental)
             {
