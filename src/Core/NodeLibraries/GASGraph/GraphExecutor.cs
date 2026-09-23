@@ -8,6 +8,58 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 {
     public static class GraphExecutor
     {
+        public static int ExecuteQuery(
+            GraphProgramRegistry programs,
+            int graphId,
+            World world,
+            Entity subject,
+            Span<Entity> targets,
+            IGraphRuntimeApi api,
+            Span<float> floats,
+            Span<int> ints,
+            Span<byte> bools,
+            Span<Entity> entities,
+            Span<int> callStack,
+            IntVector2 targetPosCm = default,
+            Entity explicitTarget = default,
+            Entity targetContext = default,
+            uint randomSeed = 0)
+        {
+            ArgumentNullException.ThrowIfNull(programs);
+            ArgumentNullException.ThrowIfNull(world);
+            ArgumentNullException.ThrowIfNull(api);
+
+            if (subject == Entity.Null)
+            {
+                throw new ArgumentException("Query execution requires an explicit non-null subject entity.", nameof(subject));
+            }
+            if (!world.IsAlive(subject))
+            {
+                throw new InvalidOperationException("Query execution requires a live subject entity.");
+            }
+
+            programs.RequireHostKind(graphId, GraphKind.Query, nameof(ExecuteQuery));
+            GraphFrame frame = GraphFrame.Bind(
+                GraphKind.Query,
+                GraphEntityPreset.TargetContext(targetContext),
+                world,
+                subject,
+                explicitTarget,
+                targetPosCm,
+                api,
+                programs,
+                floats,
+                ints,
+                bools,
+                entities,
+                targets,
+                callStack,
+                randomSeed: randomSeed);
+
+            ExecuteRegistered(programs, graphId, GraphKind.Query, ref frame);
+            return frame.TargetList.Count;
+        }
+
         internal static void Execute(
             World world,
             Entity caster,

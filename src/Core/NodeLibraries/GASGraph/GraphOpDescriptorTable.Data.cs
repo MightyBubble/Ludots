@@ -139,12 +139,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.LoadConfigEffectId, LinearAll, GraphValueType.Int, imm: GraphOperandRole.SymbolImm, listenerOwner: true);
             Add(rows, GraphNodeOp.ResolveTableRow, LinearQueryScript, GraphValueType.Int, portA, queryOut: GraphValueType.Int, queryPorts: portA, scriptPorts: portA, scriptOut: GraphValueType.Int, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.TableReadInt, LinearQueryScript, GraphValueType.Int, portA, queryOut: GraphValueType.Int, queryPorts: portA, scriptPorts: portA, scriptOut: GraphValueType.Int, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.ShowPanel, LinearQueryScript, GraphValueType.Void, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.HidePanel, LinearQueryScript, GraphValueType.Void, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.CreatePanel, LinearQueryScript, GraphValueType.Void, portSource, queryPorts: portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, dst: GraphOperandRole.SymbolDst);
-            Add(rows, GraphNodeOp.SpawnTemplate, LinearQueryScript, GraphValueType.Void, portSourceAB, queryPorts: portSourceAB, scriptPorts: portSourceAB, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.SetWorldPosition, LinearQueryScript, GraphValueType.Void, portSourceAB, queryPorts: portSourceAB, scriptPorts: portSourceAB);
-            Add(rows, GraphNodeOp.DestroyPanel, LinearQueryScript, GraphValueType.Void, portSource, queryPorts: portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.ShowPanel, LinearAndScript, GraphValueType.Void, scriptPorts: noPorts, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.HidePanel, LinearAndScript, GraphValueType.Void, scriptPorts: noPorts, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.CreatePanel, LinearAndScript, GraphValueType.Void, portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, dst: GraphOperandRole.SymbolDst);
+            Add(rows, GraphNodeOp.SpawnTemplate, LinearAndScript, GraphValueType.Void, portSourceAB, scriptPorts: portSourceAB, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.SetWorldPosition, LinearAndScript, GraphValueType.Void, portSourceAB, scriptPorts: portSourceAB);
+            Add(rows, GraphNodeOp.DestroyPanel, LinearAndScript, GraphValueType.Void, portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.ReadMapVarInt, ScriptTriggerQuery, GraphValueType.Int, portSource, queryOut: GraphValueType.Int, queryPorts: portSource, scriptPorts: portSource, scriptOut: GraphValueType.Int, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.ReadMapVarFloat, ScriptTriggerQuery, GraphValueType.Float, portSource, queryOut: GraphValueType.Float, queryPorts: portSource, scriptPorts: portSource, scriptOut: GraphValueType.Float, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.WriteMapVarInt, ScriptAndTriggerGraph, GraphValueType.Void, portSourceValue, scriptPorts: portSourceValue, imm: GraphOperandRole.SymbolImm);
