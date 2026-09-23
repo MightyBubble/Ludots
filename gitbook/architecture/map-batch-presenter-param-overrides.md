@@ -12,6 +12,23 @@
 - `PresenterEntityRuntime.CreateEntityAnchoredRootBatch` 在 root `ParamDefaults` 之后、child 创建之前应用 overrides。
 - child presenter 通过 parent param resolver 读取到的是 map-authored override，而不是 root 默认值。
 
+同一条 template batch path 还携带地图实例对批量填充已经会写的组件的覆盖。前提是模板自己已经声明了该组件，行的原型不变。
+
+允许留在这条路径上的覆盖键：
+
+- `WorldPositionCm`
+- `FacingDirection`
+- `Name`
+- `Team`
+- `PlayerOwner`
+- `AttributeBuffer`
+
+`Name`、`Team`、`PlayerOwner`、`AttributeBuffer` 与模板组件的合并方式和 `EntityBuilder` 相同：对象字段深合并，数组整段替换，`__replace: true` 整组件替换。`AttributeBuffer` 里没写到的属性名保留模板初值。
+
+模板上没有的组件，以及上面名单以外的组件，离开这条路径，改走 `EntityBuilder`。`PresenterParamOverrides` 仍然只能走批量路径，所以它可以和名单内的覆盖写在同一条布阵上；和会离开这条路径的覆盖写在一起时，加载直接失败。
+
+地图批量生成把摆放编号写进同一行原型，和 `Name`、`Team` 一起在填充时写入。这一行里的实体都带这个编号组件；地图没写 `instanceId` 时值为空。生成之后不再逐个补组件。实体信息标题不在地图字段里，写在 `EntityInfo/insight_profiles.json`。
+
 ## Validation
 
 Core 必须拒绝以下情况：
