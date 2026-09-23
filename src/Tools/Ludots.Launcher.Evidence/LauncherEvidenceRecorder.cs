@@ -110,6 +110,8 @@ public static class LauncherEvidenceRecorder
     private const int MassNavigationAvoidanceFrameIntervalTicks = 4;
     private const int MassNavigationAvoidanceExtraOrderTicks = 210;
     private const int MassNavigationAvoidanceCrossingTicks = 420;
+    private const int MassNavigationAvoidanceCrossingCompletionTicks = 1800;
+    private const int MassNavigationAvoidanceFinalSettleTicks = 240;
     private const int MassNavigationAvoidanceCrowdSettleTicks = 1800;
     private const int MassNavigationAvoidanceImageWidth = 1280;
     private const int MassNavigationAvoidanceImageHeight = 720;
@@ -2400,10 +2402,14 @@ public static class LauncherEvidenceRecorder
         var avoidanceScratch = new MassNavigationAvoidanceScratch(
             simulation.Config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity,
             solverSnapshot.MaxObstacleCount);
-        CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, 0, "000_boot", captureImage: true);
-
         Entity[] commandActors = SeedMassNavigationCommandSource(runtime.Engine, simulation, MassNavigationCommandActorSampleCount);
         bool[] commandedAgentIndices = ResolveMassNavigationCommandedAgentIndices(runtime.Engine, simulation, commandActors);
+        // Position diagnostics must compare the same agents in every snapshot. ECS query order is not
+        // stable across snapshots, so a sliding "first N in query order" sample set yields an empty
+        // before/after intersection and reports zero movement for agents that actually travelled.
+        bool[] sampleMask = ResolveMassNavigationSampleMask(commandedAgentIndices);
+        CaptureMassNavigationSnapshot(runtime, simulation, sampleMask, screensDir, frameTimesMs, timeline, captureFrames, 0, "000_boot", captureImage: true);
+
         Tick(runtime, 3, frameTimesMs);
         // The flow work area follows command focus, so capture the pre-command center now:
         // the later crossing order mirrors the first target through this fixed point.
@@ -2416,11 +2422,11 @@ public static class LauncherEvidenceRecorder
         Directory.CreateDirectory(avoidanceDir);
         var avoidanceMetrics = new List<MassNavigationAvoidanceFrameMetrics>();
         CaptureMassNavigationAvoidanceSequence(runtime, simulation, avoidanceScratch, commandedAgentIndices, commandTarget, avoidanceDir, frameTimesMs, avoidanceMetrics, MassNavigationCommandSettleTicks);
-        CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, MassNavigationCommandSettleTicks, "001_command_order", captureImage: true);
+        CaptureMassNavigationSnapshot(runtime, simulation, sampleMask, screensDir, frameTimesMs, timeline, captureFrames, MassNavigationCommandSettleTicks, "001_command_order", captureImage: true);
         CaptureMassNavigationAvoidanceSequence(runtime, simulation, avoidanceScratch, commandedAgentIndices, commandTarget, avoidanceDir, frameTimesMs, avoidanceMetrics, MassNavigationAvoidanceExtraOrderTicks);
 
         WaitForMassNavigationCrowdSettle(runtime, simulation, frameTimesMs, MassNavigationAvoidanceCrowdSettleFraction, MassNavigationAvoidanceCrowdSettleTicks);
-        CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, frameTimesMs.Count, "002_settled_before_crossing", captureImage: true);
+        CaptureMassNavigationSnapshot(runtime, simulation, sampleMask, screensDir, frameTimesMs, timeline, captureFrames, frameTimesMs.Count, "002_settled_before_crossing", captureImage: true);
         // March the commanded group back across the settled central crowd. The crossing target
         // mirrors the first order target through the pre-command work-area center, scaled down so
         // the destination-following solver window keeps the whole march inside the active play
@@ -2428,7 +2434,12 @@ public static class LauncherEvidenceRecorder
         Vector2 crossingTarget = initialWorkAreaCenter - ((commandTarget - initialWorkAreaCenter) * MassNavigationAvoidanceCrossingScale);
         SubmitMassNavigationMoveOrder(runtime.Engine, simulation, commandActors, crossingTarget);
         CaptureMassNavigationAvoidanceSequence(runtime, simulation, avoidanceScratch, commandedAgentIndices, crossingTarget, avoidanceDir, frameTimesMs, avoidanceMetrics, MassNavigationAvoidanceCrossingTicks);
-        CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, frameTimesMs.Count, "003_crossing_order", captureImage: true);
+        CaptureMassNavigationSnapshot(runtime, simulation, sampleMask, screensDir, frameTimesMs, timeline, captureFrames, frameTimesMs.Count, "003_crossing_order", captureImage: true);
+        // Overlap metrics describe a resolved crowd, so let the crossing column arrive and the crowd
+        // come to rest before the final frames are recorded. The world-wide settled fraction is already
+        // ~90% while the local column is still marching, so the local order lifecycle is the gate.
+        WaitForMassNavigationMoveOrderCompletion(runtime, frameTimesMs, MassNavigationAvoidanceCrossingCompletionTicks);
+        CaptureMassNavigationAvoidanceSequence(runtime, simulation, avoidanceScratch, commandedAgentIndices, crossingTarget, avoidanceDir, frameTimesMs, avoidanceMetrics, MassNavigationAvoidanceFinalSettleTicks);
         WriteMassNavigationAvoidanceMetrics(Path.Combine(request.OutputDirectory, "avoidance-metrics.jsonl"), avoidanceMetrics);
 
         Vector2 originalCameraTarget = ClientLocalSeatAccess.ResolveAuthorityCamera(runtime.Engine).State.TargetCm;
@@ -2437,11 +2448,11 @@ public static class LauncherEvidenceRecorder
             ?? throw new InvalidOperationException("MassNavigation UAT requires core MinimapRuntime.");
         minimap.JumpCameraTo(runtime.Engine, new Vector2(remoteZone.CenterXCm, remoteZone.CenterYCm));
         Tick(runtime, MassNavigationRemoteSettleTicks, frameTimesMs);
-        CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, frameTimesMs.Count, "004_remote_minimap_jump", captureImage: true);
+        CaptureMassNavigationSnapshot(runtime, simulation, sampleMask, screensDir, frameTimesMs, timeline, captureFrames, frameTimesMs.Count, "004_remote_minimap_jump", captureImage: true);
 
         minimap.JumpCameraTo(runtime.Engine, originalCameraTarget);
         Tick(runtime, MassNavigationReturnSettleTicks, frameTimesMs);
-        CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, frameTimesMs.Count, "005_return_original_area", captureImage: true);
+        CaptureMassNavigationSnapshot(runtime, simulation, sampleMask, screensDir, frameTimesMs, timeline, captureFrames, frameTimesMs.Count, "005_return_original_area", captureImage: true);
 
         WriteTimelineSheet("MassNavigation presenter + minimap large-world UAT", captureFrames, screensDir, Path.Combine(screensDir, "timeline.png"));
 
@@ -2515,20 +2526,43 @@ public static class LauncherEvidenceRecorder
 
         ControlDomainQuery controlDomains = engine.GetService(CoreServiceKeys.ControlDomainQuery)
             ?? throw new InvalidOperationException("MassNavigation UAT requires ControlDomainQuery.");
-        var commandActors = new List<Entity>(requestedCount);
+        // Command actors are identified by ascending agent index so the evidence set does not depend
+        // on ECS query order.
+        var candidates = new List<(int AgentIndex, Entity Entity)>(requestedCount);
         engine.World.Query(in OrderableMassNavigationAgentQuery, (Entity entity, ref MassNavigationAgentIndex agentIndex, ref OrderBuffer orders, ref WorldPositionCm position, ref CommandSourceSelectableTag selectable) =>
         {
-            if (commandActors.Count < requestedCount && controlDomains.IsControllableBy(owner, entity))
+            if (!controlDomains.IsControllableBy(owner, entity))
             {
-                commandActors.Add(entity);
+                return;
+            }
+
+            if (candidates.Count >= requestedCount && agentIndex.Value >= candidates[^1].AgentIndex)
+            {
+                return;
+            }
+
+            int insertAt = candidates.Count;
+            while (insertAt > 0 && candidates[insertAt - 1].AgentIndex > agentIndex.Value)
+            {
+                insertAt--;
+            }
+
+            candidates.Insert(insertAt, (agentIndex.Value, entity));
+            if (candidates.Count > requestedCount)
+            {
+                candidates.RemoveAt(candidates.Count - 1);
             }
         });
-        if (commandActors.Count <= 0)
+        if (candidates.Count <= 0)
         {
             throw new InvalidOperationException("MassNavigation UAT found no locally controllable, OrderBuffer-backed MassNavigation agents.");
         }
 
-        Entity[] commandActorArray = commandActors.ToArray();
+        var commandActorArray = new Entity[candidates.Count];
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            commandActorArray[i] = candidates[i].Entity;
+        }
 
         var descriptor = EntityCollectionDescriptor.Create(
             EvidenceCommandSourceKey,
@@ -2562,6 +2596,30 @@ public static class LauncherEvidenceRecorder
         }
 
         return commanded;
+    }
+
+    private static bool[] ResolveMassNavigationSampleMask(bool[] commandedAgentIndices)
+    {
+        var mask = new bool[commandedAgentIndices.Length];
+        int selected = 0;
+        for (int i = 0; i < commandedAgentIndices.Length && selected < MassNavigationPositionSampleCount; i++)
+        {
+            if (!commandedAgentIndices[i])
+            {
+                continue;
+            }
+
+            mask[i] = true;
+            selected++;
+        }
+
+        if (selected < MassNavigationPositionSampleCount)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation UAT requires at least {MassNavigationPositionSampleCount} commanded agents for position diagnostics, got {selected}.");
+        }
+
+        return mask;
     }
 
     private static void SubmitMassNavigationMoveOrder(GameEngine engine, MassNavigationSimulationRuntime simulation, ReadOnlySpan<Entity> commandActors, Vector2 targetCm)
@@ -2622,6 +2680,22 @@ public static class LauncherEvidenceRecorder
                 $"result={result}, OrderQueue available capacity is {orderQueue.AvailableCapacity}.");
         }
 
+    }
+
+    private static void WaitForMassNavigationMoveOrderCompletion(
+        RecordingRuntime runtime,
+        List<double> frameTimesMs,
+        int maxTicks)
+    {
+        for (int i = 0; i < maxTicks; i++)
+        {
+            if (CountActiveMassNavigationMoveOrders(runtime.Engine) == 0)
+            {
+                return;
+            }
+
+            Tick(runtime, 1, frameTimesMs);
+        }
     }
 
     private static void WaitForMassNavigationCrowdSettle(
@@ -2942,6 +3016,7 @@ public static class LauncherEvidenceRecorder
     private static void CaptureMassNavigationSnapshot(
         RecordingRuntime runtime,
         MassNavigationSimulationRuntime simulation,
+        bool[] sampleMask,
         string screensDir,
         IReadOnlyList<double> frameTimesMs,
         List<MassNavigationSnapshot> timeline,
@@ -2950,7 +3025,7 @@ public static class LauncherEvidenceRecorder
         string step,
         bool captureImage)
     {
-        MassNavigationSnapshot snapshot = SampleMassNavigationSnapshot(runtime, simulation, tick, step, frameTimesMs.Count > 0 ? frameTimesMs[^1] : 0d);
+        MassNavigationSnapshot snapshot = SampleMassNavigationSnapshot(runtime, simulation, sampleMask, tick, step, frameTimesMs.Count > 0 ? frameTimesMs[^1] : 0d);
         timeline.Add(snapshot);
         if (!captureImage)
         {
@@ -2962,7 +3037,7 @@ public static class LauncherEvidenceRecorder
         captureFrames.Add(new CaptureFrame(snapshot.Tick, step, fileName, snapshot.AgentCount, snapshot.ActiveMoveOrderCount, snapshot.MinimapVisibleMarkerCount, snapshot.FrameMs));
     }
 
-    private static MassNavigationSnapshot SampleMassNavigationSnapshot(RecordingRuntime runtime, MassNavigationSimulationRuntime simulation, int tick, string step, double tickMs)
+    private static MassNavigationSnapshot SampleMassNavigationSnapshot(RecordingRuntime runtime, MassNavigationSimulationRuntime simulation, bool[] sampleMask, int tick, string step, double tickMs)
     {
         GameEngine engine = runtime.Engine;
         int[] configuredTeamIds = simulation.TeamIds.ToArray();
@@ -3084,15 +3159,17 @@ public static class LauncherEvidenceRecorder
                 emissionFailureCount++;
             }
 
-            if (samplePositions.Count >= MassNavigationPositionSampleCount || !payloadValid ||
+            if ((uint)agentIndex.Value >= (uint)sampleMask.Length || !sampleMask[agentIndex.Value])
+            {
+                return;
+            }
+
+            if (!payloadValid ||
                 !engine.World.TryGet(entity, out VisualTransform visual) ||
                 !engine.World.TryGet(entity, out PreviousWorldPositionCm previousPosition) ||
                 !engine.World.TryGet(payload.SingleRootPresenter, out PresenterWorldPosition presenterWorldPosition))
             {
-                if (samplePositions.Count < MassNavigationPositionSampleCount && payloadValid)
-                {
-                    transformFailureCount++;
-                }
+                transformFailureCount++;
                 return;
             }
 
@@ -3119,6 +3196,7 @@ public static class LauncherEvidenceRecorder
                 PresenterWorldCm: MassNavigationEvidencePoint.From(presenterWorldCm),
                 OwnerVisible: ownerVisible));
         });
+        samplePositions.Sort(static (left, right) => left.AgentIndex.CompareTo(right.AgentIndex));
 
         int blockerCount = 0;
         int blockerPayloadCount = 0;
