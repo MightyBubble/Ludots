@@ -11,10 +11,6 @@ public sealed class MassNavigationRuntimeBoundaryDebtRatchetTests
 {
     private static readonly BoundaryDebtSpec[] TrackedDebt =
     {
-        new("entity-id", "src/Core/MassNavigation/Runtime/MassNavigationAgentState.cs", "_spawnedEntityIds.Add(entity.Id"),
-        new("entity-id", "src/Core/MassNavigation/Runtime/MassNavigationAgentState.cs", ".TryGetValue(entity.Id"),
-        new("entity-id", "src/Core/MassNavigation/Runtime/MassNavigationAgentState.cs", "Dictionary<int, int> _controllableIndexByEntityId"),
-        new("entity-id", "src/Core/MassNavigation/Runtime/MassNavigationAgentState.cs", "HashSet<int> _spawnedEntityIds"),
         new("pathing", "src/Core/MassNavigation/Runtime/MassNavigationRouteExecutionSink.cs", "IPathService"),
         new("pathing", "src/Core/MassNavigation/Runtime/MassNavigationRouteExecutionSink.cs", "PathDomain.Auto"),
         new("pathing", "src/Core/MassNavigation/Runtime/MassNavigationRouteExecutionSink.cs", "PathingConfig"),
@@ -73,10 +69,6 @@ public sealed class MassNavigationRuntimeBoundaryDebtRatchetTests
         new("pathing", "PathStore"),
         new("pathing", "PathingConfig"),
         new("pathing", "PathDomain.Auto"),
-        new("entity-id", "HashSet<int> _spawnedEntityIds"),
-        new("entity-id", "Dictionary<int, int> _controllableIndexByEntityId"),
-        new("entity-id", ".TryGetValue(entity.Id"),
-        new("entity-id", "_spawnedEntityIds.Add(entity.Id"),
     };
 
     [Test]
