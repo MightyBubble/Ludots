@@ -22,6 +22,7 @@ uniform sampler2D texture1;
 uniform sampler2D texture2;
 uniform sampler2D texture3;
 uniform sampler2D uControlMap;
+// ludo:include shadow_sampling.glsl.inc
 
 out vec4 finalColor;
 
@@ -129,6 +130,7 @@ vec4 SampleControlWeights(vec3 worldPos)
     return w / sum;
 }
 
+
 void main()
 {
     vec3 albedo = fragColor.rgb;
@@ -152,8 +154,10 @@ void main()
     // Single-light Blinn highlight (not metallic-roughness PBR). Rock/peak bands get a bit more gloss.
     float gloss = mix(0.04, 0.18, smoothstep(0.32, 0.85, clamp(fragHeightBand, 0.0, 1.0)));
     float spec = pow(max(dot(N, H), 0.0), 48.0) * gloss * step(0.02, ndl);
-    vec3 lighting = (uAmbient.rgb * uAmbient.a) + (uLightColor * uLightIntensity * ndl);
-    vec3 lit = albedo * lighting + (uLightColor * uLightIntensity * spec);
+    float shadow = SampleShadow(fragPos, N);
+    vec3 ambient = uAmbient.rgb * uAmbient.a;
+    vec3 direct = uLightColor * uLightIntensity * ndl * shadow;
+    vec3 lit = albedo * (ambient + direct) + (uLightColor * uLightIntensity * spec * shadow);
     float fogAmount = DistanceFogAmount(length(fragPos - uViewPos));
     vec3 fogged = mix(lit, uFogColor, fogAmount);
     finalColor = vec4(clamp(fogged, 0.0, 1.0), 1.0);

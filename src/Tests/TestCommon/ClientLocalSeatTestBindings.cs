@@ -11,14 +11,14 @@ namespace Ludots.Tests.TestCommon
     {
         public static readonly Vector2 DefaultPresentResolutionPx = new(1280f, 720f);
 
-        public static void BindSoleSeat(IDictionary<string, object> globals, Entity possessedRep, int playerId = 1, string seatId = "seat.0") =>
+        public static void BindSoleSeat(IDictionary<string, object> globals, Entity possessedRep, int playerId, string seatId) =>
             ClientLocalSeatBindings.BindSoleSeat(globals, possessedRep, playerId, seatId, presentResolutionPx: DefaultPresentResolutionPx);
 
         public static void BindSoleSeat(
             GameEngine engine,
             Entity possessedRep,
-            int playerId = 1,
-            string seatId = "seat.0",
+            int playerId,
+            string seatId,
             Vector2? presentResolutionPx = null) =>
             ClientLocalSeatBindings.BindSoleSeat(
                 engine,

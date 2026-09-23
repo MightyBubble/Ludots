@@ -4,8 +4,8 @@
     "assetKind": "Material",
     "assetId": "camera.acceptance.cue.decal",
     "backendId": "raylib",
-    "sourceUris": [
-      "CameraAcceptanceMod:assets/Textures/cue_decal.png"
-    ]
+    "textures": {
+      "albedo": "CameraAcceptanceMod:assets/Textures/cue_decal.png"
+    }
   }
 ]

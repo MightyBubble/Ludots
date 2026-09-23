@@ -109,6 +109,10 @@ namespace Ludots.Raylib.Render
 
         public Vector3 SunDirectionToward { get; private set; }
 
+        public Vector3 SkyZenithColor { get; private set; }
+
+        public Vector3 SkyGroundColor { get; private set; }
+
         public Vector4 AmbientRgba { get; private set; }
 
         public Vector3 LightColor =>
@@ -291,6 +295,13 @@ namespace Ludots.Raylib.Render
             }
 
             AmbientRgba = SampleAmbient(DayPhase01);
+            Vector3 ambient = new(AmbientRgba.X, AmbientRgba.Y, AmbientRgba.Z);
+            float ambientLuma = MathF.Max(ambient.X, MathF.Max(ambient.Y, ambient.Z));
+            SkyZenithColor = Vector3.Clamp(ambient * 1.35f + new Vector3(0.04f), Vector3.Zero, Vector3.One);
+            SkyGroundColor = Vector3.Clamp(
+                new Vector3(ambientLuma, ambientLuma * 0.94f, ambientLuma * 0.82f) * 0.42f,
+                Vector3.Zero,
+                Vector3.One);
         }
 
         public unsafe void Apply(Shader shader, in RaylibFrameLightingLocations locations)

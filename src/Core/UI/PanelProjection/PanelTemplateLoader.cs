@@ -11,7 +11,7 @@ namespace Ludots.Core.UI.PanelProjection
     /// </summary>
     public static class PanelTemplateLoader
     {
-        private static readonly HashSet<string> RootFields = new(StringComparer.Ordinal) { "id", "variables", "binds", "events", "intents" };
+        private static readonly HashSet<string> RootFields = new(StringComparer.Ordinal) { "id", "skin", "variables", "binds", "events", "intents" };
         private static readonly HashSet<string> VariableFields = new(StringComparer.Ordinal) { "name", "kind", "source", "realtime" };
         private static readonly HashSet<string> SourceFields = new(StringComparer.Ordinal) { "sourceKind", "attributeId", "graphOutputKey", "lookupTable", "lookupField", "keyAttribute" };
         private static readonly HashSet<string> BindFields = new(StringComparer.Ordinal) { "control", "variable" };
@@ -49,6 +49,12 @@ namespace Ludots.Core.UI.PanelProjection
             RejectUnknownFields(rootObject, RootFields, "panel template root");
 
             string id = RequireString(rootObject, "id", "panel template");
+            string? skin = null;
+            if (rootObject["skin"] is JsonValue skinValue && skinValue.TryGetValue<string>(out string? skinText))
+            {
+                PanelHosting.PanelSkinIds.ToId(skinText);
+                skin = skinText.Trim();
+            }
             if (rootObject["variables"] is not JsonArray variablesNode || variablesNode.Count == 0)
             {
                 throw new InvalidOperationException($"Panel template '{id}' must declare a non-empty 'variables' array.");
@@ -86,7 +92,7 @@ namespace Ludots.Core.UI.PanelProjection
             List<PanelTemplateEvent> events = ParseEvents(id, rootObject);
             List<PanelIntentMapEntry> intents = ParseIntents(id, rootObject, events);
 
-            return new PanelTemplate(id, variables, binds, events, intents);
+            return new PanelTemplate(id, variables, binds, events, intents, skin);
         }
 
         private static List<PanelTemplateEvent> ParseEvents(string templateId, JsonObject rootObject)

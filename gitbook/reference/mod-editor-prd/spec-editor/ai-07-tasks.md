@@ -16,7 +16,7 @@
 ## 3. 精确语义与不变量
 
 - 预览落位规则与 TrySubmitOrderTask 一致（含 IntArg0<0 时 I0 缺省）。
-- 表单默认值（SubmitMode=0、PlayerId=0、IntArg0=-1、IntArg1=0、槽 -1）与 loader 相同。
+- 表单默认值（SubmitMode=0、IntArg0=-1、IntArg1=0、槽 -1）与 loader 相同；SubmitOrder 的 PlayerId 必须由用户显式填写为正数。
 
 ## 4. 依赖接口与验收
 

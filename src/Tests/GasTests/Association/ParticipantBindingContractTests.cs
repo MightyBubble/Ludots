@@ -43,13 +43,13 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void ParticipantBindingResolver_MapOwnedLogicalEntities_WritesIdentityLookupsRelationshipsAndLocalPlayer()
+        public void ParticipantBindingResolver_MapOwnedLogicalEntities_WritesIdentityLookupsRelationshipsAndLocalSeat()
         {
             using var world = World.Create();
             var map = CreateMap();
             var session = new MapSession(new MapId(map.Id), map)
             {
-                LaunchContext = MapLaunchContext.Create(playerId: 7),
+                LaunchContext = MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 7) }),
             };
             var index = CreateEntityIndex(map.Id, world, out Entity teamOne, out Entity teamTwo, out Entity playerOne, out Entity playerTwo);
             var types = new RelationshipTypeRegistry();
@@ -126,7 +126,7 @@ namespace Ludots.Tests.GAS
             var map = CreateMap();
             var session = new MapSession(new MapId(map.Id), map)
             {
-                LaunchContext = MapLaunchContext.Create(playerId: 7),
+                LaunchContext = MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 7) }),
             };
             var index = CreateEntityIndex(map.Id, world, out _, out _, out _, out _);
             var types = new RelationshipTypeRegistry();
@@ -166,6 +166,58 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void GameConfig_CreateStartupLaunchContext_RejectsImplicitDefaultSeat()
+        {
+            var config = new GameConfig
+            {
+                StartupLocalSeats =
+                {
+                    new StartupLocalSeatConfig { PlayerId = 7 },
+                },
+            };
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                config.CreateStartupLaunchContext())!;
+
+            Assert.That(ex.Message, Does.Contain("seatId"));
+            Assert.That(ex.Message, Does.Contain("non-empty"));
+        }
+
+        [TestCase("")]
+        [TestCase(" ")]
+        public void MapLaunchContext_Create_RejectsBlankSeatId(string seatId)
+        {
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding(seatId, 7) }))!;
+
+            Assert.That(ex.Message, Does.Contain("SeatId"));
+        }
+
+        [TestCase(0)]
+        [TestCase(-1)]
+        public void MapLaunchContext_Create_RejectsNonPositivePlayerId(int playerId)
+        {
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", playerId) }))!;
+
+            Assert.That(ex.Message, Does.Contain("PlayerId"));
+            Assert.That(ex.Message, Does.Contain("positive"));
+        }
+
+        [Test]
+        public void ClientLocalSeatBindings_BindSoleSeat_RequiresExplicitPositivePlayerAndSeat()
+        {
+            using var world = World.Create();
+            Entity possessed = world.Create();
+            var globals = new Dictionary<string, object>();
+
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                ClientLocalSeatTestBindings.BindSoleSeat(globals, possessed, 0, "seat.0"));
+            Assert.Throws<ArgumentException>(() =>
+                ClientLocalSeatTestBindings.BindSoleSeat(globals, possessed, 7, string.Empty));
+        }
+
+        [Test]
         public void SeatPossessionSyncSystem_UsesLookupAndDoesNotScanPlayerOwner()
         {
             using var world = World.Create();
@@ -177,7 +229,7 @@ namespace Ludots.Tests.GAS
             {
                 [CoreServiceKeys.PlayerEntityLookup.Name] = lookup,
             };
-            ClientLocalSeatTestBindings.BindSoleSeat(globals, strayOwner, 7);
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, strayOwner, 7, "seat.0");
             var system = new SeatPossessionSyncSystem(world, globals);
 
             system.Update(0f);
@@ -195,7 +247,7 @@ namespace Ludots.Tests.GAS
             var globals = new Dictionary<string, object>
             {
             };
-            ClientLocalSeatTestBindings.BindSoleSeat(globals, manual, 7);
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, manual, 7, "seat.0");
             var system = new SeatPossessionSyncSystem(world, globals);
 
             system.Update(0f);
@@ -216,7 +268,7 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.ClientLocalSeatRegistry.Name] = new ClientLocalSeatRegistry(),
                 [CoreServiceKeys.LogicViewRegistry.Name] = new LogicViewRegistry(),
             };
-            ClientLocalSeatTestBindings.BindSoleSeat(globals, world.Create(new PlayerOwner { PlayerId = 9 }), 9);
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, world.Create(new PlayerOwner { PlayerId = 9 }), 9, "seat.0");
 
             var result = new ParticipantBindingResult(
                 new TeamEntityLookup(),
@@ -242,7 +294,7 @@ namespace Ludots.Tests.GAS
             {
                 [CoreServiceKeys.PlayerEntityLookup.Name] = lookup,
             };
-            ClientLocalSeatTestBindings.BindSoleSeat(globals, playerEight, 7);
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, playerEight, 7, "seat.0");
             var system = new SeatPossessionSyncSystem(world, globals);
 
             system.Update(0f);
@@ -367,7 +419,7 @@ namespace Ludots.Tests.GAS
             var map = CreateMap();
             var session = new MapSession(new MapId(map.Id), map)
             {
-                LaunchContext = MapLaunchContext.Create(playerId: 7),
+                LaunchContext = MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 7) }),
             };
             var index = CreateEntityIndex(map.Id, world, out Entity teamOne, out Entity teamTwo, out Entity playerOne, out Entity playerTwo);
             var types = new RelationshipTypeRegistry();
@@ -544,13 +596,13 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void ParticipantBindingResolver_LaunchContextLocalPlayerId_SelectsLocalPlayer()
+        public void ParticipantBindingResolver_LaunchContextLocalSeats_SelectsLocalPlayer()
         {
             using var world = World.Create();
             var map = CreateMap();
             var session = new MapSession(new MapId(map.Id), map)
             {
-                LaunchContext = MapLaunchContext.Create(playerId: 8),
+                LaunchContext = MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 8) }),
             };
             var index = CreateEntityIndex(map.Id, world, out _, out _, out _, out Entity playerTwo);
             var types = new RelationshipTypeRegistry();
@@ -568,7 +620,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void ParticipantBindingResolver_WithoutLaunchContext_HasNoLocalPlayer()
+        public void ParticipantBindingResolver_WithoutLaunchContext_HasNoLocalSeat()
         {
             using var world = World.Create();
             var map = CreateMap();
@@ -587,13 +639,13 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void ParticipantBindingResolver_LaunchContextUnknownLocalPlayerId_FailsExplicitly()
+        public void ParticipantBindingResolver_LaunchContextUnknownLocalSeatPlayerId_FailsExplicitly()
         {
             using var world = World.Create();
             var map = CreateMap();
             var session = new MapSession(new MapId(map.Id), map)
             {
-                LaunchContext = MapLaunchContext.Create(playerId: 99),
+                LaunchContext = MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 99) }),
             };
             var index = CreateEntityIndex(map.Id, world, out _, out _, out _, out _);
             var types = new RelationshipTypeRegistry();

@@ -4,7 +4,7 @@
     "Cost": 1,
     "Pre": { "Mask": [], "Values": [] },
     "Post": { "Mask": [], "Values": [] },
-    "Order": { "OrderPayloadKind": "TargetEntity", "OrderTypeKey": "attackTarget", "SubmitMode": 0, "PlayerId": 0 },
+    "Order": { "OrderPayloadKind": "TargetEntity", "OrderTypeKey": "attackTarget", "SubmitMode": 0, "PlayerId": 1 },
     "Bindings": [
       { "Op": "EntityToTarget", "SourceKey": "Attack.TargetEntity" }
     ]

@@ -14,6 +14,7 @@ using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Commands;
@@ -62,6 +63,7 @@ namespace Ludots.Core.Gameplay.Spawning
         private readonly TeamEntityLookup? _teamLookup;
         private readonly RelationshipRuntime? _relationships;
         private readonly int _memberOfTypeId;
+        private readonly EntityTriggerGraphMounts? _entityTriggerGraphMounts;
 
         private readonly struct SpawnRelationshipPlan
         {
@@ -102,7 +104,8 @@ namespace Ludots.Core.Gameplay.Spawning
             PlayerEntityLookup? playerLookup = null,
             TeamEntityLookup? teamLookup = null,
             RelationshipRuntime? relationships = null,
-            int memberOfTypeId = -1)
+            int memberOfTypeId = -1,
+            EntityTriggerGraphMounts? entityTriggerGraphMounts = null)
             : base(world)
         {
             _requests = requests ?? throw new ArgumentNullException(nameof(requests));
@@ -132,6 +135,7 @@ namespace Ludots.Core.Gameplay.Spawning
             _teamLookup = teamLookup;
             _relationships = relationships;
             _memberOfTypeId = memberOfTypeId;
+            _entityTriggerGraphMounts = entityTriggerGraphMounts;
         }
 
         public override void Update(in float dt)
@@ -177,6 +181,7 @@ namespace Ludots.Core.Gameplay.Spawning
                     var spawnedSingle = SpawnTemplate(singleRequest, in singleRelationshipPlan);
                     PublishSpawnReceipt(in singleRequest, spawnedSingle);
                     PublishOnSpawnEffect(in singleRequest, spawnedSingle);
+                    MountTemplateTriggerGraphs(spawnedSingle, peek.TemplateId, template);
                     continue;
                 }
 
@@ -196,7 +201,22 @@ namespace Ludots.Core.Gameplay.Spawning
 
                 PublishOnSpawnEffect(in request, spawned);
                 PublishSpawnReceipt(in request, spawned);
+                if (request.Kind == RuntimeEntitySpawnKind.Template &&
+                    TryGetTemplate(request.TemplateId, out EntityTemplate spawnedTemplate))
+                {
+                    MountTemplateTriggerGraphs(spawned, request.TemplateId, spawnedTemplate);
+                }
             }
+        }
+
+        private void MountTemplateTriggerGraphs(Entity spawned, string templateId, EntityTemplate template)
+        {
+            if (_entityTriggerGraphMounts == null || template.TriggerGraphs is not { Count: > 0 })
+            {
+                return;
+            }
+
+            _entityTriggerGraphMounts.MountRuntimeSpawned(spawned, templateId, template.TriggerGraphs);
         }
 
         private Entity SpawnUnitType(in RuntimeEntitySpawnRequest request, in SpawnRelationshipPlan relationshipPlan)
@@ -500,6 +520,7 @@ namespace Ludots.Core.Gameplay.Spawning
                 hasRequestOnSpawnEffect ||
                 hasReceiptWork ||
                 onSpawnEffectTemplateId > 0 ||
+                template.TriggerGraphs is { Count: > 0 } ||
                 !allHaveMapEntity;
             if (requiresPostSpawnLoop)
             {
@@ -542,6 +563,8 @@ namespace Ludots.Core.Gameplay.Spawning
                     {
                         PublishOnSpawnEffect(in request, entity, onSpawnEffectTemplateId);
                     }
+
+                    MountTemplateTriggerGraphs(entity, templateId, template);
                 }
 
                 postSpawnMs = ElapsedMs(postSpawnStart);

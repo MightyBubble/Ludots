@@ -7,8 +7,8 @@ namespace Ludots.Core.GraphRuntime
         None = 0,
         BehaviorTree = 1,
         Hfsm = 2,
-        Level = 3,
-        Script = 4
+        Script = 3,
+        TriggerGraph = 4
     }
 
     public static class GraphActionHostYieldPolicy

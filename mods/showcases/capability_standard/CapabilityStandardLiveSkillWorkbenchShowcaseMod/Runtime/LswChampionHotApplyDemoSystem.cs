@@ -439,7 +439,7 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
         }
 
         // WorldHud projection requires a local viewer seat + attribute knowledge disclosure.
-        Ludots.Core.Client.ClientLocalSeatBindings.BindSoleSeat(_engine, caster, 1);
+        Ludots.Core.Client.ClientLocalSeatBindings.BindSoleSeat(_engine, caster, 1, "seat.0");
 
         _engine.GlobalContext[CoreServiceKeys.PresentationAudienceRevealHidden.Name] = true;
 

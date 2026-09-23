@@ -12,6 +12,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
     /// </summary>
     public static class GraphProgramAuthoringFrontDoor
     {
+        private static readonly string[] RequiredTriggerGraphEntryFields = { "label", "event", "start" };
+
         public static (GraphProgramPackage? Package, GraphOutputSchema OutputSchema, List<GraphDiagnostic> Diagnostics)
             CompileJsonObject(JsonObject obj, string graphId, JsonSerializerOptions options)
         {
@@ -30,6 +32,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
             GraphKind kind = RequireKind(obj, graphId);
             RequireControlFlowAuthoringShape(obj, graphId, kind);
+            RequireTriggerGraphEntryShape(obj, graphId, kind);
 
             GraphControlFlowDocument? doc;
             try
@@ -122,6 +125,138 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// TriggerGraph replaces the single entry start node with a top-level entries table;
+        /// both fields are kind-exclusive and validated before strict deserialize for actionable errors.
+        /// </summary>
+        public static void RequireTriggerGraphEntryShape(JsonObject obj, string graphId, GraphKind kind)
+        {
+            if (kind != GraphKind.TriggerGraph)
+            {
+                if (obj.ContainsKey("entries"))
+                {
+                    throw new InvalidOperationException(
+                        $"Graph '{graphId}' kind '{kind}' must not declare top-level 'entries'; the entry table is TriggerGraph-only.");
+                }
+
+                return;
+            }
+
+            if (obj.ContainsKey("entry"))
+            {
+                throw new InvalidOperationException(
+                    $"TriggerGraph graph '{graphId}' must not declare top-level 'entry'; author the 'entries' table instead.");
+            }
+
+            if (obj["entries"] is not JsonArray entries || entries.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"TriggerGraph graph '{graphId}' requires a non-empty top-level 'entries' array.");
+            }
+
+            for (int i = 0; i < entries.Count; i++)
+            {
+                if (entries[i] is not JsonObject entry)
+                {
+                    throw new InvalidOperationException(
+                        $"TriggerGraph graph '{graphId}' entries[{i}] must be an object.");
+                }
+
+                foreach (KeyValuePair<string, JsonNode?> field in entry)
+                {
+                    switch (field.Key)
+                    {
+                        case "label":
+                        case "event":
+                        case "start":
+                            if (field.Value is not JsonValue value || !value.TryGetValue<string>(out _))
+                            {
+                                throw new InvalidOperationException(
+                                    $"TriggerGraph graph '{graphId}' entries[{i}] field '{field.Key}' must be a string.");
+                            }
+
+                            break;
+                        case "once":
+                            if (field.Value is not JsonValue onceValue || !onceValue.TryGetValue<bool>(out _))
+                            {
+                                throw new InvalidOperationException(
+                                    $"TriggerGraph graph '{graphId}' entries[{i}] field 'once' must be a boolean.");
+                            }
+
+                            break;
+                        case "refire":
+                            if (field.Value is not JsonValue refireValue || !refireValue.TryGetValue<string>(out _))
+                            {
+                                throw new InvalidOperationException(
+                                    $"TriggerGraph graph '{graphId}' entries[{i}] field 'refire' must be a string.");
+                            }
+
+                            break;
+                        case "filters":
+                            RequireTriggerGraphEntryFiltersShape(obj, graphId, i, field.Value);
+                            break;
+                        default:
+                            throw new InvalidOperationException(
+                                $"TriggerGraph graph '{graphId}' entries[{i}] has unknown field '{field.Key}'; allowed fields are label, event, start, once, refire, filters.");
+                    }
+                }
+
+                foreach (string required in RequiredTriggerGraphEntryFields)
+                {
+                    if (!entry.ContainsKey(required))
+                    {
+                        throw new InvalidOperationException(
+                            $"TriggerGraph graph '{graphId}' entries[{i}] is missing required field '{required}'.");
+                    }
+                }
+            }
+        }
+
+        private static void RequireTriggerGraphEntryFiltersShape(JsonObject obj, string graphId, int entryIndex, JsonNode? filtersNode)
+        {
+            if (filtersNode is not JsonObject filters)
+            {
+                throw new InvalidOperationException(
+                    $"TriggerGraph graph '{graphId}' entries[{entryIndex}] field 'filters' must be an object.");
+            }
+
+            foreach (KeyValuePair<string, JsonNode?> field in filters)
+            {
+                switch (field.Key)
+                {
+                    case "region":
+                    case "tag":
+                    case "direction":
+                        if (field.Value is not JsonValue textValue || !textValue.TryGetValue<string>(out _))
+                        {
+                            throw new InvalidOperationException(
+                                $"TriggerGraph graph '{graphId}' entries[{entryIndex}] filters field '{field.Key}' must be a string.");
+                        }
+
+                        break;
+                    case "team":
+                        if (field.Value is not JsonValue teamValue || !teamValue.TryGetValue<int>(out _))
+                        {
+                            throw new InvalidOperationException(
+                                $"TriggerGraph graph '{graphId}' entries[{entryIndex}] filters field 'team' must be an integer.");
+                        }
+
+                        break;
+                    case "threshold":
+                        if (field.Value is not JsonValue thresholdValue || !thresholdValue.TryGetValue<float>(out _))
+                        {
+                            throw new InvalidOperationException(
+                                $"TriggerGraph graph '{graphId}' entries[{entryIndex}] filters field 'threshold' must be a number.");
+                        }
+
+                        break;
+                    default:
+                        throw new InvalidOperationException(
+                            $"TriggerGraph graph '{graphId}' entries[{entryIndex}] filters has unknown field '{field.Key}'; allowed fields are region, tag, team, threshold, direction.");
+                }
+            }
         }
     }
 }

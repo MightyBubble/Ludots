@@ -30,6 +30,7 @@ namespace Ludots.Core.UI.PanelProjection
             {
                 case PanelBindingSourceKind.SingleAttribute:
                 case PanelBindingSourceKind.DerivedAttribute:
+                case PanelBindingSourceKind.AttributeBase:
                     if (string.IsNullOrWhiteSpace(attributeId))
                     {
                         throw new ArgumentException(

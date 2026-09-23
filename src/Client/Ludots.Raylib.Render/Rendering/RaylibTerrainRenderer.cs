@@ -22,6 +22,7 @@ namespace Ludots.Raylib.Render
         private Shader _terrainShader;
         private Material _terrainMaterial;
         private RaylibFrameLightingLocations _terrainLightingLocs;
+        private RaylibShadowSamplingLocations _terrainShadowLocs;
 
         private Shader _waterShader;
         private Material _waterMaterial;
@@ -35,6 +36,8 @@ namespace Ludots.Raylib.Render
         private int _locWaterWaveStrength;
 
         private RaylibFrameLighting? _frameLighting;
+        private RaylibDirectionalShadowMap? _frameShadow;
+        private float _frameShadowTexelWorld = 0.08f;
         private int _frameIndex;
         private Mesh _oceanPlaneMesh;
         private bool _oceanPlaneReady;
@@ -51,12 +54,18 @@ namespace Ludots.Raylib.Render
 
         public float HeightScale { get; set; } = 2.0f;
 
-        public void ApplyFrameLighting(RaylibFrameLighting lighting)
+        public void ApplyFrameLighting(
+            RaylibFrameLighting lighting,
+            RaylibDirectionalShadowMap? shadow = null,
+            float shadowTexelWorld = 0.08f)
         {
             _frameLighting = lighting ?? throw new ArgumentNullException(nameof(lighting));
+            _frameShadow = shadow;
+            _frameShadowTexelWorld = shadowTexelWorld;
             if (_initialized)
             {
                 lighting.Apply(_terrainShader, in _terrainLightingLocs);
+                ApplyTerrainShadow();
             }
         }
 
@@ -219,6 +228,43 @@ namespace Ludots.Raylib.Render
             RenderInternal(source, in camera, drawTerrain: false, drawWater: true, bumpFrame: false);
         }
 
+        public void RenderTerrainShadow(ITerrainChunkMeshSource source, in Camera3D camera, RaylibDirectionalShadowMap shadow)
+        {
+            if (shadow == null) throw new ArgumentNullException(nameof(shadow));
+            if (source == null || source.WidthInChunks <= 0) return;
+
+            EnsureShadersInitialized();
+
+            float cx = camera.target.X;
+            float cz = camera.target.Z;
+
+            int minChunkX = (int)MathF.Floor((cx - VisibleRadius) / source.ChunkSpacingXMeters);
+            int maxChunkX = (int)MathF.Ceiling((cx + VisibleRadius) / source.ChunkSpacingXMeters);
+            int minChunkY = (int)MathF.Floor((cz - VisibleRadius) / source.ChunkSpacingYMeters);
+            int maxChunkY = (int)MathF.Ceiling((cz + VisibleRadius) / source.ChunkSpacingYMeters);
+
+            minChunkX = Math.Max(0, minChunkX);
+            minChunkY = Math.Max(0, minChunkY);
+            maxChunkX = Math.Min(source.WidthInChunks - 1, maxChunkX);
+            maxChunkY = Math.Min(source.HeightInChunks - 1, maxChunkY);
+
+            RaylibMatrix identity = RaylibMatrix.Identity;
+            for (int y = minChunkY; y <= maxChunkY; y++)
+            {
+                for (int x = minChunkX; x <= maxChunkX; x++)
+                {
+                    float chunkWorldX = x * source.ChunkSpacingXMeters;
+                    float chunkWorldZ = y * source.ChunkSpacingYMeters;
+                    float dx = chunkWorldX - cx;
+                    float dz = chunkWorldZ - cz;
+                    float dist = MathF.Sqrt(dx * dx + dz * dz);
+                    bool simplified = dist > SimplifiedCliffRadius;
+                    ref ChunkGpu chunk = ref GetOrCreateChunk(source, x, y, simplified);
+                    shadow.DrawMeshShadow(chunk.TerrainMesh, identity);
+                }
+            }
+        }
+
         private void RenderInternal(ITerrainChunkMeshSource source, in Camera3D camera, bool drawTerrain, bool drawWater, bool bumpFrame)
         {
             if (source == null || source.WidthInChunks <= 0) return;
@@ -302,12 +348,25 @@ namespace Ludots.Raylib.Render
             }
 
             string baseDir = AppContext.BaseDirectory;
-            _terrainShader = Rl.LoadShader(Path.Combine(baseDir, "terrain.vs"), Path.Combine(baseDir, "terrain.fs"));
-            if (_terrainShader.id == 0) throw new InvalidOperationException("Failed to load terrain shader (shader.id == 0).");
+            _terrainShader = RaylibShaderLoader.Load(baseDir, "terrain.vs", "terrain.fs", "terrain");
             _terrainMaterial = Rl.LoadMaterialDefault();
             _terrainMaterial.shader = _terrainShader;
 
             _terrainLightingLocs = RaylibFrameLightingLocations.ResolveOrThrow(_terrainShader, "terrain");
+            _terrainShadowLocs = RaylibShadowSamplingLocations.ResolveOrThrow(
+                _terrainShader,
+                "terrain",
+                RaylibShadowSampling.ShaderTextureSlot);
+            int locTerrainMvp = RaylibShaderBindingGuard.RequireUniform(_terrainShader, "mvp", "terrain");
+            int locTerrainMatModel = RaylibShaderBindingGuard.RequireUniform(_terrainShader, "matModel", "terrain");
+            int locTerrainVertexPosition = RaylibShaderBindingGuard.RequireAttribute(_terrainShader, "vertexPosition", "terrain");
+            int locTerrainVertexNormal = RaylibShaderBindingGuard.RequireAttribute(_terrainShader, "vertexNormal", "terrain");
+            int locTerrainVertexColor = RaylibShaderBindingGuard.RequireAttribute(_terrainShader, "vertexColor", "terrain");
+            _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_POSITION] = locTerrainVertexPosition;
+            _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_NORMAL] = locTerrainVertexNormal;
+            _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_COLOR] = locTerrainVertexColor;
+            _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MVP] = locTerrainMvp;
+            _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MODEL] = locTerrainMatModel;
             // Shared terrain.fs supports optional VH height-band albedos; VertexMap path stays vertex tint only.
             int locUseTerrainAlbedo = Rl.GetShaderLocation(_terrainShader, "uUseTerrainAlbedo");
             if (locUseTerrainAlbedo >= 0)
@@ -354,6 +413,7 @@ namespace Ludots.Raylib.Render
 
             _initialized = true;
             ClearReflectiveWater();
+            ApplyTerrainShadow();
             if (_frameLighting != null)
             {
                 _frameLighting.Apply(_terrainShader, in _terrainLightingLocs);
@@ -372,6 +432,7 @@ namespace Ludots.Raylib.Render
             lighting.Apply(_terrainShader, in _terrainLightingLocs);
             Vector3 viewPos = camera.position;
             lighting.ApplyViewPosition(_terrainShader, in _terrainLightingLocs, viewPos);
+            ApplyTerrainShadow();
 
             Vector3 lightPos = lighting.FarLightPosition();
             float ambient = lighting.AmbientRgba.W;
@@ -410,6 +471,12 @@ namespace Ludots.Raylib.Render
             ChunkBuildMsLastFrame += (Stopwatch.GetTimestamp() - buildStart) * 1000.0 / Stopwatch.Frequency;
             _chunks[key] = gpu;
             return ref CollectionsMarshal.GetValueRefOrNullRef(_chunks, key);
+        }
+
+        private void ApplyTerrainShadow()
+        {
+            _terrainShadowLocs.ApplyUniforms(_terrainShader, _frameShadow, _frameShadowTexelWorld);
+            RaylibShadowSampling.BindTexture(ref _terrainMaterial, _frameShadow);
         }
 
         private static Mesh CreateMesh(ChunkMeshWriteBuffer src)
@@ -467,6 +534,7 @@ namespace Ludots.Raylib.Render
                 // Detach pass-owned RT textures before material teardown (avoids double-free).
                 ClearReflectiveWater();
                 DetachWaterPassTextures();
+                RaylibShadowSampling.ClearTexture(ref _terrainMaterial);
             }
 
             if (_oceanPlaneReady)

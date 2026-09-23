@@ -100,4 +100,22 @@ public sealed class RaylibRenderEnvironmentConfigTests
         Assert.That(RaylibPostProcessRenderer.NeedsRenderTargetResize(true, 1280, 720, 1280, 720), Is.False);
         Assert.That(RaylibPostProcessRenderer.NeedsRenderTargetResize(true, 1280, 720, 1600, 900), Is.True);
     }
+
+    [Test]
+    public void RaylibSkyboxConfig_ValidatesSunDiskParams()
+    {
+        RaylibSkyboxConfig defaults = RaylibSkyboxConfig.CreateDefault();
+        Assert.That(defaults.SunDiskSharpness, Is.EqualTo(720f));
+        Assert.That(defaults.SunDiskIntensity, Is.EqualTo(2.4f));
+        Assert.That(defaults.SunGlowSharpness, Is.EqualTo(22f));
+        Assert.That(defaults.SunGlowIntensity, Is.EqualTo(0.34f));
+
+        foreach (float invalid in new[] { 0f, -1f, float.NaN, float.PositiveInfinity, float.NegativeInfinity })
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => (defaults with { SunDiskSharpness = invalid }).Validate());
+            Assert.Throws<ArgumentOutOfRangeException>(() => (defaults with { SunDiskIntensity = invalid }).Validate());
+            Assert.Throws<ArgumentOutOfRangeException>(() => (defaults with { SunGlowSharpness = invalid }).Validate());
+            Assert.Throws<ArgumentOutOfRangeException>(() => (defaults with { SunGlowIntensity = invalid }).Validate());
+        }
+    }
 }

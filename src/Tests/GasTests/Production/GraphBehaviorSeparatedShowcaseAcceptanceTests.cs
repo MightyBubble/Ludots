@@ -3,7 +3,6 @@ using CapabilityStandardBehaviorTreeArenaMod.Runtime;
 using CapabilityStandardGraphBehaviorCommon;
 using CapabilityStandardGraphBehaviorIntegrationMod.Runtime;
 using CapabilityStandardHfsmSentryArenaMod.Runtime;
-using CapabilityStandardLevelBlueprintTrialMod.Runtime;
 using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.GraphRuntime;
 using Ludots.Tests.Gas.Graph;
@@ -74,20 +73,6 @@ namespace Ludots.Tests.Gas.Production
             Drive(runtime.Tick, runtime.Metrics);
             Assert.That(runtime.Metrics.Detail, Does.Contain("HFSM"));
             Assert.That(runtime.SentryCount, Is.GreaterThanOrEqualTo(8));
-            Warn.If(runtime.Metrics.MaxThinkMs, Is.GreaterThanOrEqualTo(ShowcaseThinkBudgetMs));
-            Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(CiShowcaseEnvelopeMs));
-        }
-
-        [Test]
-        public void LevelBlueprintTrial_SpawnClearGate_AdvancesPhaseUnderBudget()
-        {
-            var runtime = new LevelBlueprintTrialRuntime();
-            runtime.Bind(_programs, _actions);
-            runtime.EnsureWorld();
-            Warm(runtime.Tick, waves: 40);
-            Assert.That(runtime.Metrics.Detail, Does.Contain("Level Script"));
-            Assert.That(runtime.Director!.Phase, Is.GreaterThanOrEqualTo(2));
-            Assert.That(runtime.GateOpen, Is.True);
             Warn.If(runtime.Metrics.MaxThinkMs, Is.GreaterThanOrEqualTo(ShowcaseThinkBudgetMs));
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(CiShowcaseEnvelopeMs));
         }

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Numerics;
 using Ludots.Core.Registry;
 using Ludots.Platform.Abstractions;
 
@@ -11,6 +13,8 @@ namespace Ludots.Core.Presentation.Assets
         private readonly StringIntRegistry _ids;
         private MaterialAssetDescriptor[] _data;
         private bool[] _has;
+        private readonly Dictionary<int, IReadOnlyDictionary<string, string>> _hostTextureUris = new();
+        private readonly Dictionary<int, ResolvedMaterialAsset> _resolvedCache = new();
 
         public PresentationMaterialRegistry(int capacity = 256)
         {
@@ -23,16 +27,48 @@ namespace Ludots.Core.Presentation.Assets
             _data = new MaterialAssetDescriptor[capacity];
             _has = new bool[capacity];
 
-            Register(DefaultSurfaceKey, MaterialAssetDomain.Surface, Array.Empty<string>(), MaterialAssetFlags.None);
+            Register(DefaultSurfaceKey, MaterialAssetDomain.Surface, MaterialAssetFlags.None);
         }
 
-        public int Register(string key, MaterialAssetDomain domain, string[] sourceUris, MaterialAssetFlags flags)
+        public int Register(
+            string key,
+            MaterialAssetDomain domain,
+            MaterialAssetFlags flags,
+            string? shaderKey = null,
+            string? parentKey = null,
+            IReadOnlyDictionary<string, float>? floatParams = null,
+            IReadOnlyDictionary<string, Vector4>? colorParams = null)
         {
             int id = _ids.Register(key);
             EnsureCapacity(id);
-            _data[id] = new MaterialAssetDescriptor(id, domain, sourceUris, flags);
+            _data[id] = new MaterialAssetDescriptor(id, domain, flags, shaderKey, parentKey, floatParams, colorParams);
             _has[id] = true;
+            _resolvedCache.Clear();
             return id;
+        }
+
+        /// <summary>宿主侧按名挂载贴图 URI（host_assets.json 每 backend 一份）；重复挂载后者覆盖。</summary>
+        public void SetHostTextureUris(int id, IReadOnlyDictionary<string, string> textureUris)
+        {
+            if (textureUris == null)
+            {
+                throw new ArgumentNullException(nameof(textureUris));
+            }
+
+            if (!TryGet(id, out _))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(PresentationMaterialRegistry)} cannot attach host textures to unregistered materialId={id}.");
+            }
+
+            var copy = new SortedDictionary<string, string>(StringComparer.Ordinal);
+            foreach (KeyValuePair<string, string> pair in textureUris)
+            {
+                copy[pair.Key] = pair.Value;
+            }
+
+            _hostTextureUris[id] = copy;
+            _resolvedCache.Clear();
         }
 
         public int GetId(string key) => _ids.GetId(key);
@@ -49,6 +85,29 @@ namespace Ludots.Core.Presentation.Assets
 
             descriptor = default;
             return false;
+        }
+
+        public bool TryResolve(int id, out ResolvedMaterialAsset material)
+        {
+            if (!TryGet(id, out _))
+            {
+                material = default;
+                return false;
+            }
+
+            if (_resolvedCache.TryGetValue(id, out material))
+            {
+                return true;
+            }
+
+            material = MaterialAssetResolver.Resolve(this, id, ResolveHostTextureUris);
+            _resolvedCache[id] = material;
+            return true;
+        }
+
+        private IReadOnlyDictionary<string, string>? ResolveHostTextureUris(int id)
+        {
+            return _hostTextureUris.TryGetValue(id, out IReadOnlyDictionary<string, string>? uris) ? uris : null;
         }
 
         private void EnsureCapacity(int id)

@@ -20,7 +20,9 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private readonly GalleryMeshAssets _meshes = new();
         private readonly GalleryPrimitiveSnapshot _snapshot = new();
         private RaylibPrimitiveRenderer _primitives = null!;
+        private readonly RaylibSkyboxRenderer _skybox = new();
         private RaylibFrameLighting _lighting = null!;
+        private RaylibDirectionalShadowMap _shadowMap = null!;
         private bool _disposed;
 
         public string Id => "particles";
@@ -66,6 +68,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             _meshes.Register("gallery.cube", MeshAssetDescriptor.Primitive(101, PrimitiveMeshKind.Cube));
 
             _lighting = RaylibFrameLighting.LoadFromDefaultPath(dayPhase01: 0.60f);
+            _shadowMap = new RaylibDirectionalShadowMap();
             _primitives = new RaylibPrimitiveRenderer(
                 RaylibPrimitiveRenderMode.Immediate,
                 GalleryAssetPaths.Instance,
@@ -204,12 +207,27 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             camera.target.Y = 2.4f;
 
             _lighting.SetDayPhase(0.60f);
+            BuildSnapshot();
 
-            Rl.ClearBackground(new Color(9, 10, 16, 255));
+            _shadowMap.BeginFrame(_lighting.SunDirectionToward, new Vector3(0f, 1.2f, 0f), 13f);
+            _primitives.DrawShadow(_snapshot, _shadowMap, _meshes, camera);
+            _shadowMap.EndFrame();
+
+            RaylibRenderEnvironmentConfig skyConfig = GallerySunSky.CreateConfig(_lighting, sizeMeters: 900f);
+            Rl.ClearBackground(skyConfig.Skybox.ClearColor);
             Rl.BeginMode3D(camera);
+            _skybox.Draw(camera, totalTimeSeconds, skyConfig);
             Rl.DrawGrid(20, 2f);
 
-            _primitives.ApplyFrameLighting(_lighting, camera.position);
+            _primitives.ApplyFrameLighting(_lighting, camera.position, _shadowMap, shadowTexelWorld: 0.04f);
+            _primitives.Draw(_snapshot, camera, _meshes, timeSeconds: totalTimeSeconds);
+            Rl.EndMode3D();
+
+            GalleryFont.Draw($"vfx drawn last frame {_primitives.LastDrawnVfxCount}", 12, 28, 20, GalleryColors.RayWhite);
+        }
+
+        private void BuildSnapshot()
+        {
             _snapshot.BeginFrame();
             _snapshot.Add(GalleryItems.Mesh(101, 50, new Vector3(-5.5f, 0.7f, 0f), new Vector3(1.6f, 1.4f, 1.6f), new Vector4(0.32f, 0.30f, 0.34f, 1f)));
             _snapshot.Add(GalleryItems.Mesh(101, 51, new Vector3(0f, 0.7f, 2.5f), new Vector3(1.6f, 1.4f, 1.6f), new Vector4(0.30f, 0.32f, 0.38f, 1f)));
@@ -217,10 +235,6 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             _snapshot.Add(GalleryItems.Vfx(SparkAssetId, 1, new Vector3(-5.5f, 1.9f, 0f), new Vector4(1f, 0.9f, 0.7f, 1f)));
             _snapshot.Add(GalleryItems.Vfx(SmokeAssetId, 2, new Vector3(0f, 1.9f, 2.5f), new Vector4(0.9f, 0.92f, 1f, 0.85f)));
             _snapshot.Add(GalleryItems.Vfx(EmberAssetId, 3, new Vector3(5.5f, 1.9f, 0f), new Vector4(1f, 0.75f, 0.45f, 1f)));
-            _primitives.Draw(_snapshot, camera, _meshes, timeSeconds: totalTimeSeconds);
-            Rl.EndMode3D();
-
-            GalleryFont.Draw($"vfx drawn last frame {_primitives.LastDrawnVfxCount}", 12, 28, 20, GalleryColors.RayWhite);
         }
 
         public void Dispose()
@@ -231,6 +245,8 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             }
 
             _primitives?.Dispose();
+            _shadowMap?.Dispose();
+            _skybox.Dispose();
             _disposed = true;
         }
     }

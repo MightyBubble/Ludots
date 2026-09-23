@@ -28,12 +28,20 @@ namespace Ludots.Raylib.Render
         private int _gradientHeight;
         private Color? _clearColorOverride;
         private int _locDayPhase = -1;
+        private int _locSunDirection = -1;
+        private int _locSunColor = -1;
+        private int _locSunDiskSharpness = -1;
+        private int _locSunDiskIntensity = -1;
+        private int _locSunGlowSharpness = -1;
+        private int _locSunGlowIntensity = -1;
         private int _locMatView = -1;
         private int _locMatProjection = -1;
 
         private SkyEnvironmentDescriptor? _active;
         private string? _activeMapId;
         private float _dayPhase01;
+        private Vector3 _sunDirection = new(-0.36f, 0.82f, -0.44f);
+        private Vector3 _sunColor = new(1f, 0.93f, 0.78f);
         private bool _hasDayPhase;
         private bool _requireDayPhase;
         private bool _gpuReady;
@@ -114,6 +122,14 @@ namespace Ludots.Raylib.Render
 
             _dayPhase01 = Math.Clamp(phase01, 0f, 1f);
             _hasDayPhase = true;
+        }
+
+        public void SetSun(Vector3 direction, Vector3 color)
+        {
+            ThrowIfDisposed();
+            _sunDirection = RaylibRenderEnvironmentConfig.RequireUnitDirection(direction, nameof(direction));
+            RaylibRenderEnvironmentConfig.RequireColor(color, nameof(color));
+            _sunColor = color;
         }
 
         public void EnsureActiveForMap(string? mapId)
@@ -204,6 +220,18 @@ namespace Ludots.Raylib.Render
 
             float phase = _dayPhase01;
             Rl.SetShaderValue(_shader, _locDayPhase, &phase, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Vector3 sunDirection = _sunDirection;
+            Vector3 sunColor = _sunColor;
+            Rl.SetShaderValue(_shader, _locSunDirection, &sunDirection, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
+            Rl.SetShaderValue(_shader, _locSunColor, &sunColor, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
+            float sunDiskSharpness = _active!.SunDiskSharpness;
+            float sunDiskIntensity = _active!.SunDiskIntensity;
+            float sunGlowSharpness = _active!.SunGlowSharpness;
+            float sunGlowIntensity = _active!.SunGlowIntensity;
+            Rl.SetShaderValue(_shader, _locSunDiskSharpness, &sunDiskSharpness, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(_shader, _locSunDiskIntensity, &sunDiskIntensity, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(_shader, _locSunGlowSharpness, &sunGlowSharpness, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(_shader, _locSunGlowIntensity, &sunGlowIntensity, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
 
             Matrix4x4 view = Matrix4x4.CreateLookAt(camera.position, camera.target, camera.up);
             view.Translation = Vector3.Zero;
@@ -313,26 +341,29 @@ namespace Ludots.Raylib.Render
                     fsPath);
             }
 
-            _shader = Rl.LoadShader(vsPath, fsPath);
-            if (_shader.id == 0)
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibSkyEnvironment)} failed to compile day-night sky shader from '{vsPath}' + '{fsPath}'.");
-            }
+            _shader = RaylibShaderLoader.Load(_shaderBaseDirectory, "sky_daynight.vs", "sky_daynight.fs", "sky_daynight");
 
             EnsureShaderLocations();
             _material = Rl.LoadMaterialDefault();
             _material.shader = _shader;
-            _cubeMesh = Rl.GenMeshCube(1f, 1f, 1f);
+            _cubeMesh = Rl.GenMeshSphere(1f, 64, 32);
             if (_cubeMesh.vertexCount <= 0)
             {
-                throw new InvalidOperationException($"{nameof(RaylibSkyEnvironment)} GenMeshCube failed.");
+                throw new InvalidOperationException($"{nameof(RaylibSkyEnvironment)} GenMeshSphere failed.");
             }
         }
 
         private void EnsureShaderLocations()
         {
-            if (_locDayPhase >= 0 && _locMatView >= 0 && _locMatProjection >= 0)
+            if (_locDayPhase >= 0 &&
+                _locSunDirection >= 0 &&
+                _locSunColor >= 0 &&
+                _locSunDiskSharpness >= 0 &&
+                _locSunDiskIntensity >= 0 &&
+                _locSunGlowSharpness >= 0 &&
+                _locSunGlowIntensity >= 0 &&
+                _locMatView >= 0 &&
+                _locMatProjection >= 0)
             {
                 return;
             }
@@ -341,6 +372,12 @@ namespace Ludots.Raylib.Render
             _locMatView = Rl.GetShaderLocation(_shader, "matView");
             _locMatProjection = Rl.GetShaderLocation(_shader, "matProjection");
             _locDayPhase = Rl.GetShaderLocation(_shader, "uDayPhase");
+            _locSunDirection = Rl.GetShaderLocation(_shader, "uSunDirection");
+            _locSunColor = Rl.GetShaderLocation(_shader, "uSunColor");
+            _locSunDiskSharpness = Rl.GetShaderLocation(_shader, "uSunDiskSharpness");
+            _locSunDiskIntensity = Rl.GetShaderLocation(_shader, "uSunDiskIntensity");
+            _locSunGlowSharpness = Rl.GetShaderLocation(_shader, "uSunGlowSharpness");
+            _locSunGlowIntensity = Rl.GetShaderLocation(_shader, "uSunGlowIntensity");
             int locMapAlbedo = Rl.GetShaderLocation(_shader, "texture0");
 
             if (locVertexPosition < 0)
@@ -361,6 +398,36 @@ namespace Ludots.Raylib.Render
             if (_locDayPhase < 0)
             {
                 throw new InvalidOperationException("skybox shader is missing uniform 'uDayPhase'.");
+            }
+
+            if (_locSunDirection < 0)
+            {
+                throw new InvalidOperationException("skybox shader is missing uniform 'uSunDirection'.");
+            }
+
+            if (_locSunColor < 0)
+            {
+                throw new InvalidOperationException("skybox shader is missing uniform 'uSunColor'.");
+            }
+
+            if (_locSunDiskSharpness < 0)
+            {
+                throw new InvalidOperationException("skybox shader is missing uniform 'uSunDiskSharpness'.");
+            }
+
+            if (_locSunDiskIntensity < 0)
+            {
+                throw new InvalidOperationException("skybox shader is missing uniform 'uSunDiskIntensity'.");
+            }
+
+            if (_locSunGlowSharpness < 0)
+            {
+                throw new InvalidOperationException("skybox shader is missing uniform 'uSunGlowSharpness'.");
+            }
+
+            if (_locSunGlowIntensity < 0)
+            {
+                throw new InvalidOperationException("skybox shader is missing uniform 'uSunGlowIntensity'.");
             }
 
             if (locMapAlbedo < 0)
@@ -605,6 +672,12 @@ namespace Ludots.Raylib.Render
             }
 
             _locDayPhase = -1;
+            _locSunDirection = -1;
+            _locSunColor = -1;
+            _locSunDiskSharpness = -1;
+            _locSunDiskIntensity = -1;
+            _locSunGlowSharpness = -1;
+            _locSunGlowIntensity = -1;
             _locMatView = -1;
             _locMatProjection = -1;
             _gpuReady = false;
@@ -640,6 +713,12 @@ namespace Ludots.Raylib.Render
                 throw new InvalidOperationException(
                     $"{DefaultRelativePath} entry '{id}' gradientWidth/Height must be >= 2.");
             }
+
+            RaylibSkyboxConfig skyboxDefaults = RaylibSkyboxConfig.CreateDefault();
+            float sunDiskSharpness = ReadPositiveFloat(obj["sunDiskSharpness"], skyboxDefaults.SunDiskSharpness, id, "sunDiskSharpness");
+            float sunDiskIntensity = ReadPositiveFloat(obj["sunDiskIntensity"], skyboxDefaults.SunDiskIntensity, id, "sunDiskIntensity");
+            float sunGlowSharpness = ReadPositiveFloat(obj["sunGlowSharpness"], skyboxDefaults.SunGlowSharpness, id, "sunGlowSharpness");
+            float sunGlowIntensity = ReadPositiveFloat(obj["sunGlowIntensity"], skyboxDefaults.SunGlowIntensity, id, "sunGlowIntensity");
 
             Color? clearRgb = null;
             if (obj["clearRgb"] is JsonArray clearArr)
@@ -714,6 +793,10 @@ namespace Ludots.Raylib.Render
                 gradientHeight,
                 hasInitialPhase,
                 initialPhase,
+                sunDiskSharpness,
+                sunDiskIntensity,
+                sunGlowSharpness,
+                sunGlowIntensity,
                 clearSampleV,
                 clearRgb);
         }
@@ -744,6 +827,23 @@ namespace Ludots.Raylib.Render
             }
 
             return node.GetValue<float>();
+        }
+
+        private static float ReadPositiveFloat(JsonNode? node, float fallback, string rowId, string fieldName)
+        {
+            if (node == null)
+            {
+                return fallback;
+            }
+
+            float value = node.GetValue<float>();
+            if (!float.IsFinite(value) || value <= 0f)
+            {
+                throw new InvalidOperationException(
+                    $"{DefaultRelativePath} entry '{rowId}' {fieldName} must be finite and greater than zero.");
+            }
+
+            return value;
         }
 
         private static int ReadInt(JsonNode? node, int fallback)
@@ -805,6 +905,10 @@ namespace Ludots.Raylib.Render
                 int gradientHeight,
                 bool hasInitialPhase,
                 float initialPhase,
+                float sunDiskSharpness,
+                float sunDiskIntensity,
+                float sunGlowSharpness,
+                float sunGlowIntensity,
                 float clearSampleV,
                 Color? clearRgb)
             {
@@ -818,6 +922,10 @@ namespace Ludots.Raylib.Render
                 GradientHeight = gradientHeight;
                 HasInitialPhase = hasInitialPhase;
                 InitialPhase = initialPhase;
+                SunDiskSharpness = sunDiskSharpness;
+                SunDiskIntensity = sunDiskIntensity;
+                SunGlowSharpness = sunGlowSharpness;
+                SunGlowIntensity = sunGlowIntensity;
                 ClearSampleV = clearSampleV;
                 ClearRgb = clearRgb;
             }
@@ -832,6 +940,10 @@ namespace Ludots.Raylib.Render
             public int GradientHeight { get; }
             public bool HasInitialPhase { get; }
             public float InitialPhase { get; }
+            public float SunDiskSharpness { get; }
+            public float SunDiskIntensity { get; }
+            public float SunGlowSharpness { get; }
+            public float SunGlowIntensity { get; }
             public float ClearSampleV { get; }
             public Color? ClearRgb { get; }
 

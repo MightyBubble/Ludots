@@ -1,0 +1,93 @@
+[
+  {
+    "id": "fireball_hero",
+    "components": {
+      "Name": {
+        "Value": "Hero"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": -200,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "VisionEmitterCm": {
+        "scope": "fireball.local",
+        "layers": [
+          "ground"
+        ],
+        "polarity": "Reveal",
+        "aperture": {
+          "kind": "Disk",
+          "rangeCm": 1000
+        },
+        "detectionStrength": 1
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100,
+          "Mana": 80,
+          "Attack": 25
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Fireball.Cast"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "fireball_target",
+    "components": {
+      "Name": {
+        "Value": "Target"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 400,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "FogOccupantCm": {
+        "layers": [
+          "ground"
+        ]
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 120,
+          "Mana": 0,
+          "Attack": 10
+        }
+      }
+    }
+  }
+]

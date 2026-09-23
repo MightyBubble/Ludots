@@ -1,0 +1,13 @@
+{
+  "windowTitle": "Ludots - Panel Theme Ink-wash (Web)",
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "panelTheme": "ink-wash",
+  "panelSkin": "web",
+  "panelWebApp": "PanelSkinWebMod:Assets/overlay-app/index.html",
+  "browserRuntime": {
+    "enabled": true,
+    "required": true,
+    "provider": "cef"
+  }
+}

@@ -1,0 +1,9 @@
+[
+  {
+    "id": "panel.night_raid.victory",
+    "variables": [
+      { "name": "heroHealth", "kind": "Float", "realtime": true,
+        "source": { "sourceKind": "SingleAttribute", "attributeId": "Health" } }
+    ]
+  }
+]

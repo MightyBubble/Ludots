@@ -22,6 +22,9 @@ namespace Ludots.Platform.Abstractions
     {
         bool TryGet(int id, out MaterialAssetDescriptor descriptor);
 
+        /// <summary>解析实例链（含宿主贴图合入）。id 未注册返回 false；环/缺失父级/实例越权覆盖直接抛。</summary>
+        bool TryResolve(int id, out ResolvedMaterialAsset material);
+
         int GetId(string key);
 
         string GetName(int id);

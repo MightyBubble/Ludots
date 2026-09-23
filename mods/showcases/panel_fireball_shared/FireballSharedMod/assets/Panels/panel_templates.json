@@ -1,0 +1,22 @@
+[
+  {
+    "id": "panel.fireball.status",
+    "variables": [
+      { "name": "health", "kind": "Float", "realtime": true,
+        "source": { "sourceKind": "SingleAttribute", "attributeId": "Health" } },
+      { "name": "mana", "kind": "Float", "realtime": true,
+        "source": { "sourceKind": "SingleAttribute", "attributeId": "Mana" } },
+      { "name": "attack", "kind": "Float", "realtime": true,
+        "source": { "sourceKind": "SingleAttribute", "attributeId": "Attack" } },
+      { "name": "healthBase", "kind": "Float",
+        "source": { "sourceKind": "AttributeBase", "attributeId": "Health" } },
+      { "name": "manaBase", "kind": "Float",
+        "source": { "sourceKind": "AttributeBase", "attributeId": "Mana" } }
+    ],
+    "binds": [
+      { "control": "lbl.health", "variable": "health" },
+      { "control": "lbl.mana", "variable": "mana" },
+      { "control": "lbl.attack", "variable": "attack" }
+    ]
+  }
+]

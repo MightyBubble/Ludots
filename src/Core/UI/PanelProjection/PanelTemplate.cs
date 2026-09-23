@@ -15,7 +15,8 @@ namespace Ludots.Core.UI.PanelProjection
             IReadOnlyList<PanelTemplateVariable> variables,
             IReadOnlyList<PanelTemplateBind>? binds = null,
             IReadOnlyList<PanelTemplateEvent>? events = null,
-            IReadOnlyList<PanelIntentMapEntry>? intents = null)
+            IReadOnlyList<PanelIntentMapEntry>? intents = null,
+            string? skin = null)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -89,6 +90,7 @@ namespace Ludots.Core.UI.PanelProjection
             }
 
             Id = id.Trim();
+            Skin = string.IsNullOrWhiteSpace(skin) ? null : skin.Trim();
             Variables = variables;
             Binds = safeBinds;
             Events = safeEvents;
@@ -96,6 +98,9 @@ namespace Ludots.Core.UI.PanelProjection
         }
 
         public string Id { get; }
+
+        /// <summary>Per-template default skin; instance op param wins, then game.json default.</summary>
+        public string? Skin { get; }
         public IReadOnlyList<PanelTemplateVariable> Variables { get; }
         public IReadOnlyList<PanelTemplateBind> Binds { get; }
         public IReadOnlyList<PanelTemplateEvent> Events { get; }

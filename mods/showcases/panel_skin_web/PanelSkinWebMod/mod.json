@@ -1,0 +1,9 @@
+{
+  "name": "PanelSkinWebMod",
+  "version": "1.0.0",
+  "description": "Web UI-flavored panel skin: PanelHost realtime variables rendered via UI surface",
+  "priority": 0,
+  "dependencies": {
+    "FireballSharedMod": "^1.0.0"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "Id": "fireball_arena",
+  "Tags": ["showcase", "fireball"],
+  "TriggerGraphs": [
+    { "graph": "Graph.Fireball.Panel.OpenStatus", "scopeInstanceId": "fireball-hero" }
+  ],
+  "Entities": [
+    { "InstanceId": "fireball-hero", "Template": "fireball_hero" },
+    { "InstanceId": "fireball-target", "Template": "fireball_target" }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "fireball-hero" },
+    { "TeamId": 2, "RepresentativeInstanceId": "fireball-target" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "fireball-hero" }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      { "TeamA": 1, "TeamB": 1, "TypeId": "LudotsCore.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 2, "TeamB": 2, "TypeId": "LudotsCore.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 1, "TeamB": 2, "TypeId": "LudotsCore.Participant", "Attitude": "Hostile", "Symmetric": true }
+    ],
+    "Players": [],
+    "PlayerTeams": []
+  },
+  "DefaultCamera": { "TargetXCm": 100, "TargetYCm": 0, "Yaw": 45, "Pitch": 35, "DistanceCm": 800, "FovYDeg": 50 }
+}

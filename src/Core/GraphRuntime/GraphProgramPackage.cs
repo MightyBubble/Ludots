@@ -4,5 +4,6 @@ namespace Ludots.Core.GraphRuntime
         string GraphName,
         string[] Symbols,
         GraphInstruction[] Program,
-        GraphKind Kind);
+        GraphKind Kind,
+        TriggerGraphEntry[] TriggerGraphEntries);
 }

@@ -3,9 +3,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using Ludots.Core.Gameplay.AI.BehaviorTree;
+using Ludots.Tests;
 using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.Gameplay.AI.Fsm;
-using Ludots.Core.Gameplay.Level;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Tests.Gas.Graph;
@@ -20,7 +20,6 @@ namespace Ludots.Tests.Gas.AI
     {
         private const double FrameBudgetMs = 15.0;
         private const double HfsmFrameBudgetMs = 5.0;
-        private const double LevelFrameBudgetMs = 5.0;
         private const double CiFrameEnvelopeMs = 25.0;
         private const double CiNarrowEnvelopeMs = 10.0;
 
@@ -45,20 +44,18 @@ namespace Ludots.Tests.Gas.AI
         }
 
         [Test]
-        public void WritePressureMatrices_M1_M2_M3_M4_M5_M6()
+        public void WritePressureMatrices_M1_M2_M3_M4_M6()
         {
             Directory.CreateDirectory(ArtifactDir);
             PressureThinkRow[] m1 = WriteM1();
             PressureThinkRow[] m2 = WriteM2();
             PressureSliceRow[] m3 = WriteM3();
             PressureHfsmRow[] m4 = WriteM4();
-            PressureLevelRow[] m5 = WriteM5();
             PressureSliceRow[] m6 = WriteM6();
             Assert.That(File.Exists(Path.Combine(ArtifactDir, "matrix-m1.csv")));
             Assert.That(File.Exists(Path.Combine(ArtifactDir, "matrix-m2.csv")));
             Assert.That(File.Exists(Path.Combine(ArtifactDir, "matrix-m3.csv")));
             Assert.That(File.Exists(Path.Combine(ArtifactDir, "matrix-m4.csv")));
-            Assert.That(File.Exists(Path.Combine(ArtifactDir, "matrix-m5.csv")));
             Assert.That(File.Exists(Path.Combine(ArtifactDir, "matrix-m6.csv")));
 
             for (int i = 0; i < m1.Length; i++)
@@ -105,18 +102,6 @@ namespace Ludots.Tests.Gas.AI
                     $"M4 HFSM think wave exceeded CI envelope: {row.TimeMs:F3}");
             }
 
-            for (int i = 0; i < m5.Length; i++)
-            {
-                PressureLevelRow row = m5[i];
-                Assert.That(row.Checked, Is.EqualTo(row.ArmedTriggers),
-                    $"M5 checked {row.Checked}/{row.ArmedTriggers} armed triggers.");
-                Assert.That(row.TimeMs, Is.GreaterThan(0.0), "M5 produced no timing sample.");
-                Warn.If(row.TimeMs, Is.GreaterThanOrEqualTo(LevelFrameBudgetMs),
-                    $"M5 level director think wave exceeded {LevelFrameBudgetMs:F0}ms: {row.TimeMs:F3}");
-                Assert.That(row.TimeMs, Is.LessThan(CiNarrowEnvelopeMs),
-                    $"M5 level director think wave exceeded CI envelope: {row.TimeMs:F3}");
-            }
-
             for (int i = 0; i < m6.Length; i++)
             {
                 PressureSliceRow row = m6[i];
@@ -125,9 +110,9 @@ namespace Ludots.Tests.Gas.AI
                 Assert.That(row.TimeMs, Is.GreaterThan(0.0),
                     $"M6 targets={row.Agents} I={row.Instructions} produced no timing sample.");
                 Warn.If(row.TimeMs, Is.GreaterThanOrEqualTo(FrameBudgetMs),
-                    $"M6 targets={row.Agents} I={row.Instructions} cast wave exceeded {FrameBudgetMs:F0}ms: {row.TimeMs:F3}");
+                    $"M6 targets={row.Agents} I={row.Instructions} cast wave exceeded {FrameBudgetMs:F0}ms: {row.TimeMs:F3}ms");
                 Assert.That(row.TimeMs, Is.LessThan(CiFrameEnvelopeMs),
-                    $"M6 targets={row.Agents} I={row.Instructions} cast wave exceeded CI envelope: {row.TimeMs:F3}");
+                    $"M6 targets={row.Agents} I={row.Instructions} cast wave exceeded CI envelope: {row.TimeMs:F3}ms");
             }
         }
 
@@ -140,12 +125,6 @@ namespace Ludots.Tests.Gas.AI
             double TimeMs,
             int Predicates,
             int Transitions);
-        private readonly record struct PressureLevelRow(
-            int ArmedTriggers,
-            int ActionGraphs,
-            int PeakUnits,
-            double TimeMs,
-            int Checked);
 
         private static PressureThinkRow[] WriteM1()
         {
@@ -285,36 +264,6 @@ namespace Ludots.Tests.Gas.AI
             sb.AppendLine(
                 $"{row.Agents},{row.States},{row.OutEdges},{row.TimeMs:F3},{row.Predicates},{row.Transitions},HFSM sentry hierarchy half stimulated");
             File.WriteAllText(Path.Combine(ArtifactDir, "matrix-m4.csv"), sb.ToString());
-            return new[] { row };
-        }
-
-        private static PressureLevelRow[] WriteM5()
-        {
-            var actions = new LevelActionDef[LevelDirectorLimits.MaxActions];
-            var triggers = new LevelTriggerDef[LevelDirectorLimits.MaxTriggers];
-            for (int i = 0; i < triggers.Length; i++)
-            {
-                actions[i] = new LevelActionDef(LevelActionKind.EmitSignal, arg0: i, arg1: 0);
-                triggers[i] = new LevelTriggerDef(LevelTriggerKind.ElapsedThinkWaves, threshold: 1_000_000 + i, actionIndex: i);
-            }
-
-            var director = new LevelDirector("level.stress", triggers, actions);
-            const int peakUnits = 10_000;
-            var sw = Stopwatch.StartNew();
-            LevelThinkStats stats = director.TickThinkWave();
-            sw.Stop();
-
-            var row = new PressureLevelRow(
-                triggers.Length,
-                actions.Length,
-                peakUnits,
-                sw.Elapsed.TotalMilliseconds,
-                stats.TriggersChecked);
-            var sb = new StringBuilder();
-            sb.AppendLine("armed_triggers,action_graphs,peak_units,T_ms,checked,notes");
-            sb.AppendLine(
-                $"{row.ArmedTriggers},{row.ActionGraphs},{row.PeakUnits},{row.TimeMs:F3},{row.Checked},ElapsedThinkWaves high threshold no fire");
-            File.WriteAllText(Path.Combine(ArtifactDir, "matrix-m5.csv"), sb.ToString());
             return new[] { row };
         }
 

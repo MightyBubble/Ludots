@@ -12,6 +12,7 @@ namespace Ludots.App.RaylibEngineGallery
     {
         public static readonly Color Black = new(0, 0, 0, 255);
         public static readonly Color RayWhite = new(245, 245, 245, 255);
+        public static readonly Vector4 ShadowReceiverGray = new(0.62f, 0.64f, 0.66f, 1f);
     }
 
     /// <summary>窗口标志位的 vendored 命名形态：绑定只暴露 SetConfigFlags(uint)。</summary>
@@ -93,24 +94,42 @@ namespace Ludots.App.RaylibEngineGallery
         }
     }
 
-    /// <summary>渲染侧材质资产直读表：sourceUris[0] 为 albedo，flags 驱动 blend/cutout/double-sided。</summary>
+    /// <summary>渲染侧材质资产直读表：命名贴图表 + flags 驱动 blend/cutout/double-sided，支持 parentKey 实例链。</summary>
     public sealed class GalleryMaterialAssets : IRenderMaterialAssets
     {
         private readonly Dictionary<int, MaterialAssetDescriptor> _byId = new();
         private readonly Dictionary<string, int> _byKey = new(StringComparer.Ordinal);
         private readonly Dictionary<int, string> _names = new();
+        private readonly Dictionary<int, IReadOnlyDictionary<string, string>> _texturesById = new();
 
-        public int Register(string key, in MaterialAssetDescriptor descriptor)
+        public int Register(string key, in MaterialAssetDescriptor descriptor, IReadOnlyDictionary<string, string>? textureUris = null)
         {
             _byId[descriptor.Id] = descriptor;
             _byKey[key] = descriptor.Id;
             _names[descriptor.Id] = key;
+            if (textureUris != null)
+            {
+                _texturesById[descriptor.Id] = textureUris;
+            }
+
             return descriptor.Id;
         }
 
         public bool TryGet(int id, out MaterialAssetDescriptor descriptor)
         {
             return _byId.TryGetValue(id, out descriptor);
+        }
+
+        public bool TryResolve(int id, out ResolvedMaterialAsset material)
+        {
+            if (!_byId.ContainsKey(id))
+            {
+                material = default;
+                return false;
+            }
+
+            material = MaterialAssetResolver.Resolve(this, id, ResolveTextureUris);
+            return true;
         }
 
         public int GetId(string key)
@@ -121,6 +140,11 @@ namespace Ludots.App.RaylibEngineGallery
         public string GetName(int id)
         {
             return _names.TryGetValue(id, out string? name) ? name : string.Empty;
+        }
+
+        private IReadOnlyDictionary<string, string>? ResolveTextureUris(int id)
+        {
+            return _texturesById.TryGetValue(id, out IReadOnlyDictionary<string, string>? uris) ? uris : null;
         }
     }
 

@@ -25,6 +25,7 @@ uniform float uRoughness;
 uniform float uMetallic;
 uniform int uHasRoughnessMap;
 uniform int uHasMetallicMap;
+// ludo:include shadow_sampling.glsl.inc
 
 out vec4 finalColor;
 
@@ -80,6 +81,7 @@ vec3 FresnelSchlick(float cosTheta, vec3 F0)
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
+
 void main()
 {
     vec4 texel = texture(texture0, fragTexCoord);
@@ -121,7 +123,8 @@ void main()
     vec3 kD = (vec3(1.0) - kS) * (1.0 - metallic);
     vec3 radiance = uLightColor * uLightIntensity;
     vec3 ambient = uAmbient.rgb * uAmbient.a * albedo;
-    vec3 lit = ambient + (kD * albedo / PI + specular) * radiance * NdotL;
+    float shadow = SampleShadow(fragPos, N);
+    vec3 lit = ambient + (kD * albedo / PI + specular) * radiance * NdotL * shadow;
 
     float fogAmount = DistanceFogAmount(length(fragPos - uViewPos));
     vec3 fogged = mix(lit, uFogColor, fogAmount);

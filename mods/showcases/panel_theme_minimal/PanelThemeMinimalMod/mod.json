@@ -1,0 +1,10 @@
+{
+  "name": "PanelThemeMinimalMod",
+  "version": "1.0.0",
+  "description": "Panel theme showcase variant: minimal",
+  "priority": 0,
+  "dependencies": {
+    "FireballSharedMod": "^1.0.0",
+    "PanelThemeShowcaseMod": "^1.0.0"
+  }
+}

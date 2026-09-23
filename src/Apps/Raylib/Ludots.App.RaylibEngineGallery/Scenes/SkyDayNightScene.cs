@@ -17,6 +17,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private RaylibSkyEnvironment _sky = new(GalleryAssetPaths.Instance);
         private RaylibFrameLighting _lighting = null!;
         private RaylibPrimitiveRenderer _primitives = null!;
+        private RaylibDirectionalShadowMap _shadowMap = null!;
         private bool _disposed;
 
         public string Id => "sky_daynight";
@@ -85,6 +86,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 vfs: null,
                 materials: null,
                 channelRegistrar: GalleryAnimationChannels.Register);
+            _shadowMap = new RaylibDirectionalShadowMap();
         }
 
         public void Draw(float deltaSeconds, double totalTimeSeconds, ref Camera3D camera)
@@ -94,15 +96,10 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             float phase = (((float)totalTimeSeconds + (CycleSeconds * 0.34f)) % CycleSeconds) / CycleSeconds;
             _sky.ApplyDayPhase(phase);
             _lighting.SetDayPhase(phase);
+            _sky.SetSun(_lighting.SunDirectionToward, _lighting.LightColor);
 
-            Rl.ClearBackground(_sky.ResolveClearColor());
-            CameraRenderState3D cameraState = GalleryCamera.StateOf(camera);
-
-            Rl.BeginMode3D(camera);
-            _sky.Draw(camera, cameraState);
-
-            _primitives.ApplyFrameLighting(_lighting, camera.position);
             _snapshot.BeginFrame();
+            _snapshot.Add(GalleryItems.Mesh(101, 999, new Vector3(0f, -0.10f, 0f), new Vector3(42f, 0.20f, 36f), GalleryColors.ShadowReceiverGray));
             _snapshot.Add(GalleryItems.Mesh(101, 1, new Vector3(-6f, 1.6f, 0f), new Vector3(3.2f), new Vector4(0.92f, 0.90f, 0.86f, 1f)));
             _snapshot.Add(GalleryItems.Mesh(102, 2, new Vector3(5f, 1.5f, -3f), new Vector3(3f), new Vector4(0.86f, 0.60f, 0.34f, 1f)));
             for (int i = 0; i < 6; i++)
@@ -116,8 +113,18 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                     new Vector4(0.55f, 0.62f, 0.72f, 1f)));
             }
 
+            _shadowMap.BeginFrame(_lighting.SunDirectionToward, new Vector3(0f, 1f, 0f), 28f);
+            _primitives.DrawShadow(_snapshot, _shadowMap, _meshes, camera);
+            _shadowMap.EndFrame();
+
+            Rl.ClearBackground(_sky.ResolveClearColor());
+            CameraRenderState3D cameraState = GalleryCamera.StateOf(camera);
+
+            Rl.BeginMode3D(camera);
+            _sky.Draw(camera, cameraState);
+
+            _primitives.ApplyFrameLighting(_lighting, camera.position, _shadowMap, shadowTexelWorld: 0.06f);
             _primitives.Draw(_snapshot, camera, _meshes, timeSeconds: totalTimeSeconds);
-            Rl.DrawGrid(24, 3f);
             Rl.EndMode3D();
         }
 
@@ -129,8 +136,10 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             }
 
             _primitives?.Dispose();
+            _shadowMap?.Dispose();
             _sky?.Dispose();
             _sky = null!;
+            _shadowMap = null!;
             _disposed = true;
         }
     }

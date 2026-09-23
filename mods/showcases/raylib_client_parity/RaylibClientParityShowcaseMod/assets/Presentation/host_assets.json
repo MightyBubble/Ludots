@@ -31,8 +31,8 @@
     "assetKind": "Material",
     "assetId": "raylib_client_parity.albedo_demo",
     "backendId": "raylib",
-    "sourceUris": [
-      "RaylibClientParityShowcaseMod:assets/Textures/parity_albedo_override.png"
-    ]
+    "textures": {
+      "albedo": "RaylibClientParityShowcaseMod:assets/Textures/parity_albedo_override.png"
+    }
   }
 ]

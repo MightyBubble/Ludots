@@ -1,0 +1,14 @@
+[
+  {
+    "id": "ink-wash",
+    "root": "PanelThemeShowcaseMod:assets/PanelThemes/ink-wash/theme.css"
+  },
+  {
+    "id": "fantasy",
+    "root": "PanelThemeShowcaseMod:assets/PanelThemes/fantasy/theme.css"
+  },
+  {
+    "id": "minimal",
+    "root": "PanelThemeShowcaseMod:assets/PanelThemes/minimal/theme.css"
+  }
+]

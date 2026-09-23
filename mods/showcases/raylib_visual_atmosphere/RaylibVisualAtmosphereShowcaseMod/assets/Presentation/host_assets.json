@@ -40,81 +40,81 @@
     "assetKind": "Material",
     "assetId": "raylib_visual_atmosphere.palm_cutout",
     "backendId": "raylib",
-    "sourceUris": [
-      "RaylibVisualAtmosphereShowcaseMod:assets/Textures/palm_cutout.png"
-    ]
+    "textures": {
+      "albedo": "RaylibVisualAtmosphereShowcaseMod:assets/Textures/palm_cutout.png"
+    }
   },
   {
     "id": "raylib_visual_atmosphere.bush_cutout.material.raylib",
     "assetKind": "Material",
     "assetId": "raylib_visual_atmosphere.bush_cutout",
     "backendId": "raylib",
-    "sourceUris": [
-      "RaylibVisualAtmosphereShowcaseMod:assets/Textures/bush_cutout.png"
-    ]
+    "textures": {
+      "albedo": "RaylibVisualAtmosphereShowcaseMod:assets/Textures/bush_cutout.png"
+    }
   },
   {
     "id": "raylib_visual_atmosphere.vfx_alphablend.material.raylib",
     "assetKind": "Material",
     "assetId": "raylib_visual_atmosphere.vfx_alphablend",
     "backendId": "raylib",
-    "sourceUris": [
-      "RaylibVisualAtmosphereShowcaseMod:assets/Textures/vfx_soft_puff.png"
-    ]
+    "textures": {
+      "albedo": "RaylibVisualAtmosphereShowcaseMod:assets/Textures/vfx_soft_puff.png"
+    }
   },
   {
     "id": "raylib_visual_atmosphere.vfx_additive.material.raylib",
     "assetKind": "Material",
     "assetId": "raylib_visual_atmosphere.vfx_additive",
     "backendId": "raylib",
-    "sourceUris": [
-      "RaylibVisualAtmosphereShowcaseMod:assets/Textures/vfx_additive_glow.png"
-    ]
+    "textures": {
+      "albedo": "RaylibVisualAtmosphereShowcaseMod:assets/Textures/vfx_additive_glow.png"
+    }
   },
   {
     "id": "raylib_visual_atmosphere.rock.material.raylib",
     "assetKind": "Material",
     "assetId": "raylib_visual_atmosphere.rock",
     "backendId": "raylib",
-    "sourceUris": [
-      "RaylibVisualAtmosphereShowcaseMod:assets/Textures/rock_albedo.png",
-      "RaylibVisualAtmosphereShowcaseMod:assets/Textures/rock_roughness.png"
-    ]
+    "textures": {
+      "albedo": "RaylibVisualAtmosphereShowcaseMod:assets/Textures/rock_albedo.png",
+      "roughness": "RaylibVisualAtmosphereShowcaseMod:assets/Textures/rock_roughness.png"
+    }
   },
   {
     "id": "raylib_visual_atmosphere.decal_footprints.material.raylib",
     "assetKind": "Material",
     "assetId": "raylib_visual_atmosphere.decal_footprints",
     "backendId": "raylib",
-    "sourceUris": [
-      "RaylibVisualAtmosphereShowcaseMod:assets/Textures/decal_footprints.png"
-    ]
+    "textures": {
+      "albedo": "RaylibVisualAtmosphereShowcaseMod:assets/Textures/decal_footprints.png"
+    }
   },
   {
     "id": "raylib_visual_atmosphere.decal_scorch.material.raylib",
     "assetKind": "Material",
     "assetId": "raylib_visual_atmosphere.decal_scorch",
     "backendId": "raylib",
-    "sourceUris": [
-      "RaylibVisualAtmosphereShowcaseMod:assets/Textures/decal_scorch.png"
-    ]
+    "textures": {
+      "albedo": "RaylibVisualAtmosphereShowcaseMod:assets/Textures/decal_scorch.png"
+    }
   },
   {
     "id": "raylib_visual_atmosphere.decal_blood.material.raylib",
     "assetKind": "Material",
     "assetId": "raylib_visual_atmosphere.decal_blood",
     "backendId": "raylib",
-    "sourceUris": [
-      "RaylibVisualAtmosphereShowcaseMod:assets/Textures/decal_blood.png"
-    ]
+    "textures": {
+      "albedo": "RaylibVisualAtmosphereShowcaseMod:assets/Textures/decal_blood.png"
+    }
   },
   {
     "id": "raylib_visual_atmosphere.decal_cracks.material.raylib",
     "assetKind": "Material",
     "assetId": "raylib_visual_atmosphere.decal_cracks",
     "backendId": "raylib",
-    "sourceUris": [
-      "RaylibVisualAtmosphereShowcaseMod:assets/Textures/decal_cracks.png"
-    ]
+    "textures": {
+      "albedo": "RaylibVisualAtmosphereShowcaseMod:assets/Textures/decal_cracks.png"
+    }
   }
 ]

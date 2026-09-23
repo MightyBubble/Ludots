@@ -9,7 +9,7 @@ namespace Ludots.Core.Config
     /// </summary>
     public sealed class StartupLocalSeatConfig
     {
-        public string SeatId { get; set; } = "seat.0";
+        public string SeatId { get; set; } = string.Empty;
         public int PlayerId { get; set; }
         public string? ControlSchemeId { get; set; }
 

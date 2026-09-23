@@ -18,6 +18,13 @@
   "Gas": {
     "clampToBase": true,
     "min": 0
+  },
+  "Mana": {
+    "min": 0,
+    "max": 9999
+  },
+  "Attack": {
+    "min": 0,
+    "max": 9999
   }
 }
-

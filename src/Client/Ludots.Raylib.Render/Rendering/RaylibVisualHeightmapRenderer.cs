@@ -31,6 +31,9 @@ namespace Ludots.Raylib.Render
         private Material _terrainMaterial;
         private RaylibFrameLightingLocations _terrainLightingLocs;
         private RaylibFrameLighting? _frameLighting;
+        private RaylibDirectionalShadowMap? _frameShadow;
+        private RaylibShadowSamplingLocations _terrainShadowLocs;
+        private float _frameShadowTexelWorld = 0.08f;
         private bool _initialized;
         private int _frameIndex;
 
@@ -240,12 +243,18 @@ namespace Ludots.Raylib.Render
             }
         }
 
-        public void ApplyFrameLighting(RaylibFrameLighting lighting)
+        public void ApplyFrameLighting(
+            RaylibFrameLighting lighting,
+            RaylibDirectionalShadowMap? shadow = null,
+            float shadowTexelWorld = 0.08f)
         {
             _frameLighting = lighting ?? throw new ArgumentNullException(nameof(lighting));
+            _frameShadow = shadow;
+            _frameShadowTexelWorld = shadowTexelWorld;
             if (_initialized)
             {
                 lighting.Apply(_terrainShader, in _terrainLightingLocs);
+                ApplyTerrainShadow();
             }
         }
 
@@ -304,6 +313,36 @@ namespace Ludots.Raylib.Render
             }
 
             EvictUnusedChunks(240);
+        }
+
+        public void RenderShadow(IVisualHeightmapRenderSource source, in Camera3D camera, RaylibDirectionalShadowMap shadow)
+        {
+            if (source == null)
+            {
+                return;
+            }
+
+            if (shadow == null) throw new ArgumentNullException(nameof(shadow));
+
+            EnsureInitialized();
+            int minChunkX = ResolveChunkIndex((camera.target.X * 100f) - VisibleRadiusCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
+            int maxChunkX = ResolveChunkIndex((camera.target.X * 100f) + VisibleRadiusCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
+            int minChunkY = ResolveChunkIndex((camera.target.Z * 100f) - VisibleRadiusCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
+            int maxChunkY = ResolveChunkIndex((camera.target.Z * 100f) + VisibleRadiusCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
+            RaylibMatrix identity = RaylibMatrix.Identity;
+            for (int y = minChunkY; y <= maxChunkY; y++)
+            {
+                for (int x = minChunkX; x <= maxChunkX; x++)
+                {
+                    if (!source.TryGetChunk(x, y, out VisualHeightmapRenderChunk chunk))
+                    {
+                        continue;
+                    }
+
+                    ref ChunkGpu gpu = ref GetOrCreateChunk(in chunk);
+                    shadow.DrawMeshShadow(gpu.Mesh, identity);
+                }
+            }
         }
 
         public int DrawMeshesOverlappingAabbMeters(
@@ -415,15 +454,20 @@ namespace Ludots.Raylib.Render
             }
 
             string baseDir = AppContext.BaseDirectory;
-            _terrainShader = Rl.LoadShader(Path.Combine(baseDir, "terrain.vs"), Path.Combine(baseDir, "terrain.fs"));
-            if (_terrainShader.id == 0)
-            {
-                throw new InvalidOperationException("Failed to load visual heightmap terrain shader (shader.id == 0).");
-            }
+            _terrainShader = RaylibShaderLoader.Load(baseDir, "terrain.vs", "terrain.fs", "visual-heightmap terrain");
 
             _terrainMaterial = Rl.LoadMaterialDefault();
             _terrainMaterial.shader = _terrainShader;
             _terrainLightingLocs = RaylibFrameLightingLocations.ResolveOrThrow(_terrainShader, "visual-heightmap terrain");
+            _terrainShadowLocs = RaylibShadowSamplingLocations.ResolveOrThrow(
+                _terrainShader,
+                "visual-heightmap terrain",
+                RaylibShadowSampling.ShaderTextureSlot);
+            int locMvp = RaylibShaderBindingGuard.RequireUniform(_terrainShader, "mvp", "visual-heightmap terrain");
+            int locMatModel = RaylibShaderBindingGuard.RequireUniform(_terrainShader, "matModel", "visual-heightmap terrain");
+            int locVertexPosition = RaylibShaderBindingGuard.RequireAttribute(_terrainShader, "vertexPosition", "visual-heightmap terrain");
+            int locVertexNormal = RaylibShaderBindingGuard.RequireAttribute(_terrainShader, "vertexNormal", "visual-heightmap terrain");
+            int locVertexColor = RaylibShaderBindingGuard.RequireAttribute(_terrainShader, "vertexColor", "visual-heightmap terrain");
 
             _locUseTerrainAlbedo = Rl.GetShaderLocation(_terrainShader, "uUseTerrainAlbedo");
             _locTerrainTileScale = Rl.GetShaderLocation(_terrainShader, "uTerrainTileScale");
@@ -450,6 +494,11 @@ namespace Ludots.Raylib.Render
                     "Visual heightmap terrain shader is missing albedo uniforms/samplers (uUseTerrainAlbedo/uTerrainTileScale/uAntiTile/uUseControlMap/uControlBounds/uControlMap/texture0..texture3).");
             }
 
+            _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_POSITION] = locVertexPosition;
+            _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_NORMAL] = locVertexNormal;
+            _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_COLOR] = locVertexColor;
+            _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MVP] = locMvp;
+            _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MODEL] = locMatModel;
             _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ALBEDO] = locSand;
             _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_METALNESS] = locGrass;
             _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_NORMAL] = locDirt;
@@ -459,6 +508,7 @@ namespace Ludots.Raylib.Render
 
             _initialized = true;
             ApplyAlbedoUniforms();
+            ApplyTerrainShadow();
             if (_frameLighting != null)
             {
                 _frameLighting.Apply(_terrainShader, in _terrainLightingLocs);
@@ -475,7 +525,14 @@ namespace Ludots.Raylib.Render
 
             _frameLighting.Apply(_terrainShader, in _terrainLightingLocs);
             _frameLighting.ApplyViewPosition(_terrainShader, in _terrainLightingLocs, camera.position);
+            ApplyTerrainShadow();
             ApplyAlbedoUniforms();
+        }
+
+        private void ApplyTerrainShadow()
+        {
+            _terrainShadowLocs.ApplyUniforms(_terrainShader, _frameShadow, _frameShadowTexelWorld);
+            RaylibShadowSampling.BindTexture(ref _terrainMaterial, _frameShadow);
         }
 
         private void ApplyAlbedoUniforms()
@@ -1257,6 +1314,7 @@ namespace Ludots.Raylib.Render
                 return;
             }
 
+            RaylibShadowSampling.ClearTexture(ref _terrainMaterial);
             _terrainMaterial.shader = default;
             Rl.UnloadMaterial(_terrainMaterial);
             Rl.UnloadShader(_terrainShader);

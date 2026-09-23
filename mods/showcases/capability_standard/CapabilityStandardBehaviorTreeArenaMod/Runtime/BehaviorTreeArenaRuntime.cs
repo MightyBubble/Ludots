@@ -94,7 +94,7 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
 
         if (_config.ShowCrowdBand && _config.CrowdBandCount > 0)
         {
-            BehaviorTreeDefinition crowdTree = BehaviorTreeFactory.CreateAlwaysSuccessSequence("showcase.bt.crowd", 7);
+            BehaviorTreeDefinition crowdTree = _behavior.RequireTree("bt.arenaCrowd");
             _crowd = new BehaviorTreeWorld(crowdTree, _config.CrowdBandCount);
             for (int i = 0; i < _config.CrowdBandCount; i++) _crowd.AddAgent();
         }

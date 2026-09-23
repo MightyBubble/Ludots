@@ -308,7 +308,7 @@ public sealed class GraphOpsStageVisuals
     {
         _viewer = viewer;
         _engine.GlobalContext[CoreServiceKeys.PresentationAudienceRevealHidden.Name] = true;
-        Ludots.Core.Client.ClientLocalSeatBindings.BindSoleSeat(_engine, viewer, LocalViewerPlayerId);
+        Ludots.Core.Client.ClientLocalSeatBindings.BindSoleSeat(_engine, viewer, LocalViewerPlayerId, "seat.0");
     }
 
     public void GateWorldHudByKnowledge()

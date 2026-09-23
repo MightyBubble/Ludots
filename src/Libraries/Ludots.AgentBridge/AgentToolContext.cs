@@ -19,9 +19,16 @@ namespace Ludots.AgentBridge
 
         public static int SolePlayerId(GameEngine engine)
         {
-            return Ludots.Core.Client.ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out _)
-                ? Ludots.Core.Client.ClientLocalSeatAccess.RequireRegistry(engine).Require("seat.0").PossessedPlayerId
-                : 1;
+            if (!Ludots.Core.Client.ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out _) ||
+                !Ludots.Core.Client.ClientLocalSeatAccess.RequireRegistry(engine).TryGetSoleSeat(out var seat) ||
+                seat.PossessedPlayerId <= 0)
+            {
+                throw new AgentToolException(
+                    AgentBridgeErrorCodes.InvalidParams,
+                    "No sole local player is explicitly bound for this session.");
+            }
+
+            return seat.PossessedPlayerId;
         }
 
         /// <summary>

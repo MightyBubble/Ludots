@@ -27,6 +27,8 @@ namespace Ludots.Tests.RaylibAdapter
             "skia_overlay",
             "debug_draw",
             "primitives",
+            "lighting",
+            "crowd_anim",
         };
 
         [Test]

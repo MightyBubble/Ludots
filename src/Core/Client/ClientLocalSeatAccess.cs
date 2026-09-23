@@ -66,25 +66,15 @@ namespace Ludots.Core.Client
         public static Entity RequireSolePossessedRep(GameEngine engine)
         {
             ClientLocalSeatRegistry registry = RequireRegistry(engine);
-            if (registry.TryGetSolePossessedRep(out Entity existing) && engine.World.IsAlive(existing))
+            Entity possessed = registry.RequireSolePossessedRep();
+            if (!engine.World.IsAlive(possessed))
             {
-                return existing;
+                throw new InvalidOperationException(
+                    $"The sole client local seat possesses entity {possessed}, but that entity is not alive.");
             }
 
-            EnsureDefaultSoleSeat(engine);
-            return registry.RequireSolePossessedRep();
-        }
-
-        private static void EnsureDefaultSoleSeat(GameEngine engine)
-        {
-            ClientLocalSeatRegistry registry = RequireRegistry(engine);
-            Entity viewer = engine.World.Create(
-                new Ludots.Core.Gameplay.Components.PlayerIdentity { PlayerId = 1 },
-                new Ludots.Core.Gameplay.Components.PlayerOwner { PlayerId = 1 },
-                new Ludots.Core.Components.MapEntity { MapId = engine.CurrentMapSession?.MapId ?? new Ludots.Core.Map.MapId("default") },
-                Ludots.Core.Components.WorldPositionCm.FromCm(0, 0));
-            ClientLocalSeatBindings.BindSoleSeat(engine, viewer, 1, presentResolutionPx: new System.Numerics.Vector2(1920f, 1080f));
             WireAuthorityCameraServices(engine);
+            return possessed;
         }
 
         private static void WireAuthorityCameraServices(GameEngine engine)

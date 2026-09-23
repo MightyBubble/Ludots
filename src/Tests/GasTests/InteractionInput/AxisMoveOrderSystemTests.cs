@@ -226,7 +226,7 @@ namespace Ludots.Tests.GAS
             Assert.That(harness.Orders.Count, Is.EqualTo(0), "no resolved local player entity: nothing to move.");
 
             Entity positionless = harness.World.Create();
-            ClientLocalSeatTestBindings.BindSoleSeat(harness.Globals, positionless);
+            ClientLocalSeatTestBindings.BindSoleSeat(harness.Globals, positionless, 1, "seat.0");
             system.Update(0f);
             Assert.That(harness.Orders.Count, Is.EqualTo(0), "a rep without WorldPositionCm has no movable anchor.");
         }
@@ -344,7 +344,7 @@ namespace Ludots.Tests.GAS
                 {
                     [CoreServiceKeys.AuthoritativeInput.Name] = input,
                 };
-                ClientLocalSeatTestBindings.BindSoleSeat(globals, avatar, 1);
+                ClientLocalSeatTestBindings.BindSoleSeat(globals, avatar, 1, "seat.0");
                 return new Harness
                 {
                     World = world,

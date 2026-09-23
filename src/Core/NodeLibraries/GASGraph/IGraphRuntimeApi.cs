@@ -3,6 +3,7 @@ using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.GraphQuery;
 using Ludots.Core.Spatial;
@@ -86,9 +87,36 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("GAS.GRAPH.ERR.PanelHostUnavailable");
         }
 
+        void CreatePanel(int templateKeyId, int anchorKeyId, Entity scope, byte skinId, float zOrder)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PanelHostUnavailable");
+        }
+
         void DestroyPanel(int templateKeyId, Entity scope)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.PanelHostUnavailable");
+        }
+
+        // ── Map-scoped variables ──
+
+        int ReadMapVarInt(int varKeyId, MapId mapId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.MapVariableStoreUnavailable");
+        }
+
+        float ReadMapVarFloat(int varKeyId, MapId mapId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.MapVariableStoreUnavailable");
+        }
+
+        void WriteMapVarInt(int varKeyId, MapId mapId, int value)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.MapVariableStoreUnavailable");
+        }
+
+        void WriteMapVarFloat(int varKeyId, MapId mapId, float value)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.MapVariableStoreUnavailable");
         }
         int CollectMapEntities(Span<Entity> buffer)
         {

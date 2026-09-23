@@ -15,7 +15,7 @@
     "AbilityKey": "Ability.UtilityAutocast.Attack",
     "AbilitySlotIndex": 0,
     "SubmitMode": 0,
-    "PlayerId": 0
+    "PlayerId": 1
   }
 ]
 ```
@@ -25,7 +25,7 @@
 ```json
 [ { "id": "Task.Example.Combo", "Kind": "Sequence" },
   { "id": "Task.Example.MoveArgs", "Kind": "SubmitOrder",
-    "OrderTypeKey": "moveTo", "IntArg1": 3 } ]
+    "OrderTypeKey": "moveTo", "PlayerId": 1, "IntArg1": 3 } ]
 ```
 
 ## 2. 字段与行为
@@ -35,7 +35,7 @@
 | Kind | 必填 | SubmitOrder/Sequence/Parallel/ParallelComplete |
 | OrderTypeKey 或 OrderTypeId | 仅 SubmitOrder 必填 | 双写互验：解析不一致报错 |
 | SubmitMode | 0（Immediate） | 订单提交模式，枚举外值报错 |
-| PlayerId | 0 | 订单归属玩家 |
+| PlayerId | SubmitOrder 必填正数 | 订单归属玩家；`0` 只表示无玩家，不能作为 AI 下单玩家 |
 | AbilityKey 或 AbilityId | 可选 | 任务级技能绑定（回退链一环） |
 | AbilitySlotIndex | -1 | 任务级槽位（回退链首环） |
 | IntArg0 | -1 | 无槽位时的 I0 负值（≥0 才写进 Order） |

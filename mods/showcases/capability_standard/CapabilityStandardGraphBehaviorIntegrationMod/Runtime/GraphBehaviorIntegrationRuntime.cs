@@ -5,13 +5,14 @@ using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.Gameplay.AI.BehaviorTree;
 using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.Gameplay.AI.Fsm;
-using Ludots.Core.Gameplay.Level;
 using Ludots.Core.GraphRuntime;
 
 namespace CapabilityStandardGraphBehaviorIntegrationMod.Runtime;
 
 public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
 {
+    private const float EnemyFirstWaveSeconds = 0.6f;
+
     private readonly GraphShowcaseConfig _config = new();
     private GraphProgramRegistry? _programs;
     private GraphActionCatalog? _actions;
@@ -19,8 +20,6 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
     private BehaviorTreeWorld? _bt;
     private HfsmWorld? _hfsm;
     private GraphProgramHfsmHost? _hfsmHost;
-    private LevelDirector? _level;
-    private GraphProgramLevelHost? _levelHost;
     private float _accum;
     private float _time;
     private float[] _gx = Array.Empty<float>();
@@ -48,7 +47,7 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
     public float[] SentryY => _sy;
     public int SentryCount => _sx.Length;
     public HfsmWorld? Hfsm => _hfsm;
-    public LevelDirector? Level => _level;
+    public bool EnemyStaged => _time >= EnemyFirstWaveSeconds;
     public float EnemyX => _ex;
     public float EnemyY => _ey;
     public bool EnemyAlive => _enemyAlive;
@@ -77,10 +76,6 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
         _bt = new BehaviorTreeWorld(_behavior.RequireTree("bt.patrolChaseAttack"), guards);
         _hfsmHost = new GraphProgramHfsmHost(_programs);
         _hfsm = new HfsmWorld(_behavior.RequireHfsm("hfsm.sentry.scripted"), sentries);
-        _levelHost = new GraphProgramLevelHost(_programs);
-        _level = LevelBlueprintFactory.CreateTwoPhaseTrial(
-            "integration.level",
-            GraphRegistryScriptResolver.RequireActionId(_actions, "level.phaseAdvance", GraphActionHost.Level));
 
         _gx = new float[guards];
         _gy = new float[guards];
@@ -113,7 +108,7 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
         EnsureWorld();
         _time += dt;
         if (_markerY < -7.5f) _markerY += 2f * dt;
-        if (_level!.Phase >= 1 && !_enemyAlive && _time < 20f)
+        if (!_enemyAlive && _time >= EnemyFirstWaveSeconds && _time < 20f)
         {
             _enemyAlive = true;
             _ex = 0f;
@@ -138,20 +133,16 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
         if (_accum >= _config.ThinkPeriodSeconds)
         {
             _accum = 0f;
-            if (_level.Phase == 1 && !_enemyAlive && Metrics.ThinkWaves > 8) _level.AddCounter(10);
             _bt!.RestartAllThinking();
             var sw = Stopwatch.StartNew();
             _bt.TickAll(_programs, 32, this);
             _hfsm!.TickAll(_hfsmHost);
-            _level.TickThinkWave(_levelHost);
-            if (Metrics.ThinkWaves == 12) _level.PulseManual(2, _levelHost);
             sw.Stop();
             for (int i = 0; i < _bt.Count; i++) _intent[i] = (byte)_bt.LastScriptReturns[i];
             Metrics.LastThinkMs = sw.Elapsed.TotalMilliseconds;
             if (Metrics.LastThinkMs > Metrics.MaxThinkMs) Metrics.MaxThinkMs = Metrics.LastThinkMs;
             Metrics.ThinkWaves++;
-            Metrics.Detail =
-                $"Integration phase={_level.Phase} script={_levelHost!.LastRanGraphId} last={Metrics.LastThinkMs:F3}ms";
+            Metrics.Detail = $"Integration Scripts last={Metrics.LastThinkMs:F3}ms";
         }
 
         IntegrateGuards(dt);

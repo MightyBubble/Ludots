@@ -98,7 +98,7 @@ namespace Ludots.Tests.GAS
                     new UtilityAiCurveDefinition(UtilityAiCurveKind.Linear, 1f),
                     new UtilityAiCurveDefinition(UtilityAiCurveKind.Linear, 1f)
                 },
-                new[] { new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, AiOrderPayloadKind.CastAbility, 102, 0, (int)OrderSubmitMode.Immediate, 0) },
+                new[] { new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, AiOrderPayloadKind.CastAbility, 102, 0, (int)OrderSubmitMode.Immediate, 1) },
                 Array.Empty<UtilityAiStanceDefinition>(),
                 Array.Empty<UtilityAiActuatorDefinition>());
             fixture.AddActor();
@@ -124,17 +124,17 @@ namespace Ludots.Tests.GAS
 
             fixture.RunDecision(runtime);
 
+<<<<<<< HEAD
             Assert.That(fixture.Orders.Count, Is.EqualTo(1));
             Assert.That(fixture.Orders.TryDequeue(out var order), Is.True);
             Assert.That(order.OrderTypeId, Is.EqualTo(102));
-        }
 
         [Test]
         public void UtilityAiDecisionSystem_StateMachine_RespectsCurrentDecisionMinimumDuration()
-        {
-            using var fixture = RuntimeFixture.Create();
-            var target = fixture.CreateHostile(500, 0);
-            var runtime = fixture.CreateTwoDecisionRuntime(
+=======
+            TeamManager.Clear();
+            TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
+            GameplayTagContainer noTags = default;
                 lowPriority: 1,
                 highPriority: 10,
                 firstMinDurationSteps: 5);
@@ -576,7 +576,11 @@ namespace Ludots.Tests.GAS
                     new[] { new UtilityAiInputDefinition(inputKind, inputKind == UtilityAiInputKind.Constant ? 1 : 0, 0) },
                     new[] { new UtilityAiNormalizationDefinition(inputKind == UtilityAiInputKind.Constant ? UtilityAiNormalizationKind.Identity : UtilityAiNormalizationKind.RangeInverse, 0f, 250000f) },
                     new[] { new UtilityAiCurveDefinition(UtilityAiCurveKind.Linear, 1f) },
+<<<<<<< HEAD
                     new[] { new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, AiOrderPayloadKind.CastAbility, orderTypeId, abilitySlotIndex, (int)OrderSubmitMode.Immediate, 0) },
+=======
+                    new[] { new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, orderTypeId, abilityId, 0, (int)OrderSubmitMode.Immediate, 1, -1, 0) },
+>>>>>>> origin/main
                     Array.Empty<UtilityAiStanceDefinition>(),
                     Array.Empty<UtilityAiActuatorDefinition>());
             }
@@ -607,8 +611,13 @@ namespace Ludots.Tests.GAS
                     new[] { new UtilityAiCurveDefinition(UtilityAiCurveKind.Linear, 1f) },
                     new[]
                     {
+<<<<<<< HEAD
                         new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, AiOrderPayloadKind.CastAbility, 201, 0, (int)OrderSubmitMode.Immediate, 0),
                         new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, AiOrderPayloadKind.CastAbility, 202, 0, (int)OrderSubmitMode.Immediate, 0)
+=======
+                        new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, 201, AttackAbilityId, 0, (int)OrderSubmitMode.Immediate, 1, -1, 0),
+                        new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, 202, AttackAbilityId, 0, (int)OrderSubmitMode.Immediate, 1, -1, 0)
+>>>>>>> origin/main
                     },
                     Array.Empty<UtilityAiStanceDefinition>(),
                     Array.Empty<UtilityAiActuatorDefinition>());

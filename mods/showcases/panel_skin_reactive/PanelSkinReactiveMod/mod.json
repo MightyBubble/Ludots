@@ -1,0 +1,9 @@
+{
+  "name": "PanelSkinReactiveMod",
+  "version": "1.0.0",
+  "description": "Reactive-flavored panel skin: PanelHost realtime variables rendered via UI surface",
+  "priority": 0,
+  "dependencies": {
+    "FireballSharedMod": "^1.0.0"
+  }
+}

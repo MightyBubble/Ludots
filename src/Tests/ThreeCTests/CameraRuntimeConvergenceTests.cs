@@ -257,7 +257,7 @@ namespace Ludots.Tests.ThreeC
             var collections = new EntityCollectionStore(new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
 
             Entity selector = world.Create();
-            ClientLocalSeatTestBindings.BindSoleSeat(globals, selector);
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, selector, 1, "seat.0");
             globals[CoreServiceKeys.EntityCollectionStore.Name] = collections;
 
             Entity light = world.Create(new WorldPositionCm { Value = new Ludots.Core.Mathematics.FixedPoint.Fix64Vec2(1000, 2000) });

@@ -32,10 +32,6 @@ namespace Ludots.AgentBridge.Tools
             var result = new JsonObject
             {
                 ["tick"] = session.CurrentTick,
-                ["localPlayerId"] = Ludots.Core.Client.ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out var soleRep)
-                    && Ludots.Core.Client.ClientLocalSeatAccess.RequireRegistry(engine).Require("seat.0").PossessedPlayerId > 0
-                    ? Ludots.Core.Client.ClientLocalSeatAccess.RequireRegistry(engine).Require("seat.0").PossessedPlayerId
-                    : 1,
                 ["pacemaker"] = engine.Pacemaker?.GetType().Name ?? "null",
                 ["mods"] = mods,
                 ["camera"] = new JsonObject
@@ -54,6 +50,14 @@ namespace Ludots.AgentBridge.Tools
             if (context.TryGetService(CoreServiceKeys.ViewController, out var view))
             {
                 result["resolution"] = new JsonObject { ["width"] = view.Resolution.X, ["height"] = view.Resolution.Y };
+            }
+
+            if (Ludots.Core.Client.ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out _) &&
+                Ludots.Core.Client.ClientLocalSeatAccess.RequireRegistry(engine).TryGetSoleSeat(out var seat) &&
+                seat.PossessedPlayerId > 0)
+            {
+                result["localPlayerId"] = seat.PossessedPlayerId;
+                result["localSeatId"] = seat.SeatId;
             }
 
             if (engine.GlobalContext.TryGetValue(CoreServiceKeys.MapId.Name, out object? mapId) && mapId != null)

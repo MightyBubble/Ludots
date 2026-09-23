@@ -50,3 +50,7 @@ Raylib 只消费 flush 后的 VFX 项与粒子 runtime snapshot。它不拥有�
 ## 引擎能力画廊
 
 各渲染能力的标准化独立展示（零 Core 依赖、一能力一场景）见 [Raylib 引擎能力标准化 Showcase](engine-capability-showcases.md)；本文保持产品化合同与演进方向的真源。
+
+## 光照栈
+
+单物体 GGX 通道、平面投影阴影、材质标量 PBR、解析式天空 IBL 的合同与用法见 [渲染光照栈与下游使用指南](render-lighting-guide.md)；本文保持产品化合同与演进方向真源。

@@ -1858,8 +1858,9 @@ public static class LauncherEvidenceRecorder
     private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
     {
         owner = Entity.Null;
-        Entity local = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
-        if (local == Entity.Null || !engine.World.IsAlive(local))
+        if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity local) ||
+            local == Entity.Null ||
+            !engine.World.IsAlive(local))
         {
             return false;
         }
@@ -2501,11 +2502,8 @@ public static class LauncherEvidenceRecorder
         EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
             ?? throw new InvalidOperationException("MassNavigation UAT requires EntityCollectionStore.");
 
-        Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
-        if (owner == Entity.Null || !engine.World.IsAlive(owner))
-        {
-            throw new InvalidOperationException("MassNavigation UAT requires a live LocalPlayerEntity.");
-        }
+        ClientLocalSeat localSeat = RequireSoleLocalSeat(engine);
+        Entity owner = localSeat.PossessedRep;
 
         ControlDomainQuery controlDomains = engine.GetService(CoreServiceKeys.ControlDomainQuery)
             ?? throw new InvalidOperationException("MassNavigation UAT requires ControlDomainQuery.");
@@ -2581,6 +2579,7 @@ public static class LauncherEvidenceRecorder
             throw new InvalidOperationException($"MassNavigation UAT requires order type '{MassNavigationOrderKeys.Move}'.");
         }
 
+        ClientLocalSeat localSeat = RequireSoleLocalSeat(engine);
         var orders = new Order[commandActors.Length];
         int orderCount = 0;
         for (int i = 0; i < commandActors.Length; i++)
@@ -2595,7 +2594,7 @@ public static class LauncherEvidenceRecorder
             {
                 OrderId = 0,
                 OrderTypeId = moveOrderTypeId,
-                PlayerId = 1,
+                PlayerId = localSeat.PossessedPlayerId,
                 Actor = entity,
                 SubmitMode = OrderSubmitMode.Immediate,
                 Args = OrderArgs.CreateSingleWorldCm(new Vector3(targetCm.X, 0f, targetCm.Y))
@@ -3264,10 +3263,25 @@ public static class LauncherEvidenceRecorder
     {
         EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
             ?? throw new InvalidOperationException("MassNavigation UAT requires EntityCollectionStore.");
-        Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+        Entity owner = RequireSoleLocalSeat(engine).PossessedRep;
         return owner != Entity.Null && collections.TryGetView(owner, EntityCollectionKeys.CommandSource, out EntityCollectionView view)
             ? view.Count
             : 0;
+    }
+
+    private static ClientLocalSeat RequireSoleLocalSeat(GameEngine engine)
+    {
+        ClientLocalSeatRegistry seats = ClientLocalSeatAccess.RequireRegistry(engine);
+        if (!seats.TryGetSoleSeat(out ClientLocalSeat seat) ||
+            !seat.HasPossession ||
+            seat.PossessedPlayerId <= 0 ||
+            !engine.World.IsAlive(seat.PossessedRep))
+        {
+            throw new InvalidOperationException(
+                "UAT requires exactly one live local seat possession declared by launchContext.localSeats / startupLocalSeats.");
+        }
+
+        return seat;
     }
 
     private static int CountActiveMassNavigationMoveOrders(GameEngine engine)

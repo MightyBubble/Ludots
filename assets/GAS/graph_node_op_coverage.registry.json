@@ -49,6 +49,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Score",
         "Script",
         "Validation"
@@ -88,6 +89,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Query",
         "Score",
         "Script",
@@ -167,6 +169,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Query",
         "Score",
         "Script",
@@ -280,6 +283,7 @@
     {
       "op": "Call",
       "authorableKinds": [
+        "TriggerGraph",
         "Script"
       ],
       "showcaseId": "capability_standard_graph_op_Call",
@@ -386,6 +390,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Score",
         "Script",
         "Validation"
@@ -408,6 +413,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Score",
         "Script",
         "Validation"
@@ -452,6 +458,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Query",
         "Score",
         "Script",
@@ -475,6 +482,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Score",
         "Script",
         "Validation"
@@ -540,6 +548,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Query",
         "Score",
         "Script",
@@ -560,6 +569,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Query",
         "Score",
         "Script",
@@ -681,6 +691,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Query",
         "Score",
         "Script",
@@ -705,6 +716,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Query",
         "Score",
         "Script",
@@ -728,6 +740,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Query",
         "Score",
         "Script",
@@ -765,6 +778,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Query",
         "Score",
         "Script",
@@ -809,6 +823,7 @@
     {
       "op": "Jump",
       "authorableKinds": [
+        "TriggerGraph",
         "Script"
       ],
       "showcaseId": "capability_standard_graph_op_Jump",
@@ -829,6 +844,7 @@
       "op": "JumpIfFalse",
       "authorableKinds": [
         "Effect",
+        "TriggerGraph",
         "Script"
       ],
       "showcaseId": "capability_standard_graph_op_JumpIfFalse",
@@ -872,6 +888,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Score",
         "Script",
         "Validation"
@@ -894,6 +911,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Query",
         "Score",
         "Script",
@@ -1083,6 +1101,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Score",
         "Script",
         "Validation"
@@ -1104,6 +1123,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Score",
         "Script",
         "Validation"
@@ -1250,6 +1270,7 @@
     {
       "op": "MoveInt",
       "authorableKinds": [
+        "TriggerGraph",
         "Script"
       ],
       "showcaseId": "capability_standard_graph_op_MoveInt",
@@ -1592,6 +1613,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Query",
         "Score",
         "Script",
@@ -1638,6 +1660,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Query",
         "Score",
         "Script",
@@ -1703,6 +1726,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Query",
         "Score",
         "Script",
@@ -1749,6 +1773,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Score",
         "Script",
         "Validation"
@@ -1770,6 +1795,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Score",
         "Script",
         "Validation"
@@ -1792,6 +1818,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Score",
         "Script",
         "Validation"
@@ -1806,6 +1833,38 @@
         "GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+      ]
+    },
+    {
+      "op": "ReadMapVarFloat",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_ReadMapVarFloat",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryMapVarAcceptanceTests.ReadMapVarFloatVignette_ExecutesOpWithoutThrow"
+      ]
+    },
+    {
+      "op": "ReadMapVarInt",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_ReadMapVarInt",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryMapVarAcceptanceTests.ReadMapVarIntVignette_ExecutesOpWithoutThrow"
       ]
     },
     {
@@ -2233,6 +2292,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Query",
         "Score",
         "Script",
@@ -2252,6 +2312,7 @@
     {
       "op": "Return",
       "authorableKinds": [
+        "TriggerGraph",
         "Script"
       ],
       "showcaseId": "capability_standard_graph_op_Return",
@@ -2311,6 +2372,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Query",
         "Score",
         "Script",
@@ -2394,6 +2456,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Query",
         "Score",
         "Script",
@@ -2415,6 +2478,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Query",
         "Score",
         "Script",
@@ -2436,6 +2500,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Score",
         "Script",
         "Validation"
@@ -2505,6 +2570,38 @@
       ]
     },
     {
+      "op": "WriteMapVarFloat",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_WriteMapVarFloat",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryMapVarAcceptanceTests.WriteMapVarFloatVignette_ExecutesOpWithoutThrow"
+      ]
+    },
+    {
+      "op": "WriteMapVarInt",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_WriteMapVarInt",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryMapVarAcceptanceTests.WriteMapVarIntVignette_ExecutesOpWithoutThrow"
+      ]
+    },
+    {
       "op": "WriteSelfAttribute",
       "authorableKinds": [
         "Derived",
@@ -2527,6 +2624,7 @@
     {
       "op": "Yield",
       "authorableKinds": [
+        "TriggerGraph",
         "Script"
       ],
       "showcaseId": "capability_standard_graph_op_Yield",

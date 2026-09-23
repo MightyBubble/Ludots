@@ -1,0 +1,11 @@
+{
+  "name": "MapTriggerNightRaidMod",
+  "version": "1.0.0",
+  "description": "Night raid three waves: region entry springs the raid, alive-count waves advance it, boss death flips the phase and opens victory - all in map + MapTriggerGraph data",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0"
+  },
+  "main": "bin/net8.0/MapTriggerNightRaidMod.dll"
+}

@@ -95,7 +95,44 @@ namespace Ludots.Core.Presentation.Config
                     $"Presentation host asset '{rowId}' targets unknown material asset '{assetId}' for backend '{backendId}'.");
             }
 
-            _materialRegistry.Register(assetId, descriptor.Domain, ParseSourceUris(node["sourceUris"], rowId), descriptor.Flags);
+            if (node["sourceUris"] != null)
+            {
+                throw new InvalidOperationException(
+                    $"Presentation host asset '{rowId}' uses sourceUris for a Material row. Material textures are named: declare a 'textures' object (albedo/roughness/metallic/normal).");
+            }
+
+            _materialRegistry.SetHostTextureUris(materialAssetId, ParseTextureUris(node["textures"], rowId));
+        }
+
+        private static IReadOnlyDictionary<string, string> ParseTextureUris(JsonNode? node, string rowId)
+        {
+            if (node is not JsonObject obj || obj.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"Presentation host asset '{rowId}' must declare a non-empty textures object (name → URI).");
+            }
+
+            var uris = new SortedDictionary<string, string>(StringComparer.Ordinal);
+            foreach (KeyValuePair<string, JsonNode?> pair in obj)
+            {
+                if (string.IsNullOrWhiteSpace(pair.Key) || !string.Equals(pair.Key, pair.Key.Trim(), StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Presentation host asset '{rowId}' has an invalid texture slot name '{pair.Key}'.");
+                }
+
+                string uri = pair.Value?.GetValue<string>() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(uri))
+                {
+                    throw new InvalidOperationException(
+                        $"Presentation host asset '{rowId}' has an empty URI for texture slot '{pair.Key}'.");
+                }
+
+                RequireNoBoundaryWhitespace(uri, $"Presentation host asset '{rowId}' textures.{pair.Key}");
+                uris[pair.Key] = uri;
+            }
+
+            return uris;
         }
 
         private static string[] ParseSourceUris(JsonNode node, string rowId)

@@ -1,0 +1,143 @@
+[
+  {
+    "id": "fireball_showcase_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "fireball_hero" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "fireball_showcase_hero_root",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "fireball_hero" },
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+      },
+      {
+        "event": { "kind": "EntitySpawned", "key": "fireball_target" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "fireball_showcase_target_root",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "fireball_target" },
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+      },
+      {
+        "event": { "kind": "ProjectileSpawned", "key": "Effect.Fireball.ProjectileVisual" },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "fireball_showcase_projectile_root",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "fireball_showcase_hero_root",
+    "children": [
+      {
+        "definitionId": "fireball_showcase_hero_mesh",
+        "scopeTag": "structure",
+        "overrides": {
+          "transform": {
+            "localPosition": [0, 1.3, 0],
+            "localScale": [2, 2.6, 2]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "fireball_showcase_hero_mesh",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "fireball_showcase.hero_box",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static"
+        }
+      }
+    ]
+  },
+  {
+    "id": "fireball_showcase_target_root",
+    "children": [
+      {
+        "definitionId": "fireball_showcase_target_mesh",
+        "scopeTag": "structure",
+        "overrides": {
+          "transform": {
+            "localPosition": [0, 1.1, 0],
+            "localScale": [1.6, 2.2, 1.6]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "fireball_showcase_target_mesh",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "fireball_showcase.target_box",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static"
+        }
+      }
+    ]
+  },
+  {
+    "id": "fireball_showcase_projectile_root",
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "children": [
+      {
+        "definitionId": "fireball_showcase_projectile_mesh",
+        "scopeTag": "body",
+        "overrides": {
+          "transform": {
+            "localPosition": [0, 0.35, 0],
+            "localScale": [0.55, 0.55, 0.55]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "fireball_showcase_projectile_mesh",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "fireball_showcase.projectile_orb",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable"
+        },
+        "style": {
+          "color": [1, 0.25, 0.05, 1]
+        }
+      }
+    ]
+  }
+]

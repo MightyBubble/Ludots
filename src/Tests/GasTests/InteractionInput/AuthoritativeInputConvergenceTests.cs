@@ -181,7 +181,7 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.AuthoritativeInput.Name] = authoritativeInput,
                 [CoreServiceKeys.UiCaptured.Name] = false,
             };
-            ClientLocalSeatTestBindings.BindSoleSeat(globals, localPlayerIdentity, 1);
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, localPlayerIdentity, 1, "seat.0");
             var system = new InputActionAttributeBindingSystem(
                 world,
                 globals,
@@ -287,7 +287,7 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.EntityCollectionKeyRegistry.Name] = collectionKeys,
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings { ConfirmActionId = "Confirm" },
             };
-            ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1);
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1, "seat.0");
             ((AuthoritativePointerButtonSnapshot)globals[CoreServiceKeys.AuthoritativePointerButtons.Name]).SetState(
                 "Confirm",
                 new PointerButtonState(
@@ -356,6 +356,7 @@ namespace Ludots.Tests.GAS
                 globals,
                 localPlayer,
                 playerId: 1,
+                seatId: "seat.0",
                 primaryCamera: camera,
                 presentResolutionPx: ClientLocalSeatTestBindings.DefaultPresentResolutionPx);
             var actionBindings = new InputActionAttributeBindingRegistry();

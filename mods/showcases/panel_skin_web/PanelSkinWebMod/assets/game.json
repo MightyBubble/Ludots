@@ -1,0 +1,17 @@
+{
+  "browserRuntime": {
+    "enabled": true,
+    "required": true,
+    "provider": "cef"
+  },
+  "windowTitle": "Ludots - Panel Web UI Skin",
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "logging": {
+    "fileLogging": true,
+    "logFilePath": "panel_skin_web.log",
+    "globalLevel": "Info"
+  },
+  "panelSkin": "web",
+  "panelWebApp": "PanelSkinWebMod:Assets/overlay-app/index.html"
+}

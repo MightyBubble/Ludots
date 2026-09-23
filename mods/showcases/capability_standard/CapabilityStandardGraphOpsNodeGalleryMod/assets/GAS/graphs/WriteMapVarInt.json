@@ -1,0 +1,80 @@
+[
+  {
+    "id": "showcase.graph_op.WriteMapVarInt",
+    "kind": "Script",
+    "entry": "readKills",
+    "nodes": [
+      {
+        "id": "readKills",
+        "op": "ReadMapVarInt",
+        "var": "gallery.kills"
+      },
+      {
+        "id": "one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "add",
+        "op": "AddInt"
+      },
+      {
+        "id": "writeKills",
+        "op": "WriteMapVarInt",
+        "var": "gallery.kills"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "readKills",
+        "fromPort": "next",
+        "to": "one"
+      },
+      {
+        "from": "one",
+        "fromPort": "next",
+        "to": "add"
+      },
+      {
+        "from": "add",
+        "fromPort": "next",
+        "to": "writeKills"
+      },
+      {
+        "from": "writeKills",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "readKills",
+        "fromPort": "value",
+        "to": "add",
+        "toPort": "a"
+      },
+      {
+        "from": "one",
+        "fromPort": "value",
+        "to": "add",
+        "toPort": "b"
+      },
+      {
+        "from": "add",
+        "fromPort": "value",
+        "to": "writeKills",
+        "toPort": "value"
+      },
+      {
+        "from": "add",
+        "fromPort": "value",
+        "to": "done",
+        "toPort": "value"
+      }
+    ]
+  }
+]

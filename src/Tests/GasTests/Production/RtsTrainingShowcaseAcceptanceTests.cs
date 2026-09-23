@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -428,7 +428,7 @@ namespace Ludots.Tests.GAS.Production
                 title: "RTS training command source",
                 summary: "1 actor");
             collections.Replace(owner, in descriptor, next, owner);
-            ClientLocalSeatTestBindings.BindSoleSeat(engine.GlobalContext, owner);
+            ClientLocalSeatTestBindings.BindSoleSeat(engine.GlobalContext, owner, 1, "seat.0");
         }
 
         private static string ReadName(World world, Entity entity)

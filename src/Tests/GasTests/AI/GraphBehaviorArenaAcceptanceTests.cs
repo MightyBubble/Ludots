@@ -1,15 +1,15 @@
 using System.Diagnostics;
 using Ludots.Core.Gameplay.AI.BehaviorTree;
+using Ludots.Tests;
 using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.Gameplay.AI.Fsm;
-using Ludots.Core.Gameplay.Level;
 using Ludots.Core.GraphRuntime;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.AI
 {
     /// <summary>
-    /// Headless stand-in for the four showcases' think-wave contract before full Raylib mods land.
+    /// Headless stand-in for the showcases' think-wave contract before full Raylib mods land.
     /// </summary>
     [TestFixture]
     [NonParallelizable]
@@ -26,13 +26,10 @@ namespace Ludots.Tests.Gas.AI
             // Showcase default topology N=8; N=16 remains BT-only stress (see BehaviorTreeRuntimeTests).
             _ = Ludots.Tests.Gas.Graph.GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(
                 out _,
-                out GraphActionCatalog actions,
+                out _,
                 out GraphBehaviorCatalog behavior);
             BehaviorTreeDefinition bt = BehaviorTreeFactory.CreateAlwaysSuccessSequence("arena.bt", leafCount: 7);
             HfsmDefinition hfsm = behavior.RequireHfsm("hfsm.sentry");
-            LevelDirector level = LevelBlueprintFactory.CreateTwoPhaseTrial(
-                "arena.level",
-                GraphRegistryScriptResolver.RequireActionId(actions, "level.phaseAdvance", GraphActionHost.Level));
 
             var btWorld = new BehaviorTreeWorld(bt, agents);
             var hfsmWorld = new HfsmWorld(hfsm, agents);
@@ -51,7 +48,6 @@ namespace Ludots.Tests.Gas.AI
                 btWorld.RestartAllThinking();
                 btWorld.TickAll(32);
                 hfsmWorld.TickAll();
-                level.TickThinkWave();
             }
 
             var samples = new double[waves];
@@ -68,12 +64,6 @@ namespace Ludots.Tests.Gas.AI
                     long start = Stopwatch.GetTimestamp();
                     btWorld.TickAll(32);
                     hfsmWorld.TickAll();
-                    level.TickThinkWave();
-                    if (w == 5)
-                    {
-                        level.AddCounter(10);
-                    }
-
                     samples[w] = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
                 }
             }
@@ -96,12 +86,11 @@ namespace Ludots.Tests.Gas.AI
             Array.Sort(samples);
             double p95 = samples[(int)(waves * 0.95)];
             TestContext.WriteLine(
-                $"waves={waves} A={agents} N_topo={bt.NodeCount} avg={avgMs:F3} p95={p95:F3} max={maxMs:F3} over5ms={over} phase={level.Phase}");
+                $"waves={waves} A={agents} N_topo={bt.NodeCount} avg={avgMs:F3} p95={p95:F3} max={maxMs:F3} over5ms={over}");
             Warn.If(over, Is.GreaterThan(0), $"Combined think wave exceeded {combinedWaveBudgetMs:F0}ms in {over} of {waves} samples");
             Assert.That(avgMs, Is.LessThan(15.0), $"Combined think avg exceeded 15ms: {avgMs:F3}");
             Assert.That(p95, Is.LessThan(15.0), $"Combined think p95 exceeded 15ms: {p95:F3}");
             Assert.That(maxMs, Is.LessThan(combinedWaveCiEnvelopeMs), $"Combined think max exceeded CI envelope: {maxMs:F3}ms");
-            Assert.That(level.Phase, Is.EqualTo(2));
         }
     }
 }

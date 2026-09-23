@@ -355,7 +355,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     },
                     [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
                 };
-                ClientLocalSeatTestBindings.BindSoleSeat(globals, localPlayer, 1);
+                ClientLocalSeatTestBindings.BindSoleSeat(globals, localPlayer, 1, "seat.0");
 
                 var vfs = new VirtualFileSystem();
                 vfs.Mount("TestMobaMappingMod", root);

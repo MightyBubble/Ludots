@@ -28,9 +28,7 @@ internal sealed class GraphBehaviorIntegrationPresentationSystem : ISystem<float
     {
         GraphShowcaseStagePresenter.Clear(_debugDraw);
         GraphShowcaseStagePresenter.DrawPolyline(_debugDraw, GraphBehaviorIntegrationRuntime.LeftPatrol, GraphShowcaseStagePresenter.PathColor);
-        GraphShowcaseStagePresenter.DrawTriggerRing(_debugDraw, 0f, -8f, 1.6f, armed: (_runtime.Level?.Phase ?? 0) == 0);
-        GraphShowcaseStagePresenter.DrawGateBar(_debugDraw, y: 5f, halfWidth: 3.5f, open: (_runtime.Level?.Phase ?? 0) >= 2);
-        GraphShowcaseStagePresenter.DrawPhasePips(_debugDraw, Math.Max(1, _runtime.Level?.Phase ?? 0), 3);
+        GraphShowcaseStagePresenter.DrawTriggerRing(_debugDraw, 0f, -8f, 1.6f, armed: !_runtime.EnemyStaged);
 
         _debugDraw.Lines.Add(new DebugDrawLine2D
         {

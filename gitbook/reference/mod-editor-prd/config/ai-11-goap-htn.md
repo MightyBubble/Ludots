@@ -24,7 +24,7 @@
 ```json
 [ { "id": "Submit.Attack", "Cost": 1,
     "Pre": { "Mask": [], "Values": [] }, "Post": { "Mask": [], "Values": [] },
-    "Order": { "OrderTypeKey": "attackTarget", "SubmitMode": 0, "PlayerId": 0 },
+    "Order": { "OrderTypeKey": "attackTarget", "SubmitMode": 0, "PlayerId": 1 },
     "Bindings": [] } ]
 ```
 

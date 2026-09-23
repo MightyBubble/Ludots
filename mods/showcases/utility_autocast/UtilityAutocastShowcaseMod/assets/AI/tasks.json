@@ -6,7 +6,7 @@
     "OrderTypeKey": "castAbility",
     "AbilitySlotIndex": 0,
     "SubmitMode": 0,
-    "PlayerId": 0
+    "PlayerId": 1
   },
   {
     "id": "Task.UtilityAutocast.HealBurst",
@@ -15,7 +15,7 @@
     "OrderTypeKey": "castAbility",
     "AbilitySlotIndex": 1,
     "SubmitMode": 0,
-    "PlayerId": 0
+    "PlayerId": 1
   },
   {
     "id": "Task.UtilityAutocast.Curse",
@@ -24,6 +24,6 @@
     "OrderTypeKey": "castAbility",
     "AbilitySlotIndex": 2,
     "SubmitMode": 0,
-    "PlayerId": 0
+    "PlayerId": 1
   }
 ]

@@ -1419,7 +1419,7 @@ namespace Ludots.Tests.Presentation
             meshes.Register("mesh.unit", MeshAssetDescriptor.Model(0));
             meshes.Register("effect.batch.spark", CreateEffectDescriptor());
 
-            materials.Register("material.unit", MaterialAssetDomain.Surface, Array.Empty<string>(), MaterialAssetFlags.None);
+            materials.Register("material.unit", MaterialAssetDomain.Surface, MaterialAssetFlags.None);
             return new InstancedBatchAssetConfigLoader(
                 pipeline,
                 registry,

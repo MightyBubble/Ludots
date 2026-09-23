@@ -12,7 +12,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         Score = 1 << 2,
         Validation = 1 << 3,
         Derived = 1 << 4,
-        Script = 1 << 5
+        Script = 1 << 5,
+        TriggerGraph = 1 << 6
     }
 
     public enum GraphOperandRole : byte
@@ -50,7 +51,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphOperandRole dstRole,
             GraphOperandRole flagsRole,
             GraphOperandRole immRole,
-            bool scriptOnly,
+            bool scriptSliceOnly,
             bool derivedAttributeWrite,
             bool requiresListenerOwnerContext)
         {
@@ -64,7 +65,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             DstRole = dstRole;
             FlagsRole = flagsRole;
             ImmRole = immRole;
-            ScriptOnly = scriptOnly;
+            ScriptSliceOnly = scriptSliceOnly;
             DerivedAttributeWrite = derivedAttributeWrite;
             RequiresListenerOwnerContext = requiresListenerOwnerContext;
         }
@@ -79,7 +80,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public GraphOperandRole DstRole { get; }
         public GraphOperandRole FlagsRole { get; }
         public GraphOperandRole ImmRole { get; }
-        public bool ScriptOnly { get; }
+        /// <summary>True for host-slice control-flow ops (Yield): only Script and host-resumed TriggerGraph may contain them.</summary>
+        public bool ScriptSliceOnly { get; }
         public bool DerivedAttributeWrite { get; }
         public bool RequiresListenerOwnerContext { get; }
 
@@ -118,6 +120,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphKind.Validation => GraphKindMask.Validation,
                 GraphKind.Derived => GraphKindMask.Derived,
                 GraphKind.Script => GraphKindMask.Script,
+                GraphKind.TriggerGraph => GraphKindMask.TriggerGraph,
                 _ => GraphKindMask.None
             };
 

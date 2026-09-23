@@ -8,8 +8,9 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
     /// <summary>天空盒：RaylibSkyboxRenderer 渐变天空，太阳方位随时间绕行。</summary>
     public sealed class SkyboxScene : IEngineScene
     {
+        private readonly GalleryLitProps _litProps = new();
         private RaylibSkyboxRenderer _skybox = new();
-        private RaylibRenderEnvironmentConfig _config = RaylibRenderEnvironmentConfig.CreateDefault();
+        private RaylibDirectionalShadowMap _shadowMap = null!;
         private bool _disposed;
 
         public string Id => "skybox";
@@ -18,46 +19,55 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
 
         public void Load()
         {
-            _config = RaylibRenderEnvironmentConfig.CreateDefault() with
-            {
-                Skybox = new RaylibSkyboxConfig(
-                    Enabled: true,
-                    SizeMeters: 1200f,
-                    ZenithColor: new Vector3(0.10f, 0.30f, 0.62f),
-                    HorizonColor: new Vector3(0.84f, 0.72f, 0.58f),
-                    GroundHazeColor: new Vector3(0.46f, 0.42f, 0.38f),
-                    ClearColor: new Color(120, 150, 180, 255),
-                    DeepClearColor: new Color(6, 10, 16, 255)),
-            };
+            _litProps.Load();
+            _shadowMap = new RaylibDirectionalShadowMap();
         }
 
         public void Draw(float deltaSeconds, double totalTimeSeconds, ref Camera3D camera)
         {
             GalleryCamera.EnforceDistance(ref camera, 46f);
 
-            float sunAngle = (float)(totalTimeSeconds * 0.12f);
-            Vector3 sunDirection = Vector3.Normalize(new Vector3(
-                MathF.Cos(sunAngle),
-                0.55f + (0.35f * MathF.Sin(sunAngle * 0.7f)),
-                MathF.Sin(sunAngle)));
-            RaylibRenderEnvironmentConfig config = _config with
-            {
-                Lighting = _config.Lighting with { SunDirection = sunDirection },
-            };
+            float t = (float)totalTimeSeconds;
+            _litProps.DayPhase01 = 0.38f + (float)(totalTimeSeconds * 0.012 % 0.28f);
+            _litProps.Lighting.SetDayPhase(_litProps.DayPhase01);
+            _shadowMap.BeginFrame(_litProps.Lighting.SunDirectionToward, Vector3.Zero, 42f);
+            DrawPropShadows(t);
+            _shadowMap.EndFrame();
 
+            RaylibRenderEnvironmentConfig config = GallerySunSky.CreateConfig(_litProps.Lighting, sizeMeters: 1200f);
+            Rl.ClearBackground(config.Skybox.ClearColor);
+            _litProps.BeginFrame(camera.position, _shadowMap, shadowTexelWorld: 0.08f);
             Rl.BeginMode3D(camera);
             _skybox.Draw(camera, totalTimeSeconds, config);
+            DrawProps(t);
+            Rl.EndMode3D();
+        }
 
-            Rl.DrawGrid(40, 4f);
+        private void DrawProps(float t)
+        {
+            _litProps.DrawCube(new Vector3(0f, -0.08f, 0f), new Vector3(70f, 0.16f, 70f), GalleryColors.ShadowReceiverGray, roughness: 0.9f);
             for (int i = 0; i < 7; i++)
             {
                 float angle = i * MathF.Tau / 7f;
                 var position = new Vector3(MathF.Cos(angle) * 26f, 2.2f, MathF.Sin(angle) * 26f);
-                Rl.DrawCube(position, 4f, 4.4f, 4f, new Color(52, 58, 74, 255));
-                Rl.DrawCube(position + new Vector3(0f, 5.6f, 0f), 2.2f, 2.2f, 2.2f, new Color(150, 140, 120, 255));
+                _litProps.DrawCube(position, new Vector3(4f, 4.4f, 4f), new Vector4(0.20f, 0.23f, 0.29f, 1f), roughness: 0.85f);
+                _litProps.DrawCube(
+                    position + new Vector3(0f, 5.6f, 0f),
+                    new Vector3(2.2f),
+                    new Vector4(0.59f, 0.55f, 0.47f, 1f),
+                    roughness: 0.6f);
             }
+        }
 
-            Rl.EndMode3D();
+        private void DrawPropShadows(float t)
+        {
+            for (int i = 0; i < 7; i++)
+            {
+                float angle = i * MathF.Tau / 7f;
+                var position = new Vector3(MathF.Cos(angle) * 26f, 2.2f, MathF.Sin(angle) * 26f);
+                _litProps.DrawCubeShadow(_shadowMap, position, new Vector3(4f, 4.4f, 4f));
+                _litProps.DrawCubeShadow(_shadowMap, position + new Vector3(0f, 5.6f, 0f), new Vector3(2.2f));
+            }
         }
 
         public void Dispose()
@@ -68,7 +78,10 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             }
 
             _skybox?.Dispose();
+            _shadowMap?.Dispose();
+            _litProps.Dispose();
             _skybox = null!;
+            _shadowMap = null!;
             _disposed = true;
         }
     }

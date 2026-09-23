@@ -639,12 +639,10 @@ namespace Ludots.Tests.Presentation
                 materialAssets.Register(
                     BrickNorthMaterialKey,
                     MaterialAssetDomain.Surface,
-                    new[] { "materials/blacksmith_fixture_brick_north.mat" },
                     MaterialAssetFlags.None);
                 materialAssets.Register(
                     BrickSouthMaterialKey,
                     MaterialAssetDomain.Surface,
-                    new[] { "materials/blacksmith_fixture_brick_south.mat" },
                     MaterialAssetFlags.None);
             }
 

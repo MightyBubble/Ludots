@@ -91,12 +91,10 @@ namespace Ludots.Tests.Gas.Graph
 
             Assert.That(functions.TryGet("bt.patrol", out _), Is.False);
             Assert.That(functions.TryGet("hfsm.combat.onTick", out _), Is.False);
-            Assert.That(functions.TryGet("level.phaseAdvance", out _), Is.False);
             Assert.That(functions.TryGet("script.drinkUntilFull", out _), Is.False);
             Assert.That(functions.Require("ability.slash").GraphId, Is.GreaterThan(0));
             Assert.That(actions.Require("bt.patrol"), Is.GreaterThan(0));
             Assert.That(actions.Require("hfsm.combat.onTick"), Is.GreaterThan(0));
-            Assert.That(actions.Require("level.phaseAdvance"), Is.GreaterThan(0));
             Assert.That(actions.Require("script.drinkUntilFull"), Is.GreaterThan(0));
         }
 

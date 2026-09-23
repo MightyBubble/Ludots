@@ -356,14 +356,6 @@ namespace CoreInputMod.Systems
                 return true;
             }
 
-            if (ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity local) &&
-                local != Entity.Null &&
-                _world.IsAlive(local))
-            {
-                owner = local;
-                return true;
-            }
-
             return false;
         }
 

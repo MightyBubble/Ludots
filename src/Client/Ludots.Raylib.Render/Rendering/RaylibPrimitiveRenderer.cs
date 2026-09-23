@@ -28,13 +28,13 @@ namespace Ludots.Raylib.Render
         }
         private readonly IRenderAssetPathResolver? _vfs;
         private readonly IRenderMaterialAssets? _materials;
-        private readonly RaylibMaterialHostBinder? _materialHostBinder;
+        private readonly RaylibMaterialLibrary? _materialLibrary;
         private readonly string? _diagnosticPath;
         private const int DefaultMaxModelInstancesPerDraw = 32768;
         private const int HardMaxModelInstancesPerDraw = 131072;
 
         private bool _initialized;
-        private const float DefaultVegetationAlphaCutoff = 0.9f;
+        internal const float DefaultVegetationAlphaCutoff = 0.9f;
         private const string BillboardTextureRequiredError = "RAYLIB.PRIMITIVE.ERR.BillboardTextureRequired";
 
         private Mesh _cubeMesh;
@@ -43,58 +43,34 @@ namespace Ludots.Raylib.Render
         private IRaylibReceiverMeshProjector? _receiverMeshProjector;
         private IVisualHeightmap? _frameVisualHeightmap;
         private Shader _shader;
-        private Shader _skinningShader;
-        private Shader _vegetationCutoutShader;
-        private Shader _decalProjectShader;
         private Material _material;
+        private RaylibLaneShader _instancingLane = null!;
+        private readonly RaylibShaderCatalog _shaderCatalog = new();
         private Material _vfxMaterial;
-        private Material _decalMaterial;
         private bool _vfxMaterialLoaded;
-        private bool _decalMaterialLoaded;
-        private bool _vegetationCutoutShaderReady;
-        private bool _decalProjectShaderReady;
-        private int _locDecalProjectColDiffuse;
-        private int _locDecalProjectTint;
-        private int _locDecalProjectWorldToDecal;
-        private int _locDecalProjectAlphaCutoff;
-        private int _locDecalProjectMinReceiverNDotUp;
-        private int _locDecalProjectReceiverDepthBias;
-        private const float DecalMinReceiverNDotUp = 0.05f;
-        private const float DecalReceiverDepthBiasMeters = 0.04f;
-        private const float DecalAlphaBlendCutoff = 0.02f;
-        private const float DecalCutoutAlphaCutoff = DefaultVegetationAlphaCutoff;
         private readonly RaylibEffectShaderRegistry _effectShaders = new RaylibEffectShaderRegistry();
-        private int _locColDiffuse;
-        private int _locTint;
-        private int _locRoughness;
-        private int _locMetallic;
-        private int _locHasRoughnessMap;
-        private int _locHasMetallicMap;
-        private int _locVegetationCutoutColDiffuse;
-        private int _locVegetationCutoutAlphaCutoff;
-        private int _locSkinningColDiffuse;
-        private int _locSkinningTint;
-        private int _locSkinningRoughness;
-        private int _locSkinningMetallic;
-        private int _locSkinningHasRoughnessMap;
-        private int _locSkinningHasMetallicMap;
-        private int _locBoneMatrices;
-        private RaylibFrameLightingLocations _instancingLightingLocs;
-        private RaylibFrameLightingLocations _skinningLightingLocs;
+        private RaylibPbrUniformLocations _instancingPbrLocs;
         private RaylibFrameLighting? _frameLighting;
         private Vector3 _frameViewPos;
         private bool _hasFrameViewPos;
-        private bool _skinningShaderReady;
+        private RaylibDirectionalShadowMap? _frameShadow;
+        private float _frameShadowTexelWorld = 0.04f;
+        private RaylibSkyIbl? _skyIbl;
+        private RaylibLitModel? _immediateLit;
+        private Mesh _billboardShadowMesh;
 
         private readonly List<Batch> _cubeBatches = new List<Batch>(16);
         private readonly List<Batch> _sphereBatches = new List<Batch>(16);
         private readonly Dictionary<long, ModelInstanceBatch> _modelInstanceBatches = new Dictionary<long, ModelInstanceBatch>();
         private readonly Dictionary<RaylibIsmRenderBridge.Bucket, ModelInstanceBatch> _staticModelInstanceBatches = new();
-        private readonly Dictionary<GpuSkinnedInstanceBatchKey, GpuSkinnedInstanceBatch> _gpuSkinnedInstanceBatches = new();
-        private readonly List<GpuSkinnedInstanceBatch> _activeGpuSkinnedInstanceBatches = new(64);
+        private readonly Dictionary<RaylibIsmRenderBridge.Bucket, ModelInstanceBatch> _shadowInstanceBatches = new();
         private readonly RaylibIsmRenderBridge _ismBridge = new RaylibIsmRenderBridge();
         private readonly RaylibGpuSkinnedModelCache _gpuSkinnedModelCache;
+        private readonly RaylibInstancedMaterialPipeline _materialPipeline;
+        private readonly RaylibGpuSkinnedBatchRenderer _gpuSkinned;
         private readonly RaylibVfxRenderer _vfxRenderer;
+        private readonly RaylibDecalProjectorRenderer _decalRenderer;
+        private readonly RaylibVegetationCutoutRenderer _vegetationCutout = new();
         private double _frameTimeSeconds;
 
         private readonly Dictionary<int, CachedModel> _modelCache = new Dictionary<int, CachedModel>();
@@ -103,7 +79,6 @@ namespace Ludots.Raylib.Render
         private readonly HashSet<int> _loggedTextureDiagnostics = new HashSet<int>();
         private readonly HashSet<int> _loggedBillboardDrawDiagnostics = new HashSet<int>();
         private readonly HashSet<int> _reportedMissingModelDraws = new HashSet<int>();
-        private readonly HashSet<int> _reportedInvalidInstancedMaterials = new HashSet<int>();
         private Material _proceduralMeshMaterial;
         private bool _proceduralMeshMaterialLoaded;
         private readonly int _maxModelInstancesPerDraw;
@@ -138,22 +113,64 @@ namespace Ludots.Raylib.Render
 
         public RaylibIsmRenderBridge IsmBridge => _ismBridge;
 
-        public void ApplyFrameLighting(RaylibFrameLighting lighting, Vector3 viewPos)
+        public void ApplyFrameLighting(
+            RaylibFrameLighting lighting,
+            Vector3 viewPos,
+            RaylibDirectionalShadowMap? shadow = null,
+            float shadowTexelWorld = 0.04f)
         {
             _frameLighting = lighting ?? throw new ArgumentNullException(nameof(lighting));
             _frameViewPos = viewPos;
             _hasFrameViewPos = true;
+            _frameShadow = shadow;
+            _frameShadowTexelWorld = shadowTexelWorld;
             if (_initialized)
             {
-                lighting.Apply(_shader, in _instancingLightingLocs);
-                lighting.ApplyViewPosition(_shader, in _instancingLightingLocs, viewPos);
+                ApplyLightingToInstancingLanes(lighting, viewPos);
+                ApplyFrameShadowToInstancingLanes();
             }
 
-            if (_skinningShaderReady)
+            _gpuSkinned.ApplyFrameLighting(lighting, viewPos, shadow, shadowTexelWorld);
+
+            if (_immediateLit != null)
             {
-                lighting.Apply(_skinningShader, in _skinningLightingLocs);
-                lighting.ApplyViewPosition(_skinningShader, in _skinningLightingLocs, viewPos);
+                _immediateLit.BeginFrame(lighting, viewPos, shadow, shadowTexelWorld);
             }
+        }
+
+        /// <summary>split-sum IBL：烘焙/重烘环境立方图 + LUT，光照与天空 uniform 推到全部已注册车道着色器，IBL 纹理挂合批材质槽位（与 shader 无关）。</summary>
+        private void ApplyLightingToInstancingLanes(RaylibFrameLighting lighting, Vector3 viewPos)
+        {
+            if (!_initialized)
+            {
+                return;
+            }
+
+            _skyIbl ??= new RaylibSkyIbl();
+            _skyIbl.Ensure(lighting);
+            Vector3 zenith = lighting.SkyZenithColor;
+            Vector3 ground = lighting.SkyGroundColor;
+            foreach (RaylibLaneShader lane in _shaderCatalog.InstancingShaders)
+            {
+                lane.ApplyFrameLighting(lighting, viewPos);
+                lane.ApplySkyUniforms(zenith, ground, envSpecular: 1f);
+            }
+
+            Rl.SetMaterialTexture(ref _material, (int)Rl.MaterialMapIndex.MATERIAL_MAP_CUBEMAP, _skyIbl.EnvCubemap);
+            Rl.SetMaterialTexture(ref _material, (int)Rl.MaterialMapIndex.MATERIAL_MAP_BRDF, _skyIbl.BrdfLut);
+        }
+
+        private void ApplyFrameShadowToInstancingLanes()
+        {
+            foreach (RaylibLaneShader lane in _shaderCatalog.InstancingShaders)
+            {
+                lane.ApplyFrameShadow(_frameShadow, _frameShadowTexelWorld);
+            }
+        }
+
+        private void BindFrameShadow(ref Material material)
+        {
+            RaylibInstancedMaterialPipeline.BindFrameShadow(ref material, _frameShadow);
         }
 
         public void BindReceiverMeshProjector(IRaylibReceiverMeshProjector projector)
@@ -184,13 +201,16 @@ namespace Ludots.Raylib.Render
             _channelRegistrar = channelRegistrar ?? ThrowMissingChannelRegistrar;
             _vfs = vfs;
             _materials = materials;
-            _materialHostBinder = vfs != null && materials != null
-                ? new RaylibMaterialHostBinder(vfs, materials)
+            _materialLibrary = vfs != null && materials != null
+                ? new RaylibMaterialLibrary(vfs, materials)
                 : null;
             _diagnosticPath = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_DIAGNOSTIC_PATH");
             _maxModelInstancesPerDraw = ResolveMaxModelInstancesPerDraw();
             _gpuSkinnedModelCache = new RaylibGpuSkinnedModelCache(vfs);
+            _materialPipeline = new RaylibInstancedMaterialPipeline(_materialLibrary);
+            _gpuSkinned = new RaylibGpuSkinnedBatchRenderer(_gpuSkinnedModelCache, _materialPipeline, _maxModelInstancesPerDraw);
             _vfxRenderer = new RaylibVfxRenderer(vfs);
+            _decalRenderer = new RaylibDecalProjectorRenderer(materials, _materialLibrary);
         }
 
         public void Draw(IPrimitiveDrawSnapshot draw, Camera3D camera, IRenderMeshAssets meshes, float scaleMul = 1f, IVisualHeightmap? visualHeightmap = null, double timeSeconds = 0d)
@@ -237,6 +257,7 @@ namespace Ludots.Raylib.Render
             LastGpuSkinnedBatches = 0;
             LastGpuSkinnedMatrixBuildMs = 0d;
             LastGpuSkinnedMeshDrawMs = 0d;
+            _gpuSkinned.ResetStats();
             LastMeshVisualCount = 0;
             LastDecalVisualCount = 0;
             LastVfxVisualCount = 0;
@@ -284,6 +305,93 @@ namespace Ludots.Raylib.Render
                 _vfxRenderer.EndFrame();
                 _frameVisualHeightmap = null;
             }
+        }
+
+        public void DrawShadow(
+            IPrimitiveDrawSnapshot draw,
+            RaylibDirectionalShadowMap shadow,
+            IRenderMeshAssets meshes,
+            Camera3D camera,
+            float scaleMul = 1f)
+        {
+            if (draw == null) throw new ArgumentNullException(nameof(draw));
+            if (shadow == null) throw new ArgumentNullException(nameof(shadow));
+            if (meshes == null) throw new ArgumentNullException(nameof(meshes));
+
+            EnsureInitialized();
+            var span = draw.GetSpan();
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref readonly var item = ref span[i];
+                if (item.Visibility != VisualVisibility.Visible ||
+                    item.AssetKind == AssetKind.VFX ||
+                    item.AssetKind == AssetKind.Decal)
+                {
+                    continue;
+                }
+
+                DrawShadowLeafAsset(
+                    item.MeshAssetId,
+                    item.Position,
+                    item.Rotation,
+                    item.Scale * scaleMul,
+                    camera,
+                    meshes,
+                    shadow,
+                    item.MaterialId);
+            }
+        }
+
+        public void DrawShadow(
+            ISkinnedVisualBatchSnapshot skinnedBatch,
+            RaylibDirectionalShadowMap shadow,
+            IRenderMeshAssets meshes,
+            float scaleMul = 1f)
+        {
+            if (skinnedBatch == null) throw new ArgumentNullException(nameof(skinnedBatch));
+            if (shadow == null) throw new ArgumentNullException(nameof(shadow));
+            if (meshes == null) throw new ArgumentNullException(nameof(meshes));
+
+            var span = skinnedBatch.GetSpan();
+            _gpuSkinned.Prepare();
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref readonly var item = ref span[i];
+                if (item.Visibility != VisualVisibility.Visible)
+                {
+                    continue;
+                }
+
+                if (!RaylibMaterialDrawState.CastsShadow(RaylibMaterialDrawState.ResolveBlendMode(
+                        _materials,
+                        item.MaterialId,
+                        MaterialBlendMode.Opaque,
+                        $"{nameof(RaylibPrimitiveRenderer)} skinned shadow")))
+                {
+                    continue;
+                }
+
+                if (_gpuSkinned.TrySubmit(in item, meshes, scaleMul))
+                {
+                    continue;
+                }
+
+                DrawShadowLeafAsset(
+                    item.MeshAssetId,
+                    item.Position,
+                    item.Rotation,
+                    item.Scale * scaleMul,
+                    default,
+                    meshes,
+                    shadow,
+                    item.MaterialId);
+            }
+
+            _gpuSkinned.FlushShadow(shadow);
+            LastGpuSkinnedInstances = _gpuSkinned.LastInstances;
+            LastGpuSkinnedBatches = _gpuSkinned.LastBatches;
+            LastGpuSkinnedMatrixBuildMs = _gpuSkinned.LastMatrixBuildMs;
+            LastGpuSkinnedMeshDrawMs = _gpuSkinned.LastMeshDrawMs;
         }
 
         private void DrawPersistentStaticLanes(Camera3D camera, IRenderMeshAssets meshes, float scaleMul)
@@ -501,10 +609,10 @@ namespace Ludots.Raylib.Render
             EnsureInitialized();
             LastDecalVisualCount++;
             TotalDecalVisualCount++;
-            DrawTexturedDecal(
+            _decalRenderer.Draw(
                 item.Position,
                 item.Rotation,
-                volume,
+                in volume,
                 item.Color,
                 item.MaterialId,
                 item.StableId,
@@ -519,7 +627,7 @@ namespace Ludots.Raylib.Render
 
         private void SubmitPrimitive(PrimitiveMeshKind kind, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, int materialId = 0)
         {
-            uint key = PackRgba(color);
+            uint key = RaylibInstancedMaterialPipeline.PackRgba(color);
             var matrix = RaylibMatrix.FromSystemNumerics(
                 Matrix4x4.CreateScale(scale) *
                 Matrix4x4.CreateFromQuaternion(VisualMath.NormalizeOrIdentity(rotation)) *
@@ -573,7 +681,10 @@ namespace Ludots.Raylib.Render
         private void DrawSkinnedBatch(ISkinnedVisualBatchSnapshot skinnedBatch, Camera3D camera, IRenderMeshAssets meshes, float scaleMul)
         {
             var span = skinnedBatch.GetSpan();
-            PrepareGpuSkinnedInstanceBatches();
+            if (!_gpuSkinned.BatchesPreparedForShadow)
+            {
+                _gpuSkinned.Prepare();
+            }
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
@@ -582,7 +693,7 @@ namespace Ludots.Raylib.Render
                     continue;
                 }
 
-                if (TrySubmitGpuSkinnedInstance(item, meshes, scaleMul))
+                if (_gpuSkinned.TrySubmit(in item, meshes, scaleMul))
                 {
                     continue;
                 }
@@ -603,93 +714,16 @@ namespace Ludots.Raylib.Render
                     item.MaterialId);
             }
 
-            FlushGpuSkinnedInstanceBatches();
+            if (_gpuSkinned.HasActiveBatches)
+            {
+                EnsureInitialized();
+            }
+            _gpuSkinned.Flush(_shader, in _instancingPbrLocs, _skyIbl);
+            LastGpuSkinnedInstances = _gpuSkinned.LastInstances;
+            LastGpuSkinnedBatches = _gpuSkinned.LastBatches;
+            LastGpuSkinnedMatrixBuildMs = _gpuSkinned.LastMatrixBuildMs;
+            LastGpuSkinnedMeshDrawMs = _gpuSkinned.LastMeshDrawMs;
         }
-
-        private void PrepareGpuSkinnedInstanceBatches()
-        {
-            for (int i = 0; i < _activeGpuSkinnedInstanceBatches.Count; i++)
-            {
-                _activeGpuSkinnedInstanceBatches[i].Count = 0;
-            }
-
-            _activeGpuSkinnedInstanceBatches.Clear();
-        }
-
-        private bool TrySubmitGpuSkinnedInstance(in SkinnedVisualBatchItem item, IRenderMeshAssets meshes, float scaleMul)
-        {
-            if (item.RenderPath != VisualRenderPath.GpuSkinnedInstance ||
-                !meshes.TryGetDescriptor(item.MeshAssetId, out MeshAssetDescriptor descriptor) ||
-                descriptor.Type != MeshAssetType.Model)
-            {
-                return false;
-            }
-
-            RaylibGpuSkinnedModelCache.Entry entry = _gpuSkinnedModelCache.GetOrLoad(item.MeshAssetId, in descriptor);
-            AnimatorPackedState animator = item.Animator;
-            RaylibSkinnedPlayback.ResolveFromAnimator(
-                in animator,
-                entry.Animations,
-                entry.AnimCount,
-                stateToClipMap: null,
-                out int clipIndex,
-                out int frameIndex);
-
-            long start = Stopwatch.GetTimestamp();
-            uint colorKey = PackRgba(item.Color);
-            var key = new GpuSkinnedInstanceBatchKey(
-                item.MeshAssetId,
-                item.MaterialId,
-                colorKey,
-                clipIndex,
-                frameIndex);
-            if (!_gpuSkinnedInstanceBatches.TryGetValue(key, out GpuSkinnedInstanceBatch? batch))
-            {
-                batch = new GpuSkinnedInstanceBatch(key);
-                _gpuSkinnedInstanceBatches.Add(key, batch);
-            }
-
-            if (batch.Count == 0)
-            {
-                batch.Model = entry.Model;
-                batch.Animations = entry.Animations;
-                batch.AnimCount = entry.AnimCount;
-                _activeGpuSkinnedInstanceBatches.Add(batch);
-            }
-
-            batch.Add(RaylibMatrix.FromSystemNumerics(
-                Matrix4x4.CreateScale(item.Scale * scaleMul) *
-                Matrix4x4.CreateFromQuaternion(VisualMath.NormalizeOrIdentity(item.Rotation)) *
-                Matrix4x4.CreateTranslation(item.Position)));
-            LastGpuSkinnedMatrixBuildMs += (Stopwatch.GetTimestamp() - start) * 1000d / Stopwatch.Frequency;
-            return true;
-        }
-
-        private void FlushGpuSkinnedInstanceBatches()
-        {
-            if (_activeGpuSkinnedInstanceBatches.Count == 0)
-            {
-                return;
-            }
-
-            EnsureInitialized();
-            EnsureSkinningShaderInitialized();
-            long drawStart = Stopwatch.GetTimestamp();
-            for (int i = 0; i < _activeGpuSkinnedInstanceBatches.Count; i++)
-            {
-                GpuSkinnedInstanceBatch batch = _activeGpuSkinnedInstanceBatches[i];
-                if (batch.Count == 0)
-                {
-                    continue;
-                }
-
-                LastGpuSkinnedInstances += batch.Count;
-                LastGpuSkinnedBatches += DrawGpuSkinnedInstanceBatch(batch);
-            }
-
-            LastGpuSkinnedMeshDrawMs += (Stopwatch.GetTimestamp() - drawStart) * 1000d / Stopwatch.Frequency;
-        }
-
         private bool TryDrawPrototypeSkinned(in SkinnedVisualBatchItem item, IRenderMeshAssets meshes, float scaleMul)
         {
             if (!item.RenderPath.IsSkinnedLane() ||
@@ -814,6 +848,52 @@ namespace Ludots.Raylib.Render
             }
         }
 
+        private void DrawShadowLeafAsset(
+            int meshAssetId,
+            Vector3 position,
+            Quaternion rotation,
+            Vector3 scale,
+            Camera3D camera,
+            IRenderMeshAssets meshes,
+            RaylibDirectionalShadowMap shadow,
+            int materialId)
+        {
+            if (!meshes.TryGetDescriptor(meshAssetId, out MeshAssetDescriptor descriptor))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} cannot shadow unknown meshAssetId={meshAssetId}.");
+            }
+
+            MaterialBlendMode blendMode = RaylibMaterialDrawState.ResolveBlendMode(
+                _materials,
+                materialId,
+                MaterialBlendMode.Opaque,
+                $"{nameof(RaylibPrimitiveRenderer)} shadow");
+            if (!RaylibMaterialDrawState.CastsShadow(blendMode))
+            {
+                return;
+            }
+
+            switch (descriptor.Type)
+            {
+                case MeshAssetType.Primitive:
+                    DrawPrimitiveShadow(descriptor.PrimitiveKind, position, rotation, scale, shadow);
+                    return;
+                case MeshAssetType.Model:
+                    DrawModelShadow(meshAssetId, in descriptor, position, rotation, scale, shadow);
+                    return;
+                case MeshAssetType.Billboard:
+                    DrawBillboardShadow(meshAssetId, in descriptor, position, scale, camera, shadow, blendMode);
+                    return;
+                case MeshAssetType.ProceduralMesh:
+                    DrawProceduralMeshShadow(meshAssetId, in descriptor, position, rotation, scale, shadow);
+                    return;
+                default:
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibPrimitiveRenderer)} refuses composite shadow mesh type '{descriptor.Type}' for meshAssetId={meshAssetId}. Author Presenter children instead of Prefab.");
+            }
+        }
+
         private void CountMeshVisual()
         {
             LastMeshVisualCount++;
@@ -850,214 +930,6 @@ namespace Ludots.Raylib.Render
             return $"primitive-lane bucketCount={bucketCount} firstBucketItems={itemCount} mesh={mesh} meshAssetId={item.MeshAssetId} stable={item.StableId} renderPath={item.RenderPath} mobility={item.Mobility} visibility={item.Visibility} pos=({item.Position.X:F2},{item.Position.Y:F2},{item.Position.Z:F2}) scale=({item.Scale.X:F2},{item.Scale.Y:F2},{item.Scale.Z:F2}) color=({item.Color.X:F2},{item.Color.Y:F2},{item.Color.Z:F2},{item.Color.W:F2})";
         }
 
-        private void DrawTexturedDecal(
-            in Vector3 position,
-            in Quaternion rotation,
-            in ProjectedDecalVolume volume,
-            in Vector4 color,
-            int materialId,
-            int stableId,
-            IRaylibReceiverMeshProjector projector)
-        {
-            EnsureInitialized();
-            if (materialId <= 0)
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} requires a positive materialId with host albedo.");
-            }
-
-            if (_materialHostBinder == null)
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} materialId={materialId} requires {nameof(RaylibMaterialHostBinder)}.");
-            }
-
-            EnsureDecalResources();
-            if (!_materialHostBinder.TryApplyHostMaps(ref _decalMaterial, materialId))
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} materialId={materialId} has no host albedo binding in Presentation/host_assets.json.");
-            }
-
-            if (!VisualMath.TryExtractFacingRadFromVisualYRotation(rotation, out float yaw))
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} projector is yaw-about-Y only; authored rotation is not a planar yaw.");
-            }
-
-            Vector3 projectorCenter = projector.FitYawedStampProjectorCenter(
-                position,
-                yaw,
-                volume.StampSizeMeters,
-                stableId);
-            if (!volume.TryBuildWorldToLocal(
-                    projectorCenter,
-                    yaw,
-                    out Matrix4x4 worldToDecal,
-                    out float minX,
-                    out float minY,
-                    out float minZ,
-                    out float maxX,
-                    out float maxY,
-                    out float maxZ))
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} projector volume is not invertible.");
-            }
-
-            MaterialBlendMode blendMode = ResolveMaterialBlendMode(materialId, MaterialBlendMode.AlphaBlend);
-            if (blendMode == MaterialBlendMode.Opaque)
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} materialId={materialId} must use AlphaBlend or Cutout, not Opaque.");
-            }
-
-            if (_decalMaterial.maps == null)
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} material maps were not allocated by LoadMaterialDefault.");
-            }
-
-            int albedoIndex = (int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO;
-            _decalMaterial.maps[albedoIndex].color = Color.WHITE;
-
-            EnsureDecalProjectShader();
-            float alphaCutoff = blendMode == MaterialBlendMode.Cutout
-                ? DecalCutoutAlphaCutoff
-                : DecalAlphaBlendCutoff;
-            float minReceiver = DecalMinReceiverNDotUp;
-            float receiverDepthBias = DecalReceiverDepthBiasMeters;
-            Vector4 colDiffuse = Vector4.One;
-            Vector4 tint = color;
-            RaylibMatrix worldToDecalRay = RaylibMatrix.FromSystemNumerics(worldToDecal);
-            Rl.SetShaderValue(
-                _decalProjectShader,
-                _locDecalProjectColDiffuse,
-                &colDiffuse,
-                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
-            Rl.SetShaderValue(
-                _decalProjectShader,
-                _locDecalProjectTint,
-                &tint,
-                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
-            Rl.SetShaderValueMatrix(_decalProjectShader, _locDecalProjectWorldToDecal, worldToDecalRay);
-            Rl.SetShaderValue(
-                _decalProjectShader,
-                _locDecalProjectAlphaCutoff,
-                &alphaCutoff,
-                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
-            Rl.SetShaderValue(
-                _decalProjectShader,
-                _locDecalProjectMinReceiverNDotUp,
-                &minReceiver,
-                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
-            Rl.SetShaderValue(
-                _decalProjectShader,
-                _locDecalProjectReceiverDepthBias,
-                &receiverDepthBias,
-                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
-
-            bool blending = TryBeginAuthorBlendMode(blendMode);
-            bool depthMaskDisabled = blending;
-            if (depthMaskDisabled)
-            {
-                Rl.rlDisableDepthMask();
-            }
-
-            Shader previousShader = _decalMaterial.shader;
-            try
-            {
-                _decalMaterial.shader = _decalProjectShader;
-                int drawn = projector.DrawMeshesOverlappingAabbMeters(
-                    minX,
-                    minY,
-                    minZ,
-                    maxX,
-                    maxY,
-                    maxZ,
-                    _decalMaterial);
-                if (drawn <= 0)
-                {
-                    throw new InvalidOperationException(
-                        $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} projector AABB " +
-                        $"({minX:F1},{minY:F1},{minZ:F1})-({maxX:F1},{maxY:F1},{maxZ:F1}) overlaps no receiver meshes.");
-                }
-            }
-            finally
-            {
-                _decalMaterial.shader = previousShader;
-
-                if (depthMaskDisabled)
-                {
-                    Rl.rlEnableDepthMask();
-                }
-
-                if (blending)
-                {
-                    Rl.EndBlendMode();
-                }
-
-                _materialHostBinder.DetachOwnedMaps(ref _decalMaterial);
-            }
-        }
-
-        private void EnsureDecalResources()
-        {
-            if (!_decalMaterialLoaded)
-            {
-                _decalMaterial = Rl.LoadMaterialDefault();
-                _decalMaterialLoaded = true;
-            }
-        }
-
-        private void EnsureDecalProjectShader()
-        {
-            if (_decalProjectShaderReady)
-            {
-                return;
-            }
-
-            string baseDir = AppContext.BaseDirectory;
-            _decalProjectShader = Rl.LoadShader(
-                Path.Combine(baseDir, "decal_project.vs"),
-                Path.Combine(baseDir, "decal_project.fs"));
-            if (_decalProjectShader.id == 0)
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} failed to load decal_project shader.");
-            }
-
-            _locDecalProjectColDiffuse = Rl.GetShaderLocation(_decalProjectShader, "colDiffuse");
-            _locDecalProjectTint = Rl.GetShaderLocation(_decalProjectShader, "tint");
-            _locDecalProjectWorldToDecal = Rl.GetShaderLocation(_decalProjectShader, "matWorldToDecal");
-            _locDecalProjectAlphaCutoff = Rl.GetShaderLocation(_decalProjectShader, "alphaCutoff");
-            _locDecalProjectMinReceiverNDotUp = Rl.GetShaderLocation(_decalProjectShader, "minReceiverNDotUp");
-            _locDecalProjectReceiverDepthBias = Rl.GetShaderLocation(_decalProjectShader, "receiverDepthBias");
-            int locMap = Rl.GetShaderLocation(_decalProjectShader, "texture0");
-            int locMvp = Rl.GetShaderLocation(_decalProjectShader, "mvp");
-            int locMatModel = Rl.GetShaderLocation(_decalProjectShader, "matModel");
-            int locVertexPosition = Rl.GetShaderLocationAttrib(_decalProjectShader, "vertexPosition");
-            int locVertexNormal = Rl.GetShaderLocationAttrib(_decalProjectShader, "vertexNormal");
-            if (_locDecalProjectColDiffuse < 0 ||
-                _locDecalProjectTint < 0 ||
-                _locDecalProjectWorldToDecal < 0 ||
-                _locDecalProjectAlphaCutoff < 0 ||
-                _locDecalProjectMinReceiverNDotUp < 0 ||
-                _locDecalProjectReceiverDepthBias < 0 ||
-                locMap < 0 ||
-                locMvp < 0 ||
-                locMatModel < 0 ||
-                locVertexPosition < 0 ||
-                locVertexNormal < 0)
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} decal_project is missing required attribs/uniforms.");
-            }
-
-            _decalProjectShaderReady = true;
-        }
-
-
         private void DrawPrimitive(PrimitiveMeshKind kind, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color)
         {
             EnsureInitialized();
@@ -1065,15 +937,37 @@ namespace Ludots.Raylib.Render
                 Matrix4x4.CreateScale(scale) *
                 Matrix4x4.CreateFromQuaternion(VisualMath.NormalizeOrIdentity(rotation)) *
                 Matrix4x4.CreateTranslation(position));
-            Color rayColor = ToRaylibColor(color);
+            EnsureImmediateLitFrame();
 
             if (kind == PrimitiveMeshKind.Cube)
             {
-                DrawTransformedPrimitive(in transform, PrimitiveMeshKind.Cube, rayColor);
+                _immediateLit!.DrawMesh(_cubeMesh, transform, color);
             }
             else if (kind == PrimitiveMeshKind.Sphere)
             {
-                DrawTransformedPrimitive(in transform, PrimitiveMeshKind.Sphere, rayColor);
+                _immediateLit!.DrawMesh(_sphereMesh, transform, color);
+            }
+        }
+
+        private void DrawPrimitiveShadow(
+            PrimitiveMeshKind kind,
+            Vector3 position,
+            Quaternion rotation,
+            Vector3 scale,
+            RaylibDirectionalShadowMap shadow)
+        {
+            RaylibMatrix transform = RaylibMatrix.FromSystemNumerics(
+                Matrix4x4.CreateScale(scale) *
+                Matrix4x4.CreateFromQuaternion(VisualMath.NormalizeOrIdentity(rotation)) *
+                Matrix4x4.CreateTranslation(position));
+
+            if (kind == PrimitiveMeshKind.Cube)
+            {
+                shadow.DrawMeshShadow(_cubeMesh, transform);
+            }
+            else if (kind == PrimitiveMeshKind.Sphere)
+            {
+                shadow.DrawMeshShadow(_sphereMesh, transform);
             }
         }
 
@@ -1342,10 +1236,29 @@ namespace Ludots.Raylib.Render
 
             var tint = ToRaylibColor(color);
             var model = cached.Model;
+            RaylibMaterialDrawState.RequireLaneShaderKey(_materials, materialId, $"{nameof(RaylibPrimitiveRenderer)} immediate model");
             ApplyHostMapsToModel(ref model, materialId);
             ToAxisAngleDegrees(rotation, out Vector3 axis, out float angleDegrees);
-            RestoreOpaqueModelState();
+            RaylibInstancedMaterialPipeline.RestoreOpaqueModelState();
             Rl.DrawModelEx(model, position, axis, angleDegrees, scale, tint);
+        }
+
+        private void DrawModelShadow(
+            int meshAssetId,
+            in MeshAssetDescriptor desc,
+            Vector3 position,
+            Quaternion rotation,
+            Vector3 scale,
+            RaylibDirectionalShadowMap shadow)
+        {
+            if (!TryGetOrLoadModel(meshAssetId, desc, out CachedModel cached))
+            {
+                WarnMissingModelSkipped(meshAssetId, stableId: 0, "model shadow draw");
+                return;
+            }
+
+            ToAxisAngleDegrees(rotation, out Vector3 axis, out float angleDegrees);
+            shadow.DrawModelShadow(cached.Model, position, axis, angleDegrees, scale);
         }
 
         private void DrawBillboard(int meshAssetId, in MeshAssetDescriptor desc, Vector3 position, Vector3 scale, Vector4 color, Camera3D camera, int materialId)
@@ -1364,7 +1277,8 @@ namespace Ludots.Raylib.Render
             // Billboard art ships pre-colored; multiply once by frame lighting so night/dusk dims vegetation.
             byte alpha = Clamp01ToByte(color.W);
             Vector3 litRgb = ResolveBillboardLitTintRgb();
-            MaterialBlendMode blendMode = ResolveMaterialBlendMode(materialId, MaterialBlendMode.Opaque);
+            MaterialBlendMode blendMode = RaylibMaterialDrawState.ResolveBlendMode(_materials, materialId, MaterialBlendMode.Opaque, nameof(RaylibPrimitiveRenderer));
+            RaylibMaterialDrawState.RequireLaneShaderKey(_materials, materialId, $"{nameof(RaylibPrimitiveRenderer)} billboard");
             // DrawBillboardRec multiplies by tint; keep cutout colDiffuse at identity to avoid double-dim.
             Color tint = new Color(
                 Clamp01ToByte(litRgb.X),
@@ -1381,38 +1295,27 @@ namespace Ludots.Raylib.Render
                 Rl.rlDisableBackfaceCulling();
             }
 
-            bool blending = TryBeginAuthorBlendMode(blendMode);
-            bool cutoutShader = false;
+            bool blending = RaylibMaterialDrawState.TryBeginAuthorBlendMode(blendMode, nameof(RaylibPrimitiveRenderer));
             try
             {
                 if (blendMode == MaterialBlendMode.Cutout)
                 {
-                    EnsureVegetationCutoutShader();
-                    float cutoff = DefaultVegetationAlphaCutoff;
-                    Vector4 colDiffuse = Vector4.One;
-                    Rl.SetShaderValue(
-                        _vegetationCutoutShader,
-                        _locVegetationCutoutColDiffuse,
-                        &colDiffuse,
-                        (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
-                    Rl.SetShaderValue(
-                        _vegetationCutoutShader,
-                        _locVegetationCutoutAlphaCutoff,
-                        &cutoff,
-                        (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
-                    Rl.BeginShaderMode(_vegetationCutoutShader);
-                    cutoutShader = true;
+                    _vegetationCutout.DrawBillboard(
+                        in camera,
+                        cached.Texture,
+                        in source,
+                        billboardPosition,
+                        new Vector2(width, height),
+                        tint,
+                        DefaultVegetationAlphaCutoff);
                 }
-
-                Rl.DrawBillboardRec(camera, cached.Texture, source, billboardPosition, new Vector2(width, height), tint);
+                else
+                {
+                    Rl.DrawBillboardRec(camera, cached.Texture, source, billboardPosition, new Vector2(width, height), tint);
+                }
             }
             finally
             {
-                if (cutoutShader)
-                {
-                    Rl.EndShaderMode();
-                }
-
                 if (blending)
                 {
                     Rl.EndBlendMode();
@@ -1423,6 +1326,45 @@ namespace Ludots.Raylib.Render
                     Rl.rlEnableBackfaceCulling();
                 }
             }
+        }
+
+        private void DrawBillboardShadow(
+            int meshAssetId,
+            in MeshAssetDescriptor desc,
+            Vector3 position,
+            Vector3 scale,
+            Camera3D camera,
+            RaylibDirectionalShadowMap shadow,
+            MaterialBlendMode blendMode)
+        {
+            if (!TryGetOrLoadTexture(meshAssetId, desc, out CachedTexture cached))
+            {
+                throw new InvalidOperationException(
+                    $"{BillboardTextureRequiredError}: meshAssetId={meshAssetId}, sourceUris={FormatSourceUris(desc.SourceUris)}.");
+            }
+
+            float height = MathF.Max(scale.Y, 0.05f);
+            float width = height * cached.AspectRatio;
+            Vector3 center = new(position.X, position.Y + height * 0.5f, position.Z);
+            Vector3 toCamera = camera.position - center;
+            toCamera.Y = 0f;
+            if (toCamera.LengthSquared() <= 0.0001f)
+            {
+                toCamera = Vector3.UnitZ;
+            }
+
+            float yaw = MathF.Atan2(toCamera.X, toCamera.Z);
+            RaylibMatrix transform = RaylibMatrix.FromSystemNumerics(
+                Matrix4x4.CreateScale(width, height, 1f) *
+                Matrix4x4.CreateRotationY(yaw) *
+                Matrix4x4.CreateTranslation(center));
+            if (blendMode == MaterialBlendMode.Cutout)
+            {
+                shadow.DrawMeshShadowCutout(_billboardShadowMesh, transform, cached.Texture, DefaultVegetationAlphaCutoff);
+                return;
+            }
+
+            shadow.DrawMeshShadow(_billboardShadowMesh, transform);
         }
 
         private void DrawProceduralMesh(
@@ -1464,10 +1406,42 @@ namespace Ludots.Raylib.Render
             Rl.rlEnableBackfaceCulling();
         }
 
+        private void DrawProceduralMeshShadow(
+            int meshAssetId,
+            in MeshAssetDescriptor descriptor,
+            Vector3 position,
+            Quaternion rotation,
+            Vector3 scale,
+            RaylibDirectionalShadowMap shadow)
+        {
+            if (!TryGetOrBuildProceduralMesh(meshAssetId, descriptor, out CachedProceduralMesh cached))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} cannot shadow procedural meshAssetId={meshAssetId} because it has no committed procedural payload.");
+            }
+
+            RaylibMatrix transform = RaylibMatrix.FromSystemNumerics(
+                Matrix4x4.CreateScale(scale) *
+                Matrix4x4.CreateFromQuaternion(VisualMath.NormalizeOrIdentity(rotation)) *
+                Matrix4x4.CreateTranslation(position));
+
+            if (cached.SubmeshMeshes == null || cached.SubmeshMeshes.Length == 0)
+            {
+                shadow.DrawMeshShadow(cached.Mesh, transform);
+                return;
+            }
+
+            for (int i = 0; i < cached.SubmeshMeshes.Length; i++)
+            {
+                shadow.DrawMeshShadow(cached.SubmeshMeshes[i], transform);
+            }
+        }
+
         private Material ResolveProceduralDrawMaterial(int materialAssetId)
         {
             Material material = _proceduralMeshMaterial;
-            ApplyHostMaterialMaps(ref material, materialAssetId, _proceduralMeshMaterial.shader);
+            _materialPipeline.ApplyHostMaterialMaps(ref material, materialAssetId, _proceduralMeshMaterial.shader, in _instancingPbrLocs);
+            BindFrameShadow(ref material);
             return material;
         }
 
@@ -1524,6 +1498,8 @@ namespace Ludots.Raylib.Render
                     throw new InvalidOperationException(
                         $"{nameof(RaylibPrimitiveRenderer)} only supports surface-domain procedural mesh materials (meshAssetId={meshAssetId}, materialId={materialId}, domain={material.Domain}).");
                 }
+
+                RaylibMaterialDrawState.RequireLaneShaderKey(_materials, materialId, $"{nameof(RaylibPrimitiveRenderer)} procedural mesh");
 
                 materialIds[i] = materialId;
             }
@@ -1895,28 +1871,6 @@ namespace Ludots.Raylib.Render
         }
 
 
-        private MaterialBlendMode ResolveMaterialBlendMode(int materialId, MaterialBlendMode defaultWhenMissing)
-        {
-            if (materialId <= 0)
-            {
-                return defaultWhenMissing;
-            }
-
-            if (_materials == null)
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} received materialId={materialId} but no {nameof(IRenderMaterialAssets)} was provided.");
-            }
-
-            if (!_materials.TryGet(materialId, out MaterialAssetDescriptor descriptor))
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} cannot resolve blend mode for unknown materialId={materialId}.");
-            }
-
-            return MaterialBlendModeResolver.Resolve(descriptor.Flags);
-        }
-
         private bool IsMaterialDoubleSided(int materialId)
         {
             if (materialId <= 0 || _materials == null)
@@ -1932,87 +1886,6 @@ namespace Ludots.Raylib.Render
 
             return (descriptor.Flags & MaterialAssetFlags.DoubleSided) != 0;
         }
-
-        private static bool TryBeginAuthorBlendMode(MaterialBlendMode blendMode)
-        {
-            switch (blendMode)
-            {
-                case MaterialBlendMode.Opaque:
-                case MaterialBlendMode.Cutout:
-                    return false;
-                case MaterialBlendMode.AlphaBlend:
-                    Rl.BeginBlendMode(BlendMode.BLEND_ALPHA);
-                    return true;
-                case MaterialBlendMode.Additive:
-                    Rl.BeginBlendMode(BlendMode.BLEND_ADDITIVE);
-                    return true;
-                default:
-                    throw new InvalidOperationException(
-                        $"{nameof(RaylibPrimitiveRenderer)} does not recognize material blend mode '{blendMode}'.");
-            }
-        }
-
-        private void EnsureVegetationCutoutShader()
-        {
-            if (_vegetationCutoutShaderReady)
-            {
-                return;
-            }
-
-            string baseDir = AppContext.BaseDirectory;
-            string vsPath = Path.Combine(baseDir, "vegetation_cutout.vs");
-            string fsPath = Path.Combine(baseDir, "vegetation_cutout.fs");
-            if (!File.Exists(vsPath))
-            {
-                throw new FileNotFoundException(
-                    $"{nameof(RaylibPrimitiveRenderer)} vegetation cutout vertex shader missing under BaseDirectory '{baseDir}'. Expected '{vsPath}'.",
-                    vsPath);
-            }
-
-            if (!File.Exists(fsPath))
-            {
-                throw new FileNotFoundException(
-                    $"{nameof(RaylibPrimitiveRenderer)} vegetation cutout fragment shader missing under BaseDirectory '{baseDir}'. Expected '{fsPath}'.",
-                    fsPath);
-            }
-
-            _vegetationCutoutShader = Rl.LoadShader(vsPath, fsPath);
-            if (_vegetationCutoutShader.id == 0)
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} failed to compile vegetation_cutout from '{vsPath}' + '{fsPath}' (shader.id == 0).");
-            }
-
-            int locVertexPosition = Rl.GetShaderLocationAttrib(_vegetationCutoutShader, "vertexPosition");
-            int locVertexTexCoord = Rl.GetShaderLocationAttrib(_vegetationCutoutShader, "vertexTexCoord");
-            int locVertexColor = Rl.GetShaderLocationAttrib(_vegetationCutoutShader, "vertexColor");
-            int locMvp = Rl.GetShaderLocation(_vegetationCutoutShader, "mvp");
-            int locMapDiffuse = Rl.GetShaderLocation(_vegetationCutoutShader, "texture0");
-            _locVegetationCutoutColDiffuse = Rl.GetShaderLocation(_vegetationCutoutShader, "colDiffuse");
-            _locVegetationCutoutAlphaCutoff = Rl.GetShaderLocation(_vegetationCutoutShader, "alphaCutoff");
-
-            if (locVertexPosition < 0 || locMvp < 0 || locMapDiffuse < 0 ||
-                _locVegetationCutoutColDiffuse < 0 || _locVegetationCutoutAlphaCutoff < 0)
-            {
-                Rl.UnloadShader(_vegetationCutoutShader);
-                _vegetationCutoutShader = default;
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} vegetation_cutout is missing required attribs/uniforms (vertexPosition/mvp/texture0/colDiffuse/alphaCutoff).");
-            }
-
-            if (_vegetationCutoutShader.locs != null)
-            {
-                _vegetationCutoutShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_POSITION] = locVertexPosition;
-                _vegetationCutoutShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TEXCOORD01] = locVertexTexCoord;
-                _vegetationCutoutShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_COLOR] = locVertexColor;
-                _vegetationCutoutShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MVP] = locMvp;
-                _vegetationCutoutShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ALBEDO] = locMapDiffuse;
-                _vegetationCutoutShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_COLOR_DIFFUSE] = _locVegetationCutoutColDiffuse;
-            }
-
-            _vegetationCutoutShaderReady = true;
-        }
-
 
         private static void ToAxisAngleDegrees(Quaternion rotation, out Vector3 axis, out float angleDegrees)
         {
@@ -2126,6 +1999,62 @@ namespace Ludots.Raylib.Render
             FlushInstancedBatches();
         }
 
+        public void DrawInstancedBucketShadow(
+            RaylibIsmRenderBridge.Bucket bucket,
+            IRenderMeshAssets meshes,
+            RaylibDirectionalShadowMap shadow,
+            float scaleMul = 1f)
+        {
+            if (bucket == null) throw new ArgumentNullException(nameof(bucket));
+            if (meshes == null) throw new ArgumentNullException(nameof(meshes));
+            if (shadow == null) throw new ArgumentNullException(nameof(shadow));
+
+            EnsureInitialized();
+
+            List<PrimitiveDrawItem> items = bucket.Items;
+            if (items.Count == 0)
+            {
+                return;
+            }
+
+            PrimitiveDrawItem first = items[0];
+            if (!meshes.TryGetDescriptor(first.MeshAssetId, out MeshAssetDescriptor descriptor))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} cannot shadow unknown meshAssetId={first.MeshAssetId}.");
+            }
+
+            switch (descriptor.Type)
+            {
+                case MeshAssetType.Primitive when descriptor.PrimitiveKind is PrimitiveMeshKind.Cube or PrimitiveMeshKind.Sphere:
+                    DrawPrimitiveInstancedBucketShadow(bucket, items, descriptor.PrimitiveKind, scaleMul, shadow);
+                    return;
+                case MeshAssetType.Model:
+                    DrawModelInstancedBucketShadow(bucket, items, meshes, scaleMul, shadow);
+                    return;
+                case MeshAssetType.Billboard:
+                case MeshAssetType.ProceduralMesh:
+                    for (int i = 0; i < items.Count; i++)
+                    {
+                        PrimitiveDrawItem item = items[i];
+                        DrawShadowLeafAsset(
+                            item.MeshAssetId,
+                            item.Position,
+                            item.Rotation,
+                            item.Scale * scaleMul,
+                            default,
+                            meshes,
+                            shadow,
+                            item.MaterialId);
+                    }
+
+                    return;
+                default:
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibPrimitiveRenderer)} refuses composite shadow mesh type '{descriptor.Type}' for meshAssetId={first.MeshAssetId}. Author Presenter children instead of Prefab.");
+            }
+        }
+
         private bool TryDrawModelInstancedBucket(RaylibIsmRenderBridge.Bucket bucket, List<PrimitiveDrawItem> items, IRenderMeshAssets meshes, float scaleMul)
         {
             PrimitiveDrawItem first = items[0];
@@ -2141,7 +2070,7 @@ namespace Ludots.Raylib.Render
                 return true;
             }
 
-            uint colorKey = PackRgba(first.Color);
+            uint colorKey = RaylibInstancedMaterialPipeline.PackRgba(first.Color);
             long batchKey = BuildModelInstanceBatchKey(first.MeshAssetId, colorKey);
             bool canCacheStaticMatrices = bucket.Lane.Mobility == VisualMobility.Static && MathF.Abs(scaleMul - 1f) <= 0.0001f;
             ModelInstanceBatch batch;
@@ -2171,6 +2100,88 @@ namespace Ludots.Raylib.Render
             LastInstancedInstances += batch.Count;
             LastInstancedBatches += drawCalls;
             return true;
+        }
+
+        private void DrawPrimitiveInstancedBucketShadow(
+            RaylibIsmRenderBridge.Bucket bucket,
+            List<PrimitiveDrawItem> items,
+            PrimitiveMeshKind primitiveKind,
+            float scaleMul,
+            RaylibDirectionalShadowMap shadow)
+        {
+            Mesh mesh = primitiveKind == PrimitiveMeshKind.Cube ? _cubeMesh : _sphereMesh;
+            ModelInstanceBatch batch = BuildInstancedShadowBatch(bucket, items, scaleMul);
+            DrawMeshInstancedShadow(mesh, batch, shadow);
+        }
+
+        private void DrawModelInstancedBucketShadow(
+            RaylibIsmRenderBridge.Bucket bucket,
+            List<PrimitiveDrawItem> items,
+            IRenderMeshAssets meshes,
+            float scaleMul,
+            RaylibDirectionalShadowMap shadow)
+        {
+            PrimitiveDrawItem first = items[0];
+            if (!meshes.TryGetDescriptor(first.MeshAssetId, out MeshAssetDescriptor descriptor) ||
+                descriptor.Type != MeshAssetType.Model)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} shadow bucket meshAssetId={first.MeshAssetId} is not a model.");
+            }
+
+            if (!TryGetOrLoadModel(first.MeshAssetId, in descriptor, out CachedModel cached))
+            {
+                WarnMissingModelSkipped(first.MeshAssetId, first.StableId, "instanced static mesh shadow bucket");
+                return;
+            }
+
+            ModelInstanceBatch batch = BuildInstancedShadowBatch(bucket, items, scaleMul);
+            for (int meshIndex = 0; meshIndex < cached.Model.meshCount; meshIndex++)
+            {
+                Mesh mesh = cached.Model.meshes[meshIndex];
+                DrawMeshInstancedShadow(mesh, batch, shadow);
+            }
+        }
+
+        private ModelInstanceBatch BuildInstancedShadowBatch(
+            RaylibIsmRenderBridge.Bucket bucket,
+            List<PrimitiveDrawItem> items,
+            float scaleMul)
+        {
+            const uint shadowColorKey = 0;
+            bool canCacheStaticMatrices = bucket.Lane.Mobility == VisualMobility.Static && MathF.Abs(scaleMul - 1f) <= 0.0001f;
+            if (!_shadowInstanceBatches.TryGetValue(bucket, out ModelInstanceBatch batch) ||
+                batch.ColorKey != shadowColorKey)
+            {
+                batch = new ModelInstanceBatch(shadowColorKey);
+            }
+
+            if (!canCacheStaticMatrices ||
+                batch.Revision != bucket.Revision ||
+                batch.Count != items.Count)
+            {
+                RebuildModelInstanceBatch(ref batch, items, scaleMul, bucket.Revision);
+                _shadowInstanceBatches[bucket] = batch;
+            }
+
+            return batch;
+        }
+
+        private void DrawMeshInstancedShadow(Mesh mesh, ModelInstanceBatch batch, RaylibDirectionalShadowMap shadow)
+        {
+            if (mesh.vertexCount <= 0 || batch.Count <= 0)
+            {
+                return;
+            }
+
+            fixed (RaylibMatrix* transforms = batch.Transforms)
+            {
+                for (int offset = 0; offset < batch.Count; offset += _maxModelInstancesPerDraw)
+                {
+                    int chunkCount = Math.Min(_maxModelInstancesPerDraw, batch.Count - offset);
+                    shadow.DrawMeshInstancedShadow(mesh, transforms + offset, chunkCount);
+                }
+            }
         }
 
         private ModelInstanceBatch GetStaticModelInstanceBatch(RaylibIsmRenderBridge.Bucket bucket, uint colorKey)
@@ -2228,18 +2239,19 @@ namespace Ludots.Raylib.Render
             EnsureFrameLightingAppliedForInstancing();
             int drawCalls = 0;
             long drawStart = Stopwatch.GetTimestamp();
-            RestoreOpaqueModelState();
+            RaylibInstancedMaterialPipeline.RestoreOpaqueModelState();
+            RaylibLaneShader lane = ResolveInstancingLaneShader(materialId);
             fixed (RaylibMatrix* transforms = batch.Transforms)
             {
                 for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
                 {
                     Mesh mesh = model.meshes[meshIndex];
-                    RequireMeshNormals(in mesh, "Instanced ISM");
-                    if (!TryResolveInstancedModelMaterial(model, meshIndex, materialId, out Material material))
+                    RaylibInstancedMaterialPipeline.RequireMeshNormals(in mesh, "Instanced ISM");
+                    if (!_materialPipeline.TryResolveInstancedModelMaterial(model, meshIndex, materialId, lane.Shader, in lane.PbrLocs, _skyIbl, _frameShadow, out Material material))
                     {
                         continue;
                     }
-                    ApplyInstancedMaterialTint(ref material, colorKey);
+                    ApplyInstancedMaterialTint(ref material, colorKey, lane);
                     for (int offset = 0; offset < batch.Count; offset += _maxModelInstancesPerDraw)
                     {
                         int chunkCount = Math.Min(_maxModelInstancesPerDraw, batch.Count - offset);
@@ -2252,141 +2264,9 @@ namespace Ludots.Raylib.Render
             LastInstancedMeshDrawMs += (Stopwatch.GetTimestamp() - drawStart) * 1000.0 / Stopwatch.Frequency;
             return drawCalls;
         }
-
-        private int DrawGpuSkinnedInstanceBatch(GpuSkinnedInstanceBatch batch)
-        {
-            Model model = batch.Model;
-            if (model.meshCount <= 0 || batch.Count <= 0)
-            {
-                return 0;
-            }
-
-            if (batch.Animations == null || batch.AnimCount <= 0)
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} GpuSkinned batch meshAssetId={batch.Key.MeshAssetId} has no animations; silent static draw is forbidden.");
-            }
-
-            int clipIndex = batch.Key.ClipIndex;
-            int frameIndex = batch.Key.FrameIndex;
-            if ((uint)clipIndex >= (uint)batch.AnimCount)
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} GpuSkinned batch clipIndex={clipIndex} outside animCount={batch.AnimCount}.");
-            }
-
-            ModelAnimation anim = batch.Animations[clipIndex];
-            Rl.UpdateModelAnimationBones(model, anim, frameIndex);
-
-            EnsureFrameLightingAppliedForSkinning();
-            int drawCalls = 0;
-            uint colorKey = batch.Key.ColorKey;
-            int materialId = batch.Key.MaterialId;
-            RestoreOpaqueModelState();
-            fixed (RaylibMatrix* transforms = batch.Transforms)
-            {
-                for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
-                {
-                    Mesh mesh = model.meshes[meshIndex];
-                    if (mesh.vertexCount <= 0)
-                    {
-                        continue;
-                    }
-
-                    RequireMeshNormals(in mesh, "GpuSkinnedInstance");
-                    if (!TryResolveInstancedModelMaterial(model, meshIndex, materialId, out Material material))
-                    {
-                        continue;
-                    }
-
-                    material.shader = _skinningShader;
-                    ApplyHostMaterialMaps(ref material, materialId, _skinningShader);
-                    ApplyGpuSkinnedMaterialTint(ref material, colorKey);
-
-                    if (mesh.boneMatrices != null && mesh.boneCount > 0)
-                    {
-                        Rl.rlEnableShader(_skinningShader.id);
-                        Rl.rlSetUniformMatrices(_locBoneMatrices, mesh.boneMatrices, mesh.boneCount);
-                    }
-
-                    for (int offset = 0; offset < batch.Count; offset += _maxModelInstancesPerDraw)
-                    {
-                        int chunkCount = Math.Min(_maxModelInstancesPerDraw, batch.Count - offset);
-                        Rl.DrawMeshInstanced(mesh, material, transforms + offset, chunkCount);
-                        drawCalls++;
-                    }
-                }
-            }
-
-            return drawCalls;
-        }
-
-        private static void RestoreOpaqueModelState()
-        {
-            Rl.rlEnableDepthTest();
-            Rl.rlEnableDepthMask();
-            Rl.rlEnableBackfaceCulling();
-        }
-
-        private bool TryResolveInstancedModelMaterial(Model model, int meshIndex, int materialId, out Material material)
-        {
-            if (model.materialCount <= 0 || model.materials == null)
-            {
-                material = default;
-                int reportKey = HashCode.Combine(model.meshCount, meshIndex, model.materialCount);
-                if (_reportedInvalidInstancedMaterials.Add(reportKey))
-                {
-                    RenderDiagnostics.Warn($"Raylib instanced model skipped meshIndex={meshIndex}: imported model has no material. Host asset material import must provide an explicit material.");
-                }
-
-                return false;
-            }
-
-            int materialIndex = 0;
-            if (model.meshMaterial != null && meshIndex >= 0 && meshIndex < model.meshCount)
-            {
-                materialIndex = model.meshMaterial[meshIndex];
-            }
-
-            if (materialIndex < 0 || materialIndex >= model.materialCount)
-            {
-                int reportKey = HashCode.Combine(model.meshCount, meshIndex, materialIndex);
-                if (_reportedInvalidInstancedMaterials.Add(reportKey))
-                {
-                    RenderDiagnostics.Warn($"Raylib instanced model skipped meshIndex={meshIndex}: meshMaterial index {materialIndex} is outside materialCount={model.materialCount}.");
-                }
-
-                material = default;
-                return false;
-            }
-
-            material = model.materials[materialIndex];
-            material.shader = _shader;
-            ApplyHostMaterialMaps(ref material, materialId, _shader);
-            return true;
-        }
-
-        private void ApplyHostMaterialMaps(ref Material material, int materialId, Shader shader)
-        {
-            if (_materialHostBinder == null || materialId <= 0)
-            {
-                _materialHostBinder?.DetachOwnedMaps(ref material);
-                ApplyPbrUniforms(shader, materialId: 0, hostBound: false);
-                return;
-            }
-
-            bool hostBound = _materialHostBinder.TryApplyHostMaps(ref material, materialId);
-            if (!hostBound)
-            {
-                _materialHostBinder.DetachOwnedMaps(ref material);
-            }
-
-            ApplyPbrUniforms(shader, materialId, hostBound);
-        }
-
         private void ApplyHostMapsToModel(ref Model model, int materialId)
         {
-            if (_materialHostBinder == null || materialId <= 0 || model.materialCount <= 0 || model.materials == null)
+            if (_materialLibrary == null || materialId <= 0 || model.materialCount <= 0 || model.materials == null)
             {
                 return;
             }
@@ -2394,91 +2274,45 @@ namespace Ludots.Raylib.Render
             for (int i = 0; i < model.materialCount; i++)
             {
                 ref Material material = ref model.materials[i];
-                ApplyHostMaterialMaps(ref material, materialId, material.shader.id != 0 ? material.shader : _shader);
+                _materialPipeline.ApplyHostMaterialMaps(ref material, materialId, material.shader.id != 0 ? material.shader : _shader, in _instancingPbrLocs);
             }
         }
-
-        private void ApplyPbrUniforms(Shader shader, int materialId, bool hostBound)
+        private void ApplyInstancedMaterialTint(ref Material material, uint colorKey, RaylibLaneShader lane)
         {
-            float roughness = RaylibMaterialHostBinder.DefaultRoughness;
-            float metallic = RaylibMaterialHostBinder.DefaultMetallic;
-            int hasRoughnessMap = 0;
-            int hasMetallicMap = 0;
-
-            if (hostBound &&
-                _materialHostBinder != null &&
-                _materialHostBinder.TryGetHostPbrParams(
-                    materialId,
-                    out roughness,
-                    out metallic,
-                    out bool hasRoughness,
-                    out bool hasMetallic,
-                    out _))
-            {
-                hasRoughnessMap = hasRoughness ? 1 : 0;
-                hasMetallicMap = hasMetallic ? 1 : 0;
-            }
-
-            bool isSkinning = _skinningShaderReady && shader.id == _skinningShader.id;
-            int locRoughness = isSkinning ? _locSkinningRoughness : _locRoughness;
-            int locMetallic = isSkinning ? _locSkinningMetallic : _locMetallic;
-            int locHasRoughness = isSkinning ? _locSkinningHasRoughnessMap : _locHasRoughnessMap;
-            int locHasMetallic = isSkinning ? _locSkinningHasMetallicMap : _locHasMetallicMap;
-
-            if (locRoughness >= 0)
-            {
-                Rl.SetShaderValue(shader, locRoughness, &roughness, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
-            }
-
-            if (locMetallic >= 0)
-            {
-                Rl.SetShaderValue(shader, locMetallic, &metallic, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
-            }
-
-            if (locHasRoughness >= 0)
-            {
-                Rl.SetShaderValue(shader, locHasRoughness, &hasRoughnessMap, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_INT);
-            }
-
-            if (locHasMetallic >= 0)
-            {
-                Rl.SetShaderValue(shader, locHasMetallic, &hasMetallicMap, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_INT);
-            }
-        }
-
-        private void ApplyInstancedMaterialTint(ref Material material, uint colorKey)
-        {
-            SetTintUniform(colorKey);
-            if (_locColDiffuse >= 0 && material.maps != null)
+            SetTintUniform(lane, colorKey);
+            if (material.maps != null)
             {
                 int albedoIndex = (int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO;
                 Color color = material.maps[albedoIndex].color;
                 Vector4 diffuse = new(color.r / 255f, color.g / 255f, color.b / 255f, color.a / 255f);
-                Rl.SetShaderValue(_shader, _locColDiffuse, &diffuse, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+                lane.SetColDiffuse(diffuse);
             }
         }
 
-        private void ApplyGpuSkinnedMaterialTint(ref Material material, uint colorKey)
+        /// <summary>材质 shaderKey → 车道着色程序；默认 lit 走内建实例化着色器，其余 key 必须已注册（fail-loud）。</summary>
+        private RaylibLaneShader ResolveInstancingLaneShader(int materialId)
         {
-            if (_locSkinningTint >= 0)
+            if (materialId <= 0 || _materialLibrary == null)
             {
-                float r = (colorKey & 0xFF) / 255f;
-                float g = ((colorKey >> 8) & 0xFF) / 255f;
-                float b = ((colorKey >> 16) & 0xFF) / 255f;
-                float a = ((colorKey >> 24) & 0xFF) / 255f;
-                var tint = new Vector4(r, g, b, a);
-                Rl.SetShaderValue(_skinningShader, _locSkinningTint, &tint, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+                return _instancingLane;
             }
 
-            if (_locSkinningColDiffuse >= 0 && material.maps != null)
+            if (!_materialLibrary.TryGetResolved(materialId, out ResolvedMaterialAsset resolved))
             {
-                int albedoIndex = (int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO;
-                Color color = material.maps[albedoIndex].color;
-                Vector4 diffuse = new(color.r / 255f, color.g / 255f, color.b / 255f, color.a / 255f);
-                Rl.SetShaderValue(_skinningShader, _locSkinningColDiffuse, &diffuse, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} cannot resolve shaderKey for unknown materialId={materialId}.");
             }
+
+            return string.Equals(resolved.ShaderKey, RaylibShaderKeys.Lit, StringComparison.Ordinal)
+                ? _instancingLane
+                : _shaderCatalog.RequireInstancing(resolved.ShaderKey);
         }
 
+        /// <summary>给实例化合批车道注册自定义 shaderKey 着色程序（须满足 instancing 接线契约；注册方持有程序生命周期）。</summary>
+        public void RegisterInstancingShader(string shaderKey, RaylibLaneShader laneShader)
+        {
+            _shaderCatalog.RegisterInstancing(shaderKey, laneShader ?? throw new ArgumentNullException(nameof(laneShader)));
+        }
         private static int ResolveMaxModelInstancesPerDraw()
         {
             string? raw = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_MAX_MODEL_INSTANCES_PER_DRAW");
@@ -2522,15 +2356,18 @@ namespace Ludots.Raylib.Render
         private void FlushMeshBatches(List<Batch> batches, ref int totalInstances, ref int batchCount, ref Mesh mesh)
         {
             EnsureFrameLightingAppliedForInstancing();
-            RequireMeshNormals(in mesh, "Instanced primitive");
+            RaylibInstancedMaterialPipeline.RequireMeshNormals(in mesh, "Instanced primitive");
             for (int i = 0; i < batches.Count; i++)
             {
                 var b = batches[i];
                 if (b.Count == 0) continue;
 
-                SetTintUniform(b.ColorKey);
-                SetColDiffuseUniform(Vector4.One);
-                ApplyHostMaterialMaps(ref _material, b.MaterialId, _shader);
+                RaylibLaneShader lane = ResolveInstancingLaneShader(b.MaterialId);
+                _material.shader = lane.Shader;
+                SetTintUniform(lane, b.ColorKey);
+                lane.SetColDiffuse(Vector4.One);
+                _materialPipeline.ApplyHostMaterialMaps(ref _material, b.MaterialId, lane.Shader, in lane.PbrLocs);
+                BindFrameShadow(ref _material);
 
                 fixed (RaylibMatrix* p = b.Transforms)
                 {
@@ -2545,22 +2382,14 @@ namespace Ludots.Raylib.Render
             }
         }
 
-        private void SetTintUniform(uint colorKey)
+        private static void SetTintUniform(RaylibLaneShader lane, uint colorKey)
         {
-            if (_locTint < 0) return;
-
             float r = (colorKey & 0xFF) / 255f;
             float g = ((colorKey >> 8) & 0xFF) / 255f;
             float b = ((colorKey >> 16) & 0xFF) / 255f;
             float a = ((colorKey >> 24) & 0xFF) / 255f;
             var cd = new Vector4(r, g, b, a);
-            Rl.SetShaderValue(_shader, _locTint, &cd, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
-        }
-
-        private void SetColDiffuseUniform(Vector4 color)
-        {
-            if (_locColDiffuse < 0) return;
-            Rl.SetShaderValue(_shader, _locColDiffuse, &color, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+            lane.SetTint(cd);
         }
 
         private void EnsureInitialized()
@@ -2594,176 +2423,68 @@ namespace Ludots.Raylib.Render
             }
             Rl.UploadMesh(ref _vfxBillboardMesh, false);
 
+            _billboardShadowMesh = CreateBillboardShadowMesh();
+
             RaylibEffectShader defaultVfx = _effectShaders.GetOrLoad(RaylibEffectShaderRegistry.DefaultUnlitTintKey);
             _vfxMaterial = Rl.LoadMaterialDefault();
             _vfxMaterial.shader = defaultVfx.Shader;
             _vfxMaterialLoaded = true;
 
             string baseDir = AppContext.BaseDirectory;
-            _shader = Rl.LoadShader(Path.Combine(baseDir, "instancing.vs"), Path.Combine(baseDir, "instancing.fs"));
-            if (_shader.id == 0) throw new InvalidOperationException("Failed to load instancing shader (shader.id == 0).");
+            _instancingLane = RaylibLaneShader.LoadInstancing(baseDir, "instancing.vs", "instancing.fs", "instancing");
+            _shaderCatalog.RegisterInstancing(RaylibShaderKeys.Lit, _instancingLane);
+            _shader = _instancingLane.Shader;
 
             _material = Rl.LoadMaterialDefault();
             _material.shader = _shader;
 
-            _locColDiffuse = Rl.GetShaderLocation(_shader, "colDiffuse");
-            _locTint = Rl.GetShaderLocation(_shader, "tint");
-            _locRoughness = Rl.GetShaderLocation(_shader, "uRoughness");
-            _locMetallic = Rl.GetShaderLocation(_shader, "uMetallic");
-            _locHasRoughnessMap = Rl.GetShaderLocation(_shader, "uHasRoughnessMap");
-            _locHasMetallicMap = Rl.GetShaderLocation(_shader, "uHasMetallicMap");
-            int locMapAlbedo = Rl.GetShaderLocation(_shader, "texture0");
-            int locMapMetalness = Rl.GetShaderLocation(_shader, "texture1");
-            int locMapRoughness = Rl.GetShaderLocation(_shader, "texture3");
-            int locMvp = Rl.GetShaderLocation(_shader, "mvp");
-            int locInstance = Rl.GetShaderLocationAttrib(_shader, "instanceTransform");
-            int locVertexPosition = Rl.GetShaderLocationAttrib(_shader, "vertexPosition");
-            int locVertexTexCoord = Rl.GetShaderLocationAttrib(_shader, "vertexTexCoord");
-            int locVertexNormal = Rl.GetShaderLocationAttrib(_shader, "vertexNormal");
-            _instancingLightingLocs = RaylibFrameLightingLocations.ResolveOrThrow(_shader, "instancing");
+            _instancingPbrLocs = _instancingLane.PbrLocs;
 
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_POSITION] = locVertexPosition;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TEXCOORD01] = locVertexTexCoord;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TEXCOORD02] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_NORMAL] = locVertexNormal;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TANGENT] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_COLOR] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MVP] = locMvp;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_VIEW] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_PROJECTION] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MODEL] = locInstance;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_NORMAL] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VECTOR_VIEW] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_COLOR_DIFFUSE] = _locColDiffuse;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_COLOR_SPECULAR] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_COLOR_AMBIENT] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ALBEDO] = locMapAlbedo;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_METALNESS] = locMapMetalness;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_NORMAL] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ROUGHNESS] = locMapRoughness;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_OCCLUSION] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_EMISSION] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_HEIGHT] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_CUBEMAP] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_IRRADIANCE] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_PREFILTER] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_BRDF] = -1;
-
-            if (locVertexPosition < 0) throw new InvalidOperationException("Shader attrib 'vertexPosition' not found.");
-            if (locVertexTexCoord < 0) throw new InvalidOperationException("Shader attrib 'vertexTexCoord' not found.");
-            if (locVertexNormal < 0) throw new InvalidOperationException("Shader attrib 'vertexNormal' not found.");
-            if (locMvp < 0) throw new InvalidOperationException("Shader uniform 'mvp' not found.");
-            if (locInstance < 0) throw new InvalidOperationException("Shader attrib 'instanceTransform' not found.");
-            if (_locColDiffuse < 0) throw new InvalidOperationException("Shader uniform 'colDiffuse' not found.");
-            if (_locTint < 0) throw new InvalidOperationException("Shader uniform 'tint' not found.");
-            if (locMapAlbedo < 0) throw new InvalidOperationException("Shader uniform 'texture0' not found.");
-            if (_locRoughness < 0) throw new InvalidOperationException("Shader uniform 'uRoughness' not found.");
-            if (_locMetallic < 0) throw new InvalidOperationException("Shader uniform 'uMetallic' not found.");
-            if (_locHasRoughnessMap < 0) throw new InvalidOperationException("Shader uniform 'uHasRoughnessMap' not found.");
-            if (_locHasMetallicMap < 0) throw new InvalidOperationException("Shader uniform 'uHasMetallicMap' not found.");
-            if (locMapMetalness < 0) throw new InvalidOperationException("Shader uniform 'texture1' not found.");
-            if (locMapRoughness < 0) throw new InvalidOperationException("Shader uniform 'texture3' not found.");
-
-            ApplyPbrUniforms(_shader, materialId: 0, hostBound: false);
+            _materialPipeline.ApplyDefaultPbrUniforms(_shader, in _instancingPbrLocs);
 
             _initialized = true;
+            ApplyFrameShadowToInstancingLanes();
             if (_frameLighting != null)
             {
-                _frameLighting.Apply(_shader, in _instancingLightingLocs);
-                if (_hasFrameViewPos)
-                {
-                    _frameLighting.ApplyViewPosition(_shader, in _instancingLightingLocs, _frameViewPos);
-                }
+                ApplyLightingToInstancingLanes(_frameLighting, _frameViewPos);
             }
         }
 
-        private void EnsureSkinningShaderInitialized()
+        private static Mesh CreateBillboardShadowMesh()
         {
-            if (_skinningShaderReady)
+            float[] vertices =
             {
-                return;
-            }
+                -0.5f, -0.5f, 0f,
+                 0.5f, -0.5f, 0f,
+                 0.5f,  0.5f, 0f,
+                -0.5f, -0.5f, 0f,
+                 0.5f,  0.5f, 0f,
+                -0.5f,  0.5f, 0f,
+            };
 
-            string baseDir = AppContext.BaseDirectory;
-            string vsPath = Path.Combine(baseDir, "skinning_instanced.vs");
-            string fsPath = Path.Combine(baseDir, "skinning_instanced.fs");
-            if (!File.Exists(vsPath) || !File.Exists(fsPath))
+            // 镂空影子采样整张贴图：UV 与 DrawBillboardRec 全幅 source rect 同向（+Y 世界向上对应 v=0 图像顶部）。
+            float[] texcoords =
             {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} GpuSkinnedInstance requires skinning_instanced.vs/.fs beside the binary (missing under '{baseDir}').");
-            }
+                0f, 1f,
+                1f, 1f,
+                1f, 0f,
+                0f, 1f,
+                1f, 0f,
+                0f, 0f,
+            };
 
-            _skinningShader = Rl.LoadShader(vsPath, fsPath);
-            if (_skinningShader.id == 0)
+            Mesh mesh = new()
             {
-                throw new InvalidOperationException("Failed to load skinning_instanced shader (shader.id == 0).");
-            }
-
-            _locBoneMatrices = Rl.GetShaderLocation(_skinningShader, "boneMatrices");
-            _locSkinningTint = Rl.GetShaderLocation(_skinningShader, "tint");
-            _locSkinningColDiffuse = Rl.GetShaderLocation(_skinningShader, "colDiffuse");
-            _locSkinningRoughness = Rl.GetShaderLocation(_skinningShader, "uRoughness");
-            _locSkinningMetallic = Rl.GetShaderLocation(_skinningShader, "uMetallic");
-            _locSkinningHasRoughnessMap = Rl.GetShaderLocation(_skinningShader, "uHasRoughnessMap");
-            _locSkinningHasMetallicMap = Rl.GetShaderLocation(_skinningShader, "uHasMetallicMap");
-            int locMapAlbedo = Rl.GetShaderLocation(_skinningShader, "texture0");
-            int locMapMetalness = Rl.GetShaderLocation(_skinningShader, "texture1");
-            int locMapRoughness = Rl.GetShaderLocation(_skinningShader, "texture3");
-            int locMvp = Rl.GetShaderLocation(_skinningShader, "mvp");
-            int locInstance = Rl.GetShaderLocationAttrib(_skinningShader, "instanceTransform");
-            int locVertexPosition = Rl.GetShaderLocationAttrib(_skinningShader, "vertexPosition");
-            int locVertexTexCoord = Rl.GetShaderLocationAttrib(_skinningShader, "vertexTexCoord");
-            int locVertexNormal = Rl.GetShaderLocationAttrib(_skinningShader, "vertexNormal");
-            int locVertexColor = Rl.GetShaderLocationAttrib(_skinningShader, "vertexColor");
-            int locBoneIds = Rl.GetShaderLocationAttrib(_skinningShader, "vertexBoneIds");
-            int locBoneWeights = Rl.GetShaderLocationAttrib(_skinningShader, "vertexBoneWeights");
-            _skinningLightingLocs = RaylibFrameLightingLocations.ResolveOrThrow(_skinningShader, "skinning_instanced");
-
-            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_POSITION] = locVertexPosition;
-            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TEXCOORD01] = locVertexTexCoord;
-            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_NORMAL] = locVertexNormal;
-            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_COLOR] = locVertexColor;
-            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_BONEIDS] = locBoneIds;
-            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_BONEWEIGHTS] = locBoneWeights;
-            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MVP] = locMvp;
-            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MODEL] = locInstance;
-            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_COLOR_DIFFUSE] = _locSkinningColDiffuse;
-            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ALBEDO] = locMapAlbedo;
-            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_METALNESS] = locMapMetalness;
-            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_NORMAL] = -1;
-            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ROUGHNESS] = locMapRoughness;
-            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_BONE_MATRICES] = _locBoneMatrices;
-
-            if (_locBoneMatrices < 0) throw new InvalidOperationException("Skinning shader uniform 'boneMatrices' not found.");
-            if (locMvp < 0) throw new InvalidOperationException("Skinning shader uniform 'mvp' not found.");
-            if (locInstance < 0) throw new InvalidOperationException("Skinning shader attrib 'instanceTransform' not found.");
-            if (locVertexPosition < 0) throw new InvalidOperationException("Skinning shader attrib 'vertexPosition' not found.");
-            if (locVertexNormal < 0) throw new InvalidOperationException("Skinning shader attrib 'vertexNormal' not found.");
-            if (locBoneIds < 0) throw new InvalidOperationException("Skinning shader attrib 'vertexBoneIds' not found.");
-            if (locBoneWeights < 0) throw new InvalidOperationException("Skinning shader attrib 'vertexBoneWeights' not found.");
-            if (_locSkinningColDiffuse < 0) throw new InvalidOperationException("Skinning shader uniform 'colDiffuse' not found.");
-            if (_locSkinningTint < 0) throw new InvalidOperationException("Skinning shader uniform 'tint' not found.");
-            if (locMapAlbedo < 0) throw new InvalidOperationException("Skinning shader uniform 'texture0' not found.");
-            if (_locSkinningRoughness < 0) throw new InvalidOperationException("Skinning shader uniform 'uRoughness' not found.");
-            if (_locSkinningMetallic < 0) throw new InvalidOperationException("Skinning shader uniform 'uMetallic' not found.");
-            if (_locSkinningHasRoughnessMap < 0) throw new InvalidOperationException("Skinning shader uniform 'uHasRoughnessMap' not found.");
-            if (_locSkinningHasMetallicMap < 0) throw new InvalidOperationException("Skinning shader uniform 'uHasMetallicMap' not found.");
-            if (locMapMetalness < 0) throw new InvalidOperationException("Skinning shader uniform 'texture1' not found.");
-            if (locMapRoughness < 0) throw new InvalidOperationException("Skinning shader uniform 'texture3' not found.");
-
-            ApplyPbrUniforms(_skinningShader, materialId: 0, hostBound: false);
-
-            _skinningShaderReady = true;
-            if (_frameLighting != null)
-            {
-                _frameLighting.Apply(_skinningShader, in _skinningLightingLocs);
-                if (_hasFrameViewPos)
-                {
-                    _frameLighting.ApplyViewPosition(_skinningShader, in _skinningLightingLocs, _frameViewPos);
-                }
-            }
+                vertexCount = 6,
+                triangleCount = 2,
+            };
+            mesh.vertices = (float*)Rl.MemAlloc(sizeof(float) * vertices.Length);
+            vertices.AsSpan().CopyTo(new Span<float>(mesh.vertices, vertices.Length));
+            mesh.texcoords = (float*)Rl.MemAlloc(sizeof(float) * texcoords.Length);
+            texcoords.AsSpan().CopyTo(new Span<float>(mesh.texcoords, texcoords.Length));
+            Rl.UploadMesh(ref mesh, false);
+            return mesh;
         }
-
         private void EnsureFrameLightingAppliedForInstancing()
         {
             if (_frameLighting == null)
@@ -2778,47 +2499,26 @@ namespace Ludots.Raylib.Render
                     $"{nameof(RaylibPrimitiveRenderer)} lit instancing requires camera view position before draw.");
             }
 
-            _frameLighting.Apply(_shader, in _instancingLightingLocs);
-            _frameLighting.ApplyViewPosition(_shader, in _instancingLightingLocs, _frameViewPos);
+            ApplyLightingToInstancingLanes(_frameLighting, _frameViewPos);
+            ApplyFrameShadowToInstancingLanes();
         }
-
-        private void EnsureFrameLightingAppliedForSkinning()
+        private void EnsureImmediateLitFrame()
         {
             if (_frameLighting == null)
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} lit GpuSkinnedInstance requires {nameof(ApplyFrameLighting)} before draw.");
+                    $"{nameof(RaylibPrimitiveRenderer)} lit immediate primitives require {nameof(ApplyFrameLighting)} before draw.");
             }
 
             if (!_hasFrameViewPos)
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} lit GpuSkinnedInstance requires camera view position before draw.");
+                    $"{nameof(RaylibPrimitiveRenderer)} lit immediate primitives require camera view position before draw.");
             }
 
-            EnsureSkinningShaderInitialized();
-            _frameLighting.Apply(_skinningShader, in _skinningLightingLocs);
-            _frameLighting.ApplyViewPosition(_skinningShader, in _skinningLightingLocs, _frameViewPos);
+            _immediateLit ??= new RaylibLitModel();
+            _immediateLit.BeginFrame(_frameLighting, _frameViewPos, _frameShadow, _frameShadowTexelWorld);
         }
-
-        private static void RequireMeshNormals(in Mesh mesh, string lane)
-        {
-            if (mesh.normals == null)
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} {lane} lit path requires mesh normals (vertexCount={mesh.vertexCount}); silent flat shading is forbidden.");
-            }
-        }
-
-        private static uint PackRgba(in Vector4 c)
-        {
-            uint r = Clamp01ToByte(c.X);
-            uint g = Clamp01ToByte(c.Y);
-            uint b = Clamp01ToByte(c.Z);
-            uint a = Clamp01ToByte(c.W);
-            return r | (g << 8) | (b << 16) | (a << 24);
-        }
-
         private static Color ToRaylibColor(in Vector4 c) => RaylibColorUtil.ToRaylibColor(in c);
 
         private Vector3 ResolveBillboardLitTintRgb()
@@ -2852,7 +2552,7 @@ namespace Ludots.Raylib.Render
                 }
 
                 Model model = kvp.Value.Model;
-                _materialHostBinder?.DetachOwnedMaps(model);
+                _materialLibrary?.DetachOwnedMaps(model);
                 Rl.UnloadModel(model);
             }
             _modelCache.Clear();
@@ -2873,7 +2573,8 @@ namespace Ludots.Raylib.Render
 
             if (_proceduralMeshMaterialLoaded)
             {
-                _materialHostBinder?.DetachOwnedMaps(ref _proceduralMeshMaterial);
+                _materialLibrary?.DetachOwnedMaps(ref _proceduralMeshMaterial);
+                RaylibShadowSampling.ClearTexture(ref _proceduralMeshMaterial);
                 Rl.UnloadMaterial(_proceduralMeshMaterial);
                 _proceduralMeshMaterialLoaded = false;
             }
@@ -2885,43 +2586,33 @@ namespace Ludots.Raylib.Render
                 _vfxMaterialLoaded = false;
             }
 
-            if (_decalMaterialLoaded)
-            {
-                _materialHostBinder?.DetachOwnedMaps(ref _decalMaterial);
-                _decalMaterial.shader = default;
-                Rl.UnloadMaterial(_decalMaterial);
-                _decalMaterialLoaded = false;
-            }
+            _decalRenderer.Dispose();
+            _vegetationCutout.Dispose();
+            _gpuSkinned.Dispose();
 
-            _gpuSkinnedModelCache.UnloadAll(model => _materialHostBinder?.DetachOwnedMaps(model));
+            _gpuSkinnedModelCache.UnloadAll(model => _materialLibrary?.DetachOwnedMaps(model));
             _gpuSkinnedModelCache.Dispose();
             _vfxRenderer.Dispose();
             _effectShaders.Dispose();
-            _materialHostBinder?.Dispose();
+            _materialLibrary?.Dispose();
+            _skyIbl?.Dispose();
+            _skyIbl = null;
+            _immediateLit?.Dispose();
+            _immediateLit = null;
 
             if (!_initialized) return;
 
             if (_cubeMesh.vertexCount > 0) Rl.UnloadMesh(_cubeMesh);
             if (_sphereMesh.vertexCount > 0) Rl.UnloadMesh(_sphereMesh);
             if (_vfxBillboardMesh.vertexCount > 0) Rl.UnloadMesh(_vfxBillboardMesh);
+            if (_billboardShadowMesh.vertexCount > 0) Rl.UnloadMesh(_billboardShadowMesh);
             _material.shader = default;
+            // UnloadMaterial 会删除材质槽上的全部纹理；IBL 纹理归 RaylibSkyIbl 所有，先清槽防双删。
+            _material.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_CUBEMAP].texture = default;
+            _material.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_BRDF].texture = default;
+            RaylibShadowSampling.ClearTexture(ref _material);
             Rl.UnloadMaterial(_material);
             Rl.UnloadShader(_shader);
-            if (_vegetationCutoutShaderReady)
-            {
-                Rl.UnloadShader(_vegetationCutoutShader);
-                _vegetationCutoutShaderReady = false;
-            }
-            if (_decalProjectShaderReady)
-            {
-                Rl.UnloadShader(_decalProjectShader);
-                _decalProjectShaderReady = false;
-            }
-            if (_skinningShaderReady)
-            {
-                Rl.UnloadShader(_skinningShader);
-                _skinningShaderReady = false;
-            }
             _initialized = false;
         }
 
@@ -2985,39 +2676,6 @@ namespace Ludots.Raylib.Render
                 Transforms = new RaylibMatrix[Math.Max(4, initialCapacity)];
                 Count = 0;
                 Revision = int.MinValue;
-            }
-
-            public void Add(in RaylibMatrix matrix)
-            {
-                if (Count >= Transforms.Length)
-                {
-                    Array.Resize(ref Transforms, Transforms.Length * 2);
-                }
-
-                Transforms[Count++] = matrix;
-            }
-        }
-
-        private readonly record struct GpuSkinnedInstanceBatchKey(
-            int MeshAssetId,
-            int MaterialId,
-            uint ColorKey,
-            int ClipIndex,
-            int FrameIndex);
-
-        private sealed class GpuSkinnedInstanceBatch
-        {
-            public readonly GpuSkinnedInstanceBatchKey Key;
-            public RaylibMatrix[] Transforms;
-            public int Count;
-            public Model Model;
-            public ModelAnimation* Animations;
-            public int AnimCount;
-
-            public GpuSkinnedInstanceBatch(GpuSkinnedInstanceBatchKey key, int initialCapacity = 256)
-            {
-                Key = key;
-                Transforms = new RaylibMatrix[Math.Max(4, initialCapacity)];
             }
 
             public void Add(in RaylibMatrix matrix)
