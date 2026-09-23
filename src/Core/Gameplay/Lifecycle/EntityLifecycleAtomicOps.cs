@@ -1,6 +1,8 @@
 using System;
 using Arch.Core;
+using Ludots.Core.Association;
 using Ludots.Core.Components;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
@@ -43,28 +45,43 @@ namespace Ludots.Core.Gameplay.Lifecycle
 
         public static void CopyIdentityComponents(World world, Entity target, in LifecycleSnapshot snapshot)
         {
-            if (snapshot.HasPlayerOwner)
+            CopyIdentityComponents(world, target, Entity.Null, in snapshot, ownership: null, relationships: null, memberOfTypeId: -1);
+        }
+
+        public static void CopyIdentityComponents(
+            World world,
+            Entity target,
+            Entity source,
+            in LifecycleSnapshot snapshot,
+            OwnershipResolver? ownership,
+            RelationshipRuntime? relationships,
+            int memberOfTypeId)
+        {
+            if (ownership != null &&
+                world.IsAlive(source) &&
+                ownership.TryResolveRootOwner(source, out Entity root) &&
+                world.IsAlive(root) &&
+                world.Has<PlayerIdentity>(root))
             {
-                if (world.Has<PlayerOwner>(target))
-                {
-                    world.Set(target, snapshot.PlayerOwner);
-                }
-                else
-                {
-                    world.Add(target, snapshot.PlayerOwner);
-                }
+                ownership.EnsureOwnership(root, target);
+                ParticipantIdentityProjector.SyncPlayerOwner(world, target, ownership);
+            }
+            else if (snapshot.HasPlayerOwner)
+            {
+                ParticipantIdentityProjector.UpsertPlayerOwner(world, target, snapshot.PlayerOwner.PlayerId);
             }
 
-            if (snapshot.HasTeam)
+            if (relationships != null &&
+                memberOfTypeId >= 0 &&
+                world.IsAlive(source) &&
+                ParticipantIdentityProjector.TryFindTeamRepresentative(world, relationships, memberOfTypeId, source, out Entity teamRepresentative))
             {
-                if (world.Has<Team>(target))
-                {
-                    world.Set(target, snapshot.Team);
-                }
-                else
-                {
-                    world.Add(target, snapshot.Team);
-                }
+                relationships.EnsureLink(target, teamRepresentative, memberOfTypeId);
+                ParticipantIdentityProjector.ProjectTeam(world, target, teamRepresentative);
+            }
+            else if (snapshot.HasTeam)
+            {
+                ParticipantIdentityProjector.UpsertTeam(world, target, snapshot.Team.Id);
             }
         }
 

@@ -43,7 +43,15 @@ namespace Ludots.Core.Gameplay.Lifecycle
         {
             RejectOuterEffectTransaction(nameof(HandleCopyIdentityComponents));
             var state = RequireTransactionState();
-            EntityLifecycleAtomicOps.CopyIdentityComponents(world, state.Target, in state.Snapshot);
+            var services = RequireServices();
+            EntityLifecycleAtomicOps.CopyIdentityComponents(
+                world,
+                state.Target,
+                state.Source,
+                in state.Snapshot,
+                services.Ownership,
+                services.Relationships,
+                services.MemberOfTypeId);
         }
 
         public static void HandleCopyAttributeSlice(

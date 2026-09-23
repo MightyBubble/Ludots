@@ -897,6 +897,11 @@ namespace Ludots.Core.Engine
             int controlsRelationshipTypeId = relationshipTypeRegistry.GetId("Controls");
             int memberOfRelationshipTypeId = relationshipTypeRegistry.GetId("MemberOf");
             var ownershipResolver = new OwnershipResolver(relationshipRuntime, ownsRelationshipTypeId);
+            ownershipResolver.BindIdentityProjection(World);
+            relationshipRuntime.BindParticipantIdentityProjection(
+                ownershipResolver,
+                ownsRelationshipTypeId,
+                memberOfRelationshipTypeId);
             var controlDomainQuery = new ControlDomainQuery(
                 World,
                 relationshipRuntime,
@@ -2397,7 +2402,10 @@ namespace Ludots.Core.Engine
                 presenterRuntime,
                 presenterDefinitions,
                 componentAuthoringContext,
-                entityTriggerGraphMounts: EntityTriggerGraphMounts);
+                entityTriggerGraphMounts: EntityTriggerGraphMounts,
+                ownership: ownershipResolver,
+                relationships: relationshipRuntime,
+                memberOfTypeId: memberOfRelationshipTypeId);
             var effectProcessingLoopSystem = new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasRuntimeCapacity.EffectLifetimeSnapshotCapacity, gasRuntimeCapacity.EffectFanOutCommandCapacity, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, runtimeEntityLifecycleQueue, entityLifecycleServices, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps, exchangeRuntime: exchangeRuntime, progressionEvaluator: progressionEvaluator, orderTypeRegistry: orderTypeRegistry, orderRuleRegistry: orderRuleRegistry, stepRateHz: stepRateHz, relationshipRuntime: relationshipRuntime, knowledgeAreaRevealRuntime: knowledgeAreaRevealRuntime, maxWorkUnitsPerSlice: gasRuntimeCapacity.EffectProcessingMaxWorkUnitsPerSlice, orderIntake: orderQueue, poseAuthorityArbiter: poseAuthorityArbiter, aggregateDirty: aggregateDirtyRegistry);
             effectProcessingLoopSystem.DueWheel = effectDueWheel;
             RegisterSystem(effectProcessingLoopSystem, SystemGroup.EffectProcessing);
