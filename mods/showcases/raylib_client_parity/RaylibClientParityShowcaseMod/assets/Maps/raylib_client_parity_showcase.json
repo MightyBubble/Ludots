@@ -12,14 +12,22 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthCells": 512,
-      "HeightCells": 512,
-      "GridCellSizeCm": 100
+      "WidthCm": 51200,
+      "HeightCm": 51200,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      }
     }
   ],
   "DefaultCamera": {
-    "TargetXCm": 0,
-    "TargetYCm": 0
+    "TargetXCm": 25600,
+    "TargetYCm": 25600
   },
   "Entities": [
     {
@@ -27,8 +35,8 @@
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
-            "X": 650,
-            "Y": 0
+            "X": 26250,
+            "Y": 25600
           }
         }
       }
@@ -38,8 +46,8 @@
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
-            "X": -650,
-            "Y": 0
+            "X": 24950,
+            "Y": 25600
           }
         }
       }
@@ -49,8 +57,8 @@
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
-            "X": -630,
-            "Y": 900
+            "X": 24970,
+            "Y": 26500
           }
         }
       }
@@ -60,8 +68,8 @@
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
-            "X": -450,
-            "Y": 900
+            "X": 25150,
+            "Y": 26500
           }
         }
       }
@@ -71,8 +79,8 @@
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
-            "X": -270,
-            "Y": 900
+            "X": 25330,
+            "Y": 26500
           }
         }
       }
@@ -82,8 +90,8 @@
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
-            "X": -90,
-            "Y": 900
+            "X": 25510,
+            "Y": 26500
           }
         }
       }
@@ -93,8 +101,8 @@
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
-            "X": 90,
-            "Y": 900
+            "X": 25690,
+            "Y": 26500
           }
         }
       }
@@ -104,8 +112,8 @@
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
-            "X": 270,
-            "Y": 900
+            "X": 25870,
+            "Y": 26500
           }
         }
       }
@@ -115,8 +123,8 @@
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
-            "X": 450,
-            "Y": 900
+            "X": 26050,
+            "Y": 26500
           }
         }
       }
@@ -126,8 +134,8 @@
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
-            "X": 630,
-            "Y": 900
+            "X": 26230,
+            "Y": 26500
           }
         }
       }
@@ -137,8 +145,8 @@
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
-            "X": -540,
-            "Y": 1080
+            "X": 25060,
+            "Y": 26680
           }
         }
       }
@@ -148,8 +156,8 @@
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
-            "X": -360,
-            "Y": 1080
+            "X": 25240,
+            "Y": 26680
           }
         }
       }
@@ -159,8 +167,8 @@
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
-            "X": -180,
-            "Y": 1080
+            "X": 25420,
+            "Y": 26680
           }
         }
       }
@@ -170,8 +178,8 @@
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
-            "X": 0,
-            "Y": 1080
+            "X": 25600,
+            "Y": 26680
           }
         }
       }
@@ -181,8 +189,8 @@
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
-            "X": 180,
-            "Y": 1080
+            "X": 25780,
+            "Y": 26680
           }
         }
       }
@@ -192,8 +200,8 @@
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
-            "X": 360,
-            "Y": 1080
+            "X": 25960,
+            "Y": 26680
           }
         }
       }
@@ -203,8 +211,8 @@
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
-            "X": 540,
-            "Y": 1080
+            "X": 26140,
+            "Y": 26680
           }
         }
       }
@@ -214,8 +222,8 @@
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
-            "X": 720,
-            "Y": 1080
+            "X": 26320,
+            "Y": 26680
           }
         }
       }

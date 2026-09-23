@@ -14,15 +14,23 @@
     {
       "Name": "default",
       "SpatialType": "NodeGraph",
-      "WidthCells": 512,
-      "HeightCells": 512,
-      "GridCellSizeCm": 100
+      "WidthCm": 51200,
+      "HeightCm": 51200,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      }
     }
   ],
   "DefaultCamera": {
     "VirtualCameraId": "RoadNetwork.Camera.Tactical",
-    "TargetXCm": -9800,
-    "TargetYCm": 0
+    "TargetXCm": 15800,
+    "TargetYCm": 25600
   },
   "Entities": [
     {
@@ -34,8 +42,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": -18000,
-            "Y": 0
+            "X": 7600,
+            "Y": 25600
           }
         }
       }
@@ -48,8 +56,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": -9000,
-            "Y": 0
+            "X": 16600,
+            "Y": 25600
           }
         }
       }
@@ -62,8 +70,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": 0,
-            "Y": 0
+            "X": 25600,
+            "Y": 25600
           }
         }
       }
@@ -76,8 +84,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": 9000,
-            "Y": 0
+            "X": 34600,
+            "Y": 25600
           }
         }
       }
@@ -91,8 +99,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": 18000,
-            "Y": 0
+            "X": 43600,
+            "Y": 25600
           }
         }
       }
@@ -105,8 +113,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": 0,
-            "Y": 9000
+            "X": 25600,
+            "Y": 34600
           }
         }
       }
@@ -119,8 +127,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": 0,
-            "Y": -9000
+            "X": 25600,
+            "Y": 16600
           }
         }
       }
@@ -133,8 +141,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": 9000,
-            "Y": 9000
+            "X": 34600,
+            "Y": 34600
           }
         }
       }
@@ -147,8 +155,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": 9000,
-            "Y": -9000
+            "X": 34600,
+            "Y": 16600
           }
         }
       }
@@ -167,8 +175,8 @@
         "CommandSourceDragState": {},
         "WorldPositionCm": {
           "Value": {
-            "X": -9800,
-            "Y": 0
+            "X": 15800,
+            "Y": 25600
           }
         },
         "RoadMoveProfileRef": {
@@ -190,8 +198,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": -9400,
-            "Y": 700
+            "X": 16200,
+            "Y": 26300
           }
         },
         "RoadMoveProfileRef": {
@@ -213,8 +221,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": -9400,
-            "Y": -700
+            "X": 16200,
+            "Y": 24900
           }
         },
         "RoadMoveProfileRef": {
@@ -233,8 +241,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": 9800,
-            "Y": 0
+            "X": 35400,
+            "Y": 25600
           }
         },
         "RoadMoveProfileRef": {
@@ -253,8 +261,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": 9000,
-            "Y": 9000
+            "X": 34600,
+            "Y": 34600
           }
         },
         "RoadMoveProfileRef": {
@@ -273,8 +281,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": 9000,
-            "Y": -9000
+            "X": 34600,
+            "Y": 16600
           }
         },
         "RoadMoveProfileRef": {

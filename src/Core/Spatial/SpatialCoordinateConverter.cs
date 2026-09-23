@@ -7,9 +7,9 @@ using Ludots.Platform.Abstractions;
 namespace Ludots.Core.Spatial
 {
     /// <summary>
-    /// Board-local topology coordinates to world cm. Anchored boards (#1567 slice 2b)
-    /// carry their declared min-corner as the grid/hex frame origin; centered boards
-    /// keep the legacy frame pinned at world 0 for zero drift.
+    /// Board-local topology coordinates to world cm.
+    /// The origin is the world position of the corner where cells start.
+    /// GridToWorld then steps half a cell to the cell center.
     /// </summary>
     public sealed class SpatialCoordinateConverter : ISpatialCoordinateConverter
     {

@@ -25,9 +25,17 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthCells": 512,
-      "HeightCells": 512,
-      "GridCellSizeCm": 100
+      "WidthCm": 51200,
+      "HeightCm": 51200,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      }
     }
   ],
   "DefaultCamera": {

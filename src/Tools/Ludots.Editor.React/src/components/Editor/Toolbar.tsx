@@ -441,29 +441,42 @@ export const Toolbar: React.FC = () => {
     const boardPropertyChunkSizeCells = canvasMapLoaded
         ? boardMetrics.chunkSizeCells
         : (selectedBoardInfo?.chunkSizeCells ?? selectedMapInfo?.chunkSizeCells ?? boardMetrics.chunkSizeCells);
+    const boardSource = selectedBoardInfo ?? selectedMapInfo ?? null;
     const boardScalePreviewCellSizeCm = Math.max(1, Math.floor(editBoardCellSizeCm || CellCm));
     const boardScalePreviewHexEdgeLengthCm = Math.max(1, Math.floor(editBoardHexEdgeLengthCm || DefaultHexEdgeLengthCm));
-    const boardScalePreviewWidthCells = boardPropertyWidthChunks * boardPropertyChunkSizeCells;
-    const boardScalePreviewHeightCells = boardPropertyHeightChunks * boardPropertyChunkSizeCells;
-    const boardScalePreviewWidthCm = boardScalePreviewWidthCells * boardScalePreviewCellSizeCm;
-    const boardScalePreviewHeightCm = boardScalePreviewHeightCells * boardScalePreviewCellSizeCm;
+    const authoredWidthCm = boardSource?.effectiveWidthCm ?? 0;
+    const authoredHeightCm = boardSource?.effectiveHeightCm ?? 0;
+    const fallbackWidthCells = boardPropertyWidthChunks * boardPropertyChunkSizeCells;
+    const fallbackHeightCells = boardPropertyHeightChunks * boardPropertyChunkSizeCells;
+    const boardScalePreviewWidthCells = authoredWidthCm > 0
+        ? Math.floor(authoredWidthCm / boardScalePreviewCellSizeCm)
+        : fallbackWidthCells;
+    const boardScalePreviewHeightCells = authoredHeightCm > 0
+        ? Math.floor(authoredHeightCm / boardScalePreviewCellSizeCm)
+        : fallbackHeightCells;
+    const boardScalePreviewWidthCm = authoredWidthCm > 0
+        ? authoredWidthCm
+        : boardScalePreviewWidthCells * boardScalePreviewCellSizeCm;
+    const boardScalePreviewHeightCm = authoredHeightCm > 0
+        ? authoredHeightCm
+        : boardScalePreviewHeightCells * boardScalePreviewCellSizeCm;
     const boardScalePreviewChunkCm = boardPropertyChunkSizeCells * boardScalePreviewCellSizeCm;
     const boardScaleCellChanged = boardScalePreviewCellSizeCm !== boardPropertyCellSizeCm;
     const boardScaleHexChanged = boardPropertyTopology === 'HexGrid' && boardScalePreviewHexEdgeLengthCm !== boardPropertyHexEdgeLengthCm;
-    const boardSource = selectedBoardInfo ?? selectedMapInfo ?? null;
     const editOriginXValid = editBoardOriginXCm.trim() === '' || Number.isFinite(Number(editBoardOriginXCm));
     const editOriginYValid = editBoardOriginYCm.trim() === '' || Number.isFinite(Number(editBoardOriginYCm));
     const editOriginComplete = editBoardOriginXCm.trim() !== '' && editBoardOriginYCm.trim() !== '';
     const editOriginCleared = editBoardOriginXCm.trim() === '' && editBoardOriginYCm.trim() === '';
     const editOriginChanged = boardSource != null && (
-        (editOriginComplete && (Math.floor(Number(editBoardOriginXCm)) !== boardSource.originXcm || Math.floor(Number(editBoardOriginYCm)) !== boardSource.originYcm)) ||
-        (editOriginCleared && boardSource.originXcm != null));
-    const editHexesComplete = editBoardWidthHexes.trim() !== '' && editBoardHeightHexes.trim() !== '';
-    const editHexesCleared = editBoardWidthHexes.trim() === '' && editBoardHeightHexes.trim() === '';
-    const editHexesChanged = boardSource != null && boardPropertyTopology === 'HexGrid' && (
-        (editHexesComplete && (Math.floor(Number(editBoardWidthHexes)) !== boardSource.widthHexes || Math.floor(Number(editBoardHeightHexes)) !== boardSource.heightHexes)) ||
-        (editHexesCleared && boardSource.widthHexes != null));
-    const boardScaleHasChanges = boardScaleCellChanged || boardScaleHexChanged || editOriginChanged || editHexesChanged;
+        (editOriginComplete && editOriginXValid && editOriginYValid && (
+            Math.floor(Number(editBoardOriginXCm)) !== boardSource.anchorWorldXCm ||
+            Math.floor(Number(editBoardOriginYCm)) !== boardSource.anchorWorldYCm)) ||
+        (editOriginCleared && (
+            boardSource.anchorWorldXCm !== 0 ||
+            boardSource.anchorWorldYCm !== 0 ||
+            boardSource.anchorLocalXCm !== 0 ||
+            boardSource.anchorLocalYCm !== 0)));
+    const boardScaleHasChanges = boardScaleCellChanged || boardScaleHexChanged || editOriginChanged;
     const newMapWidthMetersValue = parseDraftNumber(newMapWidthMeters);
     const newMapHeightMetersValue = parseDraftNumber(newMapHeightMeters);
     const newMapCellSizeCmValue = parseDraftNumber(newMapCellSizeCm);
@@ -550,8 +563,8 @@ export const Toolbar: React.FC = () => {
         const source = selectedBoardInfo ?? selectedMapInfo;
         setEditBoardCellSizeCm(source?.cellSizeCm ?? CellCm);
         setEditBoardHexEdgeLengthCm(source?.hexEdgeLengthCm ?? DefaultHexEdgeLengthCm);
-        setEditBoardOriginXCm(source?.originXcm != null ? String(source.originXcm) : '');
-        setEditBoardOriginYCm(source?.originYcm != null ? String(source.originYcm) : '');
+        setEditBoardOriginXCm(source ? String(source.anchorWorldXCm) : '');
+        setEditBoardOriginYCm(source ? String(source.anchorWorldYCm) : '');
         setEditBoardWidthHexes(source?.widthHexes != null ? String(source.widthHexes) : '');
         setEditBoardHeightHexes(source?.heightHexes != null ? String(source.heightHexes) : '');
     }, [selectedBoardInfo, selectedMapInfo, selectedMapId, selectedBoardName]);
@@ -622,12 +635,17 @@ export const Toolbar: React.FC = () => {
             alert(newBoardCreateDisabledReason);
             return;
         }
+        const cellSizeCm = Math.max(1, Math.floor(newBoardCellSizeCmValue));
         const request: BoardCreateRequest = {
             name: newBoardName.trim(),
             spatialType: newBoardTopology,
-            widthCells: newBoardAllocation.allocatedWidthCells,
-            heightCells: newBoardAllocation.allocatedHeightCells,
-            cellSizeCm: Math.max(1, Math.floor(newBoardCellSizeCmValue)),
+            widthCm: newBoardAllocation.allocatedWidthCells * cellSizeCm,
+            heightCm: newBoardAllocation.allocatedHeightCells * cellSizeCm,
+            cellSizeCm,
+            anchorLocalXCm: 0,
+            anchorLocalYCm: 0,
+            anchorWorldXCm: 0,
+            anchorWorldYCm: 0,
         };
         if (newBoardTopology === 'HexGrid') {
             request.hexEdgeLengthCm = Math.max(1, Math.floor(newBoardHexEdgeLengthCmValue));
@@ -636,11 +654,11 @@ export const Toolbar: React.FC = () => {
         const originY = Number(newBoardOriginYCm);
         if (newBoardOriginXCm.trim() !== '' || newBoardOriginYCm.trim() !== '') {
             if (!Number.isFinite(originX) || !Number.isFinite(originY)) {
-                alert('Board origin must be two finite cm values (or both empty for centered).');
+                alert('Anchor world must be two finite Ludots centimeters, or both empty to keep the cell corner on the Ludots origin.');
                 return;
             }
-            request.originXCm = Math.floor(originX);
-            request.originYCm = Math.floor(originY);
+            request.anchorWorldXCm = Math.floor(originX);
+            request.anchorWorldYCm = Math.floor(originY);
         }
         try {
             await createBoard(request);
@@ -661,16 +679,15 @@ export const Toolbar: React.FC = () => {
             request.hexEdgeLengthCm = boardScalePreviewHexEdgeLengthCm;
         }
         if (editOriginChanged && editOriginComplete && editOriginXValid && editOriginYValid) {
-            request.originXCm = Math.floor(Number(editBoardOriginXCm));
-            request.originYCm = Math.floor(Number(editBoardOriginYCm));
+            request.anchorLocalXCm = boardSource?.anchorLocalXCm ?? 0;
+            request.anchorLocalYCm = boardSource?.anchorLocalYCm ?? 0;
+            request.anchorWorldXCm = Math.floor(Number(editBoardOriginXCm));
+            request.anchorWorldYCm = Math.floor(Number(editBoardOriginYCm));
         } else if (editOriginChanged && editOriginCleared) {
-            request.clearOrigin = true;
-        }
-        if (editHexesChanged && editHexesComplete) {
-            request.widthHexes = Math.max(1, Math.floor(Number(editBoardWidthHexes)));
-            request.heightHexes = Math.max(1, Math.floor(Number(editBoardHeightHexes)));
-        } else if (editHexesChanged && editHexesCleared) {
-            request.clearHexAuthoring = true;
+            request.anchorLocalXCm = 0;
+            request.anchorLocalYCm = 0;
+            request.anchorWorldXCm = 0;
+            request.anchorWorldYCm = 0;
         }
         try {
             await updateSelectedBoard(request);
@@ -2002,25 +2019,25 @@ export const Toolbar: React.FC = () => {
                             </label>
                             <div className="grid grid-cols-2 gap-2">
                                 <label className={fieldLabelClass}>
-                                    Origin X cm
+                                    Anchor world X cm
                                     <input
                                         type="number"
                                         value={editBoardOriginXCm}
                                         onChange={(e) => setEditBoardOriginXCm(e.target.value)}
                                         className={inputClass}
                                         aria-invalid={!editOriginXValid}
-                                        title="Board min-corner anchor in world cm; empty = centered. Root boards stay centered."
+                                        title="Anchor.World X in Ludots centimeters. The cell corner is World minus Local. Empty both fields to put that corner on the Ludots origin. The root board's world anchor stays (0, 0)."
                                     />
                                 </label>
                                 <label className={fieldLabelClass}>
-                                    Origin Y cm
+                                    Anchor world Y cm
                                     <input
                                         type="number"
                                         value={editBoardOriginYCm}
                                         onChange={(e) => setEditBoardOriginYCm(e.target.value)}
                                         className={inputClass}
                                         aria-invalid={!editOriginYValid}
-                                        title="Board min-corner anchor in world cm; empty = centered. Root boards stay centered."
+                                        title="Anchor.World Y in Ludots centimeters. The cell corner is World minus Local. Empty both fields to put that corner on the Ludots origin. The root board's world anchor stays (0, 0)."
                                     />
                                 </label>
                             </div>
@@ -2032,9 +2049,9 @@ export const Toolbar: React.FC = () => {
                                             type="number"
                                             min="1"
                                             value={editBoardWidthHexes}
-                                            onChange={(e) => setEditBoardWidthHexes(e.target.value)}
+                                            readOnly
                                             className={inputClass}
-                                            title="Hex-count authoring takes precedence over cells; empty = fall back to cells."
+                                            title="Whole hexes that fit in the centimeter rectangle. Change the rectangle or the hex edge; the count is derived."
                                         />
                                     </label>
                                     <label className={fieldLabelClass}>
@@ -2043,9 +2060,9 @@ export const Toolbar: React.FC = () => {
                                             type="number"
                                             min="1"
                                             value={editBoardHeightHexes}
-                                            onChange={(e) => setEditBoardHeightHexes(e.target.value)}
+                                            readOnly
                                             className={inputClass}
-                                            title="Hex-count authoring takes precedence over cells; empty = fall back to cells."
+                                            title="Whole hexes that fit in the centimeter rectangle. Change the rectangle or the hex edge; the count is derived."
                                         />
                                     </label>
                                 </div>
@@ -2053,7 +2070,7 @@ export const Toolbar: React.FC = () => {
                             {boardSource != null && (boardSource.originXcm != null || boardSource.effectiveWidthCm > 0) ? (
                                 <div className="rounded border border-slate-800 bg-slate-950/70 px-2 py-1 font-mono text-[10px] text-slate-400">
                                     effective {(boardSource.effectiveWidthCm / 100).toLocaleString()}m x {(boardSource.effectiveHeightCm / 100).toLocaleString()}m
-                                    {boardSource.originXcm != null ? ' @ (' + (boardSource.originXcm / 100).toLocaleString() + 'm, ' + ((boardSource.originYcm ?? 0) / 100) + 'm)' : ' centered'}
+                                    {boardSource.originXcm != null ? ' cell corner @ (' + (boardSource.originXcm / 100).toLocaleString() + 'm, ' + ((boardSource.originYcm ?? 0) / 100).toLocaleString() + 'm)' : ''}
                                     {boardSource.widthHexes != null ? ' - ' + boardSource.widthHexes + 'x' + boardSource.heightHexes + ' hexes' : ''}
                                 </div>
                             ) : null}
@@ -3065,27 +3082,27 @@ export const Toolbar: React.FC = () => {
                             </div>
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                 <label className="block text-sm text-slate-400">
-                                    Origin X cm (optional)
+                                    Anchor world X cm
                                     <input
                                         type="text"
                                         inputMode="numeric"
                                         value={newBoardOriginXCm}
                                         onChange={(e) => setNewBoardOriginXCm(e.target.value)}
                                         className={inputClass}
-                                        placeholder="centered"
-                                        title="Min-corner anchor in world cm; leave both empty for the centered default. Root boards cannot declare an origin."
+                                        placeholder="0"
+                                        title="Anchor.World X in Ludots centimeters. Leave both empty to put the cell corner on the Ludots origin. The first board is the root and its world anchor must stay (0, 0)."
                                     />
                                 </label>
                                 <label className="block text-sm text-slate-400">
-                                    Origin Y cm (optional)
+                                    Anchor world Y cm
                                     <input
                                         type="text"
                                         inputMode="numeric"
                                         value={newBoardOriginYCm}
                                         onChange={(e) => setNewBoardOriginYCm(e.target.value)}
                                         className={inputClass}
-                                        placeholder="centered"
-                                        title="Min-corner anchor in world cm; leave both empty for the centered default. Root boards cannot declare an origin."
+                                        placeholder="0"
+                                        title="Anchor.World Y in Ludots centimeters. Leave both empty to put the cell corner on the Ludots origin. The first board is the root and its world anchor must stay (0, 0)."
                                     />
                                 </label>
                             </div>
