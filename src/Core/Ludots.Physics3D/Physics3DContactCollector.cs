@@ -183,9 +183,9 @@ internal sealed class Physics3DContactCollector
         return EventCount;
     }
 
-    public bool ContainsPersistentPair(int slotA, int slotB)
+    public bool ContainsPersistentPair(Physics3DBodyId bodyA, Physics3DBodyId bodyB)
     {
-        ulong key = CreateKey(slotA, slotB);
+        ulong key = CreateKey(bodyA.Slot, bodyB.Slot);
         int low = 0;
         int high = Count - 1;
         while (low <= high)
@@ -194,7 +194,9 @@ internal sealed class Physics3DContactCollector
             ulong candidate = _persistentKeys[middle];
             if (candidate == key)
             {
-                return true;
+                Physics3DContactPair pair = _pairs[middle];
+                return (pair.BodyA == bodyA && pair.BodyB == bodyB) ||
+                       (pair.BodyA == bodyB && pair.BodyB == bodyA);
             }
 
             if (candidate < key)

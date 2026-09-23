@@ -99,6 +99,52 @@ public sealed class Character3DTests
     }
 
     [Test]
+    public void OneWayPlatformPersistentContact_RemainsCharacterSupportWhenPlatformVelocityChanges()
+    {
+        using var world = CreateWorld(mobileCapacity: 3, staticCapacity: 0, solverSubstepCount: 1);
+        Physics3DShapeId platformShape = world.RegisterBoxShape(new Vector3(500f, 20f, 500f));
+        Physics3DShapeId capsuleShape = world.RegisterCapsuleShape(30f, 100f);
+        Physics3DShapeId anchorShape = world.RegisterSphereShape(1f);
+        Physics3DBodyId platform = world.CreateBody(CreateBody(
+            Physics3DBodyKind.Kinematic,
+            platformShape,
+            new Vector3(0f, -10f, 0f),
+            Physics3DBodyContactPolicy.OneWayPlatform(Vector3.UnitY)));
+        Physics3DBodyId anchor = world.CreateBody(CreateBody(
+            Physics3DBodyKind.Kinematic,
+            anchorShape,
+            new Vector3(0f, -10_000f, 0f)));
+        Physics3DBodyId body = world.CreateBody(CreateBody(
+            Physics3DBodyKind.Dynamic,
+            capsuleShape,
+            new Vector3(0f, 80f, 0f)));
+
+        world.Step();
+
+        Span<Physics3DContactPair> contacts = stackalloc Physics3DContactPair[1];
+        Assert.That(world.CopyContactPairs(contacts), Is.EqualTo(1));
+        Physics3DContactPair contact = contacts[0];
+        Assert.Multiple(() =>
+        {
+            Assert.That(contact.BodyA == platform || contact.BodyB == platform, Is.True);
+            Assert.That(contact.BodyA == body || contact.BodyB == body, Is.True);
+        });
+
+        var characters = new Character3DControllerSet(world, capacity: 1, overlapHitCapacity: 16);
+        Character3DHandle character = characters.Register(body, anchor, CreateProfile());
+        world.SetKinematicNextPose(platform, new Vector3(0f, -20f, 0f), Quaternion.Identity);
+        characters.SubmitIntent(character, new Character3DIntent(Vector2.Zero, jumpRequested: false));
+        characters.PrepareFixedStep();
+
+        Character3DState prepared = characters.GetState(character);
+        Assert.Multiple(() =>
+        {
+            Assert.That(prepared.IsGrounded, Is.True);
+            Assert.That(prepared.SupportBody, Is.EqualTo(platform));
+        });
+    }
+
+    [Test]
     public void StationaryInput_InheritsConveyorSurfaceVelocityAcrossThirtyHertzSteps()
     {
         using var world = CreateWorld(mobileCapacity: 3, staticCapacity: 0, solverSubstepCount: 1);

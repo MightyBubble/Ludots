@@ -276,6 +276,7 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
         }
 
         CaptureCharacterTraversalInput(_engine?.GetService(CoreServiceKeys.AuthoritativeInput));
+        ApplyCharacterRouteGuideInput();
         CaptureWheelLabInput(_engine?.GetService(CoreServiceKeys.AuthoritativeInput));
         PrepareSceneForPhysicsStep();
     }
@@ -408,6 +409,7 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
             WindHeavyTravelCm: windHeavyTravelCm,
             ConstraintDriveEnabled: _forgeDriveEnabled,
             ConstraintDriveDirection: _forgeDriveDirection,
+            CharacterRouteGuideActive: _characterRouteGuideActive,
             CharacterRouteStatus: _characterRouteStatus,
             CharacterRouteCheckpointIndex: _scene is Physics3DShowcaseScene.PlatformStation or Physics3DShowcaseScene.TraversalCourse
                 ? CharacterRouteCheckpointIndex
@@ -840,6 +842,9 @@ internal sealed partial class Physics3DShowcaseRuntime : IBenchmarkSceneControll
                 break;
             case Physics3DShowcaseCommandKind.ReverseConstraintDrive:
                 ReverseConstraintForgeDrive();
+                break;
+            case Physics3DShowcaseCommandKind.ToggleCharacterRouteGuide:
+                ToggleCharacterRouteGuide();
                 break;
             default:
                 throw new InvalidOperationException($"Unknown Physics3D showcase command '{command.Kind}'.");

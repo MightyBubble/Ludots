@@ -1395,7 +1395,7 @@ internal sealed partial class Physics3DShowcaseRuntime
     private static string WheelLabModeMessage(Vehicle3DWheelKind mode) => mode switch
     {
         Vehicle3DWheelKind.Physical => "Physical wheels selected: real wheel bodies, suspension constraints, steering, drive, and braking are active.",
-        Vehicle3DWheelKind.Box => "Box Wheels selected: the same suspension recipe now drives collision boxes through the course.",
+        Vehicle3DWheelKind.Box => "Box Wheels selected: suspension constraints drive collision boxes with their own tuned force profile.",
         Vehicle3DWheelKind.Scanning => "Scanning wheels selected: sphere casts support the same chassis without separate wheel bodies.",
         _ => throw new InvalidOperationException($"Unsupported Wheel Lab wheel kind '{mode}'.")
     };

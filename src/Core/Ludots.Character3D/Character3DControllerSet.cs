@@ -363,7 +363,7 @@ public sealed class Character3DControllerSet
             Physics3DBodyState characterState = _world.GetBodyState(_bodies[slot]);
             bool walkable = result.Hit &&
                             hit.Normal.Y >= _minimumSupportNormalY[slot] &&
-                            AllowsSupportProbe(in characterState, in hit);
+                            AllowsSupportProbe(slot, in characterState, in hit);
             if (result.Hit && !walkable)
             {
                 Physics3DCapsuleCastQuery request = _supportProbeRequests[requestIndex];
@@ -419,7 +419,7 @@ public sealed class Character3DControllerSet
         {
             Physics3DShapeCastHit candidate = hits[hitIndex];
             if (candidate.Normal.Y < _minimumSupportNormalY[slot] ||
-                !AllowsSupportProbe(in characterState, in candidate))
+                !AllowsSupportProbe(slot, in characterState, in candidate))
             {
                 continue;
             }
@@ -433,6 +433,7 @@ public sealed class Character3DControllerSet
     }
 
     private bool AllowsSupportProbe(
+        int slot,
         in Physics3DBodyState characterState,
         in Physics3DShapeCastHit candidate)
     {
@@ -455,6 +456,11 @@ public sealed class Character3DControllerSet
         if (signedCenterDistance < -policy.BackfaceToleranceCm)
         {
             return false;
+        }
+
+        if (_world.HasCurrentContact(_bodies[slot], candidate.Body))
+        {
+            return true;
         }
 
         Vector3 platformVelocity = _world.GetBodyVelocityAtWorldPoint(candidate.Body, candidate.PositionCm);

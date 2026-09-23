@@ -11,6 +11,29 @@ namespace Ludots.Tests.Physics3D;
 [NonParallelizable]
 public sealed class Traversal3DTests
 {
+    [Test]
+    public void AttachProbeRadius_LargerThanCharacter_FailsBeforeRegistration()
+    {
+        using Physics3DWorld world = Character3DTests.CreateWorld(mobileCapacity: 2, staticCapacity: 0);
+        Physics3DShapeId bodyShape = world.RegisterCapsuleShape(30f, 90f);
+        Physics3DShapeId anchorShape = world.RegisterSphereShape(1f);
+        Physics3DBodyId body = world.CreateBody(Character3DTests.CreateBody(
+            Physics3DBodyKind.Dynamic,
+            bodyShape,
+            new Vector3(0f, 200f, 0f)));
+        Physics3DBodyId anchor = world.CreateBody(Character3DTests.CreateBody(
+            Physics3DBodyKind.Kinematic,
+            anchorShape,
+            new Vector3(0f, -10_000f, 0f)));
+        var characters = new Character3DControllerSet(world, capacity: 1, overlapHitCapacity: 8);
+        Character3DHandle character = characters.Register(body, anchor, Character3DTests.CreateProfile());
+        var traversal = new Traversal3DControllerSet(world, characters, capacity: 1, bodySlotCapacity: 16, overlapHitCapacity: 8);
+        Traversal3DProfile invalid = CreateProfile(attachProbeRadiusCm: 31f);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => traversal.RegisterCharacter(character, invalid));
+        Assert.That(traversal.ActiveCount, Is.Zero);
+    }
+
     public enum LedgeBlocker : byte
     {
         None,
@@ -220,9 +243,13 @@ public sealed class Traversal3DTests
         Assert.That(allocated, Is.Zero, $"Warmed Traversal3D normal lane allocated {allocated} managed bytes.");
     }
 
-    private static Traversal3DProfile CreateProfile(float ledgeProbeDownCm = 180f)
+    private static Traversal3DProfile CreateProfile(
+        float ledgeProbeDownCm = 180f,
+        float attachProbeRadiusCm = 15f)
         => new(
             attachProbeDistanceCm: 150f,
+            attachProbeRadiusCm: attachProbeRadiusCm,
+            surfaceClearanceCm: 2f,
             attachSpeedCmPerSecond: 500f,
             climbSpeedCmPerSecond: 320f,
             lateralSpeedCmPerSecond: 220f,

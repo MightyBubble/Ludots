@@ -20,6 +20,7 @@ internal sealed partial class Physics3DShowcaseRuntime
     {
         ClearOwnedScene();
         ResetSceneDiagnostics();
+        ApplyStationCameraPose(_scene);
         switch (_scene)
         {
             case Physics3DShowcaseScene.ScannerRange:

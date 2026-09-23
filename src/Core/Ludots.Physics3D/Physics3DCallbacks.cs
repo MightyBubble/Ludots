@@ -213,7 +213,7 @@ internal struct Physics3DNarrowPhaseCallbacks : INarrowPhaseCallbacks
             return false;
         }
 
-        if (_contacts.ContainsPersistentPair(platformSlot, otherSlot))
+        if (_contacts.ContainsPersistentPair(_bodies.GetId(platformSlot), _bodies.GetId(otherSlot)))
         {
             return true;
         }

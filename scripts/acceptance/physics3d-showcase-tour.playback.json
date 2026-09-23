@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "events": [
+    { "frame": 30, "kind": "Marker", "label": "tour:start" },
+
+    { "frame": 40, "kind": "UiClick", "elementId": "physics3d-scanner-kind-capsulecast" },
+    { "frame": 42, "kind": "UiClick", "elementId": "physics3d-scanner-distance-2" },
+    { "frame": 44, "kind": "UiClick", "elementId": "physics3d-scanner-layer-2" },
+    { "frame": 46, "kind": "Pointer", "x": 300, "y": 780 },
+    { "frame": 48, "kind": "Wheel", "value": -6 },
+    { "frame": 60, "kind": "UiClick", "elementId": "physics3d-scanner-run" },
+    { "frame": 62, "kind": "UiClick", "elementId": "physics3d-action-pause" },
+    { "frame": 64, "kind": "UiClick", "elementId": "physics3d-action-single-step" },
+    { "frame": 66, "kind": "UiClick", "elementId": "physics3d-action-pause" },
+    { "frame": 130, "kind": "Marker", "label": "capture:scanner-capsule-sweep" },
+
+    { "frame": 170, "kind": "Wheel", "value": 100 },
+    { "frame": 180, "kind": "UiClick", "elementId": "physics3d-scene-materialhill" },
+    { "frame": 185, "kind": "Wheel", "value": -100 },
+    { "frame": 190, "kind": "UiClick", "elementId": "physics3d-action-impact" },
+    { "frame": 950, "kind": "Marker", "label": "capture:material-friction" },
+
+    { "frame": 980, "kind": "Wheel", "value": 100 },
+    { "frame": 1000, "kind": "UiClick", "elementId": "physics3d-scene-platformstation" },
+    { "frame": 1020, "kind": "UiClick", "elementId": "physics3d-route-guide" },
+    { "frame": 1700, "kind": "Marker", "label": "capture:platform-route-complete" },
+
+    { "frame": 1750, "kind": "UiClick", "elementId": "physics3d-scene-windtunnel" },
+    { "frame": 1760, "kind": "UiClick", "elementId": "physics3d-wind-zone-vortex" },
+    { "frame": 1762, "kind": "UiClick", "elementId": "physics3d-wind-reverse" },
+    { "frame": 1764, "kind": "UiClick", "elementId": "physics3d-wind-relaunch" },
+    { "frame": 1830, "kind": "Marker", "label": "capture:wind-vortex-reverse" },
+
+    { "frame": 1880, "kind": "UiClick", "elementId": "physics3d-scene-traversalcourse" },
+    { "frame": 1900, "kind": "UiClick", "elementId": "physics3d-route-guide" },
+    { "frame": 2650, "kind": "Marker", "label": "capture:traversal-route-complete" },
+
+    { "frame": 2710, "kind": "UiClick", "elementId": "physics3d-scene-wheellab" },
+    { "frame": 2730, "kind": "Button", "path": "<Keyboard>/w", "pressed": true },
+    { "frame": 2870, "kind": "Marker", "label": "capture:wheel-physical" },
+    { "frame": 2890, "kind": "Button", "path": "<Keyboard>/w", "pressed": false },
+    { "frame": 2890, "kind": "UiClick", "elementId": "physics3d-wheel-box" },
+    { "frame": 2910, "kind": "Button", "path": "<Keyboard>/w", "pressed": true },
+    { "frame": 3050, "kind": "Marker", "label": "capture:wheel-box" },
+    { "frame": 3070, "kind": "Button", "path": "<Keyboard>/w", "pressed": false },
+    { "frame": 3070, "kind": "UiClick", "elementId": "physics3d-wheel-scanning" },
+    { "frame": 3090, "kind": "Button", "path": "<Keyboard>/w", "pressed": true },
+    { "frame": 3230, "kind": "Marker", "label": "capture:wheel-scanning" },
+    { "frame": 3250, "kind": "Button", "path": "<Keyboard>/w", "pressed": false },
+    { "frame": 3250, "kind": "Button", "path": "<Keyboard>/space", "pressed": true },
+    { "frame": 3290, "kind": "Button", "path": "<Keyboard>/space", "pressed": false },
+
+    { "frame": 3330, "kind": "UiClick", "elementId": "physics3d-scene-ragdolllab" },
+    { "frame": 3350, "kind": "UiClick", "elementId": "physics3d-ragdoll-pendulum" },
+    { "frame": 3510, "kind": "Marker", "label": "capture:ragdoll-impact" },
+    { "frame": 3530, "kind": "UiClick", "elementId": "physics3d-ragdoll-active-pose" },
+    { "frame": 3550, "kind": "UiClick", "elementId": "physics3d-ragdoll-recover" },
+    { "frame": 3610, "kind": "Marker", "label": "capture:ragdoll-recovery-blocked" },
+    { "frame": 3830, "kind": "UiClick", "elementId": "physics3d-ragdoll-recover" },
+    { "frame": 3880, "kind": "Marker", "label": "capture:ragdoll-recovered" },
+
+    { "frame": 3930, "kind": "UiClick", "elementId": "physics3d-scene-constraintforge" },
+    { "frame": 3950, "kind": "UiClick", "elementId": "physics3d-constraint-reverse" },
+    { "frame": 3970, "kind": "UiClick", "elementId": "physics3d-constraint-toggle" },
+    { "frame": 4010, "kind": "Marker", "label": "capture:constraint-reverse-paused" },
+
+    { "frame": 4070, "kind": "UiClick", "elementId": "physics3d-scene-replaytheater" },
+    { "frame": 4230, "kind": "UiClick", "elementId": "physics3d-replay-inject-difference" },
+    { "frame": 4360, "kind": "Marker", "label": "capture:rebuild-difference" },
+    { "frame": 4390, "kind": "UiClick", "elementId": "physics3d-action-reset" },
+    { "frame": 4550, "kind": "UiClick", "elementId": "physics3d-replay-start" },
+    { "frame": 4680, "kind": "Marker", "label": "capture:rebuild-pass" },
+
+    { "frame": 4730, "kind": "UiClick", "elementId": "physics3d-scene-scalecity" },
+    { "frame": 4760, "kind": "UiClick", "elementId": "physics3d-benchmark-50000" },
+    { "frame": 5250, "kind": "UiClick", "elementId": "physics3d-action-impact" },
+    { "frame": 5310, "kind": "Marker", "label": "capture:scale-city-50k" },
+    { "frame": 5330, "kind": "Marker", "label": "tour:complete" }
+  ]
+}

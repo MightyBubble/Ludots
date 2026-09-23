@@ -97,7 +97,7 @@ internal sealed partial class Physics3DShowcaseRuntime
             InstanceCapacity = 1,
             MaximumBonesPerInstance = boneCount,
             RecoveryOverlapHitCapacity = config.RecoveryOverlapHitCapacity,
-            FixedStepHz = 30
+            FixedStepHz = FixedHzFromDeltaTime(RequirePhysicsWorld().FixedDeltaSeconds)
         });
 
         RagdollRecipeDefinition recipeDefinition = config.CreateRecipe();

@@ -45,6 +45,8 @@ public readonly struct Traversal3DProfile
 {
     public Traversal3DProfile(
         float attachProbeDistanceCm,
+        float attachProbeRadiusCm,
+        float surfaceClearanceCm,
         float attachSpeedCmPerSecond,
         float climbSpeedCmPerSecond,
         float lateralSpeedCmPerSecond,
@@ -62,6 +64,8 @@ public readonly struct Traversal3DProfile
         float detachOutSpeedCmPerSecond)
     {
         AttachProbeDistanceCm = attachProbeDistanceCm;
+        AttachProbeRadiusCm = attachProbeRadiusCm;
+        SurfaceClearanceCm = surfaceClearanceCm;
         AttachSpeedCmPerSecond = attachSpeedCmPerSecond;
         ClimbSpeedCmPerSecond = climbSpeedCmPerSecond;
         LateralSpeedCmPerSecond = lateralSpeedCmPerSecond;
@@ -80,6 +84,8 @@ public readonly struct Traversal3DProfile
     }
 
     public float AttachProbeDistanceCm { get; }
+    public float AttachProbeRadiusCm { get; }
+    public float SurfaceClearanceCm { get; }
     public float AttachSpeedCmPerSecond { get; }
     public float ClimbSpeedCmPerSecond { get; }
     public float LateralSpeedCmPerSecond { get; }
@@ -99,6 +105,8 @@ public readonly struct Traversal3DProfile
     internal void Validate(string parameterName)
     {
         Traversal3DValidation.RequireFinitePositive(AttachProbeDistanceCm, $"{parameterName}.{nameof(AttachProbeDistanceCm)}");
+        Traversal3DValidation.RequireFinitePositive(AttachProbeRadiusCm, $"{parameterName}.{nameof(AttachProbeRadiusCm)}");
+        Traversal3DValidation.RequireFinitePositive(SurfaceClearanceCm, $"{parameterName}.{nameof(SurfaceClearanceCm)}");
         Traversal3DValidation.RequireFinitePositive(AttachSpeedCmPerSecond, $"{parameterName}.{nameof(AttachSpeedCmPerSecond)}");
         Traversal3DValidation.RequireFinitePositive(ClimbSpeedCmPerSecond, $"{parameterName}.{nameof(ClimbSpeedCmPerSecond)}");
         Traversal3DValidation.RequireFinitePositive(LateralSpeedCmPerSecond, $"{parameterName}.{nameof(LateralSpeedCmPerSecond)}");
