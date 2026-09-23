@@ -119,10 +119,19 @@ namespace Ludots.Core.Gameplay.GAS
 
     public struct AbilityDefinition
     {
-        // 鈹€鈹€ Generic execution model 鈹€鈹€
+        // ── Generic execution model ──
         public AbilityExecSpec ExecSpec;
         public AbilityExecCallerParamsPool ExecCallerParamsPool;
         public bool HasExecCallerParamsPool;
+
+        // ── TriggerGraph mounts (ability domain, scope = caster) ──
+        /// <summary>
+        /// TriggerGraph graph names mounted on this ability (abilities.json <c>TriggerGraphs</c>).
+        /// Each graph mounts with domain=ability at cast start (scope = the caster) and is
+        /// torn down at the cast terminal moment. Empty when the ability declares no graphs.
+        /// </summary>
+        public List<string> TriggerGraphs;
+        public bool HasTriggerGraphs;
 
         public AbilityOnActivateEffects OnActivateEffects;
         public bool HasOnActivateEffects;

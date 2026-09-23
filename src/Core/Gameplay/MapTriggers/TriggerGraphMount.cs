@@ -8,6 +8,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
     {
         Map = 0,
         Entity = 1,
+        Ability = 2,
     }
 
     public sealed class TriggerGraphMount
@@ -114,7 +115,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             if (string.Equals(text, "ability", StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(
-                    $"{context} domain 'ability' is not mountable yet; ability-domain mounts land with the ability-domain slice.");
+                    $"{context} domain 'ability' cannot be mounted from map JSON; ability-domain mounts are declared on ability definitions (abilities.json {FieldName}).");
             }
 
             throw new InvalidOperationException(

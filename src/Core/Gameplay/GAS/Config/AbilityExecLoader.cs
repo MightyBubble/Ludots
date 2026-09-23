@@ -7,6 +7,7 @@ using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Progression.Registry;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 
@@ -21,6 +22,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
     {
         private readonly ConfigPipeline _pipeline;
         private readonly AbilityDefinitionRegistry _registry;
+        private readonly Func<GraphProgramRegistry?> _graphPrograms;
         private const int MaxToggleActiveEffects = 4;
         private static readonly string[] RemovedAimVisualFieldNames =
         {
@@ -31,10 +33,11 @@ namespace Ludots.Core.Gameplay.GAS.Config
             "presenterId",
         };
 
-        public AbilityExecLoader(ConfigPipeline pipeline, AbilityDefinitionRegistry registry)
+        public AbilityExecLoader(ConfigPipeline pipeline, AbilityDefinitionRegistry registry, Func<GraphProgramRegistry?> graphPrograms = null)
         {
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
+            _graphPrograms = graphPrograms;
         }
 
         /// <summary>
@@ -75,6 +78,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     }
 
                     _registry.Register(abilityId, in def);
+                    ValidateTriggerGraphRegistrations(def, merged[i].Id, relativePath);
                 }
                 catch (Exception ex)
                 {
@@ -87,6 +91,49 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 throw new AggregateException(
                     $"[AbilityExecLoader] {errors.Count} ability compilation error(s) in '{relativePath}'.",
                     errors.ConvertAll(e => (Exception)new InvalidOperationException(e)));
+            }
+        }
+
+        /// <summary>
+        /// Fails closed when an ability declares TriggerGraphs that are not registered
+        /// TriggerGraph-kind programs. Graphs load before abilities in the config
+        /// pipeline, so registration is checkable at load time; when the registry is
+        /// unavailable (direct callers), mount time validation still fails closed.
+        /// </summary>
+        private void ValidateTriggerGraphRegistrations(in AbilityDefinition def, string abilityId, string path)
+        {
+            if (!def.HasTriggerGraphs || def.TriggerGraphs == null || def.TriggerGraphs.Count == 0)
+            {
+                return;
+            }
+
+            if (_graphPrograms == null)
+            {
+                return;
+            }
+
+            GraphProgramRegistry? programs = _graphPrograms();
+            if (programs == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < def.TriggerGraphs.Count; i++)
+            {
+                string graph = def.TriggerGraphs[i];
+                int graphId = GraphIdRegistry.GetId(graph);
+                if (graphId == GraphIdRegistry.InvalidId ||
+                    !programs.TryGetRegistration(graphId, out GraphProgramRegistration registration))
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{abilityId}' in '{path}' TriggerGraphs[{i}] references graph '{graph}' which is not registered.");
+                }
+
+                if (registration.Kind != GraphKind.TriggerGraph)
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{abilityId}' in '{path}' TriggerGraphs[{i}] graph '{graph}' has kind '{registration.Kind}'; only TriggerGraph graphs can be mounted.");
+                }
             }
         }
 
@@ -191,6 +238,20 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
                 def.InteractionContextProfileId = contextProfileId.Trim();
                 def.HasInteractionContextProfile = true;
+            }
+
+            // ── TriggerGraphs (ability-domain mounts, scope = caster) ──
+            if (obj["TriggerGraphs"] is JsonArray triggerGraphArr)
+            {
+                var graphs = new List<string>(triggerGraphArr.Count);
+                for (int i = 0; i < triggerGraphArr.Count; i++)
+                {
+                    string graph = RequireNonEmptyString(triggerGraphArr[i], $"TriggerGraphs[{i}]", id, path);
+                    graphs.Add(graph);
+                }
+
+                def.TriggerGraphs = graphs;
+                def.HasTriggerGraphs = true;
             }
 
             if (obj["activationPrecondition"] is JsonObject preconditionObj)

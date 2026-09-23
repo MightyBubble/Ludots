@@ -52,8 +52,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         private void PublishOne(in GasPresentationEvent evt)
         {
-            string? eventName = EventNameFor(evt.Kind);
-            if (eventName == null)
+            EventKey? eventKey = EventNameFor(evt.Kind);
+            if (eventKey == null)
             {
                 return;
             }
@@ -73,22 +73,22 @@ namespace Ludots.Core.Gameplay.MapTriggers
             context.Set(MapTriggerEventPayloadKeys.EffectId, evt.EffectTemplateId);
             context.Set(MapTriggerEventPayloadKeys.Magnitude, evt.Delta);
             context.Set(MapTriggerEventPayloadKeys.Moment, evt.Kind.ToString());
-            _triggerManager.FireMapEvent(mapId, new EventKey(eventName), context);
+            _triggerManager.FireMapEvent(mapId, eventKey.Value, context);
         }
 
-        internal static string? EventNameFor(GasPresentationEventKind kind)
+        internal static EventKey? EventNameFor(GasPresentationEventKind kind)
         {
             return kind switch
             {
-                GasPresentationEventKind.CastStarted => "Ability.CastStarted",
-                GasPresentationEventKind.CastFailed => "Ability.CastFailed",
-                GasPresentationEventKind.CastCommitted => "Ability.CastCommitted",
-                GasPresentationEventKind.CastFinished => "Ability.CastFinished",
-                GasPresentationEventKind.CastInterrupted => "Ability.CastInterrupted",
-                GasPresentationEventKind.EffectApplied => "Effect.Applied",
-                GasPresentationEventKind.EffectActivated => "Effect.Activated",
-                GasPresentationEventKind.EffectExpired => "Effect.Expired",
-                GasPresentationEventKind.EffectCancelled => "Effect.Cancelled",
+                GasPresentationEventKind.CastStarted => GameEvents.AbilityCastStarted,
+                GasPresentationEventKind.CastFailed => GameEvents.AbilityCastFailed,
+                GasPresentationEventKind.CastCommitted => GameEvents.AbilityCastCommitted,
+                GasPresentationEventKind.CastFinished => GameEvents.AbilityCastFinished,
+                GasPresentationEventKind.CastInterrupted => GameEvents.AbilityCastInterrupted,
+                GasPresentationEventKind.EffectApplied => GameEvents.EffectApplied,
+                GasPresentationEventKind.EffectActivated => GameEvents.EffectActivated,
+                GasPresentationEventKind.EffectExpired => GameEvents.EffectExpired,
+                GasPresentationEventKind.EffectCancelled => GameEvents.EffectCancelled,
                 _ => null,
             };
         }

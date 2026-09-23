@@ -93,5 +93,37 @@ namespace Ludots.Core.Scripting
         /// Payload: SourceEntity, RegionId.
         /// </summary>
         public static readonly EventKey RegionExited = new EventKey("RegionExited");
+
+        // ── GAS moment bridge events (#1031 D5) ──
+        // Fired by TriggerGraphMomentBridgeSystem from the GasPresentationEventBuffer
+        // (same-step view). Payload: SourceEntity (actor/effect owner), TargetEntity,
+        // AbilityId, EffectId, Magnitude, Moment.
+
+        /// <summary>Ability cast started. Ability-domain lifecycle event (mount creation).</summary>
+        public static readonly EventKey AbilityCastStarted = new EventKey("Ability.CastStarted");
+
+        /// <summary>Ability cast rejected before starting. No ability mount exists.</summary>
+        public static readonly EventKey AbilityCastFailed = new EventKey("Ability.CastFailed");
+
+        /// <summary>Ability cast committed (exec instance active).</summary>
+        public static readonly EventKey AbilityCastCommitted = new EventKey("Ability.CastCommitted");
+
+        /// <summary>Ability cast finished. Ability-domain lifecycle event (mount teardown).</summary>
+        public static readonly EventKey AbilityCastFinished = new EventKey("Ability.CastFinished");
+
+        /// <summary>Ability cast interrupted. Ability-domain lifecycle event (mount teardown).</summary>
+        public static readonly EventKey AbilityCastInterrupted = new EventKey("Ability.CastInterrupted");
+
+        /// <summary>Effect applied (buffer event).</summary>
+        public static readonly EventKey EffectApplied = new EventKey("Effect.Applied");
+
+        /// <summary>Effect activated.</summary>
+        public static readonly EventKey EffectActivated = new EventKey("Effect.Activated");
+
+        /// <summary>Effect expired.</summary>
+        public static readonly EventKey EffectExpired = new EventKey("Effect.Expired");
+
+        /// <summary>Effect cancelled.</summary>
+        public static readonly EventKey EffectCancelled = new EventKey("Effect.Cancelled");
     }
 }

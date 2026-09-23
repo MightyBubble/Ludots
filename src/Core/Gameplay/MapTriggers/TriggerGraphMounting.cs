@@ -77,6 +77,34 @@ namespace Ludots.Core.Gameplay.MapTriggers
             return triggers;
         }
 
+        /// <summary>
+        /// Builds one ability-domain mount (scope = the caster): one dispatch trigger
+        /// per entry plus think-wave resume companions. Caller owns registration and
+        /// lifecycle dispatch (AbilityTriggerGraphMounts).
+        /// </summary>
+        public static List<Trigger> BuildAbilityMountTriggers(
+            GraphProgramRegistry programs,
+            Entity scope,
+            string graph,
+            string ownerLabel)
+        {
+            GraphProgramRegistration registration = RequireGraphRegistration(
+                programs,
+                graph,
+                TriggerGraphMount.FieldName,
+                ownerLabel);
+            var triggers = new List<Trigger>();
+            AppendEntryTriggers(
+                triggers,
+                registration,
+                graph,
+                scope,
+                TriggerGraphMountDomain.Ability,
+                TriggerGraphMount.FieldName,
+                ownerLabel);
+            return triggers;
+        }
+
         private static void AppendMapMountTriggers(
             List<Trigger> triggers,
             MapSession session,

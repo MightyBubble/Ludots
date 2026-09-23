@@ -139,6 +139,9 @@ namespace Ludots.Core.Engine
 
         /// <summary>Entity-domain TriggerGraph mount pipeline; owns spawn/destroy-tick dispatch and dead-mount sweeps.</summary>
         public Gameplay.MapTriggers.EntityTriggerGraphMounts EntityTriggerGraphMounts { get; private set; }
+
+        /// <summary>Ability-domain TriggerGraph mount pipeline; owns cast-start creation, terminal-moment teardown, and dead-caster sweeps.</summary>
+        public Gameplay.MapTriggers.AbilityTriggerGraphMounts AbilityTriggerGraphMounts { get; private set; }
         public SystemFactoryRegistry SystemFactoryRegistry { get; private set; }
         public TriggerDecoratorRegistry TriggerDecoratorRegistry { get; private set; }
         internal ModExtensionHub ModExtensions { get; private set; }
@@ -906,7 +909,7 @@ namespace Ludots.Core.Engine
                 orderTypes: orderTypeRegistry,
                 presetTypes: presetTypes);
             _effectTemplateLoader.Load(ConfigCatalog, ConfigConflictReport);
-            new AbilityExecLoader(ConfigPipeline, abilityDefinitions).Load(ConfigCatalog, ConfigConflictReport);
+            new AbilityExecLoader(ConfigPipeline, abilityDefinitions, () => graphProgramRegistry).Load(ConfigCatalog, ConfigConflictReport);
             new AbilityFormSetConfigLoader(ConfigPipeline, abilityFormSets).Load(ConfigCatalog, ConfigConflictReport);
             componentAuthoringContext.Set(ComponentAuthoringServiceKeys.AbilityDefinitionRegistry, abilityDefinitions);
             componentAuthoringContext.Set(ComponentAuthoringServiceKeys.AbilityFormSetRegistry, abilityFormSets);
@@ -1475,6 +1478,14 @@ namespace Ludots.Core.Engine
                 graphProgramRegistry, gasGraphApi,
                 closeEntityIntakeOnUpdate: false);
             var abilityExecSystem = new AbilityExecSystem(World, clock, abilityInputRequestQueue, inputResponseBuffer, effectRequestQueue, gasRuntimeCapacity.AbilityExecSnapshotCapacity, abilityDefinitions, EventBus, cfgCastAbility, cfgCastAbilityStart, gasPresentationEvents, graphPrograms: graphProgramRegistry, graphApi: gasGraphApi, tagOps: tagOps, orderTypeRegistry: orderTypeRegistry, progressionRequirements: progressionEvaluator, maxWorkUnitsPerSlice: gasRuntimeCapacity.AbilityExecMaxWorkUnitsPerSlice);
+            AbilityTriggerGraphMounts = new Gameplay.MapTriggers.AbilityTriggerGraphMounts(
+                World,
+                () => MapSessions,
+                TriggerManager,
+                abilityDefinitions,
+                CreateContext,
+                () => TriggerDecoratorRegistry,
+                () => GetService(CoreServiceKeys.GraphProgramRegistry));
             var abilityEndOrderSystem = new AbilityEndOrderSystem(World, orderTypeRegistry, cfgCastAbilityEnd);
             var stopOrderSystem = new StopOrderSystem(World, orderTypeRegistry, cfgStop);
             var instantCompleteOrderSystem = new InstantCompleteOrderSystem(World, orderTypeRegistry);
@@ -1777,6 +1788,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(instantCompleteOrderSystem, SystemGroup.AbilityActivation);
             RegisterSystem(reactionSystem, SystemGroup.AbilityActivation);
             RegisterSystem(abilityExecSystem, SystemGroup.AbilityActivation);
+            RegisterSystem(new Gameplay.MapTriggers.AbilityTriggerGraphMountSystem(AbilityTriggerGraphMounts, gasPresentationEvents), SystemGroup.AbilityActivation);
             // RFC-0065 CTX-6: exec lifecycle push/pop of interaction context frames.
             RegisterSystem(new AbilityExecInteractionContextSystem(World, interactionContextStack, interactionContextProfileRegistry, abilityDefinitions), SystemGroup.AbilityActivation);
             RegisterSystem(moveToOrderSystem, SystemGroup.AbilityActivation);
@@ -2282,6 +2294,7 @@ namespace Ludots.Core.Engine
             bool wasFocused = focused != null && focused.MapId == mid;
 
             EntityTriggerGraphMounts?.DropMap(mid);
+            AbilityTriggerGraphMounts?.DropMap(mid);
             MapSessions.UnloadSession(mid, World);
             _mapLoadStatuses.Remove(mid);
 
@@ -2455,6 +2468,7 @@ namespace Ludots.Core.Engine
             if (innerSession != null)
             {
                 EntityTriggerGraphMounts?.DropMap(poppedId);
+                AbilityTriggerGraphMounts?.DropMap(poppedId);
                 MapSessions.UnloadSession(poppedId, World);
                 _mapLoadStatuses.Remove(poppedId);
             }

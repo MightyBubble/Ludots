@@ -54,7 +54,12 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// that entity's own mounts. Entity mounts may declare entries on any other
     /// event key; those dispatch through the map's bus registration normally. A
     /// dead entity's mounts are inert (CheckConditions false) and lazily swept
-    /// at think waves by the mount pipeline.
+    /// at think waves by the mount pipeline. Ability mounts (scope = the caster)
+    /// follow the same shape with the cast instance as lifecycle: "Ability.CastStarted"
+    /// executes at mount creation, terminal moments ("Ability.CastFinished" /
+    /// "Ability.CastInterrupted") execute at teardown, and any other entry key
+    /// dispatches through the map's bus registration; a dead caster's mounts are
+    /// inert and swept by the ability mount pipeline.
     /// </summary>
     public sealed class TriggerGraphMountTrigger : Trigger
     {
@@ -140,7 +145,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         public int DroppedCount { get; private set; }
 
-        private bool IsSelfLifecycleEvent => EventKey == GameEvents.EntitySpawned || EventKey == GameEvents.EntityDied;
+        private bool IsSelfLifecycleEvent => _domain == TriggerGraphMountDomain.Ability
+            ? EventKey == GameEvents.AbilityCastStarted ||
+              EventKey == GameEvents.AbilityCastFinished ||
+              EventKey == GameEvents.AbilityCastInterrupted
+            : EventKey == GameEvents.EntitySpawned || EventKey == GameEvents.EntityDied;
 
         public override bool CheckConditions(ScriptContext context)
         {
@@ -149,10 +158,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 return false;
             }
 
-            if (_domain == TriggerGraphMountDomain.Entity && !_lifecycleDispatch && IsSelfLifecycleEvent)
+            if (_domain != TriggerGraphMountDomain.Map && !_lifecycleDispatch && IsSelfLifecycleEvent)
             {
-                // Entity-domain lifecycle entries never ride the think-wave bus
-                // broadcasts; the mount pipeline dispatches them at spawn/destroy ticks.
+                // Entity/ability-domain lifecycle entries never ride the think-wave bus
+                // broadcasts; the mount pipeline dispatches them at lifecycle ticks
+                // (spawn/destroy for entity; cast start/terminal moments for ability).
                 return false;
             }
 
@@ -231,7 +241,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 return true;
             }
 
-            if (_domain != TriggerGraphMountDomain.Entity)
+            if (_domain == TriggerGraphMountDomain.Map)
             {
                 return true;
             }
