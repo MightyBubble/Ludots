@@ -407,7 +407,7 @@ public sealed class EntityInfoPanelServiceTests
         Entity owner = world.Create();
         Entity entity = world.Create(
             new Name { Value = "Templated Vanguard" },
-            new EntityInfoTitleToken { TokenId = textCatalog.GetTokenId("tests.entityinfo.title") },
+            new PlacedInstanceId { Value = "hero.unlisted" },
             new EntityTemplateKeyRef { TemplateKeyId = templateKeyId },
             attributes,
             abilities,
@@ -485,15 +485,49 @@ public sealed class EntityInfoPanelServiceTests
     }
 
     [Test]
-    public void Refresh_TitleToken_FollowsActiveLocale()
+    public void Refresh_InstanceTitle_FollowsActiveLocale()
     {
         using var world = World.Create();
+        const int templateKeyId = 701;
         PresentationTextCatalog catalog = CreateBilingualTitleCatalog();
         var localeSelection = new PresentationTextLocaleSelection(catalog);
-        var service = new EntityInfoPanelService(presentationTextCatalog: catalog, localeSelection: localeSelection);
+        var templates = new EntityInfoPanelTemplateCatalog();
+        templates.Register(new EntityInfoPanelTemplateDescriptor
+        {
+            Id = "tests.entityinfo.template.title-only",
+            Sections = EntityInfoPanelTemplateSectionFlags.Title,
+        });
+        var profileCatalog = new EntityInsightProfileCatalog(
+            new[]
+            {
+                new EntityInsightProfile
+                {
+                    Id = "tests.entityinfo.locale",
+                    TemplateKeyIds = new[] { templateKeyId },
+                    AccentColorHex = "#000000",
+                    SurfaceColorHex = "#111111",
+                    GenreGlyph = "H",
+                    PortraitGlyph = "P",
+                    GenreLabelTokenId = catalog.GetTokenId("tests.entityinfo.shared"),
+                    SubtitleTokenId = catalog.GetTokenId("tests.entityinfo.shared"),
+                    BodyTokenId = catalog.GetTokenId("tests.entityinfo.shared"),
+                    TitleTokenId = catalog.GetTokenId("tests.entityinfo.shared"),
+                    Badges = Array.Empty<EntityInsightBadgeProfile>(),
+                    Stats = Array.Empty<EntityInsightStatProfile>(),
+                    Tips = Array.Empty<EntityInsightTipProfile>(),
+                    Actions = Array.Empty<EntityInsightActionProfile>(),
+                },
+            },
+            new Dictionary<int, int> { [templateKeyId] = 0 },
+            new Dictionary<string, EntityInsightInstanceTitle>
+            {
+                ["hero.liu"] = new EntityInsightInstanceTitle(0, catalog.GetTokenId("tests.entityinfo.title")),
+            });
+        var service = new EntityInfoPanelService(profileCatalog, catalog, localeSelection, templates: templates);
         Entity entity = world.Create(
             new Name { Value = "Templated Vanguard" },
-            new EntityInfoTitleToken { TokenId = catalog.GetTokenId("tests.entityinfo.title") });
+            new PlacedInstanceId { Value = "hero.liu" },
+            new EntityTemplateKeyRef { TemplateKeyId = templateKeyId });
 
         EntityInfoPanelHandle panel = service.Open(new EntityInfoPanelRequest(
             EntityInfoPanelKind.InsightBrief,
@@ -501,7 +535,8 @@ public sealed class EntityInfoPanelServiceTests
             EntityInfoPanelTarget.Fixed(entity),
             new EntityInfoPanelLayout(EntityInfoPanelAnchor.TopLeft, 0f, 0f, 360f, 240f),
             EntityInfoGasDetailFlags.None,
-            true));
+            true,
+            "tests.entityinfo.template.title-only"));
 
         service.Refresh(world, new Dictionary<string, object>());
         Assert.That(service.GetTitle(panel.Slot), Is.EqualTo("Liu Bei"));
@@ -510,6 +545,55 @@ public sealed class EntityInfoPanelServiceTests
         service.Refresh(world, new Dictionary<string, object>());
         Assert.That(service.GetTitle(panel.Slot), Is.EqualTo("刘备"));
         Assert.That(world.Get<Name>(entity).Value, Is.EqualTo("Templated Vanguard"));
+    }
+
+    [Test]
+    public void Refresh_InstanceTitle_RejectsForeignTemplate()
+    {
+        using var world = World.Create();
+        const int ownedTemplateKeyId = 701;
+        const int foreignTemplateKeyId = 702;
+        PresentationTextCatalog catalog = CreateBilingualTitleCatalog();
+        var profileCatalog = new EntityInsightProfileCatalog(
+            new[]
+            {
+                new EntityInsightProfile
+                {
+                    Id = "tests.entityinfo.locale",
+                    TemplateKeyIds = new[] { ownedTemplateKeyId },
+                    AccentColorHex = "#000000",
+                    SurfaceColorHex = "#111111",
+                    GenreGlyph = "H",
+                    PortraitGlyph = "P",
+                    GenreLabelTokenId = catalog.GetTokenId("tests.entityinfo.shared"),
+                    SubtitleTokenId = catalog.GetTokenId("tests.entityinfo.shared"),
+                    BodyTokenId = catalog.GetTokenId("tests.entityinfo.shared"),
+                    Badges = Array.Empty<EntityInsightBadgeProfile>(),
+                    Stats = Array.Empty<EntityInsightStatProfile>(),
+                    Tips = Array.Empty<EntityInsightTipProfile>(),
+                    Actions = Array.Empty<EntityInsightActionProfile>(),
+                },
+            },
+            new Dictionary<int, int> { [ownedTemplateKeyId] = 0 },
+            new Dictionary<string, EntityInsightInstanceTitle>
+            {
+                ["hero.liu"] = new EntityInsightInstanceTitle(0, catalog.GetTokenId("tests.entityinfo.title")),
+            });
+        var service = new EntityInfoPanelService(profileCatalog, catalog, new PresentationTextLocaleSelection(catalog));
+        Entity entity = world.Create(
+            new Name { Value = "Templated Vanguard" },
+            new PlacedInstanceId { Value = "hero.liu" },
+            new EntityTemplateKeyRef { TemplateKeyId = foreignTemplateKeyId });
+        service.Open(new EntityInfoPanelRequest(
+            EntityInfoPanelKind.InsightBrief,
+            EntityInfoPanelSurface.Ui,
+            EntityInfoPanelTarget.Fixed(entity),
+            new EntityInfoPanelLayout(EntityInfoPanelAnchor.TopLeft, 0f, 0f, 360f, 240f),
+            EntityInfoGasDetailFlags.None,
+            true));
+
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => service.Refresh(world, new Dictionary<string, object>()))!;
+        Assert.That(ex.Message, Does.Contain("does not belong to this entity's template"));
     }
 
     [Test]
@@ -637,6 +721,7 @@ public sealed class EntityInfoPanelServiceTests
             GenreLabelTokenId = textCatalog.GetTokenId("tests.entityinfo.genre"),
             SubtitleTokenId = textCatalog.GetTokenId("tests.entityinfo.subtitle"),
             BodyTokenId = textCatalog.GetTokenId("tests.entityinfo.body"),
+            TitleTokenId = textCatalog.GetTokenId("tests.entityinfo.title"),
             Badges = Array.Empty<EntityInsightBadgeProfile>(),
             Stats = new[]
             {
@@ -671,11 +756,18 @@ public sealed class EntityInfoPanelServiceTests
     {
         var tokenIds = new StringIntRegistry(capacity: 4, startId: 1, invalidId: 0, comparer: System.StringComparer.Ordinal);
         int titleTokenId = tokenIds.Register("tests.entityinfo.title");
+        int sharedTokenId = tokenIds.Register("tests.entityinfo.shared");
         var tokens = new PresentationTextTokenDefinition[tokenIds.Count + 1];
         tokens[titleTokenId] = new PresentationTextTokenDefinition
         {
             TokenId = titleTokenId,
             Key = "tests.entityinfo.title",
+            ArgCount = 0
+        };
+        tokens[sharedTokenId] = new PresentationTextTokenDefinition
+        {
+            TokenId = sharedTokenId,
+            Key = "tests.entityinfo.shared",
             ArgCount = 0
         };
         var localeIds = new StringIntRegistry(capacity: 4, startId: 1, invalidId: 0, comparer: System.StringComparer.Ordinal);
@@ -685,6 +777,8 @@ public sealed class EntityInfoPanelServiceTests
         var zhTemplates = new PresentationTextTemplate[tokenIds.Count + 1];
         enTemplates[titleTokenId] = Literal("Liu Bei");
         zhTemplates[titleTokenId] = Literal("刘备");
+        enTemplates[sharedTokenId] = Literal("Hero");
+        zhTemplates[sharedTokenId] = Literal("英雄");
         var locales = new PresentationTextLocaleTable[localeIds.Count + 1];
         locales[en] = new PresentationTextLocaleTable(en, "en-US", enTemplates);
         locales[zh] = new PresentationTextLocaleTable(zh, "zh-CN", zhTemplates);

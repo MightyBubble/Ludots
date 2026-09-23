@@ -9,17 +9,17 @@
 ## 2. 产品承诺
 
 - **模板互斥匹配**：一个实体模板至多归属一个档案——templateIds 冲突即启动失败，绝无二义渲染。
-- **文案全走 token**：副题、正文、徽章、提示、动作标题全部引用本地化 token；token 必须可解析，裸文案不进档案。
+- **文案全走 token**：标题、副题、正文、徽章、提示、动作标题全部引用本地化 token；token 必须可解析，裸文案不进档案。同一模板下的不同摆放，标题写在档案的 `instances` 里，按摆放编号各用一条 token。
 - **数值两源**：stats 按名解析属性（AttributeRegistry），未知属性即失败；或常量直供——展示永远不猜。
 - **动作即能力**：actions.ability 引用能力 id；玩家在面板上按下的就是真实技能管线。
 - **档案在 mod、加载在 mod**：表在目录声明，但 loader 由 EntityInfoPanelsMod 提供——装了该能力 mod 才有此面（现状约束，见 reference）。
 
 ## 3. 运行行为
 
-实体信息面板系统在选中实体时按模板键查档案，渲染配色与徽记、取 token 文案、读属性渲染数值条、按能力 id 出动作按钮。地图实例写了 `titleToken` 时，面板标题按当前语言取这个文案槽；没写时，标题读 `Name`。
+实体信息面板系统在选中实体时按模板键查档案，渲染配色与徽记、取 token 文案、读属性渲染数值条、按能力 id 出动作按钮。标题也在这份档案里。档案可以给整份模板写 `titleToken`，也可以在 `instances` 里按摆放编号各写一条 `titleToken`。对上摆放编号时用那一条，否则用模板标题；两边都没写时，标题读 `Name`。词在多语言表里，面板按当前语言取。
 
 ## 4. 异常承诺
 
-templateIds 重复归属、token 解析失败、stats.source=attribute 的属性未注册、source/display 枚举外值、能力引用未注册——加载失败并指明档案与位置。
+templateIds 重复归属、token 解析失败、stats.source=attribute 的属性未注册、source/display 枚举外值、能力引用未注册、摆放编号重复或未修剪、实例条目出现 `instanceId` / `titleToken` 以外的字段——加载失败并指明档案与位置。摆放编号对上的档案不含该实体的模板时，打开面板失败。
 
 **相关文档**：[配置说明](../config/misc-04-entity-info.md) · [pres-04](pres-04-localization.md) · [attr-01](attr-01-definition.md)

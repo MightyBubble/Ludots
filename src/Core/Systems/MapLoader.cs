@@ -40,7 +40,6 @@ namespace Ludots.Core.Systems
         private TemplateEntityBatchSpawner _templateBatchSpawner;
         private PresentationStableIdAllocator _stableIds;
         private PresenterEntityRuntime _presenterRuntime;
-        private Ludots.Core.Presentation.Hud.PresentationTextCatalog _textCatalog;
         private PresenterDefinitionRegistry _presenterDefinitions;
         private CompiledPresenterBootstrapRegistry _presenterBootstrap;
         private MeshAssetRegistry _meshAssets;
@@ -104,11 +103,6 @@ namespace Ludots.Core.Systems
             }
 
             return _authoringContext;
-        }
-
-        public void SetPresentationTextCatalog(Ludots.Core.Presentation.Hud.PresentationTextCatalog textCatalog)
-        {
-            _textCatalog = textCatalog ?? throw new ArgumentNullException(nameof(textCatalog));
         }
 
         public void SetPresentationRuntime(
@@ -751,14 +745,11 @@ namespace Ludots.Core.Systems
                     }
                 }
 
-                // 标题文案槽不在批量行的原型里。表现引导还握着这行的组件跨度，
+                // 摆放编号不在批量行的原型里。表现引导还握着这行的组件跨度，
                 // 结构变更必须等引导结束。
                 for (int i = 0; i < created.Length; i++)
                 {
-                    AttachTitleToken(
-                        $"Map '{mapConfig.Id}' entity '{ResolveMapEntityContextId(pendingBatchEntityData[i])}'",
-                        created[i],
-                        pendingBatchEntityData[i].TitleToken);
+                    StampPlacedInstanceId(created[i], pendingBatchEntityData[i].InstanceId);
                 }
 
                 pendingBatchRequests.Clear();
@@ -793,16 +784,13 @@ namespace Ludots.Core.Systems
                         "the placed instance root must declare a non-empty, trimmed InstanceId to prefix addressable paths.");
                 }
 
-                Dictionary<string, int> childTitleTokens = IndexChildTitleTokens(
-                    mapConfig.Id,
-                    entityData,
-                    templates);
-                if (entityData.TitleToken != null)
+                if (entityData.OverridePaths is { Count: > 0 })
                 {
-                    ResolveTitleToken(
-                        $"Map '{mapConfig.Id}' entity '{ResolveMapEntityContextId(entityData)}'",
-                        entityData.TitleToken);
+                    throw new InvalidOperationException(
+                        $"Map '{mapConfig.Id}' entity '{ResolveMapEntityContextId(entityData)}' overridePaths is not loaded. " +
+                        "Instance titles belong in EntityInfo/insight_profiles.json.");
                 }
+
                 bool isBatchCompatible = _templateBatchSpawner.IsBatchCompatible(entityData.Template, templates[entityData.Template]);
                 if (isBatchCompatible && TryBuildBatchRequest(
                         mapConfig.Id,
@@ -875,10 +863,7 @@ namespace Ludots.Core.Systems
                 TryApplyTemplateKey(entity, entityData.Template);
                 _world.Add(entity, mapEntityTag);
                 entityIndex.Register(mapConfig.Id, entityData.InstanceId, entity);
-                AttachTitleToken(
-                    $"Map '{mapConfig.Id}' entity '{ResolveMapEntityContextId(entityData)}'",
-                    entity,
-                    entityData.TitleToken);
+                StampPlacedInstanceId(entity, entityData.InstanceId);
                 PublishTemplateOnSpawnEffect(entity, entityData.Template);
                 MountInitialInteractionContext(
                     entity, entityData.Template, templates[entityData.Template], entityData.Overrides);
@@ -891,8 +876,7 @@ namespace Ludots.Core.Systems
                     entity,
                     mapEntityTag,
                     entityIndex,
-                    string.IsNullOrWhiteSpace(entityData.InstanceId) ? null : entityData.InstanceId,
-                    childTitleTokens);
+                    string.IsNullOrWhiteSpace(entityData.InstanceId) ? null : entityData.InstanceId);
             }
 
             FlushPendingTemplateBatch();
@@ -957,8 +941,7 @@ namespace Ludots.Core.Systems
             Entity parent,
             MapEntity mapEntityTag,
             MapLoadEntityIndex entityIndex,
-            string? parentLocalPath,
-            System.Collections.Generic.Dictionary<string, int> childTitleTokens)
+            string? parentLocalPath)
         {
             EntityTemplate parentTemplate = templates[parentTemplateId];
             SpawnTemplateChildNodes(
@@ -970,8 +953,7 @@ namespace Ludots.Core.Systems
                 parent,
                 mapEntityTag,
                 entityIndex,
-                parentLocalPath,
-                childTitleTokens);
+                parentLocalPath);
         }
 
         private void SpawnTemplateChildNodes(
@@ -983,8 +965,7 @@ namespace Ludots.Core.Systems
             Entity parent,
             MapEntity mapEntityTag,
             MapLoadEntityIndex entityIndex,
-            string? parentLocalPath,
-            System.Collections.Generic.Dictionary<string, int> childTitleTokens)
+            string? parentLocalPath)
         {
             if (children is not { Count: > 0 })
             {
@@ -1006,8 +987,7 @@ namespace Ludots.Core.Systems
                         parent,
                         mapEntityTag,
                         entityIndex,
-                        parentLocalPath,
-                        childTitleTokens);
+                        parentLocalPath);
                     index++;
                     continue;
                 }
@@ -1023,7 +1003,6 @@ namespace Ludots.Core.Systems
                     mapEntityTag,
                     entityIndex,
                     parentLocalPath,
-                    childTitleTokens,
                     builder);
                 index += run;
             }
@@ -1094,7 +1073,6 @@ namespace Ludots.Core.Systems
             MapEntity mapEntityTag,
             MapLoadEntityIndex entityIndex,
             string? parentLocalPath,
-            System.Collections.Generic.Dictionary<string, int> childTitleTokens,
             EntityBuilder builder)
         {
             var names = new Name[run];
@@ -1128,13 +1106,7 @@ namespace Ludots.Core.Systems
                 if (!string.IsNullOrEmpty(childLocalPath))
                 {
                     entityIndex.RegisterLocalPath(mapId, childLocalPath, childEntity);
-                }
-
-                if (childLocalPath != null &&
-                    childTitleTokens != null &&
-                    childTitleTokens.TryGetValue(childLocalPath, out int titleTokenId))
-                {
-                    _world.Add(childEntity, new EntityInfoTitleToken { TokenId = titleTokenId });
+                    StampPlacedInstanceId(childEntity, childLocalPath);
                 }
 
                 Ludots.Core.Gameplay.Attachment.AttachmentOps.Attach(
@@ -1152,8 +1124,7 @@ namespace Ludots.Core.Systems
                     childEntity,
                     mapEntityTag,
                     entityIndex,
-                    childLocalPath,
-                    childTitleTokens);
+                    childLocalPath);
                 SpawnTemplateChildNodes(
                     builder,
                     templates,
@@ -1163,8 +1134,7 @@ namespace Ludots.Core.Systems
                     childEntity,
                     mapEntityTag,
                     entityIndex,
-                    childLocalPath,
-                    childTitleTokens);
+                    childLocalPath);
             }
         }
 
@@ -1178,8 +1148,7 @@ namespace Ludots.Core.Systems
             Entity parent,
             MapEntity mapEntityTag,
             MapLoadEntityIndex entityIndex,
-            string? parentLocalPath,
-            System.Collections.Generic.Dictionary<string, int> childTitleTokens)
+            string? parentLocalPath)
         {
             string context = $"Map template children '{ownerTemplateId}'[{index}] '{child.Template}'";
             builder
@@ -1203,13 +1172,7 @@ namespace Ludots.Core.Systems
             if (!string.IsNullOrEmpty(childLocalPath))
             {
                 entityIndex.RegisterLocalPath(mapId, childLocalPath, childEntity);
-            }
-
-            if (childLocalPath != null &&
-                childTitleTokens != null &&
-                childTitleTokens.TryGetValue(childLocalPath, out int titleTokenId))
-            {
-                _world.Add(childEntity, new EntityInfoTitleToken { TokenId = titleTokenId });
+                StampPlacedInstanceId(childEntity, childLocalPath);
             }
 
             // attach:false 的独立出生属切E；本切仍走结构挂接，保留标记与禁令豁免。
@@ -1229,8 +1192,7 @@ namespace Ludots.Core.Systems
                 childEntity,
                 mapEntityTag,
                 entityIndex,
-                childLocalPath,
-                childTitleTokens);
+                childLocalPath);
             SpawnTemplateChildNodes(
                 builder,
                 templates,
@@ -1240,8 +1202,7 @@ namespace Ludots.Core.Systems
                 childEntity,
                 mapEntityTag,
                 entityIndex,
-                childLocalPath,
-                childTitleTokens);
+                childLocalPath);
         }
 
         private static string? ChildRelativePath(string? parentLocalPath, string? localId)
@@ -1256,97 +1217,14 @@ namespace Ludots.Core.Systems
                 : parentLocalPath + "." + localId;
         }
 
-        private Dictionary<string, int> IndexChildTitleTokens(
-            string mapId,
-            EntitySpawnData entityData,
-            System.Collections.Generic.Dictionary<string, EntityTemplate> templates)
+        private void StampPlacedInstanceId(Entity entity, string instanceId)
         {
-            List<EntityPathNameOverride> paths = entityData.OverridePaths;
-            if (paths == null || paths.Count == 0)
-            {
-                return null;
-            }
-
-            string rootPath = string.IsNullOrWhiteSpace(entityData.InstanceId) ? null : entityData.InstanceId;
-            var addressed = new Dictionary<string, string>(StringComparer.Ordinal);
-            CollectChildTemplates(
-                templates,
-                entityData.Template,
-                templates[entityData.Template].Children,
-                rootPath,
-                addressed);
-            var tokens = new Dictionary<string, int>(paths.Count, StringComparer.Ordinal);
-            string instance = rootPath ?? entityData.Template;
-            for (int i = 0; i < paths.Count; i++)
-            {
-                EntityPathNameOverride entry = paths[i];
-                string context = $"Map '{mapId}' entity '{instance}' overridePaths[{i}]";
-                if (entry == null)
-                {
-                    throw new InvalidOperationException($"{context} requires an object payload.");
-                }
-
-                if (string.IsNullOrWhiteSpace(entry.Path) || !string.Equals(entry.Path, entry.Path.Trim(), StringComparison.Ordinal))
-                {
-                    throw new InvalidOperationException($"{context}.path requires a trimmed non-empty localId path.");
-                }
-
-                if (entry.Set != null && entry.Set.Count > 0)
-                {
-                    throw new InvalidOperationException($"{context} only accepts titleToken.");
-                }
-
-                string fullPath = string.IsNullOrEmpty(rootPath) ? entry.Path : rootPath + "." + entry.Path;
-                if (!addressed.TryGetValue(fullPath, out _))
-                {
-                    throw new InvalidOperationException($"{context}.path '{entry.Path}' does not address a child.");
-                }
-
-                if (tokens.ContainsKey(fullPath))
-                {
-                    throw new InvalidOperationException($"{context}.path '{entry.Path}' is duplicated.");
-                }
-
-                tokens.Add(fullPath, ResolveTitleToken(context, entry.TitleToken));
-            }
-
-            return tokens;
-        }
-
-        private static void CollectChildTemplates(
-            System.Collections.Generic.Dictionary<string, EntityTemplate> templates,
-            string ownerTemplateId,
-            System.Collections.Generic.List<EntityTemplateChild> children,
-            string? parentLocalPath,
-            Dictionary<string, string> addressed)
-        {
-            if (children == null)
+            if (string.IsNullOrEmpty(instanceId))
             {
                 return;
             }
 
-            for (int i = 0; i < children.Count; i++)
-            {
-                EntityTemplateChild child = children[i];
-                if (child == null || string.IsNullOrWhiteSpace(child.Template) || !templates.ContainsKey(child.Template))
-                {
-                    throw new InvalidOperationException(
-                        $"Map entity template '{ownerTemplateId}' children[{i}] references unknown template '{child?.Template}'.");
-                }
-
-                string? relativePath = ChildRelativePath(parentLocalPath, child.LocalId);
-                if (relativePath != null)
-                {
-                    if (!addressed.TryAdd(relativePath, child.Template))
-                    {
-                        throw new InvalidOperationException(
-                            $"Map entity template '{ownerTemplateId}' child path '{relativePath}' is duplicated.");
-                    }
-                }
-
-                CollectChildTemplates(templates, child.Template, templates[child.Template].Children, relativePath, addressed);
-                CollectChildTemplates(templates, ownerTemplateId, child.Children, relativePath, addressed);
-            }
+            _world.Add(entity, new PlacedInstanceId { Value = instanceId });
         }
 
         private static bool TryBuildBatchRequest(
@@ -1607,37 +1485,6 @@ namespace Ludots.Core.Systems
             }
 
             return angleNode.GetValue<float>();
-        }
-
-        private int ResolveTitleToken(string context, string tokenKey)
-        {
-            if (tokenKey == null || string.IsNullOrWhiteSpace(tokenKey) || !string.Equals(tokenKey, tokenKey.Trim(), StringComparison.Ordinal))
-            {
-                throw new InvalidOperationException($"{context} titleToken requires a trimmed non-empty text token key.");
-            }
-
-            if (_textCatalog == null)
-            {
-                throw new InvalidOperationException($"{context} titleToken requires the presentation text catalog.");
-            }
-
-            int tokenId = _textCatalog.GetTokenId(tokenKey);
-            if (tokenId <= 0)
-            {
-                throw new InvalidOperationException($"{context} titleToken references unknown text token '{tokenKey}'.");
-            }
-
-            return tokenId;
-        }
-
-        private void AttachTitleToken(string context, Entity entity, string tokenKey)
-        {
-            if (tokenKey == null)
-            {
-                return;
-            }
-
-            _world.Add(entity, new EntityInfoTitleToken { TokenId = ResolveTitleToken(context, tokenKey) });
         }
 
         private static void ValidateProperties(JsonObject obj, string context, params string[] allowedNames)

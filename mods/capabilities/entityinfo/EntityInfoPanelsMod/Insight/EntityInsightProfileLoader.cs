@@ -38,6 +38,7 @@ public sealed class EntityInsightProfileLoader
 
         var profiles = new EntityInsightProfile[nodes.Count];
         var profileIndexByTemplateKey = new Dictionary<int, int>();
+        var instanceTitles = new Dictionary<string, EntityInsightInstanceTitle>(StringComparer.Ordinal);
         for (int profileIndex = 0; profileIndex < nodes.Count; profileIndex++)
         {
             JsonObject node = nodes[profileIndex].Node;
@@ -67,14 +68,16 @@ public sealed class EntityInsightProfileLoader
                 GenreLabelTokenId = ResolveRequiredTokenId(textCatalog, node, "genreLabelToken", profileId),
                 SubtitleTokenId = ResolveRequiredTokenId(textCatalog, node, "subtitleToken", profileId),
                 BodyTokenId = ResolveRequiredTokenId(textCatalog, node, "bodyToken", profileId),
+                TitleTokenId = ReadOptionalTokenId(textCatalog, node, "titleToken", profileId),
                 Badges = ReadBadges(textCatalog, node, profileId),
                 Stats = ReadStats(textCatalog, node, profileId),
                 Tips = ReadTips(textCatalog, node, profileId),
                 Actions = ReadActions(textCatalog, node, profileId)
             };
+            ReadInstanceTitles(textCatalog, node, profileId, profileIndex, instanceTitles);
         }
 
-        return new EntityInsightProfileCatalog(profiles, profileIndexByTemplateKey);
+        return new EntityInsightProfileCatalog(profiles, profileIndexByTemplateKey, instanceTitles);
     }
 
     private static int[] ReadTemplateKeyIds(JsonObject node, EntityTemplateKeyRegistry templateKeys, string profileId)
@@ -249,6 +252,69 @@ public sealed class EntityInsightProfileLoader
         }
 
         return actions;
+    }
+
+    private static int ReadOptionalTokenId(PresentationTextCatalog textCatalog, JsonObject node, string propertyName, string scope)
+    {
+        if (!node.ContainsKey(propertyName) || node[propertyName] is null)
+        {
+            return 0;
+        }
+
+        return ResolveRequiredTokenId(textCatalog, node, propertyName, scope);
+    }
+
+    // instanceId 是地图登记的摆放编号：根为 instanceId，子实体为 instanceId 加 localId 链。
+    private static void ReadInstanceTitles(
+        PresentationTextCatalog textCatalog,
+        JsonObject node,
+        string profileId,
+        int profileIndex,
+        Dictionary<string, EntityInsightInstanceTitle> instanceTitles)
+    {
+        if (!node.ContainsKey("instances") || node["instances"] is null)
+        {
+            return;
+        }
+
+        if (node["instances"] is not JsonArray rows)
+        {
+            throw new InvalidOperationException($"Entity insight profile '{profileId}' instances must be an array.");
+        }
+
+        for (int i = 0; i < rows.Count; i++)
+        {
+            if (rows[i] is not JsonObject row)
+            {
+                throw new InvalidOperationException($"Entity insight profile '{profileId}' instances[{i}] must be an object.");
+            }
+
+            foreach (var property in row)
+            {
+                if (!string.Equals(property.Key, "instanceId", StringComparison.Ordinal) &&
+                    !string.Equals(property.Key, "titleToken", StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Entity insight profile '{profileId}' instances[{i}] contains unsupported property '{property.Key}'.");
+                }
+            }
+
+            string scope = $"{profileId}.instances[{i}]";
+            string instanceId = ReadRequiredString(row, "instanceId");
+            if (!string.Equals(instanceId, instanceId.Trim(), StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"Entity insight profile '{profileId}' instances[{i}].instanceId must be trimmed.");
+            }
+
+            int tokenId = ResolveRequiredTokenId(textCatalog, row, "titleToken", scope);
+            if (instanceTitles.ContainsKey(instanceId))
+            {
+                throw new InvalidOperationException(
+                    $"Entity insight profile '{profileId}' reuses instance '{instanceId}'.");
+            }
+
+            instanceTitles.Add(instanceId, new EntityInsightInstanceTitle(profileIndex, tokenId));
+        }
     }
 
     private static int ResolveRequiredTokenId(PresentationTextCatalog textCatalog, JsonObject node, string propertyName, string scope)

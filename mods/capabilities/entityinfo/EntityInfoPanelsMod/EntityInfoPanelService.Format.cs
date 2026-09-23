@@ -4,10 +4,12 @@ using System.Numerics;
 using System.Reflection;
 using Arch.Core;
 using Arch.Core.Extensions;
+using EntityInfoPanelsMod.Insight;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation.Components;
 
@@ -259,9 +261,24 @@ public sealed partial class EntityInfoPanelService
 
     private string ResolveEntityInfoTitle(World world, Entity entity)
     {
-        if (world.TryGet(entity, out EntityInfoTitleToken titleToken))
+        if (world.TryGet(entity, out PlacedInstanceId placed) &&
+            _insightCatalog.TryGetInstanceTitle(placed.Value, out EntityInsightInstanceTitle instanceTitle))
         {
-            return ResolveTextTokenId(titleToken.TokenId);
+            if (!world.TryGet(entity, out EntityTemplateKeyRef templateKey) ||
+                !_insightCatalog.ProfileOwnsTemplate(instanceTitle.ProfileIndex, templateKey.TemplateKeyId))
+            {
+                throw new InvalidOperationException(
+                    $"Entity insight instance '{placed.Value}' does not belong to this entity's template.");
+            }
+
+            return ResolveTextTokenId(instanceTitle.TokenId);
+        }
+
+        if (world.TryGet(entity, out EntityTemplateKeyRef profileKey) &&
+            _insightCatalog.TryGetProfileByTemplateKey(profileKey.TemplateKeyId, out EntityInsightProfile profile) &&
+            profile.TitleTokenId > 0)
+        {
+            return ResolveTextTokenId(profile.TitleTokenId);
         }
 
         if (world.TryGet(entity, out Name name) && !string.IsNullOrWhiteSpace(name.Value))
