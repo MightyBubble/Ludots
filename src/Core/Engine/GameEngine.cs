@@ -948,7 +948,7 @@ namespace Ludots.Core.Engine
             var componentAuthoringContext = new ComponentAuthoringContext();
             MapLoader.SetComponentAuthoringContext(componentAuthoringContext);
             new AttributeConstraintsLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
-            int timeScalePermilleAttributeId = AttributeRegistry.Register(TimeAttributeNames.ScalePermille);
+            AttributeRegistry.Register(TimeAttributeNames.ScalePermille);
             var graphProgramRegistry = new GraphProgramRegistry(graphHandlers);
             // Enums load before events: custom event params may annotate enumType
             // against this catalog, and graph compilation resolves enum-bound sugar through it.
@@ -1653,12 +1653,13 @@ namespace Ludots.Core.Engine
             _inputRuntimeSystem.Initialize();
             var clockStepPolicy = new GasClockStepPolicy(gasClockConfig.StepEveryFixedTicks, gasClockConfig.Mode);
             var clockSystem = new GasClockSystem(clock, clockStepPolicy, CreateContext, TriggerManager.FireEvent);
-            var entityLocalClockSystem = new EntityLocalClockSystem(World, clockStepPolicy, timeScalePermilleAttributeId);
+            var entityLocalClockSystem = new EntityLocalClockSystem(World, clockStepPolicy);
             var calendarRegistry = new CalendarDefinitionRegistry();
             CalendarWorldConfig? calendarWorld = new CalendarConfigLoader(ConfigPipeline)
                 .Load(calendarRegistry, ConfigCatalog, ConfigConflictReport);
             var calendarRuntime = new CalendarRuntime(calendarWorld, calendarRegistry);
             gasGraphApi.BindCalendarRuntime(calendarRuntime);
+            gasGraphApi.BindTimeFlow(_timeFlow);
             // Calendar.* schema 声明为 Global scope：走全局订阅表派发（地图挂的全局触发
             // 听得到），并带订阅探针——没人听的日子事件连投影 diff 都不算。
             CalendarSystem? calendarSystem = calendarRuntime.IsEnabled
@@ -2317,7 +2318,6 @@ namespace Ludots.Core.Engine
             RegisterSystem(new InputActionAttributeBindingSystem(World, GlobalContext, inputActionAttributeBindings, tagOps), SystemGroup.InputCollection);
             RegisterSystem(new StoryRuntimeSystem(this, dialogueRuntime, sequencerRuntime), SystemGroup.InputCollection);
             RegisterSystem(clockSystem, SystemGroup.InputCollection);
-            RegisterSystem(entityLocalClockSystem, SystemGroup.InputCollection);
             if (calendarSystem != null)
             {
                 RegisterSystem(calendarSystem, SystemGroup.InputCollection);
@@ -2488,6 +2488,7 @@ namespace Ludots.Core.Engine
             // Phase 4: AttributeCalculation
             RegisterSystem(aggSystem, SystemGroup.AttributeCalculation);
             RegisterSystem(bindingSystem, SystemGroup.AttributeCalculation);
+            RegisterSystem(entityLocalClockSystem, SystemGroup.AttributeCalculation);
             RegisterSystem(_cameraRuntimeSystem, SystemGroup.AttributeCalculation);
 
             // Phase 5: DeferredTriggerCollection

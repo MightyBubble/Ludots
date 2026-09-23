@@ -264,6 +264,8 @@ namespace Ludots.Core.GraphRuntime
         public string? Calendar { get; set; }
         /// <summary>Cycle id for ReadCalendarCyclePhase / ReadCalendarCycleDay.</summary>
         public string? Cycle { get; set; }
+        /// <summary>TimeFlow domain name for ReadTimeFlow* / AcquireTimeFlow*. Must already be registered.</summary>
+        public string? Domain { get; set; }
         public float RadiusCm { get; set; }
         public float RangeCm { get; set; }
         public int DirectionDeg { get; set; }

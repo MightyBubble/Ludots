@@ -724,6 +724,31 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
         }
 
+        bool ReadTimeFlowPaused(string domainName)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.TimeFlowUnavailable");
+        }
+
+        int ReadTimeFlowScalePermille(string domainName)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.TimeFlowUnavailable");
+        }
+
+        int AcquireTimeFlowPause(string domainName, string owner, string reason)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.TimeFlowUnavailable");
+        }
+
+        int AcquireTimeFlowScale(string domainName, int scalePermille, string owner, string reason)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.TimeFlowUnavailable");
+        }
+
+        void ReleaseTimeFlowToken(int tokenValue)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.TimeFlowUnavailable");
+        }
+
         /// <summary>
         /// Registers an AwaitCallback waiter (Imm callback type) and parks the slice.
         /// Completions resume through GraphCallbackContinuationSystem in registration order.

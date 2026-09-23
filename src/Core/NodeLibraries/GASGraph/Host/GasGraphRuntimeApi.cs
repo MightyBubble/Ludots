@@ -6,6 +6,7 @@ using Ludots.Core.Components;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.EntityQueries;
 using Ludots.Core.Engine;
+using Ludots.Core.Engine.TimeFlow;
 using Ludots.Core.Gameplay.Calendar;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -147,6 +148,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private Gameplay.MapTriggers.CustomEventNameRegistry? _customEvents;
         private Func<GameEngine?>? _engineResolver;
         private CalendarRuntime? _calendar;
+        private TimeFlowService? _timeFlow;
         private Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmissionBuffer? _commandIntentSubmissions;
         private Ludots.Core.EntityCollections.CollectionApplier? _collectionApplier;
 
@@ -375,6 +377,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _calendar = calendarRuntime ?? throw new ArgumentNullException(nameof(calendarRuntime));
         }
 
+        public void BindTimeFlow(TimeFlowService timeFlow)
+        {
+            _timeFlow = timeFlow ?? throw new ArgumentNullException(nameof(timeFlow));
+        }
+
         /// <summary>共享到期时间轮；直接取消路径写标记后强制快道效果下一 slice 出桶。</summary>
         internal Ludots.Core.Gameplay.GAS.Systems.EffectDueWheel? DueWheel { get; set; }
         internal Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry? AggregateDirty { get; set; }
@@ -504,6 +511,25 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 calendar.SetDayIndex(dayIndex, contextFactory, fireEvent, hasSubscribers));
         }
 
+        public bool ReadTimeFlowPaused(string domainName) => RequireTimeFlow().IsPaused(domainName);
+
+        public int ReadTimeFlowScalePermille(string domainName) => RequireTimeFlow().GetEffectiveScalePermille(domainName);
+
+        public int AcquireTimeFlowPause(string domainName, string owner, string reason)
+        {
+            return RequireTimeFlow().AcquirePauseToken(domainName, owner, reason).Value;
+        }
+
+        public int AcquireTimeFlowScale(string domainName, int scalePermille, string owner, string reason)
+        {
+            return RequireTimeFlow().AcquireScaleToken(domainName, scalePermille, owner, reason).Value;
+        }
+
+        public void ReleaseTimeFlowToken(int tokenValue)
+        {
+            RequireTimeFlow().ReleaseToken(new TimeFlowToken(tokenValue));
+        }
+
         public void SetCalendarTicksIntoDay(int ticksIntoDay)
         {
             WithCalendarDispatch((calendar, contextFactory, fireEvent, hasSubscribers) =>
@@ -512,6 +538,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         private CalendarRuntime RequireCalendar()
             => _calendar ?? throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+
+        private TimeFlowService RequireTimeFlow()
+            => _timeFlow ?? throw new InvalidOperationException("GAS.GRAPH.ERR.TimeFlowUnavailable");
 
         private static string ResolveCalendarId(CalendarRuntime calendar, int calendarKeyId)
         {

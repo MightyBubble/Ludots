@@ -2616,6 +2616,46 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSetCalendarTicksIntoDayEntryMod",
         "projectPath": "CapabilityStandardGraphOpSetCalendarTicksIntoDayEntryMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_AcquireTimeFlowPause",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpAcquireTimeFlowPauseEntryMod",
+        "projectPath": "CapabilityStandardGraphOpAcquireTimeFlowPauseEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_AcquireTimeFlowScale",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpAcquireTimeFlowScaleEntryMod",
+        "projectPath": "CapabilityStandardGraphOpAcquireTimeFlowScaleEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ReadTimeFlowPaused",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadTimeFlowPausedEntryMod",
+        "projectPath": "CapabilityStandardGraphOpReadTimeFlowPausedEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ReadTimeFlowScalePermille",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadTimeFlowScalePermilleEntryMod",
+        "projectPath": "CapabilityStandardGraphOpReadTimeFlowScalePermilleEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ReleaseTimeFlowToken",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReleaseTimeFlowTokenEntryMod",
+        "projectPath": "CapabilityStandardGraphOpReleaseTimeFlowTokenEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

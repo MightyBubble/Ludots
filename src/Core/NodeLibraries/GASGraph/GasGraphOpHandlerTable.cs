@@ -381,7 +381,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.ReadCalendarCycleDay or
                 GraphNodeOp.ApplyCalendarStart or
                 GraphNodeOp.SetCalendarDayIndex or
-                GraphNodeOp.SetCalendarTicksIntoDay
+                GraphNodeOp.SetCalendarTicksIntoDay or
+                GraphNodeOp.ReadTimeFlowPaused or
+                GraphNodeOp.ReadTimeFlowScalePermille or
+                GraphNodeOp.AcquireTimeFlowPause or
+                GraphNodeOp.AcquireTimeFlowScale or
+                GraphNodeOp.ReleaseTimeFlowToken
                     => EffectOperationMetadata.Pure(description),
 
                 GraphNodeOp.SubmitAssignedOrder or
@@ -1004,6 +1009,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.ApplyCalendarStart, HandleApplyCalendarStart, "ApplyCalendarStart graph opcode.");
             Register(GraphNodeOp.SetCalendarDayIndex, HandleSetCalendarDayIndex, "SetCalendarDayIndex graph opcode.");
             Register(GraphNodeOp.SetCalendarTicksIntoDay, HandleSetCalendarTicksIntoDay, "SetCalendarTicksIntoDay graph opcode.");
+            Register(GraphNodeOp.ReadTimeFlowPaused, HandleReadTimeFlowPaused, "ReadTimeFlowPaused graph opcode.");
+            Register(GraphNodeOp.ReadTimeFlowScalePermille, HandleReadTimeFlowScalePermille, "ReadTimeFlowScalePermille graph opcode.");
+            Register(GraphNodeOp.AcquireTimeFlowPause, HandleAcquireTimeFlowPause, "AcquireTimeFlowPause graph opcode.");
+            Register(GraphNodeOp.AcquireTimeFlowScale, HandleAcquireTimeFlowScale, "AcquireTimeFlowScale graph opcode.");
+            Register(GraphNodeOp.ReleaseTimeFlowToken, HandleReleaseTimeFlowToken, "ReleaseTimeFlowToken graph opcode.");
         }
 
         // ── Value Ops ──
@@ -1147,6 +1157,80 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void HandleSetCalendarTicksIntoDay(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.Api.SetCalendarTicksIntoDay(s.I[ins.A]);
+        }
+
+        private static void HandleReadTimeFlowPaused(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.B[ins.Dst] = (byte)(s.Api.ReadTimeFlowPaused(RequireTimeFlowDomain(ref s, ins.Imm)) ? 1 : 0);
+        }
+
+        private static void HandleReadTimeFlowScalePermille(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = s.Api.ReadTimeFlowScalePermille(RequireTimeFlowDomain(ref s, ins.Imm));
+        }
+
+        private static void HandleAcquireTimeFlowPause(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            (string owner, string reason) = RequireTimeFlowOwner(ref s);
+            s.I[ins.Dst] = s.Api.AcquireTimeFlowPause(RequireTimeFlowDomain(ref s, ins.Imm), owner, reason);
+        }
+
+        private static void HandleAcquireTimeFlowScale(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            (string owner, string reason) = RequireTimeFlowOwner(ref s);
+            s.I[ins.Dst] = s.Api.AcquireTimeFlowScale(RequireTimeFlowDomain(ref s, ins.Imm), s.I[ins.A], owner, reason);
+        }
+
+        private static void HandleReleaseTimeFlowToken(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.ReleaseTimeFlowToken(s.I[ins.A]);
+        }
+
+        private static string RequireTimeFlowDomain(ref GraphExecutionState s, int symbolIndex)
+        {
+            if (s.Programs == null ||
+                !s.Programs.TryGetRegistration(s.CurrentGraphId, out GraphProgramRegistration registration))
+            {
+                throw new InvalidOperationException(
+                    $"TimeFlow domain symbol requires a registered graph program. graphId={s.CurrentGraphId}.");
+            }
+
+            string[] symbols = registration.Symbols;
+            if ((uint)symbolIndex >= (uint)symbols.Length)
+            {
+                throw new InvalidOperationException(
+                    $"TimeFlow domain symbol index {symbolIndex} is outside the symbol table of graph {s.CurrentGraphId}.");
+            }
+
+            string domain = symbols[symbolIndex];
+            if (string.IsNullOrWhiteSpace(domain))
+            {
+                throw new InvalidOperationException(
+                    $"TimeFlow domain symbol index {symbolIndex} is empty on graph {s.CurrentGraphId}.");
+            }
+
+            return domain;
+        }
+
+        private static (string Owner, string Reason) RequireTimeFlowOwner(ref GraphExecutionState s)
+        {
+            string owner = Host.GraphIdRegistry.GetName(s.CurrentGraphId);
+            if (string.IsNullOrWhiteSpace(owner))
+            {
+                throw new InvalidOperationException(
+                    $"TimeFlow token owner requires graph id {s.CurrentGraphId} to be registered in GraphIdRegistry.");
+            }
+
+            if (s.Programs == null ||
+                !s.Programs.TryGetSourceMap(s.CurrentGraphId, out GraphInstructionSourceMap sourceMap) ||
+                !sourceMap.TryGetSource(s.CurrentInstructionPc, out GraphInstructionSource source) ||
+                string.IsNullOrWhiteSpace(source.NodeId))
+            {
+                throw new InvalidOperationException(
+                    $"TimeFlow token reason requires a source node for graph '{owner}'.");
+            }
+
+            return (owner, source.NodeId);
         }
 
         private static GraphTextHeap RequireTextHeap(ref GraphExecutionState s)

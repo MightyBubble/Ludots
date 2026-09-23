@@ -240,6 +240,7 @@
 - [今天走到哪](ReadCalendarDayIndex.md) — 读出当前日序，字幕报出这个数。
 - [今天过了多少步](ReadCalendarTicksIntoDay.md) — 读出今天已经走了多少步。
 - [今年是第几年](ReadCalendarYear.md) — 按主历读出年份。
+- [停一下再放开](AcquireTimeFlowPause.md) — 拿一张整局暂停，马上放回。
 - [写死一句字幕](ConstText.md) — 作者把「你好」钉在图上；跑完，字幕口吐出同样三个字。
 - [出门办事，办完回家](Call.md) — 人走到驿站歇一脚，脚一落地就回原点，家这格空着时留个虚影。
 - [办完差事，交回原点](Return.md) — 差事办完这一步，人从驿站那格退回原点，虚影收回真人。
@@ -256,8 +257,11 @@
 - [把小数念成字](FloatToText.md) — 小数 1.5 先变成文字，再送进字幕口。
 - [把整数念成字](IntToText.md) — 数字 7 先变成文字，再送进字幕口。
 - [把日子往前拨一天](SetCalendarDayIndex.md) — 读出今天，加一天，写回去。不能往回拨。
+- [把暂停放回去](ReleaseTimeFlowToken.md) — 先拿一张整局暂停，再放回这张令牌。
 - [把钟拨回刚读到的这一拍](SetCalendarTicksIntoDay.md) — 读出今天已走的步数，再写回去。
 - [按文案键出字幕](LoadTextKey.md) — 作者从名册里挑 gallery.hello；跑完，字幕口吐出本地化的「你好」。
+- [整局停没停](ReadTimeFlowPaused.md) — 先看整局模拟有没有被暂停。
+- [整局现在多少](ReadTimeFlowScalePermille.md) — 读出整局的有效倍率，一千是原速。
 - [没满就再续一杯](JumpIfFalse.md) — 茶杯一格格见满：没满时绿箭头带着续一杯，满了那一下改走黄箭头，直接收工。
 - [满了就跳过续杯](Jump.md) — 杯是满的：续杯那几行被划掉，指针直接飞到收工行。
 - [点名派发任务](OfferTask.md) — 图节点指定任务 id；运行后，任务进入指定实体的任务列表，字幕显示「任务已派发」。
@@ -266,6 +270,7 @@
 - [等回话再往下走](AwaitCallback.md) — 图停在门口等确认；回话一到，下一拍接着演。
 - [算出一个整数就收工](HaltReturnInt.md) — 数落进托盘、卷轴拉下打烊条、人挪到答案旁边——这三件事同时发生，就是收工。
 - [续一杯，歇一口气](Yield.md) — 每续一杯就停一拍：人影顿一下，杯里水涨一格，三格满就完。
+- [调成两倍再收回](AcquireTimeFlowScale.md) — 给整局一张两倍令牌，马上放回。
 - [这一季叫什么](ReadCalendarCyclePhase.md) — 按季节周期读出当前相位编号。
 - [这一季的第几天](ReadCalendarCycleDay.md) — 读出当前季节里的第几天。
 - [进图开一场对话](StartDialogue.md) — 图节点点名对话 id；跑完，会话已开，字幕报「对话已开」。

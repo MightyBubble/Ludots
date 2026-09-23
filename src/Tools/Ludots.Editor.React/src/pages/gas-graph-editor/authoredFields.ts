@@ -30,6 +30,7 @@ export type AuthoredFieldKey =
   | 'functionName'
   | 'presentationSurface'
   | 'calendar'
+  | 'domain'
   | 'cycle';
 
 export type AuthoredFieldKind = 'string' | 'int' | 'float' | 'bool' | 'anchor' | 'payloadKey' | 'instanceId' | 'enumType' | 'textKey';
@@ -87,6 +88,7 @@ const presentationSurface: AuthoredFieldSpec = {
   kind: 'string',
 };
 const calendar: AuthoredFieldSpec = { key: 'calendar', label: '历法 id，留空用当前主历', kind: 'string' };
+const domain: AuthoredFieldSpec = { key: 'domain', label: '时间域，例如 simulation', kind: 'string' };
 const cycle: AuthoredFieldSpec = { key: 'cycle', label: '周期 id', kind: 'string' };
 
 const FIELDS: Record<string, AuthoredFieldSpec[]> = {
@@ -147,6 +149,10 @@ const FIELDS: Record<string, AuthoredFieldSpec[]> = {
   ReadCalendarYear: [calendar],
   ReadCalendarCyclePhase: [calendar, cycle],
   ReadCalendarCycleDay: [calendar, cycle],
+  ReadTimeFlowPaused: [domain],
+  ReadTimeFlowScalePermille: [domain],
+  AcquireTimeFlowPause: [domain],
+  AcquireTimeFlowScale: [domain],
 };
 
 export function authoredFieldsForOp(op: string): AuthoredFieldSpec[] {

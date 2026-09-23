@@ -318,6 +318,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.ReadCalendarCycleDay:
                     ValidateCalendarNode(node, op.NodeOp, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
+                case GraphNodeOp.ReadTimeFlowPaused:
+                case GraphNodeOp.ReadTimeFlowScalePermille:
+                    ValidateTimeFlowNode(node, op.NodeOp, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
                 default:
                     diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
                         $"Op '{op.NodeOp}' is not supported by Query ControlFlow compiler.", node.Id));
@@ -748,6 +752,25 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.ReadCalendarCyclePhase:
                 case GraphNodeOp.ReadCalendarCycleDay:
                     EmitCalendarNode(
+                        node,
+                        op.NodeOp,
+                        ref instruction,
+                        valueEdges,
+                        nodeIndices,
+                        outputTypes,
+                        outputRegisters,
+                        boolScratches,
+                        droppedRegisters,
+                        definedInts,
+                        definedBools,
+                        symbolToIndex,
+                        symbols,
+                        graphId,
+                        diagnostics);
+                    break;
+                case GraphNodeOp.ReadTimeFlowPaused:
+                case GraphNodeOp.ReadTimeFlowScalePermille:
+                    EmitTimeFlowNode(
                         node,
                         op.NodeOp,
                         ref instruction,

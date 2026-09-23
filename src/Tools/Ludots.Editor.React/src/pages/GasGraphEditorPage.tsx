@@ -145,6 +145,7 @@ type GraphNodeConfig = {
   pinRegister?: number;
   calendar?: string | null;
   cycle?: string | null;
+  domain?: string | null;
 };
 
 type GasNodeData = GraphNodeConfig & {
@@ -393,6 +394,7 @@ function toWireNode(n: GraphNodeConfig): GraphNodeConfig {
     pinRegister: n.pinRegister,
     calendar: n.calendar ?? undefined,
     cycle: n.cycle ?? undefined,
+    domain: n.domain ?? undefined,
   });
 }
 

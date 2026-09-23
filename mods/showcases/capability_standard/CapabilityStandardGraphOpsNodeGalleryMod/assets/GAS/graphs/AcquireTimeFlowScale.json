@@ -1,0 +1,74 @@
+[
+  {
+    "id": "showcase.graph_op.AcquireTimeFlowScale",
+    "kind": "Script",
+    "entry": "two",
+    "nodes": [
+      {
+        "id": "two",
+        "op": "ConstInt",
+        "intValue": 2000
+      },
+      {
+        "id": "featured",
+        "op": "AcquireTimeFlowScale",
+        "domain": "simulation"
+      },
+      {
+        "id": "read",
+        "op": "ReadTimeFlowScalePermille",
+        "domain": "simulation"
+      },
+      {
+        "id": "release",
+        "op": "ReleaseTimeFlowToken"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "two",
+        "fromPort": "next",
+        "to": "featured"
+      },
+      {
+        "from": "featured",
+        "fromPort": "next",
+        "to": "read"
+      },
+      {
+        "from": "read",
+        "fromPort": "next",
+        "to": "release"
+      },
+      {
+        "from": "release",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "two",
+        "fromPort": "value",
+        "to": "featured",
+        "toPort": "value"
+      },
+      {
+        "from": "featured",
+        "fromPort": "value",
+        "to": "release",
+        "toPort": "value"
+      },
+      {
+        "from": "read",
+        "fromPort": "value",
+        "to": "done",
+        "toPort": "value"
+      }
+    ]
+  }
+]

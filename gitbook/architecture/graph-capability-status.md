@@ -124,7 +124,7 @@ TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面�
 
 历法当前值可以在图里直接读、直接写：日序、当天步数、千分比、昼夜相位、年份、周期相位和周期内第几天；开局落定、往前拨日、改当天步数。启用仍然只认 `Calendar/world.json`。`Calendar.*` 不是实体属性。
 
-时间流的图节点还没做。设计在 [时间流图节点](time-flow-graph-nodes.md)：整局和玩法步进用暂停令牌、变速令牌；一个人的快慢继续写 `time.scale_permille`，经 AttributeSink 落到本地时钟。
+时间流可以在图里直接读、直接拿令牌：整局和玩法步进的暂停、有效倍率、暂停令牌、变速令牌、放回令牌。一个人的快慢仍写 `time.scale_permille`，经 AttributeSink `Time.EntityScalePermille` 落到本地时钟。本地时钟在属性落地之后推进；同一拍里更早的系统，包括限时标签到期，看到的是上一拍的本地步数。合同在 [时间流图节点](time-flow-graph-nodes.md)。
 
 又开了一条线：行为树「真图化」（BT-1）与 HFSM「真图化」（FSM-1）。设计冻结本在 `artifacts/showcases/graph-fsm-bt-refactor-design.md`（L2 身份已纠偏，见下）。
 
@@ -150,7 +150,7 @@ Case E 查询债务施工：分支 `codex/case-e-query-completeness` 已实现�
 | `FormatTextKey` / ActiveLocale / 生产 Dialogue drain | TextKey 后续 | 见 graph-textkey.md |
 | 实体能力 authoring 声明与编译校验 | 编辑器下一切片 | 不得把运行时隐式安装写成已完成 |
 | `LoadEntryPayloadText`（事件 String 载荷进 Text 寄存器） | **合同缺口** | FormalText 已落地，但入口捕获表尚无 String 槽；编辑器对 String 针脚返回空 |
-| 时间流图节点 | **设计已写，节点未做** | 见 [时间流图节点](time-flow-graph-nodes.md)。先做域令牌五个节点，再把 `time.scale_permille` 的落地改到 AttributeSink |
+| 时间流图节点 | **已落地** | 五个域节点 520–524，见 [时间流图节点](time-flow-graph-nodes.md)。`time.scale_permille` 经 `Time.EntityScalePermille` 落到本地时钟 |
 | 外层 L2 拓扑 SSOT 恢复（AI JSON + 拓扑编辑器） | **已落地** | 见 [BT/FSM 独立编辑器](graph-bt-fsm-nested-func.md)；糖宿主仅回归 |
 
 | trace 记录没有时间 / 帧号 | **合同缺口** | 想要真的逐步流动就给 `GraphDebugTraceRecord` 补时间源；在那之前只许说齐亮齐灭 |

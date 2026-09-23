@@ -4187,6 +4187,93 @@
         "GraphOpsNodeGalleryCalendarAcceptanceTests.SetCalendarTicksIntoDay_WritesTheTicksItJustRead"
       ],
       "codegenStatus": "covered"
+    },
+    {
+      "op": "ReadTimeFlowPaused",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Query",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_ReadTimeFlowPaused",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryTimeFlowAcceptanceTests.ReadTimeFlowPaused_ShowsTheSimulationIsRunning"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "ReadTimeFlowScalePermille",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Query",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_ReadTimeFlowScalePermille",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryTimeFlowAcceptanceTests.ReadTimeFlowScalePermille_ShowsTheLiveScale"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "AcquireTimeFlowPause",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_AcquireTimeFlowPause",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryTimeFlowAcceptanceTests.AcquireTimeFlowPause_PausesThenReleases"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "AcquireTimeFlowScale",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_AcquireTimeFlowScale",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryTimeFlowAcceptanceTests.AcquireTimeFlowScale_ReadsTwoThousandThenReleases"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "ReleaseTimeFlowToken",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_ReleaseTimeFlowToken",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryTimeFlowAcceptanceTests.ReleaseTimeFlowToken_ReleasesThePauseItJustTook"
+      ],
+      "codegenStatus": "covered"
     }
   ]
 }

@@ -829,6 +829,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     ValidateCalendarNode(node, op.NodeOp, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
 
+                case GraphNodeOp.ReadTimeFlowPaused:
+                case GraphNodeOp.ReadTimeFlowScalePermille:
+                case GraphNodeOp.AcquireTimeFlowPause:
+                case GraphNodeOp.AcquireTimeFlowScale:
+                case GraphNodeOp.ReleaseTimeFlowToken:
+                    ValidateTimeFlowNode(node, op.NodeOp, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
                 default:
                     diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
                         $"Op '{op.NodeOp}' is not supported by linear ControlFlow compiler.", node.Id));
@@ -2061,6 +2069,29 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.SetCalendarDayIndex:
                 case GraphNodeOp.SetCalendarTicksIntoDay:
                     EmitCalendarNode(
+                        node,
+                        op.NodeOp,
+                        ref instruction,
+                        valueEdges,
+                        nodeIndices,
+                        outputTypes,
+                        outputRegisters,
+                        boolScratches,
+                        droppedRegisters,
+                        definedInts,
+                        definedBools,
+                        symbolToIndex,
+                        symbols,
+                        graphId,
+                        diagnostics);
+                    break;
+
+                case GraphNodeOp.ReadTimeFlowPaused:
+                case GraphNodeOp.ReadTimeFlowScalePermille:
+                case GraphNodeOp.AcquireTimeFlowPause:
+                case GraphNodeOp.AcquireTimeFlowScale:
+                case GraphNodeOp.ReleaseTimeFlowToken:
+                    EmitTimeFlowNode(
                         node,
                         op.NodeOp,
                         ref instruction,

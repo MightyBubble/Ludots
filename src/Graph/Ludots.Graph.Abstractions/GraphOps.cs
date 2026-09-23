@@ -495,6 +495,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         SetCalendarDayIndex = 518,
         /// <summary>Set ticks into the current day to I[A], in [0, ticksPerDay). A day-phase change fires Calendar.DayPhaseChanged.</summary>
         SetCalendarTicksIntoDay = 519,
+        /// <summary>B[Dst] = domain named by symbols[Imm] is paused. Effective scale includes the parent domain.</summary>
+        ReadTimeFlowPaused = 520,
+        /// <summary>I[Dst] = effective scale permille of the domain named by symbols[Imm]. 1000 is normal speed. 0 is paused.</summary>
+        ReadTimeFlowScalePermille = 521,
+        /// <summary>I[Dst] = pause token on the domain named by symbols[Imm]. Owner is the running graph id.</summary>
+        AcquireTimeFlowPause = 522,
+        /// <summary>I[Dst] = scale token. Domain is symbols[Imm]. Scale permille is I[A], and must be &gt; 0.</summary>
+        AcquireTimeFlowScale = 523,
+        /// <summary>Release pause or scale token I[A]. A token that is not active fails closed.</summary>
+        ReleaseTimeFlowToken = 524,
 
     }
 

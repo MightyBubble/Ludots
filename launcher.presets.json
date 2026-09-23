@@ -3588,6 +3588,51 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_AcquireTimeFlowPause_raylib",
+      "name": "Graph Op AcquireTimeFlowPause Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_AcquireTimeFlowPause"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_AcquireTimeFlowScale_raylib",
+      "name": "Graph Op AcquireTimeFlowScale Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_AcquireTimeFlowScale"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ReadTimeFlowPaused_raylib",
+      "name": "Graph Op ReadTimeFlowPaused Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ReadTimeFlowPaused"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ReadTimeFlowScalePermille_raylib",
+      "name": "Graph Op ReadTimeFlowScalePermille Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ReadTimeFlowScalePermille"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ReleaseTimeFlowToken_raylib",
+      "name": "Graph Op ReleaseTimeFlowToken Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ReleaseTimeFlowToken"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }
