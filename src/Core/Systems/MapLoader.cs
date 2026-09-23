@@ -778,7 +778,12 @@ namespace Ludots.Core.Systems
                 }
 
                 bool isBatchCompatible = _templateBatchSpawner.IsBatchCompatible(entityData.Template, templates[entityData.Template]);
-                if (isBatchCompatible && TryBuildBatchRequest(mapConfig.Id, entityData, mapEntityTag, out var batchRequest))
+                if (isBatchCompatible && TryBuildBatchRequest(
+                        mapConfig.Id,
+                        entityData,
+                        templates[entityData.Template],
+                        mapEntityTag,
+                        out var batchRequest))
                 {
                     if (!string.Equals(activeBatchTemplateId, entityData.Template, StringComparison.Ordinal) ||
                         pendingBatchRequests.Count >= _templateBatchSpawner.ScratchCapacity)
@@ -1016,6 +1021,7 @@ namespace Ludots.Core.Systems
         private static bool TryBuildBatchRequest(
             string mapId,
             EntitySpawnData entityData,
+            EntityTemplate template,
             in MapEntity mapEntity,
             out TemplateEntityBatchSpawner.TemplateBatchSpawnRequest request)
         {
@@ -1027,12 +1033,31 @@ namespace Ludots.Core.Systems
 
             if (entityData.Overrides != null && entityData.Overrides.Count > 0)
             {
-                bool containsWorldPosition = entityData.Overrides.ContainsKey("WorldPositionCm");
-                bool containsFacing = entityData.Overrides.ContainsKey("FacingDirection");
-                int supportedOverrideCount = (containsWorldPosition ? 1 : 0) + (containsFacing ? 1 : 0);
-                if (entityData.Overrides.Count != supportedOverrideCount)
+                bool containsWorldPosition = false;
+                bool containsFacing = false;
+                foreach (string key in entityData.Overrides.Keys)
                 {
-                    return false;
+                    switch (key)
+                    {
+                        case "WorldPositionCm":
+                            containsWorldPosition = true;
+                            break;
+                        case "FacingDirection":
+                            containsFacing = true;
+                            break;
+                        case "Name":
+                        case "Team":
+                        case "PlayerOwner":
+                        case "AttributeBuffer":
+                            if (template?.Components == null || !template.Components.ContainsKey(key))
+                            {
+                                return false;
+                            }
+
+                            break;
+                        default:
+                            return false;
+                    }
                 }
 
                 if (containsWorldPosition)
@@ -1054,16 +1079,19 @@ namespace Ludots.Core.Systems
                 }
             }
 
-            // Map-authored placement yaw is authored as core FacingDirection.
-            // Presentation VisualTransform.Rotation remains derived by presentation sync/static lowering.
-            request = new TemplateEntityBatchSpawner.TemplateBatchSpawnRequest(
+            // Placement yaw stays FacingDirection. Per-instance Name / Team / PlayerOwner /
+            // AttributeBuffer stay on this lane when the template already has that component,
+            // so the row archetype does not change. Any other component still leaves the lane.
+            request = TemplateEntityBatchSpawner.CreatePlacementRequest(
+                $"Map '{mapId}' entity template '{entityData.Template}'",
+                template,
                 worldPosition,
                 hasWorldPosition,
                 facingAngleRad,
                 hasFacing,
                 mapEntity,
-                hasMapEntity: true,
-                presenterParamOverrides: ParsePresenterParamOverrides(mapId, entityData));
+                ParsePresenterParamOverrides(mapId, entityData),
+                entityData.Overrides);
             return true;
         }
 

@@ -8,7 +8,9 @@ using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Modding;
@@ -32,13 +34,19 @@ namespace GasTests
     {
         private const string TemplateId = "test.map.batch.unit";
         private const string TemplateName = "Template:MapBatchUnit";
+        private const string HeroTemplateId = "test.map.batch.hero";
+        private const string HeroTemplateName = "Template:MapBatchHero";
+        private const string VitalityAttribute = "MapBatch.Vitality";
+        private const string PaceAttribute = "MapBatch.Pace";
         private const string MapId = "map_batch_placement";
 
         [TestCase(null, true, false, 0f)]
         [TestCase("position", true, false, 0f)]
         [TestCase("facing", true, true, 1.25f)]
         [TestCase("position-facing", true, true, 2.5f)]
+        [TestCase("position-name", true, false, 0f)]
         [TestCase("position-facing-presenter-param", true, true, 2.5f)]
+        [TestCase("position-team", false, false, 0f)]
         [TestCase("position-facing-health", false, false, 0f)]
         public void TryBuildBatchRequest_ClassifiesPlacementOverrides(
             string? overrideShape,
@@ -56,8 +64,13 @@ namespace GasTests
             }
 
             That(GetRequestBool(request, "HasFacing"), Is.EqualTo(expectedHasFacing));
+            That(GetRequestBool(request, "HasNameOverride"), Is.EqualTo(overrideShape == "position-name"));
             That(GetRequestParamOverrideCount(request), Is.EqualTo(
                 overrideShape == "position-facing-presenter-param" ? 1 : 0));
+            if (overrideShape == "position-name")
+            {
+                That(GetRequestName(request), Is.EqualTo("刘备"));
+            }
             if (expectedHasFacing)
             {
                 That(GetRequestFloat(request, "FacingAngleRad"), Is.EqualTo(expectedFacing).Within(0.0001f));
@@ -118,6 +131,145 @@ namespace GasTests
             ref readonly Health health = ref world.Get<Health>(entity);
             That(health.Current, Is.EqualTo(7));
             That(health.Max, Is.EqualTo(11));
+        }
+
+        [Test]
+        public void LoadEntities_EmptyNameOverride_FailsOnBatchPath()
+        {
+            using var world = World.Create();
+            var loader = CreateLoader(world);
+            var map = new MapConfig { Id = MapId };
+            map.Entities.Add(CreateSpawn(new Dictionary<string, JsonNode>
+            {
+                ["Name"] = JsonNode.Parse(@"{ ""Value"": "" "" }")!,
+            }));
+
+            InvalidOperationException ex = Throws<InvalidOperationException>(() => loader.LoadEntities(map))!;
+            That(ex.Message, Does.Contain("Name.Value requires a non-empty string value"));
+        }
+
+        [Test]
+        public void LoadEntities_TeamOverrideWithoutTemplateComponent_LeavesBatchPath()
+        {
+            using var world = World.Create();
+            var loader = CreateLoader(world);
+            var map = new MapConfig { Id = MapId };
+            map.Entities.Add(CreateSpawnWithPresenterParam(new Dictionary<string, JsonNode>
+            {
+                ["WorldPositionCm"] = WorldPosition(10, 20),
+                ["Team"] = JsonNode.Parse(@"{ ""Id"": 2 }")!,
+            }));
+
+            InvalidOperationException ex = Throws<InvalidOperationException>(() => loader.LoadEntities(map))!;
+            That(ex.Message, Does.Contain("not compatible with the map template batch path"));
+        }
+
+        [Test]
+        public void LoadEntities_BatchTemplate_AppliesPerInstanceIdentityAndAttributeOverrides()
+        {
+            using var world = World.Create();
+            var loader = CreateLoader(world, includeIdentityTemplate: true);
+            var presenterRuntime = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+            int slopeParamKey = PresenterParamKeyRegistry.Register("test.map.batch.slope");
+            int templateKeyId = loader.EntityTemplateKeys.GetId(HeroTemplateId);
+            int rootDefinitionId = definitions.GetOrRegisterId("test.map.batch.hero.root");
+            definitions.Register("test.map.batch.hero.root", new PresenterDefinition
+            {
+                ParamDefaults =
+                [
+                    new ParamDefault
+                    {
+                        ParamKey = slopeParamKey,
+                        Lane = ParamLane.Float,
+                        FloatValue = 0f,
+                    },
+                ],
+                Rules =
+                [
+                    new PresenterRule
+                    {
+                        Event = new EventFilter
+                        {
+                            Kind = PresentationEventKind.EntitySpawned,
+                            KeyId = templateKeyId,
+                        },
+                        Command = new PresenterCommand
+                        {
+                            CommandKind = PresenterCommandKind.CreatePresenter,
+                            PresenterDefinitionId = rootDefinitionId,
+                            ScopeSource = PresenterCommandScopeSource.EventPayloadA,
+                            AnchorKind = PresentationAnchorKind.Entity,
+                        },
+                    },
+                ],
+            });
+            presenterRuntime.BindDefinitions(definitions);
+            loader.SetPresentationRuntime(
+                new PresentationStableIdAllocator(),
+                presenterRuntime,
+                definitions,
+                new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 4),
+                new WorldSizeSpec(new Ludots.Platform.Abstractions.WorldAabbCm(-10_000, -10_000, 20_000, 20_000), 100));
+
+            int vitalityId = AttributeRegistry.RequireId(VitalityAttribute);
+            int paceId = AttributeRegistry.RequireId(PaceAttribute);
+            That(vitalityId, Is.LessThan(AttributeBuffer.MAX_ATTRS));
+            That(paceId, Is.LessThan(AttributeBuffer.MAX_ATTRS));
+
+            var map = new MapConfig { Id = MapId };
+            map.Entities.Add(CreateHeroSpawn(
+                "刘备",
+                teamId: 1,
+                playerId: 1,
+                attributes: JsonNode.Parse(@$"{{ ""base"": {{ ""{VitalityAttribute}"": 180 }} }}")!,
+                x: 100,
+                y: 200,
+                facing: 0.2f,
+                slope: 0.1f));
+            map.Entities.Add(CreateHeroSpawn(
+                "关羽",
+                teamId: 2,
+                playerId: 2,
+                attributes: null,
+                x: 300,
+                y: 400,
+                facing: 0.4f,
+                slope: 0.2f));
+            map.Entities.Add(CreateHeroSpawn(
+                "张飞",
+                teamId: null,
+                playerId: null,
+                attributes: JsonNode.Parse(@$"{{ ""current"": {{ ""{PaceAttribute}"": 8 }} }}")!,
+                x: 500,
+                y: 600,
+                facing: 0.6f,
+                slope: 0.3f));
+            map.Entities.Add(CreateHeroSpawn(
+                "赵云",
+                teamId: 4,
+                playerId: 4,
+                attributes: JsonNode.Parse(@$"{{ ""__replace"": true, ""base"": {{ ""{VitalityAttribute}"": 1 }} }}")!,
+                x: 700,
+                y: 800,
+                facing: 0.8f,
+                slope: 0.4f));
+
+            loader.LoadEntities(map);
+
+            var owners = FindNamedEntities(world, "刘备", "关羽", "张飞", "赵云");
+            That(owners.Count, Is.EqualTo(4));
+            AssertHero(world, owners[0], "刘备", 1, 1, 100, 200, 0.2f, vitalityId, 180f, 180f, paceId, 5f, 5f);
+            AssertHero(world, owners[1], "关羽", 2, 2, 300, 400, 0.4f, vitalityId, 100f, 100f, paceId, 5f, 5f);
+            AssertHero(world, owners[2], "张飞", 1, 9, 500, 600, 0.6f, vitalityId, 100f, 100f, paceId, 5f, 8f);
+            AssertHero(world, owners[3], "赵云", 4, 4, 700, 800, 0.8f, vitalityId, 1f, 1f, paceId, hasPace: false);
+
+            Entity rootLiu = world.Get<PresentationOwnerHasPresenterPayload>(owners[0]).SingleRootPresenter;
+            Entity rootZhao = world.Get<PresentationOwnerHasPresenterPayload>(owners[3]).SingleRootPresenter;
+            That(presenterRuntime.TryResolveFloat(rootLiu, slopeParamKey, out float slopeLiu), Is.True);
+            That(presenterRuntime.TryResolveFloat(rootZhao, slopeParamKey, out float slopeZhao), Is.True);
+            That(slopeLiu, Is.EqualTo(0.1f).Within(0.0001f));
+            That(slopeZhao, Is.EqualTo(0.4f).Within(0.0001f));
         }
 
         [Test]
@@ -462,11 +614,20 @@ namespace GasTests
             That(ex.Message, Does.Contain("FacingDirection.AngleRad requires a numeric value"));
         }
 
-        private static MapLoader CreateLoader(World world, bool includeDynamicHeightSampling = false)
+        private static MapLoader CreateLoader(
+            World world,
+            bool includeDynamicHeightSampling = false,
+            bool includeIdentityTemplate = false)
         {
             string root = Path.Combine(Path.GetTempPath(), "Ludots_MapLoaderBatchPlacementTests", Guid.NewGuid().ToString("N"));
             try
             {
+                if (includeIdentityTemplate)
+                {
+                    AttributeRegistry.Register(VitalityAttribute);
+                    AttributeRegistry.Register(PaceAttribute);
+                }
+
                 Directory.CreateDirectory(Path.Combine(root, "Entities"));
                 File.WriteAllText(
                     Path.Combine(root, "config_catalog.json"),
@@ -474,6 +635,26 @@ namespace GasTests
                 string dynamicHeightComponent = includeDynamicHeightSampling
                     ? """
                           "ContinuousHeightmapSampleState": {},
+                    """
+                    : string.Empty;
+                string identityTemplate = includeIdentityTemplate
+                    ? $$"""
+                      ,
+                      {
+                        "id": "{{HeroTemplateId}}",
+                        "components": {
+                          "Name": { "Value": "{{HeroTemplateName}}" },
+                          "WorldPositionCm": { "Value": { "X": 10, "Y": 20 } },
+                          "FacingDirection": { "AngleRad": 0.5 },
+                          "Team": { "Id": 1 },
+                          "PlayerOwner": { "PlayerId": 9 },
+                          "AttributeBuffer": {
+                            "base": { "{{VitalityAttribute}}": 100, "{{PaceAttribute}}": 5 }
+                          },
+                          "GameplayTagContainer": {},
+                          "TagCountContainer": {}
+                        }
+                      }
                     """
                     : string.Empty;
                 File.WriteAllText(
@@ -491,7 +672,7 @@ namespace GasTests
                           "GameplayTagContainer": {},
                           "TagCountContainer": {}
                         }
-                      }
+                      }{{identityTemplate}}
                     ]
                     """);
 
@@ -557,6 +738,16 @@ namespace GasTests
                     ["WorldPositionCm"] = WorldPosition(-300, 400),
                     ["FacingDirection"] = Facing(2.5f),
                 },
+                "position-name" => new Dictionary<string, JsonNode>
+                {
+                    ["WorldPositionCm"] = WorldPosition(1000, 2000),
+                    ["Name"] = JsonNode.Parse(@"{ ""Value"": ""刘备"" }")!,
+                },
+                "position-team" => new Dictionary<string, JsonNode>
+                {
+                    ["WorldPositionCm"] = WorldPosition(1000, 2000),
+                    ["Team"] = JsonNode.Parse(@"{ ""Id"": 2 }")!,
+                },
                 "position-facing-presenter-param" => new Dictionary<string, JsonNode>
                 {
                     ["WorldPositionCm"] = WorldPosition(-300, 400),
@@ -600,12 +791,70 @@ namespace GasTests
             {
                 MapId,
                 spawn,
+                CreateClassificationTemplate(),
                 new MapEntity { MapId = new MapId(MapId) },
                 null!,
             };
             bool result = (bool)method.Invoke(null, args)!;
-            request = args[3];
+            request = args[4];
             return result;
+        }
+
+        private static EntityTemplate CreateClassificationTemplate()
+        {
+            return new EntityTemplate
+            {
+                Id = TemplateId,
+                Components = new Dictionary<string, JsonNode>
+                {
+                    ["Name"] = JsonNode.Parse($$"""{ "Value": "{{TemplateName}}" }""")!,
+                    ["WorldPositionCm"] = WorldPosition(10, 20),
+                    ["FacingDirection"] = Facing(0.5f),
+                    ["AttributeBuffer"] = JsonNode.Parse(@"{ ""base"": {} }")!,
+                },
+            };
+        }
+
+        private static EntitySpawnData CreateHeroSpawn(
+            string name,
+            int? teamId,
+            int? playerId,
+            JsonNode? attributes,
+            int x,
+            int y,
+            float facing,
+            float slope)
+        {
+            var overrides = new Dictionary<string, JsonNode>
+            {
+                ["Name"] = JsonNode.Parse($$$"""{ "Value": "{{{name}}}" }""")!,
+                ["WorldPositionCm"] = WorldPosition(x, y),
+                ["FacingDirection"] = Facing(facing),
+            };
+            if (teamId.HasValue)
+            {
+                overrides["Team"] = JsonNode.Parse($$"""{ "Id": {{teamId.Value}} }""")!;
+            }
+
+            if (playerId.HasValue)
+            {
+                overrides["PlayerOwner"] = JsonNode.Parse($$"""{ "PlayerId": {{playerId.Value}} }""")!;
+            }
+
+            if (attributes != null)
+            {
+                overrides["AttributeBuffer"] = attributes;
+            }
+
+            var spawn = CreateSpawn(overrides);
+            spawn.Template = HeroTemplateId;
+            spawn.PresenterParamOverrides.Add(new ParamOverrideData
+            {
+                ParamKey = "test.map.batch.slope",
+                Lane = ParamLane.Float,
+                FloatValue = slope,
+            });
+            return spawn;
         }
 
         private static bool GetRequestBool(object request, string propertyName)
@@ -613,6 +862,14 @@ namespace GasTests
             PropertyInfo property = request.GetType().GetProperty(propertyName)!;
             That(property, Is.Not.Null);
             return (bool)property.GetValue(request)!;
+        }
+
+        private static string GetRequestName(object request)
+        {
+            PropertyInfo property = request.GetType().GetProperty("NameOverride")!;
+            That(property, Is.Not.Null);
+            object name = property.GetValue(request)!;
+            return (string)name.GetType().GetField("Value")!.GetValue(name)!;
         }
 
         private static float GetRequestFloat(object request, string propertyName)
@@ -645,6 +902,60 @@ namespace GasTests
 
             found.Sort((left, right) => left.Id.CompareTo(right.Id));
             return found;
+        }
+
+        private static List<Entity> FindNamedEntities(World world, params string[] names)
+        {
+            var wanted = new HashSet<string>(names, StringComparer.Ordinal);
+            var found = new List<Entity>();
+            var query = new QueryDescription().WithAll<Name, MapEntity>();
+            world.Query(in query, (Entity entity, ref Name name, ref MapEntity mapEntity) =>
+            {
+                if (wanted.Contains(name.Value) &&
+                    string.Equals(mapEntity.MapId.Value, MapId, StringComparison.Ordinal))
+                {
+                    found.Add(entity);
+                }
+            });
+
+            found.Sort((left, right) => left.Id.CompareTo(right.Id));
+            return found;
+        }
+
+        private static void AssertHero(
+            World world,
+            Entity entity,
+            string expectedName,
+            int expectedTeam,
+            int expectedPlayer,
+            int expectedX,
+            int expectedY,
+            float expectedFacing,
+            int vitalityId,
+            float expectedVitalityBase,
+            float expectedVitalityCurrent,
+            int paceId,
+            float expectedPaceBase = 0f,
+            float expectedPaceCurrent = 0f,
+            bool hasPace = true)
+        {
+            AssertPlacement(world, entity, expectedX, expectedY, expectedFacing);
+            That(world.Get<Name>(entity).Value, Is.EqualTo(expectedName));
+            That(world.Has<Team>(entity), Is.True);
+            That(world.Has<PlayerOwner>(entity), Is.True);
+            That(world.Get<Team>(entity).Id, Is.EqualTo(expectedTeam));
+            That(world.Get<PlayerOwner>(entity).PlayerId, Is.EqualTo(expectedPlayer));
+
+            AttributeBuffer attributes = world.Get<AttributeBuffer>(entity);
+            That(attributes.HasAttribute(vitalityId), Is.True);
+            That(attributes.GetBase(vitalityId), Is.EqualTo(expectedVitalityBase).Within(0.0001f));
+            That(attributes.GetCurrent(vitalityId), Is.EqualTo(expectedVitalityCurrent).Within(0.0001f));
+            That(attributes.HasAttribute(paceId), Is.EqualTo(hasPace));
+            if (hasPace)
+            {
+                That(attributes.GetBase(paceId), Is.EqualTo(expectedPaceBase).Within(0.0001f));
+                That(attributes.GetCurrent(paceId), Is.EqualTo(expectedPaceCurrent).Within(0.0001f));
+            }
         }
 
         private static void AssertPlacement(

@@ -37,6 +37,13 @@ namespace Ludots.Core.Config
 
     internal sealed class TemplateEntityBatchSpawner
     {
+        internal readonly record struct AttributeSeed(
+            int AttributeId,
+            bool HasBase,
+            float BaseValue,
+            bool HasCurrent,
+            float CurrentValue);
+
         private readonly World _world;
         private readonly EntityTemplateKeyRegistry _templateKeys;
         private readonly PresentationStableIdAllocator? _stableIds;
@@ -286,7 +293,7 @@ namespace Ludots.Core.Config
                     var worldPosition = request.HasWorldPosition ? request.WorldPositionCm : descriptor.DefaultWorldPosition;
                     float facingAngle = request.HasFacing ? request.FacingAngleRad : descriptor.Facing.AngleRad;
 
-                    names[componentIndex] = descriptor.Name;
+                    names[componentIndex] = request.HasNameOverride ? request.NameOverride : descriptor.Name;
                     positions[componentIndex] = new WorldPositionCm { Value = worldPosition };
                     previousPositions[componentIndex] = new PreviousWorldPositionCm { Value = worldPosition };
                     facings[componentIndex] = new FacingDirection
@@ -305,10 +312,13 @@ namespace Ludots.Core.Config
                     culls[componentIndex] = cull;
                     if (descriptor.HasAttributeBuffer)
                     {
-                        AttributeBuffer attributeBuffer = descriptor.CreateAttributeBuffer();
+                        AttributeSeed[] attributeSeeds = request.HasAttributeOverride
+                            ? request.AttributeSeeds
+                            : null;
+                        AttributeBuffer attributeBuffer = descriptor.CreateAttributeBuffer(attributeSeeds);
                         attributes[componentIndex] = attributeBuffer;
-                        attributeSnapshots[componentIndex] = descriptor.CreateAttributeLastSnapshot(ref attributeBuffer);
-                        descriptor.SeedWorldStore(entity, attributeBuffer);
+                        attributeSnapshots[componentIndex] = descriptor.CreateAttributeLastSnapshot(ref attributeBuffer, attributeSeeds);
+                        descriptor.SeedWorldStore(entity, attributeBuffer, attributeSeeds);
                     }
 
                     if (descriptor.HasGameplayTagContainer)
@@ -355,12 +365,14 @@ namespace Ludots.Core.Config
 
                     if (descriptor.HasTeam)
                     {
-                        teams[componentIndex] = descriptor.Team;
+                        teams[componentIndex] = request.HasTeamOverride ? request.TeamOverride : descriptor.Team;
                     }
 
                     if (descriptor.HasPlayerOwner)
                     {
-                        playerOwners[componentIndex] = descriptor.PlayerOwner;
+                        playerOwners[componentIndex] = request.HasPlayerOwnerOverride
+                            ? request.PlayerOwnerOverride
+                            : descriptor.PlayerOwner;
                     }
 
                     if (includeMapEntity)
@@ -465,7 +477,7 @@ namespace Ludots.Core.Config
 
         internal readonly struct TemplateBatchSpawnRequest
         {
-            public TemplateBatchSpawnRequest(
+            internal TemplateBatchSpawnRequest(
                 in Ludots.Core.Mathematics.FixedPoint.Fix64Vec2 worldPositionCm,
                 bool hasWorldPosition,
                 float facingAngleRad = 0f,
@@ -474,7 +486,15 @@ namespace Ludots.Core.Config
                 bool hasMapEntity = false,
                 int presentationStableId = 0,
                 bool hasPresentationStableId = false,
-                ParamDefault[]? presenterParamOverrides = null)
+                ParamDefault[]? presenterParamOverrides = null,
+                bool hasNameOverride = false,
+                Name nameOverride = default,
+                bool hasTeamOverride = false,
+                Team teamOverride = default,
+                bool hasPlayerOwnerOverride = false,
+                PlayerOwner playerOwnerOverride = default,
+                bool hasAttributeOverride = false,
+                AttributeSeed[]? attributeSeeds = null)
             {
                 WorldPositionCm = worldPositionCm;
                 HasWorldPosition = hasWorldPosition;
@@ -485,6 +505,14 @@ namespace Ludots.Core.Config
                 PresentationStableId = presentationStableId;
                 HasPresentationStableId = hasPresentationStableId;
                 PresenterParamOverrides = presenterParamOverrides ?? Array.Empty<ParamDefault>();
+                HasNameOverride = hasNameOverride;
+                NameOverride = nameOverride;
+                HasTeamOverride = hasTeamOverride;
+                TeamOverride = teamOverride;
+                HasPlayerOwnerOverride = hasPlayerOwnerOverride;
+                PlayerOwnerOverride = playerOwnerOverride;
+                HasAttributeOverride = hasAttributeOverride;
+                AttributeSeeds = attributeSeeds;
             }
 
             public Ludots.Core.Mathematics.FixedPoint.Fix64Vec2 WorldPositionCm { get; }
@@ -504,6 +532,129 @@ namespace Ludots.Core.Config
             public bool HasPresentationStableId { get; }
 
             public ParamDefault[] PresenterParamOverrides { get; }
+
+            public bool HasNameOverride { get; }
+
+            public Name NameOverride { get; }
+
+            public bool HasTeamOverride { get; }
+
+            public Team TeamOverride { get; }
+
+            public bool HasPlayerOwnerOverride { get; }
+
+            public PlayerOwner PlayerOwnerOverride { get; }
+
+            public bool HasAttributeOverride { get; }
+
+            internal AttributeSeed[] AttributeSeeds { get; }
+        }
+
+        internal static TemplateBatchSpawnRequest CreatePlacementRequest(
+            string context,
+            EntityTemplate template,
+            in Ludots.Core.Mathematics.FixedPoint.Fix64Vec2 worldPositionCm,
+            bool hasWorldPosition,
+            float facingAngleRad,
+            bool hasFacing,
+            in MapEntity mapEntity,
+            ParamDefault[] presenterParamOverrides,
+            IReadOnlyDictionary<string, JsonNode> overrides)
+        {
+            bool hasName = false;
+            Name name = default;
+            bool hasTeam = false;
+            Team team = default;
+            bool hasPlayerOwner = false;
+            PlayerOwner playerOwner = default;
+            bool hasAttributes = false;
+            AttributeSeed[] attributeSeeds = null;
+            if (overrides != null)
+            {
+                if (overrides.TryGetValue("Name", out JsonNode nameNode))
+                {
+                    name = ParseMergedName(context, template, nameNode);
+                    hasName = true;
+                }
+
+                if (overrides.TryGetValue("Team", out JsonNode teamNode))
+                {
+                    team = ParseMergedTeam(context, template, teamNode);
+                    hasTeam = true;
+                }
+
+                if (overrides.TryGetValue("PlayerOwner", out JsonNode ownerNode))
+                {
+                    playerOwner = ParseMergedPlayerOwner(context, template, ownerNode);
+                    hasPlayerOwner = true;
+                }
+
+                if (overrides.TryGetValue("AttributeBuffer", out JsonNode attributeNode))
+                {
+                    attributeSeeds = ParseMergedAttributeSeeds(context, template, attributeNode);
+                    hasAttributes = true;
+                }
+            }
+
+            return new TemplateBatchSpawnRequest(
+                worldPositionCm,
+                hasWorldPosition,
+                facingAngleRad,
+                hasFacing,
+                mapEntity,
+                hasMapEntity: true,
+                presenterParamOverrides: presenterParamOverrides,
+                hasNameOverride: hasName,
+                nameOverride: name,
+                hasTeamOverride: hasTeam,
+                teamOverride: team,
+                hasPlayerOwnerOverride: hasPlayerOwner,
+                playerOwnerOverride: playerOwner,
+                hasAttributeOverride: hasAttributes,
+                attributeSeeds: attributeSeeds);
+        }
+
+        private static Name ParseMergedName(string context, EntityTemplate template, JsonNode overrideNode)
+        {
+            JsonNode merged = MergeTemplateComponent(context, template, "Name", overrideNode);
+            var components = new Dictionary<string, JsonNode>(1) { ["Name"] = merged };
+            return TemplateSpawnDescriptor.ParseName(context, components);
+        }
+
+        private static Team ParseMergedTeam(string context, EntityTemplate template, JsonNode overrideNode)
+        {
+            JsonNode merged = MergeTemplateComponent(context, template, "Team", overrideNode);
+            return TemplateSpawnDescriptor.ParseTeam(context, merged);
+        }
+
+        private static PlayerOwner ParseMergedPlayerOwner(string context, EntityTemplate template, JsonNode overrideNode)
+        {
+            JsonNode merged = MergeTemplateComponent(context, template, "PlayerOwner", overrideNode);
+            return TemplateSpawnDescriptor.ParsePlayerOwner(context, merged);
+        }
+
+        private static AttributeSeed[] ParseMergedAttributeSeeds(string context, EntityTemplate template, JsonNode overrideNode)
+        {
+            JsonNode merged = MergeTemplateComponent(context, template, "AttributeBuffer", overrideNode);
+            var components = new Dictionary<string, JsonNode>(1) { ["AttributeBuffer"] = merged };
+            return TemplateSpawnDescriptor.ParseAttributeSeeds(context, components);
+        }
+
+        private static JsonNode MergeTemplateComponent(
+            string context,
+            EntityTemplate template,
+            string componentName,
+            JsonNode overrideNode)
+        {
+            if (template?.Components == null ||
+                !template.Components.TryGetValue(componentName, out JsonNode templateNode) ||
+                templateNode == null)
+            {
+                throw new InvalidOperationException(
+                    $"{context} override '{componentName}' requires the template to declare that component.");
+            }
+
+            return EntityBuilder.MergeComponentOverride(templateNode, overrideNode);
         }
 
         private readonly struct TemplateSpawnDescriptor
@@ -597,32 +748,33 @@ namespace Ludots.Core.Config
                 _attributeSeeds = attributeSeeds ?? Array.Empty<AttributeSeed>();
             }
 
-            public AttributeBuffer CreateAttributeBuffer()
+            public AttributeBuffer CreateAttributeBuffer(AttributeSeed[] overrideSeeds = null)
             {
+                AttributeSeed[] seeds = overrideSeeds ?? _attributeSeeds;
                 var buffer = default(AttributeBuffer);
-                for (int i = 0; i < _attributeSeeds.Length; i++)
+                for (int i = 0; i < seeds.Length; i++)
                 {
-                    if (_attributeSeeds[i].AttributeId >= Gameplay.GAS.Components.AttributeBuffer.MAX_ATTRS)
+                    if (seeds[i].AttributeId >= Gameplay.GAS.Components.AttributeBuffer.MAX_ATTRS)
                     {
                         continue;
                     }
 
-                    if (_attributeSeeds[i].HasBase)
+                    if (seeds[i].HasBase)
                     {
-                        buffer.SetBase(_attributeSeeds[i].AttributeId, _attributeSeeds[i].BaseValue);
+                        buffer.SetBase(seeds[i].AttributeId, seeds[i].BaseValue);
                     }
                 }
 
-                for (int i = 0; i < _attributeSeeds.Length; i++)
+                for (int i = 0; i < seeds.Length; i++)
                 {
-                    if (_attributeSeeds[i].AttributeId >= Gameplay.GAS.Components.AttributeBuffer.MAX_ATTRS)
+                    if (seeds[i].AttributeId >= Gameplay.GAS.Components.AttributeBuffer.MAX_ATTRS)
                     {
                         continue;
                     }
 
-                    if (_attributeSeeds[i].HasCurrent)
+                    if (seeds[i].HasCurrent)
                     {
-                        buffer.SetCurrent(_attributeSeeds[i].AttributeId, _attributeSeeds[i].CurrentValue);
+                        buffer.SetCurrent(seeds[i].AttributeId, seeds[i].CurrentValue);
                     }
                 }
 
@@ -630,14 +782,15 @@ namespace Ludots.Core.Config
             }
 
             /// <summary>种子期建行：内嵌低槽位全量镜像 + 高槽位（≥64）直写列存并播快照。</summary>
-            public void SeedWorldStore(Entity entity, AttributeBuffer embedded)
+            public void SeedWorldStore(Entity entity, AttributeBuffer embedded, AttributeSeed[] overrideSeeds = null)
             {
+                AttributeSeed[] seeds = overrideSeeds ?? _attributeSeeds;
                 Gameplay.GAS.WorldAttributeStore store = Gameplay.GAS.WorldAttributeStoreAmbient.Current;
                 if (store == null)
                 {
-                    for (int i = 0; i < _attributeSeeds.Length; i++)
+                    for (int i = 0; i < seeds.Length; i++)
                     {
-                        if (_attributeSeeds[i].AttributeId >= Gameplay.GAS.Components.AttributeBuffer.MAX_ATTRS)
+                        if (seeds[i].AttributeId >= Gameplay.GAS.Components.AttributeBuffer.MAX_ATTRS)
                         {
                             throw new InvalidOperationException(
                                 "GAS.CAPACITY.ERR.HighLaneUnavailable: 模板 AttributeBuffer 引用 attributeId >= 64 需要世界列存（RFC-0067 P1）。");
@@ -657,34 +810,40 @@ namespace Ludots.Core.Config
                     Gameplay.GAS.AttributeHighLane.SeedLastSnapshot(store, row, attributeId);
                 }
 
-                for (int i = 0; i < _attributeSeeds.Length; i++)
+                for (int i = 0; i < seeds.Length; i++)
                 {
-                    int attributeId = _attributeSeeds[i].AttributeId;
+                    int attributeId = seeds[i].AttributeId;
                     if (attributeId < Gameplay.GAS.Components.AttributeBuffer.MAX_ATTRS)
                     {
                         continue;
                     }
 
-                    if (_attributeSeeds[i].HasBase)
+                    if (seeds[i].HasBase)
                     {
-                        store.SetBase(row, attributeId, _attributeSeeds[i].BaseValue);
+                        store.SetBase(row, attributeId, seeds[i].BaseValue);
                     }
 
-                    if (_attributeSeeds[i].HasCurrent)
+                    if (seeds[i].HasCurrent)
                     {
-                        store.SetCurrentHigh(row, attributeId, _attributeSeeds[i].CurrentValue);
+                        store.SetCurrentHigh(row, attributeId, seeds[i].CurrentValue);
                     }
 
                     Gameplay.GAS.AttributeHighLane.SeedLastSnapshot(store, row, attributeId);
                 }
             }
 
-            public unsafe AttributeLastSnapshot CreateAttributeLastSnapshot(ref AttributeBuffer buffer)
+            public unsafe AttributeLastSnapshot CreateAttributeLastSnapshot(ref AttributeBuffer buffer, AttributeSeed[] overrideSeeds = null)
             {
+                AttributeSeed[] seeds = overrideSeeds ?? _attributeSeeds;
                 var snapshot = default(AttributeLastSnapshot);
-                for (int i = 0; i < _attributeSeeds.Length; i++)
+                for (int i = 0; i < seeds.Length; i++)
                 {
-                    int attributeId = _attributeSeeds[i].AttributeId;
+                    int attributeId = seeds[i].AttributeId;
+                    if ((uint)attributeId >= Gameplay.GAS.Components.AttributeBuffer.MAX_ATTRS)
+                    {
+                        continue;
+                    }
+
                     snapshot.Values[attributeId] = buffer.GetCurrent(attributeId);
                 }
 
@@ -1143,7 +1302,7 @@ namespace Ludots.Core.Config
                 return node;
             }
 
-            private static Name ParseName(string templateId, IReadOnlyDictionary<string, JsonNode> components)
+            internal static Name ParseName(string templateId, IReadOnlyDictionary<string, JsonNode> components)
             {
                 if (!components.TryGetValue("Name", out JsonNode node) || node is not JsonObject obj)
                 {
@@ -1191,7 +1350,7 @@ namespace Ludots.Core.Config
                 return new Ludots.Core.Gameplay.Components.EntityLayer(layerMask);
             }
 
-            private static Team ParseTeam(string templateId, JsonNode node)
+            internal static Team ParseTeam(string templateId, JsonNode node)
             {
                 if (node is not JsonObject obj)
                 {
@@ -1208,7 +1367,7 @@ namespace Ludots.Core.Config
                 return new Team { Id = idNode.GetValue<int>() };
             }
 
-            private static PlayerOwner ParsePlayerOwner(string templateId, JsonNode node)
+            internal static PlayerOwner ParsePlayerOwner(string templateId, JsonNode node)
             {
                 if (node is not JsonObject obj)
                 {
@@ -1274,7 +1433,7 @@ namespace Ludots.Core.Config
                     yNode.GetValue<int>());
             }
 
-            private static AttributeSeed[] ParseAttributeSeeds(string templateId, IReadOnlyDictionary<string, JsonNode> components)
+            internal static AttributeSeed[] ParseAttributeSeeds(string templateId, IReadOnlyDictionary<string, JsonNode> components)
             {
                 if (!components.TryGetValue("AttributeBuffer", out JsonNode node))
                 {
@@ -1428,13 +1587,6 @@ namespace Ludots.Core.Config
                 seeds[count++] = new AttributeSeed(attributeId, hasBase, baseValue, hasCurrent, currentValue);
             }
         }
-
-        private readonly record struct AttributeSeed(
-            int AttributeId,
-            bool HasBase,
-            float BaseValue,
-            bool HasCurrent,
-            float CurrentValue);
 
         private static VisualTransform CreatePlacementVisualTransform(
             in Ludots.Core.Mathematics.FixedPoint.Fix64Vec2 worldPosition,
