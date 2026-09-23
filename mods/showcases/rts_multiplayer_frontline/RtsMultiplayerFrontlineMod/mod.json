@@ -2,7 +2,11 @@
   "name": "RtsMultiplayerFrontlineMod",
   "version": "1.0.0",
   "description": "A symmetric two-player RTS match: harvest crystals, train infantry, and destroy the opposing command core.",
+<<<<<<< Updated upstream
   "main": "bin/net8.0/RtsMultiplayerFrontlineMod.dll",
+=======
+  "main": "bin/net9.0/RtsMultiplayerFrontlineMod.dll",
+>>>>>>> Stashed changes
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

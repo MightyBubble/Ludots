@@ -55,6 +55,7 @@
       "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 45, "localCenterZCm": 0 },
       "SpatialBox3D": { "halfSizeXCm": 60, "halfSizeYCm": 60, "halfSizeZCm": 60 },
       "ContinuousHeightmapSampleState": {},
+<<<<<<< Updated upstream
       "CullState": { "IsVisible": true, "LOD": 0, "DistanceToCameraSq": 0, "ScreenCoverage01": 1 },
       "ReplicationSchemaRef": { "SchemaId": 701 },
       "VisionEmitterCm": {
@@ -70,6 +71,20 @@
         "TrueSightStrength": 0
       },
       "FogOccupantCm": { "ExposeLayerMask": 1, "AltitudeBand": 0, "StealthLevel": 0 },
+=======
+      "ReplicationSchemaRef": { "SchemaId": 701 },
+      "VisionEmitterCm": {
+        "scope": "core.team",
+        "layers": ["ground"],
+        "polarity": "Reveal",
+        "aperture": { "kind": "Disk", "rangeCm": 4500 },
+        "altitudeBand": 0,
+        "priority": 0,
+        "detectionStrength": 0,
+        "trueSightStrength": 0
+      },
+      "FogOccupantCm": { "layers": ["ground"], "altitudeBand": 0, "stealthLevel": 0 },
+>>>>>>> Stashed changes
       "AttributeBuffer": { "base": { "Health": 1000, "Crystals": 40 } },
       "AbilityStateBuffer": { "abilityIds": ["Ability.Rts.Frontline.TrainInfantry"] },
       "GameplayTagContainer": {},
@@ -108,6 +123,7 @@
       "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 50, "localCenterZCm": 0 },
       "SpatialBox3D": { "halfSizeXCm": 50, "halfSizeYCm": 50, "halfSizeZCm": 50 },
       "ContinuousHeightmapSampleState": {},
+<<<<<<< Updated upstream
       "CullState": { "IsVisible": true, "LOD": 0, "DistanceToCameraSq": 0, "ScreenCoverage01": 1 },
       "ReplicationSchemaRef": { "SchemaId": 702 },
       "VisionEmitterCm": {
@@ -123,6 +139,20 @@
         "TrueSightStrength": 0
       },
       "FogOccupantCm": { "ExposeLayerMask": 1, "AltitudeBand": 0, "StealthLevel": 0 },
+=======
+      "ReplicationSchemaRef": { "SchemaId": 702 },
+      "VisionEmitterCm": {
+        "scope": "core.team",
+        "layers": ["ground"],
+        "polarity": "Reveal",
+        "aperture": { "kind": "Disk", "rangeCm": 2600 },
+        "altitudeBand": 0,
+        "priority": 0,
+        "detectionStrength": 0,
+        "trueSightStrength": 0
+      },
+      "FogOccupantCm": { "layers": ["ground"], "altitudeBand": 0, "stealthLevel": 0 },
+>>>>>>> Stashed changes
       "AttributeBuffer": { "base": { "Health": 120, "MoveSpeed": 700 } },
       "GameplayTagContainer": {},
       "TagCountContainer": {},
@@ -163,6 +193,7 @@
       "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 45, "localCenterZCm": 0 },
       "SpatialBox3D": { "halfSizeXCm": 48, "halfSizeYCm": 52, "halfSizeZCm": 48 },
       "ContinuousHeightmapSampleState": {},
+<<<<<<< Updated upstream
       "CullState": { "IsVisible": true, "LOD": 0, "DistanceToCameraSq": 0, "ScreenCoverage01": 1 },
       "ReplicationSchemaRef": { "SchemaId": 703 },
       "VisionEmitterCm": {
@@ -178,6 +209,20 @@
         "TrueSightStrength": 0
       },
       "FogOccupantCm": { "ExposeLayerMask": 1, "AltitudeBand": 0, "StealthLevel": 0 },
+=======
+      "ReplicationSchemaRef": { "SchemaId": 703 },
+      "VisionEmitterCm": {
+        "scope": "core.team",
+        "layers": ["ground"],
+        "polarity": "Reveal",
+        "aperture": { "kind": "Disk", "rangeCm": 3200 },
+        "altitudeBand": 0,
+        "priority": 0,
+        "detectionStrength": 0,
+        "trueSightStrength": 0
+      },
+      "FogOccupantCm": { "layers": ["ground"], "altitudeBand": 0, "stealthLevel": 0 },
+>>>>>>> Stashed changes
       "AttributeBuffer": { "base": { "Health": 100, "MoveSpeed": 800 } },
       "GameplayTagContainer": {},
       "TagCountContainer": {},
@@ -216,7 +261,10 @@
       "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 60, "localCenterZCm": 0 },
       "SpatialBox3D": { "halfSizeXCm": 60, "halfSizeYCm": 70, "halfSizeZCm": 60 },
       "ContinuousHeightmapSampleState": {},
+<<<<<<< Updated upstream
       "CullState": { "IsVisible": true, "LOD": 0, "DistanceToCameraSq": 0, "ScreenCoverage01": 1 },
+=======
+>>>>>>> Stashed changes
       "ReplicationSchemaRef": { "SchemaId": 704 },
       "GameplayTagContainer": {},
       "TagCountContainer": {},

@@ -3149,9 +3149,9 @@ namespace Ludots.Core.Engine
                 ResolveDefaultCameraFollowCollectionOwner(definition.FollowTargetKind),
                 definition.FollowCollectionKey);
 
-            EnsureCameraRuntimeConfigured();
             var targets = new System.Collections.Generic.List<Ludots.Core.Gameplay.Camera.CameraManager>(4);
             CollectDefaultCameraTargets(targets);
+            EnsureCameraRuntimeConfigured();
             Ludots.Core.Gameplay.Camera.CameraManager? logged = null;
             for (int i = 0; i < targets.Count; i++)
             {
@@ -4536,6 +4536,10 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.NetworkProcessRole, role);
             SetService(CoreServiceKeys.NetworkRuntimePort, runtime);
             bool authoritativeServer = role == NetworkProcessRole.AuthoritativeServer;
+<<<<<<< Updated upstream
+=======
+            MapLoader.SetPresentationStableIdEnabled(!authoritativeServer);
+>>>>>>> Stashed changes
             _gameplayPresentationProjectionSystem.SetEnabled(!authoritativeServer);
             _authoritativeServerPresentationCleanupSystem.SetEnabled(authoritativeServer);
         }

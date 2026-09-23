@@ -421,7 +421,10 @@ internal sealed class FrontlineClientTemplateFactory
         ForbidSpatialExclusionComponents(template);
         ForbidComponent(template, "SpatialCellRef");
         RequireComponent(template, "VisualTransform");
+<<<<<<< Updated upstream
         RequireComponent(template, "CullState");
+=======
+>>>>>>> Stashed changes
         RequireComponent(template, "CommandSourceSelectableTag");
         RequireComponent(template, "CommandSourceSelectableState");
         RequireBox3DPlayerClickBounds(template);

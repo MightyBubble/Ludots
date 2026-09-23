@@ -427,7 +427,11 @@ namespace Ludots.Tests.GAS
                 EffectPhaseId.OnApply,
                 in behavior,
                 EffectPresetType.None,
+<<<<<<< Updated upstream
                 effectTagId: 0,
+=======
+                effectCategoryId: 0,
+>>>>>>> Stashed changes
                 effectTemplateId: templateId,
                 in mergedParams,
                 runtime,
@@ -488,7 +492,11 @@ namespace Ludots.Tests.GAS
                 EffectPhaseId.OnApply,
                 in behavior,
                 EffectPresetType.None,
+<<<<<<< Updated upstream
                 effectTagId: 0,
+=======
+                effectCategoryId: 0,
+>>>>>>> Stashed changes
                 effectTemplateId: templateId,
                 mergedParams: default,
                 randomSeed: 0,
@@ -505,7 +513,11 @@ namespace Ludots.Tests.GAS
                 EffectPhaseId.OnApply,
                 in behavior,
                 EffectPresetType.None,
+<<<<<<< Updated upstream
                 effectTagId: 0,
+=======
+                effectCategoryId: 0,
+>>>>>>> Stashed changes
                 effectTemplateId: templateId,
                 mergedParams: default,
                 randomSeed: 0,

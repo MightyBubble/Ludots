@@ -200,7 +200,11 @@ namespace Ludots.Tests.GasTests
                 EffectPhaseId.OnApply,
                 in behavior,
                 EffectPresetType.DeployConsumeSource,
+<<<<<<< Updated upstream
                 effectTagId: 0,
+=======
+                effectCategoryId: 0,
+>>>>>>> Stashed changes
                 effectTemplateId: effectTemplateId,
                 mergedParams: in tpl.ConfigParams,
                 builtinRuntime: runtime);
@@ -311,7 +315,11 @@ namespace Ludots.Tests.GasTests
                 EffectPhaseId.OnApply,
                 in behavior,
                 EffectPresetType.DeployConsumeSource,
+<<<<<<< Updated upstream
                 effectTagId: 0,
+=======
+                effectCategoryId: 0,
+>>>>>>> Stashed changes
                 effectTemplateId: effectTemplateId,
                 mergedParams: in tpl.ConfigParams,
                 builtinRuntime: runtime);

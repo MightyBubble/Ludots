@@ -251,7 +251,11 @@ public sealed class MapLoadLifecycleOrderingTests
                 MapLoadCompletionResult.Ready()));
         engine.TriggerManager.RegisterEventHandler(
             GameEvents.MapLoaded,
+<<<<<<< Updated upstream
             _ => throw new InvalidOperationException("map-loaded handler failed"));
+=======
+            _ => Task.FromException(new InvalidOperationException("map-loaded handler failed")));
+>>>>>>> Stashed changes
         engine.Start();
         engine.LoadStartupMap();
 
@@ -312,6 +316,7 @@ public sealed class MapLoadLifecycleOrderingTests
         EventKey switchEvent = switchDuringGameStart
             ? GameEvents.GameStart
             : GameEvents.MapLoaded;
+<<<<<<< Updated upstream
         engine.TriggerManager.RegisterEventHandler(switchEvent, _ =>
         {
             if (!switchedMap)
@@ -322,6 +327,34 @@ public sealed class MapLoadLifecycleOrderingTests
 
             return Task.CompletedTask;
         });
+=======
+        if (switchDuringGameStart)
+        {
+            engine.TriggerManager.RegisterEventHandler(switchEvent, _ =>
+            {
+                if (!switchedMap)
+                {
+                    switchedMap = true;
+                    engine.LoadMap(InnerMapId);
+                }
+
+                return Task.CompletedTask;
+            });
+        }
+        else
+        {
+            engine.TriggerManager.RegisterEventHandler(switchEvent, async _ =>
+            {
+                if (!switchedMap)
+                {
+                    switchedMap = true;
+                    engine.LoadMap(InnerMapId);
+                }
+
+                await Task.CompletedTask;
+            });
+        }
+>>>>>>> Stashed changes
 
         if (switchDuringGameStart)
         {
@@ -422,7 +455,11 @@ public sealed class MapLoadLifecycleOrderingTests
             NetworkProcessRole.AuthoritativeServer);
         engine.TriggerManager.RegisterEventHandler(
             GameEvents.NetworkRuntimeReady,
+<<<<<<< Updated upstream
             _ => throw new InvalidOperationException("network-ready handler failed"));
+=======
+            _ => Task.FromException(new InvalidOperationException("network-ready handler failed")));
+>>>>>>> Stashed changes
         engine.Start();
 
         Assert.That(

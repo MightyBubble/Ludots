@@ -1172,7 +1172,11 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
                 EffectPhaseId.OnApply,
                 in behavior,
                 EffectPresetType.None,
+<<<<<<< Updated upstream
                 effectTagId: 0,
+=======
+                effectCategoryId: 0,
+>>>>>>> Stashed changes
                 effectTemplateId: 2303,
                 mergedParams: default,
                 rootId: context.RootId);
@@ -1236,7 +1240,11 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
                 EffectPhaseId.OnApply,
                 in behavior,
                 EffectPresetType.None,
+<<<<<<< Updated upstream
                 effectTagId: 0,
+=======
+                effectCategoryId: 0,
+>>>>>>> Stashed changes
                 effectTemplateId: 2304,
                 mergedParams: default,
                 builtinRuntime: runtime,

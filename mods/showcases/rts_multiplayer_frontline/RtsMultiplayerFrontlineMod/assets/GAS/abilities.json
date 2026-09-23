@@ -1,7 +1,11 @@
 [
   {
     "id": "Ability.Rts.Frontline.TrainInfantry",
+<<<<<<< Updated upstream
     "tags": ["Ability.Rts.Frontline.Train"],
+=======
+    "categories": ["Ability.Rts.Frontline.Train"],
+>>>>>>> Stashed changes
     "exec": {
       "clockId": "FixedFrame",
       "items": [

@@ -34,6 +34,7 @@ namespace Ludots.Core.Systems
         private Ludots.Core.Input.Interaction.InteractionContextProfileRegistry? _initialInteractionContexts;
         private TemplateEntityBatchSpawner _templateBatchSpawner;
         private PresentationStableIdAllocator _stableIds;
+        private bool _presentationStableIdsEnabled = true;
         private PresenterEntityRuntime _presenterRuntime;
         private PresenterDefinitionRegistry _presenterDefinitions;
         private CompiledPresenterBootstrapRegistry _presenterBootstrap;
@@ -116,6 +117,11 @@ namespace Ludots.Core.Systems
                 spatialPartition,
                 worldSizeSpec,
                 TemplateBatchScratchCapacity);
+        }
+
+        public void SetPresentationStableIdEnabled(bool enabled)
+        {
+            _presentationStableIdsEnabled = enabled;
         }
 
         public void LoadTemplates(ConfigCatalog catalog, ConfigConflictReport report = null)
@@ -329,7 +335,7 @@ namespace Ludots.Core.Systems
                 bool publishSpawnedEvent = ShouldPublishSpawnedEvent(templateKeyId, hasDirectBootstrap);
 
                 TemplateBatchSpawnFeatures features = TemplateBatchSpawnFeatures.MapEntity;
-                if (_stableIds != null)
+                if (_stableIds != null && _presentationStableIdsEnabled)
                 {
                     features |= TemplateBatchSpawnFeatures.PresentationStableId;
                     if (!publishSpawnedEvent)

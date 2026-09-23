@@ -181,7 +181,12 @@ namespace Ludots.Tests.GAS
                 new GraphProgramRegistry(),
                 new StubSpatialQueryService(),
                 new StubGraphApi(world),
+<<<<<<< Updated upstream
                 AllowAllCandidates);
+=======
+                AllowAllCandidates,
+                new GasGraphOpHandlerTable());
+>>>>>>> Stashed changes
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var mapping = new InputOrderMappingSystem(input, new InputOrderMappingConfig
             {
@@ -201,13 +206,21 @@ namespace Ludots.Tests.GAS
                 },
             });
             var orders = new List<Ludots.Core.Gameplay.GAS.Orders.Order>();
+<<<<<<< Updated upstream
             mapping.SetLocalPlayer(actor, 1);
+=======
+            mapping.SetSolePossessedActor(actor, 1);
+>>>>>>> Stashed changes
             mapping.SetOrderTypeKeyResolver(key => key == "castAbility" ? 100 : 0);
             mapping.SetContextScoredProvider(resolver.TryResolve);
             mapping.SetOrderSubmitHandler((in Ludots.Core.Gameplay.GAS.Orders.Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
 
             input.InjectButtonPress("Attack");
+<<<<<<< Updated upstream
             input.Update();
+=======
+            input.Update(1f / 60f);
+>>>>>>> Stashed changes
             mapping.Update(0f);
 
             Assert.That(orders, Has.Count.EqualTo(1));

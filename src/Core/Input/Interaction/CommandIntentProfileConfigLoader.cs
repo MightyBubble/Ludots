@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using Ludots.Core.Config;
 
 namespace Ludots.Core.Input.Interaction
@@ -21,7 +22,8 @@ namespace Ludots.Core.Input.Interaction
         {
             PropertyNameCaseInsensitive = true,
             ReadCommentHandling = JsonCommentHandling.Skip,
-            AllowTrailingCommas = true
+            AllowTrailingCommas = true,
+            Converters = { new JsonStringEnumConverter() }
         };
 
         public CommandIntentProfileConfigLoader(ConfigPipeline pipeline)

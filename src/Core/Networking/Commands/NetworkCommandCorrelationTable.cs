@@ -74,7 +74,12 @@ namespace Ludots.Core.Networking.Commands
             _active = new bool[capacity];
             _deliver = new bool[capacity];
             _admissionBatchIds = new int[capacity];
+<<<<<<< Updated upstream
             _orderIds = new int[capacity];
+=======
+            _actors = new Entity[checked(capacity * maxActorsPerBatch)];
+            _orderIds = new int[_actors.Length];
+>>>>>>> Stashed changes
             _seatSlots = new int[capacity];
             _seatGenerations = new uint[capacity];
             _playerIds = new int[capacity];
@@ -82,7 +87,10 @@ namespace Ludots.Core.Networking.Commands
             _targetTicks = new int[capacity];
             _actorCounts = new int[capacity];
             _terminalCounts = new ushort[capacity];
+<<<<<<< Updated upstream
             _actors = new Entity[checked(capacity * maxActorsPerBatch)];
+=======
+>>>>>>> Stashed changes
             _batchIndices = new ushort[_actors.Length];
             _rowStates = new byte[_actors.Length];
         }
@@ -118,17 +126,28 @@ namespace Ludots.Core.Networking.Commands
             ValidateActorCount(orders.Length);
 
             int admissionBatchId = orders[0].AdmissionBatchId;
+<<<<<<< Updated upstream
             int orderId = orders[0].OrderId;
             if (admissionBatchId <= 0 || orderId <= 0)
             {
                 throw new InvalidOperationException(
                     "Network command correlation requires positive order and admission batch ids.");
+=======
+            if (admissionBatchId <= 0)
+            {
+                throw new InvalidOperationException(
+                    "Network command correlation requires a positive admission batch id.");
+>>>>>>> Stashed changes
             }
 
             for (int i = 0; i < orders.Length; i++)
             {
                 ref readonly Order order = ref orders[i];
+<<<<<<< Updated upstream
                 if (order.OrderId != orderId ||
+=======
+                if (order.OrderId <= 0 ||
+>>>>>>> Stashed changes
                     order.AdmissionBatchId != admissionBatchId ||
                     order.AdmissionBatchSize != orders.Length ||
                     order.AdmissionBatchIndex != i ||
@@ -157,7 +176,10 @@ namespace Ludots.Core.Networking.Commands
             _active[slot] = true;
             _deliver[slot] = true;
             _admissionBatchIds[slot] = admissionBatchId;
+<<<<<<< Updated upstream
             _orderIds[slot] = orderId;
+=======
+>>>>>>> Stashed changes
             _seatSlots[slot] = seat.Slot;
             _seatGenerations[slot] = seat.Generation;
             _playerIds[slot] = seat.PlayerId;
@@ -170,6 +192,10 @@ namespace Ludots.Core.Networking.Commands
             for (int i = 0; i < orders.Length; i++)
             {
                 int row = rowOffset + i;
+<<<<<<< Updated upstream
+=======
+                _orderIds[row] = orders[i].OrderId;
+>>>>>>> Stashed changes
                 _actors[row] = orders[i].Actor;
                 _batchIndices[row] = orders[i].AdmissionBatchIndex;
             }
@@ -192,12 +218,18 @@ namespace Ludots.Core.Networking.Commands
         {
             for (int i = 0; i < _active.Length; i++)
             {
+<<<<<<< Updated upstream
                 if (!_active[i] || _orderIds[i] != orderId)
                 {
                     continue;
                 }
 
                 if (admissionBatchIndex >= _actorCounts[i])
+=======
+                if (!_active[i] ||
+                    admissionBatchIndex >= _actorCounts[i] ||
+                    _orderIds[(i * _maxActorsPerBatch) + admissionBatchIndex] != orderId)
+>>>>>>> Stashed changes
                 {
                     continue;
                 }
@@ -222,7 +254,11 @@ namespace Ludots.Core.Networking.Commands
         {
             for (int i = 0; i < _active.Length; i++)
             {
+<<<<<<< Updated upstream
                 if (!_active[i] || _orderIds[i] != orderId)
+=======
+                if (!_active[i])
+>>>>>>> Stashed changes
                 {
                     continue;
                 }
@@ -231,7 +267,11 @@ namespace Ludots.Core.Networking.Commands
                 for (int row = 0; row < _actorCounts[i]; row++)
                 {
                     int index = rowOffset + row;
+<<<<<<< Updated upstream
                     if (_actors[index] == actor)
+=======
+                    if (_orderIds[index] == orderId && _actors[index] == actor)
+>>>>>>> Stashed changes
                     {
                         tableIndex = i;
                         admissionBatchIndex = _batchIndices[index];
@@ -285,9 +325,18 @@ namespace Ludots.Core.Networking.Commands
             _active[tableIndex] = false;
             _deliver[tableIndex] = false;
             _admissionBatchIds[tableIndex] = 0;
+<<<<<<< Updated upstream
             _orderIds[tableIndex] = 0;
             _actorCounts[tableIndex] = 0;
             _terminalCounts[tableIndex] = 0;
+=======
+            _actorCounts[tableIndex] = 0;
+            _terminalCounts[tableIndex] = 0;
+            int rowOffset = tableIndex * _maxActorsPerBatch;
+            Array.Clear(_orderIds, rowOffset, _maxActorsPerBatch);
+            Array.Clear(_actors, rowOffset, _maxActorsPerBatch);
+            Array.Clear(_batchIndices, rowOffset, _maxActorsPerBatch);
+>>>>>>> Stashed changes
             Array.Clear(_rowStates, tableIndex * _maxActorsPerBatch, _maxActorsPerBatch);
         }
 

@@ -38,6 +38,10 @@ using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 using Ludots.Core.Vision;
 using Ludots.Launcher.Backend;
+<<<<<<< Updated upstream
+=======
+using Ludots.Platform.Abstractions;
+>>>>>>> Stashed changes
 using Ludots.UI;
 using Ludots.UI.Skia;
 using NUnit.Framework;
@@ -261,7 +265,11 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         int visiblePrimitiveCount = 0;
         foreach (ref readonly PrimitiveDrawItem item in primitives.GetSpan())
         {
+<<<<<<< Updated upstream
             if (item.Visibility == Ludots.Core.Presentation.Components.VisualVisibility.Visible)
+=======
+            if (item.Visibility == VisualVisibility.Visible)
+>>>>>>> Stashed changes
             {
                 visiblePrimitiveCount++;
             }
@@ -1054,7 +1062,11 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         string modRoot = Path.Combine(repoRoot, "mods", "showcases", "rts_multiplayer_frontline", "RtsMultiplayerFrontlineMod");
         using JsonDocument config = JsonDocument.Parse(File.ReadAllText(Path.Combine(modRoot, "assets", "RtsMultiplayerFrontlineConfig.json")));
         using JsonDocument map = JsonDocument.Parse(File.ReadAllText(Path.Combine(modRoot, "assets", "Maps", "rts_duel_v1.json")));
+<<<<<<< Updated upstream
         using JsonDocument cameras = JsonDocument.Parse(File.ReadAllText(Path.Combine(modRoot, "assets", "Configs", "Camera", "virtual_cameras.json")));
+=======
+        using JsonDocument cameras = JsonDocument.Parse(File.ReadAllText(Path.Combine(modRoot, "assets", "Camera", "virtual_cameras.json")));
+>>>>>>> Stashed changes
         using JsonDocument templates = JsonDocument.Parse(File.ReadAllText(Path.Combine(modRoot, "assets", "Entities", "templates.json")));
 
         JsonElement sides = config.RootElement.GetProperty("sides");

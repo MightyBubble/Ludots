@@ -51,6 +51,62 @@ N/A — trace 不是执行 op，不改变 Graph program。
 
 「下一个 Mod 变体」将修改: **graph 连线 / effect 步骤**。
 
+---
+
+## GAS Composition Gate — PR #711 mainline merge alignment
+
+- **Task / Issue**: 将 PR #711 的服务器权威联机与 RTS Frontline Showcase 对齐到 2026-09-01 的 `origin/main`，并修复主线命名迁移后的装载缺口。
+- **Date**: 2026-09-01
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: **A**
+
+结论: **PASS**
+
+一句话理由: Frontline 的训练、攻击、资源运输和出生配置继续组合现有 GAS effect、ability、order 与实体模板能力；本次主线适配只补 `ReplicationSchemaRef` 的 Core 组件作者面注册，不新增 profile enum、preset 开关或平行物化管线。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| 网络命令接收、校验和批次关联 | 0/1 | 现有网络 admission、correlation table、command ingress |
+| 权威状态复制与客户端镜像 | 0/1 | 现有 replication bridge、schema projector/applier registry |
+| Frontline 训练与伤害结算 | 2 | `GAS/abilities.json`、`GAS/effects.json` 与既有 effect pipeline |
+| 资源运输与单位出生 | 2 | 实体模板组件、既有 spawn queue、order type 与系统组合 |
+| `ReplicationSchemaRef` 模板作者面 | Core authoring | `ComponentRegistry` 的严格 setter 与现有模板装载链 |
+
+### 3. Reuse list
+
+- Handlers: 既有 GAS attribute/effect handlers、order admission、entity spawn 与 presentation projection。
+- Queues / Systems: 既有 EffectProcessing、OrderBuffer、RuntimeEntitySpawn、地图加载和网络 tick 管线。
+- Resolvers / Registries: `ComponentRegistry`、`AbilityDefinitionRegistry`、`ReplicationSchemaProjectorRegistry`、客户端 applier registry、既有模板与配置目录。
+- Existing presets / graphs: Frontline 的现有 ability/effect/order 配置和实体模板；不引入新的声明式生命周期 DSL。
+
+### 4. New Layer 0 ops
+
+N/A — 本次合并没有为实体生命周期或 GAS 变体新增 Layer 0 op。`ReplicationSchemaRef` 修复是已有 Core 组件的严格作者面注册。
+
+### 5. Transaction boundary
+
+网络命令仍由既有 admission 与批次关联边界负责；GAS 伤害、资源扣除和单位出生继续走现有 effect、attribute mutation 与 spawn 队列边界。注册失败或未知组件必须直接报错，不转换为空操作。
+
+### 6. Config SSOT
+
+行为配置落在现有 `assets/GAS/abilities.json`、`assets/GAS/effects.json`、`assets/GAS/order_types.json`、`assets/Entities/templates.json`、输入配置和地图配置。是否新增 JSON schema: **NO** — `ReplicationSchemaRef` 只是为现有模板字段补回 Core registry 注册及严格解析，不新增配置语言。
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加默认 fallback；未知 `ReplicationSchemaRef` 或非法 `SchemaId` 明确失败
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: **graph 连线 / effect 步骤**。
+
 ## Issue #1177 Beat 5 — Field-region ability scope — 2026-08-26
 
 - **Task / Issue**: Add the `field_jing_yang_transit` region-scoped ability demonstration.

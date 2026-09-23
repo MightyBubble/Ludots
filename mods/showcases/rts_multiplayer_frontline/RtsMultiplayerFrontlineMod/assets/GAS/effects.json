@@ -1,7 +1,11 @@
 [
   {
     "id": "Effect.Rts.Frontline.CreateInfantry",
+<<<<<<< Updated upstream
     "tags": ["Effect.Rts.Frontline.Train"],
+=======
+    "categories": ["Effect.Rts.Frontline.Train"],
+>>>>>>> Stashed changes
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -15,7 +19,11 @@
   },
   {
     "id": "Effect.Rts.Frontline.InfantryDamage",
+<<<<<<< Updated upstream
     "tags": ["Effect.Rts.Frontline.Damage"],
+=======
+    "categories": ["Effect.Rts.Frontline.Damage"],
+>>>>>>> Stashed changes
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": false,

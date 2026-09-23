@@ -57,6 +57,10 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
 {
     private const string MapId = "rts_duel_v1";
     private const string RuntimeKey = "rts.multiplayer.frontline.runtime";
+<<<<<<< Updated upstream
+=======
+    private static global::Ludots.Core.Map.MapId FrontlineMapId => new(MapId);
+>>>>>>> Stashed changes
 
     private static readonly string[] FrontlineMods =
     {
@@ -118,7 +122,11 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         Assert.That(
             () => new FrontlineClientTemplateFactory(
                 engine.World,
+<<<<<<< Updated upstream
                 engine.CurrentMapSession!.MapId,
+=======
+                FrontlineMapId,
+>>>>>>> Stashed changes
                 templates,
                 specs,
                 config.Replication.MatchStateSchemaId,
@@ -166,7 +174,11 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         Assert.That(
             () => new FrontlineClientTemplateFactory(
                 engine.World,
+<<<<<<< Updated upstream
                 engine.CurrentMapSession!.MapId,
+=======
+                FrontlineMapId,
+>>>>>>> Stashed changes
                 templates,
                 specs,
                 config.Replication.MatchStateSchemaId,
@@ -191,7 +203,11 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         Assert.That(
             () => new FrontlineClientTemplateFactory(
                 engine.World,
+<<<<<<< Updated upstream
                 engine.CurrentMapSession!.MapId,
+=======
+                FrontlineMapId,
+>>>>>>> Stashed changes
                 templates,
                 specs,
                 config.Replication.MatchStateSchemaId,
@@ -216,7 +232,11 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         Assert.That(
             () => new FrontlineClientTemplateFactory(
                 engine.World,
+<<<<<<< Updated upstream
                 engine.CurrentMapSession!.MapId,
+=======
+                FrontlineMapId,
+>>>>>>> Stashed changes
                 templates,
                 specs,
                 config.Replication.MatchStateSchemaId,
@@ -359,7 +379,11 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         FrontlineReplicationSpec[] specs = FrontlineReplication.CreateSpecs(config.Replication);
         var templates = new FrontlineClientTemplateFactory(
             engine.World,
+<<<<<<< Updated upstream
             engine.CurrentMapSession!.MapId,
+=======
+            FrontlineMapId,
+>>>>>>> Stashed changes
             engine.MapLoader.TemplateRegistry.GetAll(),
             specs,
             config.Replication.MatchStateSchemaId,
@@ -736,7 +760,11 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         FrontlineReplicationSpec[] specs = FrontlineReplication.CreateSpecs(config.Replication);
         var templates = new FrontlineClientTemplateFactory(
             engine.World,
+<<<<<<< Updated upstream
             engine.CurrentMapSession!.MapId,
+=======
+            FrontlineMapId,
+>>>>>>> Stashed changes
             engine.MapLoader.TemplateRegistry.GetAll(),
             specs,
             config.Replication.MatchStateSchemaId,
@@ -994,7 +1022,11 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         FrontlineReplicationSpec[] specs = FrontlineReplication.CreateSpecs(config.Replication);
         var templates = new FrontlineClientTemplateFactory(
             engine.World,
+<<<<<<< Updated upstream
             engine.CurrentMapSession!.MapId,
+=======
+            FrontlineMapId,
+>>>>>>> Stashed changes
             engine.MapLoader.TemplateRegistry.GetAll(),
             specs,
             config.Replication.MatchStateSchemaId,
@@ -1076,7 +1108,11 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         FrontlineReplicationSpec spec = specs[(int)FrontlineReplicationKind.Harvester];
         var templates = new FrontlineClientTemplateFactory(
             engine.World,
+<<<<<<< Updated upstream
             engine.CurrentMapSession!.MapId,
+=======
+            FrontlineMapId,
+>>>>>>> Stashed changes
             engine.MapLoader.TemplateRegistry.GetAll(),
             specs,
             config.Replication.MatchStateSchemaId,
@@ -1132,7 +1168,11 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         FrontlineReplicationSpec[] specs = FrontlineReplication.CreateSpecs(config.Replication);
         var templates = new FrontlineClientTemplateFactory(
             engine.World,
+<<<<<<< Updated upstream
             engine.CurrentMapSession!.MapId,
+=======
+            FrontlineMapId,
+>>>>>>> Stashed changes
             engine.MapLoader.TemplateRegistry.GetAll(),
             specs,
             config.Replication.MatchStateSchemaId,
@@ -1685,7 +1725,11 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         FrontlineReplicationSpec[] specs = FrontlineReplication.CreateSpecs(config.Replication);
         var templates = new FrontlineClientTemplateFactory(
             engine.World,
+<<<<<<< Updated upstream
             engine.CurrentMapSession!.MapId,
+=======
+            FrontlineMapId,
+>>>>>>> Stashed changes
             engine.MapLoader.TemplateRegistry.GetAll(),
             specs,
             config.Replication.MatchStateSchemaId,
@@ -2145,7 +2189,11 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         FrontlineReplicationSpec[] specs = FrontlineReplication.CreateSpecs(config.Replication);
         var templates = new FrontlineClientTemplateFactory(
             engine.World,
+<<<<<<< Updated upstream
             engine.CurrentMapSession!.MapId,
+=======
+            FrontlineMapId,
+>>>>>>> Stashed changes
             engine.MapLoader.TemplateRegistry.GetAll(),
             specs,
             config.Replication.MatchStateSchemaId,

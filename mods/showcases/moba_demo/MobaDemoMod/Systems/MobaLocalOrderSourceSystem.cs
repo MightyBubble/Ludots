@@ -190,7 +190,10 @@ namespace MobaDemoMod.Systems
                     }
 
                     ReplicatedClientCommandSubmitResult networkResult = port.Submit(in order);
+<<<<<<< Updated upstream
                     _globals[LocalOrderSourceHelper.LastNetworkSubmitResultDebugKey] = networkResult;
+=======
+>>>>>>> Stashed changes
                     return networkResult == ReplicatedClientCommandSubmitResult.Submitted
                         ? OrderSubmitResult.Queued
                         : OrderSubmitResult.RejectedByRule;

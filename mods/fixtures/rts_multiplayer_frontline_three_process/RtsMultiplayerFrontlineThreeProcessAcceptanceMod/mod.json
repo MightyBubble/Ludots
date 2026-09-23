@@ -2,7 +2,11 @@
   "name": "RtsMultiplayerFrontlineThreeProcessAcceptanceMod",
   "version": "1.0.0",
   "description": "Player-path three-process acceptance driver for the Frontline RTS match.",
+<<<<<<< Updated upstream
   "main": "bin/net8.0/RtsMultiplayerFrontlineThreeProcessAcceptanceMod.dll",
+=======
+  "main": "bin/net9.0/RtsMultiplayerFrontlineThreeProcessAcceptanceMod.dll",
+>>>>>>> Stashed changes
   "priority": 20,
   "dependencies": {
     "RtsMultiplayerFrontlineNetworkedMod": "^1.0.0"

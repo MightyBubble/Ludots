@@ -1,0 +1,27 @@
+[
+  {
+    "id": "Rts.Frontline",
+    "displayName": "Frontline Command",
+    "priority": 0,
+    "rigKind": "Orbit",
+    "distanceCm": 5200,
+    "pitch": 54,
+    "fovYDeg": 46,
+    "yaw": 180,
+    "minDistanceCm": 4200,
+    "maxDistanceCm": 10000,
+    "minPitchDeg": 48,
+    "maxPitchDeg": 64,
+    "targetHeightMode": "ContinuousHeightmap",
+    "panMode": "Keyboard",
+    "panCmPerSecond": 8000,
+    "enableGrabDrag": true,
+    "confineTargetToWorldBounds": true,
+    "confinePaddingCm": 0,
+    "rotateMode": "None",
+    "enableZoom": true,
+    "zoomCmPerWheel": 1000,
+    "followMode": "None",
+    "allowUserInput": true
+  }
+]
