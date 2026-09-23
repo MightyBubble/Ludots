@@ -1,0 +1,28 @@
+[
+  {
+    "id": "engage.siege.ring.navmesh",
+    "generator": {
+      "kind": "Ring",
+      "radiusCm": 800,
+      "count": 16
+    },
+    "tests": [
+      {
+        "kind": "Distance",
+        "preferNear": true,
+        "weight": 1,
+        "reference": {
+          "xCm": 0,
+          "yCm": 0
+        }
+      },
+      {
+        "kind": "PathReachable",
+        "agentTypeId": "tw.agent"
+      }
+    ],
+    "selection": {
+      "kind": "Best"
+    }
+  }
+]

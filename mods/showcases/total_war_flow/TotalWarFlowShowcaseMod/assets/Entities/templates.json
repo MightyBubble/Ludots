@@ -89,6 +89,32 @@
   }
  },
  {
+  "id": "tw_pond",
+  "components": {
+   "DirtyFlags": {},
+   "ManifestationObstacleIntent2D": {
+    "shape": "Polygon",
+    "sinkPhysicsCollider": false,
+    "sinkNavigationObstacle": true,
+    "navRadiusCm": 0,
+    "localOffsetXCm": 0,
+    "localOffsetYCm": 0
+   },
+   "ManifestationObstaclePolygon2D": {
+    "vertices": [
+     { "x": -2250, "y": 0 },
+     { "x": -2630, "y": 1520 },
+     { "x": -4150, "y": 2225 },
+     { "x": -5582, "y": 1432 },
+     { "x": -5975, "y": 0 },
+     { "x": -5423, "y": -1273 },
+     { "x": -4150, "y": -1975 },
+     { "x": -2630, "y": -1520 }
+    ]
+   }
+  }
+ },
+ {
   "id": "tw_death_burst",
   "onSpawnEffect": "Effect.Tw.DeathBurst.SelfDestruct",
   "components": {

@@ -75,10 +75,15 @@ namespace Ludots.Core.Navigation.NavMesh
 
             long[] pathRefs = new long[pathCapacity];
             var pathStatus = query.FindPath(startRef, goalRef, startPos, goalPos, filter, pathRefs.AsSpan(), out int pathCount, pathCapacity);
-            if (pathStatus.Failed() || pathStatus.IsPartial() || pathCount <= 0 || pathRefs[pathCount - 1] != goalRef)
+            if (pathStatus.Failed() || pathCount <= 0)
             {
                 return new NavPathResult(NavPathStatus.NotReachable, Array.Empty<int>(), Array.Empty<int>(), Fix64.Zero);
             }
+
+            // Detour reports DT_PARTIAL when the goal is unreachable but a walkable prefix
+            // exists. That prefix is the answer, not a failure: its end point is the nearest
+            // legal stand point toward the goal. Keep it so callers can degrade gracefully.
+            bool reachedGoal = pathRefs[pathCount - 1] == goalRef;
 
             var straight = new DtStraightPath[pathCapacity];
             var straightStatus = query.FindStraightPath(
@@ -95,7 +100,9 @@ namespace Ludots.Core.Navigation.NavMesh
                 return new NavPathResult(NavPathStatus.NotReachable, Array.Empty<int>(), Array.Empty<int>(), Fix64.Zero);
             }
 
-            return BuildPathResult(straight, straightCount);
+            return reachedGoal
+                ? BuildPathResult(straight, straightCount)
+                : BuildPartialPathResult(straight, straightCount);
         }
 
         public static NavPathResult FindPathFromDetourTileBytes(
@@ -216,10 +223,15 @@ namespace Ludots.Core.Navigation.NavMesh
 
             long[] pathRefs = new long[pathCapacity];
             var pathStatus = query.FindPath(startRef, goalRef, startPos, goalPos, filter, pathRefs.AsSpan(), out int pathCount, pathCapacity);
-            if (pathStatus.Failed() || pathStatus.IsPartial() || pathCount <= 0 || pathRefs[pathCount - 1] != goalRef)
+            if (pathStatus.Failed() || pathCount <= 0)
             {
                 return new NavPathResult(NavPathStatus.NotReachable, Array.Empty<int>(), Array.Empty<int>(), Fix64.Zero);
             }
+
+            // Detour reports DT_PARTIAL when the goal is unreachable but a walkable prefix
+            // exists. That prefix is the answer, not a failure: its end point is the nearest
+            // legal stand point toward the goal. Keep it so callers can degrade gracefully.
+            bool reachedGoal = pathRefs[pathCount - 1] == goalRef;
 
             var straight = new DtStraightPath[pathCapacity];
             var straightStatus = query.FindStraightPath(
@@ -236,7 +248,27 @@ namespace Ludots.Core.Navigation.NavMesh
                 return new NavPathResult(NavPathStatus.NotReachable, Array.Empty<int>(), Array.Empty<int>(), Fix64.Zero);
             }
 
-            return BuildPathResult(straight, straightCount);
+            return reachedGoal
+                ? BuildPathResult(straight, straightCount)
+                : BuildPartialPathResult(straight, straightCount);
+        }
+
+        private static NavPathResult BuildPartialPathResult(ReadOnlySpan<DtStraightPath> straight, int straightCount)
+        {
+            NavPathResult full = BuildPathResult(straight.ToArray(), straightCount);
+            if (full.PathXcm.Length <= 0)
+            {
+                return new NavPathResult(NavPathStatus.NotReachable, Array.Empty<int>(), Array.Empty<int>(), Fix64.Zero);
+            }
+
+            int endIndex = full.PathXcm.Length - 1;
+            return new NavPathResult(
+                NavPathStatus.Partial,
+                full.PathXcm,
+                full.PathZcm,
+                full.TravelCost,
+                full.PathXcm[endIndex],
+                full.PathZcm[endIndex]);
         }
 
         private static bool TryFindDirectRaycastPath(
@@ -334,8 +366,7 @@ namespace Ludots.Core.Navigation.NavMesh
             return navMesh;
         }
 
-        private static DtNavMesh? BuildNavMesh(NavTile[] tiles, int layer, int tileWidthCm, int tileHeightCm)
-        {
+        private static DtNavMesh? BuildNavMesh(NavTile[] tiles, int layer, int tileWidthCm, int tileHeightCm)        {
             var filtered = new List<NavTile>(tiles.Length);
             int maxPolys = 0;
             long baseOriginXcm = long.MaxValue;
@@ -589,6 +620,28 @@ namespace Ludots.Core.Navigation.NavMesh
             }
 
             return new DtQueryDefaultFilter(WalkFlag, 0, costs);
+        }
+
+        /// <summary>
+        /// Builds a nav mesh from loaded tiles for surface-correction queries
+        /// (<c>FindNearestPoly</c> / <c>ClosestPointOnPolyBoundary</c>) performed outside pathfinding.
+        /// </summary>
+        internal static DtNavMesh? BuildNavMeshForSurfaceQueries(
+            NavTile[] tiles,
+            int layer,
+            int tileWidthCm,
+            int tileHeightCm)
+        {
+            return BuildNavMesh(tiles, layer, tileWidthCm, tileHeightCm);
+        }
+
+        /// <summary>
+        /// Builds the default query filter for the given area costs. Exposed for callers that need to
+        /// issue their own Detour queries against a nav mesh built by this engine.
+        /// </summary>
+        internal static DtQueryDefaultFilter BuildDefaultFilter(NavAreaCostTable areaCosts)
+        {
+            return BuildFilter(areaCosts);
         }
 
         private static NavPathResult BuildPathResult(DtStraightPath[] straight, int straightCount)

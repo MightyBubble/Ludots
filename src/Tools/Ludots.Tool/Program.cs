@@ -994,7 +994,8 @@ namespace {modId}
                     heightStep,
                     blockedAtOrBelowHeightCm: seaLevelCm,
                     originXcm: originXcm,
-                    originZcm: originZcm));
+                    originZcm: originZcm,
+                    markAsRamp: boardConfig.TerrainProjectAsRamp));
 
             IReadOnlyList<NavBakeTileCoord> targets;
             if (!string.IsNullOrWhiteSpace(dirtyChunksPath))
@@ -1387,7 +1388,8 @@ namespace {modId}
                     heightStep,
                     blockedAtOrBelowHeightCm: seaLevelCm,
                     originXcm: asset.Bounds.Left,
-                    originZcm: asset.Bounds.Top));
+                    originZcm: asset.Bounds.Top,
+                    markAsRamp: boardConfig.TerrainProjectAsRamp));
         }
 
         static string ResolveNavOutputRoot(string repoRoot, string? modId, string? outputRoot)

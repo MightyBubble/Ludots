@@ -452,7 +452,7 @@ public sealed class MassNavigationMovePlanExecutionSystem : ISystem<float>, IMov
         if (!result.Tracked)
         {
             throw new InvalidOperationException(
-                $"MassNavigation route execution failed for command group {commandGroupToken}, agent {memberIndex}: status={result.Status}, pathStatus={result.PathStatus}, domain={result.ResolvedDomain}, errorCode={result.ErrorCode}.");
+                $"MassNavigation route execution failed for command group {commandGroupToken}, agent {memberIndex}: status={result.Status}, pathStatus={result.PathStatus}, domain={result.ResolvedDomain}, errorCode={result.ErrorCode}, start=({result.StartWorldCm.X:0.###},{result.StartWorldCm.Y:0.###}), goal=({result.DestinationWorldCm.X:0.###},{result.DestinationWorldCm.Y:0.###}).");
         }
     }
 

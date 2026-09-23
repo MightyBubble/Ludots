@@ -205,6 +205,24 @@ namespace Ludots.Tests.GAS
                 Is.True);
         }
 
+        [Test]
+        public void TotalWarFlow_MapAuthoring_UsesObstaclePlacementAndIgnoresGameplayOnlyTemplates()
+        {
+            string root = FindRepoRoot();
+            NavObstacleSet obstacles = NavObstacleAuthoringCatalog.BuildForMap(
+                root,
+                "total_war_flow_field",
+                "TotalWarFlowShowcaseMod");
+
+            NavObstacle? tower = obstacles.Obstacles.SingleOrDefault(obstacle => obstacle.Id == "tower_1");
+            Assert.That(tower, Is.Not.Null);
+            Assert.That(obstacles.Obstacles, Has.Count.EqualTo(1));
+            Assert.That(tower!.Kind, Is.EqualTo(NavObstacleKind.Circle));
+            Assert.That(tower.Center.Xcm, Is.EqualTo(400));
+            Assert.That(tower.Center.Zcm, Is.EqualTo(600));
+            Assert.That(tower.RadiusCm, Is.EqualTo(500));
+        }
+
         private static string FindRepoRoot()
         {
             var directory = new DirectoryInfo(AppContext.BaseDirectory);
