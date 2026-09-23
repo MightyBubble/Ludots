@@ -86,7 +86,7 @@ public readonly struct Physics3DNetCompatibilityFingerprint : IEquatable<Physics
         ArgumentNullException.ThrowIfNull(config);
         config.Validate();
 
-        Span<byte> buffer = stackalloc byte[44];
+        Span<byte> buffer = stackalloc byte[88];
         BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(0, 4), config.AuthoritativeHz);
         BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(4, 4), config.SnapshotHz);
         BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(8, 4), config.PlayerCapacity);
@@ -98,6 +98,17 @@ public readonly struct Physics3DNetCompatibilityFingerprint : IEquatable<Physics
         BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(32, 4), config.RemoteInterpolationHistoryTicks);
         BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(36, 4), config.ReplayEventCapacity);
         BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(40, 4), config.ClientCapacity);
+        BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(44, 4), config.DatagramReceiveBufferBytes);
+        BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(48, 4), config.DatagramSendBufferBytes);
+        BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(52, 4), config.MaxDatagramPayloadBytes);
+        BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(56, 4), config.TransportEndpointCapacity);
+        BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(60, 4), config.SnapshotEntitiesPerDatagram);
+        BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(64, 4), config.ReliableAckBitfieldBits);
+        BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(68, 4), config.ReliablePendingCapacity);
+        BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(72, 4), config.ReliableMaxRetries);
+        BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(76, 4), config.ReliableRetransmitIntervalTicks);
+        BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(80, 4), config.HandshakeFingerprintStringCapacityBytes);
+        BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(84, 4), (int)config.MissingInputPolicy);
         return Fnv1a64(buffer);
     }
 

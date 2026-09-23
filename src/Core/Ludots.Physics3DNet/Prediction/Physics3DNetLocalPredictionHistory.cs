@@ -211,6 +211,34 @@ public sealed class Physics3DNetLocalPredictionHistory
         _confirmedTick = confirmedTick;
     }
 
+    /// <summary>
+    /// Overwrites an existing predicted pose after local correction replay. Input frame is preserved.
+    /// </summary>
+    public void OverwritePredictedPose(in Physics3DNetPredictedPose pose)
+    {
+        EnsureBound();
+        int index = IndexForTick(pose.Tick);
+        if (!_occupied[index] || _tick[index] != pose.Tick)
+        {
+            throw new InvalidOperationException(
+                $"Cannot overwrite predicted pose for missing tick {pose.Tick}.");
+        }
+
+        _posX[index] = pose.PositionCm.X;
+        _posY[index] = pose.PositionCm.Y;
+        _posZ[index] = pose.PositionCm.Z;
+        _orientX[index] = pose.Orientation.X;
+        _orientY[index] = pose.Orientation.Y;
+        _orientZ[index] = pose.Orientation.Z;
+        _orientW[index] = pose.Orientation.W;
+        _linVelX[index] = pose.LinearVelocityCmPerSecond.X;
+        _linVelY[index] = pose.LinearVelocityCmPerSecond.Y;
+        _linVelZ[index] = pose.LinearVelocityCmPerSecond.Z;
+        _angVelX[index] = pose.AngularVelocityRadiansPerSecond.X;
+        _angVelY[index] = pose.AngularVelocityRadiansPerSecond.Y;
+        _angVelZ[index] = pose.AngularVelocityRadiansPerSecond.Z;
+    }
+
     public Physics3DNetCorrectionReplayRange BeginCorrectionReplay(
         int networkEntityId,
         int generation,
