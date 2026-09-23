@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":1,"error":{"code":-32601,"message":"Unknown tool \u0027tools/call\u0027. Call GET /tools or ludots.tools.list for the catalog.","data":{"code":"method.not_found"}},"instance":{"pid":35764,"port":47921,"mapId":"sango_default","processPath":"C:\\001_AI\\SangoPort\\ludots\\src\\Apps\\Raylib\\Ludots.App.Raylib\\bin\\Release\\net9.0\\Ludots.App.Raylib.exe"}}

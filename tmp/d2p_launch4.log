@@ -1,0 +1,220 @@
+
+宸叉垚鍔熺敓鎴愩�?
+    0 涓鍛?
+    0 涓敊璇?
+
+宸茬敤鏃堕棿 00:00:02.48
+
+鏈夊彲鐢ㄧ殑宸ヤ綔璐熻浇鏇存柊銆傛湁鍏宠缁嗕俊鎭紝璇疯繍琛?`dotnet workload list`銆?
+[OK] LudotsCoreMod
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  Ludots.Platform.Abstractions -> C:\001_AI\SangoPort\ludots\src\Platform\Ludots.Platform.Abstractions\bin\Release\net9.0\Ludots.Platform.Abstractions.dll
+  Arch -> C:\001_AI\SangoPort\ludots\src\Libraries\Arch\src\Arch\bin\Release\net8.0\Arch.dll
+  Arch.System -> C:\001_AI\SangoPort\ludots\src\Libraries\Arch.Extended\Arch.System\bin\Release\net7.0\Arch.System.dll
+  Arch -> C:\001_AI\SangoPort\ludots\src\Libraries\Arch\src\Arch\bin\Release\net6.0\Arch.dll
+  Ludots.Contracts -> C:\001_AI\SangoPort\ludots\src\Contracts\bin\Release\net9.0\Ludots.Contracts.dll
+  Ludots.Graph.Abstractions -> C:\001_AI\SangoPort\ludots\src\Graph\Ludots.Graph.Abstractions\bin\Release\net9.0\Ludots.Graph.Abstractions.dll
+  Arch.Persistence -> C:\001_AI\SangoPort\ludots\src\Libraries\Arch.Extended\Arch.Persistence\bin\Release\net7.0\Arch.Persistence.dll
+  Arch.Relationships -> C:\001_AI\SangoPort\ludots\src\Libraries\Arch.Extended\Arch.Relationships\bin\Release\net7.0\Arch.Relationships.dll
+  DotRecast.Core -> C:\001_AI\SangoPort\ludots\src\Libraries\DotRecast\src\DotRecast.Core\bin\Release\net9.0\DotRecast.Core.dll
+  DotRecast.Detour -> C:\001_AI\SangoPort\ludots\src\Libraries\DotRecast\src\DotRecast.Detour\bin\Release\net9.0\DotRecast.Detour.dll
+  DotRecast.Recast -> C:\001_AI\SangoPort\ludots\src\Libraries\DotRecast\src\DotRecast.Recast\bin\Release\net9.0\DotRecast.Recast.dll
+  Ludots.Core -> C:\001_AI\SangoPort\ludots\src\Core\bin\Release\net9.0\Ludots.Core.dll
+  LudotsCoreMod -> C:\001_AI\SangoPort\ludots\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll
+
+已成功生成。
+    0 个警告
+    0 个错误
+
+已用时间 00:00:01.99
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。
+Exported ref: C:\001_AI\SangoPort\ludots\mods\LudotsCoreMod\ref\LudotsCoreMod.dll
+
+[OK] SangoContentMod
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  Ludots.Platform.Abstractions -> C:\001_AI\SangoPort\ludots\src\Platform\Ludots.Platform.Abstractions\bin\Release\net9.0\Ludots.Platform.Abstractions.dll
+  Arch -> C:\001_AI\SangoPort\ludots\src\Libraries\Arch\src\Arch\bin\Release\net8.0\Arch.dll
+  Arch.System -> C:\001_AI\SangoPort\ludots\src\Libraries\Arch.Extended\Arch.System\bin\Release\net7.0\Arch.System.dll
+  Ludots.Contracts -> C:\001_AI\SangoPort\ludots\src\Contracts\bin\Release\net9.0\Ludots.Contracts.dll
+  Arch -> C:\001_AI\SangoPort\ludots\src\Libraries\Arch\src\Arch\bin\Release\net6.0\Arch.dll
+  Ludots.Graph.Abstractions -> C:\001_AI\SangoPort\ludots\src\Graph\Ludots.Graph.Abstractions\bin\Release\net9.0\Ludots.Graph.Abstractions.dll
+  Arch.Relationships -> C:\001_AI\SangoPort\ludots\src\Libraries\Arch.Extended\Arch.Relationships\bin\Release\net7.0\Arch.Relationships.dll
+  Arch.Persistence -> C:\001_AI\SangoPort\ludots\src\Libraries\Arch.Extended\Arch.Persistence\bin\Release\net7.0\Arch.Persistence.dll
+  DotRecast.Core -> C:\001_AI\SangoPort\ludots\src\Libraries\DotRecast\src\DotRecast.Core\bin\Release\net9.0\DotRecast.Core.dll
+  DotRecast.Detour -> C:\001_AI\SangoPort\ludots\src\Libraries\DotRecast\src\DotRecast.Detour\bin\Release\net9.0\DotRecast.Detour.dll
+  DotRecast.Recast -> C:\001_AI\SangoPort\ludots\src\Libraries\DotRecast\src\DotRecast.Recast\bin\Release\net9.0\DotRecast.Recast.dll
+  Ludots.Core -> C:\001_AI\SangoPort\ludots\src\Core\bin\Release\net9.0\Ludots.Core.dll
+  SangoContentMod -> C:\001_AI\SangoPort\ludots\mods\sango\SangoContentMod\bin\net9.0\SangoContentMod.dll
+
+已成功生成。
+    0 个警告
+    0 个错误
+
+已用时间 00:00:01.77
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。
+Exported ref: C:\001_AI\SangoPort\ludots\mods\sango\SangoContentMod\ref\SangoContentMod.dll
+
+[OK] SangoTerrainMod
+Resource-only mod requires no build.
+[OK] SangoSimMod
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  Ludots.Platform.Abstractions -> C:\001_AI\SangoPort\ludots\src\Platform\Ludots.Platform.Abstractions\bin\Release\net9.0\Ludots.Platform.Abstractions.dll
+  Ludots.Contracts -> C:\001_AI\SangoPort\ludots\src\Contracts\bin\Release\net9.0\Ludots.Contracts.dll
+  TKNewtonsoft -> C:\001_AI\SangoPort\ludots\mods\sango\SangoSimMod\External\TKNewtonsoft\bin\net9.0\TKNewtonsoft.dll
+  Arch -> C:\001_AI\SangoPort\ludots\src\Libraries\Arch\src\Arch\bin\Release\net8.0\Arch.dll
+  Ludots.Graph.Abstractions -> C:\001_AI\SangoPort\ludots\src\Graph\Ludots.Graph.Abstractions\bin\Release\net9.0\Ludots.Graph.Abstractions.dll
+  Arch.System -> C:\001_AI\SangoPort\ludots\src\Libraries\Arch.Extended\Arch.System\bin\Release\net7.0\Arch.System.dll
+  Arch -> C:\001_AI\SangoPort\ludots\src\Libraries\Arch\src\Arch\bin\Release\net6.0\Arch.dll
+  Arch.Relationships -> C:\001_AI\SangoPort\ludots\src\Libraries\Arch.Extended\Arch.Relationships\bin\Release\net7.0\Arch.Relationships.dll
+  Arch.Persistence -> C:\001_AI\SangoPort\ludots\src\Libraries\Arch.Extended\Arch.Persistence\bin\Release\net7.0\Arch.Persistence.dll
+  DotRecast.Core -> C:\001_AI\SangoPort\ludots\src\Libraries\DotRecast\src\DotRecast.Core\bin\Release\net9.0\DotRecast.Core.dll
+  DotRecast.Detour -> C:\001_AI\SangoPort\ludots\src\Libraries\DotRecast\src\DotRecast.Detour\bin\Release\net9.0\DotRecast.Detour.dll
+  DotRecast.Recast -> C:\001_AI\SangoPort\ludots\src\Libraries\DotRecast\src\DotRecast.Recast\bin\Release\net9.0\DotRecast.Recast.dll
+  Ludots.Core -> C:\001_AI\SangoPort\ludots\src\Core\bin\Release\net9.0\Ludots.Core.dll
+  SangoSimMod -> C:\001_AI\SangoPort\ludots\mods\sango\SangoSimMod\bin\net9.0\SangoSimMod.dll
+
+已成功生成。
+    0 个警告
+    0 个错误
+
+已用时间 00:00:01.72
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。
+Exported ref: C:\001_AI\SangoPort\ludots\mods\sango\SangoSimMod\ref\SangoSimMod.dll
+
+[OK] SangoWebUiMod
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  Ludots.Contracts -> C:\001_AI\SangoPort\ludots\src\Contracts\bin\Release\net9.0\Ludots.Contracts.dll
+  Ludots.UI -> C:\001_AI\SangoPort\ludots\src\Libraries\Ludots.UI\bin\Release\net9.0\Ludots.UI.dll
+  Ludots.Platform.Abstractions -> C:\001_AI\SangoPort\ludots\src\Platform\Ludots.Platform.Abstractions\bin\Release\net9.0\Ludots.Platform.Abstractions.dll
+  SkiaSharp -> C:\001_AI\SangoPort\ludots\src\Libraries\SkiaSharp\SkiaSharp\bin\Release\net8.0\SkiaSharp.dll
+  TKNewtonsoft -> C:\001_AI\SangoPort\ludots\mods\sango\SangoSimMod\External\TKNewtonsoft\bin\net9.0\TKNewtonsoft.dll
+  Arch -> C:\001_AI\SangoPort\ludots\src\Libraries\Arch\src\Arch\bin\Release\net8.0\Arch.dll
+  ExCSS -> C:\001_AI\SangoPort\ludots\src\Libraries\ExCSS\bin\Release\net8.0\ExCSS.dll
+  Ludots.UI.Browser -> C:\001_AI\SangoPort\ludots\src\Libraries\Ludots.UI.Browser\bin\Release\net9.0\Ludots.UI.Browser.dll
+  Arch.System -> C:\001_AI\SangoPort\ludots\src\Libraries\Arch.Extended\Arch.System\bin\Release\net7.0\Arch.System.dll
+  ShimSkiaSharp -> C:\001_AI\SangoPort\ludots\src\Libraries\Svg.Skia\ShimSkiaSharp\bin\Release\net8.0\ShimSkiaSharp.dll
+  Arch -> C:\001_AI\SangoPort\ludots\src\Libraries\Arch\src\Arch\bin\Release\net6.0\Arch.dll
+  Arch.Persistence -> C:\001_AI\SangoPort\ludots\src\Libraries\Arch.Extended\Arch.Persistence\bin\Release\net7.0\Arch.Persistence.dll
+  Arch.Relationships -> C:\001_AI\SangoPort\ludots\src\Libraries\Arch.Extended\Arch.Relationships\bin\Release\net7.0\Arch.Relationships.dll
+  Svg.Generators -> C:\001_AI\SangoPort\ludots\src\Libraries\Svg.Skia\externals\SVG\Generators\bin\Release\netstandard2.0\Svg.Generators.dll
+  Ludots.Graph.Abstractions -> C:\001_AI\SangoPort\ludots\src\Graph\Ludots.Graph.Abstractions\bin\Release\net9.0\Ludots.Graph.Abstractions.dll
+  DotRecast.Core -> C:\001_AI\SangoPort\ludots\src\Libraries\DotRecast\src\DotRecast.Core\bin\Release\net9.0\DotRecast.Core.dll
+  DotRecast.Detour -> C:\001_AI\SangoPort\ludots\src\Libraries\DotRecast\src\DotRecast.Detour\bin\Release\net9.0\DotRecast.Detour.dll
+  DotRecast.Recast -> C:\001_AI\SangoPort\ludots\src\Libraries\DotRecast\src\DotRecast.Recast\bin\Release\net9.0\DotRecast.Recast.dll
+  Svg.Custom -> C:\001_AI\SangoPort\ludots\src\Libraries\Svg.Skia\Svg.Custom\bin\Release\net8.0\Svg.Custom.dll
+  Ludots.Core -> C:\001_AI\SangoPort\ludots\src\Core\bin\Release\net9.0\Ludots.Core.dll
+  Svg.Model -> C:\001_AI\SangoPort\ludots\src\Libraries\Svg.Skia\Svg.Model\bin\Release\net8.0\Svg.Model.dll
+  SangoSimMod -> C:\001_AI\SangoPort\ludots\mods\sango\SangoSimMod\bin\net9.0\SangoSimMod.dll
+  Svg.Skia -> C:\001_AI\SangoPort\ludots\src\Libraries\Svg.Skia\Svg.Skia\bin\Release\net8.0\Svg.Skia.dll
+  Ludots.UI.HtmlEngine -> C:\001_AI\SangoPort\ludots\src\Libraries\Ludots.UI.HtmlEngine\bin\Release\net9.0\Ludots.UI.HtmlEngine.dll
+  Ludots.WebUI.DataPlane -> C:\001_AI\SangoPort\ludots\src\Libraries\Ludots.WebUI.DataPlane\bin\Release\net9.0\Ludots.WebUI.DataPlane.dll
+  Ludots.UI.Skia -> C:\001_AI\SangoPort\ludots\src\Libraries\Ludots.UI.Skia\bin\Release\net9.0\Ludots.UI.Skia.dll
+  Ludots.UI.Panels -> C:\001_AI\SangoPort\ludots\src\Libraries\Ludots.UI.Panels\bin\Release\net9.0\Ludots.UI.Panels.dll
+  Ludots.WebUI.Browser -> C:\001_AI\SangoPort\ludots\src\Libraries\Ludots.WebUI.Browser\bin\Release\net9.0\Ludots.WebUI.Browser.dll
+  SangoWebUiMod -> C:\001_AI\SangoPort\ludots\mods\sango\SangoWebUiMod\bin\net9.0\SangoWebUiMod.dll
+
+已成功生成。
+    0 个警告
+    0 个错误
+
+已用时间 00:00:03.16
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。
+Exported ref: C:\001_AI\SangoPort\ludots\mods\sango\SangoWebUiMod\ref\SangoWebUiMod.dll
+
+[OK] AgentBridgeMod
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  Ludots.Contracts -> C:\001_AI\SangoPort\ludots\src\Contracts\bin\Release\net9.0\Ludots.Contracts.dll
+  Ludots.Platform.Abstractions -> C:\001_AI\SangoPort\ludots\src\Platform\Ludots.Platform.Abstractions\bin\Release\net9.0\Ludots.Platform.Abstractions.dll
+  Ludots.UI -> C:\001_AI\SangoPort\ludots\src\Libraries\Ludots.UI\bin\Release\net9.0\Ludots.UI.dll
+  Arch -> C:\001_AI\SangoPort\ludots\src\Libraries\Arch\src\Arch\bin\Release\net8.0\Arch.dll
+  Ludots.Graph.Abstractions -> C:\001_AI\SangoPort\ludots\src\Graph\Ludots.Graph.Abstractions\bin\Release\net9.0\Ludots.Graph.Abstractions.dll
+  Arch.System -> C:\001_AI\SangoPort\ludots\src\Libraries\Arch.Extended\Arch.System\bin\Release\net7.0\Arch.System.dll
+  Arch -> C:\001_AI\SangoPort\ludots\src\Libraries\Arch\src\Arch\bin\Release\net6.0\Arch.dll
+  Arch.Persistence -> C:\001_AI\SangoPort\ludots\src\Libraries\Arch.Extended\Arch.Persistence\bin\Release\net7.0\Arch.Persistence.dll
+  Arch.Relationships -> C:\001_AI\SangoPort\ludots\src\Libraries\Arch.Extended\Arch.Relationships\bin\Release\net7.0\Arch.Relationships.dll
+  DotRecast.Core -> C:\001_AI\SangoPort\ludots\src\Libraries\DotRecast\src\DotRecast.Core\bin\Release\net9.0\DotRecast.Core.dll
+  DotRecast.Detour -> C:\001_AI\SangoPort\ludots\src\Libraries\DotRecast\src\DotRecast.Detour\bin\Release\net9.0\DotRecast.Detour.dll
+  DotRecast.Recast -> C:\001_AI\SangoPort\ludots\src\Libraries\DotRecast\src\DotRecast.Recast\bin\Release\net9.0\DotRecast.Recast.dll
+  Ludots.Core -> C:\001_AI\SangoPort\ludots\src\Core\bin\Release\net9.0\Ludots.Core.dll
+  Ludots.AgentBridge -> C:\001_AI\SangoPort\ludots\src\Libraries\Ludots.AgentBridge\bin\Release\net9.0\Ludots.AgentBridge.dll
+  AgentBridgeMod -> C:\001_AI\SangoPort\ludots\mods\AgentBridgeMod\bin\net9.0\AgentBridgeMod.dll
+
+已成功生成。
+    0 个警告
+    0 个错误
+
+已用时间 00:00:01.79
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。
+Exported ref: C:\001_AI\SangoPort\ludots\mods\AgentBridgeMod\ref\AgentBridgeMod.dll
+
+[OK] browserRuntime:cef
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  Ludots.UI -> C:\001_AI\SangoPort\ludots\src\Libraries\Ludots.UI\bin\Release\net9.0\Ludots.UI.dll
+  Ludots.UI.Browser -> C:\001_AI\SangoPort\ludots\src\Libraries\Ludots.UI.Browser\bin\Release\net9.0\Ludots.UI.Browser.dll
+  Ludots.UI.Browser.Cef -> C:\001_AI\SangoPort\ludots\src\Libraries\Ludots.UI.Browser.Cef\bin\Release\net9.0-windows\Ludots.UI.Browser.Cef.dll
+  Ludots.UI.Browser.Cef -> C:\001_AI\SangoPort\ludots\BrowserRuntime\cef\
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。
+
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  Ludots.Platform.Abstractions -> C:\001_AI\SangoPort\ludots\src\Platform\Ludots.Platform.Abstractions\bin\Release\net9.0\Ludots.Platform.Abstractions.dll
+  Raylib-cs -> C:\001_AI\SangoPort\ludots\src\Libraries\Raylib-cs\bin\Release\net9.0\Raylib-cs.dll
+  Ludots.UI -> C:\001_AI\SangoPort\ludots\src\Libraries\Ludots.UI\bin\Release\net9.0\Ludots.UI.dll
+  SkiaSharp -> C:\001_AI\SangoPort\ludots\src\Libraries\SkiaSharp\SkiaSharp\bin\Release\net8.0\SkiaSharp.dll
+  LiteNetLib -> C:\001_AI\SangoPort\ludots\src\Libraries\LiteNetLib\bin\Release\net8.0\LiteNetLib.dll
+  Ludots.Contracts -> C:\001_AI\SangoPort\ludots\src\Contracts\bin\Release\net9.0\Ludots.Contracts.dll
+  ExCSS -> C:\001_AI\SangoPort\ludots\src\Libraries\ExCSS\bin\Release\net8.0\ExCSS.dll
+  Arch -> C:\001_AI\SangoPort\ludots\src\Libraries\Arch\src\Arch\bin\Release\net8.0\Arch.dll
+  Ludots.Platform.Desktop -> C:\001_AI\SangoPort\ludots\src\Platform\Ludots.Platform.Desktop\bin\Release\net9.0\Ludots.Platform.Desktop.dll
+  Ludots.Raylib.Render -> C:\001_AI\SangoPort\ludots\src\Client\Ludots.Raylib.Render\bin\Release\net9.0\Ludots.Raylib.Render.dll
+  Ludots.Graph.Abstractions -> C:\001_AI\SangoPort\ludots\src\Graph\Ludots.Graph.Abstractions\bin\Release\net9.0\Ludots.Graph.Abstractions.dll
+  Arch.System -> C:\001_AI\SangoPort\ludots\src\Libraries\Arch.Extended\Arch.System\bin\Release\net7.0\Arch.System.dll
+  Svg.Generators -> C:\001_AI\SangoPort\ludots\src\Libraries\Svg.Skia\externals\SVG\Generators\bin\Release\netstandard2.0\Svg.Generators.dll
+  ShimSkiaSharp -> C:\001_AI\SangoPort\ludots\src\Libraries\Svg.Skia\ShimSkiaSharp\bin\Release\net8.0\ShimSkiaSharp.dll
+  Arch -> C:\001_AI\SangoPort\ludots\src\Libraries\Arch\src\Arch\bin\Release\net6.0\Arch.dll
+  Ludots.UI.Browser -> C:\001_AI\SangoPort\ludots\src\Libraries\Ludots.UI.Browser\bin\Release\net9.0\Ludots.UI.Browser.dll
+  Svg.Custom -> C:\001_AI\SangoPort\ludots\src\Libraries\Svg.Skia\Svg.Custom\bin\Release\net8.0\Svg.Custom.dll
+  Arch.Persistence -> C:\001_AI\SangoPort\ludots\src\Libraries\Arch.Extended\Arch.Persistence\bin\Release\net7.0\Arch.Persistence.dll
+  Arch.Relationships -> C:\001_AI\SangoPort\ludots\src\Libraries\Arch.Extended\Arch.Relationships\bin\Release\net7.0\Arch.Relationships.dll
+  DotRecast.Core -> C:\001_AI\SangoPort\ludots\src\Libraries\DotRecast\src\DotRecast.Core\bin\Release\net9.0\DotRecast.Core.dll
+  Svg.Model -> C:\001_AI\SangoPort\ludots\src\Libraries\Svg.Skia\Svg.Model\bin\Release\net8.0\Svg.Model.dll
+  DotRecast.Recast -> C:\001_AI\SangoPort\ludots\src\Libraries\DotRecast\src\DotRecast.Recast\bin\Release\net9.0\DotRecast.Recast.dll
+  DotRecast.Detour -> C:\001_AI\SangoPort\ludots\src\Libraries\DotRecast\src\DotRecast.Detour\bin\Release\net9.0\DotRecast.Detour.dll
+  Svg.Skia -> C:\001_AI\SangoPort\ludots\src\Libraries\Svg.Skia\Svg.Skia\bin\Release\net8.0\Svg.Skia.dll
+  Ludots.UI.Skia -> C:\001_AI\SangoPort\ludots\src\Libraries\Ludots.UI.Skia\bin\Release\net9.0\Ludots.UI.Skia.dll
+  Ludots.Core -> C:\001_AI\SangoPort\ludots\src\Core\bin\Release\net9.0\Ludots.Core.dll
+  Ludots.Graph.Codegen -> C:\001_AI\SangoPort\ludots\src\Graph\Ludots.Graph.Codegen\bin\Release\net9.0\Ludots.Graph.Codegen.dll
+  Ludots.Physics.Broadphase -> C:\001_AI\SangoPort\ludots\src\Core\Ludots.Physics.Broadphase\bin\Release\net9.0\Ludots.Physics.Broadphase.dll
+  Ludots.WebUI.DataPlane -> C:\001_AI\SangoPort\ludots\src\Libraries\Ludots.WebUI.DataPlane\bin\Release\net9.0\Ludots.WebUI.DataPlane.dll
+  Ludots.Adapter.LiteNetLib -> C:\001_AI\SangoPort\ludots\src\Adapters\Networking\Ludots.Adapter.LiteNetLib\bin\Release\net9.0\Ludots.Adapter.LiteNetLib.dll
+  Ludots.Presentation.Skia -> C:\001_AI\SangoPort\ludots\src\Libraries\Ludots.Presentation.Skia\bin\Release\net9.0\Ludots.Presentation.Skia.dll
+  Ludots.Client.Raylib -> C:\001_AI\SangoPort\ludots\src\Client\Ludots.Client.Raylib\bin\Release\net9.0\Ludots.Client.Raylib.dll
+  Ludots.UI.HtmlEngine -> C:\001_AI\SangoPort\ludots\src\Libraries\Ludots.UI.HtmlEngine\bin\Release\net9.0\Ludots.UI.HtmlEngine.dll
+  Ludots.Physics2D -> C:\001_AI\SangoPort\ludots\src\Core\Ludots.Physics2D\bin\Release\net9.0\Ludots.Physics2D.dll
+  Ludots.UI.Panels -> C:\001_AI\SangoPort\ludots\src\Libraries\Ludots.UI.Panels\bin\Release\net9.0\Ludots.UI.Panels.dll
+  Ludots.Movement.Physics2DBridge -> C:\001_AI\SangoPort\ludots\src\Core\Ludots.Movement.Physics2DBridge\bin\Release\net9.0\Ludots.Movement.Physics2DBridge.dll
+  Ludots.WebUI.Browser -> C:\001_AI\SangoPort\ludots\src\Libraries\Ludots.WebUI.Browser\bin\Release\net9.0\Ludots.WebUI.Browser.dll
+  Ludots.Adapter.Raylib -> C:\001_AI\SangoPort\ludots\src\Adapters\Raylib\Ludots.Adapter.Raylib\bin\Release\net9.0\Ludots.Adapter.Raylib.dll
+  Ludots.App.Raylib -> C:\001_AI\SangoPort\ludots\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net9.0\Ludots.App.Raylib.dll
+
+已成功生成。
+    0 个警告
+    0 个错误
+
+已用时间 00:00:02.35
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。
+
+No recording scenario is registered for root mods: SangoTerrainMod, SangoSimMod, SangoWebUiMod, AgentBridgeMod

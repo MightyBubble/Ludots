@@ -1,0 +1,236 @@
+[INF][Engine] Initializing with ConfigPipeline...
+[INF][Engine] Applying explicit mod plan: mods=5
+[INF][ModLoader] Resolved Mod Load Order (launcher graph):
+[INF][ModLoader] - LudotsCoreMod (P:-1000)
+[INF][ModLoader] - SangoContentMod (P:0)
+[INF][ModLoader] - SangoTerrainMod (P:0)
+[INF][ModLoader] - SangoSimMod (P:5)
+[INF][ModLoader] - AgentBridgeMod (P:950)
+[INF][ModLoader] Loading DLL for LudotsCoreMod at C:\001_AI\SangoPort\ludots\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll
+[INF][ModLoader] Scanning 2 types in assembly...
+[INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+[INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+[INF][ModLoader] LudotsCoreMod OnLoad completed.
+[INF][ModLoader] Loaded LudotsCoreMod
+[INF][ModLoader] Loading DLL for SangoContentMod at C:\001_AI\SangoPort\ludots\mods\sango\SangoContentMod\bin\net9.0\SangoContentMod.dll
+[INF][ModLoader] Scanning 32 types in assembly...
+[INF][ModLoader] Instantiated entry for SangoContentMod. Calling OnLoad...
+[INF][Mod.SangoContentMod] [SangoContentMod] Loaded (assets/Data tables + assets/Scenario; table loading lands with the sim milestone).
+[INF][ModLoader] SangoContentMod OnLoad completed.
+[INF][ModLoader] Loaded SangoContentMod
+[INF][ModLoader] Skip code load for SangoTerrainMod: manifest has no 'main' (asset-only mod).
+[INF][ModLoader] Loading DLL for SangoSimMod at C:\001_AI\SangoPort\ludots\mods\sango\SangoSimMod\bin\net9.0\SangoSimMod.dll
+[INF][ModLoader] Scanning 1124 types in assembly...
+[INF][ModLoader] Instantiated entry for SangoSimMod. Calling OnLoad...
+[INF][Mod.SangoSimMod] [SangoSimMod] Loaded (M1.b: kernel boot on first manual turn, assets via VFS; M1.d: sango.sim save participant; M2.a: MapLoaded field/city-marker sync; M2.b: troop markers + seed event; M2.d: step-turns/journal dev events; M3.f: combat challenge trigger online; M3-end: entity mirror read model; D-1': native city entities + GAS attributes; D-2': native person entities + GAS attributes; D-3': native troop/corps entities + GAS attributes)
+[INF][ModLoader] SangoSimMod OnLoad completed.
+[INF][ModLoader] Loaded SangoSimMod
+[INF][ModLoader] Loading DLL for AgentBridgeMod at C:\001_AI\SangoPort\ludots\mods\AgentBridgeMod\bin\net9.0\AgentBridgeMod.dll
+[INF][ModLoader] Scanning 3 types in assembly...
+[INF][ModLoader] Instantiated entry for AgentBridgeMod. Calling OnLoad...
+[INF][ModLoader] AgentBridgeMod OnLoad completed.
+[INF][ModLoader] Loaded AgentBridgeMod
+[INF][Config] Merged fragment from: Core:game.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json
+[INF][Config] Merged fragment from: SangoTerrainMod:assets/game.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json
+[INF][Engine] Merged GameConfig: StartupMapId=sango_default, DefaultCoreMod=LudotsCoreMod
+[INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3
+[INF][Engine] Initializing JobScheduler...
+[INF][Config] Loading DataRegistry<EntityTemplate> from Entities/templates.json...
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json
+[INF][Config] Merged fragment from: SangoTerrainMod:assets/Entities/templates.json
+[INF][Config] Merged fragment from: SangoSimMod:assets/Entities/templates.json
+[INF][Config] Loaded 11 DataRegistry<EntityTemplate> items.
+[INF][Engine] Initializing Core GAS Systems...
+[INF][Config] Merged fragment from: Core:Engine/clock.json
+[INF][Config] Merged fragment from: Core:Relationships/catalog.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json
+[INF][Config] Merged fragment from: Core:Relationships/control_profiles.json
+[INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json
+[INF][Config] Merged fragment from: Core:GAS/clock.json
+[INF][Config] Merged fragment from: SangoSimMod:assets/GAS/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/solver.json
+[INF][Config] Merged fragment from: Core:Physics2D/kinematic.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json
+[INF][Config] Merged fragment from: Core:Enums/enums.json
+[INF][Config] Merged fragment from: Core:Vision/fog_layers.json
+[INF][Config] Merged fragment from: SangoSimMod:assets/Fields/layers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: SangoTerrainMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: SangoTerrainMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json
+[INF][Config] Merged fragment from: SangoTerrainMod:assets/Presentation/text_locales.json
+[INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json
+[INF][Config] Merged fragment from: Core:GAS/graphs.json
+[INF][Config] Merged fragment from: Core:GAS/preset_types.json
+[INF][Config] Merged fragment from: SangoSimMod:assets/GAS/preset_types.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Progression/scopes.json
+[INF][Config] Merged fragment from: Core:Progression/progressions.json
+[INF][Config] Merged fragment from: Core:Progression/requirements.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: Core:GAS/effects.json
+[INF][Config] Merged fragment from: SangoSimMod:assets/GAS/effects.json
+[INF][Config] Merged fragment from: SangoSimMod:assets/GAS/abilities.json
+[INF][Config] Merged fragment from: Core:GAS/func_lib.json
+[INF][Config] Merged fragment from: Core:GAS/action_lib.json
+[INF][Config] Merged fragment from: Core:Items/shapes.json
+[INF][Config] Merged fragment from: Core:Items/layouts.json
+[INF][Config] Merged fragment from: Core:Items/definitions.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Panels/panel_templates.json
+[INF][Config] Merged fragment from: Core:Input/filter_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: SangoTerrainMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json
+[INF][Config] Merged fragment from: SangoTerrainMod:assets/Presentation/instanced_batches.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json
+[INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: SangoTerrainMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: SangoSimMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Input/default_input.json
+[INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json
+[INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json
+[INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json
+[INF][Config] Merged fragment from: Core:Input/control_schemes.json
+[INF][Config] Merged fragment from: Core:Input/interaction_prefs.json
+[INF][Config] Merged fragment from: Core:Input/interaction_modes.json
+[INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json
+[INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json
+[INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json
+[INF][Config] Merged fragment from: Core:AI/behavior_trees.json
+[INF][Config] Merged fragment from: Core:AI/hfsm.json
+[INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json
+[INF][Config] Merged fragment from: Core:Presentation/image_assets.json
+[INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json
+[INF][Config] Merged fragment from: SangoTerrainMod:assets/Camera/virtual_cameras.json
+[INF][Config] Merged fragment from: Core:Story/lines.json
+[INF][Config] Merged fragment from: Core:Story/presentation_profiles.json
+[INF][Config] Merged fragment from: Core:Story/speakers.json
+[INF][Config] Merged fragment from: Core:Dialogue/dialogues.json
+[INF][Config] Merged fragment from: Core:Sequencer/sequences.json
+[INF][ModLoader] No registration conflicts detected.
+[INF][Config] Merged fragment from: SangoTerrainMod:assets/Presentation/host_assets.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Input/default_input.json
+INFO: Initializing raylib 5.5
+INFO: Platform backend: DESKTOP (GLFW)
+INFO: Supported raylib modules:
+INFO:     > rcore:..... loaded (mandatory)
+INFO:     > rlgl:...... loaded (mandatory)
+INFO:     > rshapes:... loaded (optional)
+INFO:     > rtextures:. loaded (optional)
+INFO:     > rtext:..... loaded (optional)
+INFO:     > rmodels:... loaded (optional)
+INFO:     > raudio:.... loaded (optional)
+INFO: DISPLAY: Device initialized successfully
+INFO:     > Display size: 2560 x 1600
+INFO:     > Screen size:  1600 x 900
+INFO:     > Render size:  1600 x 900
+INFO:     > Viewport offsets: 0, 0
+INFO: GLAD: OpenGL extensions loaded successfully
+INFO: GL: Supported extensions count: 296
+INFO: GL: OpenGL device information:
+INFO:     > Vendor:   ATI Technologies Inc.
+INFO:     > Renderer: AMD Radeon(TM) 8060S Graphics
+INFO:     > Version:  3.3.0 Core Profile Context 26.10.32.01.260717
+INFO:     > GLSL:     4.60
+INFO: GL: VAO extension detected, VAO functions loaded successfully
+INFO: GL: NPOT textures extension detected, full NPOT textures supported
+INFO: GL: DXT compressed textures supported
+INFO: GL: ETC2/EAC compressed textures supported
+INFO: PLATFORM: DESKTOP (GLFW - Win32): Initialized successfully
+INFO: TEXTURE: [ID 1] Texture loaded successfully (1x1 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Default texture loaded successfully
+INFO: SHADER: [ID 1] Vertex shader compiled successfully
+INFO: SHADER: [ID 2] Fragment shader compiled successfully
+INFO: SHADER: [ID 3] Program shader loaded successfully
+INFO: SHADER: [ID 3] Default shader loaded successfully
+INFO: RLGL: Render batch vertex buffers loaded successfully in RAM (CPU)
+INFO: RLGL: Render batch vertex buffers loaded successfully in VRAM (GPU)
+INFO: RLGL: Default OpenGL state initialized successfully
+INFO: TEXTURE: [ID 2] Texture loaded successfully (128x128 | GRAY_ALPHA | 1 mipmaps)
+INFO: FONT: Default font loaded successfully (224 glyphs)
+INFO: SYSTEM: Working Directory: C:\001_AI\SangoPort\ludots\src\Apps\Raylib\Ludots.App.Raylib\bin\Debug\net9.0
+INFO: TIMER: Target time per frame: 0.000 milliseconds
+INFO: AUDIO: Device initialized successfully
+INFO:     > Backend:       miniaudio | WASAPI
+INFO:     > Format:        32-bit IEEE Floating Point -> 32-bit IEEE Floating Point
+INFO:     > Channels:      2 -> 2
+INFO:     > Sample rate:   48000 -> 48000
+INFO:     > Periods size:  1440
+[INF][Presentation] GPU Accelerated: False (raster UI compositor)
+INFO: TEXTURE: [ID 3] Texture loaded successfully (2560x1511 | R8G8B8A8 | 1 mipmaps)
+[INF][Presentation] Skia overlay backend: GPU direct framebuffer underlay with raster compositor for UI/top overlay
+[INF][Config] Merged fragment from: SangoTerrainMod:assets/Presentation/water_environments.json
+[INF][Config] Merged fragment from: SangoTerrainMod:assets/Presentation/terrain_albedo_environments.json
+[INF][Engine] Firing GameStart event...
+[LudotsCoreMod] Core systems installed
+[INF][Engine] [AgentBridge] listening on http://127.0.0.1:47921/ (discovery: C:\001_AI\SangoPort\ludots\artifacts\agent-bridge\sessions\47680.json)
+[INF][Mod.AgentBridgeMod] [AgentBridgeMod] Agent bridge active: http://127.0.0.1:47921/ (38 tools)
+[INF][Engine] Activated system 'AgentBridge' (group=SchemaUpdate, presentation=True).
+[INF][Engine] Loading Map: sango_default
+[INF][Map] Loading Map: sango_default
+[INF][Config] Merged fragment from: SangoTerrainMod:assets/Maps/sango_default.json
+[INF][Map] Map 'sango_default' loaded.
+[INF][Map] Creating HexGridBoard 'default' (1x1 macroTiles, hexEdge=2000cm)
+[INF][Engine] Created Board 'default' (type=HexGrid) for map 'sango_default'
+[INF][Map] Map 'sango_default' pushed to focus (stack depth=1).
+[INF][Engine] Loaded VertexMap 4x4 for board 'default'
+[INF][Config] Merged fragment from: Core:Navigation/pathing.json
+[INF][Engine] Pathing bootstrap skipped for map 'sango_default': no node-graph board or navmesh query service is loaded.
+[INF][Engine] Creating Entities from MapConfig...
+[INF][Engine] Applied DefaultCamera: yaw=45 pitch=45 dist=400000cm fov=55
+[INF][Engine] Firing MapLoaded event for sango_default...
+GameData.Init()
+SkillConfigManager.Init()
+[INF][Mod.SangoSimMod] [SangoEntityMirror] rebuilt for scenario turn 0: 0 cities, 0 persons, 0 troops
+[ERR][Engine] Error in event handler for 'MapLoaded': System.Collections.Generic.KeyNotFoundException: The given key 'chainPass' was not present in the dictionary.
+   at System.Collections.Generic.Dictionary`2.get_Item(TKey key)
+   at Sango.Runtime.SangoCombatNativeRuntime.BuildGasStack(String modRoot, String coreModRoot) in C:\001_AI\SangoPort\ludots\mods\sango\SangoSimMod\SangoRuntime\NativeCombat\SangoCombatNativeRuntime.cs:line 190
+   at Sango.Runtime.SangoCombatNativeRuntime..ctor(World world, String modRoot, String coreModRoot) in C:\001_AI\SangoPort\ludots\mods\sango\SangoSimMod\SangoRuntime\NativeCombat\SangoCombatNativeRuntime.cs:line 93
+   at Sango.Runtime.SangoCombatNativeRuntime.AttachWithRoot(World world, String modRoot, String coreModRoot) in C:\001_AI\SangoPort\ludots\mods\sango\SangoSimMod\SangoRuntime\NativeCombat\SangoCombatNativeRuntime.cs:line 144
+   at Sango.Runtime.SangoCombatNativeRuntime.Attach(GameEngine engine) in C:\001_AI\SangoPort\ludots\mods\sango\SangoSimMod\SangoRuntime\NativeCombat\SangoCombatNativeRuntime.cs:line 125
+   at Sango.SangoSimModEntry.SyncWorldPresentation(GameEngine engine) in C:\001_AI\SangoPort\ludots\mods\sango\SangoSimMod\SangoSimModEntry.cs:line 215
+   at Sango.SangoSimModEntry.SyncWorldToEngine(ScriptContext context) in C:\001_AI\SangoPort\ludots\mods\sango\SangoSimMod\SangoSimModEntry.cs:line 178
+   at Sango.SangoSimModEntry.<>c__DisplayClass14_0.<OnMapLoaded>b__0(ScriptContext context) in C:\001_AI\SangoPort\ludots\mods\sango\SangoSimMod\SangoSimModEntry.cs:line 161
+   at Ludots.Core.Scripting.TriggerManager.FireEventHandlerAsync(Func`2 handler, EventKey eventKey, ScriptContext context) in C:\001_AI\SangoPort\ludots\src\Core\Scripting\TriggerManager.cs:line 780
+INFO: TEXTURE: [ID 3] Unloaded texture data from VRAM (GPU)
+INFO: AUDIO: Device closed successfully
+INFO: TEXTURE: [ID 2] Unloaded texture data from VRAM (GPU)
+INFO: SHADER: [ID 3] Default shader unloaded successfully
+INFO: TEXTURE: [ID 1] Default texture unloaded successfully
+INFO: Window closed successfully
+[INF][Engine] Unloading ModLoader contexts...
+[INF][Engine] Disposing JobScheduler...
+System.Collections.Generic.KeyNotFoundException: The given key 'chainPass' was not present in the dictionary.
+   at System.Collections.Generic.Dictionary`2.get_Item(TKey key)
+   at Sango.Runtime.SangoCombatNativeRuntime.BuildGasStack(String modRoot, String coreModRoot) in C:\001_AI\SangoPort\ludots\mods\sango\SangoSimMod\SangoRuntime\NativeCombat\SangoCombatNativeRuntime.cs:line 190
+   at Sango.Runtime.SangoCombatNativeRuntime..ctor(World world, String modRoot, String coreModRoot) in C:\001_AI\SangoPort\ludots\mods\sango\SangoSimMod\SangoRuntime\NativeCombat\SangoCombatNativeRuntime.cs:line 93
+   at Sango.Runtime.SangoCombatNativeRuntime.AttachWithRoot(World world, String modRoot, String coreModRoot) in C:\001_AI\SangoPort\ludots\mods\sango\SangoSimMod\SangoRuntime\NativeCombat\SangoCombatNativeRuntime.cs:line 144
+   at Sango.Runtime.SangoCombatNativeRuntime.Attach(GameEngine engine) in C:\001_AI\SangoPort\ludots\mods\sango\SangoSimMod\SangoRuntime\NativeCombat\SangoCombatNativeRuntime.cs:line 125
+   at Sango.SangoSimModEntry.SyncWorldPresentation(GameEngine engine) in C:\001_AI\SangoPort\ludots\mods\sango\SangoSimMod\SangoSimModEntry.cs:line 215
+   at Sango.SangoSimModEntry.SyncWorldToEngine(ScriptContext context) in C:\001_AI\SangoPort\ludots\mods\sango\SangoSimMod\SangoSimModEntry.cs:line 178
+   at Sango.SangoSimModEntry.<>c__DisplayClass14_0.<OnMapLoaded>b__0(ScriptContext context) in C:\001_AI\SangoPort\ludots\mods\sango\SangoSimMod\SangoSimModEntry.cs:line 161
+   at Ludots.Core.Scripting.TriggerManager.FireEventHandlerAsync(Func`2 handler, EventKey eventKey, ScriptContext context) in C:\001_AI\SangoPort\ludots\src\Core\Scripting\TriggerManager.cs:line 780
+   at Ludots.Core.Engine.GameEngine.CompleteLifecycleEvent(Task task) in C:\001_AI\SangoPort\ludots\src\Core\Engine\GameEngine.cs:line 4797
+   at Ludots.Core.Engine.GameEngine.CompleteMapLoad(MapSession session, MapConfig mapConfig, MapLoadStatus loadStatus) in C:\001_AI\SangoPort\ludots\src\Core\Engine\GameEngine.MapLoadLifecycle.cs:line 500
+   at Ludots.Core.Engine.GameEngine.LoadMapCore(MapLoadRequest request) in C:\001_AI\SangoPort\ludots\src\Core\Engine\GameEngine.cs:line 2890
+   at Ludots.Core.Engine.GameEngine.LoadMap(MapLoadRequest request) in C:\001_AI\SangoPort\ludots\src\Core\Engine\GameEngine.cs:line 2797
+   at Ludots.Core.Engine.GameEngine.LoadStartupMap() in C:\001_AI\SangoPort\ludots\src\Core\Engine\GameEngine.cs:line 4531
+   at Ludots.Adapter.Raylib.RaylibHostLoop.Run(RaylibHostSetup setup) in C:\001_AI\SangoPort\ludots\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibHostLoop.cs:line 378
+   at Ludots.Adapter.Raylib.RaylibAppHost.Run() in C:\001_AI\SangoPort\ludots\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibAppHost.cs:line 84
+   at Program.<Main>$(String[] args) in C:\001_AI\SangoPort\ludots\src\Apps\Raylib\Ludots.App.Raylib\Program.cs:line 25

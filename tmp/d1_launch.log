@@ -1,0 +1,247 @@
+C:\001_AI\SangoPort\ludots\mods\capabilities\navigation\MassNavigationMod\MassNavigationModEntry.cs(32,29): warning CS0618: “ScriptContextExtensions.GetEngine(ScriptContext)”已过时:“Do not take the concrete GameEngine from ScriptContext. Use IModContext and existing ScriptContext ports (GetWorld, CoreServiceKeys). Do not add new call sites.” [C:\001_AI\SangoPort\ludots\mods\capabilities\navigation\MassNavigationMod\MassNavigationMod.csproj]
+C:\001_AI\SangoPort\ludots\mods\CoreInputMod\Triggers\InstallCoreInputOnGameStartTrigger.cs(41,26): warning CS0618: “ScriptContextExtensions.GetEngine(ScriptContext)”已过时:“Do not take the concrete GameEngine from ScriptContext. Use IModContext and existing ScriptContext ports (GetWorld, CoreServiceKeys). Do not add new call sites.” [C:\001_AI\SangoPort\ludots\mods\CoreInputMod\CoreInputMod.csproj]
+C:\001_AI\SangoPort\ludots\mods\CoreInputMod\Systems\LocalOrderSourceHelper.cs(697,54): warning CS8601: 可能的 null 引用赋值。 [C:\001_AI\SangoPort\ludots\mods\CoreInputMod\CoreInputMod.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Backend\LauncherService.cs(525,23): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Backend\Ludots.Launcher.Backend.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Backend\LauncherService.cs(599,23): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Backend\Ludots.Launcher.Backend.csproj]
+C:\001_AI\SangoPort\ludots\mods\fixtures\camera\CameraAcceptanceMod\CameraAcceptanceModEntry.cs(22,30): warning CS0618: “ScriptContextExtensions.GetEngine(ScriptContext)”已过时:“Do not take the concrete GameEngine from ScriptContext. Use IModContext and existing ScriptContext ports (GetWorld, CoreServiceKeys). Do not add new call sites.” [C:\001_AI\SangoPort\ludots\mods\fixtures\camera\CameraAcceptanceMod\CameraAcceptanceMod.csproj]
+C:\001_AI\SangoPort\ludots\mods\fixtures\camera\CameraAcceptanceMod\Runtime\CameraAcceptanceRuntime.cs(94,26): warning CS0618: “ScriptContextExtensions.GetEngine(ScriptContext)”已过时:“Do not take the concrete GameEngine from ScriptContext. Use IModContext and existing ScriptContext ports (GetWorld, CoreServiceKeys). Do not add new call sites.” [C:\001_AI\SangoPort\ludots\mods\fixtures\camera\CameraAcceptanceMod\CameraAcceptanceMod.csproj]
+C:\001_AI\SangoPort\ludots\mods\fixtures\camera\CameraAcceptanceMod\Runtime\CameraAcceptanceRuntime.cs(121,26): warning CS0618: “ScriptContextExtensions.GetEngine(ScriptContext)”已过时:“Do not take the concrete GameEngine from ScriptContext. Use IModContext and existing ScriptContext ports (GetWorld, CoreServiceKeys). Do not add new call sites.” [C:\001_AI\SangoPort\ludots\mods\fixtures\camera\CameraAcceptanceMod\CameraAcceptanceMod.csproj]
+C:\001_AI\SangoPort\ludots\mods\fixtures\camera\CameraAcceptanceMod\Runtime\CameraAcceptanceRuntime.cs(388,26): warning CS0618: “ScriptContextExtensions.GetEngine(ScriptContext)”已过时:“Do not take the concrete GameEngine from ScriptContext. Use IModContext and existing ScriptContext ports (GetWorld, CoreServiceKeys). Do not add new call sites.” [C:\001_AI\SangoPort\ludots\mods\fixtures\camera\CameraAcceptanceMod\CameraAcceptanceMod.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(44,7): warning CS0105: “Ludots.Platform.Abstractions”的 using 指令以前在此命名空间中出现过 [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(680,90): warning CS0618: “SKPaint.TextSize”已过时:“Use SKFont.Size instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(681,105): warning CS0618: “SKPaint.TextSize”已过时:“Use SKFont.Size instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(682,102): warning CS0618: “SKPaint.TextSize”已过时:“Use SKFont.Size instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(683,102): warning CS0618: “SKPaint.TextSize”已过时:“Use SKFont.Size instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(684,102): warning CS0618: “SKPaint.TextSize”已过时:“Use SKFont.Size instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(692,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(693,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(702,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(710,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(719,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(720,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(730,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(746,17): warning CS0618: “SKPaint.MeasureText(string)”已过时:“Use SKFont.MeasureText() instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(755,17): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(769,13): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(1239,90): warning CS0618: “SKPaint.TextSize”已过时:“Use SKFont.Size instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(1240,106): warning CS0618: “SKPaint.TextSize”已过时:“Use SKFont.Size instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(1257,13): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(1278,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(1279,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(1280,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(1281,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(1284,13): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(1422,32): warning CS8602: 解引用可能出现空引用。 [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(1743,90): warning CS0618: “SKPaint.TextSize”已过时:“Use SKFont.Size instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(1744,106): warning CS0618: “SKPaint.TextSize”已过时:“Use SKFont.Size instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(1793,13): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(1803,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(1804,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(1805,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(1806,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(1807,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(1808,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(2059,32): warning CS8602: 解引用可能出现空引用。 [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(2293,90): warning CS0618: “SKPaint.TextSize”已过时:“Use SKFont.Size instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(2294,106): warning CS0618: “SKPaint.TextSize”已过时:“Use SKFont.Size instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(2334,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(2335,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(2336,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(2337,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(2349,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(3846,89): warning CS0618: “SKPaint.TextSize”已过时:“Use SKFont.Size instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(3847,106): warning CS0618: “SKPaint.TextSize”已过时:“Use SKFont.Size instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(3868,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(3869,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(3870,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(3871,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(3872,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(3873,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(3874,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(3875,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(3876,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(3883,13): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(4016,90): warning CS0618: “SKPaint.TextSize”已过时:“Use SKFont.Size instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\LauncherEvidenceRecorder.cs(4017,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\SangoPort\ludots\src\Tools\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj]
+adapter=web
+pid=40540
+bootstrap=C:\001_AI\SangoPort\ludots\src\Apps\Web\Ludots.App.Web\bin\Release\net9.0\launcher.runtime.json
+process=primary role= pid=40540 bootstrap=C:\001_AI\SangoPort\ludots\src\Apps\Web\Ludots.App.Web\bin\Release\net9.0\launcher.runtime.json
+rootMods=SangoTerrainMod, SangoSimMod, SangoWebUiMod, AgentBridgeMod
+orderedMods=LudotsCoreMod, SangoContentMod, SangoTerrainMod, SangoSimMod, SangoWebUiMod, AgentBridgeMod
+startup:
+  defaultCoreMod=LudotsCoreMod @ assets/game.json
+  startupMapId=sango_default @ mods/sango/SangoTerrainMod/assets/game.json
+    - mods/LudotsCoreMod/assets/game.json -> entry
+    * mods/sango/SangoTerrainMod/assets/game.json -> sango_default
+  startupInputContexts=[Default_Gameplay] @ mods/LudotsCoreMod/assets/game.json
+  browserRuntime={"enabled":true,"required":true,"provider":"cef"} @ mods/sango/SangoWebUiMod/assets/game.json
+warnings:
+  - Selected 4 root mods (SangoTerrainMod, SangoSimMod, SangoWebUiMod, AgentBridgeMod). Runtime still boots a single startupMapId; inspect the effective startup settings below.
+http://localhost:5200
+[INF][Engine] Initializing with ConfigPipeline...
+[INF][Engine] Applying launcher-resolved mod plan: fingerprint=55f9e2c1399a3753880c2055bad05ffdd28f2d429b3625fbeb83d0e6395b58a2, schema=1, mods=6
+[INF][ModLoader] Resolved Mod Load Order (launcher graph):
+[INF][ModLoader] - LudotsCoreMod (P:-1000)
+[INF][ModLoader] - SangoContentMod (P:0)
+[INF][ModLoader] - SangoTerrainMod (P:0)
+[INF][ModLoader] - SangoSimMod (P:5)
+[INF][ModLoader] - SangoWebUiMod (P:10)
+[INF][ModLoader] - AgentBridgeMod (P:950)
+[INF][ModLoader] Loading DLL for LudotsCoreMod at C:\001_AI\SangoPort\ludots\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll
+[INF][ModLoader] Scanning 2 types in assembly...
+[INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+[INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+[INF][ModLoader] LudotsCoreMod OnLoad completed.
+[INF][ModLoader] Loaded LudotsCoreMod
+[INF][ModLoader] Loading DLL for SangoContentMod at C:\001_AI\SangoPort\ludots\mods\sango\SangoContentMod\bin\net9.0\SangoContentMod.dll
+[INF][ModLoader] Scanning 32 types in assembly...
+[INF][ModLoader] Instantiated entry for SangoContentMod. Calling OnLoad...
+[INF][Mod.SangoContentMod] [SangoContentMod] Loaded (assets/Data tables + assets/Scenario; table loading lands with the sim milestone).
+[INF][ModLoader] SangoContentMod OnLoad completed.
+[INF][ModLoader] Loaded SangoContentMod
+[INF][ModLoader] Skip code load for SangoTerrainMod: manifest has no 'main' (asset-only mod).
+[INF][ModLoader] Loading DLL for SangoSimMod at C:\001_AI\SangoPort\ludots\mods\sango\SangoSimMod\bin\net9.0\SangoSimMod.dll
+[INF][ModLoader] Scanning 1067 types in assembly...
+[INF][ModLoader] Instantiated entry for SangoSimMod. Calling OnLoad...
+[INF][Mod.SangoSimMod] [SangoSimMod] Loaded (M1.b: kernel boot on first manual turn, assets via VFS; M1.d: sango.sim save participant; M2.a: MapLoaded field/city-marker sync; M2.b: troop markers + seed event; M2.d: step-turns/journal dev events; M3.f: combat challenge trigger online; M3-end: entity mirror read model; D-1': native city entities + GAS attributes)
+[INF][ModLoader] SangoSimMod OnLoad completed.
+[INF][ModLoader] Loaded SangoSimMod
+[INF][ModLoader] Loading DLL for SangoWebUiMod at C:\001_AI\SangoPort\ludots\mods\sango\SangoWebUiMod\bin\net9.0\SangoWebUiMod.dll
+[INF][ModLoader] Scanning 57 types in assembly...
+[INF][ModLoader] Instantiated entry for SangoWebUiMod. Calling OnLoad...
+[INF][Mod.SangoWebUiMod] [SangoWebUiMod] Loaded (M1.c: world topics + city commands + endTurn via Manual clock).
+[INF][ModLoader] SangoWebUiMod OnLoad completed.
+[INF][ModLoader] Loaded SangoWebUiMod
+[INF][ModLoader] Loading DLL for AgentBridgeMod at C:\001_AI\SangoPort\ludots\mods\AgentBridgeMod\bin\net9.0\AgentBridgeMod.dll
+[INF][ModLoader] Scanning 3 types in assembly...
+[INF][ModLoader] Instantiated entry for AgentBridgeMod. Calling OnLoad...
+[INF][ModLoader] AgentBridgeMod OnLoad completed.
+[INF][ModLoader] Loaded AgentBridgeMod
+[INF][Config] Merged fragment from: Core:game.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json
+[INF][Config] Merged fragment from: SangoTerrainMod:assets/game.json
+[INF][Config] Merged fragment from: SangoWebUiMod:assets/game.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json
+[INF][Engine] Merged GameConfig: StartupMapId=sango_default, DefaultCoreMod=LudotsCoreMod
+[INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3
+[INF][Engine] Initializing JobScheduler...
+[INF][Config] Loading DataRegistry<EntityTemplate> from Entities/templates.json...
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json
+[INF][Config] Merged fragment from: SangoTerrainMod:assets/Entities/templates.json
+[INF][Config] Merged fragment from: SangoSimMod:assets/Entities/templates.json
+[INF][Config] Loaded 8 DataRegistry<EntityTemplate> items.
+[INF][Engine] Initializing Core GAS Systems...
+[INF][Config] Merged fragment from: Core:Engine/clock.json
+[INF][Config] Merged fragment from: Core:Relationships/catalog.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json
+[INF][Config] Merged fragment from: Core:Relationships/control_profiles.json
+[INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json
+[INF][Config] Merged fragment from: Core:GAS/clock.json
+[INF][Config] Merged fragment from: SangoSimMod:assets/GAS/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/solver.json
+[INF][Config] Merged fragment from: Core:Physics2D/kinematic.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json
+[INF][Config] Merged fragment from: Core:Enums/enums.json
+[INF][Config] Merged fragment from: Core:Vision/fog_layers.json
+[INF][Config] Merged fragment from: SangoSimMod:assets/Fields/layers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: SangoTerrainMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: SangoTerrainMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json
+[INF][Config] Merged fragment from: SangoTerrainMod:assets/Presentation/text_locales.json
+[INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json
+[INF][Config] Merged fragment from: Core:GAS/graphs.json
+[INF][Config] Merged fragment from: Core:GAS/preset_types.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Progression/scopes.json
+[INF][Config] Merged fragment from: Core:Progression/progressions.json
+[INF][Config] Merged fragment from: Core:Progression/requirements.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: Core:GAS/effects.json
+[INF][Config] Merged fragment from: Core:GAS/func_lib.json
+[INF][Config] Merged fragment from: Core:GAS/action_lib.json
+[INF][Config] Merged fragment from: Core:Items/shapes.json
+[INF][Config] Merged fragment from: Core:Items/layouts.json
+[INF][Config] Merged fragment from: Core:Items/definitions.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Panels/panel_templates.json
+[INF][Config] Merged fragment from: Core:Input/filter_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: SangoTerrainMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json
+[INF][Config] Merged fragment from: SangoTerrainMod:assets/Presentation/instanced_batches.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json
+[INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: SangoTerrainMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: SangoSimMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Input/default_input.json
+[INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json
+[INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json
+[INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json
+[INF][Config] Merged fragment from: Core:Input/control_schemes.json
+[INF][Config] Merged fragment from: Core:Input/interaction_prefs.json
+[INF][Config] Merged fragment from: Core:Input/interaction_modes.json
+[INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json
+[INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json
+[INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json
+[INF][Config] Merged fragment from: Core:AI/behavior_trees.json
+[INF][Config] Merged fragment from: Core:AI/hfsm.json
+[INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json
+[INF][Config] Merged fragment from: Core:Presentation/image_assets.json
+[INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json
+[INF][Config] Merged fragment from: SangoTerrainMod:assets/Camera/virtual_cameras.json
+[INF][Config] Merged fragment from: Core:Story/lines.json
+[INF][Config] Merged fragment from: Core:Story/presentation_profiles.json
+[INF][Config] Merged fragment from: Core:Story/speakers.json
+[INF][Config] Merged fragment from: Core:Dialogue/dialogues.json
+[INF][Config] Merged fragment from: Core:Sequencer/sequences.json
+[INF][ModLoader] No registration conflicts detected.
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Input/default_input.json
+[INF][Engine] Firing GameStart event...
+[LudotsCoreMod] Core systems installed
+Web server starting on http://0.0.0.0:5200 ...
+Static files: C:\001_AI\SangoPort\ludots\src\Client\Web\dist
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://0.0.0.0:5200
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\001_AI\SangoPort\ludots\src\Apps\Web\Ludots.App.Web\bin\Release\net9.0
+GameData.Init()
+SkillConfigManager.Init()
+[ERR][Engine] Error in event handler for 'GameStart': System.InvalidOperationException: SangoWebUiMod requires a Ludots host-provided BrowserRuntime service.
+   at Sango.WebUi.SangoWebUiModEntry.OnGameStartAsync(ScriptContext context) in C:\001_AI\SangoPort\ludots\mods\sango\SangoWebUiMod\SangoWebUiModEntry.cs:line 132
+   at Ludots.Core.Scripting.TriggerManager.FireEventHandlerAsync(Func`2 handler, EventKey eventKey, ScriptContext context) in C:\001_AI\SangoPort\ludots\src\Core\Scripting\TriggerManager.cs:line 780
+[INF][Engine] [AgentBridge] listening on http://127.0.0.1:47921/ (discovery: C:\001_AI\SangoPort\ludots\artifacts\agent-bridge\sessions\40540.json)
+[INF][Mod.AgentBridgeMod] [AgentBridgeMod] Agent bridge active: http://127.0.0.1:47921/ (38 tools)
+[INF][Engine] Activated system 'AgentBridge' (group=SchemaUpdate, presentation=True).
+[GameLoop FAULTED] System.AggregateException: One or more errors occurred. (SangoWebUiMod requires a Ludots host-provided BrowserRuntime service.)
+ ---> System.InvalidOperationException: SangoWebUiMod requires a Ludots host-provided BrowserRuntime service.
+   at Sango.WebUi.SangoWebUiModEntry.OnGameStartAsync(ScriptContext context) in C:\001_AI\SangoPort\ludots\mods\sango\SangoWebUiMod\SangoWebUiModEntry.cs:line 132
+   at Ludots.Core.Scripting.TriggerManager.FireEventHandlerAsync(Func`2 handler, EventKey eventKey, ScriptContext context) in C:\001_AI\SangoPort\ludots\src\Core\Scripting\TriggerManager.cs:line 780
+   at Ludots.Core.Engine.GameEngine.CompleteLifecycleEvent(Task task) in C:\001_AI\SangoPort\ludots\src\Core\Engine\GameEngine.cs:line 4797
+   at Ludots.Core.Engine.GameEngine.Start() in C:\001_AI\SangoPort\ludots\src\Core\Engine\GameEngine.cs:line 4554
+   at Ludots.Adapter.Web.WebHostLoop.Run(WebHostSetup setup, CancellationToken ct) in C:\001_AI\SangoPort\ludots\src\Adapters\Web\Ludots.Adapter.Web\WebHostLoop.cs:line 93
+   at Ludots.Adapter.Web.WebGameHost.Run(CancellationToken ct) in C:\001_AI\SangoPort\ludots\src\Adapters\Web\Ludots.Adapter.Web\WebGameHost.cs:line 27
+   at Program.<>c__DisplayClass0_0.<<Main>$>b__0() in C:\001_AI\SangoPort\ludots\src\Apps\Web\Ludots.App.Web\Program.cs:line 22
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+--- End of stack trace from previous location ---
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
+   at System.Threading.Tasks.Task.ExecuteWithThreadLocal(Task& currentTaskSlot, Thread threadPoolThread)
+   --- End of inner exception stack trace ---
