@@ -261,17 +261,9 @@ public sealed partial class EntityInfoPanelService
 
     private string ResolveEntityInfoTitle(World world, Entity entity)
     {
-        if (world.TryGet(entity, out PlacedInstanceId placed) &&
-            _insightCatalog.TryGetInstanceTitle(placed.Value, out EntityInsightInstanceTitle instanceTitle))
+        if (world.TryGet(entity, out EntityInfoTitleToken titleToken))
         {
-            if (!world.TryGet(entity, out EntityTemplateKeyRef templateKey) ||
-                !_insightCatalog.ProfileOwnsTemplate(instanceTitle.ProfileIndex, templateKey.TemplateKeyId))
-            {
-                throw new InvalidOperationException(
-                    $"Entity insight instance '{placed.Value}' does not belong to this entity's template.");
-            }
-
-            return ResolveTextTokenId(instanceTitle.TokenId);
+            return ResolveTextTokenKey(titleToken.Value);
         }
 
         if (world.TryGet(entity, out EntityTemplateKeyRef profileKey) &&

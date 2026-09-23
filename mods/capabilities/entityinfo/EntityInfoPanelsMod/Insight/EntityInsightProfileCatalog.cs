@@ -74,8 +74,6 @@ public sealed class EntityInsightProfile
     public required EntityInsightActionProfile[] Actions { get; init; }
 }
 
-public readonly record struct EntityInsightInstanceTitle(int ProfileIndex, int TokenId);
-
 public sealed class EntityInsightProfileCatalog
 {
     public static readonly EntityInsightProfileCatalog Empty = new(
@@ -84,23 +82,13 @@ public sealed class EntityInsightProfileCatalog
 
     private readonly EntityInsightProfile[] _profiles;
     private readonly Dictionary<int, int> _profileIndexByTemplateKey;
-    private readonly Dictionary<string, EntityInsightInstanceTitle> _instanceTitles;
 
     public EntityInsightProfileCatalog(
         EntityInsightProfile[] profiles,
         Dictionary<int, int> profileIndexByTemplateKey)
-        : this(profiles, profileIndexByTemplateKey, new Dictionary<string, EntityInsightInstanceTitle>(StringComparer.Ordinal))
-    {
-    }
-
-    public EntityInsightProfileCatalog(
-        EntityInsightProfile[] profiles,
-        Dictionary<int, int> profileIndexByTemplateKey,
-        Dictionary<string, EntityInsightInstanceTitle> instanceTitles)
     {
         _profiles = profiles ?? throw new ArgumentNullException(nameof(profiles));
         _profileIndexByTemplateKey = profileIndexByTemplateKey ?? throw new ArgumentNullException(nameof(profileIndexByTemplateKey));
-        _instanceTitles = instanceTitles ?? throw new ArgumentNullException(nameof(instanceTitles));
     }
 
     public int Count => _profiles.Length;
@@ -108,36 +96,6 @@ public sealed class EntityInsightProfileCatalog
     public bool TryGetProfileIndex(int templateKeyId, out int profileIndex)
     {
         return _profileIndexByTemplateKey.TryGetValue(templateKeyId, out profileIndex);
-    }
-
-    public bool TryGetInstanceTitle(string instanceId, out EntityInsightInstanceTitle title)
-    {
-        if (string.IsNullOrEmpty(instanceId))
-        {
-            title = default;
-            return false;
-        }
-
-        return _instanceTitles.TryGetValue(instanceId, out title);
-    }
-
-    public bool ProfileOwnsTemplate(int profileIndex, int templateKeyId)
-    {
-        if ((uint)profileIndex >= (uint)_profiles.Length)
-        {
-            return false;
-        }
-
-        int[] templateKeyIds = _profiles[profileIndex].TemplateKeyIds;
-        for (int i = 0; i < templateKeyIds.Length; i++)
-        {
-            if (templateKeyIds[i] == templateKeyId)
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     public bool TryGetProfileByTemplateKey(int templateKeyId, out EntityInsightProfile profile)

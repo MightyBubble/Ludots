@@ -97,9 +97,16 @@ namespace Ludots.Core.Components
 
     /// <summary>
     /// 地图摆放时登记的实例编号。根是 instanceId，子实体是不含地图 id 的 localId 路径。
-    /// 实体信息档案用这个编号对上 instances。
     /// </summary>
     public struct PlacedInstanceId
+    {
+        public string Value;
+    }
+
+    /// <summary>
+    /// 地图这一份摆放自己绑的标题文案槽。档案是模板表，不记录谁摆了它。
+    /// </summary>
+    public struct EntityInfoTitleToken
     {
         public string Value;
     }
