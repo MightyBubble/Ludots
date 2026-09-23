@@ -1,0 +1,278 @@
+[
+  {
+    "id": "openworld_team",
+    "components": {
+      "Name": {
+        "Value": "OpenWorld.Team"
+      }
+    }
+  },
+  {
+    "id": "openworld_player",
+    "initialInteractionContext": "interaction.context.case_e.battle",
+    "components": {
+      "Name": {
+        "Value": "OpenWorld.Player"
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "BlackboardFloatBuffer": {},
+      "BlackboardIntBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "CommandSourceDragState": {}
+    }
+  },
+  {
+    "id": "openworld_cmd",
+    "components": {
+      "Name": {
+        "Value": "OpenWorld.Command"
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "BlackboardFloatBuffer": {},
+      "BlackboardIntBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "CommandSourceDragState": {}
+    }
+  },
+  {
+    "id": "openworld_land_infantry",
+    "components": {
+      "Name": {
+        "Value": "OpenWorld.LandInfantry"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "ContinuousHeightmapSampleState": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "OrderBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100
+        },
+        "current": {
+          "Health": 100
+        }
+      },
+      "GameplayTagContainer": {
+        "tags": [
+          "Unit.Commandable"
+        ]
+      },
+      "EntityLayer": {
+        "category": [
+          "massNavigation.agent"
+        ],
+        "mask": [
+          "massNavigation.agent"
+        ]
+      },
+      "MassNavigationAgent": {
+        "profileId": "land_infantry"
+      }
+    }
+  },
+  {
+    "id": "openworld_mountain_corps",
+    "components": {
+      "Name": {
+        "Value": "OpenWorld.MountainCorps"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "ContinuousHeightmapSampleState": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "OrderBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100
+        },
+        "current": {
+          "Health": 100
+        }
+      },
+      "GameplayTagContainer": {
+        "tags": [
+          "Unit.Commandable"
+        ]
+      },
+      "EntityLayer": {
+        "category": [
+          "massNavigation.agent"
+        ],
+        "mask": [
+          "massNavigation.agent"
+        ]
+      },
+      "MassNavigationAgent": {
+        "profileId": "mountain_corps"
+      }
+    }
+  },
+  {
+    "id": "openworld_naval_shallow",
+    "components": {
+      "Name": {
+        "Value": "OpenWorld.NavalShallow"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "ContinuousHeightmapSampleState": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "OrderBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100
+        },
+        "current": {
+          "Health": 100
+        }
+      },
+      "GameplayTagContainer": {
+        "tags": [
+          "Unit.Commandable"
+        ]
+      },
+      "EntityLayer": {
+        "category": [
+          "massNavigation.agent"
+        ],
+        "mask": [
+          "massNavigation.agent"
+        ]
+      },
+      "MassNavigationAgent": {
+        "profileId": "naval_shallow"
+      }
+    }
+  },
+  {
+    "id": "openworld_naval_deep",
+    "components": {
+      "Name": {
+        "Value": "OpenWorld.NavalDeep"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "ContinuousHeightmapSampleState": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "OrderBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100
+        },
+        "current": {
+          "Health": 100
+        }
+      },
+      "GameplayTagContainer": {
+        "tags": [
+          "Unit.Commandable"
+        ]
+      },
+      "EntityLayer": {
+        "category": [
+          "massNavigation.agent"
+        ],
+        "mask": [
+          "massNavigation.agent"
+        ]
+      },
+      "MassNavigationAgent": {
+        "profileId": "naval_deep"
+      }
+    }
+  },
+  {
+    "id": "openworld_amphibious",
+    "components": {
+      "Name": {
+        "Value": "OpenWorld.Amphibious"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "ContinuousHeightmapSampleState": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "OrderBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100
+        },
+        "current": {
+          "Health": 100
+        }
+      },
+      "GameplayTagContainer": {
+        "tags": [
+          "Unit.Commandable"
+        ]
+      },
+      "EntityLayer": {
+        "category": [
+          "massNavigation.agent"
+        ],
+        "mask": [
+          "massNavigation.agent"
+        ]
+      },
+      "MassNavigationAgent": {
+        "profileId": "amphibious"
+      }
+    }
+  }
+]

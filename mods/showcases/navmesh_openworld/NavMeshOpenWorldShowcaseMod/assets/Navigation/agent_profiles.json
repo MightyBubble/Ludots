@@ -1,0 +1,52 @@
+[
+  {
+    "id": "land_infantry",
+    "radiusCm": 50,
+    "heightCm": 180,
+    "clearanceCm": 50,
+    "draftCm": 0,
+    "beamCm": 0,
+    "mass": 80,
+    "layer": 0
+  },
+  {
+    "id": "mountain_corps",
+    "radiusCm": 45,
+    "heightCm": 175,
+    "clearanceCm": 45,
+    "draftCm": 0,
+    "beamCm": 0,
+    "mass": 75,
+    "layer": 1
+  },
+  {
+    "id": "naval_shallow",
+    "radiusCm": 300,
+    "heightCm": 400,
+    "clearanceCm": 300,
+    "draftCm": 120,
+    "beamCm": 600,
+    "mass": 5000,
+    "layer": 2
+  },
+  {
+    "id": "naval_deep",
+    "radiusCm": 500,
+    "heightCm": 600,
+    "clearanceCm": 500,
+    "draftCm": 450,
+    "beamCm": 900,
+    "mass": 12000,
+    "layer": 2
+  },
+  {
+    "id": "amphibious",
+    "radiusCm": 250,
+    "heightCm": 350,
+    "clearanceCm": 250,
+    "draftCm": 100,
+    "beamCm": 500,
+    "mass": 4000,
+    "layer": 0
+  }
+]
