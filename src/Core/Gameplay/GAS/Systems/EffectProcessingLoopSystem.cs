@@ -71,6 +71,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             get => _lifetime.DueWheel!;
             set
             {
+                _proposal.DueWheel = value;
                 _application.DueWheel = value;
                 _lifetime.DueWheel = value;
             }
