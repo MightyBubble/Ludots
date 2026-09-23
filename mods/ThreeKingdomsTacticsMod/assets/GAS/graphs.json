@@ -1,0 +1,85 @@
+[
+  {
+    "id": "tk.graph.skillScore",
+    "kind": "Effect",
+    "entry": "caster",
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster",
+        "next": "war"
+      },
+      {
+        "id": "war",
+        "op": "LoadAttribute",
+        "inputs": [
+          "caster"
+        ],
+        "attribute": "WarPower",
+        "next": "strategy"
+      },
+      {
+        "id": "strategy",
+        "op": "LoadAttribute",
+        "inputs": [
+          "caster"
+        ],
+        "attribute": "Strategy",
+        "next": "target"
+      },
+      {
+        "id": "target",
+        "op": "LoadExplicitTarget",
+        "next": "targetMorale"
+      },
+      {
+        "id": "targetMorale",
+        "op": "LoadAttribute",
+        "inputs": [
+          "target"
+        ],
+        "attribute": "Morale"
+      }
+    ]
+  },
+  {
+    "id": "tk.graph.supplyPressure",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      {
+        "id": "target",
+        "op": "LoadExplicitTarget",
+        "next": "supplies"
+      },
+      {
+        "id": "supplies",
+        "op": "LoadAttribute",
+        "inputs": [
+          "target"
+        ],
+        "attribute": "Supplies"
+      }
+    ]
+  },
+  {
+    "id": "tk.graph.moraleBreak",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      {
+        "id": "target",
+        "op": "LoadExplicitTarget",
+        "next": "morale"
+      },
+      {
+        "id": "morale",
+        "op": "LoadAttribute",
+        "inputs": [
+          "target"
+        ],
+        "attribute": "Morale"
+      }
+    ]
+  }
+]

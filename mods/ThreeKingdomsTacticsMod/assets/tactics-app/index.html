@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Three Kingdoms Tactics DataPlane</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+      --ink: #f6ecd1;
+      --muted: #aeb7bc;
+      --gold: #e7c15a;
+      --red: #cf514b;
+      --blue: #4f8ecf;
+      --green: #5aa874;
+      --panel: rgba(17, 22, 26, .88);
+      --line: rgba(231, 193, 90, .26);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow: hidden;
+      background:
+        linear-gradient(135deg, rgba(29, 37, 36, .95), rgba(34, 27, 29, .96)),
+        repeating-linear-gradient(45deg, rgba(255, 255, 255, .04) 0 1px, transparent 1px 14px);
+      color: var(--ink);
+    }
+
+    #app {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 10px;
+      padding: 12px;
+    }
+
+    .top {
+      display: grid;
+      grid-template-columns: minmax(240px, 1fr) auto;
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .title, .metrics, .side, .log, .commands {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      box-shadow: 0 18px 50px rgba(0, 0, 0, .28);
+    }
+
+    .title {
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 19px;
+      line-height: 1.05;
+      color: var(--gold);
+      white-space: nowrap;
+    }
+
+    .status {
+      color: var(--muted);
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(8, minmax(76px, 1fr));
+      gap: 1px;
+      overflow: hidden;
+      min-width: 720px;
+    }
+
+    .metric {
+      padding: 8px 9px;
+      background: rgba(255, 255, 255, .035);
+      min-width: 0;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .metric strong {
+      display: block;
+      margin-top: 2px;
+      font-size: 19px;
+      line-height: 1;
+    }
+
+    .main {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(680px, 1fr) 340px;
+      gap: 10px;
+    }
+
+    .map-wrap {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 8px;
+    }
+
+    .banner {
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(231, 193, 90, .36);
+      border-radius: 6px;
+      background: rgba(44, 98, 67, .35);
+      color: var(--gold);
+      font-size: 20px;
+      font-weight: 800;
+      opacity: 0;
+      transform: translateY(-4px);
+      transition: opacity .18s ease, transform .18s ease;
+    }
+
+    .banner.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .map {
+      align-self: stretch;
+      justify-self: stretch;
+      display: grid;
+      grid-template-columns: repeat(60, 1fr);
+      grid-template-rows: repeat(36, 1fr);
+      min-height: 0;
+      border: 1px solid rgba(255, 255, 255, .16);
+      border-radius: 6px;
+      overflow: hidden;
+      background: #202626;
+    }
+
+    .cell {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      border-right: 1px solid rgba(0, 0, 0, .18);
+      border-bottom: 1px solid rgba(0, 0, 0, .18);
+      color: rgba(255, 255, 255, .82);
+      font-size: clamp(8px, 1.1vw, 13px);
+      line-height: 1;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+    }
+
+    .plain { background: #34423b; }
+    .river { background: #29526b; }
+    .forest { background: #254c34; }
+    .pass { background: #554d43; }
+    .farmland { background: #526236; }
+    .city { background: #654f35; }
+    .player { background: var(--blue); }
+    .enemy { background: var(--red); }
+    .selected {
+      outline: 2px solid var(--gold);
+      outline-offset: -2px;
+      z-index: 2;
+    }
+
+    .side {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      overflow: hidden;
+    }
+
+    .selected-card {
+      padding: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, .08);
+    }
+
+    .selected-card h2 {
+      margin: 0 0 6px;
+      font-size: 18px;
+      color: var(--gold);
+    }
+
+    .selected-card p {
+      margin: 3px 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .units {
+      min-height: 0;
+      overflow: auto;
+      padding: 6px 10px;
+    }
+
+    .unit {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 4px 8px;
+      padding: 7px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, .08);
+      font-size: 12px;
+    }
+
+    .unit strong { color: var(--ink); }
+    .unit small { color: var(--muted); }
+
+    .log {
+      height: 148px;
+      padding: 9px 12px;
+      overflow: auto;
+      border-left: 0;
+      border-right: 0;
+      border-bottom: 0;
+      border-radius: 0;
+      font-size: 12px;
+      color: #d8d2c2;
+    }
+
+    .log div { padding: 2px 0; }
+
+    .commands {
+      display: grid;
+      grid-template-columns: repeat(9, minmax(84px, 1fr));
+      gap: 8px;
+      padding: 10px;
+    }
+
+    button {
+      height: 42px;
+      border: 0;
+      border-radius: 6px;
+      color: white;
+      background: #315f8f;
+      font-weight: 800;
+      letter-spacing: 0;
+      cursor: pointer;
+      box-shadow: inset 0 -2px rgba(0, 0, 0, .22);
+    }
+
+    button:hover { filter: brightness(1.08); }
+    button:active { transform: translateY(1px); }
+    button.develop { background: #4d7d4d; }
+    button.battle { background: #9b3f3a; }
+    button.skill { background: #626139; }
+
+    @media (max-width: 980px) {
+      #app { padding: 8px; }
+      .top { grid-template-columns: 1fr; }
+      .metrics { min-width: 0; grid-template-columns: repeat(4, 1fr); }
+      .main { grid-template-columns: 1fr; }
+      .side { display: none; }
+      .commands { grid-template-columns: repeat(3, 1fr); }
+      h1 { white-space: normal; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header class="top">
+      <div class="title">
+        <h1>Three Kingdoms Tactics</h1>
+        <div id="status" class="status">connecting to DataPlane</div>
+      </div>
+      <div id="metrics" class="metrics"></div>
+    </header>
+
+    <main class="main">
+      <section class="map-wrap">
+        <div id="banner" class="banner">VICTORY</div>
+        <div id="map" class="map" aria-label="seamless campaign map"></div>
+      </section>
+      <aside class="side">
+        <section id="selected" class="selected-card"></section>
+        <section id="units" class="units"></section>
+        <section id="log" class="log"></section>
+      </aside>
+    </main>
+
+    <footer class="commands">
+      <button data-command="develop" class="develop">Develop</button>
+      <button data-command="advance">Advance</button>
+      <button data-command="battle" class="battle">Battle</button>
+      <button data-command="selectNext">Next</button>
+      <button data-command="move" data-dx="0" data-dy="-2">Move N</button>
+      <button data-command="attack">Attack</button>
+      <button data-command="skill" class="skill">Skill</button>
+      <button data-command="troop">Troop</button>
+      <button data-command="endTurn">End Turn</button>
+    </footer>
+  </div>
+
+  <script type="module">
+    const topic = 'ludots.threeKingdoms.tactics.world';
+    const sessionId = 'three-kingdoms-recording';
+    let clientSeq = 1;
+    let lastSnapshot = null;
+    const nativeDataPlane = Boolean(window.ludotsDataplane?.postMessage);
+    const status = document.getElementById('status');
+    const metrics = document.getElementById('metrics');
+    const map = document.getElementById('map');
+    const units = document.getElementById('units');
+    const selected = document.getElementById('selected');
+    const log = document.getElementById('log');
+    const banner = document.getElementById('banner');
+
+    function envelope(kind, payload = {}, requestId = clientSeq++) {
+      return { schemaVersion: 1, sessionId, requestId, kind, topic, payload };
+    }
+
+    async function post(kind, payload = {}, requestId = clientSeq++) {
+      const packet = envelope(kind, payload, requestId);
+      if (nativeDataPlane) {
+        window.ludotsDataplane.postMessage(packet);
+        return;
+      }
+
+      await fetch('/dataplane/control', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(packet)
+      });
+    }
+
+    function handlePacket(packet) {
+      if (!packet) return;
+      if (packet.kind === 'handshakeAck') {
+        post('subscribe', {}, clientSeq++);
+        return;
+      }
+
+      const payload = packet.payload ?? packet;
+      if (payload?.units) render(payload, packet.kind ?? 'snapshot');
+    }
+
+    if (nativeDataPlane) {
+      window.ludotsDataplane.addEventListener?.('message', event => handlePacket(event?.data ?? event));
+      post('handshake', { app: 'three-kingdoms-tactics' });
+    } else {
+      post('handshake', { app: 'three-kingdoms-tactics', transport: 'http-poll' });
+      setInterval(async () => {
+        try {
+          const response = await fetch(`/dataplane/poll?session=${encodeURIComponent(sessionId)}`);
+          if (!response.ok) return;
+          const packets = await response.json();
+          packets.forEach(handlePacket);
+        } catch {
+          status.textContent = 'DataPlane poll failed';
+        }
+      }, 120);
+    }
+
+    document.querySelectorAll('button').forEach(button => {
+      button.addEventListener('click', async () => {
+        const name = button.dataset.command;
+        const payload = { dx: Number(button.dataset.dx ?? 0), dy: Number(button.dataset.dy ?? 0) };
+        await post('command', { name, clientSeq: clientSeq++, entityRefs: [], payload });
+      });
+    });
+
+    function render(snapshot, packetKind) {
+      lastSnapshot = snapshot;
+      status.textContent = `${packetKind} | ${snapshot.outcome} | round ${snapshot.round} | ${snapshot.selectedGeneral} | ${snapshot.lastAction}`;
+      banner.classList.toggle('visible', snapshot.outcome === 'Victory');
+      banner.textContent = snapshot.outcome === 'Victory'
+        ? `VICTORY - ${snapshot.playerUnitsAlive} formations held the field`
+        : 'CAMPAIGN IN PROGRESS';
+      metrics.innerHTML = [
+        ['Outcome', snapshot.outcome],
+        ['Develop', snapshot.developmentLevel],
+        ['Momentum', snapshot.campaignMomentum],
+        ['Player', snapshot.playerUnitsAlive],
+        ['Enemy', snapshot.enemyUnitsAlive],
+        ['Generals', snapshot.allGenerals],
+        ['Skills', snapshot.uniqueSkills],
+        ['Troops', snapshot.troopTypes]
+      ].map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join('');
+      renderMap(snapshot);
+      renderSelected(snapshot);
+      renderUnits(snapshot);
+      log.innerHTML = snapshot.logLines.map(line => `<div>${escapeHtml(line)}</div>`).join('');
+    }
+
+    function renderMap(snapshot) {
+      const byTile = new Map();
+      snapshot.units.filter(unit => unit.alive).forEach(unit => byTile.set(`${unit.x},${unit.y}`, unit));
+      let html = '';
+      for (let y = 0; y < snapshot.mapHeight; y++) {
+        for (let x = 0; x < snapshot.mapWidth; x++) {
+          const unit = byTile.get(`${x},${y}`);
+          const terrain = terrainClass(x, y);
+          const unitClass = unit ? (unit.teamId === 1 ? ' player' : ' enemy') : '';
+          const selectedClass = unit?.selected ? ' selected' : '';
+          const label = unit ? (unit.teamId === 1 ? 'P' : 'E') : '';
+          html += `<div class="cell ${terrain}${unitClass}${selectedClass}" title="${x},${y}">${label}</div>`;
+        }
+      }
+      map.innerHTML = html;
+    }
+
+    function renderSelected(snapshot) {
+      const current = snapshot.units.find(unit => unit.selected);
+      if (!current) {
+        selected.innerHTML = '<h2>No active formation</h2>';
+        return;
+      }
+      selected.innerHTML = `
+        <h2>${escapeHtml(current.name)}</h2>
+        <p>${escapeHtml(current.faction)} / ${escapeHtml(current.troop)} / ${escapeHtml(current.skill)}</p>
+        <p>HP ${current.health} / Morale ${current.morale} / Supplies ${current.supplies}</p>
+        <p>Position ${current.x},${current.y} / ${escapeHtml(current.status)}</p>
+        <p>Graph ${escapeHtml(snapshot.lastGraphProgram)} +${snapshot.lastGraphScore} / Item ${escapeHtml(snapshot.lastItemTransaction)}</p>`;
+    }
+
+    function renderUnits(snapshot) {
+      units.innerHTML = snapshot.units
+        .filter(unit => unit.alive)
+        .sort((a, b) => a.teamId - b.teamId || a.index - b.index)
+        .map(unit => `
+          <div class="unit">
+            <strong>${unit.selected ? '> ' : ''}${escapeHtml(unit.name)}</strong>
+            <strong>${unit.teamId === 1 ? 'P' : 'E'} ${unit.health}</strong>
+            <small>${escapeHtml(unit.troop)} / ${escapeHtml(unit.skill)}</small>
+            <small>${unit.x},${unit.y}</small>
+          </div>`)
+        .join('');
+    }
+
+    function terrainClass(x, y) {
+      const value = Math.abs((x * 31 + y * 17 + Math.floor(x / 7) * 9) % 23);
+      if (value === 0 || value === 1) return 'river';
+      if (value >= 2 && value <= 4) return 'forest';
+      if (value === 5) return 'pass';
+      if (value === 6 || value === 7) return 'farmland';
+      if (value === 8) return 'city';
+      return 'plain';
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      })[char]);
+    }
+
+    window.__tk = {
+      get snapshot() { return lastSnapshot; },
+      command: name => post('command', { name, clientSeq: clientSeq++, entityRefs: [], payload: {} })
+    };
+  </script>
+</body>
+</html>

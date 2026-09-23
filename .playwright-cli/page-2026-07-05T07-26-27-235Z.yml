@@ -1,0 +1,20 @@
+- generic [ref=f1e2]:
+  - banner [ref=f1e3]:
+    - generic [ref=f1e4]:
+      - heading "Three Kingdoms Tactics" [level=1] [ref=f1e5]
+      - generic [ref=f1e6]: connecting to DataPlane
+  - main [ref=f1e8]:
+    - generic [ref=f1e9]:
+      - generic [ref=f1e10]: VICTORY
+      - generic "seamless campaign map" [ref=f1e11]
+    - complementary [ref=f1e12]
+  - contentinfo [ref=f1e16]:
+    - button "Develop" [ref=f1e17] [cursor=pointer]
+    - button "Advance" [ref=f1e18] [cursor=pointer]
+    - button "Battle" [ref=f1e19] [cursor=pointer]
+    - button "Next" [ref=f1e20] [cursor=pointer]
+    - button "Move N" [ref=f1e21] [cursor=pointer]
+    - button "Attack" [ref=f1e22] [cursor=pointer]
+    - button "Skill" [ref=f1e23] [cursor=pointer]
+    - button "Troop" [ref=f1e24] [cursor=pointer]
+    - button "End Turn" [ref=f1e25] [cursor=pointer]

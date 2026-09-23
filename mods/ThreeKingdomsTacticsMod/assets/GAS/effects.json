@@ -1,0 +1,2102 @@
+[
+  {
+    "id": "Effect.TK.General.001",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -8
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -5
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.002",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -10
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -6
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.003",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -13
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -7
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.004",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -15
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -9
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.005",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -17
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -10
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.006",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -6
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -3
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.007",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -8
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -5
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.008",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -11
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -6
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.009",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -13
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -8
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.010",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -15
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -9
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.011",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -18
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -10
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.012",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -6
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -4
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.013",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -9
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -5
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.014",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -11
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -6
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.015",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -13
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -8
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.016",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -16
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -9
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.017",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -18
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -11
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.018",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -7
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -4
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.019",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -9
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -5
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.020",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -11
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -7
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.021",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -14
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -8
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.022",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -16
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -9
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.023",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -18
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -11
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.024",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -7
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -4
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.025",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -9
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -5
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.026",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -12
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -7
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.027",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -14
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -8
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.028",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -16
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -10
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.029",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -19
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -11
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.030",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -7
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -4
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.031",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -10
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -6
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.032",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -12
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -7
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.033",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -14
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -8
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.034",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -17
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -10
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.035",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -19
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -11
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.036",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -8
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -4
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.037",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -10
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -6
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.038",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -12
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -7
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.039",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -15
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -9
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.040",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -17
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -10
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.041",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -6
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -3
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.042",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -8
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -5
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.043",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -10
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -6
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.044",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -13
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -7
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.045",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -15
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -9
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.046",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -17
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -10
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.047",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -6
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -3
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.048",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -8
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -5
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.049",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -11
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -6
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.050",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -13
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -8
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.051",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -15
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -9
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.052",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -18
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -10
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.053",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -6
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -4
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.054",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -9
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -5
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.055",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -11
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -6
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.056",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -13
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -8
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.057",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -16
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -9
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.058",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -18
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -11
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.059",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -7
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -4
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.060",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -9
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -5
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.061",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -11
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -7
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.062",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -14
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -8
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.063",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -16
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -9
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.064",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -18
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -11
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.065",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -7
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -4
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.066",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -9
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -5
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.067",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -12
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -7
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.068",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -14
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -8
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.069",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -16
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -10
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.070",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -19
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -11
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.071",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -7
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -4
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.072",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -10
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -6
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.073",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -12
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -7
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.074",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -14
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -8
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.075",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -17
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -10
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.076",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -19
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -11
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.077",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -8
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -4
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.078",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -10
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -6
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.079",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -12
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -7
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.080",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -15
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -9
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.081",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -17
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -10
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.082",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -6
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -3
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.083",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -8
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -5
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.084",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -10
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -6
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.085",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -13
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -7
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.086",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -15
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -9
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.087",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -17
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -10
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.088",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -6
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -3
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.089",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -8
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -5
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.090",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -11
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -6
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.091",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -13
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -8
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.092",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -15
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -9
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.093",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -18
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -10
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.094",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -6
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -4
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.095",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -9
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -5
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.096",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -11
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -6
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.097",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -13
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -8
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.098",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -16
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -9
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.099",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -18
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -11
+      }
+    ]
+  },
+  {
+    "id": "Effect.TK.General.100",
+    "tags": [
+      "Effect.TK.Skill"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": -7
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -4
+      }
+    ]
+  }
+]

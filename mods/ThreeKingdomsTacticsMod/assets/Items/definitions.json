@@ -1,0 +1,1102 @@
+[
+  {
+    "id": "itm_tk_troop_charter_001",
+    "displayName": "Pass Spear Charter 001",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Spear",
+      "Terrain.Pass"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_002",
+    "displayName": "Marsh Pike Charter 002",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Pike",
+      "Terrain.Marsh"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_003",
+    "displayName": "Fort Crossbow Charter 003",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Crossbow",
+      "Terrain.Fort"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_004",
+    "displayName": "River Cavalry Charter 004",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Cavalry",
+      "Terrain.River"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_005",
+    "displayName": "City Horse Archer Charter 005",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.HorseArcher",
+      "Terrain.City"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_006",
+    "displayName": "Road Shield Charter 006",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Shield",
+      "Terrain.Road"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_007",
+    "displayName": "Forest Siege Charter 007",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Siege",
+      "Terrain.Forest"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_008",
+    "displayName": "Farmland Naval Charter 008",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Naval",
+      "Terrain.Farmland"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_009",
+    "displayName": "Hill Scout Charter 009",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Scout",
+      "Terrain.Hill"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_010",
+    "displayName": "Plain Guard Charter 010",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Guard",
+      "Terrain.Plain"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_011",
+    "displayName": "Pass Engineer Charter 011",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Engineer",
+      "Terrain.Pass"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_012",
+    "displayName": "Marsh Supply Charter 012",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Supply",
+      "Terrain.Marsh"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_013",
+    "displayName": "Fort Fire Ox Charter 013",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.FireOx",
+      "Terrain.Fort"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_014",
+    "displayName": "River Repeater Charter 014",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Repeater",
+      "Terrain.River"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_015",
+    "displayName": "City Halberd Charter 015",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Halberd",
+      "Terrain.City"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_016",
+    "displayName": "Road Raider Charter 016",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Raider",
+      "Terrain.Road"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_017",
+    "displayName": "Forest Monk Charter 017",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Monk",
+      "Terrain.Forest"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_018",
+    "displayName": "Farmland Elephant Charter 018",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Elephant",
+      "Terrain.Farmland"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_019",
+    "displayName": "Hill Chariot Charter 019",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Chariot",
+      "Terrain.Hill"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_020",
+    "displayName": "Plain Militia Charter 020",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Militia",
+      "Terrain.Plain"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_021",
+    "displayName": "Pass Spear Charter 021",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Spear",
+      "Terrain.Pass"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_022",
+    "displayName": "Marsh Pike Charter 022",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Pike",
+      "Terrain.Marsh"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_023",
+    "displayName": "Fort Crossbow Charter 023",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Crossbow",
+      "Terrain.Fort"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_024",
+    "displayName": "River Cavalry Charter 024",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Cavalry",
+      "Terrain.River"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_025",
+    "displayName": "City Horse Archer Charter 025",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.HorseArcher",
+      "Terrain.City"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_026",
+    "displayName": "Road Shield Charter 026",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Shield",
+      "Terrain.Road"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_027",
+    "displayName": "Forest Siege Charter 027",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Siege",
+      "Terrain.Forest"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_028",
+    "displayName": "Farmland Naval Charter 028",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Naval",
+      "Terrain.Farmland"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_029",
+    "displayName": "Hill Scout Charter 029",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Scout",
+      "Terrain.Hill"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_030",
+    "displayName": "Plain Guard Charter 030",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Guard",
+      "Terrain.Plain"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_031",
+    "displayName": "Pass Engineer Charter 031",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Engineer",
+      "Terrain.Pass"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_032",
+    "displayName": "Marsh Supply Charter 032",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Supply",
+      "Terrain.Marsh"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_033",
+    "displayName": "Fort Fire Ox Charter 033",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.FireOx",
+      "Terrain.Fort"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_034",
+    "displayName": "River Repeater Charter 034",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Repeater",
+      "Terrain.River"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_035",
+    "displayName": "City Halberd Charter 035",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Halberd",
+      "Terrain.City"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_036",
+    "displayName": "Road Raider Charter 036",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Raider",
+      "Terrain.Road"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_037",
+    "displayName": "Forest Monk Charter 037",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Monk",
+      "Terrain.Forest"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_038",
+    "displayName": "Farmland Elephant Charter 038",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Elephant",
+      "Terrain.Farmland"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_039",
+    "displayName": "Hill Chariot Charter 039",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Chariot",
+      "Terrain.Hill"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_040",
+    "displayName": "Plain Militia Charter 040",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Militia",
+      "Terrain.Plain"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_041",
+    "displayName": "Pass Spear Charter 041",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Spear",
+      "Terrain.Pass"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_042",
+    "displayName": "Marsh Pike Charter 042",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Pike",
+      "Terrain.Marsh"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_043",
+    "displayName": "Fort Crossbow Charter 043",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Crossbow",
+      "Terrain.Fort"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_044",
+    "displayName": "River Cavalry Charter 044",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Cavalry",
+      "Terrain.River"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_045",
+    "displayName": "City Horse Archer Charter 045",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.HorseArcher",
+      "Terrain.City"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_046",
+    "displayName": "Road Shield Charter 046",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Shield",
+      "Terrain.Road"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_047",
+    "displayName": "Forest Siege Charter 047",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Siege",
+      "Terrain.Forest"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_048",
+    "displayName": "Farmland Naval Charter 048",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Naval",
+      "Terrain.Farmland"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_049",
+    "displayName": "Hill Scout Charter 049",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Scout",
+      "Terrain.Hill"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_050",
+    "displayName": "Plain Guard Charter 050",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Guard",
+      "Terrain.Plain"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_051",
+    "displayName": "Pass Engineer Charter 051",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Engineer",
+      "Terrain.Pass"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_052",
+    "displayName": "Marsh Supply Charter 052",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Supply",
+      "Terrain.Marsh"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_053",
+    "displayName": "Fort Fire Ox Charter 053",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.FireOx",
+      "Terrain.Fort"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_054",
+    "displayName": "River Repeater Charter 054",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Repeater",
+      "Terrain.River"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_055",
+    "displayName": "City Halberd Charter 055",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Halberd",
+      "Terrain.City"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_056",
+    "displayName": "Road Raider Charter 056",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Raider",
+      "Terrain.Road"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_057",
+    "displayName": "Forest Monk Charter 057",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Monk",
+      "Terrain.Forest"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_058",
+    "displayName": "Farmland Elephant Charter 058",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Elephant",
+      "Terrain.Farmland"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_059",
+    "displayName": "Hill Chariot Charter 059",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Chariot",
+      "Terrain.Hill"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_060",
+    "displayName": "Plain Militia Charter 060",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Militia",
+      "Terrain.Plain"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_061",
+    "displayName": "Pass Spear Charter 061",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Spear",
+      "Terrain.Pass"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_062",
+    "displayName": "Marsh Pike Charter 062",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Pike",
+      "Terrain.Marsh"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_063",
+    "displayName": "Fort Crossbow Charter 063",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Crossbow",
+      "Terrain.Fort"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_064",
+    "displayName": "River Cavalry Charter 064",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Cavalry",
+      "Terrain.River"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_065",
+    "displayName": "City Horse Archer Charter 065",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.HorseArcher",
+      "Terrain.City"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_066",
+    "displayName": "Road Shield Charter 066",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Shield",
+      "Terrain.Road"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_067",
+    "displayName": "Forest Siege Charter 067",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Siege",
+      "Terrain.Forest"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_068",
+    "displayName": "Farmland Naval Charter 068",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Naval",
+      "Terrain.Farmland"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_069",
+    "displayName": "Hill Scout Charter 069",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Scout",
+      "Terrain.Hill"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_070",
+    "displayName": "Plain Guard Charter 070",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Guard",
+      "Terrain.Plain"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_071",
+    "displayName": "Pass Engineer Charter 071",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Engineer",
+      "Terrain.Pass"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_072",
+    "displayName": "Marsh Supply Charter 072",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Supply",
+      "Terrain.Marsh"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_073",
+    "displayName": "Fort Fire Ox Charter 073",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.FireOx",
+      "Terrain.Fort"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_074",
+    "displayName": "River Repeater Charter 074",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Repeater",
+      "Terrain.River"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_075",
+    "displayName": "City Halberd Charter 075",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Halberd",
+      "Terrain.City"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_076",
+    "displayName": "Road Raider Charter 076",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Raider",
+      "Terrain.Road"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_077",
+    "displayName": "Forest Monk Charter 077",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Monk",
+      "Terrain.Forest"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_078",
+    "displayName": "Farmland Elephant Charter 078",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Elephant",
+      "Terrain.Farmland"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_079",
+    "displayName": "Hill Chariot Charter 079",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Chariot",
+      "Terrain.Hill"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_080",
+    "displayName": "Plain Militia Charter 080",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Militia",
+      "Terrain.Plain"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_081",
+    "displayName": "Pass Spear Charter 081",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Spear",
+      "Terrain.Pass"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_082",
+    "displayName": "Marsh Pike Charter 082",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Pike",
+      "Terrain.Marsh"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_083",
+    "displayName": "Fort Crossbow Charter 083",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Crossbow",
+      "Terrain.Fort"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_084",
+    "displayName": "River Cavalry Charter 084",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Cavalry",
+      "Terrain.River"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_085",
+    "displayName": "City Horse Archer Charter 085",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.HorseArcher",
+      "Terrain.City"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_086",
+    "displayName": "Road Shield Charter 086",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Shield",
+      "Terrain.Road"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_087",
+    "displayName": "Forest Siege Charter 087",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Siege",
+      "Terrain.Forest"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_088",
+    "displayName": "Farmland Naval Charter 088",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Naval",
+      "Terrain.Farmland"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_089",
+    "displayName": "Hill Scout Charter 089",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Scout",
+      "Terrain.Hill"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_090",
+    "displayName": "Plain Guard Charter 090",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Guard",
+      "Terrain.Plain"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_091",
+    "displayName": "Pass Engineer Charter 091",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Engineer",
+      "Terrain.Pass"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_092",
+    "displayName": "Marsh Supply Charter 092",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Supply",
+      "Terrain.Marsh"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_093",
+    "displayName": "Fort Fire Ox Charter 093",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.FireOx",
+      "Terrain.Fort"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_094",
+    "displayName": "River Repeater Charter 094",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Repeater",
+      "Terrain.River"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_095",
+    "displayName": "City Halberd Charter 095",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Halberd",
+      "Terrain.City"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_096",
+    "displayName": "Road Raider Charter 096",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Raider",
+      "Terrain.Road"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_097",
+    "displayName": "Forest Monk Charter 097",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Monk",
+      "Terrain.Forest"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_098",
+    "displayName": "Farmland Elephant Charter 098",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Elephant",
+      "Terrain.Farmland"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_099",
+    "displayName": "Hill Chariot Charter 099",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Chariot",
+      "Terrain.Hill"
+    ],
+    "maxStack": 1
+  },
+  {
+    "id": "itm_tk_troop_charter_100",
+    "displayName": "Plain Militia Charter 100",
+    "shape": "tk_shape_1x1",
+    "tags": [
+      "Item.TK.TroopCharter",
+      "Troop.Role.Militia",
+      "Terrain.Plain"
+    ],
+    "maxStack": 1
+  }
+]

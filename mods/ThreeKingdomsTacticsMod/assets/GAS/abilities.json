@@ -1,0 +1,2302 @@
+[
+  {
+    "id": "Ability.TK.General.001",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.001"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Dragon Mandate 001",
+      "iconGlyph": "D1",
+      "accentColor": "#D65A31",
+      "hintText": "Fire command skill unique to Liu."
+    }
+  },
+  {
+    "id": "Ability.TK.General.002",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.002"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Phoenix Charge 002",
+      "iconGlyph": "P2",
+      "accentColor": "#2D8DBA",
+      "hintText": "Flood command skill unique to Guan."
+    }
+  },
+  {
+    "id": "Ability.TK.General.003",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.003"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Tiger Trap 003",
+      "iconGlyph": "T3",
+      "accentColor": "#C58B35",
+      "hintText": "Duel command skill unique to Zhang."
+    }
+  },
+  {
+    "id": "Ability.TK.General.004",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.004"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Qilin Formation 004",
+      "iconGlyph": "Q4",
+      "accentColor": "#5FA86A",
+      "hintText": "Rally command skill unique to Zhao."
+    }
+  },
+  {
+    "id": "Ability.TK.General.005",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.005"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "River Volley 005",
+      "iconGlyph": "R5",
+      "accentColor": "#8B6BD6",
+      "hintText": "Ambush command skill unique to Ma."
+    }
+  },
+  {
+    "id": "Ability.TK.General.006",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.006"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Mountain Edict 006",
+      "iconGlyph": "M6",
+      "accentColor": "#C84E75",
+      "hintText": "Heal command skill unique to Huang."
+    }
+  },
+  {
+    "id": "Ability.TK.General.007",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.007"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Thunder Ruse 007",
+      "iconGlyph": "T7",
+      "accentColor": "#6A8D2D",
+      "hintText": "Siege command skill unique to Zhuge."
+    }
+  },
+  {
+    "id": "Ability.TK.General.008",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.008"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Ember Oath 008",
+      "iconGlyph": "E8",
+      "accentColor": "#B06F2A",
+      "hintText": "Supply command skill unique to Pang."
+    }
+  },
+  {
+    "id": "Ability.TK.General.009",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.009"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Banner Siege 009",
+      "iconGlyph": "B9",
+      "accentColor": "#2E9D8F",
+      "hintText": "Mobility command skill unique to Wei."
+    }
+  },
+  {
+    "id": "Ability.TK.General.010",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.010"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Spear Resupply 010",
+      "iconGlyph": "S0",
+      "accentColor": "#7A84D2",
+      "hintText": "Stratagem command skill unique to Jiang."
+    }
+  },
+  {
+    "id": "Ability.TK.General.011",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.011"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Gale Mandate 011",
+      "iconGlyph": "G1",
+      "accentColor": "#D65A31",
+      "hintText": "Fire command skill unique to Sun."
+    }
+  },
+  {
+    "id": "Ability.TK.General.012",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.012"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Jade Charge 012",
+      "iconGlyph": "J2",
+      "accentColor": "#2D8DBA",
+      "hintText": "Flood command skill unique to Zhou."
+    }
+  },
+  {
+    "id": "Ability.TK.General.013",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.013"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Iron Trap 013",
+      "iconGlyph": "I3",
+      "accentColor": "#C58B35",
+      "hintText": "Duel command skill unique to Lu."
+    }
+  },
+  {
+    "id": "Ability.TK.General.014",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.014"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Moon Formation 014",
+      "iconGlyph": "M4",
+      "accentColor": "#5FA86A",
+      "hintText": "Rally command skill unique to Gan."
+    }
+  },
+  {
+    "id": "Ability.TK.General.015",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.015"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Sun Volley 015",
+      "iconGlyph": "S5",
+      "accentColor": "#8B6BD6",
+      "hintText": "Ambush command skill unique to Taishi."
+    }
+  },
+  {
+    "id": "Ability.TK.General.016",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.016"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Crane Edict 016",
+      "iconGlyph": "C6",
+      "accentColor": "#C84E75",
+      "hintText": "Heal command skill unique to Ling."
+    }
+  },
+  {
+    "id": "Ability.TK.General.017",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.017"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Wolf Ruse 017",
+      "iconGlyph": "W7",
+      "accentColor": "#6A8D2D",
+      "hintText": "Siege command skill unique to Cao."
+    }
+  },
+  {
+    "id": "Ability.TK.General.018",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.018"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Tortoise Oath 018",
+      "iconGlyph": "T8",
+      "accentColor": "#B06F2A",
+      "hintText": "Supply command skill unique to Xiahou."
+    }
+  },
+  {
+    "id": "Ability.TK.General.019",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.019"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Lotus Siege 019",
+      "iconGlyph": "L9",
+      "accentColor": "#2E9D8F",
+      "hintText": "Mobility command skill unique to Dian."
+    }
+  },
+  {
+    "id": "Ability.TK.General.020",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.020"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Star Resupply 020",
+      "iconGlyph": "S0",
+      "accentColor": "#7A84D2",
+      "hintText": "Stratagem command skill unique to Xu."
+    }
+  },
+  {
+    "id": "Ability.TK.General.021",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.021"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Dragon Mandate 021",
+      "iconGlyph": "D1",
+      "accentColor": "#D65A31",
+      "hintText": "Fire command skill unique to Sima."
+    }
+  },
+  {
+    "id": "Ability.TK.General.022",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.022"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Phoenix Charge 022",
+      "iconGlyph": "P2",
+      "accentColor": "#2D8DBA",
+      "hintText": "Flood command skill unique to Zhang Liao."
+    }
+  },
+  {
+    "id": "Ability.TK.General.023",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.023"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Tiger Trap 023",
+      "iconGlyph": "T3",
+      "accentColor": "#C58B35",
+      "hintText": "Duel command skill unique to Xu Huang."
+    }
+  },
+  {
+    "id": "Ability.TK.General.024",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.024"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Qilin Formation 024",
+      "iconGlyph": "Q4",
+      "accentColor": "#5FA86A",
+      "hintText": "Rally command skill unique to Yu Jin."
+    }
+  },
+  {
+    "id": "Ability.TK.General.025",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.025"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "River Volley 025",
+      "iconGlyph": "R5",
+      "accentColor": "#8B6BD6",
+      "hintText": "Ambush command skill unique to Yue."
+    }
+  },
+  {
+    "id": "Ability.TK.General.026",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.026"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Mountain Edict 026",
+      "iconGlyph": "M6",
+      "accentColor": "#C84E75",
+      "hintText": "Heal command skill unique to Dong."
+    }
+  },
+  {
+    "id": "Ability.TK.General.027",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.027"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Thunder Ruse 027",
+      "iconGlyph": "T7",
+      "accentColor": "#6A8D2D",
+      "hintText": "Siege command skill unique to Lu Bu."
+    }
+  },
+  {
+    "id": "Ability.TK.General.028",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.028"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Ember Oath 028",
+      "iconGlyph": "E8",
+      "accentColor": "#B06F2A",
+      "hintText": "Supply command skill unique to Gao."
+    }
+  },
+  {
+    "id": "Ability.TK.General.029",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.029"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Banner Siege 029",
+      "iconGlyph": "B9",
+      "accentColor": "#2E9D8F",
+      "hintText": "Mobility command skill unique to Chen."
+    }
+  },
+  {
+    "id": "Ability.TK.General.030",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.030"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Spear Resupply 030",
+      "iconGlyph": "S0",
+      "accentColor": "#7A84D2",
+      "hintText": "Stratagem command skill unique to Jia."
+    }
+  },
+  {
+    "id": "Ability.TK.General.031",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.031"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Gale Mandate 031",
+      "iconGlyph": "G1",
+      "accentColor": "#D65A31",
+      "hintText": "Fire command skill unique to Liu 2."
+    }
+  },
+  {
+    "id": "Ability.TK.General.032",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.032"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Jade Charge 032",
+      "iconGlyph": "J2",
+      "accentColor": "#2D8DBA",
+      "hintText": "Flood command skill unique to Guan 2."
+    }
+  },
+  {
+    "id": "Ability.TK.General.033",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.033"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Iron Trap 033",
+      "iconGlyph": "I3",
+      "accentColor": "#C58B35",
+      "hintText": "Duel command skill unique to Zhang 2."
+    }
+  },
+  {
+    "id": "Ability.TK.General.034",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.034"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Moon Formation 034",
+      "iconGlyph": "M4",
+      "accentColor": "#5FA86A",
+      "hintText": "Rally command skill unique to Zhao 2."
+    }
+  },
+  {
+    "id": "Ability.TK.General.035",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.035"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Sun Volley 035",
+      "iconGlyph": "S5",
+      "accentColor": "#8B6BD6",
+      "hintText": "Ambush command skill unique to Ma 2."
+    }
+  },
+  {
+    "id": "Ability.TK.General.036",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.036"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Crane Edict 036",
+      "iconGlyph": "C6",
+      "accentColor": "#C84E75",
+      "hintText": "Heal command skill unique to Huang 2."
+    }
+  },
+  {
+    "id": "Ability.TK.General.037",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.037"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Wolf Ruse 037",
+      "iconGlyph": "W7",
+      "accentColor": "#6A8D2D",
+      "hintText": "Siege command skill unique to Zhuge 2."
+    }
+  },
+  {
+    "id": "Ability.TK.General.038",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.038"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Tortoise Oath 038",
+      "iconGlyph": "T8",
+      "accentColor": "#B06F2A",
+      "hintText": "Supply command skill unique to Pang 2."
+    }
+  },
+  {
+    "id": "Ability.TK.General.039",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.039"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Lotus Siege 039",
+      "iconGlyph": "L9",
+      "accentColor": "#2E9D8F",
+      "hintText": "Mobility command skill unique to Wei 2."
+    }
+  },
+  {
+    "id": "Ability.TK.General.040",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.040"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Star Resupply 040",
+      "iconGlyph": "S0",
+      "accentColor": "#7A84D2",
+      "hintText": "Stratagem command skill unique to Jiang 2."
+    }
+  },
+  {
+    "id": "Ability.TK.General.041",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.041"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Dragon Mandate 041",
+      "iconGlyph": "D1",
+      "accentColor": "#D65A31",
+      "hintText": "Fire command skill unique to Sun 2."
+    }
+  },
+  {
+    "id": "Ability.TK.General.042",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.042"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Phoenix Charge 042",
+      "iconGlyph": "P2",
+      "accentColor": "#2D8DBA",
+      "hintText": "Flood command skill unique to Zhou 2."
+    }
+  },
+  {
+    "id": "Ability.TK.General.043",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.043"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Tiger Trap 043",
+      "iconGlyph": "T3",
+      "accentColor": "#C58B35",
+      "hintText": "Duel command skill unique to Lu 2."
+    }
+  },
+  {
+    "id": "Ability.TK.General.044",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.044"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Qilin Formation 044",
+      "iconGlyph": "Q4",
+      "accentColor": "#5FA86A",
+      "hintText": "Rally command skill unique to Gan 2."
+    }
+  },
+  {
+    "id": "Ability.TK.General.045",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.045"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "River Volley 045",
+      "iconGlyph": "R5",
+      "accentColor": "#8B6BD6",
+      "hintText": "Ambush command skill unique to Taishi 2."
+    }
+  },
+  {
+    "id": "Ability.TK.General.046",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.046"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Mountain Edict 046",
+      "iconGlyph": "M6",
+      "accentColor": "#C84E75",
+      "hintText": "Heal command skill unique to Ling 2."
+    }
+  },
+  {
+    "id": "Ability.TK.General.047",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.047"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Thunder Ruse 047",
+      "iconGlyph": "T7",
+      "accentColor": "#6A8D2D",
+      "hintText": "Siege command skill unique to Cao 2."
+    }
+  },
+  {
+    "id": "Ability.TK.General.048",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.048"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Ember Oath 048",
+      "iconGlyph": "E8",
+      "accentColor": "#B06F2A",
+      "hintText": "Supply command skill unique to Xiahou 2."
+    }
+  },
+  {
+    "id": "Ability.TK.General.049",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.049"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Banner Siege 049",
+      "iconGlyph": "B9",
+      "accentColor": "#2E9D8F",
+      "hintText": "Mobility command skill unique to Dian 2."
+    }
+  },
+  {
+    "id": "Ability.TK.General.050",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.050"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Spear Resupply 050",
+      "iconGlyph": "S0",
+      "accentColor": "#7A84D2",
+      "hintText": "Stratagem command skill unique to Xu 2."
+    }
+  },
+  {
+    "id": "Ability.TK.General.051",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.051"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Gale Mandate 051",
+      "iconGlyph": "G1",
+      "accentColor": "#D65A31",
+      "hintText": "Fire command skill unique to Sima 2."
+    }
+  },
+  {
+    "id": "Ability.TK.General.052",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.052"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Jade Charge 052",
+      "iconGlyph": "J2",
+      "accentColor": "#2D8DBA",
+      "hintText": "Flood command skill unique to Zhang Liao 2."
+    }
+  },
+  {
+    "id": "Ability.TK.General.053",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.053"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Iron Trap 053",
+      "iconGlyph": "I3",
+      "accentColor": "#C58B35",
+      "hintText": "Duel command skill unique to Xu Huang 2."
+    }
+  },
+  {
+    "id": "Ability.TK.General.054",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.054"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Moon Formation 054",
+      "iconGlyph": "M4",
+      "accentColor": "#5FA86A",
+      "hintText": "Rally command skill unique to Yu Jin 2."
+    }
+  },
+  {
+    "id": "Ability.TK.General.055",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.055"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Sun Volley 055",
+      "iconGlyph": "S5",
+      "accentColor": "#8B6BD6",
+      "hintText": "Ambush command skill unique to Yue 2."
+    }
+  },
+  {
+    "id": "Ability.TK.General.056",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.056"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Crane Edict 056",
+      "iconGlyph": "C6",
+      "accentColor": "#C84E75",
+      "hintText": "Heal command skill unique to Dong 2."
+    }
+  },
+  {
+    "id": "Ability.TK.General.057",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.057"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Wolf Ruse 057",
+      "iconGlyph": "W7",
+      "accentColor": "#6A8D2D",
+      "hintText": "Siege command skill unique to Lu Bu 2."
+    }
+  },
+  {
+    "id": "Ability.TK.General.058",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.058"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Tortoise Oath 058",
+      "iconGlyph": "T8",
+      "accentColor": "#B06F2A",
+      "hintText": "Supply command skill unique to Gao 2."
+    }
+  },
+  {
+    "id": "Ability.TK.General.059",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.059"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Lotus Siege 059",
+      "iconGlyph": "L9",
+      "accentColor": "#2E9D8F",
+      "hintText": "Mobility command skill unique to Chen 2."
+    }
+  },
+  {
+    "id": "Ability.TK.General.060",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.060"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Star Resupply 060",
+      "iconGlyph": "S0",
+      "accentColor": "#7A84D2",
+      "hintText": "Stratagem command skill unique to Jia 2."
+    }
+  },
+  {
+    "id": "Ability.TK.General.061",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.061"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Dragon Mandate 061",
+      "iconGlyph": "D1",
+      "accentColor": "#D65A31",
+      "hintText": "Fire command skill unique to Liu 3."
+    }
+  },
+  {
+    "id": "Ability.TK.General.062",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.062"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Phoenix Charge 062",
+      "iconGlyph": "P2",
+      "accentColor": "#2D8DBA",
+      "hintText": "Flood command skill unique to Guan 3."
+    }
+  },
+  {
+    "id": "Ability.TK.General.063",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.063"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Tiger Trap 063",
+      "iconGlyph": "T3",
+      "accentColor": "#C58B35",
+      "hintText": "Duel command skill unique to Zhang 3."
+    }
+  },
+  {
+    "id": "Ability.TK.General.064",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.064"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Qilin Formation 064",
+      "iconGlyph": "Q4",
+      "accentColor": "#5FA86A",
+      "hintText": "Rally command skill unique to Zhao 3."
+    }
+  },
+  {
+    "id": "Ability.TK.General.065",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.065"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "River Volley 065",
+      "iconGlyph": "R5",
+      "accentColor": "#8B6BD6",
+      "hintText": "Ambush command skill unique to Ma 3."
+    }
+  },
+  {
+    "id": "Ability.TK.General.066",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.066"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Mountain Edict 066",
+      "iconGlyph": "M6",
+      "accentColor": "#C84E75",
+      "hintText": "Heal command skill unique to Huang 3."
+    }
+  },
+  {
+    "id": "Ability.TK.General.067",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.067"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Thunder Ruse 067",
+      "iconGlyph": "T7",
+      "accentColor": "#6A8D2D",
+      "hintText": "Siege command skill unique to Zhuge 3."
+    }
+  },
+  {
+    "id": "Ability.TK.General.068",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.068"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Ember Oath 068",
+      "iconGlyph": "E8",
+      "accentColor": "#B06F2A",
+      "hintText": "Supply command skill unique to Pang 3."
+    }
+  },
+  {
+    "id": "Ability.TK.General.069",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.069"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Banner Siege 069",
+      "iconGlyph": "B9",
+      "accentColor": "#2E9D8F",
+      "hintText": "Mobility command skill unique to Wei 3."
+    }
+  },
+  {
+    "id": "Ability.TK.General.070",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.070"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Spear Resupply 070",
+      "iconGlyph": "S0",
+      "accentColor": "#7A84D2",
+      "hintText": "Stratagem command skill unique to Jiang 3."
+    }
+  },
+  {
+    "id": "Ability.TK.General.071",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.071"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Gale Mandate 071",
+      "iconGlyph": "G1",
+      "accentColor": "#D65A31",
+      "hintText": "Fire command skill unique to Sun 3."
+    }
+  },
+  {
+    "id": "Ability.TK.General.072",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.072"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Jade Charge 072",
+      "iconGlyph": "J2",
+      "accentColor": "#2D8DBA",
+      "hintText": "Flood command skill unique to Zhou 3."
+    }
+  },
+  {
+    "id": "Ability.TK.General.073",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.073"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Iron Trap 073",
+      "iconGlyph": "I3",
+      "accentColor": "#C58B35",
+      "hintText": "Duel command skill unique to Lu 3."
+    }
+  },
+  {
+    "id": "Ability.TK.General.074",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.074"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Moon Formation 074",
+      "iconGlyph": "M4",
+      "accentColor": "#5FA86A",
+      "hintText": "Rally command skill unique to Gan 3."
+    }
+  },
+  {
+    "id": "Ability.TK.General.075",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.075"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Sun Volley 075",
+      "iconGlyph": "S5",
+      "accentColor": "#8B6BD6",
+      "hintText": "Ambush command skill unique to Taishi 3."
+    }
+  },
+  {
+    "id": "Ability.TK.General.076",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.076"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Crane Edict 076",
+      "iconGlyph": "C6",
+      "accentColor": "#C84E75",
+      "hintText": "Heal command skill unique to Ling 3."
+    }
+  },
+  {
+    "id": "Ability.TK.General.077",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.077"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Wolf Ruse 077",
+      "iconGlyph": "W7",
+      "accentColor": "#6A8D2D",
+      "hintText": "Siege command skill unique to Cao 3."
+    }
+  },
+  {
+    "id": "Ability.TK.General.078",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.078"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Tortoise Oath 078",
+      "iconGlyph": "T8",
+      "accentColor": "#B06F2A",
+      "hintText": "Supply command skill unique to Xiahou 3."
+    }
+  },
+  {
+    "id": "Ability.TK.General.079",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.079"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Lotus Siege 079",
+      "iconGlyph": "L9",
+      "accentColor": "#2E9D8F",
+      "hintText": "Mobility command skill unique to Dian 3."
+    }
+  },
+  {
+    "id": "Ability.TK.General.080",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.080"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Star Resupply 080",
+      "iconGlyph": "S0",
+      "accentColor": "#7A84D2",
+      "hintText": "Stratagem command skill unique to Xu 3."
+    }
+  },
+  {
+    "id": "Ability.TK.General.081",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.081"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Dragon Mandate 081",
+      "iconGlyph": "D1",
+      "accentColor": "#D65A31",
+      "hintText": "Fire command skill unique to Sima 3."
+    }
+  },
+  {
+    "id": "Ability.TK.General.082",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.082"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Phoenix Charge 082",
+      "iconGlyph": "P2",
+      "accentColor": "#2D8DBA",
+      "hintText": "Flood command skill unique to Zhang Liao 3."
+    }
+  },
+  {
+    "id": "Ability.TK.General.083",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.083"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Tiger Trap 083",
+      "iconGlyph": "T3",
+      "accentColor": "#C58B35",
+      "hintText": "Duel command skill unique to Xu Huang 3."
+    }
+  },
+  {
+    "id": "Ability.TK.General.084",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.084"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Qilin Formation 084",
+      "iconGlyph": "Q4",
+      "accentColor": "#5FA86A",
+      "hintText": "Rally command skill unique to Yu Jin 3."
+    }
+  },
+  {
+    "id": "Ability.TK.General.085",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.085"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "River Volley 085",
+      "iconGlyph": "R5",
+      "accentColor": "#8B6BD6",
+      "hintText": "Ambush command skill unique to Yue 3."
+    }
+  },
+  {
+    "id": "Ability.TK.General.086",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.086"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Mountain Edict 086",
+      "iconGlyph": "M6",
+      "accentColor": "#C84E75",
+      "hintText": "Heal command skill unique to Dong 3."
+    }
+  },
+  {
+    "id": "Ability.TK.General.087",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.087"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Thunder Ruse 087",
+      "iconGlyph": "T7",
+      "accentColor": "#6A8D2D",
+      "hintText": "Siege command skill unique to Lu Bu 3."
+    }
+  },
+  {
+    "id": "Ability.TK.General.088",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.088"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Ember Oath 088",
+      "iconGlyph": "E8",
+      "accentColor": "#B06F2A",
+      "hintText": "Supply command skill unique to Gao 3."
+    }
+  },
+  {
+    "id": "Ability.TK.General.089",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.089"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Banner Siege 089",
+      "iconGlyph": "B9",
+      "accentColor": "#2E9D8F",
+      "hintText": "Mobility command skill unique to Chen 3."
+    }
+  },
+  {
+    "id": "Ability.TK.General.090",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.090"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Spear Resupply 090",
+      "iconGlyph": "S0",
+      "accentColor": "#7A84D2",
+      "hintText": "Stratagem command skill unique to Jia 3."
+    }
+  },
+  {
+    "id": "Ability.TK.General.091",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.091"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Gale Mandate 091",
+      "iconGlyph": "G1",
+      "accentColor": "#D65A31",
+      "hintText": "Fire command skill unique to Liu 4."
+    }
+  },
+  {
+    "id": "Ability.TK.General.092",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.092"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Jade Charge 092",
+      "iconGlyph": "J2",
+      "accentColor": "#2D8DBA",
+      "hintText": "Flood command skill unique to Guan 4."
+    }
+  },
+  {
+    "id": "Ability.TK.General.093",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.093"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Iron Trap 093",
+      "iconGlyph": "I3",
+      "accentColor": "#C58B35",
+      "hintText": "Duel command skill unique to Zhang 4."
+    }
+  },
+  {
+    "id": "Ability.TK.General.094",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.094"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Moon Formation 094",
+      "iconGlyph": "M4",
+      "accentColor": "#5FA86A",
+      "hintText": "Rally command skill unique to Zhao 4."
+    }
+  },
+  {
+    "id": "Ability.TK.General.095",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.095"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Sun Volley 095",
+      "iconGlyph": "S5",
+      "accentColor": "#8B6BD6",
+      "hintText": "Ambush command skill unique to Ma 4."
+    }
+  },
+  {
+    "id": "Ability.TK.General.096",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.096"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Crane Edict 096",
+      "iconGlyph": "C6",
+      "accentColor": "#C84E75",
+      "hintText": "Heal command skill unique to Huang 4."
+    }
+  },
+  {
+    "id": "Ability.TK.General.097",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.097"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Wolf Ruse 097",
+      "iconGlyph": "W7",
+      "accentColor": "#6A8D2D",
+      "hintText": "Siege command skill unique to Zhuge 4."
+    }
+  },
+  {
+    "id": "Ability.TK.General.098",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.098"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Tortoise Oath 098",
+      "iconGlyph": "T8",
+      "accentColor": "#B06F2A",
+      "hintText": "Supply command skill unique to Pang 4."
+    }
+  },
+  {
+    "id": "Ability.TK.General.099",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.099"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Lotus Siege 099",
+      "iconGlyph": "L9",
+      "accentColor": "#2E9D8F",
+      "hintText": "Mobility command skill unique to Wei 4."
+    }
+  },
+  {
+    "id": "Ability.TK.General.100",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.TK.General.100"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Star Resupply 100",
+      "iconGlyph": "S0",
+      "accentColor": "#7A84D2",
+      "hintText": "Stratagem command skill unique to Jiang 4."
+    }
+  }
+]

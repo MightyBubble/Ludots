@@ -1,0 +1,19 @@
+{
+  "Id": "three_kingdoms_tactics",
+  "Tags": [
+    "three_kingdoms_tactics",
+    "rts",
+    "fourx",
+    "webui_dataplane"
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Rts",
+    "TargetXCm": 3000,
+    "TargetYCm": 1800,
+    "Yaw": 180,
+    "Pitch": 55,
+    "DistanceCm": 16000,
+    "FovYDeg": 60
+  },
+  "Entities": []
+}

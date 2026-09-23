@@ -1,0 +1,7 @@
+{
+  "startupMapId": "three_kingdoms_tactics",
+  "startupInputContexts": [
+    "Default_Gameplay",
+    "Rts_Gameplay"
+  ]
+}
