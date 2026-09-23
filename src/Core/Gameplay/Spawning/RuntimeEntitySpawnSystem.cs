@@ -1113,24 +1113,30 @@ namespace Ludots.Core.Gameplay.Spawning
                 team = World.Get<Team>(request.Source);
             }
 
-            // #1570 真相源反转：可解析时先建 MemberOf(unit→teamEntity) 边再写组件（投影）。
-            // 不 fail-fast：出生期 teamRep 可能尚未进 lookup（参与者绑定在实体装载后完成），
-            // 拓扑由 ParticipantBindingResolver 在绑定时补齐——出生侧 best-effort，装载站收口。
+            // 代表已在表里时，先写入队边，队伍组件从队伍代表的身份投影。
+            // 代表还没进表时，组件只暂存待绑定的队伍编号，装载绑定建边后再覆盖。
             if (_relationships != null && _memberOfTypeId >= 0 && _teamLookup != null &&
                 _teamLookup.TryGet(team.Id, out Entity teamEntity) && World.IsAlive(teamEntity))
             {
+                if (!World.Has<TeamIdentity>(teamEntity))
+                {
+                    throw new InvalidOperationException(
+                        $"Team {team.Id} resolved representative {teamEntity.Id} without TeamIdentity.");
+                }
+
+                int identityTeamId = World.Get<TeamIdentity>(teamEntity).TeamId;
+                if (identityTeamId != team.Id)
+                {
+                    throw new InvalidOperationException(
+                        $"Team {team.Id} resolved representative {teamEntity.Id} whose TeamIdentity is {identityTeamId}.");
+                }
+
                 _relationships.EnsureLink(entity, teamEntity, _memberOfTypeId);
+                ParticipantIdentityProjector.UpsertTeam(World, entity, identityTeamId);
+                return;
             }
 
-            if (World.Has<Team>(entity))
-            {
-                World.Set(entity, team);
-            }
-            else
-            {
-                World.Add(entity, team);
-            }
-
+            ParticipantIdentityProjector.UpsertTeam(World, entity, team.Id);
         }
 
         private void TryApplyPlayerOwner(in RuntimeEntitySpawnRequest request, Entity entity)
@@ -1152,21 +1158,29 @@ namespace Ludots.Core.Gameplay.Spawning
                 owner = World.Get<PlayerOwner>(request.Source);
             }
 
-            if (World.Has<PlayerOwner>(entity))
-            {
-                World.Set(entity, owner);
-            }
-            else
-            {
-                World.Add(entity, owner);
-            }
-
-            // #1570 真相源反转：Owns(playerRep→unit) 边是唯一真相，PlayerOwner 组件是投影。
-            if (_relationships != null && _ownsTypeId >= 0 && _playerLookup != null &&
+            if (_ownership != null && _playerLookup != null &&
                 _playerLookup.TryGet(owner.PlayerId, out Entity playerRep) && World.IsAlive(playerRep))
             {
-                _relationships.EnsureLink(playerRep, entity, _ownsTypeId);
+                if (!World.Has<PlayerIdentity>(playerRep))
+                {
+                    throw new InvalidOperationException(
+                        $"Player {owner.PlayerId} resolved representative {playerRep.Id} without PlayerIdentity.");
+                }
+
+                int identityPlayerId = World.Get<PlayerIdentity>(playerRep).PlayerId;
+                if (identityPlayerId != owner.PlayerId)
+                {
+                    throw new InvalidOperationException(
+                        $"Player {owner.PlayerId} resolved representative {playerRep.Id} whose PlayerIdentity is {identityPlayerId}.");
+                }
+
+                _ownership.EnsureOwnership(playerRep, entity);
+                ParticipantIdentityProjector.SyncPlayerOwner(World, entity, _ownership);
+                return;
             }
+
+            // 代表还没进表时建不了归属边。组件先记下待绑定的玩家编号，绑定建边后按边投影覆盖。
+            ParticipantIdentityProjector.UpsertPlayerOwner(World, entity, owner.PlayerId);
         }
 
         /// <summary>RFC-0065 CTRL-2: runtime spawns join the ownership topology exactly like map-load binding.</summary>
@@ -1185,17 +1199,27 @@ namespace Ludots.Core.Gameplay.Spawning
             if (plan.HasOwnershipSource)
             {
                 _ownership!.EnsureOwnership(plan.OwnershipSource, entity);
+                ParticipantIdentityProjector.SyncPlayerOwner(World, entity, _ownership);
             }
 
             if (plan.HasMembershipTarget)
             {
                 _relationships!.EnsureLink(entity, plan.MembershipTarget, _memberOfTypeId);
+                if (World.Has<TeamIdentity>(plan.MembershipTarget))
+                {
+                    ParticipantIdentityProjector.ProjectTeam(World, entity, plan.MembershipTarget);
+                }
+
                 return;
             }
 
             if (plan.HasImplicitMemberOfTarget)
             {
                 _relationships!.EnsureLink(entity, plan.ImplicitMemberOfTarget, _memberOfTypeId);
+                if (World.Has<TeamIdentity>(plan.ImplicitMemberOfTarget))
+                {
+                    ParticipantIdentityProjector.ProjectTeam(World, entity, plan.ImplicitMemberOfTarget);
+                }
             }
         }
 

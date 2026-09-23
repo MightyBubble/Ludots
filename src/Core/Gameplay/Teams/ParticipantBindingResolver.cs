@@ -140,8 +140,8 @@ namespace Ludots.Core.Gameplay.Teams
                 }
 
                 Upsert(world, entity, new PlayerIdentity { PlayerId = binding.PlayerId });
-                Upsert(world, entity, new PlayerOwner { PlayerId = binding.PlayerId });
-                Upsert(world, entity, new Team { Id = binding.TeamId });
+                ParticipantIdentityProjector.UpsertPlayerOwner(world, entity, binding.PlayerId);
+                ParticipantIdentityProjector.UpsertTeam(world, entity, binding.TeamId);
                 playerLookup.Register(binding.PlayerId, entity);
             }
 
@@ -635,6 +635,7 @@ namespace Ludots.Core.Gameplay.Teams
                 Entity playerRep = players.Get(binding.PlayerId);
                 Entity teamRep = teams.Get(binding.TeamId);
                 relationships.EnsureLink(playerRep, teamRep, memberOfTypeId);
+                ParticipantIdentityProjector.ProjectTeam(world, playerRep, teamRep);
             }
 
             var stanceMembers = new List<(Entity Entity, int TeamId)>();
@@ -665,6 +666,7 @@ namespace Ludots.Core.Gameplay.Teams
                 }
 
                 relationships.EnsureLink(member, teamRep, memberOfTypeId);
+                ParticipantIdentityProjector.ProjectTeam(world, member, teamRep);
             }
 
             OwnershipEdgeBuilder.LinkMapOwnedEntities(world, ownership, players, session.MapId);
