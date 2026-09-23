@@ -55,6 +55,63 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void OnEntityDestroyed_RemovesDeadRows_AndKeepsCollectionRevisionObservable()
+        {
+            using var world = World.Create();
+            Entity owner = world.Create();
+            Entity first = world.Create();
+            Entity dead = world.Create();
+            Entity last = world.Create();
+            var registry = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var store = new EntityCollectionStore(registry);
+            var descriptor = EntityCollectionDescriptor.Create(
+                "tests.destroy.rows",
+                EntityCollectionSourceKind.Debug,
+                EntityCollectionRoleKind.Display,
+                owner,
+                first,
+                "Rows",
+                "3 entities");
+
+            EntityCollectionHandle before = store.Replace(owner, descriptor, new[] { first, dead, last });
+            world.SubscribeEntityDestroyed(store.OnEntityDestroyed);
+            world.Destroy(dead);
+
+            Assert.That(store.TryGet(owner, descriptor.Key, out EntityCollectionHandle after), Is.True);
+            Assert.That(after.Revision, Is.GreaterThan(before.Revision));
+            Assert.That(store.TryGetView(after, out EntityCollectionView view), Is.True);
+            Assert.That(view.Count, Is.EqualTo(2));
+
+            Span<Entity> rows = stackalloc Entity[2];
+            Assert.That(store.CopyEntities(after, 0, rows), Is.EqualTo(2));
+            Assert.That(rows[0], Is.EqualTo(first));
+            Assert.That(rows[1], Is.EqualTo(last));
+        }
+
+        [Test]
+        public void OnEntityDestroyed_RemovesCollectionsOwnedByDeadEntity()
+        {
+            using var world = World.Create();
+            Entity owner = world.Create();
+            Entity row = world.Create();
+            var registry = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var store = new EntityCollectionStore(registry);
+            var descriptor = EntityCollectionDescriptor.Create(
+                "tests.destroy.owner",
+                EntityCollectionSourceKind.Debug,
+                EntityCollectionRoleKind.Display,
+                owner,
+                row);
+
+            store.Replace(owner, descriptor, new[] { row });
+            world.SubscribeEntityDestroyed(store.OnEntityDestroyed);
+            world.Destroy(owner);
+
+            Assert.That(store.TryGet(owner, descriptor.Key, out _), Is.False);
+            Assert.That(store.CollectionCount, Is.EqualTo(0));
+        }
+
+        [Test]
         public void Replace_SameContentPreservesRevision_ContentOrDescriptorChangeBumpsRevision()
         {
             using var world = World.Create();

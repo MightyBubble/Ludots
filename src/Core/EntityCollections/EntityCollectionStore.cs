@@ -74,6 +74,38 @@ namespace Ludots.Core.EntityCollections
         public int CollectionCount => _collections.ActiveCount;
         public int RowCapacity => _rowEntities.Length;
 
+        /// <summary>
+        /// Removes collections owned by a destroyed entity and removes the entity from every other collection.
+        /// This is an explicit World destruction callback; historical knowledge stores are not involved here.
+        /// </summary>
+        public void OnEntityDestroyed(in Entity entity)
+        {
+            if (entity == Entity.Null)
+            {
+                return;
+            }
+
+            for (int slot = 0; slot < _active.Length; slot++)
+            {
+                if (!_active[slot])
+                {
+                    continue;
+                }
+
+                if (_owners[slot] == entity)
+                {
+                    if (_collections.TryGetSlot(slot, out EntityKeyedSoaKey ownerKey, out _, out _))
+                    {
+                        Remove(entity, ownerKey.Discriminator);
+                    }
+
+                    continue;
+                }
+
+                RemoveDestroyedRows(slot, entity);
+            }
+        }
+
         public int CopyActiveHandles(Span<EntityCollectionHandle> destination)
         {
             if (destination.IsEmpty)
@@ -580,6 +612,77 @@ namespace Ludots.Core.EntityCollections
                 out _,
                 out _,
                 out slot);
+        }
+
+        private void RemoveDestroyedRows(int slot, Entity destroyed)
+        {
+            int rowStart = _rowStarts[slot];
+            int previousCount = _rowCounts[slot];
+            int write = 0;
+            for (int read = 0; read < previousCount; read++)
+            {
+                int readIndex = rowStart + read;
+                if (_rowEntities[readIndex] == destroyed)
+                {
+                    continue;
+                }
+
+                int writeIndex = rowStart + write;
+                if (writeIndex != readIndex)
+                {
+                    _rowEntities[writeIndex] = _rowEntities[readIndex];
+                    _rowRoleIds[writeIndex] = _rowRoleIds[readIndex];
+                    _rowFlags[writeIndex] = _rowFlags[readIndex];
+                    _rowWriterDomains[writeIndex] = _rowWriterDomains[readIndex];
+                }
+
+                _rowOrdinals[writeIndex] = write;
+                write++;
+            }
+
+            if (write == previousCount)
+            {
+                return;
+            }
+
+            for (int index = write; index < previousCount; index++)
+            {
+                int rowIndex = rowStart + index;
+                _rowEntities[rowIndex] = Entity.Null;
+                _rowOrdinals[rowIndex] = 0;
+                _rowRoleIds[rowIndex] = 0;
+                _rowFlags[rowIndex] = EntityCollectionRowFlags.None;
+                _rowWriterDomains[rowIndex] = Entity.Null;
+            }
+
+            _rowCounts[slot] = write;
+            if (!_collections.TryGetSlot(slot, out _, out EntityCollectionPayload payload, out _))
+            {
+                throw new InvalidOperationException("Active entity collection slot is missing its backing payload.");
+            }
+
+            int keyId = payload.KeyId;
+            EntityCollectionDescriptor descriptor = EntityCollectionDescriptor.Create(
+                _keyRegistry.GetName(keyId) ?? throw new InvalidOperationException($"Entity collection key id '{keyId}' is not registered."),
+                _sourceKinds[slot],
+                _roles[slot],
+                _contextEntities[slot],
+                _primaryEntities[slot],
+                _titles[slot] ?? string.Empty,
+                _summaries[slot] ?? string.Empty);
+            Entity writerDomain = write > 0 ? _rowWriterDomains[rowStart] : Entity.Null;
+            _signatures[slot] = ComputeSignature(
+                in descriptor,
+                _rowEntities.AsSpan(rowStart, write),
+                _rowRoleIds.AsSpan(rowStart, write),
+                _rowFlags.AsSpan(rowStart, write),
+                writerDomain);
+            _revisions[slot] = _collections.Upsert(
+                EntityKeyedSoaKey.ForEntityAndDiscriminator(_owners[slot], keyId),
+                new EntityCollectionPayload(keyId),
+                expiryTick: 0,
+                payloadChanged: true,
+                out _);
         }
 
         private bool TryValidateSlot(int slot)
