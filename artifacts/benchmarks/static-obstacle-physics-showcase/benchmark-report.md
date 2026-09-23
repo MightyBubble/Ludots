@@ -11,9 +11,9 @@
 | Static body version after materialization | 1 |
 | Steady-state dirty static bodies | 0 |
 | Physics Hz | 60 |
-| Last physics update ms | 0.9001 |
+| Last physics update ms | 0.4162 |
 | Measured frames | 36 |
-| Average frame tick ms | 5.1591 |
-| Max frame tick ms | 137.0943 |
+| Average frame tick ms | 10.9345 |
+| Max frame tick ms | 270.5066 |
 
 Production-chain evidence: ConfigPipeline catalog Replace entry -> map focus event -> RuntimeEntitySpawnQueue.EnqueueMany -> RuntimeEntitySpawnSystem -> ManifestationObstacleBridge2DSystem -> Physics2DSimulationSystem retained static cache.
