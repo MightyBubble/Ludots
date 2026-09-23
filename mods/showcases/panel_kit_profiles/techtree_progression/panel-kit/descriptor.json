@@ -1,0 +1,30 @@
+{
+  "descriptorId": "wpk.showcase.techtree-progression",
+  "profileId": "profile.techtree.generic",
+  "layoutId": "layout.techtree.tree",
+  "scopeKey": "scope.sample",
+  "nodes": [
+    {
+      "nodeId": "node.root",
+      "progressionId": "progression.sample.root",
+      "prerequisiteNodeIds": [],
+      "displayTokenId": "token.techtree.node.root",
+      "commandId": "progression.research",
+      "targetLevel": 1,
+      "sortOrder": 1,
+      "layoutSlotId": "slot.root"
+    },
+    {
+      "nodeId": "node.child",
+      "progressionId": "progression.sample.child",
+      "requirementId": "requirement.sample.child",
+      "prerequisiteNodeIds": ["node.root"],
+      "displayTokenId": "token.techtree.node.child",
+      "blockedReasonTokenId": "token.techtree.blocked.requirement",
+      "commandId": "progression.research",
+      "targetLevel": 1,
+      "sortOrder": 2,
+      "layoutSlotId": "slot.child"
+    }
+  ]
+}

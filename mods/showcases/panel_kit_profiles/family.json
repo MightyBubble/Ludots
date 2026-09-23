@@ -1,0 +1,95 @@
+{
+  "familyId": "wpk.panel-kit.showcases",
+  "description": "One focused Panel Kit showcase per panel category for new-player first-screen understanding. Not a mega dashboard.",
+  "showcases": [
+    {
+      "id": "wpk.showcase.resource-attribute",
+      "category": "resource-attribute",
+      "title": "Resource bar",
+      "path": "mods/showcases/panel_kit_profiles/resource_attribute",
+      "manifestPath": "panel-kit/manifest.json",
+      "profilePath": "showcase.profile.json",
+      "uatPath": "UAT.md",
+      "topics": ["wpk.showcase.resource"],
+      "launcherBinding": "panel_kit_resource_attribute_showcase"
+    },
+    {
+      "id": "wpk.showcase.command-deck",
+      "category": "command-deck",
+      "title": "Command deck",
+      "path": "mods/showcases/panel_kit_profiles/command_deck",
+      "manifestPath": "panel-kit/manifest.json",
+      "profilePath": "showcase.profile.json",
+      "uatPath": "UAT.md",
+      "topics": ["wpk.showcase.command"],
+      "launcherBinding": "panel_kit_command_deck_showcase"
+    },
+    {
+      "id": "wpk.showcase.production-overview",
+      "category": "production-overview",
+      "title": "Production and workers",
+      "path": "mods/showcases/panel_kit_profiles/production_overview",
+      "manifestPath": "panel-kit/manifest.json",
+      "profilePath": "showcase.profile.json",
+      "uatPath": "UAT.md",
+      "topics": ["wpk.showcase.production"],
+      "launcherBinding": "panel_kit_production_overview_showcase"
+    },
+    {
+      "id": "wpk.showcase.tooltip",
+      "category": "tooltip",
+      "title": "Tooltip",
+      "path": "mods/showcases/panel_kit_profiles/tooltip",
+      "manifestPath": "panel-kit/manifest.json",
+      "profilePath": "showcase.profile.json",
+      "uatPath": "UAT.md",
+      "topics": ["wpk.showcase.tooltip"],
+      "launcherBinding": "panel_kit_tooltip_showcase"
+    },
+    {
+      "id": "wpk.showcase.quest-objective",
+      "category": "quest-objective",
+      "title": "Quest objective",
+      "path": "mods/showcases/panel_kit_profiles/quest_objective",
+      "manifestPath": "panel-kit/manifest.json",
+      "profilePath": "showcase.profile.json",
+      "uatPath": "UAT.md",
+      "topics": ["wpk.showcase.objective"],
+      "launcherBinding": "panel_kit_quest_objective_showcase"
+    },
+    {
+      "id": "wpk.showcase.notification",
+      "category": "notification",
+      "title": "Notification",
+      "path": "mods/showcases/panel_kit_profiles/notification",
+      "manifestPath": "panel-kit/manifest.json",
+      "profilePath": "showcase.profile.json",
+      "uatPath": "UAT.md",
+      "topics": ["wpk.showcase.notification"],
+      "launcherBinding": "panel_kit_notification_showcase"
+    },
+    {
+      "id": "wpk.showcase.minimap-web-shell",
+      "category": "minimap-web-shell",
+      "title": "Minimap web shell",
+      "path": "mods/showcases/panel_kit_profiles/minimap_web_shell",
+      "manifestPath": "panel-kit/manifest.json",
+      "profilePath": "showcase.profile.json",
+      "uatPath": "UAT.md",
+      "topics": ["wpk.minimap.shell"],
+      "launcherBinding": "browser_minimap_composited_overlay_showcase",
+      "runtimeModPath": "mods/showcases/browser_minimap_composited_overlay/BrowserMinimapCompositedOverlayShowcaseMod"
+    },
+    {
+      "id": "wpk.showcase.techtree-progression",
+      "category": "techtree-progression",
+      "title": "Tech tree / progression",
+      "path": "mods/showcases/panel_kit_profiles/techtree_progression",
+      "manifestPath": "panel-kit/manifest.json",
+      "profilePath": "showcase.profile.json",
+      "uatPath": "UAT.md",
+      "topics": ["wpk.showcase.techtree"],
+      "launcherBinding": "panel_kit_techtree_progression_showcase"
+    }
+  ]
+}

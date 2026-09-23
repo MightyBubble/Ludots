@@ -19,5 +19,6 @@
     <None Include="Samples\sample_resource_attribute_descriptor.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Samples\sample_production_overview_descriptor.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Samples\sample_tooltip_descriptor.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Samples\sample_techtree_descriptor.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

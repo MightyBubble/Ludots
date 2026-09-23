@@ -1,0 +1,10 @@
+{
+  "showcaseId": "wpk.showcase.quest-objective",
+  "category": "quest-objective",
+  "playerGoal": "See the current objective and know the next concrete step.",
+  "panelType": "objective",
+  "profileId": "profile.objective.generic",
+  "layoutId": "layout.list.vertical",
+  "topic": "wpk.showcase.objective",
+  "manifestPath": "panel-kit/manifest.json"
+}

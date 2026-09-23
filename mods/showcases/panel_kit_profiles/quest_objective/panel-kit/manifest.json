@@ -1,0 +1,20 @@
+{
+  "manifestId": "wpk.showcase.quest-objective",
+  "hostOwnerId": "PanelKit.QuestObjective.Showcase",
+  "panels": [
+    {
+      "panelId": "panel.objective.tracker",
+      "panelType": "objective",
+      "surfaceRegionId": "region.top-right",
+      "surfaceSegment": "Overlay",
+      "surfacePriority": 15,
+      "anchor": "top-right",
+      "visibleConditionId": "condition.always",
+      "topic": "wpk.showcase.objective",
+      "profileId": "profile.objective.generic",
+      "layoutId": "layout.list.vertical",
+      "densityId": "density.compact",
+      "inputCapabilityId": "input.none"
+    }
+  ]
+}

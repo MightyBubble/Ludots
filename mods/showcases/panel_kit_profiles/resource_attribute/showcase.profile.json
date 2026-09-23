@@ -1,0 +1,11 @@
+{
+  "showcaseId": "wpk.showcase.resource-attribute",
+  "category": "resource-attribute",
+  "playerGoal": "Read your stockpile numbers on the first screen and understand what you can afford.",
+  "panelType": "resource-bar",
+  "profileId": "profile.resource.generic",
+  "layoutId": "layout.bar.horizontal",
+  "topic": "wpk.showcase.resource",
+  "descriptorPath": "panel-kit/descriptor.json",
+  "manifestPath": "panel-kit/manifest.json"
+}

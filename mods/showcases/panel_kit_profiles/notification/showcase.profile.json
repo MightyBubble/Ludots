@@ -1,0 +1,10 @@
+{
+  "showcaseId": "wpk.showcase.notification",
+  "category": "notification",
+  "playerGoal": "Receive a clear toast when something important happens and optionally open the related panel.",
+  "panelType": "notification",
+  "profileId": "profile.notification.generic",
+  "layoutId": "layout.toast.stack",
+  "topic": "wpk.showcase.notification",
+  "manifestPath": "panel-kit/manifest.json"
+}

@@ -1,0 +1,20 @@
+{
+  "manifestId": "wpk.showcase.resource-attribute",
+  "hostOwnerId": "PanelKit.ResourceAttribute.Showcase",
+  "panels": [
+    {
+      "panelId": "panel.resource.bar",
+      "panelType": "resource-bar",
+      "surfaceRegionId": "region.top-left",
+      "surfaceSegment": "Overlay",
+      "surfacePriority": 10,
+      "anchor": "top-left",
+      "visibleConditionId": "condition.always",
+      "topic": "wpk.showcase.resource",
+      "profileId": "profile.resource.generic",
+      "layoutId": "layout.bar.horizontal",
+      "densityId": "density.compact",
+      "inputCapabilityId": "input.none"
+    }
+  ]
+}

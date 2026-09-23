@@ -1,0 +1,10 @@
+{
+  "showcaseId": "wpk.showcase.tooltip",
+  "category": "tooltip",
+  "playerGoal": "Hover or focus a target and read a rich tooltip that explains what it does.",
+  "panelType": "tooltip",
+  "profileId": "profile.insight.generic",
+  "layoutId": "layout.tooltip.rich",
+  "topic": "wpk.showcase.tooltip",
+  "manifestPath": "panel-kit/manifest.json"
+}

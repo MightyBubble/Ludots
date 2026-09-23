@@ -1,0 +1,10 @@
+{
+  "showcaseId": "wpk.showcase.command-deck",
+  "category": "command-deck",
+  "playerGoal": "See global build/train buttons and click one to issue a real command.",
+  "panelType": "command-deck",
+  "profileId": "profile.command-deck.global",
+  "layoutId": "layout.deck.grid",
+  "topic": "wpk.showcase.command",
+  "manifestPath": "panel-kit/manifest.json"
+}

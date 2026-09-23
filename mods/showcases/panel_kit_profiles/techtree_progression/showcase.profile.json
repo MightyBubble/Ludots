@@ -1,0 +1,11 @@
+{
+  "showcaseId": "wpk.showcase.techtree-progression",
+  "category": "techtree-progression",
+  "playerGoal": "Open the progression tree, see what is locked or available, and research the next node.",
+  "panelType": "techtree",
+  "profileId": "profile.techtree.generic",
+  "layoutId": "layout.techtree.tree",
+  "topic": "wpk.showcase.techtree",
+  "descriptorPath": "panel-kit/descriptor.json",
+  "manifestPath": "panel-kit/manifest.json"
+}

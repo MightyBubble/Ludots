@@ -42,6 +42,7 @@ Resource attribute panels (WPK-2) publish `owner` / `descriptor` / `revision` / 
 Production / Worker / Queue overview topics (WPK-4) project existing EntityCommandPanel status/queue, OrderBuffer, and entity-collection worker buckets; see [webui_production_overview_panel.md](webui_production_overview_panel.md).
 Tooltip panels (WPK-5) publish structured rich-text snapshots via `WebUiTooltipTopicProducer`; see [WebUI Tooltip + Rich Text](webui_tooltip_rich_text.md).
 Notification panels (WPK-7) publish ordered message snapshots via `NotificationWebUiTopicProducer` from an independent `NotificationRuntime`; see [WebUI Notification Panel](webui_notification_panel.md).
+TechTree / Progression panels (WPK-9) publish node status snapshots via `WebUiTechTreeTopicProducer` from `ProgressionStateBuffer` and `ProgressionRequirementEvaluator`; see [WebUI TechTree / Progression Panel](webui_techtree_progression_panel.md).
 
 ## 3 Entity Collection Topics
 
@@ -199,6 +200,7 @@ Current evidence is architectural, source-aligned, and executable:
 - Tooltip + rich text (WPK-5): `src/Libraries/Ludots.WebUI.PanelKit/WebUiTooltip*` / `WebUiRichText*` and `docs/architecture/webui_tooltip_rich_text.md`
 - Quest Objective panel projection (WPK-6): `QuestObjectiveWebUiTopicProducer` and `docs/architecture/webui_quest_objective_panel.md`
 - Notification panel (WPK-7): `src/Libraries/Ludots.WebUI.DataPlane/Notification*` and `docs/architecture/webui_notification_panel.md`
+- TechTree / Progression panel (WPK-9): `src/Libraries/Ludots.WebUI.PanelKit/WebUiTechTree*` and `docs/architecture/webui_techtree_progression_panel.md`
 - Shared-memory host transport: `src/Libraries/Ludots.WebUI.Browser/BrowserSharedMemoryDataTransport.cs`
 - Host-owned MMF buffer store: `src/Libraries/Ludots.WebUI.Browser/BrowserSharedMemoryBufferStore.cs`
 - Provider-neutral shared-buffer bridge: `src/Libraries/Ludots.UI.Browser/BrowserSharedBufferBridge.cs`

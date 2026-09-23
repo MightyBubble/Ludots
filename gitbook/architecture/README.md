@@ -46,6 +46,7 @@
 - WebUI DataPlane：正式边界位于 `docs/architecture/webui_dataplane_architecture.md`，归属 `Ludots.WebUI` 高层，复用 `EntityCollectionStore` 与 Minimap marker buffer 的 SoA / bucket / drop diagnostics 模式；UE5 BLUI 只作为外部 transport adapter
 - WebUI Panel Kit Manifest（WPK-1）：面板组合合同位于 `docs/architecture/webui_panel_kit_manifest.md`；复用 `UiSurfaceHost` 与 DataPlane topic，不新建平行 host；加载期校验 topic/profile/layout/surface 引用
 - WebUI Notification Panel（WPK-7）：独立消息 SSOT 位于 `docs/architecture/webui_notification_panel.md`；不依赖 NarrativeFrontend / Quest / showcase toast 私有状态；文案走 WPK-5 token 校验；Web 只渲染 DataPlane snapshot
+- WebUI TechTree / Progression Panel（WPK-9）：Progression 节点面板合同位于 `docs/architecture/webui_techtree_progression_panel.md`；复用 ProgressionStateBuffer / requirement evaluator / ScopeKey / WebUiCommandRouter；禁止 TechTreeStore 与浏览器私有科技状态
 
 ## 当前主线重点
 

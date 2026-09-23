@@ -1,0 +1,20 @@
+{
+  "manifestId": "wpk.showcase.command-deck",
+  "hostOwnerId": "PanelKit.CommandDeck.Showcase",
+  "panels": [
+    {
+      "panelId": "panel.command.deck",
+      "panelType": "command-deck",
+      "surfaceRegionId": "region.bottom-center",
+      "surfaceSegment": "Overlay",
+      "surfacePriority": 20,
+      "anchor": "bottom-center",
+      "visibleConditionId": "condition.always",
+      "topic": "wpk.showcase.command",
+      "profileId": "profile.command-deck.global",
+      "layoutId": "layout.deck.grid",
+      "densityId": "density.comfortable",
+      "inputCapabilityId": "input.activate-slot"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "descriptorId": "wpk.showcase.resource-attribute",
+  "fields": [
+    {
+      "fieldId": "field.primary",
+      "groupId": "group.stockpile",
+      "displayTokenId": "token.resource.primary",
+      "unitTokenId": "unit.count",
+      "sortOrder": 10,
+      "sourceKind": "singleAttribute",
+      "attributeId": "attr.sample.primary"
+    },
+    {
+      "fieldId": "field.derived",
+      "groupId": "group.stockpile",
+      "displayTokenId": "token.resource.secondary",
+      "unitTokenId": "unit.rate",
+      "sortOrder": 20,
+      "sourceKind": "derivedAttribute",
+      "attributeId": "attr.sample.derived"
+    }
+  ]
+}

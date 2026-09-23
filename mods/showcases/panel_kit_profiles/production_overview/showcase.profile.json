@@ -1,0 +1,10 @@
+{
+  "showcaseId": "wpk.showcase.production-overview",
+  "category": "production-overview",
+  "playerGoal": "Watch a production queue and worker groups after issuing a build/train order.",
+  "panelType": "production-overview",
+  "profileId": "profile.production-overview.generic",
+  "layoutId": "layout.overview.split",
+  "topic": "wpk.showcase.production",
+  "manifestPath": "panel-kit/manifest.json"
+}

@@ -1,0 +1,20 @@
+{
+  "manifestId": "wpk.showcase.techtree-progression",
+  "hostOwnerId": "PanelKit.TechTree.Showcase",
+  "panels": [
+    {
+      "panelId": "panel.techtree.progression",
+      "panelType": "techtree",
+      "surfaceRegionId": "region.center-right",
+      "surfaceSegment": "Overlay",
+      "surfacePriority": 30,
+      "anchor": "center-right",
+      "visibleConditionId": "condition.always",
+      "topic": "wpk.showcase.techtree",
+      "profileId": "profile.techtree.generic",
+      "layoutId": "layout.techtree.tree",
+      "densityId": "density.comfortable",
+      "inputCapabilityId": "input.techtree-research"
+    }
+  ]
+}

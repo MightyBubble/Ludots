@@ -34,6 +34,7 @@
 - [WebUI Tooltip + Rich Text (WPK-5)](webui_tooltip_rich_text.md)
 - [WebUI Quest Objective Panel (WPK-6)](webui_quest_objective_panel.md)
 - [WebUI Notification Panel (WPK-7)](webui_notification_panel.md)
+- [WebUI TechTree / Progression Panel (WPK-9)](webui_techtree_progression_panel.md)
 
 ## Target State And Migration
 

@@ -1,0 +1,11 @@
+{
+  "showcaseId": "wpk.showcase.minimap-web-shell",
+  "category": "minimap-web-shell",
+  "playerGoal": "Use the circular minimap shell to look around the map without the browser drawing gameplay markers.",
+  "panelType": "minimap.web-shell",
+  "profileId": "profile.minimap.composited-overlay",
+  "layoutId": "layout.minimap.floating",
+  "topic": "wpk.minimap.shell",
+  "manifestPath": "panel-kit/manifest.json",
+  "runtimeModPath": "mods/showcases/browser_minimap_composited_overlay/BrowserMinimapCompositedOverlayShowcaseMod"
+}

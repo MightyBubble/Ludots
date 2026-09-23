@@ -1,0 +1,20 @@
+{
+  "manifestId": "wpk.showcase.tooltip",
+  "hostOwnerId": "PanelKit.Tooltip.Showcase",
+  "panels": [
+    {
+      "panelId": "panel.tooltip.rich",
+      "panelType": "tooltip",
+      "surfaceRegionId": "region.cursor",
+      "surfaceSegment": "Overlay",
+      "surfacePriority": 40,
+      "anchor": "cursor",
+      "visibleConditionId": "condition.binding-flag",
+      "topic": "wpk.showcase.tooltip",
+      "profileId": "profile.insight.generic",
+      "layoutId": "layout.tooltip.rich",
+      "densityId": "density.comfortable",
+      "inputCapabilityId": "input.none"
+    }
+  ]
+}
