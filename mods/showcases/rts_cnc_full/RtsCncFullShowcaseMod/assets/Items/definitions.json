@@ -1,0 +1,62 @@
+[
+  {
+    "id": "rts_cnc_full_ore_canister",
+    "displayName": "Ore Canister",
+    "shape": "rts_cnc_full_1x1",
+    "maxStack": 999,
+    "tags": [
+      "Item.RtsCncFull.Munitions"
+    ],
+    "allowedNamedSlots": [
+      "munitions"
+    ]
+  },
+  {
+    "id": "rts_cnc_full_power_core",
+    "displayName": "Power Core",
+    "shape": "rts_cnc_full_1x1",
+    "maxStack": 99,
+    "tags": [
+      "Item.RtsCncFull.Power"
+    ],
+    "allowedNamedSlots": [
+      "power"
+    ]
+  },
+  {
+    "id": "rts_cnc_full_vehicle_kit",
+    "displayName": "Vehicle Kit",
+    "shape": "rts_cnc_full_2x1",
+    "maxStack": 20,
+    "tags": [
+      "Item.RtsCncFull.Parts"
+    ],
+    "allowedNamedSlots": [
+      "parts"
+    ]
+  },
+  {
+    "id": "rts_cnc_full_airframe_crate",
+    "displayName": "Airframe Crate",
+    "shape": "rts_cnc_full_2x2",
+    "maxStack": 10,
+    "tags": [
+      "Item.RtsCncFull.Parts"
+    ],
+    "allowedNamedSlots": [
+      "parts"
+    ]
+  },
+  {
+    "id": "rts_cnc_full_naval_parts",
+    "displayName": "Naval Parts",
+    "shape": "rts_cnc_full_2x2",
+    "maxStack": 10,
+    "tags": [
+      "Item.RtsCncFull.Parts"
+    ],
+    "allowedNamedSlots": [
+      "parts"
+    ]
+  }
+]

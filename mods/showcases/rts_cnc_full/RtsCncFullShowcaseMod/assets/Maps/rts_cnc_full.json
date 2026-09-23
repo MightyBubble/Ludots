@@ -1,0 +1,2121 @@
+{
+  "Id": "rts_cnc_full",
+  "Tags": [
+    "rts",
+    "rts_showcase",
+    "rts_production",
+    "rts_cnc_full",
+    "cnc"
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Rts",
+    "TargetXCm": 14000,
+    "TargetYCm": 15500,
+    "Yaw": 195,
+    "Pitch": 54,
+    "DistanceCm": 15800,
+    "FovYDeg": 60
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "widthInMacroTiles": 96,
+      "heightInMacroTiles": 96,
+      "GridCellSizeCm": 400,
+      "ChunkSizeCells": 32,
+      "NavigationEnabled": false
+    }
+  ],
+  "Entities": [
+    {
+      "Template": "rts_cnc_full_team_anchor",
+      "InstanceId": "atlantic_team_anchor",
+      "Overrides": {
+        "Team": {
+          "Id": 1
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9000,
+            "Y": 10000
+          }
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_player_anchor",
+      "InstanceId": "atlantic_player_anchor",
+      "Overrides": {
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9120,
+            "Y": 10120
+          }
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_atlantic_infantry_producer",
+      "InstanceId": "atlantic_infantry_producer",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8100,
+            "Y": 9480
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_atlantic_infantry_rifle_section",
+      "InstanceId": "atlantic_infantry_rifle_section",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7300,
+            "Y": 11340
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_atlantic_infantry_grenadier_team",
+      "InstanceId": "atlantic_infantry_grenadier_team",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7860,
+            "Y": 11340
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_atlantic_infantry_combat_engineer",
+      "InstanceId": "atlantic_infantry_combat_engineer",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8420,
+            "Y": 11340
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_atlantic_infantry_commando_cell",
+      "InstanceId": "atlantic_infantry_commando_cell",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8980,
+            "Y": 11340
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_atlantic_armor_producer",
+      "InstanceId": "atlantic_armor_producer",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9000,
+            "Y": 9240
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_atlantic_armor_scout_rover",
+      "InstanceId": "atlantic_armor_scout_rover",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9540,
+            "Y": 11340
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_atlantic_armor_bulldog_ifv",
+      "InstanceId": "atlantic_armor_bulldog_ifv",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7300,
+            "Y": 11770
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_atlantic_armor_battle_tank",
+      "InstanceId": "atlantic_armor_battle_tank",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7860,
+            "Y": 11770
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_atlantic_armor_siege_crawler",
+      "InstanceId": "atlantic_armor_siege_crawler",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8420,
+            "Y": 11770
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_atlantic_air_producer",
+      "InstanceId": "atlantic_air_producer",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9900,
+            "Y": 9480
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_atlantic_air_recon_drone",
+      "InstanceId": "atlantic_air_recon_drone",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8980,
+            "Y": 11770
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_atlantic_air_gunship",
+      "InstanceId": "atlantic_air_gunship",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9540,
+            "Y": 11770
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_atlantic_air_strike_bomber",
+      "InstanceId": "atlantic_air_strike_bomber",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7300,
+            "Y": 12200
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_atlantic_air_airborne_hq",
+      "InstanceId": "atlantic_air_airborne_hq",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7860,
+            "Y": 12200
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_atlantic_naval_producer",
+      "InstanceId": "atlantic_naval_producer",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8540,
+            "Y": 10460
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_atlantic_naval_patrol_boat",
+      "InstanceId": "atlantic_naval_patrol_boat",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8420,
+            "Y": 12200
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_atlantic_naval_missile_frigate",
+      "InstanceId": "atlantic_naval_missile_frigate",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8980,
+            "Y": 12200
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_atlantic_naval_submersible",
+      "InstanceId": "atlantic_naval_submersible",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9540,
+            "Y": 12200
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_atlantic_naval_carrier_tender",
+      "InstanceId": "atlantic_naval_carrier_tender",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7300,
+            "Y": 12630
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_atlantic_support_producer",
+      "InstanceId": "atlantic_support_producer",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9460,
+            "Y": 10460
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_atlantic_support_mobile_radar",
+      "InstanceId": "atlantic_support_mobile_radar",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7860,
+            "Y": 12630
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_atlantic_support_repair_rig",
+      "InstanceId": "atlantic_support_repair_rig",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8420,
+            "Y": 12630
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_atlantic_support_artillery_battery",
+      "InstanceId": "atlantic_support_artillery_battery",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8980,
+            "Y": 12630
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_atlantic_support_superweapon_team",
+      "InstanceId": "atlantic_support_superweapon_team",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9540,
+            "Y": 12630
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_team_anchor",
+      "InstanceId": "volkov_team_anchor",
+      "Overrides": {
+        "Team": {
+          "Id": 2
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 19000,
+            "Y": 9500
+          }
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_player_anchor",
+      "InstanceId": "volkov_player_anchor",
+      "Overrides": {
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 2
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 19120,
+            "Y": 9620
+          }
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_volkov_infantry_producer",
+      "InstanceId": "volkov_infantry_producer",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 18100,
+            "Y": 8980
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.63
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_volkov_infantry_rifle_section",
+      "InstanceId": "volkov_infantry_rifle_section",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 17300,
+            "Y": 10840
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.48
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_volkov_infantry_grenadier_team",
+      "InstanceId": "volkov_infantry_grenadier_team",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 17860,
+            "Y": 10840
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.48
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_volkov_infantry_combat_engineer",
+      "InstanceId": "volkov_infantry_combat_engineer",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 18420,
+            "Y": 10840
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.48
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_volkov_infantry_commando_cell",
+      "InstanceId": "volkov_infantry_commando_cell",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 18980,
+            "Y": 10840
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.48
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_volkov_armor_producer",
+      "InstanceId": "volkov_armor_producer",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 19000,
+            "Y": 8740
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.63
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_volkov_armor_scout_rover",
+      "InstanceId": "volkov_armor_scout_rover",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 19540,
+            "Y": 10840
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.48
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_volkov_armor_bulldog_ifv",
+      "InstanceId": "volkov_armor_bulldog_ifv",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 17300,
+            "Y": 11270
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.48
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_volkov_armor_battle_tank",
+      "InstanceId": "volkov_armor_battle_tank",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 17860,
+            "Y": 11270
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.48
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_volkov_armor_siege_crawler",
+      "InstanceId": "volkov_armor_siege_crawler",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 18420,
+            "Y": 11270
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.48
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_volkov_air_producer",
+      "InstanceId": "volkov_air_producer",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 19900,
+            "Y": 8980
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.63
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_volkov_air_recon_drone",
+      "InstanceId": "volkov_air_recon_drone",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 18980,
+            "Y": 11270
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.48
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_volkov_air_gunship",
+      "InstanceId": "volkov_air_gunship",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 19540,
+            "Y": 11270
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.48
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_volkov_air_strike_bomber",
+      "InstanceId": "volkov_air_strike_bomber",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 17300,
+            "Y": 11700
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.48
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_volkov_air_airborne_hq",
+      "InstanceId": "volkov_air_airborne_hq",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 17860,
+            "Y": 11700
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.48
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_volkov_naval_producer",
+      "InstanceId": "volkov_naval_producer",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 18540,
+            "Y": 9960
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.63
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_volkov_naval_patrol_boat",
+      "InstanceId": "volkov_naval_patrol_boat",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 18420,
+            "Y": 11700
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.48
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_volkov_naval_missile_frigate",
+      "InstanceId": "volkov_naval_missile_frigate",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 18980,
+            "Y": 11700
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.48
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_volkov_naval_submersible",
+      "InstanceId": "volkov_naval_submersible",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 19540,
+            "Y": 11700
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.48
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_volkov_naval_carrier_tender",
+      "InstanceId": "volkov_naval_carrier_tender",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 17300,
+            "Y": 12130
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.48
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_volkov_support_producer",
+      "InstanceId": "volkov_support_producer",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 19460,
+            "Y": 9960
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.63
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_volkov_support_mobile_radar",
+      "InstanceId": "volkov_support_mobile_radar",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 17860,
+            "Y": 12130
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.48
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_volkov_support_repair_rig",
+      "InstanceId": "volkov_support_repair_rig",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 18420,
+            "Y": 12130
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.48
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_volkov_support_artillery_battery",
+      "InstanceId": "volkov_support_artillery_battery",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 18980,
+            "Y": 12130
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.48
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_volkov_support_superweapon_team",
+      "InstanceId": "volkov_support_superweapon_team",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 19540,
+            "Y": 12130
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.48
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_team_anchor",
+      "InstanceId": "nile_team_anchor",
+      "Overrides": {
+        "Team": {
+          "Id": 3
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8500,
+            "Y": 20500
+          }
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_player_anchor",
+      "InstanceId": "nile_player_anchor",
+      "Overrides": {
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 3
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8620,
+            "Y": 20620
+          }
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_nile_infantry_producer",
+      "InstanceId": "nile_infantry_producer",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7600,
+            "Y": 19980
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.26
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_nile_infantry_rifle_section",
+      "InstanceId": "nile_infantry_rifle_section",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6800,
+            "Y": 21840
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.96
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_nile_infantry_grenadier_team",
+      "InstanceId": "nile_infantry_grenadier_team",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7360,
+            "Y": 21840
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.96
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_nile_infantry_combat_engineer",
+      "InstanceId": "nile_infantry_combat_engineer",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7920,
+            "Y": 21840
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.96
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_nile_infantry_commando_cell",
+      "InstanceId": "nile_infantry_commando_cell",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8480,
+            "Y": 21840
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.96
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_nile_armor_producer",
+      "InstanceId": "nile_armor_producer",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8500,
+            "Y": 19740
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.26
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_nile_armor_scout_rover",
+      "InstanceId": "nile_armor_scout_rover",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9040,
+            "Y": 21840
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.96
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_nile_armor_bulldog_ifv",
+      "InstanceId": "nile_armor_bulldog_ifv",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6800,
+            "Y": 22270
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.96
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_nile_armor_battle_tank",
+      "InstanceId": "nile_armor_battle_tank",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7360,
+            "Y": 22270
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.96
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_nile_armor_siege_crawler",
+      "InstanceId": "nile_armor_siege_crawler",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7920,
+            "Y": 22270
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.96
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_nile_air_producer",
+      "InstanceId": "nile_air_producer",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9400,
+            "Y": 19980
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.26
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_nile_air_recon_drone",
+      "InstanceId": "nile_air_recon_drone",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8480,
+            "Y": 22270
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.96
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_nile_air_gunship",
+      "InstanceId": "nile_air_gunship",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9040,
+            "Y": 22270
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.96
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_nile_air_strike_bomber",
+      "InstanceId": "nile_air_strike_bomber",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6800,
+            "Y": 22700
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.96
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_nile_air_airborne_hq",
+      "InstanceId": "nile_air_airborne_hq",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7360,
+            "Y": 22700
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.96
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_nile_naval_producer",
+      "InstanceId": "nile_naval_producer",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8040,
+            "Y": 20960
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.26
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_nile_naval_patrol_boat",
+      "InstanceId": "nile_naval_patrol_boat",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7920,
+            "Y": 22700
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.96
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_nile_naval_missile_frigate",
+      "InstanceId": "nile_naval_missile_frigate",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8480,
+            "Y": 22700
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.96
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_nile_naval_submersible",
+      "InstanceId": "nile_naval_submersible",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9040,
+            "Y": 22700
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.96
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_nile_naval_carrier_tender",
+      "InstanceId": "nile_naval_carrier_tender",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6800,
+            "Y": 23130
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.96
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_nile_support_producer",
+      "InstanceId": "nile_support_producer",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8960,
+            "Y": 20960
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.26
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_nile_support_mobile_radar",
+      "InstanceId": "nile_support_mobile_radar",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7360,
+            "Y": 23130
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.96
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_nile_support_repair_rig",
+      "InstanceId": "nile_support_repair_rig",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7920,
+            "Y": 23130
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.96
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_nile_support_artillery_battery",
+      "InstanceId": "nile_support_artillery_battery",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8480,
+            "Y": 23130
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.96
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_nile_support_superweapon_team",
+      "InstanceId": "nile_support_superweapon_team",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9040,
+            "Y": 23130
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 0.96
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_team_anchor",
+      "InstanceId": "pacific_team_anchor",
+      "Overrides": {
+        "Team": {
+          "Id": 4
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 19800,
+            "Y": 21000
+          }
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_player_anchor",
+      "InstanceId": "pacific_player_anchor",
+      "Overrides": {
+        "Team": {
+          "Id": 4
+        },
+        "PlayerOwner": {
+          "PlayerId": 4
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 19920,
+            "Y": 21120
+          }
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_pacific_infantry_producer",
+      "InstanceId": "pacific_infantry_producer",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 18900,
+            "Y": 20480
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.8900000000000001
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_pacific_infantry_rifle_section",
+      "InstanceId": "pacific_infantry_rifle_section",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 18100,
+            "Y": 22340
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.44
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_pacific_infantry_grenadier_team",
+      "InstanceId": "pacific_infantry_grenadier_team",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 18660,
+            "Y": 22340
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.44
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_pacific_infantry_combat_engineer",
+      "InstanceId": "pacific_infantry_combat_engineer",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 19220,
+            "Y": 22340
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.44
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_pacific_infantry_commando_cell",
+      "InstanceId": "pacific_infantry_commando_cell",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 19780,
+            "Y": 22340
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.44
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_pacific_armor_producer",
+      "InstanceId": "pacific_armor_producer",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 19800,
+            "Y": 20240
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.8900000000000001
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_pacific_armor_scout_rover",
+      "InstanceId": "pacific_armor_scout_rover",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 20340,
+            "Y": 22340
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.44
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_pacific_armor_bulldog_ifv",
+      "InstanceId": "pacific_armor_bulldog_ifv",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 18100,
+            "Y": 22770
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.44
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_pacific_armor_battle_tank",
+      "InstanceId": "pacific_armor_battle_tank",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 18660,
+            "Y": 22770
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.44
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_pacific_armor_siege_crawler",
+      "InstanceId": "pacific_armor_siege_crawler",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 19220,
+            "Y": 22770
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.44
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_pacific_air_producer",
+      "InstanceId": "pacific_air_producer",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 20700,
+            "Y": 20480
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.8900000000000001
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_pacific_air_recon_drone",
+      "InstanceId": "pacific_air_recon_drone",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 19780,
+            "Y": 22770
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.44
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_pacific_air_gunship",
+      "InstanceId": "pacific_air_gunship",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 20340,
+            "Y": 22770
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.44
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_pacific_air_strike_bomber",
+      "InstanceId": "pacific_air_strike_bomber",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 18100,
+            "Y": 23200
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.44
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_pacific_air_airborne_hq",
+      "InstanceId": "pacific_air_airborne_hq",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 18660,
+            "Y": 23200
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.44
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_pacific_naval_producer",
+      "InstanceId": "pacific_naval_producer",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 19340,
+            "Y": 21460
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.8900000000000001
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_pacific_naval_patrol_boat",
+      "InstanceId": "pacific_naval_patrol_boat",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 19220,
+            "Y": 23200
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.44
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_pacific_naval_missile_frigate",
+      "InstanceId": "pacific_naval_missile_frigate",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 19780,
+            "Y": 23200
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.44
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_pacific_naval_submersible",
+      "InstanceId": "pacific_naval_submersible",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 20340,
+            "Y": 23200
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.44
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_pacific_naval_carrier_tender",
+      "InstanceId": "pacific_naval_carrier_tender",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 18100,
+            "Y": 23630
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.44
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_pacific_support_producer",
+      "InstanceId": "pacific_support_producer",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 20260,
+            "Y": 21460
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.8900000000000001
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_pacific_support_mobile_radar",
+      "InstanceId": "pacific_support_mobile_radar",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 18660,
+            "Y": 23630
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.44
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_pacific_support_repair_rig",
+      "InstanceId": "pacific_support_repair_rig",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 19220,
+            "Y": 23630
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.44
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_pacific_support_artillery_battery",
+      "InstanceId": "pacific_support_artillery_battery",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 19780,
+            "Y": 23630
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.44
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_pacific_support_superweapon_team",
+      "InstanceId": "pacific_support_superweapon_team",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 20340,
+            "Y": 23630
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.44
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_team_anchor",
+      "InstanceId": "andes_team_anchor",
+      "Overrides": {
+        "Team": {
+          "Id": 5
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 14000,
+            "Y": 15500
+          }
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_player_anchor",
+      "InstanceId": "andes_player_anchor",
+      "Overrides": {
+        "Team": {
+          "Id": 5
+        },
+        "PlayerOwner": {
+          "PlayerId": 5
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 14120,
+            "Y": 15620
+          }
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_andes_infantry_producer",
+      "InstanceId": "andes_infantry_producer",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 13100,
+            "Y": 14980
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 2.52
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_andes_infantry_rifle_section",
+      "InstanceId": "andes_infantry_rifle_section",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 12300,
+            "Y": 16840
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.92
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_andes_infantry_grenadier_team",
+      "InstanceId": "andes_infantry_grenadier_team",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 12860,
+            "Y": 16840
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.92
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_andes_infantry_combat_engineer",
+      "InstanceId": "andes_infantry_combat_engineer",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 13420,
+            "Y": 16840
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.92
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_andes_infantry_commando_cell",
+      "InstanceId": "andes_infantry_commando_cell",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 13980,
+            "Y": 16840
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.92
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_andes_armor_producer",
+      "InstanceId": "andes_armor_producer",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 14000,
+            "Y": 14740
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 2.52
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_andes_armor_scout_rover",
+      "InstanceId": "andes_armor_scout_rover",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 14540,
+            "Y": 16840
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.92
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_andes_armor_bulldog_ifv",
+      "InstanceId": "andes_armor_bulldog_ifv",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 12300,
+            "Y": 17270
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.92
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_andes_armor_battle_tank",
+      "InstanceId": "andes_armor_battle_tank",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 12860,
+            "Y": 17270
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.92
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_andes_armor_siege_crawler",
+      "InstanceId": "andes_armor_siege_crawler",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 13420,
+            "Y": 17270
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.92
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_andes_air_producer",
+      "InstanceId": "andes_air_producer",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 14900,
+            "Y": 14980
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 2.52
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_andes_air_recon_drone",
+      "InstanceId": "andes_air_recon_drone",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 13980,
+            "Y": 17270
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.92
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_andes_air_gunship",
+      "InstanceId": "andes_air_gunship",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 14540,
+            "Y": 17270
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.92
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_andes_air_strike_bomber",
+      "InstanceId": "andes_air_strike_bomber",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 12300,
+            "Y": 17700
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.92
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_andes_air_airborne_hq",
+      "InstanceId": "andes_air_airborne_hq",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 12860,
+            "Y": 17700
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.92
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_andes_naval_producer",
+      "InstanceId": "andes_naval_producer",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 13540,
+            "Y": 15960
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 2.52
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_andes_naval_patrol_boat",
+      "InstanceId": "andes_naval_patrol_boat",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 13420,
+            "Y": 17700
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.92
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_andes_naval_missile_frigate",
+      "InstanceId": "andes_naval_missile_frigate",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 13980,
+            "Y": 17700
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.92
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_andes_naval_submersible",
+      "InstanceId": "andes_naval_submersible",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 14540,
+            "Y": 17700
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.92
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_andes_naval_carrier_tender",
+      "InstanceId": "andes_naval_carrier_tender",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 12300,
+            "Y": 18130
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.92
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_andes_support_producer",
+      "InstanceId": "andes_support_producer",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 14460,
+            "Y": 15960
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 2.52
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_andes_support_mobile_radar",
+      "InstanceId": "andes_support_mobile_radar",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 12860,
+            "Y": 18130
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.92
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_andes_support_repair_rig",
+      "InstanceId": "andes_support_repair_rig",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 13420,
+            "Y": 18130
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.92
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_andes_support_artillery_battery",
+      "InstanceId": "andes_support_artillery_battery",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 13980,
+            "Y": 18130
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.92
+        }
+      }
+    },
+    {
+      "Template": "rts_cnc_full_andes_support_superweapon_team",
+      "InstanceId": "andes_support_superweapon_team",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 14540,
+            "Y": 18130
+          }
+        },
+        "FacingDirection": {
+          "AngleRad": 1.92
+        }
+      }
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "atlantic_team_anchor"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "volkov_team_anchor"
+    },
+    {
+      "TeamId": 3,
+      "RepresentativeInstanceId": "nile_team_anchor"
+    },
+    {
+      "TeamId": 4,
+      "RepresentativeInstanceId": "pacific_team_anchor"
+    },
+    {
+      "TeamId": 5,
+      "RepresentativeInstanceId": "andes_team_anchor"
+    }
+  ],
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "atlantic_player_anchor"
+    },
+    {
+      "PlayerId": 2,
+      "TeamId": 2,
+      "RepresentativeInstanceId": "volkov_player_anchor"
+    },
+    {
+      "PlayerId": 3,
+      "TeamId": 3,
+      "RepresentativeInstanceId": "nile_player_anchor"
+    },
+    {
+      "PlayerId": 4,
+      "TeamId": 4,
+      "RepresentativeInstanceId": "pacific_player_anchor"
+    },
+    {
+      "PlayerId": 5,
+      "TeamId": 5,
+      "RepresentativeInstanceId": "andes_player_anchor"
+    }
+  ]
+}

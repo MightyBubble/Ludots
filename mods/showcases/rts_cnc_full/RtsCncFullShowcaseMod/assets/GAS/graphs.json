@@ -1,0 +1,55 @@
+[
+  {
+    "id": "Graph.RtsCncFull.RosterTotals",
+    "kind": "Query",
+    "entry": "unitTypes",
+    "nodes": [
+      {
+        "id": "unitTypes",
+        "op": "ConstInt",
+        "intValue": 100,
+        "next": "factions"
+      },
+      {
+        "id": "factions",
+        "op": "ConstInt",
+        "intValue": 5,
+        "next": "producers"
+      },
+      {
+        "id": "producers",
+        "op": "ConstInt",
+        "intValue": 25
+      }
+    ],
+    "outputs": [
+      {
+        "id": "unitTypes",
+        "destination": "Summary",
+        "type": "Int",
+        "source": "unitTypes",
+        "key": "rts.cnc.full.unitTypes",
+        "title": "Unit Types",
+        "summary": "Five factions x twenty trainable unit types."
+      },
+      {
+        "id": "factions",
+        "destination": "Summary",
+        "type": "Int",
+        "source": "factions",
+        "key": "rts.cnc.full.factions",
+        "title": "Factions",
+        "summary": "Playable countries in the C&C full showcase."
+      },
+      {
+        "id": "producers",
+        "destination": "Summary",
+        "type": "Int",
+        "source": "producers",
+        "key": "rts.cnc.full.producers",
+        "title": "Production Buildings",
+        "summary": "Five producer categories per faction."
+      }
+    ]
+  }
+]

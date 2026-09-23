@@ -1,0 +1,13 @@
+{
+  "WindowWidth": 1440,
+  "WindowHeight": 900,
+  "WindowTitle": "Ludots Engine - C&C Full RTS Showcase",
+  "TargetFps": 60,
+  "ModPaths": [
+    "../../../../../../../mods/LudotsCoreMod",
+    "../../../../../../../mods/CoreInputMod",
+    "../../../../../../../mods/EntityCommandPanelMod",
+    "../../../../../../../mods/RtsDemoMod",
+    "../../../../../../../mods/showcases/rts_cnc_full/RtsCncFullShowcaseMod"
+  ]
+}

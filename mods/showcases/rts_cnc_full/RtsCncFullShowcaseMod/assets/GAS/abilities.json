@@ -1,0 +1,3923 @@
+[
+  {
+    "id": "Ability.Rts.CncFull.Hold",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Hold",
+      "iconGlyph": "H",
+      "accentColor": "#6B7280",
+      "hintText": "Idle tactical command slot."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Atlantic.Infantry.RifleSection",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 51,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 51,
+          "template": "Effect.Rts.CncFull.Train.Atlantic.Infantry.RifleSection",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 51
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Rifle Section",
+      "iconGlyph": "INF1",
+      "accentColor": "#3B82F6",
+      "hintText": "Atlantic Directorate infantry production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Atlantic.Infantry.GrenadierTeam",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 69,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 69,
+          "template": "Effect.Rts.CncFull.Train.Atlantic.Infantry.GrenadierTeam",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 69
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Grenadier Team",
+      "iconGlyph": "INF2",
+      "accentColor": "#3B82F6",
+      "hintText": "Atlantic Directorate infantry production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Atlantic.Infantry.CombatEngineer",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 87,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 87,
+          "template": "Effect.Rts.CncFull.Train.Atlantic.Infantry.CombatEngineer",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 87
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Combat Engineer",
+      "iconGlyph": "INF3",
+      "accentColor": "#3B82F6",
+      "hintText": "Atlantic Directorate infantry production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Atlantic.Infantry.CommandoCell",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 105,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 105,
+          "template": "Effect.Rts.CncFull.Train.Atlantic.Infantry.CommandoCell",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 105
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Commando Cell",
+      "iconGlyph": "INF4",
+      "accentColor": "#3B82F6",
+      "hintText": "Atlantic Directorate infantry production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Atlantic.Armor.ScoutRover",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 51,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 51,
+          "template": "Effect.Rts.CncFull.Train.Atlantic.Armor.ScoutRover",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 51
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Scout Rover",
+      "iconGlyph": "ARM1",
+      "accentColor": "#3B82F6",
+      "hintText": "Atlantic Directorate armor production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Atlantic.Armor.BulldogIFV",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 69,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 69,
+          "template": "Effect.Rts.CncFull.Train.Atlantic.Armor.BulldogIFV",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 69
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Bulldog IFV",
+      "iconGlyph": "ARM2",
+      "accentColor": "#3B82F6",
+      "hintText": "Atlantic Directorate armor production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Atlantic.Armor.BattleTank",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 87,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 87,
+          "template": "Effect.Rts.CncFull.Train.Atlantic.Armor.BattleTank",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 87
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Battle Tank",
+      "iconGlyph": "ARM3",
+      "accentColor": "#3B82F6",
+      "hintText": "Atlantic Directorate armor production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Atlantic.Armor.SiegeCrawler",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 105,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 105,
+          "template": "Effect.Rts.CncFull.Train.Atlantic.Armor.SiegeCrawler",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 105
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Siege Crawler",
+      "iconGlyph": "ARM4",
+      "accentColor": "#3B82F6",
+      "hintText": "Atlantic Directorate armor production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Atlantic.Air.ReconDrone",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 51,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 51,
+          "template": "Effect.Rts.CncFull.Train.Atlantic.Air.ReconDrone",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 51
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Recon Drone",
+      "iconGlyph": "AIR1",
+      "accentColor": "#3B82F6",
+      "hintText": "Atlantic Directorate air production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Atlantic.Air.Gunship",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 69,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 69,
+          "template": "Effect.Rts.CncFull.Train.Atlantic.Air.Gunship",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 69
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Gunship",
+      "iconGlyph": "AIR2",
+      "accentColor": "#3B82F6",
+      "hintText": "Atlantic Directorate air production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Atlantic.Air.StrikeBomber",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 87,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 87,
+          "template": "Effect.Rts.CncFull.Train.Atlantic.Air.StrikeBomber",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 87
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Strike Bomber",
+      "iconGlyph": "AIR3",
+      "accentColor": "#3B82F6",
+      "hintText": "Atlantic Directorate air production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Atlantic.Air.AirborneHQ",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 105,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 105,
+          "template": "Effect.Rts.CncFull.Train.Atlantic.Air.AirborneHQ",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 105
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Airborne HQ",
+      "iconGlyph": "AIR4",
+      "accentColor": "#3B82F6",
+      "hintText": "Atlantic Directorate air production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Atlantic.Naval.PatrolBoat",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 51,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 51,
+          "template": "Effect.Rts.CncFull.Train.Atlantic.Naval.PatrolBoat",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 51
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Patrol Boat",
+      "iconGlyph": "SEA1",
+      "accentColor": "#3B82F6",
+      "hintText": "Atlantic Directorate naval production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Atlantic.Naval.MissileFrigate",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 69,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 69,
+          "template": "Effect.Rts.CncFull.Train.Atlantic.Naval.MissileFrigate",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 69
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Missile Frigate",
+      "iconGlyph": "SEA2",
+      "accentColor": "#3B82F6",
+      "hintText": "Atlantic Directorate naval production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Atlantic.Naval.Submersible",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 87,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 87,
+          "template": "Effect.Rts.CncFull.Train.Atlantic.Naval.Submersible",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 87
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Submersible",
+      "iconGlyph": "SEA3",
+      "accentColor": "#3B82F6",
+      "hintText": "Atlantic Directorate naval production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Atlantic.Naval.CarrierTender",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 105,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 105,
+          "template": "Effect.Rts.CncFull.Train.Atlantic.Naval.CarrierTender",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 105
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Carrier Tender",
+      "iconGlyph": "SEA4",
+      "accentColor": "#3B82F6",
+      "hintText": "Atlantic Directorate naval production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Atlantic.Support.MobileRadar",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 51,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 51,
+          "template": "Effect.Rts.CncFull.Train.Atlantic.Support.MobileRadar",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 51
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Mobile Radar",
+      "iconGlyph": "SUP1",
+      "accentColor": "#3B82F6",
+      "hintText": "Atlantic Directorate support production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Atlantic.Support.RepairRig",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 69,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 69,
+          "template": "Effect.Rts.CncFull.Train.Atlantic.Support.RepairRig",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 69
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Repair Rig",
+      "iconGlyph": "SUP2",
+      "accentColor": "#3B82F6",
+      "hintText": "Atlantic Directorate support production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Atlantic.Support.ArtilleryBattery",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 87,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 87,
+          "template": "Effect.Rts.CncFull.Train.Atlantic.Support.ArtilleryBattery",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 87
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Artillery Battery",
+      "iconGlyph": "SUP3",
+      "accentColor": "#3B82F6",
+      "hintText": "Atlantic Directorate support production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Atlantic.Support.SuperweaponTeam",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 105,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 105,
+          "template": "Effect.Rts.CncFull.Train.Atlantic.Support.SuperweaponTeam",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 105
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Superweapon Team",
+      "iconGlyph": "SUP4",
+      "accentColor": "#3B82F6",
+      "hintText": "Atlantic Directorate support production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Volkov.Infantry.RifleSection",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 54,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 54,
+          "template": "Effect.Rts.CncFull.Train.Volkov.Infantry.RifleSection",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 54
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Rifle Section",
+      "iconGlyph": "INF1",
+      "accentColor": "#EF4444",
+      "hintText": "Volkov Union infantry production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Volkov.Infantry.GrenadierTeam",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 72,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 72,
+          "template": "Effect.Rts.CncFull.Train.Volkov.Infantry.GrenadierTeam",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 72
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Grenadier Team",
+      "iconGlyph": "INF2",
+      "accentColor": "#EF4444",
+      "hintText": "Volkov Union infantry production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Volkov.Infantry.CombatEngineer",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Rts.CncFull.Train.Volkov.Infantry.CombatEngineer",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Combat Engineer",
+      "iconGlyph": "INF3",
+      "accentColor": "#EF4444",
+      "hintText": "Volkov Union infantry production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Volkov.Infantry.CommandoCell",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 108,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 108,
+          "template": "Effect.Rts.CncFull.Train.Volkov.Infantry.CommandoCell",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 108
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Commando Cell",
+      "iconGlyph": "INF4",
+      "accentColor": "#EF4444",
+      "hintText": "Volkov Union infantry production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Volkov.Armor.ScoutRover",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 54,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 54,
+          "template": "Effect.Rts.CncFull.Train.Volkov.Armor.ScoutRover",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 54
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Scout Rover",
+      "iconGlyph": "ARM1",
+      "accentColor": "#EF4444",
+      "hintText": "Volkov Union armor production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Volkov.Armor.BulldogIFV",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 72,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 72,
+          "template": "Effect.Rts.CncFull.Train.Volkov.Armor.BulldogIFV",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 72
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Bulldog IFV",
+      "iconGlyph": "ARM2",
+      "accentColor": "#EF4444",
+      "hintText": "Volkov Union armor production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Volkov.Armor.BattleTank",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Rts.CncFull.Train.Volkov.Armor.BattleTank",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Battle Tank",
+      "iconGlyph": "ARM3",
+      "accentColor": "#EF4444",
+      "hintText": "Volkov Union armor production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Volkov.Armor.SiegeCrawler",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 108,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 108,
+          "template": "Effect.Rts.CncFull.Train.Volkov.Armor.SiegeCrawler",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 108
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Siege Crawler",
+      "iconGlyph": "ARM4",
+      "accentColor": "#EF4444",
+      "hintText": "Volkov Union armor production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Volkov.Air.ReconDrone",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 54,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 54,
+          "template": "Effect.Rts.CncFull.Train.Volkov.Air.ReconDrone",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 54
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Recon Drone",
+      "iconGlyph": "AIR1",
+      "accentColor": "#EF4444",
+      "hintText": "Volkov Union air production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Volkov.Air.Gunship",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 72,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 72,
+          "template": "Effect.Rts.CncFull.Train.Volkov.Air.Gunship",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 72
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Gunship",
+      "iconGlyph": "AIR2",
+      "accentColor": "#EF4444",
+      "hintText": "Volkov Union air production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Volkov.Air.StrikeBomber",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Rts.CncFull.Train.Volkov.Air.StrikeBomber",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Strike Bomber",
+      "iconGlyph": "AIR3",
+      "accentColor": "#EF4444",
+      "hintText": "Volkov Union air production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Volkov.Air.AirborneHQ",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 108,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 108,
+          "template": "Effect.Rts.CncFull.Train.Volkov.Air.AirborneHQ",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 108
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Airborne HQ",
+      "iconGlyph": "AIR4",
+      "accentColor": "#EF4444",
+      "hintText": "Volkov Union air production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Volkov.Naval.PatrolBoat",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 54,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 54,
+          "template": "Effect.Rts.CncFull.Train.Volkov.Naval.PatrolBoat",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 54
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Patrol Boat",
+      "iconGlyph": "SEA1",
+      "accentColor": "#EF4444",
+      "hintText": "Volkov Union naval production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Volkov.Naval.MissileFrigate",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 72,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 72,
+          "template": "Effect.Rts.CncFull.Train.Volkov.Naval.MissileFrigate",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 72
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Missile Frigate",
+      "iconGlyph": "SEA2",
+      "accentColor": "#EF4444",
+      "hintText": "Volkov Union naval production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Volkov.Naval.Submersible",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Rts.CncFull.Train.Volkov.Naval.Submersible",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Submersible",
+      "iconGlyph": "SEA3",
+      "accentColor": "#EF4444",
+      "hintText": "Volkov Union naval production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Volkov.Naval.CarrierTender",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 108,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 108,
+          "template": "Effect.Rts.CncFull.Train.Volkov.Naval.CarrierTender",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 108
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Carrier Tender",
+      "iconGlyph": "SEA4",
+      "accentColor": "#EF4444",
+      "hintText": "Volkov Union naval production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Volkov.Support.MobileRadar",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 54,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 54,
+          "template": "Effect.Rts.CncFull.Train.Volkov.Support.MobileRadar",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 54
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Mobile Radar",
+      "iconGlyph": "SUP1",
+      "accentColor": "#EF4444",
+      "hintText": "Volkov Union support production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Volkov.Support.RepairRig",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 72,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 72,
+          "template": "Effect.Rts.CncFull.Train.Volkov.Support.RepairRig",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 72
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Repair Rig",
+      "iconGlyph": "SUP2",
+      "accentColor": "#EF4444",
+      "hintText": "Volkov Union support production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Volkov.Support.ArtilleryBattery",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Rts.CncFull.Train.Volkov.Support.ArtilleryBattery",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Artillery Battery",
+      "iconGlyph": "SUP3",
+      "accentColor": "#EF4444",
+      "hintText": "Volkov Union support production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Volkov.Support.SuperweaponTeam",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 108,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 108,
+          "template": "Effect.Rts.CncFull.Train.Volkov.Support.SuperweaponTeam",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 108
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Superweapon Team",
+      "iconGlyph": "SUP4",
+      "accentColor": "#EF4444",
+      "hintText": "Volkov Union support production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Nile.Infantry.RifleSection",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 57,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 57,
+          "template": "Effect.Rts.CncFull.Train.Nile.Infantry.RifleSection",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 57
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Rifle Section",
+      "iconGlyph": "INF1",
+      "accentColor": "#F59E0B",
+      "hintText": "Nile Compact infantry production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Nile.Infantry.GrenadierTeam",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 75,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 75,
+          "template": "Effect.Rts.CncFull.Train.Nile.Infantry.GrenadierTeam",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 75
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Grenadier Team",
+      "iconGlyph": "INF2",
+      "accentColor": "#F59E0B",
+      "hintText": "Nile Compact infantry production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Nile.Infantry.CombatEngineer",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 93,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 93,
+          "template": "Effect.Rts.CncFull.Train.Nile.Infantry.CombatEngineer",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 93
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Combat Engineer",
+      "iconGlyph": "INF3",
+      "accentColor": "#F59E0B",
+      "hintText": "Nile Compact infantry production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Nile.Infantry.CommandoCell",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 111,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 111,
+          "template": "Effect.Rts.CncFull.Train.Nile.Infantry.CommandoCell",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 111
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Commando Cell",
+      "iconGlyph": "INF4",
+      "accentColor": "#F59E0B",
+      "hintText": "Nile Compact infantry production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Nile.Armor.ScoutRover",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 57,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 57,
+          "template": "Effect.Rts.CncFull.Train.Nile.Armor.ScoutRover",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 57
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Scout Rover",
+      "iconGlyph": "ARM1",
+      "accentColor": "#F59E0B",
+      "hintText": "Nile Compact armor production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Nile.Armor.BulldogIFV",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 75,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 75,
+          "template": "Effect.Rts.CncFull.Train.Nile.Armor.BulldogIFV",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 75
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Bulldog IFV",
+      "iconGlyph": "ARM2",
+      "accentColor": "#F59E0B",
+      "hintText": "Nile Compact armor production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Nile.Armor.BattleTank",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 93,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 93,
+          "template": "Effect.Rts.CncFull.Train.Nile.Armor.BattleTank",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 93
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Battle Tank",
+      "iconGlyph": "ARM3",
+      "accentColor": "#F59E0B",
+      "hintText": "Nile Compact armor production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Nile.Armor.SiegeCrawler",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 111,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 111,
+          "template": "Effect.Rts.CncFull.Train.Nile.Armor.SiegeCrawler",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 111
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Siege Crawler",
+      "iconGlyph": "ARM4",
+      "accentColor": "#F59E0B",
+      "hintText": "Nile Compact armor production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Nile.Air.ReconDrone",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 57,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 57,
+          "template": "Effect.Rts.CncFull.Train.Nile.Air.ReconDrone",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 57
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Recon Drone",
+      "iconGlyph": "AIR1",
+      "accentColor": "#F59E0B",
+      "hintText": "Nile Compact air production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Nile.Air.Gunship",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 75,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 75,
+          "template": "Effect.Rts.CncFull.Train.Nile.Air.Gunship",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 75
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Gunship",
+      "iconGlyph": "AIR2",
+      "accentColor": "#F59E0B",
+      "hintText": "Nile Compact air production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Nile.Air.StrikeBomber",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 93,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 93,
+          "template": "Effect.Rts.CncFull.Train.Nile.Air.StrikeBomber",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 93
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Strike Bomber",
+      "iconGlyph": "AIR3",
+      "accentColor": "#F59E0B",
+      "hintText": "Nile Compact air production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Nile.Air.AirborneHQ",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 111,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 111,
+          "template": "Effect.Rts.CncFull.Train.Nile.Air.AirborneHQ",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 111
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Airborne HQ",
+      "iconGlyph": "AIR4",
+      "accentColor": "#F59E0B",
+      "hintText": "Nile Compact air production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Nile.Naval.PatrolBoat",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 57,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 57,
+          "template": "Effect.Rts.CncFull.Train.Nile.Naval.PatrolBoat",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 57
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Patrol Boat",
+      "iconGlyph": "SEA1",
+      "accentColor": "#F59E0B",
+      "hintText": "Nile Compact naval production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Nile.Naval.MissileFrigate",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 75,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 75,
+          "template": "Effect.Rts.CncFull.Train.Nile.Naval.MissileFrigate",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 75
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Missile Frigate",
+      "iconGlyph": "SEA2",
+      "accentColor": "#F59E0B",
+      "hintText": "Nile Compact naval production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Nile.Naval.Submersible",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 93,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 93,
+          "template": "Effect.Rts.CncFull.Train.Nile.Naval.Submersible",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 93
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Submersible",
+      "iconGlyph": "SEA3",
+      "accentColor": "#F59E0B",
+      "hintText": "Nile Compact naval production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Nile.Naval.CarrierTender",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 111,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 111,
+          "template": "Effect.Rts.CncFull.Train.Nile.Naval.CarrierTender",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 111
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Carrier Tender",
+      "iconGlyph": "SEA4",
+      "accentColor": "#F59E0B",
+      "hintText": "Nile Compact naval production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Nile.Support.MobileRadar",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 57,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 57,
+          "template": "Effect.Rts.CncFull.Train.Nile.Support.MobileRadar",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 57
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Mobile Radar",
+      "iconGlyph": "SUP1",
+      "accentColor": "#F59E0B",
+      "hintText": "Nile Compact support production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Nile.Support.RepairRig",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 75,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 75,
+          "template": "Effect.Rts.CncFull.Train.Nile.Support.RepairRig",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 75
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Repair Rig",
+      "iconGlyph": "SUP2",
+      "accentColor": "#F59E0B",
+      "hintText": "Nile Compact support production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Nile.Support.ArtilleryBattery",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 93,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 93,
+          "template": "Effect.Rts.CncFull.Train.Nile.Support.ArtilleryBattery",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 93
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Artillery Battery",
+      "iconGlyph": "SUP3",
+      "accentColor": "#F59E0B",
+      "hintText": "Nile Compact support production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Nile.Support.SuperweaponTeam",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 111,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 111,
+          "template": "Effect.Rts.CncFull.Train.Nile.Support.SuperweaponTeam",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 111
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Superweapon Team",
+      "iconGlyph": "SUP4",
+      "accentColor": "#F59E0B",
+      "hintText": "Nile Compact support production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Pacific.Infantry.RifleSection",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 60,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 60,
+          "template": "Effect.Rts.CncFull.Train.Pacific.Infantry.RifleSection",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 60
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Rifle Section",
+      "iconGlyph": "INF1",
+      "accentColor": "#10B981",
+      "hintText": "Pacific Combine infantry production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Pacific.Infantry.GrenadierTeam",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 78,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 78,
+          "template": "Effect.Rts.CncFull.Train.Pacific.Infantry.GrenadierTeam",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 78
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Grenadier Team",
+      "iconGlyph": "INF2",
+      "accentColor": "#10B981",
+      "hintText": "Pacific Combine infantry production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Pacific.Infantry.CombatEngineer",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 96,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 96,
+          "template": "Effect.Rts.CncFull.Train.Pacific.Infantry.CombatEngineer",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 96
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Combat Engineer",
+      "iconGlyph": "INF3",
+      "accentColor": "#10B981",
+      "hintText": "Pacific Combine infantry production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Pacific.Infantry.CommandoCell",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 114,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 114,
+          "template": "Effect.Rts.CncFull.Train.Pacific.Infantry.CommandoCell",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 114
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Commando Cell",
+      "iconGlyph": "INF4",
+      "accentColor": "#10B981",
+      "hintText": "Pacific Combine infantry production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Pacific.Armor.ScoutRover",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 60,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 60,
+          "template": "Effect.Rts.CncFull.Train.Pacific.Armor.ScoutRover",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 60
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Scout Rover",
+      "iconGlyph": "ARM1",
+      "accentColor": "#10B981",
+      "hintText": "Pacific Combine armor production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Pacific.Armor.BulldogIFV",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 78,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 78,
+          "template": "Effect.Rts.CncFull.Train.Pacific.Armor.BulldogIFV",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 78
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Bulldog IFV",
+      "iconGlyph": "ARM2",
+      "accentColor": "#10B981",
+      "hintText": "Pacific Combine armor production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Pacific.Armor.BattleTank",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 96,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 96,
+          "template": "Effect.Rts.CncFull.Train.Pacific.Armor.BattleTank",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 96
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Battle Tank",
+      "iconGlyph": "ARM3",
+      "accentColor": "#10B981",
+      "hintText": "Pacific Combine armor production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Pacific.Armor.SiegeCrawler",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 114,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 114,
+          "template": "Effect.Rts.CncFull.Train.Pacific.Armor.SiegeCrawler",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 114
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Siege Crawler",
+      "iconGlyph": "ARM4",
+      "accentColor": "#10B981",
+      "hintText": "Pacific Combine armor production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Pacific.Air.ReconDrone",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 60,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 60,
+          "template": "Effect.Rts.CncFull.Train.Pacific.Air.ReconDrone",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 60
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Recon Drone",
+      "iconGlyph": "AIR1",
+      "accentColor": "#10B981",
+      "hintText": "Pacific Combine air production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Pacific.Air.Gunship",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 78,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 78,
+          "template": "Effect.Rts.CncFull.Train.Pacific.Air.Gunship",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 78
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Gunship",
+      "iconGlyph": "AIR2",
+      "accentColor": "#10B981",
+      "hintText": "Pacific Combine air production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Pacific.Air.StrikeBomber",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 96,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 96,
+          "template": "Effect.Rts.CncFull.Train.Pacific.Air.StrikeBomber",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 96
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Strike Bomber",
+      "iconGlyph": "AIR3",
+      "accentColor": "#10B981",
+      "hintText": "Pacific Combine air production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Pacific.Air.AirborneHQ",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 114,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 114,
+          "template": "Effect.Rts.CncFull.Train.Pacific.Air.AirborneHQ",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 114
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Airborne HQ",
+      "iconGlyph": "AIR4",
+      "accentColor": "#10B981",
+      "hintText": "Pacific Combine air production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Pacific.Naval.PatrolBoat",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 60,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 60,
+          "template": "Effect.Rts.CncFull.Train.Pacific.Naval.PatrolBoat",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 60
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Patrol Boat",
+      "iconGlyph": "SEA1",
+      "accentColor": "#10B981",
+      "hintText": "Pacific Combine naval production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Pacific.Naval.MissileFrigate",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 78,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 78,
+          "template": "Effect.Rts.CncFull.Train.Pacific.Naval.MissileFrigate",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 78
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Missile Frigate",
+      "iconGlyph": "SEA2",
+      "accentColor": "#10B981",
+      "hintText": "Pacific Combine naval production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Pacific.Naval.Submersible",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 96,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 96,
+          "template": "Effect.Rts.CncFull.Train.Pacific.Naval.Submersible",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 96
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Submersible",
+      "iconGlyph": "SEA3",
+      "accentColor": "#10B981",
+      "hintText": "Pacific Combine naval production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Pacific.Naval.CarrierTender",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 114,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 114,
+          "template": "Effect.Rts.CncFull.Train.Pacific.Naval.CarrierTender",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 114
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Carrier Tender",
+      "iconGlyph": "SEA4",
+      "accentColor": "#10B981",
+      "hintText": "Pacific Combine naval production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Pacific.Support.MobileRadar",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 60,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 60,
+          "template": "Effect.Rts.CncFull.Train.Pacific.Support.MobileRadar",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 60
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Mobile Radar",
+      "iconGlyph": "SUP1",
+      "accentColor": "#10B981",
+      "hintText": "Pacific Combine support production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Pacific.Support.RepairRig",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 78,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 78,
+          "template": "Effect.Rts.CncFull.Train.Pacific.Support.RepairRig",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 78
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Repair Rig",
+      "iconGlyph": "SUP2",
+      "accentColor": "#10B981",
+      "hintText": "Pacific Combine support production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Pacific.Support.ArtilleryBattery",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 96,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 96,
+          "template": "Effect.Rts.CncFull.Train.Pacific.Support.ArtilleryBattery",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 96
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Artillery Battery",
+      "iconGlyph": "SUP3",
+      "accentColor": "#10B981",
+      "hintText": "Pacific Combine support production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Pacific.Support.SuperweaponTeam",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 114,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 114,
+          "template": "Effect.Rts.CncFull.Train.Pacific.Support.SuperweaponTeam",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 114
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Superweapon Team",
+      "iconGlyph": "SUP4",
+      "accentColor": "#10B981",
+      "hintText": "Pacific Combine support production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Andes.Infantry.RifleSection",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 63,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 63,
+          "template": "Effect.Rts.CncFull.Train.Andes.Infantry.RifleSection",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 63
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Rifle Section",
+      "iconGlyph": "INF1",
+      "accentColor": "#A855F7",
+      "hintText": "Andes League infantry production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Andes.Infantry.GrenadierTeam",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 81,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 81,
+          "template": "Effect.Rts.CncFull.Train.Andes.Infantry.GrenadierTeam",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 81
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Grenadier Team",
+      "iconGlyph": "INF2",
+      "accentColor": "#A855F7",
+      "hintText": "Andes League infantry production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Andes.Infantry.CombatEngineer",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 99,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 99,
+          "template": "Effect.Rts.CncFull.Train.Andes.Infantry.CombatEngineer",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 99
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Combat Engineer",
+      "iconGlyph": "INF3",
+      "accentColor": "#A855F7",
+      "hintText": "Andes League infantry production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Andes.Infantry.CommandoCell",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 117,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 117,
+          "template": "Effect.Rts.CncFull.Train.Andes.Infantry.CommandoCell",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 117
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Commando Cell",
+      "iconGlyph": "INF4",
+      "accentColor": "#A855F7",
+      "hintText": "Andes League infantry production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Andes.Armor.ScoutRover",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 63,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 63,
+          "template": "Effect.Rts.CncFull.Train.Andes.Armor.ScoutRover",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 63
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Scout Rover",
+      "iconGlyph": "ARM1",
+      "accentColor": "#A855F7",
+      "hintText": "Andes League armor production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Andes.Armor.BulldogIFV",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 81,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 81,
+          "template": "Effect.Rts.CncFull.Train.Andes.Armor.BulldogIFV",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 81
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Bulldog IFV",
+      "iconGlyph": "ARM2",
+      "accentColor": "#A855F7",
+      "hintText": "Andes League armor production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Andes.Armor.BattleTank",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 99,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 99,
+          "template": "Effect.Rts.CncFull.Train.Andes.Armor.BattleTank",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 99
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Battle Tank",
+      "iconGlyph": "ARM3",
+      "accentColor": "#A855F7",
+      "hintText": "Andes League armor production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Andes.Armor.SiegeCrawler",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 117,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 117,
+          "template": "Effect.Rts.CncFull.Train.Andes.Armor.SiegeCrawler",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 117
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Siege Crawler",
+      "iconGlyph": "ARM4",
+      "accentColor": "#A855F7",
+      "hintText": "Andes League armor production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Andes.Air.ReconDrone",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 63,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 63,
+          "template": "Effect.Rts.CncFull.Train.Andes.Air.ReconDrone",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 63
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Recon Drone",
+      "iconGlyph": "AIR1",
+      "accentColor": "#A855F7",
+      "hintText": "Andes League air production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Andes.Air.Gunship",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 81,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 81,
+          "template": "Effect.Rts.CncFull.Train.Andes.Air.Gunship",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 81
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Gunship",
+      "iconGlyph": "AIR2",
+      "accentColor": "#A855F7",
+      "hintText": "Andes League air production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Andes.Air.StrikeBomber",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 99,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 99,
+          "template": "Effect.Rts.CncFull.Train.Andes.Air.StrikeBomber",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 99
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Strike Bomber",
+      "iconGlyph": "AIR3",
+      "accentColor": "#A855F7",
+      "hintText": "Andes League air production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Andes.Air.AirborneHQ",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 117,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 117,
+          "template": "Effect.Rts.CncFull.Train.Andes.Air.AirborneHQ",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 117
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Airborne HQ",
+      "iconGlyph": "AIR4",
+      "accentColor": "#A855F7",
+      "hintText": "Andes League air production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Andes.Naval.PatrolBoat",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 63,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 63,
+          "template": "Effect.Rts.CncFull.Train.Andes.Naval.PatrolBoat",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 63
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Patrol Boat",
+      "iconGlyph": "SEA1",
+      "accentColor": "#A855F7",
+      "hintText": "Andes League naval production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Andes.Naval.MissileFrigate",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 81,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 81,
+          "template": "Effect.Rts.CncFull.Train.Andes.Naval.MissileFrigate",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 81
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Missile Frigate",
+      "iconGlyph": "SEA2",
+      "accentColor": "#A855F7",
+      "hintText": "Andes League naval production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Andes.Naval.Submersible",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 99,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 99,
+          "template": "Effect.Rts.CncFull.Train.Andes.Naval.Submersible",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 99
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Submersible",
+      "iconGlyph": "SEA3",
+      "accentColor": "#A855F7",
+      "hintText": "Andes League naval production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Andes.Naval.CarrierTender",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 117,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 117,
+          "template": "Effect.Rts.CncFull.Train.Andes.Naval.CarrierTender",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 117
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Carrier Tender",
+      "iconGlyph": "SEA4",
+      "accentColor": "#A855F7",
+      "hintText": "Andes League naval production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Andes.Support.MobileRadar",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 63,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 63,
+          "template": "Effect.Rts.CncFull.Train.Andes.Support.MobileRadar",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 63
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Mobile Radar",
+      "iconGlyph": "SUP1",
+      "accentColor": "#A855F7",
+      "hintText": "Andes League support production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Andes.Support.RepairRig",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 81,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 81,
+          "template": "Effect.Rts.CncFull.Train.Andes.Support.RepairRig",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 81
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Repair Rig",
+      "iconGlyph": "SUP2",
+      "accentColor": "#A855F7",
+      "hintText": "Andes League support production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Andes.Support.ArtilleryBattery",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 99,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 99,
+          "template": "Effect.Rts.CncFull.Train.Andes.Support.ArtilleryBattery",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 99
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Artillery Battery",
+      "iconGlyph": "SUP3",
+      "accentColor": "#A855F7",
+      "hintText": "Andes League support production."
+    }
+  },
+  {
+    "id": "Ability.Rts.CncFull.Train.Andes.Support.SuperweaponTeam",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 117,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CncFull.CostTrainingStep",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 117,
+          "template": "Effect.Rts.CncFull.Train.Andes.Support.SuperweaponTeam",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 117
+        }
+      ]
+    },
+    "input": {
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Train Superweapon Team",
+      "iconGlyph": "SUP4",
+      "accentColor": "#A855F7",
+      "hintText": "Andes League support production."
+    }
+  }
+]

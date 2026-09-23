@@ -1,0 +1,8132 @@
+[
+  {
+    "id": "rts_cnc_full_team_anchor",
+    "components": {
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      }
+    }
+  },
+  {
+    "id": "rts_cnc_full_player_anchor",
+    "components": {
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        },
+        "current": {
+          "Credits": 0,
+          "Power": 0,
+          "Ore": 0
+        }
+      }
+    }
+  },
+  {
+    "id": "rts_cnc_full_atlantic_infantry_producer",
+    "components": {
+      "Name": {
+        "Value": "Atlantic Directorate Barracks"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 150,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 190
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        },
+        "current": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Train.Atlantic.Infantry.RifleSection",
+          "Ability.Rts.CncFull.Train.Atlantic.Infantry.GrenadierTeam",
+          "Ability.Rts.CncFull.Train.Atlantic.Infantry.CombatEngineer",
+          "Ability.Rts.CncFull.Train.Atlantic.Infantry.CommandoCell"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_atlantic_infantry_rifle_section",
+    "components": {
+      "Name": {
+        "Value": "Atlantic Directorate Rifle Section"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 227,
+          "Damage": 25,
+          "Range": 420,
+          "MoveSpeed": 620
+        },
+        "current": {
+          "Health": 227,
+          "Damage": 25,
+          "Range": 420,
+          "MoveSpeed": 620
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_atlantic_infantry_grenadier_team",
+    "components": {
+      "Name": {
+        "Value": "Atlantic Directorate Grenadier Team"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 269,
+          "Damage": 33,
+          "Range": 465,
+          "MoveSpeed": 602
+        },
+        "current": {
+          "Health": 269,
+          "Damage": 33,
+          "Range": 465,
+          "MoveSpeed": 602
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_atlantic_infantry_combat_engineer",
+    "components": {
+      "Name": {
+        "Value": "Atlantic Directorate Combat Engineer"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 311,
+          "Damage": 41,
+          "Range": 510,
+          "MoveSpeed": 584
+        },
+        "current": {
+          "Health": 311,
+          "Damage": 41,
+          "Range": 510,
+          "MoveSpeed": 584
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_atlantic_infantry_commando_cell",
+    "components": {
+      "Name": {
+        "Value": "Atlantic Directorate Commando Cell"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 353,
+          "Damage": 49,
+          "Range": 555,
+          "MoveSpeed": 566
+        },
+        "current": {
+          "Health": 353,
+          "Damage": 49,
+          "Range": 555,
+          "MoveSpeed": 566
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_atlantic_armor_producer",
+    "components": {
+      "Name": {
+        "Value": "Atlantic Directorate Motor Pool"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 150,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 190
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        },
+        "current": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Train.Atlantic.Armor.ScoutRover",
+          "Ability.Rts.CncFull.Train.Atlantic.Armor.BulldogIFV",
+          "Ability.Rts.CncFull.Train.Atlantic.Armor.BattleTank",
+          "Ability.Rts.CncFull.Train.Atlantic.Armor.SiegeCrawler"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_atlantic_armor_scout_rover",
+    "components": {
+      "Name": {
+        "Value": "Atlantic Directorate Scout Rover"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 527,
+          "Damage": 65,
+          "Range": 560,
+          "MoveSpeed": 520
+        },
+        "current": {
+          "Health": 527,
+          "Damage": 65,
+          "Range": 560,
+          "MoveSpeed": 520
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_atlantic_armor_bulldog_ifv",
+    "components": {
+      "Name": {
+        "Value": "Atlantic Directorate Bulldog IFV"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 569,
+          "Damage": 73,
+          "Range": 605,
+          "MoveSpeed": 502
+        },
+        "current": {
+          "Health": 569,
+          "Damage": 73,
+          "Range": 605,
+          "MoveSpeed": 502
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_atlantic_armor_battle_tank",
+    "components": {
+      "Name": {
+        "Value": "Atlantic Directorate Battle Tank"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 611,
+          "Damage": 81,
+          "Range": 650,
+          "MoveSpeed": 484
+        },
+        "current": {
+          "Health": 611,
+          "Damage": 81,
+          "Range": 650,
+          "MoveSpeed": 484
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_atlantic_armor_siege_crawler",
+    "components": {
+      "Name": {
+        "Value": "Atlantic Directorate Siege Crawler"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 653,
+          "Damage": 89,
+          "Range": 695,
+          "MoveSpeed": 466
+        },
+        "current": {
+          "Health": 653,
+          "Damage": 89,
+          "Range": 695,
+          "MoveSpeed": 466
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_atlantic_air_producer",
+    "components": {
+      "Name": {
+        "Value": "Atlantic Directorate Airfield"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 150,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 190
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        },
+        "current": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Train.Atlantic.Air.ReconDrone",
+          "Ability.Rts.CncFull.Train.Atlantic.Air.Gunship",
+          "Ability.Rts.CncFull.Train.Atlantic.Air.StrikeBomber",
+          "Ability.Rts.CncFull.Train.Atlantic.Air.AirborneHQ"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_atlantic_air_recon_drone",
+    "components": {
+      "Name": {
+        "Value": "Atlantic Directorate Recon Drone"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 367,
+          "Damage": 79,
+          "Range": 760,
+          "MoveSpeed": 840
+        },
+        "current": {
+          "Health": 367,
+          "Damage": 79,
+          "Range": 760,
+          "MoveSpeed": 840
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_atlantic_air_gunship",
+    "components": {
+      "Name": {
+        "Value": "Atlantic Directorate Gunship"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 409,
+          "Damage": 87,
+          "Range": 805,
+          "MoveSpeed": 822
+        },
+        "current": {
+          "Health": 409,
+          "Damage": 87,
+          "Range": 805,
+          "MoveSpeed": 822
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_atlantic_air_strike_bomber",
+    "components": {
+      "Name": {
+        "Value": "Atlantic Directorate Strike Bomber"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 451,
+          "Damage": 95,
+          "Range": 850,
+          "MoveSpeed": 804
+        },
+        "current": {
+          "Health": 451,
+          "Damage": 95,
+          "Range": 850,
+          "MoveSpeed": 804
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_atlantic_air_airborne_hq",
+    "components": {
+      "Name": {
+        "Value": "Atlantic Directorate Airborne HQ"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 493,
+          "Damage": 103,
+          "Range": 895,
+          "MoveSpeed": 786
+        },
+        "current": {
+          "Health": 493,
+          "Damage": 103,
+          "Range": 895,
+          "MoveSpeed": 786
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_atlantic_naval_producer",
+    "components": {
+      "Name": {
+        "Value": "Atlantic Directorate Shipyard"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 150,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 190
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        },
+        "current": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Train.Atlantic.Naval.PatrolBoat",
+          "Ability.Rts.CncFull.Train.Atlantic.Naval.MissileFrigate",
+          "Ability.Rts.CncFull.Train.Atlantic.Naval.Submersible",
+          "Ability.Rts.CncFull.Train.Atlantic.Naval.CarrierTender"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_atlantic_naval_patrol_boat",
+    "components": {
+      "Name": {
+        "Value": "Atlantic Directorate Patrol Boat"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 647,
+          "Damage": 83,
+          "Range": 820,
+          "MoveSpeed": 460
+        },
+        "current": {
+          "Health": 647,
+          "Damage": 83,
+          "Range": 820,
+          "MoveSpeed": 460
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_atlantic_naval_missile_frigate",
+    "components": {
+      "Name": {
+        "Value": "Atlantic Directorate Missile Frigate"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 689,
+          "Damage": 91,
+          "Range": 865,
+          "MoveSpeed": 442
+        },
+        "current": {
+          "Health": 689,
+          "Damage": 91,
+          "Range": 865,
+          "MoveSpeed": 442
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_atlantic_naval_submersible",
+    "components": {
+      "Name": {
+        "Value": "Atlantic Directorate Submersible"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 731,
+          "Damage": 99,
+          "Range": 910,
+          "MoveSpeed": 424
+        },
+        "current": {
+          "Health": 731,
+          "Damage": 99,
+          "Range": 910,
+          "MoveSpeed": 424
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_atlantic_naval_carrier_tender",
+    "components": {
+      "Name": {
+        "Value": "Atlantic Directorate Carrier Tender"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 773,
+          "Damage": 107,
+          "Range": 955,
+          "MoveSpeed": 406
+        },
+        "current": {
+          "Health": 773,
+          "Damage": 107,
+          "Range": 955,
+          "MoveSpeed": 406
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_atlantic_support_producer",
+    "components": {
+      "Name": {
+        "Value": "Atlantic Directorate Command Lab"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 150,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 190
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        },
+        "current": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Train.Atlantic.Support.MobileRadar",
+          "Ability.Rts.CncFull.Train.Atlantic.Support.RepairRig",
+          "Ability.Rts.CncFull.Train.Atlantic.Support.ArtilleryBattery",
+          "Ability.Rts.CncFull.Train.Atlantic.Support.SuperweaponTeam"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_atlantic_support_mobile_radar",
+    "components": {
+      "Name": {
+        "Value": "Atlantic Directorate Mobile Radar"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 427,
+          "Damage": 49,
+          "Range": 900,
+          "MoveSpeed": 500
+        },
+        "current": {
+          "Health": 427,
+          "Damage": 49,
+          "Range": 900,
+          "MoveSpeed": 500
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_atlantic_support_repair_rig",
+    "components": {
+      "Name": {
+        "Value": "Atlantic Directorate Repair Rig"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 469,
+          "Damage": 57,
+          "Range": 945,
+          "MoveSpeed": 482
+        },
+        "current": {
+          "Health": 469,
+          "Damage": 57,
+          "Range": 945,
+          "MoveSpeed": 482
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_atlantic_support_artillery_battery",
+    "components": {
+      "Name": {
+        "Value": "Atlantic Directorate Artillery Battery"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 511,
+          "Damage": 65,
+          "Range": 990,
+          "MoveSpeed": 464
+        },
+        "current": {
+          "Health": 511,
+          "Damage": 65,
+          "Range": 990,
+          "MoveSpeed": 464
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_atlantic_support_superweapon_team",
+    "components": {
+      "Name": {
+        "Value": "Atlantic Directorate Superweapon Team"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 553,
+          "Damage": 73,
+          "Range": 1035,
+          "MoveSpeed": 446
+        },
+        "current": {
+          "Health": 553,
+          "Damage": 73,
+          "Range": 1035,
+          "MoveSpeed": 446
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_volkov_infantry_producer",
+    "components": {
+      "Name": {
+        "Value": "Volkov Union Barracks"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 2
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 150,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 190
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        },
+        "current": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Train.Volkov.Infantry.RifleSection",
+          "Ability.Rts.CncFull.Train.Volkov.Infantry.GrenadierTeam",
+          "Ability.Rts.CncFull.Train.Volkov.Infantry.CombatEngineer",
+          "Ability.Rts.CncFull.Train.Volkov.Infantry.CommandoCell"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_volkov_infantry_rifle_section",
+    "components": {
+      "Name": {
+        "Value": "Volkov Union Rifle Section"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 2
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 234,
+          "Damage": 26,
+          "Range": 420,
+          "MoveSpeed": 620
+        },
+        "current": {
+          "Health": 234,
+          "Damage": 26,
+          "Range": 420,
+          "MoveSpeed": 620
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_volkov_infantry_grenadier_team",
+    "components": {
+      "Name": {
+        "Value": "Volkov Union Grenadier Team"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 2
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 276,
+          "Damage": 34,
+          "Range": 465,
+          "MoveSpeed": 602
+        },
+        "current": {
+          "Health": 276,
+          "Damage": 34,
+          "Range": 465,
+          "MoveSpeed": 602
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_volkov_infantry_combat_engineer",
+    "components": {
+      "Name": {
+        "Value": "Volkov Union Combat Engineer"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 2
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 318,
+          "Damage": 42,
+          "Range": 510,
+          "MoveSpeed": 584
+        },
+        "current": {
+          "Health": 318,
+          "Damage": 42,
+          "Range": 510,
+          "MoveSpeed": 584
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_volkov_infantry_commando_cell",
+    "components": {
+      "Name": {
+        "Value": "Volkov Union Commando Cell"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 2
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 360,
+          "Damage": 50,
+          "Range": 555,
+          "MoveSpeed": 566
+        },
+        "current": {
+          "Health": 360,
+          "Damage": 50,
+          "Range": 555,
+          "MoveSpeed": 566
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_volkov_armor_producer",
+    "components": {
+      "Name": {
+        "Value": "Volkov Union Motor Pool"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 2
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 150,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 190
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        },
+        "current": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Train.Volkov.Armor.ScoutRover",
+          "Ability.Rts.CncFull.Train.Volkov.Armor.BulldogIFV",
+          "Ability.Rts.CncFull.Train.Volkov.Armor.BattleTank",
+          "Ability.Rts.CncFull.Train.Volkov.Armor.SiegeCrawler"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_volkov_armor_scout_rover",
+    "components": {
+      "Name": {
+        "Value": "Volkov Union Scout Rover"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 2
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 534,
+          "Damage": 66,
+          "Range": 560,
+          "MoveSpeed": 520
+        },
+        "current": {
+          "Health": 534,
+          "Damage": 66,
+          "Range": 560,
+          "MoveSpeed": 520
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_volkov_armor_bulldog_ifv",
+    "components": {
+      "Name": {
+        "Value": "Volkov Union Bulldog IFV"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 2
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 576,
+          "Damage": 74,
+          "Range": 605,
+          "MoveSpeed": 502
+        },
+        "current": {
+          "Health": 576,
+          "Damage": 74,
+          "Range": 605,
+          "MoveSpeed": 502
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_volkov_armor_battle_tank",
+    "components": {
+      "Name": {
+        "Value": "Volkov Union Battle Tank"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 2
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 618,
+          "Damage": 82,
+          "Range": 650,
+          "MoveSpeed": 484
+        },
+        "current": {
+          "Health": 618,
+          "Damage": 82,
+          "Range": 650,
+          "MoveSpeed": 484
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_volkov_armor_siege_crawler",
+    "components": {
+      "Name": {
+        "Value": "Volkov Union Siege Crawler"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 2
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 660,
+          "Damage": 90,
+          "Range": 695,
+          "MoveSpeed": 466
+        },
+        "current": {
+          "Health": 660,
+          "Damage": 90,
+          "Range": 695,
+          "MoveSpeed": 466
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_volkov_air_producer",
+    "components": {
+      "Name": {
+        "Value": "Volkov Union Airfield"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 2
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 150,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 190
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        },
+        "current": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Train.Volkov.Air.ReconDrone",
+          "Ability.Rts.CncFull.Train.Volkov.Air.Gunship",
+          "Ability.Rts.CncFull.Train.Volkov.Air.StrikeBomber",
+          "Ability.Rts.CncFull.Train.Volkov.Air.AirborneHQ"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_volkov_air_recon_drone",
+    "components": {
+      "Name": {
+        "Value": "Volkov Union Recon Drone"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 2
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 374,
+          "Damage": 80,
+          "Range": 760,
+          "MoveSpeed": 840
+        },
+        "current": {
+          "Health": 374,
+          "Damage": 80,
+          "Range": 760,
+          "MoveSpeed": 840
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_volkov_air_gunship",
+    "components": {
+      "Name": {
+        "Value": "Volkov Union Gunship"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 2
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 416,
+          "Damage": 88,
+          "Range": 805,
+          "MoveSpeed": 822
+        },
+        "current": {
+          "Health": 416,
+          "Damage": 88,
+          "Range": 805,
+          "MoveSpeed": 822
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_volkov_air_strike_bomber",
+    "components": {
+      "Name": {
+        "Value": "Volkov Union Strike Bomber"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 2
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 458,
+          "Damage": 96,
+          "Range": 850,
+          "MoveSpeed": 804
+        },
+        "current": {
+          "Health": 458,
+          "Damage": 96,
+          "Range": 850,
+          "MoveSpeed": 804
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_volkov_air_airborne_hq",
+    "components": {
+      "Name": {
+        "Value": "Volkov Union Airborne HQ"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 2
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500,
+          "Damage": 104,
+          "Range": 895,
+          "MoveSpeed": 786
+        },
+        "current": {
+          "Health": 500,
+          "Damage": 104,
+          "Range": 895,
+          "MoveSpeed": 786
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_volkov_naval_producer",
+    "components": {
+      "Name": {
+        "Value": "Volkov Union Shipyard"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 2
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 150,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 190
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        },
+        "current": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Train.Volkov.Naval.PatrolBoat",
+          "Ability.Rts.CncFull.Train.Volkov.Naval.MissileFrigate",
+          "Ability.Rts.CncFull.Train.Volkov.Naval.Submersible",
+          "Ability.Rts.CncFull.Train.Volkov.Naval.CarrierTender"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_volkov_naval_patrol_boat",
+    "components": {
+      "Name": {
+        "Value": "Volkov Union Patrol Boat"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 2
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 654,
+          "Damage": 84,
+          "Range": 820,
+          "MoveSpeed": 460
+        },
+        "current": {
+          "Health": 654,
+          "Damage": 84,
+          "Range": 820,
+          "MoveSpeed": 460
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_volkov_naval_missile_frigate",
+    "components": {
+      "Name": {
+        "Value": "Volkov Union Missile Frigate"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 2
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 696,
+          "Damage": 92,
+          "Range": 865,
+          "MoveSpeed": 442
+        },
+        "current": {
+          "Health": 696,
+          "Damage": 92,
+          "Range": 865,
+          "MoveSpeed": 442
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_volkov_naval_submersible",
+    "components": {
+      "Name": {
+        "Value": "Volkov Union Submersible"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 2
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 738,
+          "Damage": 100,
+          "Range": 910,
+          "MoveSpeed": 424
+        },
+        "current": {
+          "Health": 738,
+          "Damage": 100,
+          "Range": 910,
+          "MoveSpeed": 424
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_volkov_naval_carrier_tender",
+    "components": {
+      "Name": {
+        "Value": "Volkov Union Carrier Tender"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 2
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 780,
+          "Damage": 108,
+          "Range": 955,
+          "MoveSpeed": 406
+        },
+        "current": {
+          "Health": 780,
+          "Damage": 108,
+          "Range": 955,
+          "MoveSpeed": 406
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_volkov_support_producer",
+    "components": {
+      "Name": {
+        "Value": "Volkov Union Command Lab"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 2
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 150,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 190
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        },
+        "current": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Train.Volkov.Support.MobileRadar",
+          "Ability.Rts.CncFull.Train.Volkov.Support.RepairRig",
+          "Ability.Rts.CncFull.Train.Volkov.Support.ArtilleryBattery",
+          "Ability.Rts.CncFull.Train.Volkov.Support.SuperweaponTeam"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_volkov_support_mobile_radar",
+    "components": {
+      "Name": {
+        "Value": "Volkov Union Mobile Radar"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 2
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 434,
+          "Damage": 50,
+          "Range": 900,
+          "MoveSpeed": 500
+        },
+        "current": {
+          "Health": 434,
+          "Damage": 50,
+          "Range": 900,
+          "MoveSpeed": 500
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_volkov_support_repair_rig",
+    "components": {
+      "Name": {
+        "Value": "Volkov Union Repair Rig"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 2
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 476,
+          "Damage": 58,
+          "Range": 945,
+          "MoveSpeed": 482
+        },
+        "current": {
+          "Health": 476,
+          "Damage": 58,
+          "Range": 945,
+          "MoveSpeed": 482
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_volkov_support_artillery_battery",
+    "components": {
+      "Name": {
+        "Value": "Volkov Union Artillery Battery"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 2
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 518,
+          "Damage": 66,
+          "Range": 990,
+          "MoveSpeed": 464
+        },
+        "current": {
+          "Health": 518,
+          "Damage": 66,
+          "Range": 990,
+          "MoveSpeed": 464
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_volkov_support_superweapon_team",
+    "components": {
+      "Name": {
+        "Value": "Volkov Union Superweapon Team"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 2
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 560,
+          "Damage": 74,
+          "Range": 1035,
+          "MoveSpeed": 446
+        },
+        "current": {
+          "Health": 560,
+          "Damage": 74,
+          "Range": 1035,
+          "MoveSpeed": 446
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_nile_infantry_producer",
+    "components": {
+      "Name": {
+        "Value": "Nile Compact Barracks"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 3
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 150,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 190
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        },
+        "current": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Train.Nile.Infantry.RifleSection",
+          "Ability.Rts.CncFull.Train.Nile.Infantry.GrenadierTeam",
+          "Ability.Rts.CncFull.Train.Nile.Infantry.CombatEngineer",
+          "Ability.Rts.CncFull.Train.Nile.Infantry.CommandoCell"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_nile_infantry_rifle_section",
+    "components": {
+      "Name": {
+        "Value": "Nile Compact Rifle Section"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 3
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 241,
+          "Damage": 27,
+          "Range": 420,
+          "MoveSpeed": 620
+        },
+        "current": {
+          "Health": 241,
+          "Damage": 27,
+          "Range": 420,
+          "MoveSpeed": 620
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_nile_infantry_grenadier_team",
+    "components": {
+      "Name": {
+        "Value": "Nile Compact Grenadier Team"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 3
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 283,
+          "Damage": 35,
+          "Range": 465,
+          "MoveSpeed": 602
+        },
+        "current": {
+          "Health": 283,
+          "Damage": 35,
+          "Range": 465,
+          "MoveSpeed": 602
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_nile_infantry_combat_engineer",
+    "components": {
+      "Name": {
+        "Value": "Nile Compact Combat Engineer"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 3
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 325,
+          "Damage": 43,
+          "Range": 510,
+          "MoveSpeed": 584
+        },
+        "current": {
+          "Health": 325,
+          "Damage": 43,
+          "Range": 510,
+          "MoveSpeed": 584
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_nile_infantry_commando_cell",
+    "components": {
+      "Name": {
+        "Value": "Nile Compact Commando Cell"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 3
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 367,
+          "Damage": 51,
+          "Range": 555,
+          "MoveSpeed": 566
+        },
+        "current": {
+          "Health": 367,
+          "Damage": 51,
+          "Range": 555,
+          "MoveSpeed": 566
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_nile_armor_producer",
+    "components": {
+      "Name": {
+        "Value": "Nile Compact Motor Pool"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 3
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 150,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 190
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        },
+        "current": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Train.Nile.Armor.ScoutRover",
+          "Ability.Rts.CncFull.Train.Nile.Armor.BulldogIFV",
+          "Ability.Rts.CncFull.Train.Nile.Armor.BattleTank",
+          "Ability.Rts.CncFull.Train.Nile.Armor.SiegeCrawler"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_nile_armor_scout_rover",
+    "components": {
+      "Name": {
+        "Value": "Nile Compact Scout Rover"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 3
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 541,
+          "Damage": 67,
+          "Range": 560,
+          "MoveSpeed": 520
+        },
+        "current": {
+          "Health": 541,
+          "Damage": 67,
+          "Range": 560,
+          "MoveSpeed": 520
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_nile_armor_bulldog_ifv",
+    "components": {
+      "Name": {
+        "Value": "Nile Compact Bulldog IFV"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 3
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 583,
+          "Damage": 75,
+          "Range": 605,
+          "MoveSpeed": 502
+        },
+        "current": {
+          "Health": 583,
+          "Damage": 75,
+          "Range": 605,
+          "MoveSpeed": 502
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_nile_armor_battle_tank",
+    "components": {
+      "Name": {
+        "Value": "Nile Compact Battle Tank"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 3
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 625,
+          "Damage": 83,
+          "Range": 650,
+          "MoveSpeed": 484
+        },
+        "current": {
+          "Health": 625,
+          "Damage": 83,
+          "Range": 650,
+          "MoveSpeed": 484
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_nile_armor_siege_crawler",
+    "components": {
+      "Name": {
+        "Value": "Nile Compact Siege Crawler"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 3
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 667,
+          "Damage": 91,
+          "Range": 695,
+          "MoveSpeed": 466
+        },
+        "current": {
+          "Health": 667,
+          "Damage": 91,
+          "Range": 695,
+          "MoveSpeed": 466
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_nile_air_producer",
+    "components": {
+      "Name": {
+        "Value": "Nile Compact Airfield"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 3
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 150,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 190
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        },
+        "current": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Train.Nile.Air.ReconDrone",
+          "Ability.Rts.CncFull.Train.Nile.Air.Gunship",
+          "Ability.Rts.CncFull.Train.Nile.Air.StrikeBomber",
+          "Ability.Rts.CncFull.Train.Nile.Air.AirborneHQ"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_nile_air_recon_drone",
+    "components": {
+      "Name": {
+        "Value": "Nile Compact Recon Drone"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 3
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 381,
+          "Damage": 81,
+          "Range": 760,
+          "MoveSpeed": 840
+        },
+        "current": {
+          "Health": 381,
+          "Damage": 81,
+          "Range": 760,
+          "MoveSpeed": 840
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_nile_air_gunship",
+    "components": {
+      "Name": {
+        "Value": "Nile Compact Gunship"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 3
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 423,
+          "Damage": 89,
+          "Range": 805,
+          "MoveSpeed": 822
+        },
+        "current": {
+          "Health": 423,
+          "Damage": 89,
+          "Range": 805,
+          "MoveSpeed": 822
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_nile_air_strike_bomber",
+    "components": {
+      "Name": {
+        "Value": "Nile Compact Strike Bomber"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 3
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 465,
+          "Damage": 97,
+          "Range": 850,
+          "MoveSpeed": 804
+        },
+        "current": {
+          "Health": 465,
+          "Damage": 97,
+          "Range": 850,
+          "MoveSpeed": 804
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_nile_air_airborne_hq",
+    "components": {
+      "Name": {
+        "Value": "Nile Compact Airborne HQ"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 3
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 507,
+          "Damage": 105,
+          "Range": 895,
+          "MoveSpeed": 786
+        },
+        "current": {
+          "Health": 507,
+          "Damage": 105,
+          "Range": 895,
+          "MoveSpeed": 786
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_nile_naval_producer",
+    "components": {
+      "Name": {
+        "Value": "Nile Compact Shipyard"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 3
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 150,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 190
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        },
+        "current": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Train.Nile.Naval.PatrolBoat",
+          "Ability.Rts.CncFull.Train.Nile.Naval.MissileFrigate",
+          "Ability.Rts.CncFull.Train.Nile.Naval.Submersible",
+          "Ability.Rts.CncFull.Train.Nile.Naval.CarrierTender"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_nile_naval_patrol_boat",
+    "components": {
+      "Name": {
+        "Value": "Nile Compact Patrol Boat"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 3
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 661,
+          "Damage": 85,
+          "Range": 820,
+          "MoveSpeed": 460
+        },
+        "current": {
+          "Health": 661,
+          "Damage": 85,
+          "Range": 820,
+          "MoveSpeed": 460
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_nile_naval_missile_frigate",
+    "components": {
+      "Name": {
+        "Value": "Nile Compact Missile Frigate"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 3
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 703,
+          "Damage": 93,
+          "Range": 865,
+          "MoveSpeed": 442
+        },
+        "current": {
+          "Health": 703,
+          "Damage": 93,
+          "Range": 865,
+          "MoveSpeed": 442
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_nile_naval_submersible",
+    "components": {
+      "Name": {
+        "Value": "Nile Compact Submersible"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 3
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 745,
+          "Damage": 101,
+          "Range": 910,
+          "MoveSpeed": 424
+        },
+        "current": {
+          "Health": 745,
+          "Damage": 101,
+          "Range": 910,
+          "MoveSpeed": 424
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_nile_naval_carrier_tender",
+    "components": {
+      "Name": {
+        "Value": "Nile Compact Carrier Tender"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 3
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 787,
+          "Damage": 109,
+          "Range": 955,
+          "MoveSpeed": 406
+        },
+        "current": {
+          "Health": 787,
+          "Damage": 109,
+          "Range": 955,
+          "MoveSpeed": 406
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_nile_support_producer",
+    "components": {
+      "Name": {
+        "Value": "Nile Compact Command Lab"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 3
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 150,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 190
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        },
+        "current": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Train.Nile.Support.MobileRadar",
+          "Ability.Rts.CncFull.Train.Nile.Support.RepairRig",
+          "Ability.Rts.CncFull.Train.Nile.Support.ArtilleryBattery",
+          "Ability.Rts.CncFull.Train.Nile.Support.SuperweaponTeam"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_nile_support_mobile_radar",
+    "components": {
+      "Name": {
+        "Value": "Nile Compact Mobile Radar"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 3
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 441,
+          "Damage": 51,
+          "Range": 900,
+          "MoveSpeed": 500
+        },
+        "current": {
+          "Health": 441,
+          "Damage": 51,
+          "Range": 900,
+          "MoveSpeed": 500
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_nile_support_repair_rig",
+    "components": {
+      "Name": {
+        "Value": "Nile Compact Repair Rig"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 3
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 483,
+          "Damage": 59,
+          "Range": 945,
+          "MoveSpeed": 482
+        },
+        "current": {
+          "Health": 483,
+          "Damage": 59,
+          "Range": 945,
+          "MoveSpeed": 482
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_nile_support_artillery_battery",
+    "components": {
+      "Name": {
+        "Value": "Nile Compact Artillery Battery"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 3
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 525,
+          "Damage": 67,
+          "Range": 990,
+          "MoveSpeed": 464
+        },
+        "current": {
+          "Health": 525,
+          "Damage": 67,
+          "Range": 990,
+          "MoveSpeed": 464
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_nile_support_superweapon_team",
+    "components": {
+      "Name": {
+        "Value": "Nile Compact Superweapon Team"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 3
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 567,
+          "Damage": 75,
+          "Range": 1035,
+          "MoveSpeed": 446
+        },
+        "current": {
+          "Health": 567,
+          "Damage": 75,
+          "Range": 1035,
+          "MoveSpeed": 446
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_pacific_infantry_producer",
+    "components": {
+      "Name": {
+        "Value": "Pacific Combine Barracks"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "PlayerOwner": {
+        "PlayerId": 4
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 150,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 190
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        },
+        "current": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Train.Pacific.Infantry.RifleSection",
+          "Ability.Rts.CncFull.Train.Pacific.Infantry.GrenadierTeam",
+          "Ability.Rts.CncFull.Train.Pacific.Infantry.CombatEngineer",
+          "Ability.Rts.CncFull.Train.Pacific.Infantry.CommandoCell"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_pacific_infantry_rifle_section",
+    "components": {
+      "Name": {
+        "Value": "Pacific Combine Rifle Section"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "PlayerOwner": {
+        "PlayerId": 4
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 248,
+          "Damage": 28,
+          "Range": 420,
+          "MoveSpeed": 620
+        },
+        "current": {
+          "Health": 248,
+          "Damage": 28,
+          "Range": 420,
+          "MoveSpeed": 620
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_pacific_infantry_grenadier_team",
+    "components": {
+      "Name": {
+        "Value": "Pacific Combine Grenadier Team"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "PlayerOwner": {
+        "PlayerId": 4
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 290,
+          "Damage": 36,
+          "Range": 465,
+          "MoveSpeed": 602
+        },
+        "current": {
+          "Health": 290,
+          "Damage": 36,
+          "Range": 465,
+          "MoveSpeed": 602
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_pacific_infantry_combat_engineer",
+    "components": {
+      "Name": {
+        "Value": "Pacific Combine Combat Engineer"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "PlayerOwner": {
+        "PlayerId": 4
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 332,
+          "Damage": 44,
+          "Range": 510,
+          "MoveSpeed": 584
+        },
+        "current": {
+          "Health": 332,
+          "Damage": 44,
+          "Range": 510,
+          "MoveSpeed": 584
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_pacific_infantry_commando_cell",
+    "components": {
+      "Name": {
+        "Value": "Pacific Combine Commando Cell"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "PlayerOwner": {
+        "PlayerId": 4
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 374,
+          "Damage": 52,
+          "Range": 555,
+          "MoveSpeed": 566
+        },
+        "current": {
+          "Health": 374,
+          "Damage": 52,
+          "Range": 555,
+          "MoveSpeed": 566
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_pacific_armor_producer",
+    "components": {
+      "Name": {
+        "Value": "Pacific Combine Motor Pool"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "PlayerOwner": {
+        "PlayerId": 4
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 150,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 190
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        },
+        "current": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Train.Pacific.Armor.ScoutRover",
+          "Ability.Rts.CncFull.Train.Pacific.Armor.BulldogIFV",
+          "Ability.Rts.CncFull.Train.Pacific.Armor.BattleTank",
+          "Ability.Rts.CncFull.Train.Pacific.Armor.SiegeCrawler"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_pacific_armor_scout_rover",
+    "components": {
+      "Name": {
+        "Value": "Pacific Combine Scout Rover"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "PlayerOwner": {
+        "PlayerId": 4
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 548,
+          "Damage": 68,
+          "Range": 560,
+          "MoveSpeed": 520
+        },
+        "current": {
+          "Health": 548,
+          "Damage": 68,
+          "Range": 560,
+          "MoveSpeed": 520
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_pacific_armor_bulldog_ifv",
+    "components": {
+      "Name": {
+        "Value": "Pacific Combine Bulldog IFV"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "PlayerOwner": {
+        "PlayerId": 4
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 590,
+          "Damage": 76,
+          "Range": 605,
+          "MoveSpeed": 502
+        },
+        "current": {
+          "Health": 590,
+          "Damage": 76,
+          "Range": 605,
+          "MoveSpeed": 502
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_pacific_armor_battle_tank",
+    "components": {
+      "Name": {
+        "Value": "Pacific Combine Battle Tank"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "PlayerOwner": {
+        "PlayerId": 4
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 632,
+          "Damage": 84,
+          "Range": 650,
+          "MoveSpeed": 484
+        },
+        "current": {
+          "Health": 632,
+          "Damage": 84,
+          "Range": 650,
+          "MoveSpeed": 484
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_pacific_armor_siege_crawler",
+    "components": {
+      "Name": {
+        "Value": "Pacific Combine Siege Crawler"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "PlayerOwner": {
+        "PlayerId": 4
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 674,
+          "Damage": 92,
+          "Range": 695,
+          "MoveSpeed": 466
+        },
+        "current": {
+          "Health": 674,
+          "Damage": 92,
+          "Range": 695,
+          "MoveSpeed": 466
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_pacific_air_producer",
+    "components": {
+      "Name": {
+        "Value": "Pacific Combine Airfield"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "PlayerOwner": {
+        "PlayerId": 4
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 150,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 190
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        },
+        "current": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Train.Pacific.Air.ReconDrone",
+          "Ability.Rts.CncFull.Train.Pacific.Air.Gunship",
+          "Ability.Rts.CncFull.Train.Pacific.Air.StrikeBomber",
+          "Ability.Rts.CncFull.Train.Pacific.Air.AirborneHQ"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_pacific_air_recon_drone",
+    "components": {
+      "Name": {
+        "Value": "Pacific Combine Recon Drone"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "PlayerOwner": {
+        "PlayerId": 4
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 388,
+          "Damage": 82,
+          "Range": 760,
+          "MoveSpeed": 840
+        },
+        "current": {
+          "Health": 388,
+          "Damage": 82,
+          "Range": 760,
+          "MoveSpeed": 840
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_pacific_air_gunship",
+    "components": {
+      "Name": {
+        "Value": "Pacific Combine Gunship"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "PlayerOwner": {
+        "PlayerId": 4
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 430,
+          "Damage": 90,
+          "Range": 805,
+          "MoveSpeed": 822
+        },
+        "current": {
+          "Health": 430,
+          "Damage": 90,
+          "Range": 805,
+          "MoveSpeed": 822
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_pacific_air_strike_bomber",
+    "components": {
+      "Name": {
+        "Value": "Pacific Combine Strike Bomber"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "PlayerOwner": {
+        "PlayerId": 4
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 472,
+          "Damage": 98,
+          "Range": 850,
+          "MoveSpeed": 804
+        },
+        "current": {
+          "Health": 472,
+          "Damage": 98,
+          "Range": 850,
+          "MoveSpeed": 804
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_pacific_air_airborne_hq",
+    "components": {
+      "Name": {
+        "Value": "Pacific Combine Airborne HQ"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "PlayerOwner": {
+        "PlayerId": 4
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 514,
+          "Damage": 106,
+          "Range": 895,
+          "MoveSpeed": 786
+        },
+        "current": {
+          "Health": 514,
+          "Damage": 106,
+          "Range": 895,
+          "MoveSpeed": 786
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_pacific_naval_producer",
+    "components": {
+      "Name": {
+        "Value": "Pacific Combine Shipyard"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "PlayerOwner": {
+        "PlayerId": 4
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 150,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 190
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        },
+        "current": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Train.Pacific.Naval.PatrolBoat",
+          "Ability.Rts.CncFull.Train.Pacific.Naval.MissileFrigate",
+          "Ability.Rts.CncFull.Train.Pacific.Naval.Submersible",
+          "Ability.Rts.CncFull.Train.Pacific.Naval.CarrierTender"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_pacific_naval_patrol_boat",
+    "components": {
+      "Name": {
+        "Value": "Pacific Combine Patrol Boat"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "PlayerOwner": {
+        "PlayerId": 4
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 668,
+          "Damage": 86,
+          "Range": 820,
+          "MoveSpeed": 460
+        },
+        "current": {
+          "Health": 668,
+          "Damage": 86,
+          "Range": 820,
+          "MoveSpeed": 460
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_pacific_naval_missile_frigate",
+    "components": {
+      "Name": {
+        "Value": "Pacific Combine Missile Frigate"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "PlayerOwner": {
+        "PlayerId": 4
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 710,
+          "Damage": 94,
+          "Range": 865,
+          "MoveSpeed": 442
+        },
+        "current": {
+          "Health": 710,
+          "Damage": 94,
+          "Range": 865,
+          "MoveSpeed": 442
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_pacific_naval_submersible",
+    "components": {
+      "Name": {
+        "Value": "Pacific Combine Submersible"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "PlayerOwner": {
+        "PlayerId": 4
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 752,
+          "Damage": 102,
+          "Range": 910,
+          "MoveSpeed": 424
+        },
+        "current": {
+          "Health": 752,
+          "Damage": 102,
+          "Range": 910,
+          "MoveSpeed": 424
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_pacific_naval_carrier_tender",
+    "components": {
+      "Name": {
+        "Value": "Pacific Combine Carrier Tender"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "PlayerOwner": {
+        "PlayerId": 4
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 794,
+          "Damage": 110,
+          "Range": 955,
+          "MoveSpeed": 406
+        },
+        "current": {
+          "Health": 794,
+          "Damage": 110,
+          "Range": 955,
+          "MoveSpeed": 406
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_pacific_support_producer",
+    "components": {
+      "Name": {
+        "Value": "Pacific Combine Command Lab"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "PlayerOwner": {
+        "PlayerId": 4
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 150,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 190
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        },
+        "current": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Train.Pacific.Support.MobileRadar",
+          "Ability.Rts.CncFull.Train.Pacific.Support.RepairRig",
+          "Ability.Rts.CncFull.Train.Pacific.Support.ArtilleryBattery",
+          "Ability.Rts.CncFull.Train.Pacific.Support.SuperweaponTeam"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_pacific_support_mobile_radar",
+    "components": {
+      "Name": {
+        "Value": "Pacific Combine Mobile Radar"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "PlayerOwner": {
+        "PlayerId": 4
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 448,
+          "Damage": 52,
+          "Range": 900,
+          "MoveSpeed": 500
+        },
+        "current": {
+          "Health": 448,
+          "Damage": 52,
+          "Range": 900,
+          "MoveSpeed": 500
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_pacific_support_repair_rig",
+    "components": {
+      "Name": {
+        "Value": "Pacific Combine Repair Rig"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "PlayerOwner": {
+        "PlayerId": 4
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 490,
+          "Damage": 60,
+          "Range": 945,
+          "MoveSpeed": 482
+        },
+        "current": {
+          "Health": 490,
+          "Damage": 60,
+          "Range": 945,
+          "MoveSpeed": 482
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_pacific_support_artillery_battery",
+    "components": {
+      "Name": {
+        "Value": "Pacific Combine Artillery Battery"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "PlayerOwner": {
+        "PlayerId": 4
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 532,
+          "Damage": 68,
+          "Range": 990,
+          "MoveSpeed": 464
+        },
+        "current": {
+          "Health": 532,
+          "Damage": 68,
+          "Range": 990,
+          "MoveSpeed": 464
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_pacific_support_superweapon_team",
+    "components": {
+      "Name": {
+        "Value": "Pacific Combine Superweapon Team"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "PlayerOwner": {
+        "PlayerId": 4
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 574,
+          "Damage": 76,
+          "Range": 1035,
+          "MoveSpeed": 446
+        },
+        "current": {
+          "Health": 574,
+          "Damage": 76,
+          "Range": 1035,
+          "MoveSpeed": 446
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_andes_infantry_producer",
+    "components": {
+      "Name": {
+        "Value": "Andes League Barracks"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "PlayerOwner": {
+        "PlayerId": 5
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 150,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 190
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        },
+        "current": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Train.Andes.Infantry.RifleSection",
+          "Ability.Rts.CncFull.Train.Andes.Infantry.GrenadierTeam",
+          "Ability.Rts.CncFull.Train.Andes.Infantry.CombatEngineer",
+          "Ability.Rts.CncFull.Train.Andes.Infantry.CommandoCell"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_andes_infantry_rifle_section",
+    "components": {
+      "Name": {
+        "Value": "Andes League Rifle Section"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "PlayerOwner": {
+        "PlayerId": 5
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 255,
+          "Damage": 29,
+          "Range": 420,
+          "MoveSpeed": 620
+        },
+        "current": {
+          "Health": 255,
+          "Damage": 29,
+          "Range": 420,
+          "MoveSpeed": 620
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_andes_infantry_grenadier_team",
+    "components": {
+      "Name": {
+        "Value": "Andes League Grenadier Team"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "PlayerOwner": {
+        "PlayerId": 5
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 297,
+          "Damage": 37,
+          "Range": 465,
+          "MoveSpeed": 602
+        },
+        "current": {
+          "Health": 297,
+          "Damage": 37,
+          "Range": 465,
+          "MoveSpeed": 602
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_andes_infantry_combat_engineer",
+    "components": {
+      "Name": {
+        "Value": "Andes League Combat Engineer"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "PlayerOwner": {
+        "PlayerId": 5
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 339,
+          "Damage": 45,
+          "Range": 510,
+          "MoveSpeed": 584
+        },
+        "current": {
+          "Health": 339,
+          "Damage": 45,
+          "Range": 510,
+          "MoveSpeed": 584
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_andes_infantry_commando_cell",
+    "components": {
+      "Name": {
+        "Value": "Andes League Commando Cell"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "PlayerOwner": {
+        "PlayerId": 5
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 381,
+          "Damage": 53,
+          "Range": 555,
+          "MoveSpeed": 566
+        },
+        "current": {
+          "Health": 381,
+          "Damage": 53,
+          "Range": 555,
+          "MoveSpeed": 566
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_andes_armor_producer",
+    "components": {
+      "Name": {
+        "Value": "Andes League Motor Pool"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "PlayerOwner": {
+        "PlayerId": 5
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 150,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 190
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        },
+        "current": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Train.Andes.Armor.ScoutRover",
+          "Ability.Rts.CncFull.Train.Andes.Armor.BulldogIFV",
+          "Ability.Rts.CncFull.Train.Andes.Armor.BattleTank",
+          "Ability.Rts.CncFull.Train.Andes.Armor.SiegeCrawler"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_andes_armor_scout_rover",
+    "components": {
+      "Name": {
+        "Value": "Andes League Scout Rover"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "PlayerOwner": {
+        "PlayerId": 5
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 555,
+          "Damage": 69,
+          "Range": 560,
+          "MoveSpeed": 520
+        },
+        "current": {
+          "Health": 555,
+          "Damage": 69,
+          "Range": 560,
+          "MoveSpeed": 520
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_andes_armor_bulldog_ifv",
+    "components": {
+      "Name": {
+        "Value": "Andes League Bulldog IFV"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "PlayerOwner": {
+        "PlayerId": 5
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 597,
+          "Damage": 77,
+          "Range": 605,
+          "MoveSpeed": 502
+        },
+        "current": {
+          "Health": 597,
+          "Damage": 77,
+          "Range": 605,
+          "MoveSpeed": 502
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_andes_armor_battle_tank",
+    "components": {
+      "Name": {
+        "Value": "Andes League Battle Tank"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "PlayerOwner": {
+        "PlayerId": 5
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 639,
+          "Damage": 85,
+          "Range": 650,
+          "MoveSpeed": 484
+        },
+        "current": {
+          "Health": 639,
+          "Damage": 85,
+          "Range": 650,
+          "MoveSpeed": 484
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_andes_armor_siege_crawler",
+    "components": {
+      "Name": {
+        "Value": "Andes League Siege Crawler"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "PlayerOwner": {
+        "PlayerId": 5
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 681,
+          "Damage": 93,
+          "Range": 695,
+          "MoveSpeed": 466
+        },
+        "current": {
+          "Health": 681,
+          "Damage": 93,
+          "Range": 695,
+          "MoveSpeed": 466
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_andes_air_producer",
+    "components": {
+      "Name": {
+        "Value": "Andes League Airfield"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "PlayerOwner": {
+        "PlayerId": 5
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 150,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 190
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        },
+        "current": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Train.Andes.Air.ReconDrone",
+          "Ability.Rts.CncFull.Train.Andes.Air.Gunship",
+          "Ability.Rts.CncFull.Train.Andes.Air.StrikeBomber",
+          "Ability.Rts.CncFull.Train.Andes.Air.AirborneHQ"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_andes_air_recon_drone",
+    "components": {
+      "Name": {
+        "Value": "Andes League Recon Drone"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "PlayerOwner": {
+        "PlayerId": 5
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 395,
+          "Damage": 83,
+          "Range": 760,
+          "MoveSpeed": 840
+        },
+        "current": {
+          "Health": 395,
+          "Damage": 83,
+          "Range": 760,
+          "MoveSpeed": 840
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_andes_air_gunship",
+    "components": {
+      "Name": {
+        "Value": "Andes League Gunship"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "PlayerOwner": {
+        "PlayerId": 5
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 437,
+          "Damage": 91,
+          "Range": 805,
+          "MoveSpeed": 822
+        },
+        "current": {
+          "Health": 437,
+          "Damage": 91,
+          "Range": 805,
+          "MoveSpeed": 822
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_andes_air_strike_bomber",
+    "components": {
+      "Name": {
+        "Value": "Andes League Strike Bomber"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "PlayerOwner": {
+        "PlayerId": 5
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 479,
+          "Damage": 99,
+          "Range": 850,
+          "MoveSpeed": 804
+        },
+        "current": {
+          "Health": 479,
+          "Damage": 99,
+          "Range": 850,
+          "MoveSpeed": 804
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_andes_air_airborne_hq",
+    "components": {
+      "Name": {
+        "Value": "Andes League Airborne HQ"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "PlayerOwner": {
+        "PlayerId": 5
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 521,
+          "Damage": 107,
+          "Range": 895,
+          "MoveSpeed": 786
+        },
+        "current": {
+          "Health": 521,
+          "Damage": 107,
+          "Range": 895,
+          "MoveSpeed": 786
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_andes_naval_producer",
+    "components": {
+      "Name": {
+        "Value": "Andes League Shipyard"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "PlayerOwner": {
+        "PlayerId": 5
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 150,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 190
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        },
+        "current": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Train.Andes.Naval.PatrolBoat",
+          "Ability.Rts.CncFull.Train.Andes.Naval.MissileFrigate",
+          "Ability.Rts.CncFull.Train.Andes.Naval.Submersible",
+          "Ability.Rts.CncFull.Train.Andes.Naval.CarrierTender"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_andes_naval_patrol_boat",
+    "components": {
+      "Name": {
+        "Value": "Andes League Patrol Boat"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "PlayerOwner": {
+        "PlayerId": 5
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 675,
+          "Damage": 87,
+          "Range": 820,
+          "MoveSpeed": 460
+        },
+        "current": {
+          "Health": 675,
+          "Damage": 87,
+          "Range": 820,
+          "MoveSpeed": 460
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_andes_naval_missile_frigate",
+    "components": {
+      "Name": {
+        "Value": "Andes League Missile Frigate"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "PlayerOwner": {
+        "PlayerId": 5
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 717,
+          "Damage": 95,
+          "Range": 865,
+          "MoveSpeed": 442
+        },
+        "current": {
+          "Health": 717,
+          "Damage": 95,
+          "Range": 865,
+          "MoveSpeed": 442
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_andes_naval_submersible",
+    "components": {
+      "Name": {
+        "Value": "Andes League Submersible"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "PlayerOwner": {
+        "PlayerId": 5
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 759,
+          "Damage": 103,
+          "Range": 910,
+          "MoveSpeed": 424
+        },
+        "current": {
+          "Health": 759,
+          "Damage": 103,
+          "Range": 910,
+          "MoveSpeed": 424
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_andes_naval_carrier_tender",
+    "components": {
+      "Name": {
+        "Value": "Andes League Carrier Tender"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "PlayerOwner": {
+        "PlayerId": 5
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 801,
+          "Damage": 111,
+          "Range": 955,
+          "MoveSpeed": 406
+        },
+        "current": {
+          "Health": 801,
+          "Damage": 111,
+          "Range": 955,
+          "MoveSpeed": 406
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_andes_support_producer",
+    "components": {
+      "Name": {
+        "Value": "Andes League Command Lab"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "PlayerOwner": {
+        "PlayerId": 5
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 150,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 170,
+        "halfSizeZCm": 190
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        },
+        "current": {
+          "Health": 1800,
+          "Credits": 25000,
+          "Power": 220,
+          "Ore": 2400
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Train.Andes.Support.MobileRadar",
+          "Ability.Rts.CncFull.Train.Andes.Support.RepairRig",
+          "Ability.Rts.CncFull.Train.Andes.Support.ArtilleryBattery",
+          "Ability.Rts.CncFull.Train.Andes.Support.SuperweaponTeam"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_andes_support_mobile_radar",
+    "components": {
+      "Name": {
+        "Value": "Andes League Mobile Radar"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "PlayerOwner": {
+        "PlayerId": 5
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 455,
+          "Damage": 53,
+          "Range": 900,
+          "MoveSpeed": 500
+        },
+        "current": {
+          "Health": 455,
+          "Damage": 53,
+          "Range": 900,
+          "MoveSpeed": 500
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_andes_support_repair_rig",
+    "components": {
+      "Name": {
+        "Value": "Andes League Repair Rig"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "PlayerOwner": {
+        "PlayerId": 5
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 497,
+          "Damage": 61,
+          "Range": 945,
+          "MoveSpeed": 482
+        },
+        "current": {
+          "Health": 497,
+          "Damage": 61,
+          "Range": 945,
+          "MoveSpeed": 482
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_andes_support_artillery_battery",
+    "components": {
+      "Name": {
+        "Value": "Andes League Artillery Battery"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "PlayerOwner": {
+        "PlayerId": 5
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 539,
+          "Damage": 69,
+          "Range": 990,
+          "MoveSpeed": 464
+        },
+        "current": {
+          "Health": 539,
+          "Damage": 69,
+          "Range": 990,
+          "MoveSpeed": 464
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_cnc_full_andes_support_superweapon_team",
+    "components": {
+      "Name": {
+        "Value": "Andes League Superweapon Team"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "PlayerOwner": {
+        "PlayerId": 5
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 70,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 70,
+        "halfSizeYCm": 80,
+        "halfSizeZCm": 70
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 581,
+          "Damage": 77,
+          "Range": 1035,
+          "MoveSpeed": 446
+        },
+        "current": {
+          "Health": 581,
+          "Damage": 77,
+          "Range": 1035,
+          "MoveSpeed": 446
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.CncFull.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  }
+]

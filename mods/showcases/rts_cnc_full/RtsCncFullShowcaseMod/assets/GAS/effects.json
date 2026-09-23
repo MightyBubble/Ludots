@@ -1,0 +1,1618 @@
+[
+  {
+    "id": "Effect.Rts.CncFull.CostTrainingStep",
+    "tags": [
+      "Effect.Rts.CncFull.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -50
+      }
+    ]
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Atlantic.Infantry.RifleSection",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_atlantic_infantry_rifle_section",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Atlantic.Infantry.GrenadierTeam",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_atlantic_infantry_grenadier_team",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Atlantic.Infantry.CombatEngineer",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_atlantic_infantry_combat_engineer",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Atlantic.Infantry.CommandoCell",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_atlantic_infantry_commando_cell",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Atlantic.Armor.ScoutRover",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_atlantic_armor_scout_rover",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Atlantic.Armor.BulldogIFV",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_atlantic_armor_bulldog_ifv",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Atlantic.Armor.BattleTank",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_atlantic_armor_battle_tank",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Atlantic.Armor.SiegeCrawler",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_atlantic_armor_siege_crawler",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Atlantic.Air.ReconDrone",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_atlantic_air_recon_drone",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 520,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Atlantic.Air.Gunship",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_atlantic_air_gunship",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 520,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Atlantic.Air.StrikeBomber",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_atlantic_air_strike_bomber",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 520,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Atlantic.Air.AirborneHQ",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_atlantic_air_airborne_hq",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 520,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Atlantic.Naval.PatrolBoat",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_atlantic_naval_patrol_boat",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Atlantic.Naval.MissileFrigate",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_atlantic_naval_missile_frigate",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Atlantic.Naval.Submersible",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_atlantic_naval_submersible",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Atlantic.Naval.CarrierTender",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_atlantic_naval_carrier_tender",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Atlantic.Support.MobileRadar",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_atlantic_support_mobile_radar",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Atlantic.Support.RepairRig",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_atlantic_support_repair_rig",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Atlantic.Support.ArtilleryBattery",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_atlantic_support_artillery_battery",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Atlantic.Support.SuperweaponTeam",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_atlantic_support_superweapon_team",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Volkov.Infantry.RifleSection",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_volkov_infantry_rifle_section",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Volkov.Infantry.GrenadierTeam",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_volkov_infantry_grenadier_team",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Volkov.Infantry.CombatEngineer",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_volkov_infantry_combat_engineer",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Volkov.Infantry.CommandoCell",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_volkov_infantry_commando_cell",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Volkov.Armor.ScoutRover",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_volkov_armor_scout_rover",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Volkov.Armor.BulldogIFV",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_volkov_armor_bulldog_ifv",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Volkov.Armor.BattleTank",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_volkov_armor_battle_tank",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Volkov.Armor.SiegeCrawler",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_volkov_armor_siege_crawler",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Volkov.Air.ReconDrone",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_volkov_air_recon_drone",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 520,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Volkov.Air.Gunship",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_volkov_air_gunship",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 520,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Volkov.Air.StrikeBomber",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_volkov_air_strike_bomber",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 520,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Volkov.Air.AirborneHQ",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_volkov_air_airborne_hq",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 520,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Volkov.Naval.PatrolBoat",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_volkov_naval_patrol_boat",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Volkov.Naval.MissileFrigate",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_volkov_naval_missile_frigate",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Volkov.Naval.Submersible",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_volkov_naval_submersible",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Volkov.Naval.CarrierTender",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_volkov_naval_carrier_tender",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Volkov.Support.MobileRadar",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_volkov_support_mobile_radar",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Volkov.Support.RepairRig",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_volkov_support_repair_rig",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Volkov.Support.ArtilleryBattery",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_volkov_support_artillery_battery",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Volkov.Support.SuperweaponTeam",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_volkov_support_superweapon_team",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Nile.Infantry.RifleSection",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_nile_infantry_rifle_section",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Nile.Infantry.GrenadierTeam",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_nile_infantry_grenadier_team",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Nile.Infantry.CombatEngineer",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_nile_infantry_combat_engineer",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Nile.Infantry.CommandoCell",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_nile_infantry_commando_cell",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Nile.Armor.ScoutRover",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_nile_armor_scout_rover",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Nile.Armor.BulldogIFV",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_nile_armor_bulldog_ifv",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Nile.Armor.BattleTank",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_nile_armor_battle_tank",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Nile.Armor.SiegeCrawler",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_nile_armor_siege_crawler",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Nile.Air.ReconDrone",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_nile_air_recon_drone",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 520,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Nile.Air.Gunship",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_nile_air_gunship",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 520,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Nile.Air.StrikeBomber",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_nile_air_strike_bomber",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 520,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Nile.Air.AirborneHQ",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_nile_air_airborne_hq",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 520,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Nile.Naval.PatrolBoat",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_nile_naval_patrol_boat",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Nile.Naval.MissileFrigate",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_nile_naval_missile_frigate",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Nile.Naval.Submersible",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_nile_naval_submersible",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Nile.Naval.CarrierTender",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_nile_naval_carrier_tender",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Nile.Support.MobileRadar",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_nile_support_mobile_radar",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Nile.Support.RepairRig",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_nile_support_repair_rig",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Nile.Support.ArtilleryBattery",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_nile_support_artillery_battery",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Nile.Support.SuperweaponTeam",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_nile_support_superweapon_team",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Pacific.Infantry.RifleSection",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_pacific_infantry_rifle_section",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Pacific.Infantry.GrenadierTeam",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_pacific_infantry_grenadier_team",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Pacific.Infantry.CombatEngineer",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_pacific_infantry_combat_engineer",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Pacific.Infantry.CommandoCell",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_pacific_infantry_commando_cell",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Pacific.Armor.ScoutRover",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_pacific_armor_scout_rover",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Pacific.Armor.BulldogIFV",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_pacific_armor_bulldog_ifv",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Pacific.Armor.BattleTank",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_pacific_armor_battle_tank",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Pacific.Armor.SiegeCrawler",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_pacific_armor_siege_crawler",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Pacific.Air.ReconDrone",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_pacific_air_recon_drone",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 520,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Pacific.Air.Gunship",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_pacific_air_gunship",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 520,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Pacific.Air.StrikeBomber",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_pacific_air_strike_bomber",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 520,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Pacific.Air.AirborneHQ",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_pacific_air_airborne_hq",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 520,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Pacific.Naval.PatrolBoat",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_pacific_naval_patrol_boat",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Pacific.Naval.MissileFrigate",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_pacific_naval_missile_frigate",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Pacific.Naval.Submersible",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_pacific_naval_submersible",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Pacific.Naval.CarrierTender",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_pacific_naval_carrier_tender",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Pacific.Support.MobileRadar",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_pacific_support_mobile_radar",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Pacific.Support.RepairRig",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_pacific_support_repair_rig",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Pacific.Support.ArtilleryBattery",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_pacific_support_artillery_battery",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Pacific.Support.SuperweaponTeam",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_pacific_support_superweapon_team",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Andes.Infantry.RifleSection",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_andes_infantry_rifle_section",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Andes.Infantry.GrenadierTeam",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_andes_infantry_grenadier_team",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Andes.Infantry.CombatEngineer",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_andes_infantry_combat_engineer",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Andes.Infantry.CommandoCell",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_andes_infantry_commando_cell",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Andes.Armor.ScoutRover",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_andes_armor_scout_rover",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Andes.Armor.BulldogIFV",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_andes_armor_bulldog_ifv",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Andes.Armor.BattleTank",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_andes_armor_battle_tank",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Andes.Armor.SiegeCrawler",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_andes_armor_siege_crawler",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Andes.Air.ReconDrone",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_andes_air_recon_drone",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 520,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Andes.Air.Gunship",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_andes_air_gunship",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 520,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Andes.Air.StrikeBomber",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_andes_air_strike_bomber",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 520,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Andes.Air.AirborneHQ",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_andes_air_airborne_hq",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 520,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Andes.Naval.PatrolBoat",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_andes_naval_patrol_boat",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Andes.Naval.MissileFrigate",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_andes_naval_missile_frigate",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Andes.Naval.Submersible",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_andes_naval_submersible",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Andes.Naval.CarrierTender",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_andes_naval_carrier_tender",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Andes.Support.MobileRadar",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_andes_support_mobile_radar",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Andes.Support.RepairRig",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_andes_support_repair_rig",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Andes.Support.ArtilleryBattery",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_andes_support_artillery_battery",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.CncFull.Train.Andes.Support.SuperweaponTeam",
+    "tags": [
+      "Effect.Rts.CncFull.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_cnc_full_andes_support_superweapon_team",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 360,
+      "copySourcePlayerOwner": true
+    }
+  }
+]

@@ -1,0 +1,34 @@
+[
+  {
+    "id": "rts_cnc_full_supply_pallet",
+    "purpose": "Stash",
+    "width": 8,
+    "height": 4,
+    "namedSlots": [
+      {
+        "id": "munitions",
+        "label": "Munitions",
+        "requiredAll": [
+          "Item.RtsCncFull.Munitions"
+        ],
+        "singleItemOnly": false
+      },
+      {
+        "id": "power",
+        "label": "Power",
+        "requiredAll": [
+          "Item.RtsCncFull.Power"
+        ],
+        "singleItemOnly": false
+      },
+      {
+        "id": "parts",
+        "label": "Parts",
+        "requiredAll": [
+          "Item.RtsCncFull.Parts"
+        ],
+        "singleItemOnly": false
+      }
+    ]
+  }
+]

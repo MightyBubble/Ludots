@@ -92,6 +92,9 @@
     <None Include="game.rts-cnc-training.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="game.rts-cnc-full.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="game.rts-sc2-training.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

@@ -1,0 +1,9 @@
+{
+  "startupMapId": "rts_cnc_full",
+  "startupSelectedPlayerId": 1,
+  "windowTitle": "Ludots Engine - C&C Full RTS Showcase",
+  "windowWidth": 1440,
+  "windowHeight": 900,
+  "windowResizable": true,
+  "targetFps": 60
+}

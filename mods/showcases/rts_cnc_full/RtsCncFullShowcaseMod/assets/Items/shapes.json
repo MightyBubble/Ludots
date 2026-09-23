@@ -1,0 +1,24 @@
+[
+  {
+    "id": "rts_cnc_full_1x1",
+    "rows": [
+      "#"
+    ],
+    "rotatable": false
+  },
+  {
+    "id": "rts_cnc_full_2x1",
+    "rows": [
+      "##"
+    ],
+    "rotatable": true
+  },
+  {
+    "id": "rts_cnc_full_2x2",
+    "rows": [
+      "##",
+      "##"
+    ],
+    "rotatable": false
+  }
+]
