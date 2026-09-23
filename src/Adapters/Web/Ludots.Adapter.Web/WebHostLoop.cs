@@ -12,6 +12,7 @@ using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Ludots.Platform.Abstractions;
@@ -93,6 +94,13 @@ namespace Ludots.Adapter.Web
             engine.SetService(CoreServiceKeys.UiCaptured, false);
 
             BuildAndSendMeshMap(engine, setup.Transport);
+            IVisualHeightmapRenderSource? terrainSource = ResolveRequiredTerrainSource(engine);
+            int terrainRevision = int.MinValue;
+            if (terrainSource != null)
+            {
+                setup.Transport.SetTerrainSnapshot(TerrainSnapshotEncoder.Encode(terrainSource));
+                terrainRevision = terrainSource.Revision;
+            }
 
             setup.LoopStatus.MarkStarted();
             Log.Info(in LogChannel, $"Web host loop started (target {targetFps} fps, map={config.StartupMapId})");
@@ -129,14 +137,31 @@ namespace Ludots.Adapter.Web
                         engine.SetService(CoreServiceKeys.UiCaptured, uiCaptured);
                         engine.Tick(dt);
 
+                        IVisualHeightmapRenderSource? currentTerrainSource = ResolveRequiredTerrainSource(engine);
+                        if (currentTerrainSource == null)
+                        {
+                            if (terrainSource != null)
+                            {
+                                setup.Transport.ClearTerrainSnapshot();
+                                terrainSource = null;
+                                terrainRevision = int.MinValue;
+                            }
+                        }
+                        else if (!ReferenceEquals(currentTerrainSource, terrainSource) || currentTerrainSource.Revision != terrainRevision)
+                        {
+                            setup.Transport.SetTerrainSnapshot(TerrainSnapshotEncoder.Encode(currentTerrainSource));
+                            terrainSource = currentTerrainSource;
+                            terrainRevision = currentTerrainSource.Revision;
+                        }
+
                         float cameraAlpha = presentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
                         cameraPresenter.Update(engine.GameSession!.Camera, cameraAlpha, renderCameraDebug);
                         hudProjection?.Update(dt);
 
                         if (setup.Transport.HasClients)
                         {
-                            var (data, len) = extractor.CaptureFrame();
-                            setup.Transport.BroadcastFrame(data.AsSpan(0, len));
+                            ReadOnlyMemory<byte> frame = extractor.CaptureFrame();
+                            setup.Transport.BroadcastFrame(frame.Span);
                         }
 
                         if (nowMs - lastDiagMs > 5000)
@@ -220,6 +245,24 @@ namespace Ludots.Adapter.Web
             {
                 throw new InvalidOperationException($"GlobalContext missing: {CoreServiceKeys.ScreenRayProvider}");
             }
+        }
+
+        private static IVisualHeightmapRenderSource? ResolveRequiredTerrainSource(GameEngine engine)
+        {
+            string? declaredAsset = engine.CurrentMapSession?.MapConfig.VisualHeightmapAsset;
+            if (string.IsNullOrWhiteSpace(declaredAsset))
+            {
+                return null;
+            }
+
+            object? service = engine.GetService(CoreServiceKeys.VisualHeightmap);
+            if (service is not IVisualHeightmapRenderSource source)
+            {
+                throw new InvalidOperationException(
+                    $"Map declares visual heightmap '{declaredAsset}', but {CoreServiceKeys.VisualHeightmap} does not provide {nameof(IVisualHeightmapRenderSource)}.");
+            }
+
+            return source;
         }
     }
 }

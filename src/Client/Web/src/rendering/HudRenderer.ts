@@ -1,4 +1,5 @@
 import type { ScreenHudItem, ScreenOverlayItem, DebugLine, DebugCircle, DebugBox, PresentationTextPacket } from '../core/FrameDecoder';
+import type { MinimapMarkerRenderer } from './MinimapMarkerRenderer';
 
 export class HudRenderer {
   private readonly _canvas: HTMLCanvasElement;
@@ -91,30 +92,83 @@ export class HudRenderer {
     }
   }
 
-  drawScreenOverlays(items: ScreenOverlayItem[]): void {
+  drawScreenOverlays(items: ScreenOverlayItem[], minimapMarkers?: MinimapMarkerRenderer): void {
     const ctx = this._ctx;
     const OVERLAY_TEXT = 0;
     const OVERLAY_RECT = 1;
+    const OVERLAY_LINE = 2;
 
     for (const item of items) {
-      if (item.kind === OVERLAY_TEXT) {
-        const fontSize = item.fontSize <= 0 ? 16 : item.fontSize;
-        ctx.font = `${fontSize}px monospace`;
-        ctx.fillStyle = this.rgba(item.cr, item.cg, item.cb, item.ca);
-        const text = this.resolveOverlayText(item);
-        if (text) {
-          ctx.fillText(text, item.x, item.y + fontSize);
-        }
-      } else if (item.kind === OVERLAY_RECT) {
+      if (item.kind === OVERLAY_RECT) {
         if (item.width <= 0 || item.height <= 0) continue;
+        const clipped = this.applyOverlayClip(item);
         ctx.fillStyle = this.rgba(item.bgr, item.bgg, item.bgb, item.bga);
         ctx.fillRect(item.x, item.y, item.width, item.height);
         if (item.ca > 0.01) {
           ctx.strokeStyle = this.rgba(item.cr, item.cg, item.cb, item.ca);
           ctx.strokeRect(item.x, item.y, item.width, item.height);
         }
+        if (clipped) ctx.restore();
       }
     }
+
+    minimapMarkers?.draw(ctx);
+
+    for (const item of items) {
+      if (item.kind !== OVERLAY_LINE || item.thickness <= 0 || item.ca <= 0) continue;
+      const clipped = this.applyOverlayClip(item);
+      ctx.beginPath();
+      ctx.moveTo(item.x, item.y);
+      ctx.lineTo(item.width, item.height);
+      ctx.strokeStyle = this.rgba(item.cr, item.cg, item.cb, item.ca);
+      ctx.lineWidth = item.thickness;
+      ctx.stroke();
+      if (clipped) ctx.restore();
+    }
+
+    for (const item of items) {
+      if (item.kind === OVERLAY_TEXT) {
+        const fontSize = item.fontSize <= 0 ? 16 : item.fontSize;
+        const clipped = this.applyOverlayClip(item);
+        ctx.font = `${fontSize}px monospace`;
+        ctx.fillStyle = this.rgba(item.cr, item.cg, item.cb, item.ca);
+        const text = this.resolveOverlayText(item);
+        if (text) {
+          ctx.fillText(text, item.x, item.y + fontSize);
+        }
+        if (clipped) ctx.restore();
+      }
+    }
+  }
+
+  private applyOverlayClip(item: ScreenOverlayItem): boolean {
+    if (item.clipKind === 0 || item.clipWidth <= 0 || item.clipHeight <= 0) {
+      return false;
+    }
+
+    const ctx = this._ctx;
+    const x = item.clipX;
+    const y = item.clipY;
+    const width = item.clipWidth;
+    const height = item.clipHeight;
+    ctx.save();
+    ctx.beginPath();
+    if (item.clipKind === 1) {
+      ctx.rect(x, y, width, height);
+    } else if (item.clipKind === 2) {
+      ctx.ellipse(x + width * 0.5, y + height * 0.5, width * 0.5, height * 0.5, 0, 0, Math.PI * 2);
+    } else if (item.clipKind === 3) {
+      ctx.moveTo(x + width * 0.5, y);
+      ctx.lineTo(x + width, y + height * 0.5);
+      ctx.lineTo(x + width * 0.5, y + height);
+      ctx.lineTo(x, y + height * 0.5);
+      ctx.closePath();
+    } else {
+      ctx.restore();
+      throw new Error(`Unsupported screen overlay clip kind ${item.clipKind}.`);
+    }
+    ctx.clip();
+    return true;
   }
 
   private rgba(r: number, g: number, b: number, a: number): string {

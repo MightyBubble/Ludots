@@ -5,6 +5,8 @@ namespace Ludots.Adapter.Web.Protocol
         public const byte MsgTypeFrame = 0x01;
         public const byte MsgTypeMeshMap = 0x03;
         public const byte MsgTypeDelta = 0x05;
+        public const byte MsgTypeTerrainSnapshot = 0x06;
+        public const byte MsgTypeTerrainClear = 0x07;
 
         public const byte SectionEnd = 0x00;
         public const byte SectionCamera = 0x01;
@@ -14,6 +16,7 @@ namespace Ludots.Adapter.Web.Protocol
         public const byte SectionScreenHud = 0x05;
         public const byte SectionUiScene = 0x09;
         public const byte SectionScreenOverlay = 0x0A;
+        public const byte SectionMinimapMarkers = 0x0B;
         public const byte SectionDebugLines = 0x10;
         public const byte SectionDebugCircles = 0x11;
         public const byte SectionDebugBoxes = 0x12;
@@ -23,6 +26,20 @@ namespace Ludots.Adapter.Web.Protocol
         public const int SectionHeaderSize = 1 + 2 + 4;
     }
 
+    public static class TerrainSnapshotProtocol
+    {
+        public const ushort Version = 1;
+
+        // type:u8, version:u16, revision:i32, bounds:4*i32,
+        // chunk shape:4*i32, default layer:i32, chunk count:i32
+        public const int HeaderSize = 47;
+
+        // chunk coord:2*i32, revision:i32, bounds:4*i32, sample shape:2*i32,
+        // sample step:2*f32, sample count:i32
+        public const int ChunkHeaderSize = 48;
+        public const int HeightSampleSize = 4;
+    }
+
     public static class WireCameraState
     {
         public const int SizeInBytes = 10 * 4;
@@ -30,7 +47,7 @@ namespace Ludots.Adapter.Web.Protocol
 
     public static class WirePrimitiveDrawItem
     {
-        public const int SizeInBytes = 44;
+        public const int SizeInBytes = 48;
     }
 
     public static class WireGroundOverlayItem
@@ -51,7 +68,13 @@ namespace Ludots.Adapter.Web.Protocol
 
     public static class WireScreenOverlayItem
     {
-        public const int SizeInBytes = 95;
+        public const int SizeInBytes = 116;
+    }
+
+    public static class WireMinimapMarkers
+    {
+        public const int MetadataSizeInBytes = 17;
+        public const int ItemSizeInBytes = 24;
     }
 
     public static class WireDebugLine

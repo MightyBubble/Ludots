@@ -302,7 +302,7 @@ public sealed class LauncherService
         var profile = GetPlatformProfile(platformId);
         var output = new StringBuilder();
 
-        if (string.Equals(profile.Id, LauncherPlatformIds.Web, StringComparison.OrdinalIgnoreCase) &&
+        if (!string.IsNullOrWhiteSpace(profile.ClientProjectDirectory) &&
             Directory.Exists(profile.ClientProjectDirectory))
         {
             if (!Directory.Exists(Path.Combine(profile.ClientProjectDirectory, "node_modules")))
@@ -1185,7 +1185,16 @@ public sealed class LauncherService
                 Path.Combine(_repoRoot, "src", "Client", "Web"),
                 Path.Combine(_repoRoot, "src", "Client", "Web", "dist"),
                 "http://localhost:5200",
-                "launcher.runtime.json")
+                "launcher.runtime.json"),
+            new LauncherPlatformProfile(
+                LauncherPlatformIds.WebGpu,
+                "WebGPU",
+                Path.Combine(_repoRoot, "src", "Apps", "Web", "Ludots.App.Web", "Ludots.App.Web.csproj"),
+                Path.Combine(_repoRoot, "src", "Apps", "Web", "Ludots.App.Web", "bin", "Release", "net8.0"),
+                Path.Combine(_repoRoot, "src", "Client", "WebGpu"),
+                Path.Combine(_repoRoot, "src", "Client", "WebGpu", "dist"),
+                "http://localhost:5201",
+                "webgpu.launcher.runtime.json")
         };
     }
 
@@ -1208,7 +1217,8 @@ public sealed class LauncherService
 
     private static LauncherAdapterDescriptor BuildAdapterDescriptor(LauncherPlatformProfile profile)
     {
-        var isWeb = string.Equals(profile.Id, LauncherPlatformIds.Web, StringComparison.OrdinalIgnoreCase);
+        var isWeb = !string.IsNullOrWhiteSpace(profile.LaunchUrl) ||
+            !string.IsNullOrWhiteSpace(profile.ClientProjectDirectory);
         return new LauncherAdapterDescriptor(
             profile.Id,
             profile.Name,

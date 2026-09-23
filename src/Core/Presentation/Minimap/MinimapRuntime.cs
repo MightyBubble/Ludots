@@ -1373,8 +1373,19 @@ namespace Ludots.Core.Presentation.Minimap
             {
                 Vector2 a = _cameraFrustumScreenPoints[i];
                 Vector2 b = _cameraFrustumScreenPoints[(i + 1) % _cameraFrustumPointCount];
-                AddScreenLine(overlay, a, b, CameraFrustumShadowThickness, shadow, clipShape);
-                AddScreenLine(overlay, a, b, CameraFrustumLineThickness, frustumColor, clipShape);
+                float x0 = a.X;
+                float y0 = a.Y;
+                float x1 = b.X;
+                float y1 = b.Y;
+                if (!TryClipScreenLineToField(ref x0, ref y0, ref x1, ref y1))
+                {
+                    continue;
+                }
+
+                Vector2 clippedA = new(x0, y0);
+                Vector2 clippedB = new(x1, y1);
+                AddScreenLine(overlay, clippedA, clippedB, CameraFrustumShadowThickness, shadow, clipShape);
+                AddScreenLine(overlay, clippedA, clippedB, CameraFrustumLineThickness, frustumColor, clipShape);
             }
 
             if (TryWorldToScreen(_cameraTargetXcm, _cameraTargetYcm, out float targetX, out float targetY))
@@ -1421,7 +1432,7 @@ namespace Ludots.Core.Presentation.Minimap
                 return false;
             }
 
-            ProjectWorldToScreenClamped(worldCm.X, worldCm.Y, out float screenX, out float screenY);
+            ProjectWorldToScreenUnclipped(worldCm.X, worldCm.Y, out float screenX, out float screenY);
             _cameraFrustumScreenPoints[index] = new Vector2(screenX, screenY);
             return true;
         }
@@ -1466,9 +1477,7 @@ namespace Ludots.Core.Presentation.Minimap
                 Vector2 point = _cameraFrustumScreenPoints[i];
                 float x = anchorX + ((point.X - anchorX) * scale);
                 float y = anchorY + ((point.Y - anchorY) * scale);
-                _cameraFrustumScreenPoints[i] = new Vector2(
-                    Math.Clamp(x, _fieldX, _fieldX + _fieldSize - 1),
-                    Math.Clamp(y, _fieldY, _fieldY + _fieldSize - 1));
+                _cameraFrustumScreenPoints[i] = new Vector2(x, y);
             }
         }
 
@@ -1530,25 +1539,6 @@ namespace Ludots.Core.Presentation.Minimap
         private Vector2 MapLocalOffsetToWorld(float localXcm, float localYcm)
         {
             return WorldPlane2D.MapLocalOffsetToWorld(localXcm, localYcm, in _mapRight, in _mapUp);
-        }
-
-        private void ProjectWorldToScreenClamped(float worldXcm, float worldYcm, out float screenX, out float screenY)
-        {
-            WorldPlane2D.ProjectWorldCmToScreenClamped(
-                worldXcm,
-                worldYcm,
-                _centerXcm,
-                _centerYcm,
-                _mapRight.X,
-                _mapRight.Y,
-                _mapUp.X,
-                _mapUp.Y,
-                _halfExtentCm,
-                _fieldX,
-                _fieldY,
-                _fieldSize - 1f,
-                out screenX,
-                out screenY);
         }
 
         private void ProjectWorldToScreenUnclipped(float worldXcm, float worldYcm, out float screenX, out float screenY)

@@ -1,7 +1,9 @@
 using System;
+using System.Buffers;
 using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
@@ -18,8 +20,10 @@ namespace Ludots.Adapter.Web.Streaming
 
         private readonly WebInputBackend _inputBackend;
         private readonly WebViewController _viewController;
+        private readonly WebInteractiveSessionGate _interactiveSessionGate = new();
         private readonly ConcurrentDictionary<string, ClientSession> _sessions = new();
         private volatile byte[]? _meshMapMessage;
+        private volatile byte[]? _terrainSnapshotMessage;
 
         public bool HasClients => !_sessions.IsEmpty;
         public int ClientCount => _sessions.Count;
@@ -54,13 +58,61 @@ namespace Ludots.Adapter.Web.Streaming
             }
 
             _meshMapMessage = buf;
+            BroadcastReliableMessage(buf);
+        }
+
+        public void SetTerrainSnapshot(byte[] message)
+        {
+            if (message == null) throw new ArgumentNullException(nameof(message));
+            if (message.Length < TerrainSnapshotProtocol.HeaderSize || message[0] != FrameProtocol.MsgTypeTerrainSnapshot)
+            {
+                throw new ArgumentException("Terrain snapshot message does not match the web terrain protocol.", nameof(message));
+            }
+
+            _terrainSnapshotMessage = message;
+            BroadcastReliableMessage(message);
+        }
+
+        public void ClearTerrainSnapshot()
+        {
+            if (_terrainSnapshotMessage == null)
+            {
+                return;
+            }
+
+            _terrainSnapshotMessage = null;
+            BroadcastReliableMessage(new[] { FrameProtocol.MsgTypeTerrainClear });
         }
 
         public async Task HandleClientAsync(WebSocket ws, CancellationToken ct)
         {
             string id = Guid.NewGuid().ToString("N")[..8];
             var session = new ClientSession(id, ws);
-            _sessions[id] = session;
+            if (!_interactiveSessionGate.TryAcquire(id))
+            {
+                Log.Info(in LogChannel, $"Client rejected because the interactive session is occupied: {id}");
+                try
+                {
+                    await ws.CloseAsync(
+                        WebSocketCloseStatus.PolicyViolation,
+                        WebInteractiveSessionGate.RejectionReason,
+                        ct);
+                }
+                finally
+                {
+                    session.Dispose();
+                }
+
+                return;
+            }
+
+            if (!_sessions.TryAdd(id, session))
+            {
+                _interactiveSessionGate.Release(id);
+                session.Dispose();
+                throw new InvalidOperationException($"Web session id collision: {id}");
+            }
+
             Log.Info(in LogChannel, $"Client connected: {id}");
 
             try
@@ -68,11 +120,13 @@ namespace Ludots.Adapter.Web.Streaming
                 byte[]? meshMap = _meshMapMessage;
                 if (meshMap != null)
                 {
-                    await ws.SendAsync(
-                        new ArraySegment<byte>(meshMap),
-                        WebSocketMessageType.Binary,
-                        true,
-                        ct);
+                    session.EnqueueReliableMessage(meshMap);
+                }
+
+                byte[]? terrainSnapshot = _terrainSnapshotMessage;
+                if (terrainSnapshot != null)
+                {
+                    session.EnqueueReliableMessage(terrainSnapshot);
                 }
 
                 var receiveTask = ReceiveLoopAsync(session, ct);
@@ -88,6 +142,11 @@ namespace Ludots.Adapter.Web.Streaming
             finally
             {
                 _sessions.TryRemove(id, out _);
+                if (!_interactiveSessionGate.Release(id))
+                {
+                    Log.Info(in LogChannel, $"Client disconnected after losing interactive ownership: {id}");
+                }
+                session.Dispose();
                 Log.Info(in LogChannel, $"Client disconnected: {id} (sent={session.FramesSent} bytes={session.BytesSent} dropped={session.FramesDropped})");
                 if (ws.State == WebSocketState.Open)
                 {
@@ -104,10 +163,17 @@ namespace Ludots.Adapter.Web.Streaming
 
         public void BroadcastFrame(ReadOnlySpan<byte> frameData)
         {
-            byte[] copy = frameData.ToArray();
             foreach (var kvp in _sessions)
             {
-                kvp.Value.EnqueueFrame(copy);
+                kvp.Value.EnqueueFrame(frameData);
+            }
+        }
+
+        private void BroadcastReliableMessage(byte[] message)
+        {
+            foreach (var kvp in _sessions)
+            {
+                kvp.Value.EnqueueReliableMessage(message);
             }
         }
 
@@ -197,15 +263,23 @@ namespace Ludots.Adapter.Web.Streaming
         {
             while (!ct.IsCancellationRequested && session.Socket.State == WebSocketState.Open)
             {
-                byte[]? frame = session.DequeueFrame();
-                if (frame != null)
+                if (session.TryDequeueReliableMessage(out byte[]? reliableMessage))
                 {
                     await session.Socket.SendAsync(
-                        new ArraySegment<byte>(frame),
+                        new ArraySegment<byte>(reliableMessage),
                         WebSocketMessageType.Binary,
                         true,
                         ct);
-                    session.RecordSent(frame.Length);
+                    session.RecordSent(reliableMessage.Length);
+                }
+                else if (session.TryDequeueFrame(out byte[]? frame, out int frameLength))
+                {
+                    await session.Socket.SendAsync(
+                        new ArraySegment<byte>(frame, 0, frameLength),
+                        WebSocketMessageType.Binary,
+                        true,
+                        ct);
+                    session.RecordSent(frameLength);
                 }
                 else
                 {
@@ -230,9 +304,15 @@ namespace Ludots.Adapter.Web.Streaming
             _sessions.Clear();
         }
 
-        private sealed class ClientSession
+        private sealed class ClientSession : IDisposable
         {
-            private volatile byte[]? _pendingFrame;
+            private readonly object _frameGate = new();
+            private readonly Queue<byte[]> _reliableMessages = new();
+            private byte[]? _pendingFrame;
+            private byte[]? _sendingFrame;
+            private int _pendingFrameLength;
+            private bool _hasPendingFrame;
+            private bool _disposed;
 
             public ClientSession(string id, WebSocket socket)
             {
@@ -247,20 +327,115 @@ namespace Ludots.Adapter.Web.Streaming
             public long BytesSent { get; private set; }
             public long FramesDropped { get; private set; }
 
-            public void EnqueueFrame(byte[] frame)
+            public void EnqueueFrame(ReadOnlySpan<byte> frame)
             {
-                if (Interlocked.Exchange(ref _pendingFrame, frame) != null)
+                lock (_frameGate)
                 {
-                    FramesDropped++;
+                    if (_disposed)
+                    {
+                        return;
+                    }
+
+                    if (_pendingFrame == null || _pendingFrame.Length < frame.Length)
+                    {
+                        ReturnBuffer(ref _pendingFrame);
+                        _pendingFrame = ArrayPool<byte>.Shared.Rent(frame.Length);
+                    }
+
+                    frame.CopyTo(_pendingFrame);
+                    _pendingFrameLength = frame.Length;
+                    if (_hasPendingFrame)
+                    {
+                        FramesDropped++;
+                    }
+
+                    _hasPendingFrame = true;
                 }
             }
 
-            public byte[]? DequeueFrame() => Interlocked.Exchange(ref _pendingFrame, null);
+            public void EnqueueReliableMessage(byte[] message)
+            {
+                lock (_frameGate)
+                {
+                    if (_disposed)
+                    {
+                        return;
+                    }
+
+                    _reliableMessages.Enqueue(message);
+                }
+            }
+
+            public bool TryDequeueReliableMessage([NotNullWhen(true)] out byte[]? message)
+            {
+                lock (_frameGate)
+                {
+                    if (_disposed || _reliableMessages.Count == 0)
+                    {
+                        message = null;
+                        return false;
+                    }
+
+                    message = _reliableMessages.Dequeue();
+                    return true;
+                }
+            }
+
+            public bool TryDequeueFrame([NotNullWhen(true)] out byte[]? frame, out int length)
+            {
+                lock (_frameGate)
+                {
+                    if (_disposed || !_hasPendingFrame)
+                    {
+                        frame = null;
+                        length = 0;
+                        return false;
+                    }
+
+                    byte[] pendingFrame = _pendingFrame ?? throw new InvalidOperationException(
+                        "Web frame queue has pending work without an owned buffer.");
+                    _pendingFrame = _sendingFrame;
+                    _sendingFrame = pendingFrame;
+                    frame = pendingFrame;
+                    length = _pendingFrameLength;
+                    _pendingFrameLength = 0;
+                    _hasPendingFrame = false;
+                    return true;
+                }
+            }
 
             public void RecordSent(int bytes)
             {
                 FramesSent++;
                 BytesSent += bytes;
+            }
+
+            public void Dispose()
+            {
+                lock (_frameGate)
+                {
+                    if (_disposed)
+                    {
+                        return;
+                    }
+
+                    _disposed = true;
+                    _reliableMessages.Clear();
+                    _hasPendingFrame = false;
+                    _pendingFrameLength = 0;
+                    ReturnBuffer(ref _pendingFrame);
+                    ReturnBuffer(ref _sendingFrame);
+                }
+            }
+
+            private static void ReturnBuffer(ref byte[]? buffer)
+            {
+                byte[]? owned = buffer;
+                buffer = null;
+                if (owned != null)
+                {
+                    ArrayPool<byte>.Shared.Return(owned);
+                }
             }
         }
     }

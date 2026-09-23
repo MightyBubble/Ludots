@@ -7,6 +7,7 @@ public static class LauncherPlatformIds
 {
     public const string Raylib = "raylib";
     public const string Web = "web";
+    public const string WebGpu = "webgpu";
 }
 
 public sealed record LauncherPlatformProfile(

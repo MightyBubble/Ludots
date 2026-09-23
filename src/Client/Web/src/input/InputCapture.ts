@@ -8,6 +8,7 @@ export class InputCapture {
 
   constructor(canvas: HTMLCanvasElement) {
     this._canvas = canvas;
+    this._canvas.tabIndex = 0;
     this._canvas.style.touchAction = 'none';
     this._bind();
   }
@@ -23,6 +24,7 @@ export class InputCapture {
 
     this._canvas.addEventListener('pointerdown', (e) => {
       e.preventDefault();
+      this._canvas.focus({ preventScroll: true });
       this._canvas.setPointerCapture(e.pointerId);
       this._encoder.onPointerButton(e.button, true, e.clientX, e.clientY, this.viewportWidth(), this.viewportHeight());
     });
@@ -50,11 +52,15 @@ export class InputCapture {
 
     window.addEventListener('keydown', (e) => {
       if (e.repeat) return;
-      this._encoder.onKey(e.code, true);
+      if (this._encoder.onKey(e.code, true)) {
+        e.preventDefault();
+      }
     });
 
     window.addEventListener('keyup', (e) => {
-      this._encoder.onKey(e.code, false);
+      if (this._encoder.onKey(e.code, false)) {
+        e.preventDefault();
+      }
     });
 
     window.addEventListener('blur', () => {

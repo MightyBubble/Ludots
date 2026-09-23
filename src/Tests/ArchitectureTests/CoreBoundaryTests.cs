@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Xml.Linq;
+using Ludots.Launcher.Backend;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Architecture
@@ -30,7 +31,12 @@ namespace Ludots.Tests.Architecture
             {
                 "Raylib",
                 "Ludots.Client.Raylib",
-                "Ludots.Adapter.Raylib"
+                "Ludots.Adapter.Raylib",
+                "WebGpu",
+                "WebGPU",
+                "Silk.NET",
+                "Ludots.Client.WebGpu",
+                "Ludots.Adapter.WebGpu"
             };
 
             var offenders =
@@ -38,6 +44,53 @@ namespace Ludots.Tests.Architecture
                     .ToArray();
 
             Assert.That(offenders, Is.Empty, $"Core should not reference platform SDK/impl projects. Offenders: {string.Join(", ", offenders)}");
+        }
+
+        [Test]
+        public void Launcher_ListsWebGpuAsOfficialAdapter()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-webgpu-platform-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            try
+            {
+                var preferencesPath = Path.Combine(tempDirectory, "preferences.json");
+                var userConfigPath = Path.Combine(tempDirectory, "config.overlay.json");
+                File.WriteAllText(preferencesPath, "{}");
+                File.WriteAllText(userConfigPath, "{}");
+
+                var launcher = new LauncherService(
+                    repoRoot,
+                    Path.Combine(repoRoot, "launcher.config.json"),
+                    Path.Combine(repoRoot, "launcher.presets.json"),
+                    preferencesPath,
+                    userConfigPath);
+
+                var state = launcher.GetState();
+                Assert.That(
+                    state.Platforms.Any(p => string.Equals(p.Id, LauncherPlatformIds.WebGpu, StringComparison.OrdinalIgnoreCase)),
+                    Is.True);
+
+                var plan = launcher.Resolve(
+                    new[] { "mod:LudotsCoreMod" },
+                    LauncherPlatformIds.WebGpu,
+                    LauncherBuildMode.Never).Plan;
+
+                Assert.That(plan.AdapterId, Is.EqualTo(LauncherPlatformIds.WebGpu));
+                Assert.That(plan.Adapter.HostKind, Is.EqualTo("web"));
+                Assert.That(plan.Adapter.BuildPipeline, Is.EqualTo("dotnet+npm"));
+                Assert.That(plan.AppAssemblyPath, Does.Contain("Ludots.App.Web"));
+                Assert.That(plan.LaunchUrl, Is.EqualTo("http://localhost:5201"));
+                Assert.That(plan.Adapter.ClientProjectDirectory.Replace('\\', '/'), Does.Contain("Client/WebGpu"));
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
         }
 
         [Test]

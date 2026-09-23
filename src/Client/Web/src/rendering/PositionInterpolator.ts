@@ -35,15 +35,18 @@ export class PositionInterpolator {
 
     const count = next.length;
     while (this._interpolated.length < count) {
-      this._interpolated.push({ meshAssetId: 1, posX: 0, posY: 0, posZ: 0, scaleX: 1, scaleY: 1, scaleZ: 1, r: 1, g: 1, b: 1, a: 1 });
+      this._interpolated.push({ meshAssetId: 1, posX: 0, posY: 0, posZ: 0, scaleX: 1, scaleY: 1, scaleZ: 1, r: 1, g: 1, b: 1, a: 1, stableId: 0 });
     }
     this._interpolated.length = count;
 
     for (let i = 0; i < count; i++) {
       const n = next[i];
-      const p = i < prev.length ? prev[i] : n;
+      const p = i < prev.length && n.stableId > 0 && prev[i].stableId === n.stableId
+        ? prev[i]
+        : n;
       const out = this._interpolated[i];
       out.meshAssetId = n.meshAssetId;
+      out.stableId = n.stableId;
       out.posX = p.posX + (n.posX - p.posX) * t;
       out.posY = p.posY + (n.posY - p.posY) * t;
       out.posZ = p.posZ + (n.posZ - p.posZ) * t;

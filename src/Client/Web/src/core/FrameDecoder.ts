@@ -29,6 +29,7 @@ export interface PrimitiveItem {
   posX: number; posY: number; posZ: number;
   scaleX: number; scaleY: number; scaleZ: number;
   r: number; g: number; b: number; a: number;
+  stableId: number;
 }
 
 export interface DebugLine {
@@ -75,6 +76,7 @@ export interface PresentationTextPacket {
 export interface ScreenHudItem {
   kind: number;
   sx: number; sy: number;
+  stableId: number;
   c0r: number; c0g: number; c0b: number; c0a: number;
   c1r: number; c1g: number; c1b: number; c1a: number;
   width: number; height: number;
@@ -93,6 +95,9 @@ export interface ScreenOverlayItem {
   fontSize: number;
   cr: number; cg: number; cb: number; ca: number;
   bgr: number; bgg: number; bgb: number; bga: number;
+  thickness: number;
+  clipKind: number;
+  clipX: number; clipY: number; clipWidth: number; clipHeight: number;
   text: string;
   textPacket?: PresentationTextPacket;
   textTemplate?: string;
@@ -118,10 +123,22 @@ export interface DecodedFrame {
   uiScene?: UiScenePayload;
 }
 
+export interface FrameDecoderOptions {
+  decodePrimitives?: boolean;
+  decodeScreenHud?: boolean;
+}
+
 export class FrameDecoder {
   private _prevFrame: DecodedFrame | null = null;
   private _meshMap: MeshMapEntry[] | null = null;
   private _textDecoder = new TextDecoder();
+  private readonly _decodePrimitives: boolean;
+  private readonly _decodeScreenHud: boolean;
+
+  constructor(options: FrameDecoderOptions = {}) {
+    this._decodePrimitives = options.decodePrimitives ?? true;
+    this._decodeScreenHud = options.decodeScreenHud ?? true;
+  }
 
   get meshMap(): MeshMapEntry[] | null { return this._meshMap; }
 
@@ -171,10 +188,10 @@ export class FrameDecoder {
 
       switch (secType) {
         case SEC_CAMERA: p = this.readCamera(frame, v, p); break;
-        case SEC_PRIMITIVES: p = this.readPrimitives(frame, v, p, itemCount); break;
+        case SEC_PRIMITIVES: p = this._decodePrimitives ? this.readPrimitives(frame, v, p, itemCount) : p + byteLen; break;
         case SEC_GROUND_OVERLAYS: p = this.readGroundOverlays(frame, v, p, itemCount); break;
         case SEC_WORLD_HUD: p += byteLen; break;
-        case SEC_SCREEN_HUD: p = this.readScreenHud(frame, v, p, itemCount); break;
+        case SEC_SCREEN_HUD: p = this._decodeScreenHud ? this.readScreenHud(frame, v, p, itemCount) : p + byteLen; break;
         case SEC_UI_SCENE: p = this.readUiScene(frame, v, p); break;
         case SEC_SCREEN_OVERLAY: p = this.readScreenOverlays(frame, v, p, itemCount); break;
         case SEC_DEBUG_LINES: p = this.readDebugLines(frame, v, p, itemCount); break;
@@ -204,11 +221,11 @@ export class FrameDecoder {
 
       switch (secType) {
         case SEC_CAMERA: p = this.readCamera(frame, v, p); break;
-        case SEC_PRIMITIVES_DELTA: p = this.applyPrimitiveDelta(frame, v, p, itemCount); break;
-        case SEC_PRIMITIVES: p = this.readPrimitives(frame, v, p, itemCount); break;
+        case SEC_PRIMITIVES_DELTA: p = this._decodePrimitives ? this.applyPrimitiveDelta(frame, v, p, itemCount) : p + byteLen; break;
+        case SEC_PRIMITIVES: p = this._decodePrimitives ? this.readPrimitives(frame, v, p, itemCount) : p + byteLen; break;
         case SEC_GROUND_OVERLAYS: p = this.readGroundOverlays(frame, v, p, itemCount); break;
         case SEC_WORLD_HUD: p += byteLen; break;
-        case SEC_SCREEN_HUD: p = this.readScreenHud(frame, v, p, itemCount); break;
+        case SEC_SCREEN_HUD: p = this._decodeScreenHud ? this.readScreenHud(frame, v, p, itemCount) : p + byteLen; break;
         case SEC_UI_SCENE: p = this.readUiScene(frame, v, p); break;
         case SEC_SCREEN_OVERLAY: p = this.readScreenOverlays(frame, v, p, itemCount); break;
         case SEC_DEBUG_LINES: p = this.readDebugLines(frame, v, p, itemCount); break;
@@ -240,8 +257,9 @@ export class FrameDecoder {
         posX: v.getFloat32(p + 4, true), posY: v.getFloat32(p + 8, true), posZ: v.getFloat32(p + 12, true),
         scaleX: v.getFloat32(p + 16, true), scaleY: v.getFloat32(p + 20, true), scaleZ: v.getFloat32(p + 24, true),
         r: v.getFloat32(p + 28, true), g: v.getFloat32(p + 32, true), b: v.getFloat32(p + 36, true), a: v.getFloat32(p + 40, true),
+        stableId: v.getInt32(p + 44, true),
       });
-      p += 44;
+      p += 48;
     }
     return p;
   }
@@ -252,7 +270,7 @@ export class FrameDecoder {
 
     if (frame.primitives.length > totalCount) frame.primitives.length = totalCount;
     while (frame.primitives.length < totalCount) {
-      frame.primitives.push({ meshAssetId: 1, posX: 0, posY: 0, posZ: 0, scaleX: 1, scaleY: 1, scaleZ: 1, r: 1, g: 1, b: 1, a: 1 });
+      frame.primitives.push({ meshAssetId: 1, posX: 0, posY: 0, posZ: 0, scaleX: 1, scaleY: 1, scaleZ: 1, r: 1, g: 1, b: 1, a: 1, stableId: 0 });
     }
 
     for (let i = 0; i < changedCount; i++) {
@@ -262,8 +280,9 @@ export class FrameDecoder {
         posX: v.getFloat32(p + 4, true), posY: v.getFloat32(p + 8, true), posZ: v.getFloat32(p + 12, true),
         scaleX: v.getFloat32(p + 16, true), scaleY: v.getFloat32(p + 20, true), scaleZ: v.getFloat32(p + 24, true),
         r: v.getFloat32(p + 28, true), g: v.getFloat32(p + 32, true), b: v.getFloat32(p + 36, true), a: v.getFloat32(p + 40, true),
+        stableId: v.getInt32(p + 44, true),
       };
-      p += 44;
+      p += 48;
     }
     return p;
   }
@@ -292,6 +311,7 @@ export class FrameDecoder {
       items.push({
         kind: v.getUint8(p),
         sx: v.getFloat32(p + 1, true), sy: v.getFloat32(p + 5, true),
+        stableId: v.getInt32(p + 9, true),
         c0r: v.getFloat32(p + 13, true), c0g: v.getFloat32(p + 17, true), c0b: v.getFloat32(p + 21, true), c0a: v.getFloat32(p + 25, true),
         c1r: v.getFloat32(p + 29, true), c1g: v.getFloat32(p + 33, true), c1b: v.getFloat32(p + 37, true), c1a: v.getFloat32(p + 41, true),
         width: v.getFloat32(p + 45, true), height: v.getFloat32(p + 49, true),
@@ -345,11 +365,15 @@ export class FrameDecoder {
         cb: v.getFloat32(p + 29, true), ca: v.getFloat32(p + 33, true),
         bgr: v.getFloat32(p + 37, true), bgg: v.getFloat32(p + 41, true),
         bgb: v.getFloat32(p + 45, true), bga: v.getFloat32(p + 49, true),
+        thickness: v.getInt32(p + 95, true),
+        clipKind: v.getUint8(p + 99),
+        clipX: v.getFloat32(p + 100, true), clipY: v.getFloat32(p + 104, true),
+        clipWidth: v.getFloat32(p + 108, true), clipHeight: v.getFloat32(p + 112, true),
         text: '',
         textPacket,
       });
       stringIds.push(v.getUint16(p + 53, true));
-      p += 95;
+      p += 116;
     }
 
     const stringCount = v.getUint16(p, true); p += 2;

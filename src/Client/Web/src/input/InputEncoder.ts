@@ -26,6 +26,7 @@ export class InputEncoder {
   private _mouseY = 0;
   private _mouseWheel = 0;
   private _keyBits = 0n;
+  private _pendingKeyDownBits = 0n;
   private _hasPointerSample = false;
   private readonly _stateBuffer = new ArrayBuffer(33);
   private readonly _stateView = new DataView(this._stateBuffer);
@@ -65,15 +66,21 @@ export class InputEncoder {
     this.enqueuePointer(POINTER_ACTION_SCROLL, x, y, normalizedX, normalizedY, viewportWidth, viewportHeight);
   }
 
-  onKey(code: string, down: boolean): void {
+  onKey(code: string, down: boolean): boolean {
     const bit = KEY_MAP[code];
     if (bit === undefined) {
-      return;
+      return false;
     }
 
     const mask = 1n << BigInt(bit);
-    if (down) this._keyBits |= mask;
-    else this._keyBits &= ~mask;
+    if (down) {
+      this._keyBits |= mask;
+      this._pendingKeyDownBits |= mask;
+    } else {
+      this._keyBits &= ~mask;
+    }
+
+    return true;
   }
 
   clearPointerSample(): void {
@@ -83,6 +90,7 @@ export class InputEncoder {
 
   clearKeyboardState(): void {
     this._keyBits = 0n;
+    this._pendingKeyDownBits = 0n;
   }
 
   encodeState(viewportWidth: number, viewportHeight: number): ArrayBuffer {
@@ -96,10 +104,12 @@ export class InputEncoder {
     this._stateView.setFloat32(5, this._mouseX, true);
     this._stateView.setFloat32(9, this._mouseY, true);
     this._stateView.setFloat32(13, this._mouseWheel, true);
-    this._stateView.setBigUint64(17, BigInt.asUintN(64, this._keyBits), true);
+    const keyBits = this._keyBits | this._pendingKeyDownBits;
+    this._stateView.setBigUint64(17, BigInt.asUintN(64, keyBits), true);
     this._stateView.setInt32(25, viewportWidth, true);
     this._stateView.setInt32(29, viewportHeight, true);
     this._mouseWheel = 0;
+    this._pendingKeyDownBits = 0n;
     return this._stateBuffer;
   }
 

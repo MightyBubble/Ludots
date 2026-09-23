@@ -4,6 +4,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
 
@@ -16,7 +17,6 @@ namespace Ludots.Adapter.Web.Streaming
         private readonly WebCameraAdapter _cameraAdapter;
         private readonly WebUiRuntimeBridge _uiBridge;
         private uint _frameNumber;
-        private byte[] _snapshot = new byte[256 * 1024];
         private string? _lastUiSceneJson;
         private bool _hasUiSceneSnapshot;
 
@@ -28,7 +28,7 @@ namespace Ludots.Adapter.Web.Streaming
             _fullEncoder = new BinaryFrameEncoder();
         }
 
-        public (byte[] Data, int Length) CaptureFrame()
+        public ReadOnlyMemory<byte> CaptureFrame()
         {
             _frameNumber++;
 
@@ -40,7 +40,7 @@ namespace Ludots.Adapter.Web.Streaming
             var worldHudStrings = _engine.GetService(CoreServiceKeys.PresentationWorldHudStrings);
             DebugDrawCommandBuffer? debugDraw = _engine.GetService(CoreServiceKeys.DebugDrawCommandBuffer);
             ScreenOverlayBuffer? screenOverlay = _engine.GetService(CoreServiceKeys.ScreenOverlayBuffer);
-
+            MinimapScreenMarkerBuffer? minimapMarkers = _engine.GetService(CoreServiceKeys.MinimapScreenMarkerBuffer);
             string? uiSceneJson = null;
             if (_uiBridge.TryConsumeScene(out string? changedSceneJson))
             {
@@ -72,12 +72,10 @@ namespace Ludots.Adapter.Web.Streaming
                 debugDraw,
                 screenOverlay,
                 fullFrameUiScene,
-                skinnedVisuals);
-            int fullLength = _fullEncoder.EncodedLength;
-            EnsureSnapshot(fullLength);
-            _fullEncoder.CopyTo(_snapshot);
+                skinnedVisuals,
+                minimapMarkers);
             ClearConsumedBuffers(screenOverlay);
-            return (_snapshot, fullLength);
+            return _fullEncoder.GetResultMemory();
         }
 
         private static void ClearConsumedBuffers(ScreenOverlayBuffer? screenOverlay)
@@ -85,12 +83,5 @@ namespace Ludots.Adapter.Web.Streaming
             screenOverlay?.Clear();
         }
 
-        private void EnsureSnapshot(int required)
-        {
-            if (_snapshot.Length < required)
-            {
-                _snapshot = new byte[required * 2];
-            }
-        }
     }
 }

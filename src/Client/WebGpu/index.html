@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ludots WebGPU</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #0b0f12; color: #d9f2ea; }
+    canvas { display: block; }
+    #webgpu-canvas {
+      width: 100vw;
+      height: 100vh;
+      background: #0b0f12;
+    }
+    #stats {
+      position: fixed; top: 8px; right: 8px;
+      font: 12px ui-monospace, SFMono-Regular, Consolas, monospace;
+      color: #d9f2ea; background: rgba(4, 8, 10, 0.78);
+      padding: 6px 10px; border: 1px solid rgba(151, 211, 197, 0.35);
+      border-radius: 4px; pointer-events: none; z-index: 20;
+      white-space: pre;
+    }
+    #hud-canvas {
+      position: fixed; top: 0; left: 0;
+      pointer-events: none; z-index: 10;
+    }
+    #ui-canvas {
+      position: fixed; top: 0; left: 0;
+      pointer-events: none; z-index: 15;
+    }
+    #fatal {
+      position: fixed; inset: 0;
+      display: none; align-items: center; justify-content: center;
+      padding: 24px; z-index: 40;
+      background: #0b0f12;
+      color: #f4fbf8;
+      font: 16px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    #fatal.visible { display: flex; }
+    #fatal-message {
+      max-width: 640px;
+      line-height: 1.45;
+      border: 1px solid rgba(239, 93, 78, 0.7);
+      border-radius: 6px;
+      padding: 18px 20px;
+      background: rgba(78, 16, 12, 0.72);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="webgpu-canvas"></canvas>
+  <div id="stats"></div>
+  <canvas id="hud-canvas"></canvas>
+  <canvas id="ui-canvas"></canvas>
+  <div id="fatal"><div id="fatal-message"></div></div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

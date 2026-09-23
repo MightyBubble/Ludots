@@ -113,10 +113,12 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(minimapRuntime.Visible, Is.True, diagnostics);
             Assert.That(minimapRuntime.Preset, Is.EqualTo(MinimapPreset.RtsFullMap), diagnostics);
-            Assert.That(sample.MinimapSnapshot.ZoomBand, Is.EqualTo(MinimapZoomBand.Strategic), diagnostics);
+            Assert.That(sample.MinimapSnapshot.ZoomBand, Is.EqualTo(MinimapZoomBand.Tactical), diagnostics);
             Assert.That(minimapMarkers.Count, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
             Assert.That(minimapScreenMarkers.Count, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
             Assert.That(sample.MinimapSnapshot.VisibleMarkerCount, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
+            AssertInitialMinimapFormationIsReadable(minimapScreenMarkers, diagnostics);
+            AssertCameraFrustumUsesUnclippedGeometryAndClippedEdges(minimapRuntime, minimapScreenMarkers, diagnostics);
             Assert.That(sample.WorldHudBars, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
             Assert.That(sample.WorldHudText, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
             Assert.That(screenHud.BarCount, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
@@ -392,6 +394,15 @@ namespace Ludots.Tests.Presentation
             throw new InvalidOperationException($"System {typeof(TSystem).Name} is not registered in group {group}.");
         }
 
+        private static T GetPrivateField<T>(object instance, string fieldName)
+        {
+            FieldInfo field = instance.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException($"Field {fieldName} is unavailable on {instance.GetType().Name}.");
+            return field.GetValue(instance) is T value
+                ? value
+                : throw new InvalidOperationException($"Field {fieldName} is not {typeof(T).Name}.");
+        }
+
         private static void ApplyHostAssets(GameEngine engine)
         {
             var meshAssets = RequireService(engine, CoreServiceKeys.PresentationMeshAssetRegistry);
@@ -446,7 +457,6 @@ namespace Ludots.Tests.Presentation
                 TickProjectionFrames(engine, hudProjection, 1);
                 lastSample = CaptureProjectionSample(engine, simulation);
                 if (simulation.NavigationAgentCount == expectedAgents &&
-                    lastSample.MinimapSnapshot.ZoomBand == MinimapZoomBand.Strategic &&
                     lastSample.MinimapScreenMarkers >= expectedAgents &&
                     lastSample.MinimapSnapshot.VisibleMarkerCount >= expectedAgents &&
                     lastSample.WorldHudBars >= expectedAgents &&
@@ -556,6 +566,139 @@ namespace Ludots.Tests.Presentation
 
                 hudProjection.Update(FixedDeltaSeconds);
             }
+        }
+
+        private static void AssertInitialMinimapFormationIsReadable(
+            MinimapScreenMarkerBuffer markers,
+            string diagnostics)
+        {
+            Assert.That(markers.Count, Is.GreaterThan(0), diagnostics);
+            float minX = float.PositiveInfinity;
+            float minY = float.PositiveInfinity;
+            float maxX = float.NegativeInfinity;
+            float maxY = float.NegativeInfinity;
+            for (int i = 0; i < markers.Count; i++)
+            {
+                float x = markers.GetScreenX(i);
+                float y = markers.GetScreenY(i);
+                minX = MathF.Min(minX, x);
+                minY = MathF.Min(minY, y);
+                maxX = MathF.Max(maxX, x);
+                maxY = MathF.Max(maxY, y);
+            }
+
+            float spanX = maxX - minX;
+            float spanY = maxY - minY;
+            Assert.That(MathF.Min(spanX, spanY), Is.GreaterThanOrEqualTo(markers.FieldSize * 0.25f), diagnostics);
+            Assert.That(MathF.Max(spanX, spanY), Is.GreaterThanOrEqualTo(markers.FieldSize * 0.35f), diagnostics);
+        }
+
+        private static void AssertCameraFrustumUsesUnclippedGeometryAndClippedEdges(
+            MinimapRuntime runtime,
+            MinimapScreenMarkerBuffer markers,
+            string diagnostics)
+        {
+            const float epsilon = 0.01f;
+            int minX = markers.FieldX;
+            int minY = markers.FieldY;
+            int maxX = markers.FieldX + markers.FieldSize - 1;
+            int maxY = markers.FieldY + markers.FieldSize - 1;
+
+            Vector2[] points = GetPrivateField<Vector2[]>(runtime, "_cameraFrustumScreenPoints");
+            int pointCount = GetPrivateField<int>(runtime, "_cameraFrustumPointCount");
+            Assert.That(pointCount, Is.EqualTo(4), diagnostics);
+            Assert.That(
+                points.AsSpan(0, pointCount).ToArray(),
+                Has.Some.Matches<Vector2>(point =>
+                    point.X < minX - epsilon ||
+                    point.X > maxX + epsilon ||
+                    point.Y < minY - epsilon ||
+                    point.Y > maxY + epsilon),
+                $"Camera footprint must preserve off-map geometry until edge clipping; {diagnostics}");
+
+            int expectedVisibleEdges = 0;
+            for (int i = 0; i < pointCount; i++)
+            {
+                Vector2 a = points[i];
+                Vector2 b = points[(i + 1) % pointCount];
+                if (LineIntersectsRect(a, b, minX, minY, maxX, maxY))
+                {
+                    expectedVisibleEdges++;
+                }
+            }
+
+            var overlay = new ScreenOverlayBuffer();
+            runtime.Render(overlay);
+            int renderedFrustumEdges = 0;
+            ReadOnlySpan<ScreenOverlayItem> items = overlay.GetSpan();
+            for (int i = 0; i < items.Length; i++)
+            {
+                ScreenOverlayItem item = items[i];
+                if (item.Kind != ScreenOverlayItemKind.Line ||
+                    item.Thickness != 3 ||
+                    item.Color.X != 1f ||
+                    item.Color.Y != 0.86f ||
+                    item.Color.Z != 0.30f)
+                {
+                    continue;
+                }
+
+                renderedFrustumEdges++;
+                Assert.That(item.X, Is.InRange(minX, maxX), diagnostics);
+                Assert.That(item.Y, Is.InRange(minY, maxY), diagnostics);
+                Assert.That(item.Width, Is.InRange(minX, maxX), diagnostics);
+                Assert.That(item.Height, Is.InRange(minY, maxY), diagnostics);
+            }
+
+            Assert.That(renderedFrustumEdges, Is.EqualTo(expectedVisibleEdges), diagnostics);
+        }
+
+        private static bool LineIntersectsRect(
+            Vector2 a,
+            Vector2 b,
+            float minX,
+            float minY,
+            float maxX,
+            float maxY)
+        {
+            float deltaX = b.X - a.X;
+            float deltaY = b.Y - a.Y;
+            float entry = 0f;
+            float exit = 1f;
+            return ClipLineAxis(-deltaX, a.X - minX, ref entry, ref exit) &&
+                ClipLineAxis(deltaX, maxX - a.X, ref entry, ref exit) &&
+                ClipLineAxis(-deltaY, a.Y - minY, ref entry, ref exit) &&
+                ClipLineAxis(deltaY, maxY - a.Y, ref entry, ref exit);
+        }
+
+        private static bool ClipLineAxis(float direction, float distance, ref float entry, ref float exit)
+        {
+            if (MathF.Abs(direction) <= 0.0001f)
+            {
+                return distance >= 0f;
+            }
+
+            float ratio = distance / direction;
+            if (direction < 0f)
+            {
+                if (ratio > exit)
+                {
+                    return false;
+                }
+
+                entry = MathF.Max(entry, ratio);
+            }
+            else
+            {
+                if (ratio < entry)
+                {
+                    return false;
+                }
+
+                exit = MathF.Min(exit, ratio);
+            }
+
+            return true;
         }
 
         private static void DriveCommandSourceBoxAcquisition(

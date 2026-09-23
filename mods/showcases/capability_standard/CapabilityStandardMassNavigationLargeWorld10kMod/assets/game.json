@@ -33,7 +33,7 @@
       "lowLodDistanceCm": 20000.0
     },
     "minimap": {
-      "initialZoomNormalized": 0.12,
+      "initialZoomNormalized": 0.20,
       "wheelZoomNormalizedStep": 0.08,
       "buttonZoomNormalizedStep": 0.18,
       "zoomSliderEnabled": true,

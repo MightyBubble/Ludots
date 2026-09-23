@@ -630,7 +630,7 @@ export const useLauncherStore = create<LauncherState>((set, get) => {
         }
 
         if (result.url) {
-          window.open(result.url, "_blank", "noopener,noreferrer");
+          window.location.assign(result.url);
         }
       } catch (error) {
         set({

@@ -54,7 +54,6 @@ public sealed class CapabilityStandardMassNavigationLargeWorld10kModEntry : IMod
 
         runtime.Visible = true;
         runtime.SetRotateWithCamera(false);
-        runtime.UseRtsFullMapPreset();
         return Task.CompletedTask;
     }
 

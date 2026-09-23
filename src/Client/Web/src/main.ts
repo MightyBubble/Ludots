@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 import { FrameDecoder, type DecodedFrame } from './core/FrameDecoder';
+import { MinimapMarkerStream } from './core/MinimapMarkerStream';
 import { InputCapture } from './input/InputCapture';
 import { EntityManager } from './rendering/EntityManager';
 import { HudRenderer } from './rendering/HudRenderer';
+import { MinimapMarkerRenderer } from './rendering/MinimapMarkerRenderer';
 import { GroundOverlayRenderer } from './rendering/GroundOverlayRenderer';
 import { PositionInterpolator } from './rendering/PositionInterpolator';
 import { ReferenceWorldRenderer } from './rendering/ReferenceWorldRenderer';
@@ -29,11 +31,15 @@ scene.add(dirLight);
 const hudCanvas = document.getElementById('hud-canvas') as HTMLCanvasElement;
 const uiCanvas = document.getElementById('ui-canvas') as HTMLCanvasElement;
 const statsEl = document.getElementById('stats')!;
+const fatalEl = document.getElementById('fatal')!;
+const fatalMessageEl = document.getElementById('fatal-message')!;
 
 const decoder = new FrameDecoder();
+const minimapMarkerStream = new MinimapMarkerStream();
 const inputCapture = new InputCapture(renderer.domElement);
 const entityManager = new EntityManager(scene);
 const hudRenderer = new HudRenderer(hudCanvas);
+const minimapMarkerRenderer = new MinimapMarkerRenderer(minimapMarkerStream);
 const groundOverlayRenderer = new GroundOverlayRenderer(scene);
 const interpolator = new PositionInterpolator();
 const referenceWorldRenderer = new ReferenceWorldRenderer(scene);
@@ -48,6 +54,12 @@ let _displayFps = 0;
 let _displayKbps = 0;
 let _meshMapApplied = false;
 
+function showFatal(message: string): void {
+  fatalMessageEl.textContent = message;
+  fatalEl.classList.add('visible');
+  console.error(`[Web] ${message}`);
+}
+
 function connectWebSocket(): void {
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
   const wsUrl = `${protocol}//${location.host}/ws`;
@@ -59,14 +71,19 @@ function connectWebSocket(): void {
     _socket = ws;
   });
 
-  ws.addEventListener('close', () => {
-    console.log('[WS] Disconnected, reconnecting in 2s...');
+  ws.addEventListener('close', (event) => {
     if (_socket === ws) {
       _socket = null;
     }
     _meshMapApplied = false;
     _lastFrame = null;
+    minimapMarkerStream.clear();
     uiOverlay.clear();
+    if (event.code === 1008) {
+      showFatal(event.reason || 'This game is already open in another browser tab. Close that tab, then reload this page.');
+      return;
+    }
+    console.log('[WS] Disconnected, reconnecting in 2s...');
     setTimeout(connectWebSocket, 2000);
   });
 
@@ -77,6 +94,7 @@ function connectWebSocket(): void {
     _bytesReceived += ev.data.byteLength;
 
     const frame = decoder.decode(ev.data);
+    minimapMarkerStream.pushFrame(ev.data);
 
     if (!_meshMapApplied && decoder.meshMap) {
       entityManager.applyMeshMap(decoder.meshMap);
@@ -96,10 +114,10 @@ function flushOutgoingInput(): void {
     return;
   }
 
-  socket.send(inputCapture.encoder.encodeState(window.innerWidth, window.innerHeight));
   for (const message of inputCapture.encoder.drainPointerMessages()) {
     socket.send(message);
   }
+  socket.send(inputCapture.encoder.encodeState(window.innerWidth, window.innerHeight));
 }
 
 function worldToScreen2D(worldX: number, worldY: number): [number, number] | null {
@@ -159,7 +177,7 @@ function animate(): void {
       worldToScreen2D,
     );
     hudRenderer.drawScreenHud(_lastFrame.screenHud);
-    hudRenderer.drawScreenOverlays(_lastFrame.screenOverlays);
+    hudRenderer.drawScreenOverlays(_lastFrame.screenOverlays, minimapMarkerRenderer);
 
     uiOverlay.update(_lastFrame.uiScene);
   }

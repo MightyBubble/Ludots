@@ -1,13 +1,17 @@
+using System.Text.Json;
 using Ludots.Adapter.Web;
 using Ludots.Adapter.Web.Streaming;
-
-var builder = WebApplication.CreateBuilder(args);
-builder.WebHost.UseUrls("http://0.0.0.0:5200");
-
-var app = builder.Build();
+using Ludots.Core.Hosting;
 
 var baseDir = AppDomain.CurrentDomain.BaseDirectory;
 var configFile = args.Length > 0 && !string.IsNullOrWhiteSpace(args[0]) ? args[0] : "launcher.runtime.json";
+var launchOptions = WebServerLaunchOptions.Resolve(baseDir, configFile);
+
+var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.UseUrls(launchOptions.ListenUrl);
+
+var app = builder.Build();
+
 var gameHost = new WebGameHost(baseDir, configFile);
 
 var cts = new CancellationTokenSource();
@@ -45,7 +49,7 @@ _ = gameLoopTask.ContinueWith(
 
 app.UseWebSockets();
 
-var clientPath = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "..", "..", "..", "src", "Client", "Web", "dist"));
+var clientPath = launchOptions.ClientDistributionDirectory;
 if (Directory.Exists(clientPath))
 {
     app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(clientPath) });
@@ -84,12 +88,14 @@ app.Map("/ws", async (HttpContext context) =>
         context.Response.StatusCode = 400;
         return;
     }
+
     var ws = await context.WebSockets.AcceptWebSocketAsync();
     await setup.Transport.HandleClientAsync(ws, cts.Token);
 });
 
-Console.WriteLine($"Web server starting on http://0.0.0.0:5200 ...");
-Console.WriteLine($"Static files: {(Directory.Exists(clientPath) ? clientPath : "NOT FOUND — run 'npx vite build' in src/Client/Web")}");
+Console.WriteLine($"Web server starting on {launchOptions.ListenUrl} ...");
+Console.WriteLine($"Browser launch URL: {launchOptions.LaunchUrl}");
+Console.WriteLine($"Static files: {(Directory.Exists(clientPath) ? clientPath : $"NOT FOUND: {clientPath}")}");
 
 app.Lifetime.ApplicationStopping.Register(() =>
 {
@@ -98,3 +104,138 @@ app.Lifetime.ApplicationStopping.Register(() =>
 });
 
 app.Run();
+
+internal sealed record WebServerLaunchOptions(
+    string ListenUrl,
+    string LaunchUrl,
+    string ClientDistributionDirectory)
+{
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
+    public static WebServerLaunchOptions Resolve(string baseDir, string configFile)
+    {
+        string defaultClientPath = Path.GetFullPath(Path.Combine(
+            baseDir,
+            "..",
+            "..",
+            "..",
+            "..",
+            "..",
+            "..",
+            "..",
+            "src",
+            "Client",
+            "Web",
+            "dist"));
+        var defaultOptions = new WebServerLaunchOptions(
+            "http://0.0.0.0:5200",
+            "http://localhost:5200",
+            defaultClientPath);
+
+        string bootstrapPath = Path.IsPathRooted(configFile)
+            ? Path.GetFullPath(configFile)
+            : Path.GetFullPath(Path.Combine(baseDir, configFile));
+        if (!File.Exists(bootstrapPath))
+        {
+            return defaultOptions;
+        }
+
+        AppBootstrapConfig bootstrap = ReadJson<AppBootstrapConfig>(bootstrapPath, "launcher bootstrap");
+        string? graphPath = ResolveGraphPath(baseDir, bootstrapPath, bootstrap);
+        if (string.IsNullOrWhiteSpace(graphPath))
+        {
+            return defaultOptions;
+        }
+
+        LauncherGraphDocument graph = ReadJson<LauncherGraphDocument>(graphPath, "launcher graph");
+        bool isWebGpu = string.Equals(graph.Adapter.Id, "webgpu", StringComparison.OrdinalIgnoreCase);
+        string launchUrl = graph.Adapter.LaunchUrl;
+        string clientPath = graph.Adapter.ClientDistributionDirectory;
+
+        if (isWebGpu)
+        {
+            if (string.IsNullOrWhiteSpace(launchUrl))
+            {
+                throw new InvalidOperationException("WebGPU launch graph is missing adapter.launchUrl; browser play cannot start.");
+            }
+
+            if (string.IsNullOrWhiteSpace(clientPath))
+            {
+                throw new InvalidOperationException("WebGPU launch graph is missing adapter.clientDistributionDirectory; browser WebGPU client cannot be served.");
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(launchUrl) || string.IsNullOrWhiteSpace(clientPath))
+        {
+            return defaultOptions;
+        }
+
+        clientPath = Path.IsPathRooted(clientPath)
+            ? Path.GetFullPath(clientPath)
+            : Path.GetFullPath(Path.Combine(Path.GetDirectoryName(graphPath) ?? baseDir, clientPath));
+
+        return new WebServerLaunchOptions(
+            ToListenUrl(launchUrl),
+            launchUrl,
+            clientPath);
+    }
+
+    private static string? ResolveGraphPath(string baseDir, string bootstrapPath, AppBootstrapConfig bootstrap)
+    {
+        string? graphPath = ResolveBootstrapRelativePath(baseDir, bootstrapPath, bootstrap.LaunchGraphPath);
+        string? fullGraphPath = ResolveBootstrapRelativePath(baseDir, bootstrapPath, bootstrap.LaunchGraphFullPath);
+        if (graphPath != null &&
+            fullGraphPath != null &&
+            !string.Equals(Path.GetFullPath(graphPath), Path.GetFullPath(fullGraphPath), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"Launcher bootstrap has conflicting launch graph pointers: '{graphPath}' and '{fullGraphPath}'.");
+        }
+
+        string? resolved = fullGraphPath ?? graphPath;
+        if (!string.IsNullOrWhiteSpace(resolved) && !File.Exists(resolved))
+        {
+            throw new FileNotFoundException($"Launch graph not found: {resolved}");
+        }
+
+        return resolved;
+    }
+
+    private static string? ResolveBootstrapRelativePath(string baseDir, string bootstrapPath, string? candidate)
+    {
+        if (string.IsNullOrWhiteSpace(candidate))
+        {
+            return null;
+        }
+
+        return Path.IsPathRooted(candidate)
+            ? Path.GetFullPath(candidate)
+            : Path.GetFullPath(Path.Combine(Path.GetDirectoryName(bootstrapPath) ?? baseDir, candidate));
+    }
+
+    private static T ReadJson<T>(string path, string label)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<T>(File.ReadAllText(path), JsonOptions)
+                ?? throw new InvalidOperationException($"Parsed {label} is null: {path}");
+        }
+        catch (Exception ex) when (ex is not InvalidOperationException)
+        {
+            throw new InvalidOperationException($"Failed to parse {label}: {path}: {ex.Message}", ex);
+        }
+    }
+
+    private static string ToListenUrl(string launchUrl)
+    {
+        if (!Uri.TryCreate(launchUrl, UriKind.Absolute, out Uri? uri))
+        {
+            throw new InvalidOperationException($"Invalid browser launch URL: {launchUrl}");
+        }
+
+        return $"{uri.Scheme}://0.0.0.0:{uri.Port}";
+    }
+}

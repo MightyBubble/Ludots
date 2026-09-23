@@ -533,19 +533,19 @@ Ludots launcher CLI
 
 Commands
   catalog
-  resolve [selectors...] [--adapter raylib|web] [--build auto|always|never] [--json]
-  build [selectors...] [--adapter raylib|web] [--build auto|always|never]
-  build app [--adapter raylib|web]
-  launch [selectors...] [--adapter raylib|web] [--build auto|always|never] [--record <artifactDir>]
+  resolve [selectors...] [--adapter raylib|web|webgpu] [--build auto|always|never] [--json]
+  build [selectors...] [--adapter raylib|web|webgpu] [--build auto|always|never]
+  build app [--adapter raylib|web|webgpu]
+  launch [selectors...] [--adapter raylib|web|webgpu] [--build auto|always|never] [--record <artifactDir>]
   adapter list
-  adapter select --adapter raylib|web
+  adapter select --adapter raylib|web|webgpu
   workspace list
   workspace add --path <mod-root-parent>
   binding list
   binding set <name> (--path <modRoot> | --mod <modId>) [--project <relativeOrAbsoluteCsproj>]
   binding delete <name>
   preset list
-  preset save --name <name> [selectors...] [--adapter raylib|web] [--build auto|always|never]
+  preset save --name <name> [selectors...] [--adapter raylib|web|webgpu] [--build auto|always|never]
   preset select <presetId>
   preset delete <presetId>
   sdk export
@@ -563,7 +563,9 @@ Selectors
 Examples
   .\scripts\run-mod-launcher.cmd cli resolve camera_acceptance --adapter raylib
   .\scripts\run-mod-launcher.cmd cli resolve camera_acceptance --adapter web
+  .\scripts\run-mod-launcher.cmd cli resolve camera_acceptance --adapter webgpu
   .\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter web
+  .\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter webgpu --build auto
   .\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter raylib --record artifacts/acceptance/launcher-camera-acceptance-raylib
   .\scripts\run-mod-launcher.cmd cli binding set camera_acceptance --path mods/fixtures/camera/CameraAcceptanceMod
   .\scripts\run-mod-launcher.cmd cli preset save --name camera-web camera_acceptance --adapter web
