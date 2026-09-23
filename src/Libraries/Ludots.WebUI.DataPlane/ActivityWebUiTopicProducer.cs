@@ -19,7 +19,6 @@ public sealed class ActivityWebUiTopicProducer : IWebUiTopicProducer
     private readonly ActivityPanelProfile _profile;
     private readonly Entity _ownerScope;
     private readonly bool _filterByOwnerScope;
-    private readonly List<ActivityOptionView> _optionScratch = new(8);
 
     public ActivityWebUiTopicProducer(
         string topic,
@@ -62,11 +61,12 @@ public sealed class ActivityWebUiTopicProducer : IWebUiTopicProducer
         var rows = new List<ActivityWebRow>(views.Count);
         var history = new List<ActivityWebHistoryRow>(views.Count);
         var resolvedViews = new List<ActivityView>(views.Count);
+        var optionScratch = new List<ActivityOptionView>(8);
 
         for (int i = 0; i < views.Count; i++)
         {
             ActivityView view = views[i];
-            if (_filterByOwnerScope && !ScopeEquals(view.ScopeHost, _ownerScope))
+            if (!ShouldIncludeActivity(view))
             {
                 continue;
             }
@@ -88,7 +88,7 @@ public sealed class ActivityWebUiTopicProducer : IWebUiTopicProducer
                 continue;
             }
 
-            rows.Add(BuildChoiceRow(view));
+            rows.Add(BuildChoiceRow(view, optionScratch));
         }
 
         SortRows(rows);
@@ -99,17 +99,22 @@ public sealed class ActivityWebUiTopicProducer : IWebUiTopicProducer
         }
 
         IReadOnlyList<ActivityPresentationCue> cues = _activities.Presentation.Cues;
-        var cueRows = new ActivityWebCue[cues.Count];
+        var cueRows = new List<ActivityWebCue>(cues.Count);
         for (int i = 0; i < cues.Count; i++)
         {
             ActivityPresentationCue cue = cues[i];
-            cueRows[i] = new ActivityWebCue(
+            if (!ShouldIncludeCue(in cue))
+            {
+                continue;
+            }
+
+            cueRows.Add(new ActivityWebCue(
                 cue.Kind.ToString(),
                 cue.ActivityId,
                 cue.InstanceId,
                 cue.OptionId,
                 cue.Reason,
-                cue.ScopeKey);
+                cue.ScopeKey));
         }
 
         uint revision = ComputeRevision(rows, history);
@@ -119,22 +124,22 @@ public sealed class ActivityWebUiTopicProducer : IWebUiTopicProducer
             revision,
             rows.ToArray(),
             history.ToArray(),
-            cueRows);
+            cueRows.ToArray());
     }
 
-    private ActivityWebRow BuildChoiceRow(ActivityView view)
+    private ActivityWebRow BuildChoiceRow(ActivityView view, List<ActivityOptionView> optionScratch)
     {
-        _optionScratch.Clear();
-        if (!_activities.TryGetActiveOptions(view.Entity, null, _optionScratch))
+        optionScratch.Clear();
+        if (!_activities.TryGetActiveOptions(view.Entity, null, optionScratch))
         {
             throw new InvalidOperationException(
                 $"Activity instance '{view.ActivityId}' ({view.InstanceId}) is no longer active while building the panel snapshot.");
         }
 
-        var options = new ActivityWebOption[_optionScratch.Count];
-        for (int i = 0; i < _optionScratch.Count; i++)
+        var options = new ActivityWebOption[optionScratch.Count];
+        for (int i = 0; i < optionScratch.Count; i++)
         {
-            ActivityOptionView option = _optionScratch[i];
+            ActivityOptionView option = optionScratch[i];
             options[i] = new ActivityWebOption(
                 option.OptionId,
                 option.Title,
@@ -155,6 +160,32 @@ public sealed class ActivityWebUiTopicProducer : IWebUiTopicProducer
             view.Entity.WorldId,
             view.Entity.Version,
             options);
+    }
+
+    private bool ShouldIncludeActivity(ActivityView view)
+    {
+        if (_filterByOwnerScope && !ScopeEquals(view.ScopeHost, _ownerScope))
+        {
+            return false;
+        }
+
+        return IsAllowedActivity(view.ActivityId);
+    }
+
+    private bool ShouldIncludeCue(in ActivityPresentationCue cue)
+    {
+        if (_filterByOwnerScope && cue.ScopeKey != ScopeKey(_ownerScope))
+        {
+            return false;
+        }
+
+        return IsAllowedActivity(cue.ActivityId);
+    }
+
+    private bool IsAllowedActivity(string activityId)
+    {
+        return _profile.AllowedActivityIds == null ||
+            ContainsId(_profile.AllowedActivityIds, activityId);
     }
 
     private static ActivityWebHistoryRow BuildHistoryRow(ActivityView view)
@@ -294,6 +325,9 @@ public sealed class ActivityWebUiTopicProducer : IWebUiTopicProducer
     {
         return NormalizeScope(left).Equals(NormalizeScope(right));
     }
+
+    private static int ScopeKey(Entity scopeHost) =>
+        NormalizeScope(scopeHost).Equals(Entity.Null) ? 0 : scopeHost.Id;
 }
 
 public sealed record ActivityWebSnapshot(

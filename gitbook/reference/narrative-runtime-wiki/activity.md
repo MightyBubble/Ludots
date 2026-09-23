@@ -429,7 +429,7 @@ Assets/PanelKit/panel_manifest.json  事件面板绑定（panelType activity，t
 | 可玩 showcase | `activity_dispatch`（registry），启动 preset `activity_dispatch_cef_raylib` |
 | 可抄完整内容 | `mods/showcases/activity_dispatch/ActivityDispatchShowcaseMod/Assets/` |
 | headless 验收 | `ActivityDispatchShowcaseAcceptanceTests`（三路径端到端 / 池抽确定性 / 呈现排水） |
-| 单元与桥接测试 | `src/Tests/GasTests/Integration/Activity*.cs`（61 项） |
+| 单元与桥接测试 | `src/Tests/GasTests/Integration/Activity*.cs`（62 项） |
 | 证据目录 | `artifacts/acceptance/activity_dispatch/` |
 
 ## 边界与已知缺口

@@ -73,6 +73,20 @@
       "inputCapabilityId": "input.notification-action"
     },
     {
+      "panelId": "hud.activity",
+      "panelType": "activity",
+      "surfaceRegionId": "region.bottom-right",
+      "surfaceSegment": "Overlay",
+      "surfacePriority": 28,
+      "anchor": "bottom-right",
+      "visibleConditionId": "condition.always",
+      "topic": "panel-kit.sample.activity",
+      "profileId": "profile.activity.generic",
+      "layoutId": "layout.list.vertical",
+      "densityId": "density.compact",
+      "inputCapabilityId": "input.activity-confirm"
+    },
+    {
       "panelId": "hud.techtree",
       "panelType": "techtree",
       "surfaceRegionId": "region.center",

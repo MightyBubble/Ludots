@@ -2573,6 +2573,20 @@
       "buildMode": "auto"
     },
     {
+      "id": "activity_dispatch_cef_raylib",
+      "name": "Activity Dispatch CEF Raylib",
+      "selectors": [
+        "$activity_dispatch_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "cef"
+      }
+    },
+    {
       "id": "dialogue_author_kit_raylib",
       "name": "Dialogue Author Kit Raylib",
       "selectors": [
@@ -2685,6 +2699,15 @@
       "name": "Graph Op LoadTextKey Raylib",
       "selectors": [
         "$capability_standard_graph_op_LoadTextKey"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_OfferActivity_raylib",
+      "name": "Graph Op OfferActivity Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_OfferActivity"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

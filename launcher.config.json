@@ -1922,6 +1922,14 @@
       }
     },
     {
+      "name": "activity_dispatch_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/activity_dispatch/ActivityDispatchShowcaseMod",
+        "projectPath": "ActivityDispatchShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "dialogue_author_kit",
       "target": {
         "type": "path",
@@ -2018,6 +2026,14 @@
         "type": "path",
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadTextKeyEntryMod",
         "projectPath": "CapabilityStandardGraphOpLoadTextKeyEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_OfferActivity",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpOfferActivityEntryMod",
+        "projectPath": "CapabilityStandardGraphOpOfferActivityEntryMod.csproj"
       }
     },
     {

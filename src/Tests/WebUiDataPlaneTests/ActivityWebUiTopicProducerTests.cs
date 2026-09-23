@@ -126,6 +126,63 @@ public sealed class ActivityWebUiTopicProducerTests
 	}
 
 	[Test]
+	public void ScopeFilter_KeepsOnlyOwnerScopedCues()
+	{
+		using World world = World.Create();
+		ActivityRuntimeService runtime = CreateRuntime(world, out _);
+		Entity owner = world.Create();
+		Entity other = world.Create();
+
+		Entity ownerActivity = runtime.OfferOrActivate("cooldown.rejected", owner);
+		runtime.ResolveOption(ownerActivity, "hold");
+		runtime.OfferOrActivate("cooldown.rejected", owner);
+		Entity otherActivity = runtime.OfferOrActivate("cooldown.rejected", other);
+		runtime.ResolveOption(otherActivity, "hold");
+		runtime.OfferOrActivate("cooldown.rejected", other);
+
+		var scoped = new ActivityWebUiTopicProducer(
+			"panel-kit.sample.activity",
+			runtime,
+			ActivityPanelProfile.CreateGeneric(),
+			ownerScope: owner,
+			filterByOwnerScope: true);
+		ActivityWebSnapshot snapshot = scoped.BuildSnapshot();
+
+		Assert.That(snapshot.Cues, Is.Not.Empty);
+		foreach (ActivityWebCue cue in snapshot.Cues)
+		{
+			Assert.That(cue.ScopeKey, Is.EqualTo(owner.Id));
+		}
+	}
+
+	[Test]
+	public void AllowList_FiltersActivitiesHistoryAndCues()
+	{
+		using World world = World.Create();
+		ActivityRuntimeService runtime = CreateRuntime(world, out _);
+		Entity allowedScope = world.Create();
+		Entity blockedScope = world.Create();
+		var producer = new ActivityWebUiTopicProducer(
+			"panel-kit.sample.activity",
+			runtime,
+			ActivityPanelProfile.CreateGeneric(allowedActivityIds: ["forced.blocked"]));
+
+		runtime.OfferOrActivate("forced.blocked", allowedScope);
+		Entity blockedActivity = runtime.OfferOrActivate("cooldown.rejected", blockedScope);
+		runtime.ResolveOption(blockedActivity, "hold");
+		runtime.OfferOrActivate("cooldown.rejected", blockedScope);
+		ActivityWebSnapshot snapshot = producer.BuildSnapshot();
+
+		Assert.That(snapshot.Activities, Has.Length.EqualTo(1));
+		Assert.That(snapshot.Activities[0].ActivityId, Is.EqualTo("forced.blocked"));
+		Assert.That(snapshot.History, Is.Empty);
+		foreach (ActivityWebCue cue in snapshot.Cues)
+		{
+			Assert.That(cue.ActivityId, Is.EqualTo("forced.blocked"));
+		}
+	}
+
+	[Test]
 	public void UnknownAllowListActivity_FailsSnapshotBuild()
 	{
 		using World world = World.Create();
@@ -145,7 +202,6 @@ public sealed class ActivityWebUiTopicProducerTests
 	private static ActivityRuntimeService CreateRuntime(World world, out ActivityDefinitionRegistry definitions)
 	{
 		ActivityRuntimeService? created = null;
-		ActivityRuntimeService Create() => created!;
 
 		definitions = new ActivityDefinitionRegistry();
 		definitions.Register("forced.blocked", new ActivityDefinition

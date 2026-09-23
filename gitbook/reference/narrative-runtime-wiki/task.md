@@ -33,7 +33,7 @@
 ## 运行时行为速查
 
 - 实例物化为实体（与 Activity 同款纪律：真相只有实体一处）；
-- 运行时快照持久化信号计数与累加器（`TaskRuntimeSnapshot.Signals / Accumulators / NextInstanceId`），存档 domain `task`；
+- 运行时快照持久化信号计数与累加器（`TaskRuntimeSnapshot.Signals / Accumulators / NextInstanceId`），存档 domain `tasks`；
 - 桥接安装器注册 fact source `task.state_changed` 与 effect `task.create`——这是当前生产环境仅有的两个跨系统任务键，活动的定义可以放心引用；
 - 旧 Core `Gameplay/Quests/`（QuestRuntimeService 等）已退役，不要往那写。
 

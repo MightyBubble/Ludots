@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Text.Json;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Activities;
 using Ludots.Core.Gameplay.Tasks;
@@ -113,6 +115,50 @@ public sealed class ActivityDispatchShowcaseAcceptanceTests
             "lifecycle buffer must drain with the same step.");
     }
 
+    [Test]
+    public async Task SetAttributeCommand_ReevaluatesVisibleOptionThroughRuntimeState()
+    {
+        using GameEngine engine = CreateEngine();
+        engine.Start();
+        engine.LoadMap(MapId);
+        Tick(engine, 2);
+
+        var activities = engine.GetService(CoreServiceKeys.ActivityRuntimeService) as ActivityRuntimeService
+            ?? throw new InvalidOperationException("ActivityRuntimeService missing after engine start.");
+        Fire(engine, "ActivityShowcase.Forced");
+        TickUntil(engine, () => activities.CaptureViews().Any(v => v.ActivityId == "showcase.forced_supply" && v.State == ActivityInstanceState.Active), 5,
+            "forced activity must present before the runtime knob command is tested");
+        ActivityView forced = activities.CaptureViews().Single(v => v.ActivityId == "showcase.forced_supply");
+
+        var options = new List<ActivityOptionView>();
+        Assert.That(activities.TryGetActiveOptions(forced.Entity, null, options), Is.True);
+        Assert.That(options.Single(o => o.OptionId == "forward_camp").Executable, Is.True);
+
+        object lowered = await InvokeActivityDispatchCommandAsync(
+            engine,
+            "ActivityDispatchShowcaseMod.ActivityDispatchSetAttributeCommandHandler",
+            "activity.showcase.setAttribute",
+            new { attributeKey = "Health", value = 20f });
+        AssertCommandOk(lowered);
+
+        options.Clear();
+        Assert.That(activities.TryGetActiveOptions(forced.Entity, null, options), Is.True);
+        ActivityOptionView blockedCamp = options.Single(o => o.OptionId == "forward_camp");
+        Assert.That(blockedCamp.Executable, Is.False);
+        Assert.That(blockedCamp.BlockReason, Does.Contain("world.subject_attribute"));
+
+        object raised = await InvokeActivityDispatchCommandAsync(
+            engine,
+            "ActivityDispatchShowcaseMod.ActivityDispatchSetAttributeCommandHandler",
+            "activity.showcase.setAttribute",
+            new { attributeKey = "Health", value = 60f });
+        AssertCommandOk(raised);
+
+        options.Clear();
+        Assert.That(activities.TryGetActiveOptions(forced.Entity, null, options), Is.True);
+        Assert.That(options.Single(o => o.OptionId == "forward_camp").Executable, Is.True);
+    }
+
     private static string DrawPooledCandidate()
     {
         using GameEngine engine = CreateEngine();
@@ -169,6 +215,59 @@ public sealed class ActivityDispatchShowcaseAcceptanceTests
         }
 
         Assert.Fail(describeFailure);
+    }
+
+    private static async Task<object> InvokeActivityDispatchCommandAsync(
+        GameEngine engine,
+        string handlerTypeName,
+        string commandName,
+        object payload)
+    {
+        Assembly commandAssembly = AppDomain.CurrentDomain.GetAssemblies()
+            .FirstOrDefault(a => string.Equals(a.GetName().Name, "ActivityDispatchShowcaseMod", StringComparison.Ordinal))
+            ?? throw new InvalidOperationException("ActivityDispatchShowcaseMod assembly is not loaded.");
+        Type handlerType = commandAssembly.GetType(handlerTypeName, throwOnError: true)
+            ?? throw new InvalidOperationException($"Command handler type '{handlerTypeName}' is missing.");
+        object handler = Activator.CreateInstance(
+                handlerType,
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                binder: null,
+                args: new object[] { engine },
+                culture: null)
+            ?? throw new InvalidOperationException($"Command handler type '{handlerTypeName}' could not be created.");
+
+        MethodInfo handle = handlerType.GetMethod("HandleAsync", BindingFlags.Instance | BindingFlags.Public)
+            ?? throw new InvalidOperationException($"Command handler type '{handlerTypeName}' has no HandleAsync method.");
+        Type requestType = handle.GetParameters()[0].ParameterType;
+        Type entityRefType = requestType.Assembly.GetType("Ludots.WebUI.DataPlane.WebUiEntityRef", throwOnError: true)
+            ?? throw new InvalidOperationException("WebUiEntityRef type is missing.");
+        Array entityRefs = Array.CreateInstance(entityRefType, 0);
+        JsonElement payloadElement = JsonSerializer.SerializeToElement(payload);
+        object request = Activator.CreateInstance(
+                requestType,
+                commandName,
+                1L,
+                entityRefs,
+                payloadElement)
+            ?? throw new InvalidOperationException("WebUiCommandRequest could not be created.");
+
+        object valueTask = handle.Invoke(handler, new object[] { request, CancellationToken.None })
+            ?? throw new InvalidOperationException("Command handler returned null.");
+        MethodInfo asTask = valueTask.GetType().GetMethod("AsTask", BindingFlags.Instance | BindingFlags.Public)
+            ?? throw new InvalidOperationException("Command handler returned an unexpected ValueTask shape.");
+        var task = (Task)asTask.Invoke(valueTask, null)!;
+        await task.ConfigureAwait(false);
+        return task.GetType().GetProperty("Result", BindingFlags.Instance | BindingFlags.Public)!.GetValue(task)
+            ?? throw new InvalidOperationException("Command handler result is null.");
+    }
+
+    private static void AssertCommandOk(object result)
+    {
+        Type resultType = result.GetType();
+        bool success = (bool)resultType.GetProperty("Success")!.GetValue(result)!;
+        string errorCode = (string)resultType.GetProperty("ErrorCode")!.GetValue(result)!;
+        string message = (string)resultType.GetProperty("Message")!.GetValue(result)!;
+        Assert.That(success, Is.True, $"{errorCode}: {message}");
     }
 
     private static void WriteEvidence(ActivityRuntimeService activities, TaskRuntimeService tasks, string pooledCandidate)

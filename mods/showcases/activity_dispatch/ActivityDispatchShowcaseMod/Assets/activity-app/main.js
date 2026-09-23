@@ -10,7 +10,7 @@ const routeParams = new URLSearchParams(
 );
 const panelId = routeParams.get('panelId') || 'panel.activity.events';
 const dataPlaneTopic = routeParams.get('topic') || 'wpk.activity.dispatch';
-const dataPlaneSessionId = `activity-dispatch-${Date.now().toString(16)}`;
+const dataPlaneSessionId = routeParams.get('sessionId') || 'activity-dispatch-showcase';
 
 let requestSequence = 0;
 let commandSequence = 0;

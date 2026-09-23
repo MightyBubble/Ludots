@@ -54,6 +54,29 @@
   ],
   "showcases": [
     {
+      "id": "activity_dispatch",
+      "path": "mods/showcases/activity_dispatch/ActivityDispatchShowcaseMod",
+      "projectPath": "ActivityDispatchShowcaseMod.csproj",
+      "title": "活动派发：三条路径可玩",
+      "summary": "forced 拍板 / pooled 确定性抽签 / automatic 只留通报，配通用事件面板；内容纯 JSON。",
+      "tier": "T2",
+      "category": "capability",
+      "binding": "activity_dispatch_showcase",
+      "preset": "activity_dispatch_cef_raylib",
+      "docsPath": "gitbook/reference/narrative-runtime-wiki/activity.md",
+      "readmePath": null,
+      "acceptanceTest": "ActivityDispatchShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/activity_dispatch",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "activity",
+        "panel-kit",
+        "browser-ui",
+        "showcase"
+      ]
+    },
+    {
       "id": "ai_demo",
       "path": "mods/showcases/ai_demo/AIDemoMod",
       "projectPath": "AIDemoMod.csproj",
@@ -2163,6 +2186,33 @@
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_NegFloat",
       "screenshot": "artifacts/evidence/capability_standard_graph_op_NegFloat/poster.png",
       "video": "artifacts/evidence/capability_standard_graph_op_NegFloat/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_OfferActivity",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpOfferActivityEntryMod",
+      "projectPath": "CapabilityStandardGraphOpOfferActivityEntryMod.csproj",
+      "title": "点名即派发：待办活动应声上桌",
+      "summary": "军需官每点名一次，案头就添一件待办活动；件件单层拍板，绝不嵌套。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "OfferActivity"
+      ],
+      "binding": "capability_standard_graph_op_OfferActivity",
+      "preset": "capability_standard_graph_op_OfferActivity_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/OfferActivity.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryOfferActivityAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_OfferActivity",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_OfferActivity/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_OfferActivity/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },

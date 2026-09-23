@@ -116,7 +116,8 @@ public sealed class ActivityDispatchShowcaseModEntry : IMod
         string query =
             "route=activity-dispatch" +
             "&panelId=" + Uri.EscapeDataString(ActivityDispatchShowcaseIds.PanelId) +
-            "&topic=" + Uri.EscapeDataString(topic);
+            "&topic=" + Uri.EscapeDataString(topic) +
+            "&sessionId=" + Uri.EscapeDataString(ActivityDispatchShowcaseIds.SessionId);
         return BrowserLocalAppUri.Create("/", query);
     }
 

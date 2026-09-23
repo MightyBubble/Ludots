@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Activities;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Scripting;
@@ -163,6 +164,13 @@ internal sealed class ActivityDispatchSetAttributeCommandHandler : IWebUiCommand
                 $"Attribute '{attributeKey}' is not registered."));
         }
 
+        if (_engine.GetService(CoreServiceKeys.TagOps) is not TagOps tagOps)
+        {
+            return ValueTask.FromResult(WebUiCommandResult.Fail(
+                "tag_ops_missing",
+                "TagOps is not running."));
+        }
+
         foreach (ActivityView view in activities.CaptureViews())
         {
             if (view.State != ActivityInstanceState.Active)
@@ -170,13 +178,29 @@ internal sealed class ActivityDispatchSetAttributeCommandHandler : IWebUiCommand
                 continue;
             }
 
-            if (!_engine.World.IsAlive(view.ScopeHost) ||
-                !_engine.World.TryGet<AttributeBuffer>(view.ScopeHost, out AttributeBuffer buffer))
+            if (!_engine.World.IsAlive(view.ScopeHost))
             {
-                continue;
+                return ValueTask.FromResult(WebUiCommandResult.Fail(
+                    "scope_host_missing",
+                    $"Active activity '{view.ActivityId}' has no live scope host."));
             }
 
-            buffer.SetCurrent(attributeId, value);
+            if (!_engine.World.Has<AttributeBuffer>(view.ScopeHost))
+            {
+                return ValueTask.FromResult(WebUiCommandResult.Fail(
+                    "scope_attribute_missing",
+                    $"Active activity '{view.ActivityId}' scope host has no AttributeBuffer."));
+            }
+
+            try
+            {
+                AttributeMutationOps.SetCurrent(_engine.World, view.ScopeHost, attributeId, value, tagOps);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return ValueTask.FromResult(WebUiCommandResult.Fail("attribute_write_rejected", ex.Message));
+            }
+
             return ValueTask.FromResult(WebUiCommandResult.Ok());
         }
 

@@ -108,6 +108,61 @@ namespace Ludots.Tests.GAS.Integration
         }
 
         [Test]
+        public void ActivityParticipant_RoundTrip_PreservesProcessedSignalIds()
+        {
+            ActivityDefinitionRegistry definitions = CreateActivityDefinitions();
+            JsonNode captured;
+            using (World sourceWorld = World.Create())
+            {
+                var sourceRuntime = new ActivityRuntimeService(
+                    sourceWorld,
+                    definitions,
+                    CreateServices(),
+                    new ActivityPresentationBuffer());
+                ActivitySignalIntakeResult intake = sourceRuntime.IntakeSignal(new ActivitySignal(
+                    "fixture.signal_ping",
+                    "fact-dup",
+                    occurredAt: 1000,
+                    sourceWorld.Create(),
+                    Array.Empty<Entity>(),
+                    new Dictionary<string, object?>()));
+                Assert.That(intake.MatchedAnyDefinition, Is.True, "the muster activity must subscribe to fixture.signal_ping.");
+                captured = CoreSaveParticipants.CreateActivityParticipant(sourceRuntime).CaptureState();
+                Assert.That(captured["processedSignalIds"]!.AsArray(), Has.Count.EqualTo(1),
+                    "capture must serialize the processed signal id (sourceKey:signalId).");
+                Assert.That(captured["processedSignalIds"]![0]!.GetValue<string>(), Is.EqualTo("fixture.signal_ping:fact-dup"));
+            }
+
+            using World targetWorld = World.Create();
+            var targetRuntime = new ActivityRuntimeService(
+                targetWorld,
+                definitions,
+                CreateServices(),
+                new ActivityPresentationBuffer());
+            CoreSaveParticipants.CreateActivityParticipant(targetRuntime).RestoreState(captured);
+
+            ActivitySignalIntakeResult replayed = targetRuntime.IntakeSignal(new ActivitySignal(
+                "fixture.signal_ping",
+                "fact-dup",
+                occurredAt: 1000,
+                targetWorld.Create(),
+                Array.Empty<Entity>(),
+                new Dictionary<string, object?>()));
+            Assert.That(replayed.IsIdempotentDrop, Is.True,
+                "restored processed signal ids must dedupe a replayed signal after a save round-trip.");
+
+            ActivitySignalIntakeResult fresh = targetRuntime.IntakeSignal(new ActivitySignal(
+                "fixture.signal_ping",
+                "fact-fresh",
+                occurredAt: 1000,
+                targetWorld.Create(),
+                Array.Empty<Entity>(),
+                new Dictionary<string, object?>()));
+            Assert.That(fresh.IsIdempotentDrop, Is.False,
+                "a never-seen signal id must still admit after restore.");
+        }
+
+        [Test]
         public void ActivityParticipant_RestoreRebuildsIndexFromWorld()
         {
             ActivityDefinitionRegistry definitions = CreateActivityDefinitions();
