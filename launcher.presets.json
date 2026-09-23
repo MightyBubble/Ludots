@@ -2433,6 +2433,26 @@
       ]
     },
     {
+      "id": "engine_raylib_gpu_crowd",
+      "name": "引擎画廊·GPU 剔除 Indirect Draw",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--project",
+        "projects/engine_gallery",
+        "--scene",
+        "gpu_crowd",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_gpu_crowd/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_gpu_crowd/stats.json"
+      ]
+    },
+    {
       "id": "engine_raylib_slash_trail",
       "name": "引擎画廊·刀光轨迹",
       "selectors": [
@@ -2450,6 +2470,26 @@
         "artifacts/acceptance/engine_raylib_slash_trail/screen.png",
         "--json",
         "artifacts/acceptance/engine_raylib_slash_trail/stats.json"
+      ]
+    },
+    {
+      "id": "engine_raylib_gpu_crowd_sim",
+      "name": "引擎画廊·模拟层驱动 GPU 军团",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--project",
+        "projects/engine_gallery",
+        "--scene",
+        "gpu_crowd_sim",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_gpu_crowd_sim/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_gpu_crowd_sim/stats.json"
       ]
     },
     {

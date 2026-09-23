@@ -427,7 +427,12 @@ namespace CameraAcceptanceMod.Runtime
             _lastConfiguredMapId = mapId;
         }
 
-        private void HandleSelectionConfirmed(GameEngine engine, in WorldCmInt2 worldCm, Entity selectedEntity)
+        internal void HandleSelectionConfirmed(GameEngine engine, in WorldCmInt2 worldCm, Entity selectedEntity)
+        {
+            HandleSelectionConfirmed(engine, worldCm, selectedEntity, Entity.Null);
+        }
+
+        internal void HandleSelectionConfirmed(GameEngine engine, in WorldCmInt2 worldCm, Entity selectedEntity, Entity cueOwnerEntity)
         {
             string? mapId = engine.CurrentMapSession?.MapId.Value;
             if (string.Equals(mapId, CameraAcceptanceIds.ProjectionMapId, System.StringComparison.OrdinalIgnoreCase))
@@ -437,8 +442,9 @@ namespace CameraAcceptanceMod.Runtime
                     return;
                 }
 
+                Entity cueOwner = ResolveProjectionCueOwner(engine, cueOwnerEntity);
                 EnqueueProjectionSpawnBatch(engine, worldCm);
-                EmitCueMarker(engine, worldCm);
+                EmitCueMarker(engine, worldCm, cueOwner);
                 return;
             }
 
@@ -459,7 +465,25 @@ namespace CameraAcceptanceMod.Runtime
             }
         }
 
-        private void EmitCueMarker(GameEngine engine, in WorldCmInt2 worldCm)
+        private static Entity ResolveProjectionCueOwner(GameEngine engine, Entity cueOwnerEntity)
+        {
+            if (cueOwnerEntity != Entity.Null && engine.World.IsAlive(cueOwnerEntity))
+            {
+                return cueOwnerEntity;
+            }
+
+            if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity owner) &&
+                owner != Entity.Null &&
+                engine.World.IsAlive(owner))
+            {
+                return owner;
+            }
+
+            throw new System.InvalidOperationException(
+                "Camera projection acceptance requires a live ClientLocalSeat possession before emitting the cue presenter.");
+        }
+
+        private void EmitCueMarker(GameEngine engine, in WorldCmInt2 worldCm, Entity cueOwner)
         {
             if (engine.GetService(CoreServiceKeys.PresenterCommandBuffer) is not PresenterCommandBuffer commands)
             {
@@ -488,7 +512,7 @@ namespace CameraAcceptanceMod.Runtime
             {
                 CommandKind = PresenterCommandKind.CreatePresenter,
                 PresenterDefinitionId = defId,
-                Source = Entity.Null,
+                Source = cueOwner,
                 AnchorKind = PresentationAnchorKind.WorldPosition,
                 Position = WorldUnits.WorldCmToVisualMeters(worldCm),
             }))

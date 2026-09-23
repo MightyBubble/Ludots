@@ -181,7 +181,7 @@
     },
     {
       "id": "engine_raylib_gpu_crowd",
-      "preset": "gpu_crowd",
+      "preset": "engine_raylib_gpu_crowd",
       "binding": "engine_gallery",
       "testFilter": "RaylibEngineGalleryTests",
       "artifactDir": "artifacts/acceptance/engine_raylib_gpu_crowd",
@@ -189,7 +189,7 @@
     },
     {
       "id": "engine_raylib_gpu_crowd_sim",
-      "preset": "gpu_crowd_sim",
+      "preset": "engine_raylib_gpu_crowd_sim",
       "binding": "engine_gallery",
       "testFilter": "RaylibEngineGalleryTests",
       "artifactDir": "artifacts/acceptance/engine_raylib_gpu_crowd_sim",
