@@ -180,7 +180,13 @@ namespace Ludots.Core.Config
         public List<ParamOverrideData> PresenterParamOverrides { get; set; } = new List<ParamOverrideData>();
 
         /// <summary>
-        /// 后代的实体信息。path 是实例内的 localId 路径（不含 instanceId）；set 目前只认 EntityInfoName。
+        /// 这份摆放的实体信息标题。值是文案槽名，词在多语言表里。
+        /// </summary>
+        [JsonPropertyName("titleToken")]
+        public string TitleToken { get; set; }
+
+        /// <summary>
+        /// 后代的实体信息标题。path 是实例内的 localId 路径（不含 instanceId）；目前每条只认 titleToken。
         /// </summary>
         [JsonPropertyName("overridePaths")]
         public List<EntityPathNameOverride> OverridePaths { get; set; }
@@ -200,6 +206,9 @@ namespace Ludots.Core.Config
     {
         [JsonPropertyName("path")]
         public string Path { get; set; }
+
+        [JsonPropertyName("titleToken")]
+        public string TitleToken { get; set; }
 
         [JsonPropertyName("set")]
         public Dictionary<string, JsonNode> Set { get; set; }

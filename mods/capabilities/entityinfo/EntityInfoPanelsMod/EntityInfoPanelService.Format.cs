@@ -252,16 +252,16 @@ public sealed partial class EntityInfoPanelService
         };
     }
 
-    private static string ResolveEntityDisplayName(World world, Entity entity)
+    private string ResolveEntityDisplayName(World world, Entity entity)
     {
         return ResolveEntityInfoTitle(world, entity);
     }
 
-    private static string ResolveEntityInfoTitle(World world, Entity entity)
+    private string ResolveEntityInfoTitle(World world, Entity entity)
     {
-        if (world.TryGet(entity, out EntityInfoName info) && !string.IsNullOrWhiteSpace(info.Value))
+        if (world.TryGet(entity, out EntityInfoTitleToken titleToken))
         {
-            return info.Value;
+            return ResolveTextTokenId(titleToken.TokenId);
         }
 
         if (world.TryGet(entity, out Name name) && !string.IsNullOrWhiteSpace(name.Value))
@@ -319,7 +319,7 @@ public sealed partial class EntityInfoPanelService
             : preview;
     }
 
-    private static string ResolveEntityCollectionCategoryLabel(World world, Entity entity)
+    private string ResolveEntityCollectionCategoryLabel(World world, Entity entity)
     {
         string displayName = ResolveEntityDisplayName(world, entity).Trim();
         if (displayName.Length == 0)

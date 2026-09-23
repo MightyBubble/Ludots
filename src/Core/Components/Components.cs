@@ -96,10 +96,10 @@ namespace Ludots.Core.Components
     }
 
     /// <summary>
-    /// 玩家在实体信息里看见的名字。系统身份仍是 <see cref="Name"/>。
+    /// 实体信息标题引用的文案槽。显示时按当前语言取词。
     /// </summary>
-    public struct EntityInfoName
+    public struct EntityInfoTitleToken
     {
-        public string Value;
+        public int TokenId;
     }
 }

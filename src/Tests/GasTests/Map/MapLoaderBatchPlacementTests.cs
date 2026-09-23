@@ -15,6 +15,8 @@ using Ludots.Core.Map;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation;
+using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Registry;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Events;
@@ -394,10 +396,12 @@ namespace GasTests
                 new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 4),
                 new WorldSizeSpec(new Ludots.Platform.Abstractions.WorldAabbCm(-10_000, -10_000, 20_000, 20_000), 100));
 
+            PresentationTextCatalog textCatalog = CreateTitleTokenCatalog("test.map.batch.liu", "Liu Bei", "刘备");
+            loader.SetPresentationTextCatalog(textCatalog);
             var map = new MapConfig { Id = MapId };
-            Dictionary<string, JsonNode> firstOverrides = CreateOverrides("position-facing");
-            firstOverrides["EntityInfoName"] = JsonNode.Parse(@"{ ""Value"": ""刘备"" }")!;
-            map.Entities.Add(CreateSpawnWithPresenterParam(firstOverrides, -0.375f));
+            EntitySpawnData first = CreateSpawnWithPresenterParam(CreateOverrides("position-facing"), -0.375f);
+            first.TitleToken = "test.map.batch.liu";
+            map.Entities.Add(first);
             map.Entities.Add(CreateSpawnWithPresenterParam(
                 new Dictionary<string, JsonNode>
                 {
@@ -421,24 +425,24 @@ namespace GasTests
             That(slopeA, Is.EqualTo(-0.375f).Within(0.0001f));
             That(slopeB, Is.EqualTo(0.875f).Within(0.0001f));
             That(world.Get<Name>(owners[0]).Value, Is.EqualTo(TemplateName));
-            That(world.Get<EntityInfoName>(owners[0]).Value, Is.EqualTo("刘备"));
+            That(world.Get<EntityInfoTitleToken>(owners[0]).TokenId, Is.EqualTo(textCatalog.GetTokenId("test.map.batch.liu")));
             That(world.Get<Name>(owners[1]).Value, Is.EqualTo(TemplateName));
-            That(world.Has<EntityInfoName>(owners[1]), Is.False);
+            That(world.Has<EntityInfoTitleToken>(owners[1]), Is.False);
         }
 
         [Test]
-        public void LoadEntities_EmptyEntityInfoName_FailsOnBatchPath()
+        public void LoadEntities_EmptyTitleToken_FailsOnBatchPath()
         {
             using var world = World.Create();
             var loader = CreateLoader(world);
+            loader.SetPresentationTextCatalog(CreateTitleTokenCatalog("test.map.batch.liu", "Liu Bei", "刘备"));
             var map = new MapConfig { Id = MapId };
-            map.Entities.Add(CreateSpawn(new Dictionary<string, JsonNode>
-            {
-                ["EntityInfoName"] = JsonNode.Parse(@"{ ""Value"": "" "" }")!,
-            }));
+            EntitySpawnData spawn = CreateSpawn(null);
+            spawn.TitleToken = " ";
+            map.Entities.Add(spawn);
 
             InvalidOperationException ex = Throws<InvalidOperationException>(() => loader.LoadEntities(map))!;
-            That(ex.Message, Does.Contain("EntityInfoName.Value requires a non-empty string value"));
+            That(ex.Message, Does.Contain("titleToken requires a trimmed non-empty"));
         }
 
         [Test]
@@ -996,6 +1000,29 @@ namespace GasTests
             That(world.Get<WorldPositionCm>(entity).Value, Is.EqualTo(expectedPosition));
             That(world.Get<PreviousWorldPositionCm>(entity).Value, Is.EqualTo(expectedPosition));
             That(world.Get<FacingDirection>(entity).AngleRad, Is.EqualTo(expectedFacing).Within(0.0001f));
+        }
+
+        private static PresentationTextCatalog CreateTitleTokenCatalog(string key, string en, string zh)
+        {
+            var tokenIds = new StringIntRegistry(capacity: 4, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            int tokenId = tokenIds.Register(key);
+            var tokens = new PresentationTextTokenDefinition[tokenIds.Count + 1];
+            tokens[tokenId] = new PresentationTextTokenDefinition { TokenId = tokenId, Key = key, ArgCount = 0 };
+            var localeIds = new StringIntRegistry(capacity: 4, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            int enId = localeIds.Register("en-US");
+            int zhId = localeIds.Register("zh-CN");
+            var enTemplates = new PresentationTextTemplate[tokenIds.Count + 1];
+            var zhTemplates = new PresentationTextTemplate[tokenIds.Count + 1];
+            enTemplates[tokenId] = new PresentationTextTemplate(
+                en,
+                new[] { new PresentationTextTemplatePart(PresentationTextTemplatePartKind.Literal, en, -1) });
+            zhTemplates[tokenId] = new PresentationTextTemplate(
+                zh,
+                new[] { new PresentationTextTemplatePart(PresentationTextTemplatePartKind.Literal, zh, -1) });
+            var locales = new PresentationTextLocaleTable[localeIds.Count + 1];
+            locales[enId] = new PresentationTextLocaleTable(enId, "en-US", enTemplates);
+            locales[zhId] = new PresentationTextLocaleTable(zhId, "zh-CN", zhTemplates);
+            return new PresentationTextCatalog(tokenIds, tokens, localeIds, locales, defaultLocaleId: enId);
         }
     }
 }

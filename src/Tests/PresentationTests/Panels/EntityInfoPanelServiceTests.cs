@@ -403,10 +403,11 @@ public sealed class EntityInfoPanelServiceTests
         var itemGrantedSlots = new ItemGrantedSlotBuffer();
         itemGrantedSlots.SetOverride(0, abilityId, Entity.Null);
 
+        PresentationTextCatalog textCatalog = CreateTemplateTextCatalog();
         Entity owner = world.Create();
         Entity entity = world.Create(
             new Name { Value = "Templated Vanguard" },
-            new EntityInfoName { Value = "刘备" },
+            new EntityInfoTitleToken { TokenId = textCatalog.GetTokenId("tests.entityinfo.title") },
             new EntityTemplateKeyRef { TemplateKeyId = templateKeyId },
             attributes,
             abilities,
@@ -427,7 +428,6 @@ public sealed class EntityInfoPanelServiceTests
                 "1 templated entity"),
             new[] { entity });
 
-        PresentationTextCatalog textCatalog = CreateTemplateTextCatalog();
         var localeSelection = new PresentationTextLocaleSelection(textCatalog);
         var profileCatalog = CreateTemplateProfileCatalog(templateKeyId, healthId, abilityId, textCatalog);
         var templates = new EntityInfoPanelTemplateCatalog();
@@ -470,18 +470,46 @@ public sealed class EntityInfoPanelServiceTests
 
         Assert.That(service.GetTemplateId(standalone.Slot), Is.EqualTo("tests.entityinfo.template.compact"));
         Assert.That(world.Get<Name>(entity).Value, Is.EqualTo("Templated Vanguard"));
-        Assert.That(service.GetTitle(standalone.Slot), Is.EqualTo("刘备"));
+        Assert.That(service.GetTitle(standalone.Slot), Is.EqualTo("Liu Bei"));
         Assert.That(service.GetSubtitle(standalone.Slot), Is.EqualTo("Profile subtitle"));
         Assert.That(service.GetInsightStatCount(standalone.Slot), Is.EqualTo(1));
         Assert.That(service.GetInsightActionCount(standalone.Slot), Is.EqualTo(1));
         Assert.That(service.IsInsightActionPresent(standalone.Slot, 0), Is.True,
             "Entity insight must resolve the item-granted effective ability, not only base/form/granted layers.");
         Assert.That(service.TryGetEntityCollectionRow(collection.Slot, 0, out EntityCollectionPanelRow row), Is.True);
-        Assert.That(row.Name, Is.EqualTo("刘备"));
+        Assert.That(row.Name, Is.EqualTo("Liu Bei"));
         Assert.That(row.TemplateId, Is.EqualTo("tests.entityinfo.template.compact"));
         Assert.That(row.TemplateSubtitle, Is.EqualTo("Profile subtitle"));
         Assert.That(row.TemplateBody, Is.EqualTo("Profile body"));
         Assert.That(row.AccentColorHex, Is.EqualTo("#55AAEE"));
+    }
+
+    [Test]
+    public void Refresh_TitleToken_FollowsActiveLocale()
+    {
+        using var world = World.Create();
+        PresentationTextCatalog catalog = CreateBilingualTitleCatalog();
+        var localeSelection = new PresentationTextLocaleSelection(catalog);
+        var service = new EntityInfoPanelService(presentationTextCatalog: catalog, localeSelection: localeSelection);
+        Entity entity = world.Create(
+            new Name { Value = "Templated Vanguard" },
+            new EntityInfoTitleToken { TokenId = catalog.GetTokenId("tests.entityinfo.title") });
+
+        EntityInfoPanelHandle panel = service.Open(new EntityInfoPanelRequest(
+            EntityInfoPanelKind.InsightBrief,
+            EntityInfoPanelSurface.Ui,
+            EntityInfoPanelTarget.Fixed(entity),
+            new EntityInfoPanelLayout(EntityInfoPanelAnchor.TopLeft, 0f, 0f, 360f, 240f),
+            EntityInfoGasDetailFlags.None,
+            true));
+
+        service.Refresh(world, new Dictionary<string, object>());
+        Assert.That(service.GetTitle(panel.Slot), Is.EqualTo("Liu Bei"));
+
+        localeSelection.SetActiveLocale("zh-CN");
+        service.Refresh(world, new Dictionary<string, object>());
+        Assert.That(service.GetTitle(panel.Slot), Is.EqualTo("刘备"));
+        Assert.That(world.Get<Name>(entity).Value, Is.EqualTo("Templated Vanguard"));
     }
 
     [Test]
@@ -552,6 +580,7 @@ public sealed class EntityInfoPanelServiceTests
     private static PresentationTextCatalog CreateTemplateTextCatalog()
     {
         var tokenIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: System.StringComparer.Ordinal);
+        int titleTokenId = tokenIds.Register("tests.entityinfo.title");
         int subtitleTokenId = tokenIds.Register("tests.entityinfo.subtitle");
         int bodyTokenId = tokenIds.Register("tests.entityinfo.body");
         int genreTokenId = tokenIds.Register("tests.entityinfo.genre");
@@ -562,6 +591,7 @@ public sealed class EntityInfoPanelServiceTests
         var tokens = new PresentationTextTokenDefinition[tokenIds.Count + 1];
         foreach (string key in new[]
                  {
+                     "tests.entityinfo.title",
                      "tests.entityinfo.subtitle",
                      "tests.entityinfo.body",
                      "tests.entityinfo.genre",
@@ -577,6 +607,7 @@ public sealed class EntityInfoPanelServiceTests
         var localeIds = new StringIntRegistry(capacity: 4, startId: 1, invalidId: 0, comparer: System.StringComparer.Ordinal);
         int localeId = localeIds.Register("en-US");
         var templates = new PresentationTextTemplate[tokenIds.Count + 1];
+        templates[titleTokenId] = Literal("Liu Bei");
         templates[subtitleTokenId] = Literal("Profile subtitle");
         templates[bodyTokenId] = Literal("Profile body");
         templates[genreTokenId] = Literal("Profile genre");
@@ -634,6 +665,30 @@ public sealed class EntityInfoPanelServiceTests
         return new EntityInsightProfileCatalog(
             new[] { profile },
             new Dictionary<int, int> { [templateKeyId] = 0 });
+    }
+
+    private static PresentationTextCatalog CreateBilingualTitleCatalog()
+    {
+        var tokenIds = new StringIntRegistry(capacity: 4, startId: 1, invalidId: 0, comparer: System.StringComparer.Ordinal);
+        int titleTokenId = tokenIds.Register("tests.entityinfo.title");
+        var tokens = new PresentationTextTokenDefinition[tokenIds.Count + 1];
+        tokens[titleTokenId] = new PresentationTextTokenDefinition
+        {
+            TokenId = titleTokenId,
+            Key = "tests.entityinfo.title",
+            ArgCount = 0
+        };
+        var localeIds = new StringIntRegistry(capacity: 4, startId: 1, invalidId: 0, comparer: System.StringComparer.Ordinal);
+        int en = localeIds.Register("en-US");
+        int zh = localeIds.Register("zh-CN");
+        var enTemplates = new PresentationTextTemplate[tokenIds.Count + 1];
+        var zhTemplates = new PresentationTextTemplate[tokenIds.Count + 1];
+        enTemplates[titleTokenId] = Literal("Liu Bei");
+        zhTemplates[titleTokenId] = Literal("刘备");
+        var locales = new PresentationTextLocaleTable[localeIds.Count + 1];
+        locales[en] = new PresentationTextLocaleTable(en, "en-US", enTemplates);
+        locales[zh] = new PresentationTextLocaleTable(zh, "zh-CN", zhTemplates);
+        return new PresentationTextCatalog(tokenIds, tokens, localeIds, locales, defaultLocaleId: en);
     }
 
     private static PresentationTextTemplate Literal(string text)

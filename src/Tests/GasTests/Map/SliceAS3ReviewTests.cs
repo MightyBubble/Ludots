@@ -5,6 +5,8 @@ using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
+using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Registry;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Map;
@@ -110,27 +112,28 @@ namespace Ludots.Tests.GAS
         public void MapInstance_EntityInfoPaths_NameAddressedChildrenAndKeepSystemNames()
         {
             using var world = World.Create();
-            MapLoader loader = CreateMapLoader(world, NamePathTemplates);
+            PresentationTextCatalog catalog = CreateCampTitleCatalog();
+            MapLoader loader = CreateMapLoader(world, NamePathTemplates, catalog);
             var map = new MapConfig { Id = "name_path_map" };
-            map.Entities.Add(CreateNamedCamp("camp.harbor", "Harbor Camp", renameChildren: true));
-            map.Entities.Add(CreateNamedCamp("camp.alpine", "Alpine Camp", renameChildren: false));
+            map.Entities.Add(CreateNamedCamp("camp.harbor", "camp.harbor.title", renameChildren: true));
+            map.Entities.Add(CreateNamedCamp("camp.alpine", "camp.alpine.title", renameChildren: false));
 
             MapLoadEntityIndex index = loader.LoadEntitiesAndIndex(map);
 
             Assert.Multiple(() =>
             {
-                AssertInfo(world, RequireInstance(index, "camp.harbor"), "Camp", "Harbor Camp");
-                AssertInfo(world, RequireInstance(index, "camp.alpine"), "Camp", "Alpine Camp");
-                AssertInfo(world, RequirePath(index, "camp.harbor.hq"), "Shared Tent", "Harbor Tent");
-                AssertInfo(world, RequirePath(index, "camp.alpine.hq"), "Shared Tent", null);
-                AssertInfo(world, RequirePath(index, "camp.harbor.radio"), "Radio", null);
-                AssertInfo(world, RequirePath(index, "camp.harbor.radio.coil"), "Coil", "Harbor Coil");
-                AssertInfo(world, RequirePath(index, "camp.alpine.radio.coil"), "Coil", null);
+                AssertInfo(world, RequireInstance(index, "camp.harbor"), "Camp", catalog.GetTokenId("camp.harbor.title"));
+                AssertInfo(world, RequireInstance(index, "camp.alpine"), "Camp", catalog.GetTokenId("camp.alpine.title"));
+                AssertInfo(world, RequirePath(index, "camp.harbor.hq"), "Shared Tent", catalog.GetTokenId("camp.harbor.hq.title"));
+                AssertInfo(world, RequirePath(index, "camp.alpine.hq"), "Shared Tent", 0);
+                AssertInfo(world, RequirePath(index, "camp.harbor.radio"), "Radio", 0);
+                AssertInfo(world, RequirePath(index, "camp.harbor.radio.coil"), "Coil", catalog.GetTokenId("camp.harbor.coil.title"));
+                AssertInfo(world, RequirePath(index, "camp.alpine.radio.coil"), "Coil", 0);
                 Entity harborGuard = RequirePath(index, "camp.harbor.guard");
-                AssertInfo(world, harborGuard, "Guard", "Harbor Guard");
+                AssertInfo(world, harborGuard, "Guard", catalog.GetTokenId("camp.harbor.guard.title"));
                 Assert.That(world.Get<Team>(harborGuard).Id, Is.EqualTo(1));
                 Entity alpineGuard = RequirePath(index, "camp.alpine.guard");
-                AssertInfo(world, alpineGuard, "Guard", null);
+                AssertInfo(world, alpineGuard, "Guard", 0);
                 Assert.That(world.Get<Team>(alpineGuard).Id, Is.EqualTo(1));
             });
         }
@@ -139,12 +142,12 @@ namespace Ludots.Tests.GAS
         public void MapInstance_NamePath_UnknownChildFails()
         {
             using var world = World.Create();
-            MapLoader loader = CreateMapLoader(world, NamePathTemplates);
+            MapLoader loader = CreateMapLoader(world, NamePathTemplates, CreateCampTitleCatalog());
             var map = new MapConfig { Id = "name_path_missing" };
-            EntitySpawnData spawn = CreateNamedCamp("camp.harbor", "Harbor Camp", renameChildren: false);
+            EntitySpawnData spawn = CreateNamedCamp("camp.harbor", "camp.harbor.title", renameChildren: false);
             spawn.OverridePaths = new List<EntityPathNameOverride>
             {
-                InfoPath("tower", "Tower"),
+                InfoPath("tower", "camp.harbor.title"),
             };
             map.Entities.Add(spawn);
 
@@ -153,10 +156,10 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void MapInstance_EntityInfoPath_RejectsNameAndTeam()
+        public void MapInstance_EntityInfoPath_RejectsComponentSet()
         {
             using var world = World.Create();
-            MapLoader loader = CreateMapLoader(world, NamePathTemplates);
+            MapLoader loader = CreateMapLoader(world, NamePathTemplates, CreateCampTitleCatalog());
             InvalidOperationException team = Assert.Throws<InvalidOperationException>(() => loader.LoadEntitiesAndIndex(MapWithGuardSet(
                 "name_path_team",
                 "Team",
@@ -167,18 +170,18 @@ namespace Ludots.Tests.GAS
                 JsonNode.Parse(@"{ ""Value"": ""Harbor Guard"" }")!)))!;
             Assert.Multiple(() =>
             {
-                Assert.That(team.Message, Does.Contain("only accepts EntityInfoName"));
-                Assert.That(name.Message, Does.Contain("only accepts EntityInfoName"));
+                Assert.That(team.Message, Does.Contain("only accepts titleToken"));
+                Assert.That(name.Message, Does.Contain("only accepts titleToken"));
             });
         }
 
         [Test]
-        public void MapInstance_EntityInfoPath_EmptyNameFails()
+        public void MapInstance_EntityInfoPath_EmptyTokenFails()
         {
             using var world = World.Create();
-            MapLoader loader = CreateMapLoader(world, NamePathTemplates);
+            MapLoader loader = CreateMapLoader(world, NamePathTemplates, CreateCampTitleCatalog());
             var map = new MapConfig { Id = "name_path_empty" };
-            EntitySpawnData spawn = CreateNamedCamp("camp.harbor", "Harbor Camp", renameChildren: false);
+            EntitySpawnData spawn = CreateNamedCamp("camp.harbor", "camp.harbor.title", renameChildren: false);
             spawn.OverridePaths = new List<EntityPathNameOverride> { InfoPath("hq", " ") };
             map.Entities.Add(spawn);
 
@@ -187,17 +190,28 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void MapInstance_EntityInfoName_EmptyRootValueFails()
+        public void MapInstance_EntityInfoPath_UnknownTokenFails()
         {
             using var world = World.Create();
-            MapLoader loader = CreateMapLoader(world, NamePathTemplates);
-            var map = new MapConfig { Id = "name_path_empty_root" };
-            EntitySpawnData spawn = CreateNamedCamp("camp.harbor", "Harbor Camp", renameChildren: false);
-            spawn.Overrides["EntityInfoName"] = JsonNode.Parse(@"{ ""Value"": "" "" }")!;
+            MapLoader loader = CreateMapLoader(world, NamePathTemplates, CreateCampTitleCatalog());
+            var map = new MapConfig { Id = "name_path_unknown_token" };
+            EntitySpawnData spawn = CreateNamedCamp("camp.harbor", "camp.missing.title", renameChildren: false);
             map.Entities.Add(spawn);
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.LoadEntitiesAndIndex(map))!;
-            Assert.That(ex.Message, Does.Contain("EntityInfoName.Value requires a non-empty"));
+            Assert.That(ex.Message, Does.Contain("unknown text token"));
+        }
+
+        [Test]
+        public void MapInstance_EntityInfoPath_RequiresTextCatalog()
+        {
+            using var world = World.Create();
+            MapLoader loader = CreateMapLoader(world, NamePathTemplates);
+            var map = new MapConfig { Id = "name_path_no_catalog" };
+            map.Entities.Add(CreateNamedCamp("camp.harbor", "camp.harbor.title", renameChildren: false));
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.LoadEntitiesAndIndex(map))!;
+            Assert.That(ex.Message, Does.Contain("presentation text catalog"));
         }
 
         [Test]
@@ -317,24 +331,21 @@ namespace Ludots.Tests.GAS
                 harness.System.Update(0f))!;
             Assert.That(ex.Message, Does.Contain("环"));
         }
-        private static EntitySpawnData CreateNamedCamp(string instanceId, string campName, bool renameChildren)
+        private static EntitySpawnData CreateNamedCamp(string instanceId, string titleToken, bool renameChildren)
         {
             var spawn = new EntitySpawnData
             {
                 InstanceId = instanceId,
                 Template = "name.camp",
-                Overrides = new Dictionary<string, JsonNode>
-                {
-                    ["EntityInfoName"] = JsonNode.Parse($$"""{ "Value": "{{campName}}" }""")!,
-                },
+                TitleToken = titleToken,
             };
             if (renameChildren)
             {
                 spawn.OverridePaths = new List<EntityPathNameOverride>
                 {
-                    InfoPath("hq", "Harbor Tent"),
-                    InfoPath("radio.coil", "Harbor Coil"),
-                    InfoPath("guard", "Harbor Guard"),
+                    InfoPath("hq", "camp.harbor.hq.title"),
+                    InfoPath("radio.coil", "camp.harbor.coil.title"),
+                    InfoPath("guard", "camp.harbor.guard.title"),
                 };
             }
 
@@ -343,12 +354,13 @@ namespace Ludots.Tests.GAS
 
         private static MapConfig MapWithGuardSet(string mapId, string key, JsonNode value)
         {
-            EntitySpawnData spawn = CreateNamedCamp("camp.harbor", "Harbor Camp", renameChildren: false);
+            EntitySpawnData spawn = CreateNamedCamp("camp.harbor", "camp.harbor.title", renameChildren: false);
             spawn.OverridePaths = new List<EntityPathNameOverride>
             {
                 new EntityPathNameOverride
                 {
                     Path = "guard",
+                    TitleToken = "camp.harbor.guard.title",
                     Set = new Dictionary<string, JsonNode>
                     {
                         [key] = value,
@@ -360,28 +372,67 @@ namespace Ludots.Tests.GAS
             return map;
         }
 
-        private static EntityPathNameOverride InfoPath(string path, string name)
+        private static EntityPathNameOverride InfoPath(string path, string titleToken)
         {
             return new EntityPathNameOverride
             {
                 Path = path,
-                Set = new Dictionary<string, JsonNode>
-                {
-                    ["EntityInfoName"] = JsonNode.Parse($$"""{ "Value": "{{name}}" }""")!,
-                },
+                TitleToken = titleToken,
             };
         }
 
-        private static void AssertInfo(World world, Entity entity, string systemName, string infoName)
+        private static void AssertInfo(World world, Entity entity, string systemName, int titleTokenId)
         {
             Assert.That(world.Get<Name>(entity).Value, Is.EqualTo(systemName));
-            if (infoName == null)
+            if (titleTokenId <= 0)
             {
-                Assert.That(world.Has<EntityInfoName>(entity), Is.False);
+                Assert.That(world.Has<EntityInfoTitleToken>(entity), Is.False);
                 return;
             }
 
-            Assert.That(world.Get<EntityInfoName>(entity).Value, Is.EqualTo(infoName));
+            Assert.That(world.Get<EntityInfoTitleToken>(entity).TokenId, Is.EqualTo(titleTokenId));
+        }
+
+        private static PresentationTextCatalog CreateCampTitleCatalog()
+        {
+            string[] keys =
+            {
+                "camp.harbor.title",
+                "camp.alpine.title",
+                "camp.harbor.hq.title",
+                "camp.harbor.coil.title",
+                "camp.harbor.guard.title",
+            };
+            var tokenIds = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var tokens = new PresentationTextTokenDefinition[keys.Length + 1];
+            for (int i = 0; i < keys.Length; i++)
+            {
+                int id = tokenIds.Register(keys[i]);
+                tokens[id] = new PresentationTextTokenDefinition { TokenId = id, Key = keys[i], ArgCount = 0 };
+            }
+
+            var localeIds = new StringIntRegistry(capacity: 4, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            int en = localeIds.Register("en-US");
+            int zh = localeIds.Register("zh-CN");
+            var enTemplates = new PresentationTextTemplate[tokenIds.Count + 1];
+            var zhTemplates = new PresentationTextTemplate[tokenIds.Count + 1];
+            for (int id = 1; id <= keys.Length; id++)
+            {
+                enTemplates[id] = Literal(keys[id - 1] + ".en");
+                zhTemplates[id] = Literal(keys[id - 1] + ".zh");
+            }
+
+            var locales = new PresentationTextLocaleTable[localeIds.Count + 1];
+            locales[en] = new PresentationTextLocaleTable(en, "en-US", enTemplates);
+            locales[zh] = new PresentationTextLocaleTable(zh, "zh-CN", zhTemplates);
+            return new PresentationTextCatalog(tokenIds, tokens, localeIds, locales, defaultLocaleId: en);
+        }
+
+        private static PresentationTextTemplate Literal(string text)
+        {
+            return new PresentationTextTemplate(
+                text,
+                new[] { new PresentationTextTemplatePart(PresentationTextTemplatePartKind.Literal, text, -1) });
         }
 
         private static Entity RequireInstance(MapLoadEntityIndex index, string instanceId)
@@ -463,7 +514,7 @@ namespace Ludots.Tests.GAS
             }
         }
 
-        private static MapLoader CreateMapLoader(World world, string templatesJson)
+        private static MapLoader CreateMapLoader(World world, string templatesJson, PresentationTextCatalog textCatalog = null)
         {
             string root = Path.Combine(
                 Path.GetTempPath(),
@@ -482,6 +533,11 @@ namespace Ludots.Tests.GAS
                 var pipeline = new ConfigPipeline(vfs, new ModLoader(vfs, new FunctionRegistry(), new TriggerManager()));
                 var loader = new MapLoader(world, new WorldMap(), pipeline);
                 loader.LoadTemplates(ConfigCatalogLoader.Load(pipeline));
+                if (textCatalog != null)
+                {
+                    loader.SetPresentationTextCatalog(textCatalog);
+                }
+
                 return loader;
             }
             finally

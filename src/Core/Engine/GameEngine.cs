@@ -996,6 +996,7 @@ namespace Ludots.Core.Engine
             componentAuthoringContext.Set(ComponentAuthoringServiceKeys.FieldLayerRegistry, fieldLayerRegistry);
             // Lookup TextToken columns resolve against PresentationTextCatalog; load catalog before graphs.
             var presentationTextCatalog = new PresentationTextCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            MapLoader.SetPresentationTextCatalog(presentationTextCatalog);
             var rngStreams = new Randomization.RngStreamService();
             var rngTables = new Gameplay.Rng.DistributionConfigLoader(ConfigPipeline)
                 .Load(ConfigCatalog, ConfigConflictReport, rngStreams);
