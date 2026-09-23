@@ -245,6 +245,11 @@ public sealed class UiScene
 		return (Root == null) ? null : HitTest(Root, x, y);
 	}
 
+	internal UiNode? ResolvePointerTarget(float x, float y)
+	{
+		return ResolvePointerTarget(HitTest(x, y));
+	}
+
 	internal void SetReactiveRuntimeRefresh(Func<bool>? runtimeRefresh)
 	{
 		_reactiveRuntimeRefresh = runtimeRefresh;
@@ -472,9 +477,21 @@ public sealed class UiScene
 		}
 		if (evt is UiPointerEvent uiPointerEvent)
 		{
-			return HitTest(uiPointerEvent.X, uiPointerEvent.Y);
+			return ResolvePointerTarget(uiPointerEvent.X, uiPointerEvent.Y);
 		}
 		return null;
+	}
+
+	private static UiNode? ResolvePointerTarget(UiNode? node)
+	{
+		for (UiNode uiNode = node; uiNode != null; uiNode = uiNode.Parent)
+		{
+			if (IsPointerInteractiveNode(uiNode))
+			{
+				return uiNode;
+			}
+		}
+		return node;
 	}
 
 	private bool DispatchNodeActions(UiNode node, UiEvent evt)
@@ -1070,6 +1087,30 @@ public sealed class UiScene
 		}
 		UiNodeKind kind = node.Kind;
 		return (kind == UiNodeKind.Button || kind - 7 <= UiNodeKind.Column) ? true : false;
+	}
+
+	private static bool IsPointerInteractiveNode(UiNode node)
+	{
+		if (node.PseudoState.HasFlag(UiPseudoState.Disabled))
+		{
+			return false;
+		}
+		if (node.ActionHandles.Count > 0)
+		{
+			return true;
+		}
+		if (node.Attributes.Contains("tabindex"))
+		{
+			return true;
+		}
+		UiNodeKind kind = node.Kind;
+		return kind == UiNodeKind.Button
+			|| kind == UiNodeKind.Checkbox
+			|| kind == UiNodeKind.Radio
+			|| kind == UiNodeKind.Toggle
+			|| IsInputType(node, "button")
+			|| IsInputType(node, "submit")
+			|| IsInputType(node, "reset");
 	}
 
 	private static bool IsCheckableNode(UiNode node)

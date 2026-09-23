@@ -29,6 +29,7 @@
 |------|------|------|
 | `ludots-doc-governance` | governance | 文档 SSOT、链接与证据治理 |
 | `ludots-feature-delivery` | delivery | 基建优先的功能交付、showcase/UI 验收与证据 |
+| `ludots-siege-overnight-delivery` | delivery | 隔离 worktree 下的夜间攻城交付、看板、证据与 Claude 复核 |
 | `ludots-tech-debt-fuse` | audit | 跨层技术债升级与熔断 |
 | `ludots-cloud-handoff` | collaboration | 云端开发接力与上下文交接 |
 | `ludots-pr-issue-orchestration` | collaboration | Issue / PR 证据包编排 |

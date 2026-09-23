@@ -1,0 +1,18 @@
+{
+  "WindowWidth": 1600,
+  "WindowHeight": 900,
+  "WindowTitle": "Ludots Engine - Three Kingdoms Siege Assault",
+  "TargetFps": 60,
+  "ModPaths": [
+    "../../../../../../../mods/LudotsCoreMod",
+    "../../../../../../../mods/CoreInputMod",
+    "../../../../../../../mods/EntityCommandPanelMod",
+    "../../../../../../../mods/capabilities/entityinfo/EntityInfoPanelsMod",
+    "../../../../../../../mods/capabilities/minimap/MinimapControlMod",
+    "../../../../../../../mods/capabilities/camera/CameraProfilesMod",
+    "../../../../../../../mods/RtsDemoMod",
+    "../../../../../../../mods/showcases/road_network/RoadNetworkShowcaseMod",
+    "../../../../../../../mods/showcases/ux_prototype/UxPrototypeMod",
+    "../../../../../../../mods/ThreeKingdomsScenarioMod"
+  ]
+}

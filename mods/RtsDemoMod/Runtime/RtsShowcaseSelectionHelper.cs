@@ -11,7 +11,7 @@ using Ludots.Core.Scripting;
 
 namespace RtsDemoMod.Runtime
 {
-    internal static class RtsShowcaseSelectionHelper
+    public static class RtsShowcaseSelectionHelper
     {
         public static void EnsureSelectionViewBinding(GameEngine engine)
         {

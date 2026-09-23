@@ -81,7 +81,7 @@ public class UIRoot
 			return false;
 		}
 		bool flag = false;
-		UiNodeId? uiNodeId = Scene.HitTest(pointerEvent.X, pointerEvent.Y)?.Id;
+		UiNodeId? uiNodeId = Scene.ResolvePointerTarget(pointerEvent.X, pointerEvent.Y)?.Id;
 		switch (pointerEvent.Action)
 		{
 		case PointerAction.Move:

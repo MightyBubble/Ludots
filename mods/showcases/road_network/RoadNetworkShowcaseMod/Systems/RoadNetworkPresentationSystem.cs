@@ -76,7 +76,10 @@ namespace RoadNetworkShowcaseMod.Systems
             EmitLoadedChunkTiles();
             EmitRoadSplines();
             EmitFortsAndColumns();
-            EmitHud();
+            if (!IsThreeKingdomsScenarioActive())
+            {
+                EmitHud();
+            }
         }
 
         public void AfterUpdate(in float dt)
@@ -85,6 +88,24 @@ namespace RoadNetworkShowcaseMod.Systems
 
         public void Dispose()
         {
+        }
+
+        private bool IsThreeKingdomsScenarioActive()
+        {
+            if (_engine.CurrentMapSession?.MapConfig?.Tags == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < _engine.CurrentMapSession.MapConfig.Tags.Count; i++)
+            {
+                if (string.Equals(_engine.CurrentMapSession.MapConfig.Tags[i], "three_kingdoms_siege", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void EmitLoadedChunkTiles()

@@ -1,0 +1,19 @@
+{
+  "name": "ThreeKingdomsScenarioMod",
+  "version": "0.1.0",
+  "description": "Formal RTS siege scenario host composed from Ludots mainline RTS, road-network, minimap, and info-panel capabilities.",
+  "main": "bin/net8.0/ThreeKingdomsScenarioMod.dll",
+  "priority": 300,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0",
+    "EntityCommandPanelMod": "^1.0.0",
+    "EntityInfoPanelsMod": "^1.0.0",
+    "MinimapControlMod": "^1.0.0",
+    "RtsDemoMod": "^1.0.0",
+    "RoadNetworkShowcaseMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["scenario", "siege", "rts", "three-kingdoms"]
+}

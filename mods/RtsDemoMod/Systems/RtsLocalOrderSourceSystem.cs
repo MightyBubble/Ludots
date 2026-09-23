@@ -4,6 +4,7 @@ using Arch.System;
 using CoreInputMod.Systems;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Orders;
+using Ludots.Core.Map;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 
@@ -45,6 +46,11 @@ namespace RtsDemoMod.Systems
 
         public void Update(in float dt)
         {
+            if (IsThreeKingdomsScenarioActive())
+            {
+                return;
+            }
+
             EnsureInitialized();
             if (_mapping == null)
             {
@@ -62,5 +68,31 @@ namespace RtsDemoMod.Systems
         public void BeforeUpdate(in float dt) { }
         public void AfterUpdate(in float dt) { }
         public void Dispose() { }
+
+        private bool IsThreeKingdomsScenarioActive()
+        {
+            if (!_globals.TryGetValue(CoreServiceKeys.MapId.Name, out object? mapObj) ||
+                mapObj is not MapId mapId ||
+                !string.Equals(mapId.Value, "road_network_showcase_chunked", System.StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            if (!_globals.TryGetValue(CoreServiceKeys.MapTags.Name, out object? tagsObj) ||
+                tagsObj is not List<string> tags)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < tags.Count; i++)
+            {
+                if (string.Equals(tags[i], "three_kingdoms_siege", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
     }
 }

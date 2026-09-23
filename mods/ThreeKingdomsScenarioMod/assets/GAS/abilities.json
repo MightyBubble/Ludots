@@ -1,0 +1,73 @@
+[
+  {
+    "id": "Ability.ThreeKingdoms.Unit.AssaultContext",
+    "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 1 } ] },
+    "presentation": { "displayName": "Assault", "iconGlyph": "CTX", "accentColor": "#D6A256", "hintText": "Siege context root." }
+  },
+  {
+    "id": "Ability.ThreeKingdoms.Unit.EnterAttachment",
+    "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 1 } ] },
+    "indicator": { "shape": "Single", "range": 1200, "showRangeCircle": true },
+    "presentation": { "displayName": "Board", "iconGlyph": "IN", "accentColor": "#E9B949", "hintText": "Enter a valid garrison, ladder, tunnel, or wall slot." }
+  },
+  {
+    "id": "Ability.ThreeKingdoms.Unit.WallClimb",
+    "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 1 } ] },
+    "indicator": { "shape": "Single", "range": 1400, "showRangeCircle": true },
+    "presentation": { "displayName": "Climb", "iconGlyph": "WL", "accentColor": "#63C5FF", "hintText": "Approach a wall segment and climb onto its slots." }
+  },
+  {
+    "id": "Ability.ThreeKingdoms.Unit.GateCapture",
+    "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 1 } ] },
+    "indicator": { "shape": "Single", "range": 1400, "showRangeCircle": true },
+    "presentation": { "displayName": "Capture", "iconGlyph": "GT", "accentColor": "#FF7A59", "hintText": "Channel on a gatehouse to flip control and seize the door." }
+  },
+  {
+    "id": "Ability.ThreeKingdoms.Unit.FillTrench",
+    "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 1 } ] },
+    "indicator": { "shape": "Single", "range": 1100, "showRangeCircle": true },
+    "presentation": { "displayName": "Fill", "iconGlyph": "TR", "accentColor": "#9FD05D", "hintText": "Approach a trench and fill it to disable the trap." }
+  },
+  {
+    "id": "Ability.ThreeKingdoms.Ladder.AttachContext",
+    "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 1 } ] },
+    "presentation": { "displayName": "Ladder", "iconGlyph": "CTX", "accentColor": "#C1A56B", "hintText": "Ladder context root." }
+  },
+  {
+    "id": "Ability.ThreeKingdoms.Ladder.Attach",
+    "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 1 } ] },
+    "indicator": { "shape": "Single", "range": 1400, "showRangeCircle": true },
+    "presentation": { "displayName": "Latch", "iconGlyph": "LD", "accentColor": "#CDB37D", "hintText": "Latch this ladder onto a wall segment." }
+  },
+  {
+    "id": "Ability.ThreeKingdoms.Ladder.DeployOne",
+    "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 1 } ] },
+    "presentation": { "displayName": "Deploy", "iconGlyph": "UP", "accentColor": "#66D48B", "hintText": "Send one boarded squad from ladder to wall." }
+  },
+  {
+    "id": "Ability.ThreeKingdoms.Ladder.ToggleHold",
+    "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 1 } ] },
+    "presentation": { "displayName": "Hold", "iconGlyph": "H", "accentColor": "#8894A5", "hintText": "Toggle ladder auto-deployment." }
+  },
+  {
+    "id": "Ability.ThreeKingdoms.Tunnel.SetExitContext",
+    "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 1 } ] },
+    "presentation": { "displayName": "Tunnel", "iconGlyph": "CTX", "accentColor": "#8E82D9", "hintText": "Tunnel network context root." }
+  },
+  {
+    "id": "Ability.ThreeKingdoms.Tunnel.SetExit",
+    "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 1 } ] },
+    "indicator": { "shape": "Single", "range": 3600, "showRangeCircle": true },
+    "presentation": { "displayName": "Set Exit", "iconGlyph": "EX", "accentColor": "#9B7EFF", "hintText": "Bind this tunnel mouth to another exit." }
+  },
+  {
+    "id": "Ability.ThreeKingdoms.Tunnel.Summon",
+    "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 1 } ] },
+    "presentation": { "displayName": "Summon", "iconGlyph": "GO", "accentColor": "#5ED0FF", "hintText": "Send all boarded units through the current tunnel route." }
+  },
+  {
+    "id": "Ability.ThreeKingdoms.Tunnel.Evacuate",
+    "exec": { "clockId": "FixedFrame", "items": [ { "kind": "End", "tick": 1 } ] },
+    "presentation": { "displayName": "Evacuate", "iconGlyph": "RT", "accentColor": "#FFB366", "hintText": "Pull units back from the bound exit to this entrance." }
+  }
+]

@@ -6,6 +6,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
@@ -24,9 +25,11 @@ namespace EntityCommandPanelMod.UI
         private readonly AbilityPresentationIconFactory _iconFactory = new();
         private readonly EntityCommandPanelShowcaseArtFactory _showcaseArtFactory = new();
         private readonly Dictionary<int, string> _abilityLabelCache = new();
+        private static readonly UiStyleSheet InteractionFeedbackStyleSheet = CreateInteractionFeedbackStyleSheet();
         private readonly ReactivePage<HostState> _page;
         private uint _lastRevision;
         private uint _lastToolbarRevision;
+        private uint _lastInteractionFeedbackRevision;
         private bool _lastToolbarVisible;
 
         public EntityCommandPanelController(GameEngine engine, EntityCommandPanelRuntime runtime)
@@ -41,8 +44,10 @@ namespace EntityCommandPanelMod.UI
             _page = new ReactivePage<HostState>(
                 textMeasurer,
                 imageSizeProvider,
-                new HostState(0),
-                BuildRoot);
+                new HostState(0, 0),
+                BuildRoot,
+                theme: null,
+                InteractionFeedbackStyleSheet);
         }
 
         public void Sync(UIRoot root)
@@ -50,6 +55,7 @@ namespace EntityCommandPanelMod.UI
             IEntityCommandPanelToolbarProvider? toolbar = ResolveToolbarProvider();
             bool toolbarVisible = toolbar?.IsVisible == true;
             uint toolbarRevision = toolbarVisible ? toolbar!.Revision : 0u;
+            uint interactionFeedbackRevision = ComputeInteractionFeedbackRevision();
 
             if (!_runtime.HasVisiblePanels && !toolbarVisible)
             {
@@ -59,12 +65,14 @@ namespace EntityCommandPanelMod.UI
 
             if (_lastRevision != _runtime.Revision ||
                 _lastToolbarRevision != toolbarRevision ||
+                _lastInteractionFeedbackRevision != interactionFeedbackRevision ||
                 _lastToolbarVisible != toolbarVisible)
             {
                 _lastRevision = _runtime.Revision;
                 _lastToolbarRevision = toolbarRevision;
+                _lastInteractionFeedbackRevision = interactionFeedbackRevision;
                 _lastToolbarVisible = toolbarVisible;
-                _page.SetState(_ => new HostState(_lastRevision));
+                _page.SetState(_ => new HostState(_lastRevision, _lastInteractionFeedbackRevision));
                 root.IsDirty = true;
             }
 
@@ -545,17 +553,37 @@ namespace EntityCommandPanelMod.UI
             string accent = ResolveAbilityAccent(in slot);
             string glyph = ResolveAbilityGlyph(in slot, interactionModeKey);
             string hotkey = ResolveActionKeyLabel(slot.ActionId);
+            bool interactive = source is IEntityCommandPanelActionSource &&
+                !slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Empty);
+            bool blocked = slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Blocked);
+            bool hotkeyHighlighted = interactive && IsShortcutFeedbackActive(slot.ActionId);
+            bool aimingHighlighted = interactive && IsAimingAction(slot.ActionId);
             string art = _showcaseArtFactory.BuildSlotArt(
                 themeId,
                 glyph,
                 hotkey,
                 accent,
                 slot.CooldownPermille,
-                slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Blocked),
+                blocked,
                 slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Active),
                 slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Empty));
             float artWidth = ResolveShowcaseArtWidth(themeId, width);
             float artHeight = ResolveShowcaseArtHeight(themeId, artWidth);
+            string detailLabel = showDetail
+                ? ResolveDetailLabel(in slot)
+                : ResolveShowcaseFeedbackLabel(in slot, hotkeyHighlighted, aimingHighlighted);
+            UiElementBuilder detailChip = Ui.Card(
+                    Ui.Text(detailLabel)
+                        .Class("ecp-showcase-slot__detail")
+                        .FontSize(Math.Max(9f, labelFontSize - 1f))
+                        .Color(ResolveThemeSubTextColor(themeId))
+                        .Width(width - 18f))
+                .Class("ecp-showcase-slot__status")
+                .Width(width - 4f)
+                .Padding(3f, 5f)
+                .Radius(7f)
+                .Background("#102132")
+                .Border(1f, ParseUiColor("#23475F"));
 
             UiElementBuilder card = Ui.Card(
                     Ui.Image(art)
@@ -563,27 +591,26 @@ namespace EntityCommandPanelMod.UI
                         .Height(artHeight)
                         .FlexShrink(0f),
                     Ui.Text(ResolveAbilityLabel(in slot))
+                        .Class("ecp-showcase-slot__label")
                         .FontFamily(string.Equals(themeId, EntityCommandPanelShowcaseTheme.Dota2Id, StringComparison.Ordinal) ? "Georgia" : "Segoe UI")
                         .FontSize(labelFontSize)
                         .Bold()
                         .Color(ResolveThemeTextColor(themeId))
                         .Width(width - 4f),
-                    showDetail
-                        ? Ui.Text(ResolveDetailLabel(in slot))
-                            .FontSize(Math.Max(9f, labelFontSize - 1f))
-                            .Color(ResolveThemeSubTextColor(themeId))
-                            .Width(width - 4f)
-                        : Ui.Text(slot.CooldownPermille > 0 ? $"Cooldown {slot.CooldownPermille / 10f:0}%" : ResolveFlagSummary(slot.StateFlags))
-                            .FontSize(Math.Max(9f, labelFontSize - 1f))
-                            .Color(ResolveThemeSubTextColor(themeId))
-                            .Width(width - 4f))
+                    detailChip)
+                .Classes(
+                    "ecp-showcase-slot",
+                    interactive ? "ecp-showcase-slot--interactive" : "ecp-showcase-slot--passive",
+                    blocked ? "ecp-showcase-slot--blocked" : "ecp-showcase-slot--ready",
+                    hotkeyHighlighted ? "ecp-showcase-slot--hotkey" : "ecp-showcase-slot--idle",
+                    aimingHighlighted ? "ecp-showcase-slot--aiming" : "ecp-showcase-slot--not-aiming")
                 .Width(width)
                 .Gap(4f)
-                .Padding(0f)
+                .Padding(4f)
+                .Radius(12f)
                 .Background(UiColor.Transparent);
 
-            if (source is IEntityCommandPanelActionSource actions &&
-                !slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Empty))
+            if (interactive && source is IEntityCommandPanelActionSource actions)
             {
                 int slotIndex = slot.SlotIndex;
                 card.OnClick(_ => { actions.ActivateSlot(target, groupIndex, slotIndex); });
@@ -866,18 +893,19 @@ namespace EntityCommandPanelMod.UI
         {
             string entityTitle = _runtime.ResolveEntityTitle(state.TargetEntity);
             string nextActionHint = ResolvePrimaryActionHint(slotCount, slots);
+            string trackLabel = $"Tracking {entityTitle}";
 
             return Ui.Card(
                     Ui.Row(
                             Ui.Column(
                                     Ui.Text(theme.MonitorTitle)
-                                        .FontSize(15f)
+                                        .FontSize(16f)
                                         .Bold()
                                         .Color("#F7FAFD"),
-                                    Ui.Text(entityTitle)
-                                        .FontSize(21f)
+                                    Ui.Text(trackLabel)
+                                        .FontSize(12f)
                                         .Bold()
-                                        .Color("#F7FAFD"),
+                                        .Color("#C8D9E8"),
                                     Ui.Text(theme.MonitorSubtitle)
                                         .FontSize(11f)
                                         .Color("#ACC0D4")
@@ -1941,7 +1969,202 @@ namespace EntityCommandPanelMod.UI
             return 1080f;
         }
 
-        private readonly record struct HostState(uint Revision);
+        private uint ComputeInteractionFeedbackRevision()
+        {
+            PlayerInputHandler? input = _engine.GetService(CoreServiceKeys.InputHandler);
+            InputOrderMappingSystem? mapping = _engine.GetService(CoreServiceKeys.ActiveInputOrderMapping);
+            if (input == null && mapping == null)
+            {
+                return 0u;
+            }
+
+            uint revision = 2166136261u;
+            Span<int> visiblePanels = stackalloc int[EntityCommandPanelRuntime.MaxInstances];
+            var slotBuffer = new EntityCommandPanelSlotView[AbilityStateBuffer.CAPACITY];
+            int panelCount = _runtime.CopyVisibleSlotIndices(visiblePanels);
+            for (int panelIndex = 0; panelIndex < panelCount; panelIndex++)
+            {
+                if (!_runtime.TryGetStateBySlot(visiblePanels[panelIndex], out EntityCommandPanelInstanceState panelState) ||
+                    !_runtime.TryGetSourceBySlot(visiblePanels[panelIndex], out IEntityCommandPanelSource source))
+                {
+                    continue;
+                }
+
+                Span<EntityCommandPanelSlotView> slots = slotBuffer;
+                int slotCount = source.CopySlots(panelState.TargetEntity, panelState.GroupIndex, slots);
+                for (int slotIndex = 0; slotIndex < slotCount; slotIndex++)
+                {
+                    string actionId = slots[slotIndex].ActionId;
+                    if (string.IsNullOrWhiteSpace(actionId))
+                    {
+                        continue;
+                    }
+
+                    revision = HashCombine(revision, (uint)actionId.GetHashCode(StringComparison.Ordinal));
+                    revision = HashCombine(revision, input != null && input.IsDown(actionId) ? 1u : 0u);
+                    revision = HashCombine(revision, input != null && input.PressedThisFrame(actionId) ? 1u : 0u);
+                    revision = HashCombine(revision, mapping != null && string.Equals(mapping.AimingActionId, actionId, StringComparison.Ordinal) ? 1u : 0u);
+                }
+            }
+
+            return revision;
+        }
+
+        private bool IsShortcutFeedbackActive(string actionId)
+        {
+            if (string.IsNullOrWhiteSpace(actionId))
+            {
+                return false;
+            }
+
+            PlayerInputHandler? input = _engine.GetService(CoreServiceKeys.InputHandler);
+            if (input != null && (input.IsDown(actionId) || input.PressedThisFrame(actionId)))
+            {
+                return true;
+            }
+
+            return IsAimingAction(actionId);
+        }
+
+        private bool IsAimingAction(string actionId)
+        {
+            if (string.IsNullOrWhiteSpace(actionId))
+            {
+                return false;
+            }
+
+            if (_engine.GetService(CoreServiceKeys.ActiveInputOrderMapping) is not InputOrderMappingSystem mapping)
+            {
+                return false;
+            }
+
+            return string.Equals(mapping.AimingActionId, actionId, StringComparison.Ordinal);
+        }
+
+        private static string ResolveShowcaseFeedbackLabel(in EntityCommandPanelSlotView slot, bool hotkeyHighlighted, bool aimingHighlighted)
+        {
+            if (aimingHighlighted)
+            {
+                return "Aiming";
+            }
+
+            if (hotkeyHighlighted)
+            {
+                return "Hotkey";
+            }
+
+            if (slot.CooldownPermille > 0)
+            {
+                return $"Cooldown {slot.CooldownPermille / 10f:0}%";
+            }
+
+            return ResolveFlagSummary(slot.StateFlags);
+        }
+
+        private static UiStyleSheet CreateInteractionFeedbackStyleSheet()
+        {
+            return new UiStyleSheet()
+                .AddRule(".ecp-showcase-slot", style =>
+                {
+                    style.Set("border-width", "1px");
+                    style.Set("border-color", "rgba(143, 185, 209, 0.18)");
+                    style.Set("border-radius", "12px");
+                    style.Set("background-color", "rgba(7, 17, 26, 0.74)");
+                    style.Set("box-shadow", "0 0 0 rgba(0, 0, 0, 0)");
+                })
+                .AddRule(".ecp-showcase-slot__status", style =>
+                {
+                    style.Set("background-color", "rgba(10, 27, 40, 0.88)");
+                    style.Set("border-width", "1px");
+                    style.Set("border-color", "rgba(77, 128, 159, 0.72)");
+                    style.Set("border-radius", "7px");
+                })
+                .AddRule(".ecp-showcase-slot--interactive:hover", style =>
+                {
+                    style.Set("background-color", "rgba(72, 188, 255, 0.68)");
+                    style.Set("border-width", "4px");
+                    style.Set("border-color", "#D2F7FF");
+                    style.Set("outline-width", "3px");
+                    style.Set("outline-color", "rgba(181, 242, 255, 0.92)");
+                    style.Set("box-shadow", "0 0 42px rgba(73, 191, 255, 0.62)");
+                    style.Set("transform", "scale(1.10)");
+                })
+                .AddRule(".ecp-showcase-slot--interactive:active", style =>
+                {
+                    style.Set("background-color", "rgba(255, 188, 82, 0.78)");
+                    style.Set("border-width", "4px");
+                    style.Set("border-color", "#FFE3A2");
+                    style.Set("outline-width", "3px");
+                    style.Set("outline-color", "rgba(255, 227, 162, 0.98)");
+                    style.Set("box-shadow", "0 0 38px rgba(255, 195, 107, 0.56)");
+                    style.Set("transform", "scale(0.90)");
+                })
+                .AddRule(".ecp-showcase-slot--hotkey", style =>
+                {
+                    style.Set("background-color", "rgba(242, 195, 107, 0.46)");
+                    style.Set("border-width", "4px");
+                    style.Set("border-color", "#FFD27A");
+                    style.Set("outline-width", "2px");
+                    style.Set("outline-color", "rgba(255, 210, 122, 0.68)");
+                    style.Set("box-shadow", "0 0 28px rgba(255, 195, 107, 0.36)");
+                })
+                .AddRule(".ecp-showcase-slot--aiming", style =>
+                {
+                    style.Set("background-color", "rgba(88, 183, 255, 0.36)");
+                    style.Set("border-width", "3px");
+                    style.Set("border-color", "#8CD4FF");
+                    style.Set("outline-width", "2px");
+                    style.Set("outline-color", "rgba(140, 212, 255, 0.58)");
+                    style.Set("box-shadow", "0 0 24px rgba(88, 183, 255, 0.30)");
+                })
+                .AddRule(".ecp-showcase-slot--blocked", style =>
+                {
+                    style.Set("border-color", "rgba(217, 119, 127, 0.45)");
+                })
+                .AddRule(".ecp-showcase-slot--interactive:hover .ecp-showcase-slot__status", style =>
+                {
+                    style.Set("background-color", "rgba(8, 56, 86, 0.94)");
+                    style.Set("border-width", "2px");
+                    style.Set("border-color", "#C6F4FF");
+                })
+                .AddRule(".ecp-showcase-slot--interactive:active .ecp-showcase-slot__status", style =>
+                {
+                    style.Set("background-color", "rgba(88, 52, 6, 0.96)");
+                    style.Set("border-width", "2px");
+                    style.Set("border-color", "#FFE19A");
+                })
+                .AddRule(".ecp-showcase-slot--hotkey .ecp-showcase-slot__status", style =>
+                {
+                    style.Set("background-color", "rgba(72, 54, 12, 0.92)");
+                    style.Set("border-width", "2px");
+                    style.Set("border-color", "#FFD27A");
+                })
+                .AddRule(".ecp-showcase-slot--aiming .ecp-showcase-slot__status", style =>
+                {
+                    style.Set("background-color", "rgba(10, 43, 68, 0.92)");
+                    style.Set("border-width", "2px");
+                    style.Set("border-color", "#9EDDFF");
+                })
+                .AddRule(".ecp-showcase-slot--interactive:hover .ecp-showcase-slot__label, .ecp-showcase-slot--interactive:active .ecp-showcase-slot__label, .ecp-showcase-slot--hotkey .ecp-showcase-slot__label, .ecp-showcase-slot--aiming .ecp-showcase-slot__label", style =>
+                {
+                    style.Set("color", "#F8FCFF");
+                })
+                .AddRule(".ecp-showcase-slot--interactive:hover .ecp-showcase-slot__detail, .ecp-showcase-slot--interactive:active .ecp-showcase-slot__detail, .ecp-showcase-slot--hotkey .ecp-showcase-slot__detail, .ecp-showcase-slot--aiming .ecp-showcase-slot__detail", style =>
+                {
+                    style.Set("color", "#F5FAFF");
+                    style.Set("font-weight", "700");
+                });
+        }
+
+        private static uint HashCombine(uint seed, uint value)
+        {
+            unchecked
+            {
+                return (seed ^ value) * 16777619u;
+            }
+        }
+
+        private readonly record struct HostState(uint Revision, uint InteractionRevision);
 
         private readonly record struct RtsHudTheme(
             string ScenarioLabel,

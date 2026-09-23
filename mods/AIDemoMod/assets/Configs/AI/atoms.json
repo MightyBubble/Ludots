@@ -1,4 +1,5 @@
 [
-  { "id": "HasEnemy" }
+  { "id": "HasEnemy" },
+  { "id": "AttackOrderIssued" }
 ]
 

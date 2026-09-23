@@ -1,0 +1,135 @@
+{
+  "Id": "three_kingdoms_siege",
+  "Tags": ["rts", "three_kingdoms", "siege"],
+  "DefaultCamera": {
+    "VirtualCameraId": "Rts",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "Yaw": 180,
+    "Pitch": 55,
+    "DistanceCm": 15000,
+    "FovYDeg": 60
+  },
+  "Entities": [
+    {
+      "Template": "rts_war3_barracks",
+      "Overrides": {
+        "Name": { "Value": "Han Camp Barracks" },
+        "Team": { "Id": 1 },
+        "WorldPositionCm": { "Value": { "X": -5400, "Y": -2400 } }
+      }
+    },
+    {
+      "Template": "rts_war3_peasant",
+      "Overrides": {
+        "Name": { "Value": "Han Engineer" },
+        "Team": { "Id": 1 },
+        "WorldPositionCm": { "Value": { "X": -6400, "Y": -2100 } }
+      }
+    },
+    {
+      "Template": "rts_war3_footman",
+      "Overrides": {
+        "Name": { "Value": "Han Vanguard" },
+        "Team": { "Id": 1 },
+        "WorldPositionCm": { "Value": { "X": -6200, "Y": -1300 } }
+      }
+    },
+    {
+      "Template": "rts_war3_footman",
+      "Overrides": {
+        "Name": { "Value": "Han Wall Party" },
+        "Team": { "Id": 1 },
+        "WorldPositionCm": { "Value": { "X": -5900, "Y": -900 } }
+      }
+    },
+    {
+      "Template": "rts_ra2_bunker",
+      "Overrides": {
+        "Name": { "Value": "Siege Tower" },
+        "Team": { "Id": 1 },
+        "WorldPositionCm": { "Value": { "X": -4500, "Y": -900 } }
+      }
+    },
+    {
+      "Template": "rts_ra2_war_factory",
+      "Overrides": {
+        "Name": { "Value": "Assault Workshop" },
+        "Team": { "Id": 1 },
+        "WorldPositionCm": { "Value": { "X": -4300, "Y": -2300 } }
+      }
+    },
+    {
+      "Template": "rts_war3_guard_tower_site",
+      "Overrides": {
+        "Name": { "Value": "Outer Wall Tower" },
+        "Team": { "Id": 2 },
+        "WorldPositionCm": { "Value": { "X": -900, "Y": -1200 } }
+      }
+    },
+    {
+      "Template": "rts_war3_guard_tower_site",
+      "Overrides": {
+        "Name": { "Value": "Gatehouse" },
+        "Team": { "Id": 2 },
+        "WorldPositionCm": { "Value": { "X": 300, "Y": -1200 } }
+      }
+    },
+    {
+      "Template": "rts_war3_guard_tower_site",
+      "Overrides": {
+        "Name": { "Value": "Inner Wall Tower" },
+        "Team": { "Id": 2 },
+        "WorldPositionCm": { "Value": { "X": 1500, "Y": -1200 } }
+      }
+    },
+    {
+      "Template": "rts_ra2_bunker",
+      "Overrides": {
+        "Name": { "Value": "City Wall Bastion" },
+        "Team": { "Id": 2 },
+        "WorldPositionCm": { "Value": { "X": 3500, "Y": -1100 } }
+      }
+    },
+    {
+      "Template": "rts_ra2_bunker",
+      "Overrides": {
+        "Name": { "Value": "Tunnel Entrance" },
+        "Team": { "Id": 2 },
+        "WorldPositionCm": { "Value": { "X": 2700, "Y": 900 } }
+      }
+    },
+    {
+      "Template": "rts_ra2_bunker",
+      "Overrides": {
+        "Name": { "Value": "Tunnel Exit" },
+        "Team": { "Id": 2 },
+        "WorldPositionCm": { "Value": { "X": 4600, "Y": 1500 } }
+      }
+    },
+    {
+      "Template": "rts_ra2_power_plant",
+      "Overrides": {
+        "Name": { "Value": "Trench Blocker" },
+        "Team": { "Id": 2 },
+        "WorldPositionCm": { "Value": { "X": -1500, "Y": 200 } }
+      }
+    },
+    {
+      "Template": "rts_sc2_gateway",
+      "Overrides": {
+        "Name": { "Value": "Citadel Keep" },
+        "Team": { "Id": 2 },
+        "WorldPositionCm": { "Value": { "X": 5200, "Y": -200 } }
+      }
+    },
+    {
+      "Template": "rts_sc2_probe",
+      "Overrides": {
+        "Name": { "Value": "Defender Courier" },
+        "Team": { "Id": 2 },
+        "WorldPositionCm": { "Value": { "X": 4200, "Y": -500 } }
+      }
+    }
+  ]
+}

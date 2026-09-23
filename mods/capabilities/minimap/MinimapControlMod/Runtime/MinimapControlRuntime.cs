@@ -11,6 +11,7 @@ using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 
@@ -96,14 +97,14 @@ public sealed class MinimapControlRuntime
     private const int StrategicGridSide = 12;
     private const int StrategicCellCount = StrategicGridSide * StrategicGridSide;
 
-    private const int PanelX = 1472;
-    private const int PanelY = 32;
+    private const int PanelTopMargin = 32;
+    private const int PanelRightMargin = 28;
     private const int PanelWidth = 416;
     private const int PanelHeight = 414;
-    private const int FieldX = PanelX + 18;
-    private const int FieldY = PanelY + 56;
+    private const int FieldPaddingLeft = 18;
+    private const int FieldPaddingTop = 56;
     private const int FieldSize = 272;
-    private const int LegendY = FieldY + FieldSize + 18;
+    private const int LegendTopGap = 18;
 
     private static readonly QueryDescription SignalQuery = new QueryDescription()
         .WithAll<Name, WorldPositionCm, Team, MapEntity>();
@@ -169,6 +170,9 @@ public sealed class MinimapControlRuntime
     private float _maxWorldXcm;
     private float _maxWorldYcm;
     private bool _viewportInitialized;
+    private bool _hasViewportResolution;
+    private int _viewportWidthPx;
+    private int _viewportHeightPx;
 
     public bool Visible { get; set; }
     public MinimapZoomBand ZoomBand { get; private set; } = MinimapZoomBand.Strategic;
@@ -186,6 +190,20 @@ public sealed class MinimapControlRuntime
         ArgumentNullException.ThrowIfNull(engine);
 
         _currentMapId = engine.CurrentMapSession?.MapId.Value ?? string.Empty;
+        if (engine.GetService(CoreServiceKeys.ViewController) is IViewController viewController)
+        {
+            Vector2 resolution = viewController.Resolution;
+            _viewportWidthPx = Math.Max(1, (int)MathF.Round(resolution.X));
+            _viewportHeightPx = Math.Max(1, (int)MathF.Round(resolution.Y));
+            _hasViewportResolution = true;
+        }
+        else
+        {
+            _viewportWidthPx = 0;
+            _viewportHeightPx = 0;
+            _hasViewportResolution = false;
+        }
+
         if (!Visible || string.IsNullOrWhiteSpace(_currentMapId))
         {
             ResetTransientState();
@@ -286,44 +304,46 @@ public sealed class MinimapControlRuntime
     public void Render(ScreenOverlayBuffer overlay)
     {
         ArgumentNullException.ThrowIfNull(overlay);
-        if (!Visible || _signalCount == 0)
+        if (!Visible || _signalCount == 0 || !_hasViewportResolution)
         {
             return;
         }
 
+        MinimapLayout layout = ResolveLayout();
+
         overlay.AddRect(
-            PanelX,
-            PanelY,
+            layout.PanelX,
+            layout.PanelY,
             PanelWidth,
             PanelHeight,
             new Vector4(0.03f, 0.06f, 0.09f, 0.90f),
             new Vector4(0.34f, 0.49f, 0.62f, 0.90f));
-        overlay.AddText(PanelX + 18, PanelY + 24, "4X Minimap", 20, new Vector4(0.94f, 0.96f, 0.99f, 1f));
-        overlay.AddText(PanelX + 220, PanelY + 24, BandLabels[(int)ZoomBand], 16, new Vector4(0.95f, 0.78f, 0.43f, 1f));
+        overlay.AddText(layout.PanelX + 18, layout.PanelY + 24, "4X Minimap", 20, new Vector4(0.94f, 0.96f, 0.99f, 1f));
+        overlay.AddText(layout.PanelX + 220, layout.PanelY + 24, BandLabels[(int)ZoomBand], 16, new Vector4(0.95f, 0.78f, 0.43f, 1f));
 
         overlay.AddRect(
-            FieldX,
-            FieldY,
+            layout.FieldX,
+            layout.FieldY,
             FieldSize,
             FieldSize,
             new Vector4(0.04f, 0.08f, 0.12f, 0.96f),
             new Vector4(0.22f, 0.35f, 0.43f, 0.95f));
-        RenderGrid(overlay);
+        RenderGrid(overlay, in layout);
 
         if (ZoomBand == MinimapZoomBand.Strategic)
         {
-            RenderStrategicCells(overlay);
+            RenderStrategicCells(overlay, in layout);
         }
         else
         {
-            RenderSignals(overlay);
+            RenderSignals(overlay, in layout);
         }
 
-        overlay.AddText(PanelX + 18, LegendY, "Wheel/PageUp/PageDown zoom", 14, new Vector4(0.72f, 0.79f, 0.86f, 1f));
-        overlay.AddText(PanelX + 18, LegendY + 22, "Arrows pan  C center selected", 14, new Vector4(0.72f, 0.79f, 0.86f, 1f));
-        overlay.AddText(PanelX + 18, LegendY + 48, "Selected", 14, new Vector4(0.95f, 0.78f, 0.43f, 1f));
-        overlay.AddText(PanelX + 92, LegendY + 48, string.IsNullOrWhiteSpace(_selectedLabel) ? "None" : _selectedLabel, 14, new Vector4(0.97f, 0.98f, 1f, 1f));
-        overlay.AddText(PanelX + 18, LegendY + 72, "Empire / frontier / tactical layers switch by zoom band.", 13, new Vector4(0.60f, 0.69f, 0.76f, 1f));
+        overlay.AddText(layout.PanelX + 18, layout.LegendY, "Wheel/PageUp/PageDown zoom", 14, new Vector4(0.72f, 0.79f, 0.86f, 1f));
+        overlay.AddText(layout.PanelX + 18, layout.LegendY + 22, "Arrows pan  C center selected", 14, new Vector4(0.72f, 0.79f, 0.86f, 1f));
+        overlay.AddText(layout.PanelX + 18, layout.LegendY + 48, "Selected", 14, new Vector4(0.95f, 0.78f, 0.43f, 1f));
+        overlay.AddText(layout.PanelX + 92, layout.LegendY + 48, string.IsNullOrWhiteSpace(_selectedLabel) ? "None" : _selectedLabel, 14, new Vector4(0.97f, 0.98f, 1f, 1f));
+        overlay.AddText(layout.PanelX + 18, layout.LegendY + 72, "Empire / frontier / tactical layers switch by zoom band.", 13, new Vector4(0.60f, 0.69f, 0.76f, 1f));
     }
 
     public void SetViewport(float centerXcm, float centerYcm, float halfExtentCm)
@@ -469,21 +489,21 @@ public sealed class MinimapControlRuntime
             cells);
     }
 
-    private void RenderGrid(ScreenOverlayBuffer overlay)
+    private void RenderGrid(ScreenOverlayBuffer overlay, in MinimapLayout layout)
     {
         int step = FieldSize / 4;
         for (int i = 1; i < 4; i++)
         {
             int offset = step * i;
-            overlay.AddRect(FieldX + offset, FieldY, 1, FieldSize, Vector4.Zero, new Vector4(0.15f, 0.25f, 0.30f, 0.70f));
-            overlay.AddRect(FieldX, FieldY + offset, FieldSize, 1, Vector4.Zero, new Vector4(0.15f, 0.25f, 0.30f, 0.70f));
+            overlay.AddRect(layout.FieldX + offset, layout.FieldY, 1, FieldSize, Vector4.Zero, new Vector4(0.15f, 0.25f, 0.30f, 0.70f));
+            overlay.AddRect(layout.FieldX, layout.FieldY + offset, FieldSize, 1, Vector4.Zero, new Vector4(0.15f, 0.25f, 0.30f, 0.70f));
         }
 
-        overlay.AddRect(FieldX + (FieldSize / 2), FieldY, 1, FieldSize, Vector4.Zero, new Vector4(0.32f, 0.43f, 0.50f, 0.75f));
-        overlay.AddRect(FieldX, FieldY + (FieldSize / 2), FieldSize, 1, Vector4.Zero, new Vector4(0.32f, 0.43f, 0.50f, 0.75f));
+        overlay.AddRect(layout.FieldX + (FieldSize / 2), layout.FieldY, 1, FieldSize, Vector4.Zero, new Vector4(0.32f, 0.43f, 0.50f, 0.75f));
+        overlay.AddRect(layout.FieldX, layout.FieldY + (FieldSize / 2), FieldSize, 1, Vector4.Zero, new Vector4(0.32f, 0.43f, 0.50f, 0.75f));
     }
 
-    private void RenderStrategicCells(ScreenOverlayBuffer overlay)
+    private void RenderStrategicCells(ScreenOverlayBuffer overlay, in MinimapLayout layout)
     {
         int cellSize = FieldSize / StrategicGridSide;
         for (int index = 0; index < StrategicCellCount; index++)
@@ -498,8 +518,8 @@ public sealed class MinimapControlRuntime
             int y = index / StrategicGridSide;
             Vector4 fill = ResolveCellColor(index);
             overlay.AddRect(
-                FieldX + (x * cellSize) + 2,
-                FieldY + (y * cellSize) + 2,
+                layout.FieldX + (x * cellSize) + 2,
+                layout.FieldY + (y * cellSize) + 2,
                 cellSize - 4,
                 cellSize - 4,
                 fill,
@@ -507,54 +527,54 @@ public sealed class MinimapControlRuntime
 
             if (_cellObjectives[index] > 0)
             {
-                overlay.AddText(FieldX + (x * cellSize) + 6, FieldY + (y * cellSize) + 14, "O", 14, new Vector4(1f, 0.86f, 0.54f, 1f));
+                overlay.AddText(layout.FieldX + (x * cellSize) + 6, layout.FieldY + (y * cellSize) + 14, "O", 14, new Vector4(1f, 0.86f, 0.54f, 1f));
             }
             else if (_cellResources[index] > 0)
             {
-                overlay.AddText(FieldX + (x * cellSize) + 6, FieldY + (y * cellSize) + 14, "R", 14, new Vector4(0.64f, 0.92f, 0.84f, 1f));
+                overlay.AddText(layout.FieldX + (x * cellSize) + 6, layout.FieldY + (y * cellSize) + 14, "R", 14, new Vector4(0.64f, 0.92f, 0.84f, 1f));
             }
             else if (_cellHazards[index] > 0)
             {
-                overlay.AddText(FieldX + (x * cellSize) + 6, FieldY + (y * cellSize) + 14, "!", 14, new Vector4(1f, 0.57f, 0.50f, 1f));
+                overlay.AddText(layout.FieldX + (x * cellSize) + 6, layout.FieldY + (y * cellSize) + 14, "!", 14, new Vector4(1f, 0.57f, 0.50f, 1f));
             }
 
             overlay.AddText(
-                FieldX + (x * cellSize) + cellSize - 18,
-                FieldY + (y * cellSize) + cellSize - 8,
+                layout.FieldX + (x * cellSize) + cellSize - 18,
+                layout.FieldY + (y * cellSize) + cellSize - 8,
                 CountLabels[Math.Min(9, total)],
                 11,
                 new Vector4(0.97f, 0.98f, 1f, 1f));
         }
 
-        RenderImportantSignals(overlay);
+        RenderImportantSignals(overlay, in layout);
     }
 
-    private void RenderSignals(ScreenOverlayBuffer overlay)
+    private void RenderSignals(ScreenOverlayBuffer overlay, in MinimapLayout layout)
     {
         for (int i = 0; i < _visibleSignalCount; i++)
         {
-            RenderSignal(overlay, _visibleSignalIndices[i], iconOnly: false);
+            RenderSignal(overlay, _visibleSignalIndices[i], iconOnly: false, in layout);
         }
     }
 
-    private void RenderImportantSignals(ScreenOverlayBuffer overlay)
+    private void RenderImportantSignals(ScreenOverlayBuffer overlay, in MinimapLayout layout)
     {
         for (int i = 0; i < _visibleSignalCount; i++)
         {
             int index = _visibleSignalIndices[i];
             if (_importance[index] >= 3)
             {
-                RenderSignal(overlay, index, iconOnly: true);
+                RenderSignal(overlay, index, iconOnly: true, in layout);
             }
         }
     }
 
-    private void RenderSignal(ScreenOverlayBuffer overlay, int index, bool iconOnly)
+    private void RenderSignal(ScreenOverlayBuffer overlay, int index, bool iconOnly, in MinimapLayout layout)
     {
         float normalizedX = NormalizeToField(_worldXcm[index], _centerXcm, _halfExtentCm);
         float normalizedY = NormalizeToField(_worldYcm[index], _centerYcm, _halfExtentCm);
-        int screenX = FieldX + (int)MathF.Round(normalizedX * (FieldSize - 1));
-        int screenY = FieldY + (int)MathF.Round(normalizedY * (FieldSize - 1));
+        int screenX = layout.FieldX + (int)MathF.Round(normalizedX * (FieldSize - 1));
+        int screenY = layout.FieldY + (int)MathF.Round(normalizedY * (FieldSize - 1));
         string icon = ResolveIcon((MinimapSignalKind)_kinds[index]);
         Vector4 color = ResolveSignalColor((MinimapSignalFlags)_flags[index]);
 
@@ -869,4 +889,25 @@ public sealed class MinimapControlRuntime
         _maxWorldXcm = 0f;
         _maxWorldYcm = 0f;
     }
+
+    private MinimapLayout ResolveLayout()
+    {
+        int panelX = Math.Max(16, _viewportWidthPx - PanelWidth - PanelRightMargin);
+        int panelY = PanelTopMargin;
+        int fieldX = panelX + FieldPaddingLeft;
+        int fieldY = panelY + FieldPaddingTop;
+        return new MinimapLayout(
+            panelX,
+            panelY,
+            fieldX,
+            fieldY,
+            fieldY + FieldSize + LegendTopGap);
+    }
+
+    private readonly record struct MinimapLayout(
+        int PanelX,
+        int PanelY,
+        int FieldX,
+        int FieldY,
+        int LegendY);
 }

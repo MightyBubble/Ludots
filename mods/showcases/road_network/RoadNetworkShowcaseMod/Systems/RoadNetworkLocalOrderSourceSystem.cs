@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Arch.System;
@@ -6,6 +7,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Map;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
@@ -47,6 +49,11 @@ namespace RoadNetworkShowcaseMod.Systems
 
         public void Update(in float dt)
         {
+            if (IsThreeKingdomsScenarioActive())
+            {
+                return;
+            }
+
             EnsureInitialized();
             if (_mapping == null)
             {
@@ -69,6 +76,32 @@ namespace RoadNetworkShowcaseMod.Systems
 
         public void Dispose()
         {
+        }
+
+        private bool IsThreeKingdomsScenarioActive()
+        {
+            if (!_globals.TryGetValue(CoreServiceKeys.MapId.Name, out object? mapObj) ||
+                mapObj is not MapId mapId ||
+                !string.Equals(mapId.Value, "road_network_showcase_chunked", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            if (!_globals.TryGetValue(CoreServiceKeys.MapTags.Name, out object? tagsObj) ||
+                tagsObj is not List<string> tags)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < tags.Count; i++)
+            {
+                if (string.Equals(tags[i], "three_kingdoms_siege", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void EnsureInitialized()

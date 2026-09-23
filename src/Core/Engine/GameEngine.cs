@@ -15,6 +15,8 @@ using Ludots.Core.Map.Hex;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Narrative;
+using Ludots.Core.Gameplay.AI.Planning;
+using Ludots.Core.Gameplay.AI.Systems;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.GAS.Bindings;
@@ -746,6 +748,13 @@ namespace Ludots.Core.Engine
                 World, clock, orderTypeRegistry, orderRuleRegistry,
                 orderQueue, stepRateHz,
                 graphProgramRegistry, gasGraphApi);
+            var aiProjectionSystem = new WorldStateProjectionSystem(World, AiRuntime.ProjectionTable);
+            var aiGoalSelectionSystem = new AIGoalSelectionSystem(World, AiRuntime.GoalSelector);
+            var goapPlanner = new GoapAStarPlanner256();
+            var goapPlanningSystem = new GoapPlanningSystem(World, goapPlanner, AiRuntime.ActionLibrary, AiRuntime.GoapGoals);
+            var htnPlanner = new HtnPlanner256();
+            var htnPlanningSystem = new HtnPlanningSystem(World, htnPlanner, AiRuntime.HtnDomain, AiRuntime.HtnRoots);
+            var aiPlanExecutionSystem = new AIPlanExecutionSystem(World, clock, AiRuntime.ActionLibrary, orderQueue);
             var abilityExecSystem = new AbilityExecSystem(World, clock, abilityInputRequestQueue, inputResponseBuffer, selectionRequestQueue, selectionResponseBuffer, effectRequestQueue, abilityDefinitions, EventBus, cfgCastAbility, cfgCastAbilityStart, gasPresentationEvents, phaseExecutor: phaseExecutor, graphPrograms: graphProgramRegistry, graphApi: gasGraphApi, tagOps: tagOps, orderTypeRegistry: orderTypeRegistry);
             var abilityEndOrderSystem = new AbilityEndOrderSystem(World, orderTypeRegistry, cfgCastAbilityEnd);
             var stopOrderSystem = new StopOrderSystem(World, orderTypeRegistry, cfgStop);
@@ -877,6 +886,11 @@ namespace Ludots.Core.Engine
             RegisterSystem(timedTagSystem, SystemGroup.InputCollection);
             RegisterSystem(new InventoryEquipmentGrantSyncSystem(World, inventoryRuntime, effectRequestQueue), SystemGroup.InputCollection);
             RegisterSystem(new AbilityFormRoutingSystem(World, abilityFormSets, tagOps), SystemGroup.InputCollection);
+            RegisterSystem(aiProjectionSystem, SystemGroup.InputCollection);
+            RegisterSystem(aiGoalSelectionSystem, SystemGroup.InputCollection);
+            RegisterSystem(goapPlanningSystem, SystemGroup.InputCollection);
+            RegisterSystem(htnPlanningSystem, SystemGroup.InputCollection);
+            RegisterSystem(aiPlanExecutionSystem, SystemGroup.InputCollection);
             _worldToGridSyncSystem = new WorldToGridSyncSystem(World, SpatialCoords);
             _spatialPartitionUpdateSystem = new SpatialPartitionUpdateSystem(World, _spatialPartition, WorldSizeSpec);
             RegisterSystem(_worldToGridSyncSystem, SystemGroup.PostMovement);

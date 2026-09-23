@@ -433,6 +433,7 @@ namespace Ludots.Adapter.Raylib
                             AppendRaylibDiagnostic(
                                 diagnosticPath,
                                 $"screenshot frame={frameIndex} cameraPos=({activeCamera.position.X:F2},{activeCamera.position.Y:F2},{activeCamera.position.Z:F2}) cameraTarget=({activeCamera.target.X:F2},{activeCamera.target.Y:F2},{activeCamera.target.Z:F2})");
+                            AppendRaylibDiagnostic(diagnosticPath, BuildPresentationDiagnostic(engine));
                             AppendRaylibDiagnostic(diagnosticPath, BuildInputSelectionDiagnostic(engine));
 
                             Rl.TakeScreenshot(screenshotFileName!);
@@ -609,6 +610,36 @@ namespace Ludots.Adapter.Raylib
 
             string targetSummary = BuildSelectionTargetSummary(engine);
             return $"windowFocused={Rl.IsWindowFocused()} {pointerSummary} {authPointerSummary} {liveSelectSummary} {authSelectSummary} {liveCommandSummary} {authCommandSummary} {hoveredSummary} {selectedSummary} uiCaptured={uiCaptured} {dragSummary} {targetSummary}";
+        }
+
+        private static string BuildPresentationDiagnostic(GameEngine engine)
+        {
+            int primitiveCount = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer)?.GetSpan().Length ?? 0;
+            int snapshotCount = engine.GetService(CoreServiceKeys.PresentationVisualSnapshotBuffer)?.GetSpan().Length ?? 0;
+            int roadSplineCount = engine.GetService(CoreServiceKeys.RoadSplineBuffer)?.Count ?? 0;
+            string mapId = engine.CurrentMapSession?.MapId.Value ?? "<none>";
+            Vector2 targetCm = engine.GameSession.Camera.State.TargetCm;
+
+            string selectedEntity = "selectedEntity=(none)";
+            if (SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected) &&
+                selected != Entity.Null &&
+                engine.World.IsAlive(selected))
+            {
+                string name = engine.World.TryGet(selected, out Name selectedName) && !string.IsNullOrWhiteSpace(selectedName.Value)
+                    ? selectedName.Value
+                    : $"#{selected.Id}";
+
+                if (engine.World.TryGet(selected, out WorldPositionCm position))
+                {
+                    selectedEntity = $"selectedEntity={name}@({position.Value.X.ToFloat():0},{position.Value.Y.ToFloat():0})cm";
+                }
+                else
+                {
+                    selectedEntity = $"selectedEntity={name}@<no-world-position>";
+                }
+            }
+
+            return $"map={mapId} cameraTargetCm=({targetCm.X:0},{targetCm.Y:0}) primitives={primitiveCount} snapshots={snapshotCount} roadSplines={roadSplineCount} {selectedEntity}";
         }
 
         private static string BuildActionStateSummary(IInputActionReader input, string actionId, string label)

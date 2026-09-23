@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ludots Siege Overnight Delivery"
+  short_description: "Drive an isolated overnight siege scenario delivery with board updates, evidence, and Claude verification"
+  default_prompt: "Use $ludots-siege-overnight-delivery to deliver the playable overnight RTS siege scenario in the isolated worktree, keep the board current, produce tests plus visual evidence, and require Claude verification before pass."

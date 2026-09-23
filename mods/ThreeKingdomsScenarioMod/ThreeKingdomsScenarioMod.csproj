@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Core\Ludots.Core.csproj" />
+    <ProjectReference Include="..\CoreInputMod\CoreInputMod.csproj" />
+    <ProjectReference Include="..\RtsDemoMod\RtsDemoMod.csproj" />
+    <ProjectReference Include="..\capabilities\entityinfo\EntityInfoPanelsMod\EntityInfoPanelsMod.csproj" />
+    <ProjectReference Include="..\EntityCommandPanelMod\EntityCommandPanelMod.csproj" />
+    <ProjectReference Include="..\capabilities\minimap\MinimapControlMod\MinimapControlMod.csproj" />
+    <ProjectReference Include="..\showcases\road_network\RoadNetworkShowcaseMod\RoadNetworkShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\src\Libraries\Ludots.UI\Ludots.UI.csproj">
+      <Private>false</Private>
+    </ProjectReference>
+  </ItemGroup>
+
+</Project>

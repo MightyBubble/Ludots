@@ -2,10 +2,12 @@
   {
     "id": "Submit.Attack",
     "Cost": 1,
-    "Pre": { "Mask": [], "Values": [] },
-    "Post": { "Mask": [], "Values": [] },
-    "Order": { "OrderTagId": 1234, "SubmitMode": 0, "PlayerId": 0 },
-    "Bindings": []
+    "Pre": { "Mask": ["HasEnemy"], "Values": ["HasEnemy"] },
+    "Post": { "Mask": ["AttackOrderIssued"], "Values": ["AttackOrderIssued"] },
+    "Order": { "OrderTypeId": 102, "SubmitMode": 0, "PlayerId": 0 },
+    "Bindings": [
+      { "Op": "EntityToTarget", "SourceKey": 1000 }
+    ]
   }
 ]
 

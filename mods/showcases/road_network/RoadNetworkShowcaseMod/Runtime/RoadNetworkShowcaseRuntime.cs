@@ -75,10 +75,16 @@ namespace RoadNetworkShowcaseMod.Runtime
             board.LoadedChunksSource.ChunkLoaded += HandleChunkLoaded;
 
             EnsureShowcaseProfiles(engine.World);
-            ApplyInitialPlayableCamera(engine);
+            if (!IsThreeKingdomsScenarioActive(engine))
+            {
+                ApplyInitialPlayableCamera(engine);
+            }
             PrimeInitialChunkWindow(engine);
-            EnsurePrimaryPlayerControl(engine);
-            RefreshPanel(engine);
+            if (!IsThreeKingdomsScenarioActive(engine))
+            {
+                EnsurePrimaryPlayerControl(engine);
+                RefreshPanel(engine);
+            }
 
             return Task.CompletedTask;
         }
@@ -106,7 +112,10 @@ namespace RoadNetworkShowcaseMod.Runtime
                 return;
             }
 
-            EnsurePrimaryPlayerControl(engine);
+            if (!IsThreeKingdomsScenarioActive(engine))
+            {
+                EnsurePrimaryPlayerControl(engine);
+            }
 
             if (engine.GlobalContext.TryGetValue(RoadMoveOrderExpander.LastSubmitStatusKey, out var statusObj) &&
                 statusObj is string status &&
@@ -120,7 +129,10 @@ namespace RoadNetworkShowcaseMod.Runtime
                 (int)target.X,
                 (int)target.Y,
                 Scenario.StreamingRadiusCm);
-            RefreshPanel(engine);
+            if (!IsThreeKingdomsScenarioActive(engine))
+            {
+                RefreshPanel(engine);
+            }
         }
 
         public int LoadedChunkCount => ActiveBoard?.LoadedChunksSource.ActiveChunkKeys.Count ?? 0;
@@ -248,6 +260,11 @@ namespace RoadNetworkShowcaseMod.Runtime
 
         private void EnsurePrimaryPlayerControl(GameEngine engine)
         {
+            if (IsThreeKingdomsScenarioActive(engine))
+            {
+                return;
+            }
+
             Entity owner = ResolveNamedEntity(engine, PrimaryPlayerColumnName);
             if (owner == Entity.Null)
             {
@@ -424,6 +441,16 @@ namespace RoadNetworkShowcaseMod.Runtime
 
         private void RefreshPanel(GameEngine engine)
         {
+            if (IsThreeKingdomsScenarioActive(engine))
+            {
+                if (engine.GetService(CoreServiceKeys.UIRoot) is UIRoot existingRoot)
+                {
+                    _panelController.ClearIfOwned(existingRoot);
+                }
+
+                return;
+            }
+
             if (engine.GetService(CoreServiceKeys.UIRoot) is not UIRoot root)
             {
                 return;
@@ -432,6 +459,25 @@ namespace RoadNetworkShowcaseMod.Runtime
             RoadNetworkShowcasePanelState state = BuildPanelState(engine);
             _panelController.MountOrSync(root, engine, state);
             _debugLogWriter.WriteLatest(state);
+        }
+
+        private static bool IsThreeKingdomsScenarioActive(GameEngine engine)
+        {
+            if (!RoadNetworkShowcaseIds.IsShowcaseMap(engine.CurrentMapSession?.MapId.Value) ||
+                engine.CurrentMapSession?.MapConfig?.Tags == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < engine.CurrentMapSession.MapConfig.Tags.Count; i++)
+            {
+                if (string.Equals(engine.CurrentMapSession.MapConfig.Tags[i], "three_kingdoms_siege", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void Unbind(GameEngine? engine = null)

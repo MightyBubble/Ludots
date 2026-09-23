@@ -1,0 +1,8 @@
+{
+  "startupMapId": "road_network_showcase_chunked",
+  "startupInputContexts": ["Default_Gameplay", "Rts_Gameplay", "RoadNetwork_Showcase"],
+  "selection": {
+    "clickPickRadiusPixels": 40.0,
+    "dragThresholdPixels": 6.0
+  }
+}

@@ -5,7 +5,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 
 namespace RoadNetworkShowcaseMod.Gameplay
 {
-    internal sealed class RoadMoveOrderExpander
+    public sealed class RoadMoveOrderExpander
     {
         public const string LastSubmitStatusKey = "RoadNetworkShowcase.LastSubmitStatus";
 

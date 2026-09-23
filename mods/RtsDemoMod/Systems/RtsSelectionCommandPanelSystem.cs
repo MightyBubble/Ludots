@@ -76,8 +76,7 @@ namespace RtsDemoMod.Systems
 
             var commandAnchor = new EntityCommandPanelAnchor(EntityCommandPanelAnchorPreset.BottomCenter, 0f, 18f);
             var commandSize = new EntityCommandPanelSize(702f, 226f);
-            var monitorAnchor = new EntityCommandPanelAnchor(EntityCommandPanelAnchorPreset.TopRight, 28f, 126f);
-            var monitorSize = new EntityCommandPanelSize(390f, 428f);
+            bool siegeScenarioActive = IsThreeKingdomsSiegeMapActive();
 
             EnsurePanel(
                 service,
@@ -87,26 +86,38 @@ namespace RtsDemoMod.Systems
                 commandAnchor,
                 commandSize,
                 EntityCommandPanelLayoutPreset.CommandDeck);
-            EnsurePanel(
-                service,
-                ref _orderMonitorHandle,
-                selected,
-                OrderMonitorInstanceKey,
-                monitorAnchor,
-                monitorSize,
-                EntityCommandPanelLayoutPreset.OrderMonitor);
+            if (siegeScenarioActive)
+            {
+                CloseHandle(service, ref _orderMonitorHandle);
+            }
+            else
+            {
+                var monitorAnchor = new EntityCommandPanelAnchor(EntityCommandPanelAnchorPreset.TopRight, 28f, 126f);
+                var monitorSize = new EntityCommandPanelSize(390f, 428f);
+                EnsurePanel(
+                    service,
+                    ref _orderMonitorHandle,
+                    selected,
+                    OrderMonitorInstanceKey,
+                    monitorAnchor,
+                    monitorSize,
+                    EntityCommandPanelLayoutPreset.OrderMonitor);
+            }
 
             if (_lastTarget != selected)
             {
                 service.RebindTarget(_commandDeckHandle, selected);
-                service.RebindTarget(_orderMonitorHandle, selected);
                 service.SetGroupIndex(_commandDeckHandle, 0);
-                service.SetGroupIndex(_orderMonitorHandle, 0);
+                if (_orderMonitorHandle.IsValid)
+                {
+                    service.RebindTarget(_orderMonitorHandle, selected);
+                    service.SetGroupIndex(_orderMonitorHandle, 0);
+                }
                 _lastTarget = selected;
             }
 
             SetVisible(service, _commandDeckHandle, visible: true);
-            SetVisible(service, _orderMonitorHandle, visible: true);
+            SetVisible(service, _orderMonitorHandle, visible: !siegeScenarioActive);
         }
 
         public void AfterUpdate(in float dt)
@@ -274,6 +285,25 @@ namespace RtsDemoMod.Systems
             {
                 if (string.Equals(tags[i], "rts", StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(tags[i], "rts_showcase", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool IsThreeKingdomsSiegeMapActive()
+        {
+            var tags = _engine.CurrentMapSession?.MapConfig?.Tags;
+            if (tags == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < tags.Count; i++)
+            {
+                if (string.Equals(tags[i], "three_kingdoms_siege", StringComparison.OrdinalIgnoreCase))
                 {
                     return true;
                 }

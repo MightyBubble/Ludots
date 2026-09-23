@@ -42,23 +42,32 @@ namespace RoadNetworkShowcaseMod.Triggers
 
             engine.GlobalContext[RoadNetworkShowcaseIds.InstalledKey] = true;
             TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
+            bool scenarioActive = IsThreeKingdomsScenarioActive(engine);
 
             if (engine.GetService(CoreServiceKeys.OrderQueue) is OrderQueue orders)
             {
                 var plans = new RoadNavPlanStore();
                 var moveRuntime = new RoadMoveRuntimeService(engine.World, plans);
-                engine.RegisterSystem(
-                    new RoadNetworkLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _context),
-                    SystemGroup.InputCollection);
-                engine.RegisterSystem(
-                    new RoadNetworkAiAndCaptureSystem(engine.World, engine.GlobalContext, orders),
-                    SystemGroup.InputCollection);
+                if (!scenarioActive)
+                {
+                    engine.RegisterSystem(
+                        new RoadNetworkLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _context),
+                        SystemGroup.InputCollection);
+                    engine.RegisterSystem(
+                        new RoadNetworkAiAndCaptureSystem(engine.World, engine.GlobalContext, orders),
+                        SystemGroup.InputCollection);
+                }
+
                 engine.RegisterSystem(
                     new RoadNetworkChunkStreamingSystem(engine, _runtime),
                     SystemGroup.InputCollection);
-                engine.RegisterSystem(
-                    new RoadNetworkCameraResetSystem(engine.GlobalContext, engine, _runtime),
-                    SystemGroup.InputCollection);
+                if (!scenarioActive)
+                {
+                    engine.RegisterSystem(
+                        new RoadNetworkCameraResetSystem(engine.GlobalContext, engine, _runtime),
+                        SystemGroup.InputCollection);
+                }
+
                 if (engine.GetService(CoreServiceKeys.OrderTypeRegistry) is OrderTypeRegistry orderTypeRegistry &&
                     TryResolveRoadMoveFollowOrderTypeId(engine, out int roadMoveFollowOrderTypeId))
                 {
@@ -86,8 +95,29 @@ namespace RoadNetworkShowcaseMod.Triggers
                     : new RoadNavPlanStore();
                 engine.RegisterPresentationSystem(new RoadSelectedRoutePresentationSystem(engine.World, engine.GlobalContext, selectionRuntime, plans));
             }
-            _context.Log("[RoadNetworkShowcaseMod] Road input, order binding, nav selection, movement execution, AI/capture, chunk streaming, and presentation systems registered.");
+            _context.Log(
+                scenarioActive
+                    ? "[RoadNetworkShowcaseMod] Scenario-tagged map detected; registered reusable road movement, chunk streaming, and presentation systems only."
+                    : "[RoadNetworkShowcaseMod] Road input, order binding, nav selection, movement execution, AI/capture, chunk streaming, and presentation systems registered.");
             return Task.CompletedTask;
+        }
+
+        private static bool IsThreeKingdomsScenarioActive(GameEngine engine)
+        {
+            if (engine.CurrentMapSession?.MapConfig?.Tags == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < engine.CurrentMapSession.MapConfig.Tags.Count; i++)
+            {
+                if (string.Equals(engine.CurrentMapSession.MapConfig.Tags[i], "three_kingdoms_siege", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static bool TryResolveRoadMoveFollowOrderTypeId(GameEngine engine, out int orderTypeId)

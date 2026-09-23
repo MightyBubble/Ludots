@@ -1,0 +1,266 @@
+{
+  "Id": "road_network_showcase_chunked",
+  "Tags": ["rts", "three_kingdoms_siege"],
+  "DefaultCamera": {
+    "VirtualCameraId": "Rts",
+    "TargetXCm": -1200,
+    "TargetYCm": -300,
+    "Yaw": 180,
+    "Pitch": 55,
+    "DistanceCm": 18000,
+    "FovYDeg": 60
+  },
+  "Entities": [
+    {
+      "Template": "rts_war3_barracks",
+      "Overrides": {
+        "Name": { "Value": "Shu Siege Camp" },
+        "Team": { "Id": 1 },
+        "WorldPositionCm": { "Value": { "X": -9800, "Y": 2200 } }
+      }
+    },
+    {
+      "Template": "rts_war3_peasant",
+      "Overrides": {
+        "Name": { "Value": "Sapper Team" },
+        "Team": { "Id": 1 },
+        "PlayerOwner": { "PlayerId": 1 },
+        "WorldPositionCm": { "Value": { "X": -8700, "Y": 2100 } },
+        "AbilityStateBuffer": {
+          "abilityIds": [
+            "Ability.ThreeKingdoms.Unit.AssaultContext",
+            "Ability.ThreeKingdoms.Unit.EnterAttachment",
+            "Ability.ThreeKingdoms.Unit.FillTrench",
+            "Ability.ThreeKingdoms.Unit.WallClimb"
+          ]
+        }
+      }
+    },
+    {
+      "Template": "rts_war3_footman",
+      "Overrides": {
+        "Name": { "Value": "Road Vanguard" },
+        "Team": { "Id": 1 },
+        "PlayerOwner": { "PlayerId": 1 },
+        "WorldPositionCm": { "Value": { "X": -8600, "Y": 200 } },
+        "RoadColumnTag": {},
+        "RoadMoveProfileRef": { "PlannerPresetId": 1, "ExecutionPresetId": 1, "PreviewPaletteId": 1 },
+        "AbilityStateBuffer": {
+          "abilityIds": [
+            "Ability.ThreeKingdoms.Unit.AssaultContext",
+            "Ability.ThreeKingdoms.Unit.EnterAttachment",
+            "Ability.ThreeKingdoms.Unit.GateCapture",
+            "Ability.ThreeKingdoms.Unit.WallClimb"
+          ]
+        }
+      }
+    },
+    {
+      "Template": "rts_war3_footman",
+      "Overrides": {
+        "Name": { "Value": "Ladder Squad" },
+        "Team": { "Id": 1 },
+        "PlayerOwner": { "PlayerId": 1 },
+        "WorldPositionCm": { "Value": { "X": -7600, "Y": 1200 } },
+        "AbilityStateBuffer": {
+          "abilityIds": [
+            "Ability.ThreeKingdoms.Unit.AssaultContext",
+            "Ability.ThreeKingdoms.Unit.EnterAttachment",
+            "Ability.ThreeKingdoms.Unit.FillTrench",
+            "Ability.ThreeKingdoms.Unit.WallClimb"
+          ]
+        }
+      }
+    },
+    {
+      "Template": "rts_war3_footman",
+      "Overrides": {
+        "Name": { "Value": "Climber Team" },
+        "Team": { "Id": 1 },
+        "PlayerOwner": { "PlayerId": 1 },
+        "WorldPositionCm": { "Value": { "X": -7350, "Y": 1650 } },
+        "AbilityStateBuffer": {
+          "abilityIds": [
+            "Ability.ThreeKingdoms.Unit.AssaultContext",
+            "Ability.ThreeKingdoms.Unit.EnterAttachment",
+            "Ability.ThreeKingdoms.Unit.FillTrench",
+            "Ability.ThreeKingdoms.Unit.WallClimb"
+          ]
+        }
+      }
+    },
+    {
+      "Template": "rts_ra2_rhino",
+      "Overrides": {
+        "Name": { "Value": "Assault Ladder" },
+        "Team": { "Id": 1 },
+        "PlayerOwner": { "PlayerId": 1 },
+        "WorldPositionCm": { "Value": { "X": -5200, "Y": 1150 } },
+        "AbilityStateBuffer": {
+          "abilityIds": [
+            "Ability.ThreeKingdoms.Ladder.AttachContext",
+            "Ability.ThreeKingdoms.Ladder.Attach",
+            "Ability.ThreeKingdoms.Ladder.DeployOne",
+            "Ability.ThreeKingdoms.Ladder.ToggleHold"
+          ]
+        },
+        "ThreeKingdomsAttachmentHost": {
+          "Capacity": 4,
+          "SlotCount": 4,
+          "Layout": 2,
+          "ForwardOffsetCm": 160,
+          "SideSpacingCm": 120,
+          "RadiusCm": 160
+        },
+        "ThreeKingdomsLadderFeature": {
+          "AttachDurationSeconds": 1.2,
+          "DeployIntervalSeconds": 0.8
+        },
+        "FacingDirection": { "AngleRad": 0.0 }
+      }
+    },
+    {
+      "Template": "rts_ra2_power_plant",
+      "Overrides": {
+        "Name": { "Value": "Tunnel Entrance" },
+        "Team": { "Id": 1 },
+        "PlayerOwner": { "PlayerId": 1 },
+        "WorldPositionCm": { "Value": { "X": -4500, "Y": -2400 } },
+        "AbilityStateBuffer": {
+          "abilityIds": [
+            "Ability.ThreeKingdoms.Tunnel.SetExitContext",
+            "Ability.ThreeKingdoms.Tunnel.SetExit",
+            "Ability.ThreeKingdoms.Tunnel.Summon",
+            "Ability.ThreeKingdoms.Tunnel.Evacuate"
+          ]
+        },
+        "ThreeKingdomsAttachmentHost": {
+          "Capacity": 6,
+          "SlotCount": 6,
+          "Layout": 2,
+          "ForwardOffsetCm": 180,
+          "SideSpacingCm": 110,
+          "RadiusCm": 220
+        },
+        "ThreeKingdomsTunnelFeature": {
+          "TravelSpeedCmPerSecond": 1800
+        },
+        "FacingDirection": { "AngleRad": 0.0 }
+      }
+    },
+    {
+      "Template": "rts_ra2_power_plant",
+      "Overrides": {
+        "Name": { "Value": "Tunnel Exit" },
+        "Team": { "Id": 1 },
+        "WorldPositionCm": { "Value": { "X": 1800, "Y": -2350 } },
+        "ThreeKingdomsAttachmentHost": {
+          "Capacity": 6,
+          "SlotCount": 6,
+          "Layout": 2,
+          "ForwardOffsetCm": 180,
+          "SideSpacingCm": 110,
+          "RadiusCm": 220
+        },
+        "ThreeKingdomsTunnelFeature": {
+          "TravelSpeedCmPerSecond": 1800
+        },
+        "FacingDirection": { "AngleRad": 0.0 }
+      }
+    },
+    {
+      "Template": "rts_war3_guard_tower_site",
+      "Overrides": {
+        "Name": { "Value": "City Wall" },
+        "Team": { "Id": 2 },
+        "WorldPositionCm": { "Value": { "X": 2600, "Y": 1300 } },
+        "ThreeKingdomsAttachmentHost": {
+          "Capacity": 6,
+          "SlotCount": 6,
+          "Layout": 1,
+          "ForwardOffsetCm": 0,
+          "SideSpacingCm": 170,
+          "RadiusCm": 260
+        },
+        "ThreeKingdomsWallFeature": {
+          "OuterOffsetCm": 320,
+          "InnerOffsetCm": 220,
+          "ClimbDurationSeconds": 4.0,
+          "FastClimbDurationSeconds": 1.6
+        },
+        "FacingDirection": { "AngleRad": 0.0 }
+      }
+    },
+    {
+      "Template": "rts_ra2_power_plant",
+      "Overrides": {
+        "Name": { "Value": "Main Gate" },
+        "Team": { "Id": 2 },
+        "WorldPositionCm": { "Value": { "X": 3200, "Y": -250 } },
+        "ThreeKingdomsAttachmentHost": {
+          "Capacity": 4,
+          "SlotCount": 4,
+          "Layout": 1,
+          "ForwardOffsetCm": 90,
+          "SideSpacingCm": 130,
+          "RadiusCm": 180
+        },
+        "ThreeKingdomsGateFeature": {
+          "OuterOffsetCm": 360,
+          "InnerOffsetCm": 220,
+          "CaptureDurationSeconds": 3.0
+        },
+        "FacingDirection": { "AngleRad": 0.0 }
+      }
+    },
+    {
+      "Template": "rts_ra2_power_plant",
+      "Overrides": {
+        "Name": { "Value": "Forward Trench" },
+        "Team": { "Id": 0 },
+        "WorldPositionCm": { "Value": { "X": 1300, "Y": -950 } },
+        "ThreeKingdomsAttachmentHost": {
+          "Capacity": 2,
+          "SlotCount": 2,
+          "Layout": 0,
+          "ForwardOffsetCm": 0,
+          "SideSpacingCm": 0,
+          "RadiusCm": 0
+        },
+        "ThreeKingdomsTrenchFeature": {
+          "HalfWidthCm": 340,
+          "HalfHeightCm": 160,
+          "FillDurationSeconds": 2.6,
+          "TrapCapacity": 2
+        },
+        "FacingDirection": { "AngleRad": 0.0 }
+      }
+    },
+    {
+      "Template": "rts_ra2_rocket_trooper",
+      "Overrides": {
+        "Name": { "Value": "Wei Wall Guard" },
+        "Team": { "Id": 2 },
+        "WorldPositionCm": { "Value": { "X": 4100, "Y": 1250 } }
+      }
+    },
+    {
+      "Template": "rts_ra2_rocket_trooper",
+      "Overrides": {
+        "Name": { "Value": "Wei Gate Guard" },
+        "Team": { "Id": 2 },
+        "WorldPositionCm": { "Value": { "X": 4500, "Y": -450 } }
+      }
+    },
+    {
+      "Template": "rts_ra2_rhino",
+      "Overrides": {
+        "Name": { "Value": "Siege Train" },
+        "Team": { "Id": 2 },
+        "WorldPositionCm": { "Value": { "X": 9400, "Y": -1300 } },
+        "RoadColumnTag": {},
+        "RoadMoveProfileRef": { "PlannerPresetId": 3, "ExecutionPresetId": 3, "PreviewPaletteId": 3 }
+      }
+    }
+  ]
+}
