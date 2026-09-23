@@ -137,11 +137,8 @@ small {
   border: 1px solid color-mix(in srgb, var(--team-color), transparent 45%);
   border-radius: 4px;
   background: color-mix(in srgb, var(--team-color), transparent 84%);
+  cursor: pointer;
   text-align: left;
-}
-
-.faction-button.readonly {
-  cursor: default;
 }
 
 .faction-button span,
@@ -199,6 +196,8 @@ small {
   background: rgba(230, 238, 240, 0.05);
   cursor: pointer;
   text-align: left;
+  content-visibility: auto;
+  contain-intrinsic-size: 52px;
 }
 
 .entity-row:hover,

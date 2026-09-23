@@ -100,6 +100,7 @@ function App() {
           snapshot={snapshot}
           activeFaction={activeFaction}
           connection={connection}
+          onSwitchFaction={(participantId) => command('switchParticipantView', { participantId })}
         />
         <EntityRoster
           entities={snapshot.entities}
@@ -299,7 +300,7 @@ function useRtsDataPlane() {
   return { snapshot, connection, command };
 }
 
-function TopHud({ snapshot, activeFaction, connection }) {
+function TopHud({ snapshot, activeFaction, connection, onSwitchFaction }) {
   return (
     <header className="top-hud hud-panel">
       <div className="brand-block">
@@ -320,14 +321,17 @@ function TopHud({ snapshot, activeFaction, connection }) {
       </div>
       <div className="faction-strip">
         {snapshot.factions.map((faction) => (
-          <div
-            className={faction.active ? 'faction-button active readonly' : 'faction-button readonly'}
+          <button
+            className={faction.active ? 'faction-button active' : 'faction-button'}
             key={faction.id}
+            type="button"
             style={{ '--team-color': faction.color }}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={() => onSwitchFaction(faction.id)}
           >
             <span>{shortFactionName(faction.name)}</span>
             <small>{faction.entityCount} entities - {faction.relationship}</small>
-          </div>
+          </button>
         ))}
       </div>
       <div className="runtime-block">
@@ -349,7 +353,7 @@ function EntityRoster({ entities, selectedKey, onSelect }) {
     <aside className="entity-roster hud-panel">
       <PanelTitle title="Entities" meta={`${entities.length}`} />
       <div className="entity-list">
-        {entities.slice(0, 18).map((entity) => (
+        {entities.map((entity) => (
           <button
             className={entity.key === selectedKey ? 'entity-row selected' : 'entity-row'}
             key={entity.key}

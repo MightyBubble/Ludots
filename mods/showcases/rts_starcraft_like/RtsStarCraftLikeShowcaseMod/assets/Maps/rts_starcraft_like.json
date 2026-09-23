@@ -1,80 +1,2127 @@
 {
   "Id": "rts_starcraft_like",
-  "Tags": ["rts", "rts_showcase", "rts_production", "starcraft_like", "sc2"],
+  "Tags": [
+    "rts",
+    "rts_showcase",
+    "rts_production",
+    "starcraft_like",
+    "sc2"
+  ],
   "DefaultCamera": {
     "VirtualCameraId": "Rts",
-    "TargetXCm": 6200,
-    "TargetYCm": 6200,
+    "TargetXCm": 6800,
+    "TargetYCm": 7600,
     "Yaw": 180,
     "Pitch": 48,
-    "DistanceCm": 10800,
+    "DistanceCm": 11800,
     "FovYDeg": 60
   },
   "Boards": [
-    { "Name": "default", "SpatialType": "HexGrid", "DataFile": "sc2_highlands.vtxm" }
+    {
+      "Name": "default",
+      "SpatialType": "HexGrid",
+      "DataFile": "sc2_highlands.vtxm"
+    }
   ],
   "Entities": [
     {
-      "Template": "rts_war3_peasant",
+      "Template": "rts_sc_terran_command_center",
+      "InstanceId": "terran_command_center",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5200,
+            "Y": 5600
+          }
+        },
+        "Name": {
+          "Value": "Terran Command Center"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_terran_scv",
       "InstanceId": "terran_scv",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 5200, "Y": 5900 } },
-        "Name": { "Value": "Terran SCV Primitive" },
-        "Team": { "Id": 1 }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5510,
+            "Y": 5600
+          }
+        },
+        "Name": {
+          "Value": "Terran SCV"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
       }
     },
     {
-      "Template": "rts_war3_barracks",
+      "Template": "rts_sc_terran_marine",
+      "InstanceId": "terran_marine",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5820,
+            "Y": 5600
+          }
+        },
+        "Name": {
+          "Value": "Terran Marine"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_terran_marauder",
+      "InstanceId": "terran_marauder",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6130,
+            "Y": 5600
+          }
+        },
+        "Name": {
+          "Value": "Terran Marauder"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_terran_reaper",
+      "InstanceId": "terran_reaper",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6440,
+            "Y": 5600
+          }
+        },
+        "Name": {
+          "Value": "Terran Reaper"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_terran_ghost",
+      "InstanceId": "terran_ghost",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6750,
+            "Y": 5600
+          }
+        },
+        "Name": {
+          "Value": "Terran Ghost"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_terran_firebat",
+      "InstanceId": "terran_firebat",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7060,
+            "Y": 5600
+          }
+        },
+        "Name": {
+          "Value": "Terran Firebat"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_terran_medic",
+      "InstanceId": "terran_medic",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5200,
+            "Y": 5885
+          }
+        },
+        "Name": {
+          "Value": "Terran Medic"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_terran_hellion",
+      "InstanceId": "terran_hellion",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5510,
+            "Y": 5885
+          }
+        },
+        "Name": {
+          "Value": "Terran Hellion"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_terran_hellbat",
+      "InstanceId": "terran_hellbat",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5820,
+            "Y": 5885
+          }
+        },
+        "Name": {
+          "Value": "Terran Hellbat"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_terran_widow_mine",
+      "InstanceId": "terran_widow_mine",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6130,
+            "Y": 5885
+          }
+        },
+        "Name": {
+          "Value": "Terran Widow Mine"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_terran_siege_tank",
+      "InstanceId": "terran_siege_tank",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6440,
+            "Y": 5885
+          }
+        },
+        "Name": {
+          "Value": "Terran Siege Tank"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_terran_cyclone",
+      "InstanceId": "terran_cyclone",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6750,
+            "Y": 5885
+          }
+        },
+        "Name": {
+          "Value": "Terran Cyclone"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_terran_thor",
+      "InstanceId": "terran_thor",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7060,
+            "Y": 5885
+          }
+        },
+        "Name": {
+          "Value": "Terran Thor"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_terran_viking",
+      "InstanceId": "terran_viking",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5200,
+            "Y": 6170
+          }
+        },
+        "Name": {
+          "Value": "Terran Viking"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_terran_medivac",
+      "InstanceId": "terran_medivac",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5510,
+            "Y": 6170
+          }
+        },
+        "Name": {
+          "Value": "Terran Medivac"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_terran_liberator",
+      "InstanceId": "terran_liberator",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5820,
+            "Y": 6170
+          }
+        },
+        "Name": {
+          "Value": "Terran Liberator"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_terran_raven",
+      "InstanceId": "terran_raven",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6130,
+            "Y": 6170
+          }
+        },
+        "Name": {
+          "Value": "Terran Raven"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_terran_banshee",
+      "InstanceId": "terran_banshee",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6440,
+            "Y": 6170
+          }
+        },
+        "Name": {
+          "Value": "Terran Banshee"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_terran_battlecruiser",
+      "InstanceId": "terran_battlecruiser",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6750,
+            "Y": 6170
+          }
+        },
+        "Name": {
+          "Value": "Terran Battlecruiser"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_terran_planetary_fortress",
+      "InstanceId": "terran_planetary_fortress",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7960,
+            "Y": 6440
+          }
+        },
+        "Name": {
+          "Value": "Terran Planetary Fortress"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_terran_orbital_command",
+      "InstanceId": "terran_orbital_command",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5200,
+            "Y": 6860
+          }
+        },
+        "Name": {
+          "Value": "Terran Orbital Command"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_terran_supply_depot",
+      "InstanceId": "terran_supply_depot",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5660,
+            "Y": 6860
+          }
+        },
+        "Name": {
+          "Value": "Terran Supply Depot"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_terran_barracks",
       "InstanceId": "terran_barracks",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 6000, "Y": 6200 } },
-        "Name": { "Value": "Terran Barracks Primitive" },
-        "Team": { "Id": 1 }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6120,
+            "Y": 6860
+          }
+        },
+        "Name": {
+          "Value": "Terran Barracks"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
       }
     },
     {
-      "Template": "rts_sc2_gateway",
-      "InstanceId": "protoss_gateway",
+      "Template": "rts_sc_terran_engineering_bay",
+      "InstanceId": "terran_engineering_bay",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 9200, "Y": 8200 } },
-        "Name": { "Value": "Protoss Gateway" },
-        "Team": { "Id": 3 }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6580,
+            "Y": 6860
+          }
+        },
+        "Name": {
+          "Value": "Terran Engineering Bay"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
       }
     },
     {
-      "Template": "rts_sc2_probe",
-      "InstanceId": "protoss_probe",
+      "Template": "rts_sc_terran_bunker",
+      "InstanceId": "terran_bunker",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 8500, "Y": 7600 } },
-        "Name": { "Value": "Protoss Probe" },
-        "Team": { "Id": 3 }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7040,
+            "Y": 6860
+          }
+        },
+        "Name": {
+          "Value": "Terran Bunker"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
       }
     },
     {
-      "Template": "rts_sc2_zealot",
-      "InstanceId": "protoss_zealot",
+      "Template": "rts_sc_terran_refinery",
+      "InstanceId": "terran_refinery",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 9800, "Y": 8600 } },
-        "Name": { "Value": "Protoss Zealot" },
-        "Team": { "Id": 3 }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7500,
+            "Y": 6860
+          }
+        },
+        "Name": {
+          "Value": "Terran Refinery"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
       }
     },
     {
-      "Template": "rts_zerg_drone",
+      "Template": "rts_sc_terran_factory",
+      "InstanceId": "terran_factory",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7960,
+            "Y": 6860
+          }
+        },
+        "Name": {
+          "Value": "Terran Factory"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_terran_starport",
+      "InstanceId": "terran_starport",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5200,
+            "Y": 7280
+          }
+        },
+        "Name": {
+          "Value": "Terran Starport"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_terran_armory",
+      "InstanceId": "terran_armory",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5660,
+            "Y": 7280
+          }
+        },
+        "Name": {
+          "Value": "Terran Armory"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_terran_fusion_core",
+      "InstanceId": "terran_fusion_core",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6120,
+            "Y": 7280
+          }
+        },
+        "Name": {
+          "Value": "Terran Fusion Core"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_terran_missile_turret",
+      "InstanceId": "terran_missile_turret",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6580,
+            "Y": 7280
+          }
+        },
+        "Name": {
+          "Value": "Terran Missile Turret"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_terran_sensor_tower",
+      "InstanceId": "terran_sensor_tower",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7040,
+            "Y": 7280
+          }
+        },
+        "Name": {
+          "Value": "Terran Sensor Tower"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_terran_merc_compound",
+      "InstanceId": "terran_merc_compound",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7500,
+            "Y": 7280
+          }
+        },
+        "Name": {
+          "Value": "Terran Merc Compound"
+        },
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_hatchery",
+      "InstanceId": "zerg_hatchery",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2850,
+            "Y": 9000
+          }
+        },
+        "Name": {
+          "Value": "Zerg Hatchery"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_drone",
       "InstanceId": "zerg_drone",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 3000, "Y": 9000 } },
-        "Name": { "Value": "Zerg Drone" },
-        "Team": { "Id": 2 }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 3160,
+            "Y": 9000
+          }
+        },
+        "Name": {
+          "Value": "Zerg Drone"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
       }
     },
     {
-      "Template": "rts_zerg_spawning_pool",
-      "InstanceId": "zerg_pool",
+      "Template": "rts_sc_zerg_overlord",
+      "InstanceId": "zerg_overlord",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 3800, "Y": 9800 } },
-        "Name": { "Value": "Zerg Spawning Pool" },
-        "Team": { "Id": 2 }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 3470,
+            "Y": 9000
+          }
+        },
+        "Name": {
+          "Value": "Zerg Overlord"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_zergling",
+      "InstanceId": "zerg_zergling",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 3780,
+            "Y": 9000
+          }
+        },
+        "Name": {
+          "Value": "Zergling"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_queen",
+      "InstanceId": "zerg_queen",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4090,
+            "Y": 9000
+          }
+        },
+        "Name": {
+          "Value": "Zerg Queen"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_baneling",
+      "InstanceId": "zerg_baneling",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4400,
+            "Y": 9000
+          }
+        },
+        "Name": {
+          "Value": "Baneling"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_roach",
+      "InstanceId": "zerg_roach",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4710,
+            "Y": 9000
+          }
+        },
+        "Name": {
+          "Value": "Roach"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_ravager",
+      "InstanceId": "zerg_ravager",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2850,
+            "Y": 9285
+          }
+        },
+        "Name": {
+          "Value": "Ravager"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_hydralisk",
+      "InstanceId": "zerg_hydralisk",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 3160,
+            "Y": 9285
+          }
+        },
+        "Name": {
+          "Value": "Hydralisk"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_lurker",
+      "InstanceId": "zerg_lurker",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 3470,
+            "Y": 9285
+          }
+        },
+        "Name": {
+          "Value": "Lurker"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_mutalisk",
+      "InstanceId": "zerg_mutalisk",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 3780,
+            "Y": 9285
+          }
+        },
+        "Name": {
+          "Value": "Mutalisk"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_corruptor",
+      "InstanceId": "zerg_corruptor",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4090,
+            "Y": 9285
+          }
+        },
+        "Name": {
+          "Value": "Corruptor"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_brood_lord",
+      "InstanceId": "zerg_brood_lord",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4400,
+            "Y": 9285
+          }
+        },
+        "Name": {
+          "Value": "Brood Lord"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_viper",
+      "InstanceId": "zerg_viper",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4710,
+            "Y": 9285
+          }
+        },
+        "Name": {
+          "Value": "Viper"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_infestor",
+      "InstanceId": "zerg_infestor",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2850,
+            "Y": 9570
+          }
+        },
+        "Name": {
+          "Value": "Infestor"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_swarm_host",
+      "InstanceId": "zerg_swarm_host",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 3160,
+            "Y": 9570
+          }
+        },
+        "Name": {
+          "Value": "Swarm Host"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_ultralisk",
+      "InstanceId": "zerg_ultralisk",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 3470,
+            "Y": 9570
+          }
+        },
+        "Name": {
+          "Value": "Ultralisk"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_spine_crawler",
+      "InstanceId": "zerg_spine_crawler",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4230,
+            "Y": 9840
+          }
+        },
+        "Name": {
+          "Value": "Spine Crawler"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_spore_crawler",
+      "InstanceId": "zerg_spore_crawler",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4690,
+            "Y": 9840
+          }
+        },
+        "Name": {
+          "Value": "Spore Crawler"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_spawning_pool",
+      "InstanceId": "zerg_spawning_pool",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5150,
+            "Y": 9840
+          }
+        },
+        "Name": {
+          "Value": "Spawning Pool"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_extractor",
+      "InstanceId": "zerg_extractor",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5610,
+            "Y": 9840
+          }
+        },
+        "Name": {
+          "Value": "Extractor"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_evolution_chamber",
+      "InstanceId": "zerg_evolution_chamber",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2850,
+            "Y": 10260
+          }
+        },
+        "Name": {
+          "Value": "Evolution Chamber"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_roach_warren",
+      "InstanceId": "zerg_roach_warren",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 3310,
+            "Y": 10260
+          }
+        },
+        "Name": {
+          "Value": "Roach Warren"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_baneling_nest",
+      "InstanceId": "zerg_baneling_nest",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 3770,
+            "Y": 10260
+          }
+        },
+        "Name": {
+          "Value": "Baneling Nest"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_lair",
+      "InstanceId": "zerg_lair",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4230,
+            "Y": 10260
+          }
+        },
+        "Name": {
+          "Value": "Lair"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_hive",
+      "InstanceId": "zerg_hive",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4690,
+            "Y": 10260
+          }
+        },
+        "Name": {
+          "Value": "Hive"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_hydralisk_den",
+      "InstanceId": "zerg_hydralisk_den",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5150,
+            "Y": 10260
+          }
+        },
+        "Name": {
+          "Value": "Hydralisk Den"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_spire",
+      "InstanceId": "zerg_spire",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5610,
+            "Y": 10260
+          }
+        },
+        "Name": {
+          "Value": "Spire"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_greater_spire",
+      "InstanceId": "zerg_greater_spire",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2850,
+            "Y": 10680
+          }
+        },
+        "Name": {
+          "Value": "Greater Spire"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_infestation_pit",
+      "InstanceId": "zerg_infestation_pit",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 3310,
+            "Y": 10680
+          }
+        },
+        "Name": {
+          "Value": "Infestation Pit"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_ultralisk_cavern",
+      "InstanceId": "zerg_ultralisk_cavern",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 3770,
+            "Y": 10680
+          }
+        },
+        "Name": {
+          "Value": "Ultralisk Cavern"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_nydus_network",
+      "InstanceId": "zerg_nydus_network",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4230,
+            "Y": 10680
+          }
+        },
+        "Name": {
+          "Value": "Nydus Network"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_zerg_creep_tumor",
+      "InstanceId": "zerg_creep_tumor",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 4690,
+            "Y": 10680
+          }
+        },
+        "Name": {
+          "Value": "Creep Tumor"
+        },
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_nexus",
+      "InstanceId": "protoss_nexus",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9000,
+            "Y": 7900
+          }
+        },
+        "Name": {
+          "Value": "Protoss Nexus"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_probe",
+      "InstanceId": "protoss_probe",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9310,
+            "Y": 7900
+          }
+        },
+        "Name": {
+          "Value": "Protoss Probe"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_zealot",
+      "InstanceId": "protoss_zealot",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9620,
+            "Y": 7900
+          }
+        },
+        "Name": {
+          "Value": "Protoss Zealot"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_stalker",
+      "InstanceId": "protoss_stalker",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9930,
+            "Y": 7900
+          }
+        },
+        "Name": {
+          "Value": "Protoss Stalker"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_sentry",
+      "InstanceId": "protoss_sentry",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 10240,
+            "Y": 7900
+          }
+        },
+        "Name": {
+          "Value": "Protoss Sentry"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_adept",
+      "InstanceId": "protoss_adept",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 10550,
+            "Y": 7900
+          }
+        },
+        "Name": {
+          "Value": "Protoss Adept"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_high_templar",
+      "InstanceId": "protoss_high_templar",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 10860,
+            "Y": 7900
+          }
+        },
+        "Name": {
+          "Value": "High Templar"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_dark_templar",
+      "InstanceId": "protoss_dark_templar",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9000,
+            "Y": 8185
+          }
+        },
+        "Name": {
+          "Value": "Dark Templar"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_archon",
+      "InstanceId": "protoss_archon",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9310,
+            "Y": 8185
+          }
+        },
+        "Name": {
+          "Value": "Archon"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_immortal",
+      "InstanceId": "protoss_immortal",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9620,
+            "Y": 8185
+          }
+        },
+        "Name": {
+          "Value": "Immortal"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_colossus",
+      "InstanceId": "protoss_colossus",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9930,
+            "Y": 8185
+          }
+        },
+        "Name": {
+          "Value": "Colossus"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_disruptor",
+      "InstanceId": "protoss_disruptor",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 10240,
+            "Y": 8185
+          }
+        },
+        "Name": {
+          "Value": "Disruptor"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_observer",
+      "InstanceId": "protoss_observer",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 10550,
+            "Y": 8185
+          }
+        },
+        "Name": {
+          "Value": "Observer"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_warp_prism",
+      "InstanceId": "protoss_warp_prism",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 10860,
+            "Y": 8185
+          }
+        },
+        "Name": {
+          "Value": "Warp Prism"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_phoenix",
+      "InstanceId": "protoss_phoenix",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9000,
+            "Y": 8470
+          }
+        },
+        "Name": {
+          "Value": "Phoenix"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_void_ray",
+      "InstanceId": "protoss_void_ray",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9310,
+            "Y": 8470
+          }
+        },
+        "Name": {
+          "Value": "Void Ray"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_oracle",
+      "InstanceId": "protoss_oracle",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9620,
+            "Y": 8470
+          }
+        },
+        "Name": {
+          "Value": "Oracle"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_tempest",
+      "InstanceId": "protoss_tempest",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9930,
+            "Y": 8470
+          }
+        },
+        "Name": {
+          "Value": "Tempest"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_carrier",
+      "InstanceId": "protoss_carrier",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 10240,
+            "Y": 8470
+          }
+        },
+        "Name": {
+          "Value": "Carrier"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_mothership",
+      "InstanceId": "protoss_mothership",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 10550,
+            "Y": 8470
+          }
+        },
+        "Name": {
+          "Value": "Mothership"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_pylon",
+      "InstanceId": "protoss_pylon",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 11760,
+            "Y": 8740
+          }
+        },
+        "Name": {
+          "Value": "Pylon"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_assimilator",
+      "InstanceId": "protoss_assimilator",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9000,
+            "Y": 9160
+          }
+        },
+        "Name": {
+          "Value": "Assimilator"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_gateway",
+      "InstanceId": "protoss_gateway",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9460,
+            "Y": 9160
+          }
+        },
+        "Name": {
+          "Value": "Protoss Gateway"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_forge",
+      "InstanceId": "protoss_forge",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9920,
+            "Y": 9160
+          }
+        },
+        "Name": {
+          "Value": "Protoss Forge"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_cybernetics_core",
+      "InstanceId": "protoss_cybernetics_core",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 10380,
+            "Y": 9160
+          }
+        },
+        "Name": {
+          "Value": "Cybernetics Core"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_shield_battery",
+      "InstanceId": "protoss_shield_battery",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 10840,
+            "Y": 9160
+          }
+        },
+        "Name": {
+          "Value": "Shield Battery"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_robotics_facility",
+      "InstanceId": "protoss_robotics_facility",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 11300,
+            "Y": 9160
+          }
+        },
+        "Name": {
+          "Value": "Robotics Facility"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_stargate",
+      "InstanceId": "protoss_stargate",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 11760,
+            "Y": 9160
+          }
+        },
+        "Name": {
+          "Value": "Stargate"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_twilight_council",
+      "InstanceId": "protoss_twilight_council",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9000,
+            "Y": 9580
+          }
+        },
+        "Name": {
+          "Value": "Twilight Council"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_templar_archives",
+      "InstanceId": "protoss_templar_archives",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9460,
+            "Y": 9580
+          }
+        },
+        "Name": {
+          "Value": "Templar Archives"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_dark_shrine",
+      "InstanceId": "protoss_dark_shrine",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 9920,
+            "Y": 9580
+          }
+        },
+        "Name": {
+          "Value": "Dark Shrine"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_fleet_beacon",
+      "InstanceId": "protoss_fleet_beacon",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 10380,
+            "Y": 9580
+          }
+        },
+        "Name": {
+          "Value": "Fleet Beacon"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
+      }
+    },
+    {
+      "Template": "rts_sc_protoss_robotics_bay",
+      "InstanceId": "protoss_robotics_bay",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 10840,
+            "Y": 9580
+          }
+        },
+        "Name": {
+          "Value": "Robotics Bay"
+        },
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
       }
     }
   ]

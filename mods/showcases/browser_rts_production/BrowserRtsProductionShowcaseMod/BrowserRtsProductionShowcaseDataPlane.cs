@@ -89,13 +89,14 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
         Entity[] selected = SelectionContextRuntime.SnapshotCurrentSelection(_engine.World, _engine.GlobalContext);
         Entity primary = selected.Length > 0 ? selected[0] : Entity.Null;
 
-        var entities = BuildEntities(selected);
-        var factions = BuildFactions(entities);
+        var entities = BuildEntities(selected, flavor);
+        var factions = BuildFactions(entities, flavor);
         var commands = BuildCommandPanel(primary);
         var resources = BuildResourceChips();
         var production = BuildProductionQueue(commands);
         var buildables = BuildBuildables(commands);
-        var diagnostics = BuildDiagnostics(reason, mapId, entities, commands);
+        var techTree = BuildTechTree(flavor, entities, commands);
+        var diagnostics = BuildDiagnostics(reason, mapId, flavor, entities, commands, techTree);
 
         return new BrowserRtsProductionSnapshot(
             _tick,
@@ -109,12 +110,12 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
             commands,
             buildables,
             production,
-            BrowserRtsProductionTechTreeView.Empty,
+            techTree,
             BrowserRtsProductionDiplomacyView.Empty,
             diagnostics);
     }
 
-    private BrowserRtsProductionEntityView[] BuildEntities(Entity[] selected)
+    private BrowserRtsProductionEntityView[] BuildEntities(Entity[] selected, string flavor)
     {
         var selectedSet = selected
             .Where(entity => entity != Entity.Null)
@@ -148,8 +149,8 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
                 name.Value,
                 kind,
                 teamId,
-                TeamName(teamId),
-                TeamColor(teamId),
+                TeamName(flavor, teamId),
+                TeamColor(flavor, teamId),
                 MathF.Round(position.Value.X.ToFloat() / 100f, 2),
                 MathF.Round(position.Value.Y.ToFloat() / 100f, 2),
                 MathF.Round(health, 1),
@@ -161,11 +162,11 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
         return entities
             .OrderBy(entity => entity.TeamId)
             .ThenBy(entity => entity.Name, StringComparer.Ordinal)
-            .Take(80)
+            .Take(flavor == "starcraft-like" ? 140 : 80)
             .ToArray();
     }
 
-    private BrowserRtsProductionFactionView[] BuildFactions(BrowserRtsProductionEntityView[] entities)
+    private BrowserRtsProductionFactionView[] BuildFactions(BrowserRtsProductionEntityView[] entities, string flavor)
     {
         var teamIds = entities
             .Select(static entity => entity.TeamId)
@@ -186,10 +187,10 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
         return teamIds
             .Select(teamId => new BrowserRtsProductionFactionView(
                 $"team-{teamId}",
-                TeamName(teamId),
+                TeamName(flavor, teamId),
                 teamId,
-                TeamColor(teamId),
-                teamId == 1 ? "player" : "ai",
+                TeamColor(flavor, teamId),
+                flavor == "starcraft-like" ? "playable" : teamId == 1 ? "player" : "ai",
                 string.Equals($"team-{teamId}", _activeFactionId, StringComparison.Ordinal),
                 entities.Count(entity => entity.TeamId == teamId),
                 teamId == ResolveActiveTeamId() ? "Friendly" : "Neutral"))
@@ -358,11 +359,69 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
             .ToArray();
     }
 
+    private static BrowserRtsProductionTechTreeView BuildTechTree(
+        string flavor,
+        BrowserRtsProductionEntityView[] entities,
+        BrowserRtsProductionCommandPanelView commands)
+    {
+        if (flavor != "starcraft-like")
+        {
+            return BrowserRtsProductionTechTreeView.Empty;
+        }
+
+        var nodes = new List<BrowserRtsProductionTechNodeView>(16)
+        {
+            new("terran-command", "Terran command net", "GAS graph + item doctrine online", 0, 0, "Scanner Sweep and MULE Drop are graph-backed command abilities."),
+            new("zerg-biomass", "Zerg biomass lattice", "GAS graph + item doctrine online", 1, 0, "Creep Surge writes Biomass through Graph.Rts.StarCraft.Zerg.CreepSurge."),
+            new("protoss-psi", "Protoss psi matrix", "GAS graph + item doctrine online", 2, 0, "Chrono Boost writes Shield through Graph.Rts.StarCraft.Protoss.ChronoBoost.")
+        };
+
+        var raceRows = entities
+            .Where(static entity => entity.TeamId is 1 or 2 or 3)
+            .GroupBy(static entity => entity.TeamId)
+            .OrderBy(static group => group.Key);
+        foreach (var group in raceRows)
+        {
+            string race = TeamName(flavor, group.Key);
+            int unitCount = group.Count(entity => entity.Kind != "structure");
+            int structureCount = group.Count(entity => entity.Kind == "structure");
+            nodes.Add(new BrowserRtsProductionTechNodeView(
+                $"race-{group.Key}-roster",
+                $"{race} roster",
+                $"{unitCount} units / {structureCount} structures visible",
+                group.Key - 1,
+                1,
+                "Roster rows come from live ECS Name/Team/AttributeBuffer data over the WebUI DataPlane."));
+        }
+
+        nodes.Add(new BrowserRtsProductionTechNodeView(
+            "active-command-card",
+            "Active command card",
+            $"{commands.Groups.SelectMany(static group => group.Slots).Count(static slot => slot.Enabled)} playable slots",
+            1,
+            2,
+            "EntityCommandPanelMod exposes GAS ability slots; browser commands send activateAbilitySlot back through DataPlane."));
+
+        var edges = new[]
+        {
+            new BrowserRtsProductionTechEdgeView("terran-command", "race-1-roster"),
+            new BrowserRtsProductionTechEdgeView("zerg-biomass", "race-2-roster"),
+            new BrowserRtsProductionTechEdgeView("protoss-psi", "race-3-roster"),
+            new BrowserRtsProductionTechEdgeView("race-1-roster", "active-command-card"),
+            new BrowserRtsProductionTechEdgeView("race-2-roster", "active-command-card"),
+            new BrowserRtsProductionTechEdgeView("race-3-roster", "active-command-card")
+        };
+
+        return new BrowserRtsProductionTechTreeView(nodes.ToArray(), edges);
+    }
+
     private BrowserRtsProductionDiagnosticsView BuildDiagnostics(
         string reason,
         string mapId,
+        string flavor,
         BrowserRtsProductionEntityView[] entities,
-        BrowserRtsProductionCommandPanelView commands)
+        BrowserRtsProductionCommandPanelView commands,
+        BrowserRtsProductionTechTreeView techTree)
     {
         var messages = new List<string>();
         if (commands.Message.Length > 0)
@@ -373,6 +432,12 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
         if (TryBuildAimingMessage(commands, out string aimingMessage))
         {
             messages.Add(aimingMessage);
+        }
+
+        if (flavor == "starcraft-like")
+        {
+            int raceCount = entities.Select(static entity => entity.TeamId).Where(static teamId => teamId > 0).Distinct().Count();
+            messages.Add($"StarCraft-like roster stream: {raceCount} races, {entities.Length} visible ECS entities, {techTree.Nodes.Length} tech/item/graph nodes.");
         }
 
         return new BrowserRtsProductionDiagnosticsView(
@@ -856,7 +921,13 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
         if (lower.Contains("yard") || lower.Contains("factory") || lower.Contains("barracks") ||
             lower.Contains("gateway") || lower.Contains("pool") || lower.Contains("mill") ||
             lower.Contains("center") || lower.Contains("city") || lower.Contains("plant") ||
-            lower.Contains("refinery") || lower.Contains("reactor"))
+            lower.Contains("refinery") || lower.Contains("reactor") || lower.Contains("hatchery") ||
+            lower.Contains("nexus") || lower.Contains("pylon") || lower.Contains("assimilator") ||
+            lower.Contains("spire") || lower.Contains("forge") || lower.Contains("core") ||
+            lower.Contains("den") || lower.Contains("cavern") || lower.Contains("archive") ||
+            lower.Contains("bay") || lower.Contains("depot") || lower.Contains("turret") ||
+            lower.Contains("tower") || lower.Contains("battery") || lower.Contains("network") ||
+            lower.Contains("shrine"))
         {
             return "structure";
         }
@@ -876,8 +947,19 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
         return "unit";
     }
 
-    private static string TeamName(int teamId)
+    private static string TeamName(string flavor, int teamId)
     {
+        if (flavor == "starcraft-like")
+        {
+            return teamId switch
+            {
+                1 => "Terran Dominion",
+                2 => "Zerg Swarm",
+                3 => "Protoss Conclave",
+                _ => $"Team {teamId}"
+            };
+        }
+
         return teamId switch
         {
             1 => "Allied",
@@ -887,8 +969,19 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
         };
     }
 
-    private static string TeamColor(int teamId)
+    private static string TeamColor(string flavor, int teamId)
     {
+        if (flavor == "starcraft-like")
+        {
+            return teamId switch
+            {
+                1 => "#59A7FF",
+                2 => "#A6E22E",
+                3 => "#B692FF",
+                _ => "#8DB596"
+            };
+        }
+
         return teamId switch
         {
             1 => "#59A7FF",

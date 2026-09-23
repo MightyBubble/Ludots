@@ -1,0 +1,6368 @@
+[
+  {
+    "id": "rts_sc_terran_command_center",
+    "components": {
+      "Name": {
+        "Value": "Terran Command Center"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 950,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 90,
+          "Energy": 150,
+          "Minerals": 5600,
+          "Gas": 1800
+        },
+        "current": {
+          "Health": 950,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 90,
+          "Energy": 150,
+          "Minerals": 5600,
+          "Gas": 1800
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Terran.TrainMarine",
+          "Ability.Rts.StarCraft.Terran.TrainSiegeTank",
+          "Ability.Rts.StarCraft.Terran.CalldownScan",
+          "Ability.Rts.StarCraft.Terran.CallMule"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      },
+      "AbilityFormSetRef": {
+        "formSetId": "rts_sc_terran_command_forms"
+      }
+    }
+  },
+  {
+    "id": "rts_sc_terran_scv",
+    "components": {
+      "Name": {
+        "Value": "Terran SCV"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 255,
+          "MoveSpeed": 580,
+          "Damage": 20,
+          "Armor": 1,
+          "Supply": 2,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 255,
+          "MoveSpeed": 580,
+          "Damage": 20,
+          "Armor": 1,
+          "Supply": 2,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_terran_marine",
+    "components": {
+      "Name": {
+        "Value": "Terran Marine"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 430,
+          "MoveSpeed": 600,
+          "Damage": 24,
+          "Armor": 2,
+          "Supply": 3,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 430,
+          "MoveSpeed": 600,
+          "Damage": 24,
+          "Armor": 2,
+          "Supply": 3,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_terran_marauder",
+    "components": {
+      "Name": {
+        "Value": "Terran Marauder"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 465,
+          "MoveSpeed": 620,
+          "Damage": 28,
+          "Armor": 0,
+          "Supply": 4,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 465,
+          "MoveSpeed": 620,
+          "Damage": 28,
+          "Armor": 0,
+          "Supply": 4,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_terran_reaper",
+    "components": {
+      "Name": {
+        "Value": "Terran Reaper"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500,
+          "MoveSpeed": 560,
+          "Damage": 32,
+          "Armor": 1,
+          "Supply": 1,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 500,
+          "MoveSpeed": 560,
+          "Damage": 32,
+          "Armor": 1,
+          "Supply": 1,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_terran_ghost",
+    "components": {
+      "Name": {
+        "Value": "Terran Ghost"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 535,
+          "MoveSpeed": 580,
+          "Damage": 36,
+          "Armor": 2,
+          "Supply": 2,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 535,
+          "MoveSpeed": 580,
+          "Damage": 36,
+          "Armor": 2,
+          "Supply": 2,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_terran_firebat",
+    "components": {
+      "Name": {
+        "Value": "Terran Firebat"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 570,
+          "MoveSpeed": 600,
+          "Damage": 40,
+          "Armor": 0,
+          "Supply": 3,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 570,
+          "MoveSpeed": 600,
+          "Damage": 40,
+          "Armor": 0,
+          "Supply": 3,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_terran_medic",
+    "components": {
+      "Name": {
+        "Value": "Terran Medic"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 360,
+          "MoveSpeed": 620,
+          "Damage": 44,
+          "Armor": 1,
+          "Supply": 4,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 360,
+          "MoveSpeed": 620,
+          "Damage": 44,
+          "Armor": 1,
+          "Supply": 4,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_terran_hellion",
+    "components": {
+      "Name": {
+        "Value": "Terran Hellion"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 395,
+          "MoveSpeed": 560,
+          "Damage": 16,
+          "Armor": 2,
+          "Supply": 1,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 395,
+          "MoveSpeed": 560,
+          "Damage": 16,
+          "Armor": 2,
+          "Supply": 1,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_terran_hellbat",
+    "components": {
+      "Name": {
+        "Value": "Terran Hellbat"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 430,
+          "MoveSpeed": 580,
+          "Damage": 20,
+          "Armor": 0,
+          "Supply": 2,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 430,
+          "MoveSpeed": 580,
+          "Damage": 20,
+          "Armor": 0,
+          "Supply": 2,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_terran_widow_mine",
+    "components": {
+      "Name": {
+        "Value": "Terran Widow Mine"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 465,
+          "MoveSpeed": 600,
+          "Damage": 24,
+          "Armor": 1,
+          "Supply": 3,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 465,
+          "MoveSpeed": 600,
+          "Damage": 24,
+          "Armor": 1,
+          "Supply": 3,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_terran_siege_tank",
+    "components": {
+      "Name": {
+        "Value": "Terran Siege Tank"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500,
+          "MoveSpeed": 620,
+          "Damage": 28,
+          "Armor": 2,
+          "Supply": 4,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 500,
+          "MoveSpeed": 620,
+          "Damage": 28,
+          "Armor": 2,
+          "Supply": 4,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_terran_cyclone",
+    "components": {
+      "Name": {
+        "Value": "Terran Cyclone"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 535,
+          "MoveSpeed": 560,
+          "Damage": 32,
+          "Armor": 0,
+          "Supply": 1,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 535,
+          "MoveSpeed": 560,
+          "Damage": 32,
+          "Armor": 0,
+          "Supply": 1,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_terran_thor",
+    "components": {
+      "Name": {
+        "Value": "Terran Thor"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 570,
+          "MoveSpeed": 580,
+          "Damage": 36,
+          "Armor": 1,
+          "Supply": 2,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 570,
+          "MoveSpeed": 580,
+          "Damage": 36,
+          "Armor": 1,
+          "Supply": 2,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_terran_viking",
+    "components": {
+      "Name": {
+        "Value": "Terran Viking"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 360,
+          "MoveSpeed": 600,
+          "Damage": 40,
+          "Armor": 2,
+          "Supply": 3,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 360,
+          "MoveSpeed": 600,
+          "Damage": 40,
+          "Armor": 2,
+          "Supply": 3,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_terran_medivac",
+    "components": {
+      "Name": {
+        "Value": "Terran Medivac"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 395,
+          "MoveSpeed": 620,
+          "Damage": 44,
+          "Armor": 0,
+          "Supply": 4,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 395,
+          "MoveSpeed": 620,
+          "Damage": 44,
+          "Armor": 0,
+          "Supply": 4,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_terran_liberator",
+    "components": {
+      "Name": {
+        "Value": "Terran Liberator"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 430,
+          "MoveSpeed": 560,
+          "Damage": 16,
+          "Armor": 1,
+          "Supply": 1,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 430,
+          "MoveSpeed": 560,
+          "Damage": 16,
+          "Armor": 1,
+          "Supply": 1,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_terran_raven",
+    "components": {
+      "Name": {
+        "Value": "Terran Raven"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 465,
+          "MoveSpeed": 580,
+          "Damage": 20,
+          "Armor": 2,
+          "Supply": 2,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 465,
+          "MoveSpeed": 580,
+          "Damage": 20,
+          "Armor": 2,
+          "Supply": 2,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_terran_banshee",
+    "components": {
+      "Name": {
+        "Value": "Terran Banshee"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500,
+          "MoveSpeed": 600,
+          "Damage": 24,
+          "Armor": 0,
+          "Supply": 3,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 500,
+          "MoveSpeed": 600,
+          "Damage": 24,
+          "Armor": 0,
+          "Supply": 3,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_terran_battlecruiser",
+    "components": {
+      "Name": {
+        "Value": "Terran Battlecruiser"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 995,
+          "MoveSpeed": 620,
+          "Damage": 28,
+          "Armor": 1,
+          "Supply": 4,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 995,
+          "MoveSpeed": 620,
+          "Damage": 28,
+          "Armor": 1,
+          "Supply": 4,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_terran_planetary_fortress",
+    "components": {
+      "Name": {
+        "Value": "Terran Planetary Fortress"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1160,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 1160,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_terran_orbital_command",
+    "components": {
+      "Name": {
+        "Value": "Terran Orbital Command"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 950,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 0,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 950,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 0,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_terran_supply_depot",
+    "components": {
+      "Name": {
+        "Value": "Terran Supply Depot"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 985,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 3,
+          "Supply": 0,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 985,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 3,
+          "Supply": 0,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_terran_barracks",
+    "components": {
+      "Name": {
+        "Value": "Terran Barracks"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1020,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 1020,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Terran.TrainMarine",
+          "Ability.Rts.StarCraft.Terran.TrainMarauder",
+          "Ability.Rts.StarCraft.Shared.Hold",
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_terran_engineering_bay",
+    "components": {
+      "Name": {
+        "Value": "Terran Engineering Bay"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1055,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 0,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 1055,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 0,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_terran_bunker",
+    "components": {
+      "Name": {
+        "Value": "Terran Bunker"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1090,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 3,
+          "Supply": 0,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 1090,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 3,
+          "Supply": 0,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_terran_refinery",
+    "components": {
+      "Name": {
+        "Value": "Terran Refinery"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1125,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 1125,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_terran_factory",
+    "components": {
+      "Name": {
+        "Value": "Terran Factory"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1160,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 0,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 1160,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 0,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Terran.TrainHellion",
+          "Ability.Rts.StarCraft.Terran.TrainSiegeTank",
+          "Ability.Rts.StarCraft.Shared.Hold",
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_terran_starport",
+    "components": {
+      "Name": {
+        "Value": "Terran Starport"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 950,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 3,
+          "Supply": 0,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 950,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 3,
+          "Supply": 0,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Terran.TrainViking",
+          "Ability.Rts.StarCraft.Terran.TrainMedivac",
+          "Ability.Rts.StarCraft.Shared.Hold",
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_terran_armory",
+    "components": {
+      "Name": {
+        "Value": "Terran Armory"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 985,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 985,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_terran_fusion_core",
+    "components": {
+      "Name": {
+        "Value": "Terran Fusion Core"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1020,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 0,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 1020,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 0,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_terran_missile_turret",
+    "components": {
+      "Name": {
+        "Value": "Terran Missile Turret"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1055,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 3,
+          "Supply": 0,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 1055,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 3,
+          "Supply": 0,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_terran_sensor_tower",
+    "components": {
+      "Name": {
+        "Value": "Terran Sensor Tower"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1090,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 1090,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_terran_merc_compound",
+    "components": {
+      "Name": {
+        "Value": "Terran Merc Compound"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1125,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 0,
+          "Energy": 0
+        },
+        "current": {
+          "Health": 1125,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 0,
+          "Energy": 0
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_zerg_hatchery",
+    "components": {
+      "Name": {
+        "Value": "Zerg Hatchery"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 950,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 120,
+          "Biomass": 240,
+          "Minerals": 5000,
+          "Gas": 1500
+        },
+        "current": {
+          "Health": 950,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 120,
+          "Biomass": 240,
+          "Minerals": 5000,
+          "Gas": 1500
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Zerg.SpawnZergling",
+          "Ability.Rts.StarCraft.Zerg.SpawnHydralisk",
+          "Ability.Rts.StarCraft.Zerg.CreepSurge",
+          "Ability.Rts.StarCraft.Zerg.MorphUltralisk"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      },
+      "AbilityFormSetRef": {
+        "formSetId": "rts_sc_zerg_hatchery_forms"
+      }
+    }
+  },
+  {
+    "id": "rts_sc_zerg_drone",
+    "components": {
+      "Name": {
+        "Value": "Zerg Drone"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 255,
+          "MoveSpeed": 580,
+          "Damage": 20,
+          "Armor": 1,
+          "Supply": 2,
+          "Biomass": 23
+        },
+        "current": {
+          "Health": 255,
+          "MoveSpeed": 580,
+          "Damage": 20,
+          "Armor": 1,
+          "Supply": 2,
+          "Biomass": 23
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_zerg_overlord",
+    "components": {
+      "Name": {
+        "Value": "Zerg Overlord"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 430,
+          "MoveSpeed": 600,
+          "Damage": 24,
+          "Armor": 2,
+          "Supply": 3,
+          "Biomass": 26
+        },
+        "current": {
+          "Health": 430,
+          "MoveSpeed": 600,
+          "Damage": 24,
+          "Armor": 2,
+          "Supply": 3,
+          "Biomass": 26
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_zerg_zergling",
+    "components": {
+      "Name": {
+        "Value": "Zergling"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 465,
+          "MoveSpeed": 620,
+          "Damage": 28,
+          "Armor": 0,
+          "Supply": 4,
+          "Biomass": 29
+        },
+        "current": {
+          "Health": 465,
+          "MoveSpeed": 620,
+          "Damage": 28,
+          "Armor": 0,
+          "Supply": 4,
+          "Biomass": 29
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_zerg_queen",
+    "components": {
+      "Name": {
+        "Value": "Zerg Queen"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500,
+          "MoveSpeed": 560,
+          "Damage": 32,
+          "Armor": 1,
+          "Supply": 1,
+          "Biomass": 32
+        },
+        "current": {
+          "Health": 500,
+          "MoveSpeed": 560,
+          "Damage": 32,
+          "Armor": 1,
+          "Supply": 1,
+          "Biomass": 32
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_zerg_baneling",
+    "components": {
+      "Name": {
+        "Value": "Baneling"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 535,
+          "MoveSpeed": 580,
+          "Damage": 36,
+          "Armor": 2,
+          "Supply": 2,
+          "Biomass": 35
+        },
+        "current": {
+          "Health": 535,
+          "MoveSpeed": 580,
+          "Damage": 36,
+          "Armor": 2,
+          "Supply": 2,
+          "Biomass": 35
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_zerg_roach",
+    "components": {
+      "Name": {
+        "Value": "Roach"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 570,
+          "MoveSpeed": 600,
+          "Damage": 40,
+          "Armor": 0,
+          "Supply": 3,
+          "Biomass": 38
+        },
+        "current": {
+          "Health": 570,
+          "MoveSpeed": 600,
+          "Damage": 40,
+          "Armor": 0,
+          "Supply": 3,
+          "Biomass": 38
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_zerg_ravager",
+    "components": {
+      "Name": {
+        "Value": "Ravager"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 360,
+          "MoveSpeed": 620,
+          "Damage": 44,
+          "Armor": 1,
+          "Supply": 4,
+          "Biomass": 41
+        },
+        "current": {
+          "Health": 360,
+          "MoveSpeed": 620,
+          "Damage": 44,
+          "Armor": 1,
+          "Supply": 4,
+          "Biomass": 41
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_zerg_hydralisk",
+    "components": {
+      "Name": {
+        "Value": "Hydralisk"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 395,
+          "MoveSpeed": 560,
+          "Damage": 16,
+          "Armor": 2,
+          "Supply": 1,
+          "Biomass": 44
+        },
+        "current": {
+          "Health": 395,
+          "MoveSpeed": 560,
+          "Damage": 16,
+          "Armor": 2,
+          "Supply": 1,
+          "Biomass": 44
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_zerg_lurker",
+    "components": {
+      "Name": {
+        "Value": "Lurker"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 430,
+          "MoveSpeed": 580,
+          "Damage": 20,
+          "Armor": 0,
+          "Supply": 2,
+          "Biomass": 47
+        },
+        "current": {
+          "Health": 430,
+          "MoveSpeed": 580,
+          "Damage": 20,
+          "Armor": 0,
+          "Supply": 2,
+          "Biomass": 47
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_zerg_mutalisk",
+    "components": {
+      "Name": {
+        "Value": "Mutalisk"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 465,
+          "MoveSpeed": 600,
+          "Damage": 24,
+          "Armor": 1,
+          "Supply": 3,
+          "Biomass": 50
+        },
+        "current": {
+          "Health": 465,
+          "MoveSpeed": 600,
+          "Damage": 24,
+          "Armor": 1,
+          "Supply": 3,
+          "Biomass": 50
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_zerg_corruptor",
+    "components": {
+      "Name": {
+        "Value": "Corruptor"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500,
+          "MoveSpeed": 620,
+          "Damage": 28,
+          "Armor": 2,
+          "Supply": 4,
+          "Biomass": 53
+        },
+        "current": {
+          "Health": 500,
+          "MoveSpeed": 620,
+          "Damage": 28,
+          "Armor": 2,
+          "Supply": 4,
+          "Biomass": 53
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_zerg_brood_lord",
+    "components": {
+      "Name": {
+        "Value": "Brood Lord"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 995,
+          "MoveSpeed": 560,
+          "Damage": 32,
+          "Armor": 0,
+          "Supply": 1,
+          "Biomass": 56
+        },
+        "current": {
+          "Health": 995,
+          "MoveSpeed": 560,
+          "Damage": 32,
+          "Armor": 0,
+          "Supply": 1,
+          "Biomass": 56
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_zerg_viper",
+    "components": {
+      "Name": {
+        "Value": "Viper"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 570,
+          "MoveSpeed": 580,
+          "Damage": 36,
+          "Armor": 1,
+          "Supply": 2,
+          "Biomass": 59
+        },
+        "current": {
+          "Health": 570,
+          "MoveSpeed": 580,
+          "Damage": 36,
+          "Armor": 1,
+          "Supply": 2,
+          "Biomass": 59
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_zerg_infestor",
+    "components": {
+      "Name": {
+        "Value": "Infestor"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 360,
+          "MoveSpeed": 600,
+          "Damage": 40,
+          "Armor": 2,
+          "Supply": 3,
+          "Biomass": 62
+        },
+        "current": {
+          "Health": 360,
+          "MoveSpeed": 600,
+          "Damage": 40,
+          "Armor": 2,
+          "Supply": 3,
+          "Biomass": 62
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_zerg_swarm_host",
+    "components": {
+      "Name": {
+        "Value": "Swarm Host"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 395,
+          "MoveSpeed": 620,
+          "Damage": 44,
+          "Armor": 0,
+          "Supply": 4,
+          "Biomass": 65
+        },
+        "current": {
+          "Health": 395,
+          "MoveSpeed": 620,
+          "Damage": 44,
+          "Armor": 0,
+          "Supply": 4,
+          "Biomass": 65
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_zerg_ultralisk",
+    "components": {
+      "Name": {
+        "Value": "Ultralisk"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 690,
+          "MoveSpeed": 560,
+          "Damage": 16,
+          "Armor": 1,
+          "Supply": 1,
+          "Biomass": 68
+        },
+        "current": {
+          "Health": 690,
+          "MoveSpeed": 560,
+          "Damage": 16,
+          "Armor": 1,
+          "Supply": 1,
+          "Biomass": 68
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_zerg_spine_crawler",
+    "components": {
+      "Name": {
+        "Value": "Spine Crawler"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1055,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Biomass": 71
+        },
+        "current": {
+          "Health": 1055,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Biomass": 71
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_zerg_spore_crawler",
+    "components": {
+      "Name": {
+        "Value": "Spore Crawler"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1090,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 0,
+          "Biomass": 74
+        },
+        "current": {
+          "Health": 1090,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 0,
+          "Biomass": 74
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_zerg_spawning_pool",
+    "components": {
+      "Name": {
+        "Value": "Spawning Pool"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1125,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 3,
+          "Supply": 0,
+          "Biomass": 77
+        },
+        "current": {
+          "Health": 1125,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 3,
+          "Supply": 0,
+          "Biomass": 77
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_zerg_extractor",
+    "components": {
+      "Name": {
+        "Value": "Extractor"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1160,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Biomass": 80
+        },
+        "current": {
+          "Health": 1160,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Biomass": 80
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_zerg_evolution_chamber",
+    "components": {
+      "Name": {
+        "Value": "Evolution Chamber"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 950,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 0,
+          "Biomass": 83
+        },
+        "current": {
+          "Health": 950,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 0,
+          "Biomass": 83
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_zerg_roach_warren",
+    "components": {
+      "Name": {
+        "Value": "Roach Warren"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 985,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 3,
+          "Supply": 0,
+          "Biomass": 86
+        },
+        "current": {
+          "Health": 985,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 3,
+          "Supply": 0,
+          "Biomass": 86
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_zerg_baneling_nest",
+    "components": {
+      "Name": {
+        "Value": "Baneling Nest"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1020,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Biomass": 89
+        },
+        "current": {
+          "Health": 1020,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Biomass": 89
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_zerg_lair",
+    "components": {
+      "Name": {
+        "Value": "Lair"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1055,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 0,
+          "Biomass": 92
+        },
+        "current": {
+          "Health": 1055,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 0,
+          "Biomass": 92
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_zerg_hive",
+    "components": {
+      "Name": {
+        "Value": "Hive"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1090,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 3,
+          "Supply": 0,
+          "Biomass": 95
+        },
+        "current": {
+          "Health": 1090,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 3,
+          "Supply": 0,
+          "Biomass": 95
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_zerg_hydralisk_den",
+    "components": {
+      "Name": {
+        "Value": "Hydralisk Den"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1125,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Biomass": 98
+        },
+        "current": {
+          "Health": 1125,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Biomass": 98
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_zerg_spire",
+    "components": {
+      "Name": {
+        "Value": "Spire"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1160,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 0,
+          "Biomass": 101
+        },
+        "current": {
+          "Health": 1160,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 0,
+          "Biomass": 101
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_zerg_greater_spire",
+    "components": {
+      "Name": {
+        "Value": "Greater Spire"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 950,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 3,
+          "Supply": 0,
+          "Biomass": 104
+        },
+        "current": {
+          "Health": 950,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 3,
+          "Supply": 0,
+          "Biomass": 104
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_zerg_infestation_pit",
+    "components": {
+      "Name": {
+        "Value": "Infestation Pit"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 985,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Biomass": 107
+        },
+        "current": {
+          "Health": 985,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Biomass": 107
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_zerg_ultralisk_cavern",
+    "components": {
+      "Name": {
+        "Value": "Ultralisk Cavern"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1020,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 0,
+          "Biomass": 110
+        },
+        "current": {
+          "Health": 1020,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 0,
+          "Biomass": 110
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_zerg_nydus_network",
+    "components": {
+      "Name": {
+        "Value": "Nydus Network"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1055,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 3,
+          "Supply": 0,
+          "Biomass": 113
+        },
+        "current": {
+          "Health": 1055,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 3,
+          "Supply": 0,
+          "Biomass": 113
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_zerg_creep_tumor",
+    "components": {
+      "Name": {
+        "Value": "Creep Tumor"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1090,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Biomass": 116
+        },
+        "current": {
+          "Health": 1090,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Biomass": 116
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_protoss_nexus",
+    "components": {
+      "Name": {
+        "Value": "Protoss Nexus"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 950,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 100,
+          "Shield": 523,
+          "Psi": 320,
+          "Minerals": 5400,
+          "Gas": 2000
+        },
+        "current": {
+          "Health": 950,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 100,
+          "Shield": 523,
+          "Psi": 320,
+          "Minerals": 5400,
+          "Gas": 2000
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Protoss.WarpZealot",
+          "Ability.Rts.StarCraft.Protoss.WarpStalker",
+          "Ability.Rts.StarCraft.Protoss.ChronoBoost",
+          "Ability.Rts.StarCraft.Protoss.WarpDarkTemplar"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      },
+      "AbilityFormSetRef": {
+        "formSetId": "rts_sc_protoss_nexus_forms"
+      }
+    }
+  },
+  {
+    "id": "rts_sc_protoss_probe",
+    "components": {
+      "Name": {
+        "Value": "Protoss Probe"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 255,
+          "MoveSpeed": 580,
+          "Damage": 20,
+          "Armor": 1,
+          "Supply": 2,
+          "Shield": 140,
+          "Psi": 42
+        },
+        "current": {
+          "Health": 255,
+          "MoveSpeed": 580,
+          "Damage": 20,
+          "Armor": 1,
+          "Supply": 2,
+          "Shield": 140,
+          "Psi": 42
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_protoss_zealot",
+    "components": {
+      "Name": {
+        "Value": "Protoss Zealot"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 430,
+          "MoveSpeed": 600,
+          "Damage": 24,
+          "Armor": 2,
+          "Supply": 3,
+          "Shield": 237,
+          "Psi": 44
+        },
+        "current": {
+          "Health": 430,
+          "MoveSpeed": 600,
+          "Damage": 24,
+          "Armor": 2,
+          "Supply": 3,
+          "Shield": 237,
+          "Psi": 44
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_protoss_stalker",
+    "components": {
+      "Name": {
+        "Value": "Protoss Stalker"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 465,
+          "MoveSpeed": 620,
+          "Damage": 28,
+          "Armor": 0,
+          "Supply": 4,
+          "Shield": 256,
+          "Psi": 46
+        },
+        "current": {
+          "Health": 465,
+          "MoveSpeed": 620,
+          "Damage": 28,
+          "Armor": 0,
+          "Supply": 4,
+          "Shield": 256,
+          "Psi": 46
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_protoss_sentry",
+    "components": {
+      "Name": {
+        "Value": "Protoss Sentry"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500,
+          "MoveSpeed": 560,
+          "Damage": 32,
+          "Armor": 1,
+          "Supply": 1,
+          "Shield": 275,
+          "Psi": 48
+        },
+        "current": {
+          "Health": 500,
+          "MoveSpeed": 560,
+          "Damage": 32,
+          "Armor": 1,
+          "Supply": 1,
+          "Shield": 275,
+          "Psi": 48
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_protoss_adept",
+    "components": {
+      "Name": {
+        "Value": "Protoss Adept"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 535,
+          "MoveSpeed": 580,
+          "Damage": 36,
+          "Armor": 2,
+          "Supply": 2,
+          "Shield": 294,
+          "Psi": 50
+        },
+        "current": {
+          "Health": 535,
+          "MoveSpeed": 580,
+          "Damage": 36,
+          "Armor": 2,
+          "Supply": 2,
+          "Shield": 294,
+          "Psi": 50
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_protoss_high_templar",
+    "components": {
+      "Name": {
+        "Value": "High Templar"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 570,
+          "MoveSpeed": 600,
+          "Damage": 40,
+          "Armor": 0,
+          "Supply": 3,
+          "Shield": 314,
+          "Psi": 52
+        },
+        "current": {
+          "Health": 570,
+          "MoveSpeed": 600,
+          "Damage": 40,
+          "Armor": 0,
+          "Supply": 3,
+          "Shield": 314,
+          "Psi": 52
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_protoss_dark_templar",
+    "components": {
+      "Name": {
+        "Value": "Dark Templar"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 360,
+          "MoveSpeed": 620,
+          "Damage": 44,
+          "Armor": 1,
+          "Supply": 4,
+          "Shield": 198,
+          "Psi": 54
+        },
+        "current": {
+          "Health": 360,
+          "MoveSpeed": 620,
+          "Damage": 44,
+          "Armor": 1,
+          "Supply": 4,
+          "Shield": 198,
+          "Psi": 54
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_protoss_archon",
+    "components": {
+      "Name": {
+        "Value": "Archon"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 655,
+          "MoveSpeed": 560,
+          "Damage": 16,
+          "Armor": 2,
+          "Supply": 1,
+          "Shield": 360,
+          "Psi": 56
+        },
+        "current": {
+          "Health": 655,
+          "MoveSpeed": 560,
+          "Damage": 16,
+          "Armor": 2,
+          "Supply": 1,
+          "Shield": 360,
+          "Psi": 56
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_protoss_immortal",
+    "components": {
+      "Name": {
+        "Value": "Immortal"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 690,
+          "MoveSpeed": 580,
+          "Damage": 20,
+          "Armor": 0,
+          "Supply": 2,
+          "Shield": 380,
+          "Psi": 58
+        },
+        "current": {
+          "Health": 690,
+          "MoveSpeed": 580,
+          "Damage": 20,
+          "Armor": 0,
+          "Supply": 2,
+          "Shield": 380,
+          "Psi": 58
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_protoss_colossus",
+    "components": {
+      "Name": {
+        "Value": "Colossus"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 725,
+          "MoveSpeed": 600,
+          "Damage": 24,
+          "Armor": 1,
+          "Supply": 3,
+          "Shield": 399,
+          "Psi": 60
+        },
+        "current": {
+          "Health": 725,
+          "MoveSpeed": 600,
+          "Damage": 24,
+          "Armor": 1,
+          "Supply": 3,
+          "Shield": 399,
+          "Psi": 60
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_protoss_disruptor",
+    "components": {
+      "Name": {
+        "Value": "Disruptor"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500,
+          "MoveSpeed": 620,
+          "Damage": 28,
+          "Armor": 2,
+          "Supply": 4,
+          "Shield": 275,
+          "Psi": 62
+        },
+        "current": {
+          "Health": 500,
+          "MoveSpeed": 620,
+          "Damage": 28,
+          "Armor": 2,
+          "Supply": 4,
+          "Shield": 275,
+          "Psi": 62
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_protoss_observer",
+    "components": {
+      "Name": {
+        "Value": "Observer"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 535,
+          "MoveSpeed": 560,
+          "Damage": 32,
+          "Armor": 0,
+          "Supply": 1,
+          "Shield": 294,
+          "Psi": 64
+        },
+        "current": {
+          "Health": 535,
+          "MoveSpeed": 560,
+          "Damage": 32,
+          "Armor": 0,
+          "Supply": 1,
+          "Shield": 294,
+          "Psi": 64
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_protoss_warp_prism",
+    "components": {
+      "Name": {
+        "Value": "Warp Prism"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 570,
+          "MoveSpeed": 580,
+          "Damage": 36,
+          "Armor": 1,
+          "Supply": 2,
+          "Shield": 314,
+          "Psi": 66
+        },
+        "current": {
+          "Health": 570,
+          "MoveSpeed": 580,
+          "Damage": 36,
+          "Armor": 1,
+          "Supply": 2,
+          "Shield": 314,
+          "Psi": 66
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_protoss_phoenix",
+    "components": {
+      "Name": {
+        "Value": "Phoenix"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 360,
+          "MoveSpeed": 600,
+          "Damage": 40,
+          "Armor": 2,
+          "Supply": 3,
+          "Shield": 198,
+          "Psi": 68
+        },
+        "current": {
+          "Health": 360,
+          "MoveSpeed": 600,
+          "Damage": 40,
+          "Armor": 2,
+          "Supply": 3,
+          "Shield": 198,
+          "Psi": 68
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_protoss_void_ray",
+    "components": {
+      "Name": {
+        "Value": "Void Ray"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 395,
+          "MoveSpeed": 620,
+          "Damage": 44,
+          "Armor": 0,
+          "Supply": 4,
+          "Shield": 217,
+          "Psi": 70
+        },
+        "current": {
+          "Health": 395,
+          "MoveSpeed": 620,
+          "Damage": 44,
+          "Armor": 0,
+          "Supply": 4,
+          "Shield": 217,
+          "Psi": 70
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_protoss_oracle",
+    "components": {
+      "Name": {
+        "Value": "Oracle"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 430,
+          "MoveSpeed": 560,
+          "Damage": 16,
+          "Armor": 1,
+          "Supply": 1,
+          "Shield": 237,
+          "Psi": 72
+        },
+        "current": {
+          "Health": 430,
+          "MoveSpeed": 560,
+          "Damage": 16,
+          "Armor": 1,
+          "Supply": 1,
+          "Shield": 237,
+          "Psi": 72
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_protoss_tempest",
+    "components": {
+      "Name": {
+        "Value": "Tempest"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 925,
+          "MoveSpeed": 580,
+          "Damage": 20,
+          "Armor": 2,
+          "Supply": 2,
+          "Shield": 509,
+          "Psi": 74
+        },
+        "current": {
+          "Health": 925,
+          "MoveSpeed": 580,
+          "Damage": 20,
+          "Armor": 2,
+          "Supply": 2,
+          "Shield": 509,
+          "Psi": 74
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_protoss_carrier",
+    "components": {
+      "Name": {
+        "Value": "Carrier"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 960,
+          "MoveSpeed": 600,
+          "Damage": 24,
+          "Armor": 0,
+          "Supply": 3,
+          "Shield": 528,
+          "Psi": 76
+        },
+        "current": {
+          "Health": 960,
+          "MoveSpeed": 600,
+          "Damage": 24,
+          "Armor": 0,
+          "Supply": 3,
+          "Shield": 528,
+          "Psi": 76
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_protoss_mothership",
+    "components": {
+      "Name": {
+        "Value": "Mothership"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 995,
+          "MoveSpeed": 620,
+          "Damage": 28,
+          "Armor": 1,
+          "Supply": 4,
+          "Shield": 547,
+          "Psi": 78
+        },
+        "current": {
+          "Health": 995,
+          "MoveSpeed": 620,
+          "Damage": 28,
+          "Armor": 1,
+          "Supply": 4,
+          "Shield": 547,
+          "Psi": 78
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc_protoss_pylon",
+    "components": {
+      "Name": {
+        "Value": "Pylon"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1160,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Shield": 638,
+          "Psi": 80
+        },
+        "current": {
+          "Health": 1160,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Shield": 638,
+          "Psi": 80
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_protoss_assimilator",
+    "components": {
+      "Name": {
+        "Value": "Assimilator"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 950,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 0,
+          "Shield": 523,
+          "Psi": 82
+        },
+        "current": {
+          "Health": 950,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 0,
+          "Shield": 523,
+          "Psi": 82
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_protoss_gateway",
+    "components": {
+      "Name": {
+        "Value": "Protoss Gateway"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 985,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 3,
+          "Supply": 0,
+          "Shield": 542,
+          "Psi": 84
+        },
+        "current": {
+          "Health": 985,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 3,
+          "Supply": 0,
+          "Shield": 542,
+          "Psi": 84
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Protoss.WarpZealot",
+          "Ability.Rts.StarCraft.Protoss.WarpStalker",
+          "Ability.Rts.StarCraft.Shared.Hold",
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_protoss_forge",
+    "components": {
+      "Name": {
+        "Value": "Protoss Forge"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1020,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Shield": 561,
+          "Psi": 86
+        },
+        "current": {
+          "Health": 1020,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Shield": 561,
+          "Psi": 86
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_protoss_cybernetics_core",
+    "components": {
+      "Name": {
+        "Value": "Cybernetics Core"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1055,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 0,
+          "Shield": 580,
+          "Psi": 88
+        },
+        "current": {
+          "Health": 1055,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 0,
+          "Shield": 580,
+          "Psi": 88
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_protoss_shield_battery",
+    "components": {
+      "Name": {
+        "Value": "Shield Battery"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1090,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 3,
+          "Supply": 0,
+          "Shield": 600,
+          "Psi": 90
+        },
+        "current": {
+          "Health": 1090,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 3,
+          "Supply": 0,
+          "Shield": 600,
+          "Psi": 90
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_protoss_robotics_facility",
+    "components": {
+      "Name": {
+        "Value": "Robotics Facility"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1125,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Shield": 619,
+          "Psi": 92
+        },
+        "current": {
+          "Health": 1125,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Shield": 619,
+          "Psi": 92
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Protoss.WarpImmortal",
+          "Ability.Rts.StarCraft.Shared.Hold",
+          "Ability.Rts.StarCraft.Shared.Hold",
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_protoss_stargate",
+    "components": {
+      "Name": {
+        "Value": "Stargate"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1160,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 0,
+          "Shield": 638,
+          "Psi": 94
+        },
+        "current": {
+          "Health": 1160,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 0,
+          "Shield": 638,
+          "Psi": 94
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Protoss.WarpPhoenix",
+          "Ability.Rts.StarCraft.Shared.Hold",
+          "Ability.Rts.StarCraft.Shared.Hold",
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_protoss_twilight_council",
+    "components": {
+      "Name": {
+        "Value": "Twilight Council"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 950,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 3,
+          "Supply": 0,
+          "Shield": 523,
+          "Psi": 96
+        },
+        "current": {
+          "Health": 950,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 3,
+          "Supply": 0,
+          "Shield": 523,
+          "Psi": 96
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_protoss_templar_archives",
+    "components": {
+      "Name": {
+        "Value": "Templar Archives"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 985,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Shield": 542,
+          "Psi": 98
+        },
+        "current": {
+          "Health": 985,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Shield": 542,
+          "Psi": 98
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_protoss_dark_shrine",
+    "components": {
+      "Name": {
+        "Value": "Dark Shrine"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1020,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 0,
+          "Shield": 561,
+          "Psi": 100
+        },
+        "current": {
+          "Health": 1020,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 2,
+          "Supply": 0,
+          "Shield": 561,
+          "Psi": 100
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_protoss_fleet_beacon",
+    "components": {
+      "Name": {
+        "Value": "Fleet Beacon"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1055,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 3,
+          "Supply": 0,
+          "Shield": 580,
+          "Psi": 102
+        },
+        "current": {
+          "Health": 1055,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 3,
+          "Supply": 0,
+          "Shield": 580,
+          "Psi": 102
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  },
+  {
+    "id": "rts_sc_protoss_robotics_bay",
+    "components": {
+      "Name": {
+        "Value": "Robotics Bay"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1090,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Shield": 600,
+          "Psi": 104
+        },
+        "current": {
+          "Health": 1090,
+          "MoveSpeed": 0,
+          "Damage": 0,
+          "Armor": 4,
+          "Supply": 0,
+          "Shield": 600,
+          "Psi": 104
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StarCraft.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PresentationStaticTransform": {},
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 145,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 190,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 170
+      }
+    }
+  }
+]

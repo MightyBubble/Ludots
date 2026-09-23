@@ -1,0 +1,686 @@
+[
+  {
+    "id": "Ability.Rts.StarCraft.Shared.Hold",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Hold",
+      "iconGlyph": "H",
+      "accentColor": "#6B7280",
+      "hintText": "Keep the selected squad ready."
+    }
+  },
+  {
+    "id": "Ability.Rts.StarCraft.Terran.TrainMarine",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 40,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.StarCraft.Terran.TrainMarine.Cost"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 40,
+          "template": "Effect.Rts.StarCraft.Terran.TrainMarine",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 40
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Marine",
+      "iconGlyph": "TM",
+      "accentColor": "#59A7FF",
+      "hintText": "Create terran marine through the GAS production queue."
+    }
+  },
+  {
+    "id": "Ability.Rts.StarCraft.Terran.TrainMarauder",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 56,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.StarCraft.Terran.TrainMarauder.Cost"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 56,
+          "template": "Effect.Rts.StarCraft.Terran.TrainMarauder",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 56
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Marauder",
+      "iconGlyph": "MR",
+      "accentColor": "#59A7FF",
+      "hintText": "Create terran marauder through the GAS production queue."
+    }
+  },
+  {
+    "id": "Ability.Rts.StarCraft.Terran.TrainHellion",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 58,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.StarCraft.Terran.TrainHellion.Cost"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 58,
+          "template": "Effect.Rts.StarCraft.Terran.TrainHellion",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 58
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Hellion",
+      "iconGlyph": "HL",
+      "accentColor": "#59A7FF",
+      "hintText": "Create terran hellion through the GAS production queue."
+    }
+  },
+  {
+    "id": "Ability.Rts.StarCraft.Terran.TrainSiegeTank",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 88,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.StarCraft.Terran.TrainSiegeTank.Cost"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 88,
+          "template": "Effect.Rts.StarCraft.Terran.TrainSiegeTank",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 88
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Siege Tank",
+      "iconGlyph": "ST",
+      "accentColor": "#59A7FF",
+      "hintText": "Create terran siege tank through the GAS production queue."
+    }
+  },
+  {
+    "id": "Ability.Rts.StarCraft.Terran.TrainViking",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 78,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.StarCraft.Terran.TrainViking.Cost"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 78,
+          "template": "Effect.Rts.StarCraft.Terran.TrainViking",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 78
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Viking",
+      "iconGlyph": "VK",
+      "accentColor": "#59A7FF",
+      "hintText": "Create terran viking through the GAS production queue."
+    }
+  },
+  {
+    "id": "Ability.Rts.StarCraft.Terran.TrainMedivac",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 72,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.StarCraft.Terran.TrainMedivac.Cost"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 72,
+          "template": "Effect.Rts.StarCraft.Terran.TrainMedivac",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 72
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Medivac",
+      "iconGlyph": "MV",
+      "accentColor": "#59A7FF",
+      "hintText": "Create terran medivac through the GAS production queue."
+    }
+  },
+  {
+    "id": "Ability.Rts.StarCraft.Zerg.SpawnZergling",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 28,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.StarCraft.Zerg.SpawnZergling.Cost"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 28,
+          "template": "Effect.Rts.StarCraft.Zerg.SpawnZergling",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 28
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Spawn Zergling",
+      "iconGlyph": "ZG",
+      "accentColor": "#A6E22E",
+      "hintText": "Create zerg zergling through the GAS production queue."
+    }
+  },
+  {
+    "id": "Ability.Rts.StarCraft.Zerg.SpawnHydralisk",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 62,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.StarCraft.Zerg.SpawnHydralisk.Cost"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 62,
+          "template": "Effect.Rts.StarCraft.Zerg.SpawnHydralisk",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 62
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Spawn Hydralisk",
+      "iconGlyph": "HY",
+      "accentColor": "#A6E22E",
+      "hintText": "Create zerg hydralisk through the GAS production queue."
+    }
+  },
+  {
+    "id": "Ability.Rts.StarCraft.Zerg.MorphUltralisk",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 110,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.StarCraft.Zerg.MorphUltralisk.Cost"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 110,
+          "template": "Effect.Rts.StarCraft.Zerg.MorphUltralisk",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 110
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Morph Ultralisk",
+      "iconGlyph": "UL",
+      "accentColor": "#A6E22E",
+      "hintText": "Create zerg ultralisk through the GAS production queue."
+    }
+  },
+  {
+    "id": "Ability.Rts.StarCraft.Protoss.WarpZealot",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 52,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.StarCraft.Protoss.WarpZealot.Cost"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 52,
+          "template": "Effect.Rts.StarCraft.Protoss.WarpZealot",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 52
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Warp Zealot",
+      "iconGlyph": "WZ",
+      "accentColor": "#B692FF",
+      "hintText": "Create protoss zealot through the GAS production queue."
+    }
+  },
+  {
+    "id": "Ability.Rts.StarCraft.Protoss.WarpStalker",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 66,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.StarCraft.Protoss.WarpStalker.Cost"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 66,
+          "template": "Effect.Rts.StarCraft.Protoss.WarpStalker",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 66
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Warp Stalker",
+      "iconGlyph": "WS",
+      "accentColor": "#B692FF",
+      "hintText": "Create protoss stalker through the GAS production queue."
+    }
+  },
+  {
+    "id": "Ability.Rts.StarCraft.Protoss.WarpDarkTemplar",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 92,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.StarCraft.Protoss.WarpDarkTemplar.Cost"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 92,
+          "template": "Effect.Rts.StarCraft.Protoss.WarpDarkTemplar",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 92
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Warp Dark Templar",
+      "iconGlyph": "DT",
+      "accentColor": "#B692FF",
+      "hintText": "Create protoss dark templar through the GAS production queue."
+    }
+  },
+  {
+    "id": "Ability.Rts.StarCraft.Protoss.WarpImmortal",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 88,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.StarCraft.Protoss.WarpImmortal.Cost"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 88,
+          "template": "Effect.Rts.StarCraft.Protoss.WarpImmortal",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 88
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Warp Immortal",
+      "iconGlyph": "IM",
+      "accentColor": "#B692FF",
+      "hintText": "Create protoss immortal through the GAS production queue."
+    }
+  },
+  {
+    "id": "Ability.Rts.StarCraft.Protoss.WarpPhoenix",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 70,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.StarCraft.Protoss.WarpPhoenix.Cost"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 70,
+          "template": "Effect.Rts.StarCraft.Protoss.WarpPhoenix",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 70
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Warp Phoenix",
+      "iconGlyph": "PX",
+      "accentColor": "#B692FF",
+      "hintText": "Create protoss phoenix through the GAS production queue."
+    }
+  },
+  {
+    "id": "Ability.Rts.StarCraft.Terran.CalldownScan",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.StarCraft.Terran.ScanPulse"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Scanner Sweep",
+      "iconGlyph": "SS",
+      "accentColor": "#59A7FF",
+      "hintText": "Expose enemy movement and spend command energy."
+    }
+  },
+  {
+    "id": "Ability.Rts.StarCraft.Terran.CallMule",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.StarCraft.Terran.MuleDrop"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Call MULE",
+      "iconGlyph": "MU",
+      "accentColor": "#59A7FF",
+      "hintText": "Convert command energy into a visible minerals burst."
+    }
+  },
+  {
+    "id": "Ability.Rts.StarCraft.Zerg.CreepSurge",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.StarCraft.Zerg.CreepSurge"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Creep Surge",
+      "iconGlyph": "CS",
+      "accentColor": "#A6E22E",
+      "hintText": "Push biomass through the swarm economy graph."
+    }
+  },
+  {
+    "id": "Ability.Rts.StarCraft.Protoss.ChronoBoost",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.StarCraft.Protoss.ChronoBoost"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Chrono Boost",
+      "iconGlyph": "CB",
+      "accentColor": "#B692FF",
+      "hintText": "Pulse psi through shields via GAS graph."
+    }
+  }
+]

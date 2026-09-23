@@ -1,0 +1,35 @@
+[
+  {
+    "id": "rts_sc_armory_loadout",
+    "purpose": "Equipment",
+    "width": 6,
+    "height": 2,
+    "grantsEquipmentBonuses": true,
+    "namedSlots": [
+      {
+        "id": "doctrine",
+        "label": "Doctrine",
+        "requiredAll": [
+          "Item.Rts.StarCraft.Doctrine"
+        ],
+        "singleItemOnly": true
+      },
+      {
+        "id": "weapon",
+        "label": "Weapon Protocol",
+        "requiredAll": [
+          "Item.Rts.StarCraft.Weapon"
+        ],
+        "singleItemOnly": true
+      },
+      {
+        "id": "tech",
+        "label": "Tech Matrix",
+        "requiredAll": [
+          "Item.Rts.StarCraft.Tech"
+        ],
+        "singleItemOnly": true
+      }
+    ]
+  }
+]

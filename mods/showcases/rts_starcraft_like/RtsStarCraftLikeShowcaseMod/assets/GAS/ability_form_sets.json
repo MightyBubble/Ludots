@@ -1,0 +1,44 @@
+[
+  {
+    "id": "rts_sc_terran_command_forms",
+    "routes": [
+      {
+        "priority": 10,
+        "slotOverrides": [
+          {
+            "slotIndex": 3,
+            "abilityId": "Ability.Rts.StarCraft.Terran.CallMule"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rts_sc_zerg_hatchery_forms",
+    "routes": [
+      {
+        "priority": 10,
+        "slotOverrides": [
+          {
+            "slotIndex": 3,
+            "abilityId": "Ability.Rts.StarCraft.Zerg.MorphUltralisk"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rts_sc_protoss_nexus_forms",
+    "routes": [
+      {
+        "priority": 10,
+        "slotOverrides": [
+          {
+            "slotIndex": 3,
+            "abilityId": "Ability.Rts.StarCraft.Protoss.WarpDarkTemplar"
+          }
+        ]
+      }
+    ]
+  }
+]

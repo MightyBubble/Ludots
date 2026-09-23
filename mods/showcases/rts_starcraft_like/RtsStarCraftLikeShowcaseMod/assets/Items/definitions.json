@@ -1,0 +1,65 @@
+[
+  {
+    "id": "rts_sc_item_terran_stimpack",
+    "displayName": "Terran Stimpack Doctrine",
+    "shape": "rts_sc_chip",
+    "tags": [
+      "Item.Rts.StarCraft.Doctrine",
+      "Item.Rts.StarCraft.Terran"
+    ],
+    "allowedNamedSlots": [
+      "doctrine"
+    ],
+    "equipEffects": [
+      "Effect.Rts.StarCraft.Item.TerranStimpack"
+    ],
+    "abilityGrants": [
+      {
+        "slotIndex": 4,
+        "ability": "Ability.Rts.StarCraft.Terran.CalldownScan"
+      }
+    ]
+  },
+  {
+    "id": "rts_sc_item_zerg_adrenal_glands",
+    "displayName": "Zerg Adrenal Glands",
+    "shape": "rts_sc_chip",
+    "tags": [
+      "Item.Rts.StarCraft.Weapon",
+      "Item.Rts.StarCraft.Zerg"
+    ],
+    "allowedNamedSlots": [
+      "weapon"
+    ],
+    "equipEffects": [
+      "Effect.Rts.StarCraft.Item.ZergAdrenal"
+    ],
+    "abilityGrants": [
+      {
+        "slotIndex": 4,
+        "ability": "Ability.Rts.StarCraft.Zerg.CreepSurge"
+      }
+    ]
+  },
+  {
+    "id": "rts_sc_item_protoss_psi_matrix",
+    "displayName": "Protoss Psi Matrix",
+    "shape": "rts_sc_module",
+    "tags": [
+      "Item.Rts.StarCraft.Tech",
+      "Item.Rts.StarCraft.Protoss"
+    ],
+    "allowedNamedSlots": [
+      "tech"
+    ],
+    "equipEffects": [
+      "Effect.Rts.StarCraft.Item.ProtossPsiMatrix"
+    ],
+    "abilityGrants": [
+      {
+        "slotIndex": 4,
+        "ability": "Ability.Rts.StarCraft.Protoss.ChronoBoost"
+      }
+    ]
+  }
+]

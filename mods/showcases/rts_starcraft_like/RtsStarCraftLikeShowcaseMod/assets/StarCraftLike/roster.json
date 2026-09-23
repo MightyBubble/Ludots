@@ -1,0 +1,533 @@
+{
+  "id": "rts_starcraft_like_roster",
+  "races": [
+    {
+      "id": "terran",
+      "label": "Terran Dominion",
+      "teamId": 1,
+      "color": "#59A7FF",
+      "unitCount": 34,
+      "units": [
+        {
+          "id": "rts_sc_terran_command_center",
+          "label": "Terran Command Center",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_terran_scv",
+          "label": "Terran SCV",
+          "role": "worker"
+        },
+        {
+          "id": "rts_sc_terran_marine",
+          "label": "Terran Marine",
+          "role": "infantry"
+        },
+        {
+          "id": "rts_sc_terran_marauder",
+          "label": "Terran Marauder",
+          "role": "infantry"
+        },
+        {
+          "id": "rts_sc_terran_reaper",
+          "label": "Terran Reaper",
+          "role": "infantry"
+        },
+        {
+          "id": "rts_sc_terran_ghost",
+          "label": "Terran Ghost",
+          "role": "specialist"
+        },
+        {
+          "id": "rts_sc_terran_firebat",
+          "label": "Terran Firebat",
+          "role": "infantry"
+        },
+        {
+          "id": "rts_sc_terran_medic",
+          "label": "Terran Medic",
+          "role": "support"
+        },
+        {
+          "id": "rts_sc_terran_hellion",
+          "label": "Terran Hellion",
+          "role": "vehicle"
+        },
+        {
+          "id": "rts_sc_terran_hellbat",
+          "label": "Terran Hellbat",
+          "role": "vehicle"
+        },
+        {
+          "id": "rts_sc_terran_widow_mine",
+          "label": "Terran Widow Mine",
+          "role": "vehicle"
+        },
+        {
+          "id": "rts_sc_terran_siege_tank",
+          "label": "Terran Siege Tank",
+          "role": "vehicle"
+        },
+        {
+          "id": "rts_sc_terran_cyclone",
+          "label": "Terran Cyclone",
+          "role": "vehicle"
+        },
+        {
+          "id": "rts_sc_terran_thor",
+          "label": "Terran Thor",
+          "role": "vehicle"
+        },
+        {
+          "id": "rts_sc_terran_viking",
+          "label": "Terran Viking",
+          "role": "air"
+        },
+        {
+          "id": "rts_sc_terran_medivac",
+          "label": "Terran Medivac",
+          "role": "air"
+        },
+        {
+          "id": "rts_sc_terran_liberator",
+          "label": "Terran Liberator",
+          "role": "air"
+        },
+        {
+          "id": "rts_sc_terran_raven",
+          "label": "Terran Raven",
+          "role": "air"
+        },
+        {
+          "id": "rts_sc_terran_banshee",
+          "label": "Terran Banshee",
+          "role": "air"
+        },
+        {
+          "id": "rts_sc_terran_battlecruiser",
+          "label": "Terran Battlecruiser",
+          "role": "capital"
+        },
+        {
+          "id": "rts_sc_terran_planetary_fortress",
+          "label": "Terran Planetary Fortress",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_terran_orbital_command",
+          "label": "Terran Orbital Command",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_terran_supply_depot",
+          "label": "Terran Supply Depot",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_terran_barracks",
+          "label": "Terran Barracks",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_terran_engineering_bay",
+          "label": "Terran Engineering Bay",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_terran_bunker",
+          "label": "Terran Bunker",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_terran_refinery",
+          "label": "Terran Refinery",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_terran_factory",
+          "label": "Terran Factory",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_terran_starport",
+          "label": "Terran Starport",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_terran_armory",
+          "label": "Terran Armory",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_terran_fusion_core",
+          "label": "Terran Fusion Core",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_terran_missile_turret",
+          "label": "Terran Missile Turret",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_terran_sensor_tower",
+          "label": "Terran Sensor Tower",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_terran_merc_compound",
+          "label": "Terran Merc Compound",
+          "role": "structure"
+        }
+      ]
+    },
+    {
+      "id": "zerg",
+      "label": "Zerg Swarm",
+      "teamId": 2,
+      "color": "#A6E22E",
+      "unitCount": 33,
+      "units": [
+        {
+          "id": "rts_sc_zerg_hatchery",
+          "label": "Zerg Hatchery",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_zerg_drone",
+          "label": "Zerg Drone",
+          "role": "worker"
+        },
+        {
+          "id": "rts_sc_zerg_overlord",
+          "label": "Zerg Overlord",
+          "role": "air"
+        },
+        {
+          "id": "rts_sc_zerg_zergling",
+          "label": "Zergling",
+          "role": "infantry"
+        },
+        {
+          "id": "rts_sc_zerg_queen",
+          "label": "Zerg Queen",
+          "role": "support"
+        },
+        {
+          "id": "rts_sc_zerg_baneling",
+          "label": "Baneling",
+          "role": "infantry"
+        },
+        {
+          "id": "rts_sc_zerg_roach",
+          "label": "Roach",
+          "role": "infantry"
+        },
+        {
+          "id": "rts_sc_zerg_ravager",
+          "label": "Ravager",
+          "role": "infantry"
+        },
+        {
+          "id": "rts_sc_zerg_hydralisk",
+          "label": "Hydralisk",
+          "role": "infantry"
+        },
+        {
+          "id": "rts_sc_zerg_lurker",
+          "label": "Lurker",
+          "role": "specialist"
+        },
+        {
+          "id": "rts_sc_zerg_mutalisk",
+          "label": "Mutalisk",
+          "role": "air"
+        },
+        {
+          "id": "rts_sc_zerg_corruptor",
+          "label": "Corruptor",
+          "role": "air"
+        },
+        {
+          "id": "rts_sc_zerg_brood_lord",
+          "label": "Brood Lord",
+          "role": "capital"
+        },
+        {
+          "id": "rts_sc_zerg_viper",
+          "label": "Viper",
+          "role": "air"
+        },
+        {
+          "id": "rts_sc_zerg_infestor",
+          "label": "Infestor",
+          "role": "caster"
+        },
+        {
+          "id": "rts_sc_zerg_swarm_host",
+          "label": "Swarm Host",
+          "role": "specialist"
+        },
+        {
+          "id": "rts_sc_zerg_ultralisk",
+          "label": "Ultralisk",
+          "role": "heavy"
+        },
+        {
+          "id": "rts_sc_zerg_spine_crawler",
+          "label": "Spine Crawler",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_zerg_spore_crawler",
+          "label": "Spore Crawler",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_zerg_spawning_pool",
+          "label": "Spawning Pool",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_zerg_extractor",
+          "label": "Extractor",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_zerg_evolution_chamber",
+          "label": "Evolution Chamber",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_zerg_roach_warren",
+          "label": "Roach Warren",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_zerg_baneling_nest",
+          "label": "Baneling Nest",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_zerg_lair",
+          "label": "Lair",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_zerg_hive",
+          "label": "Hive",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_zerg_hydralisk_den",
+          "label": "Hydralisk Den",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_zerg_spire",
+          "label": "Spire",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_zerg_greater_spire",
+          "label": "Greater Spire",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_zerg_infestation_pit",
+          "label": "Infestation Pit",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_zerg_ultralisk_cavern",
+          "label": "Ultralisk Cavern",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_zerg_nydus_network",
+          "label": "Nydus Network",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_zerg_creep_tumor",
+          "label": "Creep Tumor",
+          "role": "structure"
+        }
+      ]
+    },
+    {
+      "id": "protoss",
+      "label": "Protoss Conclave",
+      "teamId": 3,
+      "color": "#B692FF",
+      "unitCount": 33,
+      "units": [
+        {
+          "id": "rts_sc_protoss_nexus",
+          "label": "Protoss Nexus",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_protoss_probe",
+          "label": "Protoss Probe",
+          "role": "worker"
+        },
+        {
+          "id": "rts_sc_protoss_zealot",
+          "label": "Protoss Zealot",
+          "role": "infantry"
+        },
+        {
+          "id": "rts_sc_protoss_stalker",
+          "label": "Protoss Stalker",
+          "role": "infantry"
+        },
+        {
+          "id": "rts_sc_protoss_sentry",
+          "label": "Protoss Sentry",
+          "role": "support"
+        },
+        {
+          "id": "rts_sc_protoss_adept",
+          "label": "Protoss Adept",
+          "role": "infantry"
+        },
+        {
+          "id": "rts_sc_protoss_high_templar",
+          "label": "High Templar",
+          "role": "caster"
+        },
+        {
+          "id": "rts_sc_protoss_dark_templar",
+          "label": "Dark Templar",
+          "role": "specialist"
+        },
+        {
+          "id": "rts_sc_protoss_archon",
+          "label": "Archon",
+          "role": "heavy"
+        },
+        {
+          "id": "rts_sc_protoss_immortal",
+          "label": "Immortal",
+          "role": "heavy"
+        },
+        {
+          "id": "rts_sc_protoss_colossus",
+          "label": "Colossus",
+          "role": "heavy"
+        },
+        {
+          "id": "rts_sc_protoss_disruptor",
+          "label": "Disruptor",
+          "role": "specialist"
+        },
+        {
+          "id": "rts_sc_protoss_observer",
+          "label": "Observer",
+          "role": "air"
+        },
+        {
+          "id": "rts_sc_protoss_warp_prism",
+          "label": "Warp Prism",
+          "role": "air"
+        },
+        {
+          "id": "rts_sc_protoss_phoenix",
+          "label": "Phoenix",
+          "role": "air"
+        },
+        {
+          "id": "rts_sc_protoss_void_ray",
+          "label": "Void Ray",
+          "role": "air"
+        },
+        {
+          "id": "rts_sc_protoss_oracle",
+          "label": "Oracle",
+          "role": "air"
+        },
+        {
+          "id": "rts_sc_protoss_tempest",
+          "label": "Tempest",
+          "role": "capital"
+        },
+        {
+          "id": "rts_sc_protoss_carrier",
+          "label": "Carrier",
+          "role": "capital"
+        },
+        {
+          "id": "rts_sc_protoss_mothership",
+          "label": "Mothership",
+          "role": "capital"
+        },
+        {
+          "id": "rts_sc_protoss_pylon",
+          "label": "Pylon",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_protoss_assimilator",
+          "label": "Assimilator",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_protoss_gateway",
+          "label": "Protoss Gateway",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_protoss_forge",
+          "label": "Protoss Forge",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_protoss_cybernetics_core",
+          "label": "Cybernetics Core",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_protoss_shield_battery",
+          "label": "Shield Battery",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_protoss_robotics_facility",
+          "label": "Robotics Facility",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_protoss_stargate",
+          "label": "Stargate",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_protoss_twilight_council",
+          "label": "Twilight Council",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_protoss_templar_archives",
+          "label": "Templar Archives",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_protoss_dark_shrine",
+          "label": "Dark Shrine",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_protoss_fleet_beacon",
+          "label": "Fleet Beacon",
+          "role": "structure"
+        },
+        {
+          "id": "rts_sc_protoss_robotics_bay",
+          "label": "Robotics Bay",
+          "role": "structure"
+        }
+      ]
+    }
+  ],
+  "totalUnitTypes": 100
+}

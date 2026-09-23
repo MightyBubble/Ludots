@@ -1,0 +1,638 @@
+[
+  {
+    "id": "Effect.Rts.StarCraft.Terran.TrainMarine.Cost",
+    "tags": [
+      "Effect.Rts.StarCraft.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -50
+      }
+    ]
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Terran.TrainMarine",
+    "tags": [
+      "Effect.Rts.StarCraft.Production"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_sc_terran_marine",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "onSpawnEffect": "Effect.Rts.Shared.ApplySpawnTargetOrder",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Terran.TrainMarauder.Cost",
+    "tags": [
+      "Effect.Rts.StarCraft.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -100
+      },
+      {
+        "attribute": "Gas",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Terran.TrainMarauder",
+    "tags": [
+      "Effect.Rts.StarCraft.Production"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_sc_terran_marauder",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "onSpawnEffect": "Effect.Rts.Shared.ApplySpawnTargetOrder",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Terran.TrainHellion.Cost",
+    "tags": [
+      "Effect.Rts.StarCraft.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -100
+      }
+    ]
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Terran.TrainHellion",
+    "tags": [
+      "Effect.Rts.StarCraft.Production"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_sc_terran_hellion",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "onSpawnEffect": "Effect.Rts.Shared.ApplySpawnTargetOrder",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Terran.TrainSiegeTank.Cost",
+    "tags": [
+      "Effect.Rts.StarCraft.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -150
+      },
+      {
+        "attribute": "Gas",
+        "op": "Add",
+        "value": -125
+      }
+    ]
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Terran.TrainSiegeTank",
+    "tags": [
+      "Effect.Rts.StarCraft.Production"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_sc_terran_siege_tank",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "onSpawnEffect": "Effect.Rts.Shared.ApplySpawnTargetOrder",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Terran.TrainViking.Cost",
+    "tags": [
+      "Effect.Rts.StarCraft.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -150
+      },
+      {
+        "attribute": "Gas",
+        "op": "Add",
+        "value": -75
+      }
+    ]
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Terran.TrainViking",
+    "tags": [
+      "Effect.Rts.StarCraft.Production"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_sc_terran_viking",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "onSpawnEffect": "Effect.Rts.Shared.ApplySpawnTargetOrder",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Terran.TrainMedivac.Cost",
+    "tags": [
+      "Effect.Rts.StarCraft.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -100
+      },
+      {
+        "attribute": "Gas",
+        "op": "Add",
+        "value": -100
+      }
+    ]
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Terran.TrainMedivac",
+    "tags": [
+      "Effect.Rts.StarCraft.Production"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_sc_terran_medivac",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "onSpawnEffect": "Effect.Rts.Shared.ApplySpawnTargetOrder",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Zerg.SpawnZergling.Cost",
+    "tags": [
+      "Effect.Rts.StarCraft.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -50
+      }
+    ]
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Zerg.SpawnZergling",
+    "tags": [
+      "Effect.Rts.StarCraft.Production"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_sc_zerg_zergling",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "onSpawnEffect": "Effect.Rts.Shared.ApplySpawnTargetOrder",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Zerg.SpawnHydralisk.Cost",
+    "tags": [
+      "Effect.Rts.StarCraft.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -100
+      },
+      {
+        "attribute": "Gas",
+        "op": "Add",
+        "value": -50
+      }
+    ]
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Zerg.SpawnHydralisk",
+    "tags": [
+      "Effect.Rts.StarCraft.Production"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_sc_zerg_hydralisk",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "onSpawnEffect": "Effect.Rts.Shared.ApplySpawnTargetOrder",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Zerg.MorphUltralisk.Cost",
+    "tags": [
+      "Effect.Rts.StarCraft.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -300
+      },
+      {
+        "attribute": "Gas",
+        "op": "Add",
+        "value": -200
+      }
+    ]
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Zerg.MorphUltralisk",
+    "tags": [
+      "Effect.Rts.StarCraft.Production"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_sc_zerg_ultralisk",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "onSpawnEffect": "Effect.Rts.Shared.ApplySpawnTargetOrder",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Protoss.WarpZealot.Cost",
+    "tags": [
+      "Effect.Rts.StarCraft.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -100
+      }
+    ]
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Protoss.WarpZealot",
+    "tags": [
+      "Effect.Rts.StarCraft.Production"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_sc_protoss_zealot",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "onSpawnEffect": "Effect.Rts.Shared.ApplySpawnTargetOrder",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Protoss.WarpStalker.Cost",
+    "tags": [
+      "Effect.Rts.StarCraft.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -125
+      },
+      {
+        "attribute": "Gas",
+        "op": "Add",
+        "value": -50
+      }
+    ]
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Protoss.WarpStalker",
+    "tags": [
+      "Effect.Rts.StarCraft.Production"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_sc_protoss_stalker",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "onSpawnEffect": "Effect.Rts.Shared.ApplySpawnTargetOrder",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Protoss.WarpDarkTemplar.Cost",
+    "tags": [
+      "Effect.Rts.StarCraft.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -125
+      },
+      {
+        "attribute": "Gas",
+        "op": "Add",
+        "value": -125
+      }
+    ]
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Protoss.WarpDarkTemplar",
+    "tags": [
+      "Effect.Rts.StarCraft.Production"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_sc_protoss_dark_templar",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "onSpawnEffect": "Effect.Rts.Shared.ApplySpawnTargetOrder",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Protoss.WarpImmortal.Cost",
+    "tags": [
+      "Effect.Rts.StarCraft.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -250
+      },
+      {
+        "attribute": "Gas",
+        "op": "Add",
+        "value": -100
+      }
+    ]
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Protoss.WarpImmortal",
+    "tags": [
+      "Effect.Rts.StarCraft.Production"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_sc_protoss_immortal",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "onSpawnEffect": "Effect.Rts.Shared.ApplySpawnTargetOrder",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Protoss.WarpPhoenix.Cost",
+    "tags": [
+      "Effect.Rts.StarCraft.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -150
+      },
+      {
+        "attribute": "Gas",
+        "op": "Add",
+        "value": -100
+      }
+    ]
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Protoss.WarpPhoenix",
+    "tags": [
+      "Effect.Rts.StarCraft.Production"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_sc_protoss_phoenix",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "onSpawnEffect": "Effect.Rts.Shared.ApplySpawnTargetOrder",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Terran.ScanPulse",
+    "tags": [
+      "Effect.Rts.StarCraft.Terran.Graph"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 1,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Rts.StarCraft.Terran.ScanPulse"
+      }
+    }
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Terran.MuleDrop",
+    "tags": [
+      "Effect.Rts.StarCraft.Terran.Graph"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 1,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Rts.StarCraft.Terran.MuleDrop"
+      }
+    }
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Zerg.CreepSurge",
+    "tags": [
+      "Effect.Rts.StarCraft.Zerg.Graph"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 1,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Rts.StarCraft.Zerg.CreepSurge"
+      }
+    }
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Protoss.ChronoBoost",
+    "tags": [
+      "Effect.Rts.StarCraft.Protoss.Graph"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 1,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Rts.StarCraft.Protoss.ChronoBoost"
+      }
+    }
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Item.TerranStimpack",
+    "tags": [
+      "Effect.Rts.StarCraft.Item"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "MoveSpeed",
+        "op": "Add",
+        "value": 80
+      }
+    ]
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Item.ZergAdrenal",
+    "tags": [
+      "Effect.Rts.StarCraft.Item"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Damage",
+        "op": "Add",
+        "value": 6
+      }
+    ]
+  },
+  {
+    "id": "Effect.Rts.StarCraft.Item.ProtossPsiMatrix",
+    "tags": [
+      "Effect.Rts.StarCraft.Item"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Shield",
+        "op": "Add",
+        "value": 120
+      }
+    ]
+  }
+]

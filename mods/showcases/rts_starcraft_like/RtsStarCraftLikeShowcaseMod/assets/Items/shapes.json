@@ -1,0 +1,16 @@
+[
+  {
+    "id": "rts_sc_chip",
+    "rows": [
+      "1"
+    ],
+    "rotatable": false
+  },
+  {
+    "id": "rts_sc_module",
+    "rows": [
+      "11"
+    ],
+    "rotatable": true
+  }
+]

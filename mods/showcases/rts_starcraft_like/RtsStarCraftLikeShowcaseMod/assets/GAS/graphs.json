@@ -1,0 +1,110 @@
+[
+  {
+    "id": "Graph.Rts.StarCraft.Terran.ScanPulse",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      {
+        "id": "target",
+        "op": "LoadContextTarget",
+        "next": "delta"
+      },
+      {
+        "id": "delta",
+        "op": "ConstFloat",
+        "floatValue": -25,
+        "next": "modify"
+      },
+      {
+        "id": "modify",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Energy",
+        "inputs": [
+          "target",
+          "delta"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "Graph.Rts.StarCraft.Terran.MuleDrop",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      {
+        "id": "target",
+        "op": "LoadContextTarget",
+        "next": "delta"
+      },
+      {
+        "id": "delta",
+        "op": "ConstFloat",
+        "floatValue": 75,
+        "next": "modify"
+      },
+      {
+        "id": "modify",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Minerals",
+        "inputs": [
+          "target",
+          "delta"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "Graph.Rts.StarCraft.Zerg.CreepSurge",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      {
+        "id": "target",
+        "op": "LoadContextTarget",
+        "next": "delta"
+      },
+      {
+        "id": "delta",
+        "op": "ConstFloat",
+        "floatValue": 50,
+        "next": "modify"
+      },
+      {
+        "id": "modify",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Biomass",
+        "inputs": [
+          "target",
+          "delta"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "Graph.Rts.StarCraft.Protoss.ChronoBoost",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      {
+        "id": "target",
+        "op": "LoadContextTarget",
+        "next": "delta"
+      },
+      {
+        "id": "delta",
+        "op": "ConstFloat",
+        "floatValue": 75,
+        "next": "modify"
+      },
+      {
+        "id": "modify",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Shield",
+        "inputs": [
+          "target",
+          "delta"
+        ]
+      }
+    ]
+  }
+]
