@@ -20,6 +20,12 @@ namespace Ludots.Core.Gameplay.MapTriggers
         /// <summary>Action ids that currently have at least one live mount.</summary>
         public IEnumerable<string> MountedActionIds => _byAction.Keys;
 
+        public void CopyKnownActionIds(List<string> destination)
+        {
+            destination.Clear();
+            foreach (string actionId in _knownActionIds) destination.Add(actionId);
+        }
+
         public void RememberActionId(string actionId)
         {
             if (string.IsNullOrWhiteSpace(actionId))
@@ -33,6 +39,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         public void Add(TriggerGraphMountTrigger mount)
         {
             ArgumentNullException.ThrowIfNull(mount);
+            if (mount.IsActionRegistered) throw new InvalidOperationException($"Action mount '{mount.Name}' is already registered.");
             if (string.IsNullOrWhiteSpace(mount.ActionId))
             {
                 throw new ArgumentException(
@@ -49,6 +56,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
 
             list.Add(mount);
+            mount.IsActionRegistered = true;
         }
 
         public void Remove(TriggerGraphMountTrigger mount)
@@ -63,7 +71,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 return;
             }
 
-            list.Remove(mount);
+            if (!list.Remove(mount)) return;
+            mount.IsActionRegistered = false;
             if (list.Count == 0)
             {
                 _byAction.Remove(mount.ActionId);

@@ -414,8 +414,8 @@
       "id": "case_e_selection",
       "path": "mods/showcases/case_e_selection/CaseESelectionMod",
       "projectPath": "CaseESelectionMod.csproj",
-      "title": "Case E 框选（纯数据链路）",
-      "summary": "#1398 Case E 框选全链纯配置 showcase：模板 initialInteractionContext 出生挂战斗 context、Profile triggers 门控（含 roster_sync 维护 case_e.selectable）、左键按下 BoxSelectBegin / 抬起 BoxSelectEnd（firesOn=release，无 Tap/Drag）、按下激活 boxing；boxing.whileActive 每帧命中写 case_e.box_hover，ScreenRect 跟指针；抬起写 selected 并停用 boxing；零位移按下抬起即点选。",
+      "title": "Case E 万人双玩家框选",
+      "summary": "#1398 Case E 框选全链保留纯配置图；启动场景随机分布 10,000 名单位，面板可切换两名玩家，镜头可缩放，双方候选与已选名单按玩家隔离。",
       "tier": "T1",
       "category": "capability",
       "binding": "case_e_selection",
@@ -430,7 +430,9 @@
         "input",
         "interaction",
         "selection",
-        "case-e"
+        "case-e",
+        "10k",
+        "two-player"
       ]
     },
     {

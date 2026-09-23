@@ -2439,7 +2439,8 @@ namespace Ludots.Core.Engine
                     triggerGraphActionBindings,
                     inputConfigRoot,
                     () => GetService(CoreServiceKeys.ClientLocalSeatRegistry),
-                    () => GetService(CoreServiceKeys.ClientLocalSeatInputRuntime)),
+                    () => GetService(CoreServiceKeys.ClientLocalSeatInputRuntime),
+                    interactionContextTriggerGate.ReconcileAfterInputAction),
                 SystemGroup.DeferredTriggerCollection);
 
             // Phase 5.5: Continuation (AwaitCallback drain — registration order)

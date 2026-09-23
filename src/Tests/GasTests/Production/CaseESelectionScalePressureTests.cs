@@ -36,6 +36,7 @@ public sealed class CaseESelectionScalePressureTests
 
     [TestCase(100, true)]
     [TestCase(1000, false)]
+    [TestCase(5000, false)]
     public void BoxSelectionChain_At10kEntities_SelectsEveryEligibleUnit(int selectableCount, bool enforceLatencyBudget)
     {
         string repoRoot = FindRepoRoot();
@@ -85,7 +86,8 @@ public sealed class CaseESelectionScalePressureTests
         TickUntil(engine, 6, () => CollectionCount(engine, commander, SelectableKey) >= selectableCount + 4);
 
         // ── 度量 3+正确性：完整拖拽（按下→20 次扫框→抬起提交）──
-        var press = new Vector2(-1200f, -120f);
+        float fullExtent = Math.Max(1200f, selectableCount);
+        var press = new Vector2(-fullExtent, -120f);
         PressAt(engine, backend, press);
         TickUntil(engine, 20, BoxingActive(engine, commander));
 
@@ -94,7 +96,7 @@ public sealed class CaseESelectionScalePressureTests
         var drag = Stopwatch.StartNew();
         double maxTickMs = 0;
         // 全幅框：盖住全部已入候选集的单位（本带 x∈[-400,400] 全在矩形内）；等挂载+首拍 PointerMoved 落定
-        backend.SetMousePosition(new Vector2(1200f, 120f));
+        backend.SetMousePosition(new Vector2(fullExtent, 120f));
         TickUntil(engine, 10, () => CollectionCount(engine, commander, BoxHoverKey) >= 0);
         double t0 = drag.Elapsed.TotalMilliseconds;
         if (t0 > maxTickMs) maxTickMs = t0;
@@ -119,9 +121,10 @@ public sealed class CaseESelectionScalePressureTests
 
         // 半幅框：指针 -10 → 盖住候选集中 x<0 的单位；矩形边缘的投影舍入容差 ±3，
         // 语义钉的是「命中数随几何收敛、并比全幅严格更少（成员资格双向成立）」
-        int expectedHalf = CountEligibleScreenHits(engine, new ScreenRect(-1200, -120, -10, 120));
+        int expectedHalf = CountEligibleScreenHits(engine, new ScreenRect(-fullExtent, -120, -10, 120));
         backend.SetMousePosition(new Vector2(-10f, 120f));
-        TickUntil(engine, 10, () => { int c = CollectionCount(engine, commander, BoxHoverKey); return c >= 0 && c < fullBandHover; });
+        Tick(engine, 1);
+        TickUntil(engine, 9, () => CollectionCount(engine, commander, BoxHoverKey) == expectedHalf);
         halfBandHover = CollectionCount(engine, commander, BoxHoverKey);
         Assert.That(halfBandHover, Is.EqualTo(expectedHalf),
             $"半幅框必须包含框边以内的全部单位（期望 {expectedHalf}，实测 {halfBandHover}）");
@@ -129,8 +132,14 @@ public sealed class CaseESelectionScalePressureTests
         drag.Stop();
 
         ReleaseAt(engine, backend);
-        TickUntil(engine, 30, BoxingCleared(engine, commander));
-        Tick(engine, 2);
+        var releaseTick = Stopwatch.StartNew();
+        Tick(engine, 1);
+        releaseTick.Stop();
+        var releaseNextTick = Stopwatch.StartNew();
+        Tick(engine, 1);
+        releaseNextTick.Stop();
+        TickUntil(engine, 28, BoxingCleared(engine, commander));
+        Tick(engine, 1);
         Assert.That(CollectionCount(engine, commander, SelectedKey), Is.EqualTo(halfBandHover),
             "提交语义随规模成立：半幅框落定 = 半幅命中");
         AssertNoTriggerErrors(engine);
@@ -143,8 +152,50 @@ public sealed class CaseESelectionScalePressureTests
         if (enforceLatencyBudget)
             Assert.That(maxTickMs, Is.LessThan(500.0), $"10.拖拽单拍峰值 = {maxTickMs:F2}ms 超围栏");
 
+        TestContext.WriteLine($"release_tick={releaseTick.Elapsed.TotalMilliseconds:F2}ms " +
+            $"release_next_tick={releaseNextTick.Elapsed.TotalMilliseconds:F2}ms");
+
         WriteBenchmark(repoRoot, population: 10_000, rosterSingleMs, rosterPerEventMs, rosterStreamMs, dragMs, maxTickMs,
             rosterCount, worldAmount, fullBandHover, halfBandHover);
+    }
+
+    [Test]
+    public void TenKShowcase_BatchesRandomFieldAndKeepsPlayerCollectionsIsolated()
+    {
+        string repoRoot = FindRepoRoot();
+        var backend = new TestInputBackend();
+        using GameEngine engine = CreateEngine(repoRoot, backend);
+        const string showcaseMap = "case_e_selection_10k_field";
+        engine.LoadMap(new MapLoadRequest(
+            new MapId(showcaseMap),
+            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, SchemeId) })));
+
+        TickUntil(engine, 240, () => CountTemplateTeam(engine, showcaseMap, "case_e_marine", 1) == 5_000 &&
+            CountTemplateTeam(engine, showcaseMap, "case_e_marine", 2) == 5_000);
+
+        Assert.That(CountTemplateTeam(engine, showcaseMap, "case_e_marine", 1), Is.EqualTo(5_000));
+        Assert.That(CountTemplateTeam(engine, showcaseMap, "case_e_marine", 2), Is.EqualTo(5_000));
+        Assert.That(CountTemplateTeam(engine, showcaseMap, "case_e_marine", 1) +
+            CountTemplateTeam(engine, showcaseMap, "case_e_marine", 2), Is.EqualTo(10_000));
+
+        MapSession session = engine.CurrentMapSession ?? throw new InvalidOperationException("10k showcase map did not load");
+        Entity playerOne = session.PlayerEntityLookup.Get(1);
+        Entity playerTwo = session.PlayerEntityLookup.Get(2);
+        Assert.That(playerOne, Is.Not.EqualTo(Entity.Null));
+        Assert.That(playerTwo, Is.Not.EqualTo(Entity.Null));
+
+        TickUntil(engine, 120, () => CollectionCount(engine, playerOne, SelectableKey) == 5_000 &&
+            CollectionCount(engine, playerTwo, SelectableKey) == 5_000);
+        Assert.That(CollectionCount(engine, playerOne, SelectableKey), Is.EqualTo(5_000));
+        Assert.That(CollectionCount(engine, playerTwo, SelectableKey), Is.EqualTo(5_000));
+
+        ClientLocalSeatRegistry seats = ClientLocalSeatAccess.RequireRegistry(engine);
+        seats.SetPossession("seat.0", 2, playerTwo);
+        Assert.That(seats.Require("seat.0").PossessedPlayerId, Is.EqualTo(2));
+        Assert.That(seats.Require("seat.0").PossessedRep, Is.EqualTo(playerTwo));
+        Assert.That(CollectionCount(engine, playerOne, SelectableKey), Is.EqualTo(5_000));
+        Assert.That(CollectionCount(engine, playerTwo, SelectableKey), Is.EqualTo(5_000));
+        AssertNoTriggerErrors(engine);
     }
 
     private static Entity[] CreateUnits(GameEngine engine, int teamId, int templateKey, int count, int xStepCm, int xStartCm)
@@ -178,6 +229,28 @@ public sealed class CaseESelectionScalePressureTests
                 if (engine.World.Has<Team>(e) && engine.World.Get<Team>(e).Id == 1 &&
                     engine.World.Has<EntityTemplateKeyRef>(e) &&
                     engine.World.Get<EntityTemplateKeyRef>(e).TemplateKeyId == marineKey)
+                {
+                    count++;
+                }
+            }
+        }
+
+        return count;
+    }
+
+    private static int CountTemplateTeam(GameEngine engine, string mapId, string templateId, int teamId)
+    {
+        int templateKey = engine.GetService(CoreServiceKeys.EntityTemplateKeyRegistry)
+            is EntityTemplateKeyRegistry keys ? keys.GetId(templateId) : -1;
+        int count = 0;
+        foreach (ref var chunk in engine.World.Query(new QueryDescription().WithAll<MapEntity, Team, EntityTemplateKeyRef>()))
+        {
+            foreach (int row in chunk)
+            {
+                Entity entity = chunk.Entity(row);
+                if (engine.World.Get<MapEntity>(entity).MapId.Value == mapId &&
+                    engine.World.Get<Team>(entity).Id == teamId &&
+                    engine.World.Get<EntityTemplateKeyRef>(entity).TemplateKeyId == templateKey)
                 {
                     count++;
                 }

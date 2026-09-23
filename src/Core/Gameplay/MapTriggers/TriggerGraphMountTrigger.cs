@@ -231,6 +231,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         /// owner; see <see cref="TriggerMountOwner"/>.
         /// </summary>
         public TriggerMountOwner Owner { get; internal set; }
+        internal bool IsActionRegistered { get; set; }
 
         public GraphDebugTrace DebugTrace => _debugTrace;
 

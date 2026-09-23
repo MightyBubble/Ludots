@@ -146,14 +146,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         public override void Update(in float dt)
         {
-            // Change-point deactivations (DeactivateContext op) run the profile's
-            // onDeactivated slot synchronously at the call site, but never mutate the trigger
-            // ledger mid-dispatch (the change point sits inside a context-owned TriggerGraph
-            // mount's own execution; inline UnregisterTrigger would break the action-binding
-            // index's live snapshot). The resulting unmounts are deferred here, flushed before
-            // this tick's reconcile — the same InputCollection window the retired reconcile
-            // used to unmount — so the scan below finds nothing left to unregister and never
-            // re-runs a slot the change point already executed.
+            // Deactivation slots execute synchronously; ledger removals wait until
+            // the action finishes or this gate runs, before the next reconciliation.
             FlushDeferredDeactivatedUnmounts();
 
             CollectSubjects();
@@ -213,6 +207,16 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 // its mounts are gone, so the slot sees a fully taken-down window.
                 RunLifecycleSlot(subject, _ownedScratch[i].Key.OwnerId, InteractionContextLifecycleSlot.Deactivated);
             }
+        }
+
+        public void ReconcileAfterInputAction(Entity subject)
+        {
+            FlushDeferredDeactivatedUnmounts();
+            if (!World.IsAlive(subject)) return;
+            _desiredProfileIds.Clear();
+            CollectDesiredProfiles(subject, _desiredProfileIds);
+            ReconcileSubject(subject);
+            _desiredProfileIds.Clear();
         }
 
         /// <summary>
