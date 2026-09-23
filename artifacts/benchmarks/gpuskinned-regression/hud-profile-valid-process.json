@@ -1,0 +1,9 @@
+{
+  "pid": 82532,
+  "executable": null,
+  "frames": 12000,
+  "configuration": "Release",
+  "port": 47943,
+  "startedUtc": "2026-09-08T08:11:54.4628197Z",
+  "commit": "2940e71a871c4959c4c92d9eed4af4a2b8e6d249"
+}

@@ -1,0 +1,10 @@
+{
+  "commit": "2940e71a871c4959c4c92d9eed4af4a2b8e6d249",
+  "systemBreakdown": true,
+  "initialPump": 21,
+  "startedUtc": "2026-09-08T11:54:27.2389374Z",
+  "timingInterval": 0,
+  "pid": 8708,
+  "port": 47947,
+  "frames": 1800
+}

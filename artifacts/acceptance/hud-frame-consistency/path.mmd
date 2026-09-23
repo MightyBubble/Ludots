@@ -1,0 +1,12 @@
+flowchart TD
+    A[Units display health] --> B[Rotate camera or change health]
+    B --> C[Project current frame and remove offscreen items]
+    C --> D[Update retained HUD scene]
+    D --> E{All lane items move identically?}
+    E -->|Yes| F[Reuse with current translation]
+    E -->|No| G[Draw current item positions]
+    F --> H[Compare current values and pixels]
+    G --> H
+    H -->|Mismatch| I[Fail and save comparison images]
+    H -->|Match| J[Hold camera and verify no jump back]
+    J --> K[Runtime recording: near-view acceptance pending]

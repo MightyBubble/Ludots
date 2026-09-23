@@ -1,0 +1,52 @@
+  Ludots.Platform.Abstractions -> C:\001_AI\Ludots-gpuskinned-perf\src\Platform\Ludots.Platform.Abstractions\bin\Release\net9.0\Ludots.Platform.Abstractions.dll
+  Ludots.Platform.Desktop -> C:\001_AI\Ludots-gpuskinned-perf\src\Platform\Ludots.Platform.Desktop\bin\Release\net9.0\Ludots.Platform.Desktop.dll
+  Raylib-cs -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Raylib-cs\bin\Release\net9.0\Raylib-cs.dll
+  Arch -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Arch\src\Arch\bin\Release\net8.0\Arch.dll
+  Arch -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Arch\src\Arch\bin\Release\net6.0\Arch.dll
+  Arch.Persistence -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Arch.Extended\Arch.Persistence\bin\Release\net7.0\Arch.Persistence.dll
+  Arch.Relationships -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Arch.Extended\Arch.Relationships\bin\Release\net7.0\Arch.Relationships.dll
+  Arch.System -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Arch.Extended\Arch.System\bin\Release\net7.0\Arch.System.dll
+  DotRecast.Core -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\DotRecast\src\DotRecast.Core\bin\Release\net9.0\DotRecast.Core.dll
+  DotRecast.Detour -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\DotRecast\src\DotRecast.Detour\bin\Release\net9.0\DotRecast.Detour.dll
+  DotRecast.Recast -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\DotRecast\src\DotRecast.Recast\bin\Release\net9.0\DotRecast.Recast.dll
+  Ludots.Contracts -> C:\001_AI\Ludots-gpuskinned-perf\src\Contracts\bin\Release\net9.0\Ludots.Contracts.dll
+  Ludots.Graph.Abstractions -> C:\001_AI\Ludots-gpuskinned-perf\src\Graph\Ludots.Graph.Abstractions\bin\Release\net9.0\Ludots.Graph.Abstractions.dll
+  Ludots.Core -> C:\001_AI\Ludots-gpuskinned-perf\src\Core\bin\Release\net9.0\Ludots.Core.dll
+  SkiaSharp -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\SkiaSharp\SkiaSharp\bin\Release\net8.0\SkiaSharp.dll
+  Ludots.Raylib.Render -> C:\001_AI\Ludots-gpuskinned-perf\src\Client\Ludots.Raylib.Render\bin\Release\net9.0\Ludots.Raylib.Render.dll
+  Ludots.Client.Raylib -> C:\001_AI\Ludots-gpuskinned-perf\src\Client\Ludots.Client.Raylib\bin\Release\net9.0\Ludots.Client.Raylib.dll
+  Ludots.UI -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Ludots.UI\bin\Release\net9.0\Ludots.UI.dll
+  ShimSkiaSharp -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Svg.Skia\ShimSkiaSharp\bin\Release\net8.0\ShimSkiaSharp.dll
+  ExCSS -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\ExCSS\bin\Release\net8.0\ExCSS.dll
+  Svg.Generators -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Svg.Skia\externals\SVG\Generators\bin\Release\netstandard2.0\Svg.Generators.dll
+  Svg.Custom -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Svg.Skia\Svg.Custom\bin\Release\net8.0\Svg.Custom.dll
+  Svg.Model -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Svg.Skia\Svg.Model\bin\Release\net8.0\Svg.Model.dll
+  Svg.Skia -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Svg.Skia\Svg.Skia\bin\Release\net8.0\Svg.Skia.dll
+  Ludots.UI.Skia -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Ludots.UI.Skia\bin\Release\net9.0\Ludots.UI.Skia.dll
+  Ludots.UI.Browser -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Ludots.UI.Browser\bin\Release\net9.0\Ludots.UI.Browser.dll
+  Ludots.UI.HtmlEngine -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Ludots.UI.HtmlEngine\bin\Release\net9.0\Ludots.UI.HtmlEngine.dll
+  Ludots.UI.Panels -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Ludots.UI.Panels\bin\Release\net9.0\Ludots.UI.Panels.dll
+  Ludots.WebUI.DataPlane -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Ludots.WebUI.DataPlane\bin\Release\net9.0\Ludots.WebUI.DataPlane.dll
+  Ludots.WebUI.Browser -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Ludots.WebUI.Browser\bin\Release\net9.0\Ludots.WebUI.Browser.dll
+  Ludots.Presentation.Skia -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Ludots.Presentation.Skia\bin\Release\net9.0\Ludots.Presentation.Skia.dll
+C:\001_AI\Ludots-gpuskinned-perf\src\Adapters\Raylib\Ludots.Adapter.Raylib\Services\RaylibSoundConsumer.cs(283,51): warning CS8604: “Sound IRaylibSoundBackend.LoadFromFile(string path)”中的形参“path”可能传入 null 引用实参。 [C:\001_AI\Ludots-gpuskinned-perf\src\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibHostLoop.cs(1212,55): warning CS8602: 解引用可能出现空引用。 [C:\001_AI\Ludots-gpuskinned-perf\src\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj]
+  Ludots.Adapter.Raylib -> C:\001_AI\Ludots-gpuskinned-perf\src\Adapters\Raylib\Ludots.Adapter.Raylib\bin\Release\net9.0\Ludots.Adapter.Raylib.dll
+  LiteNetLib -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\LiteNetLib\bin\Release\net8.0\LiteNetLib.dll
+  Ludots.Adapter.LiteNetLib -> C:\001_AI\Ludots-gpuskinned-perf\src\Adapters\Networking\Ludots.Adapter.LiteNetLib\bin\Release\net9.0\Ludots.Adapter.LiteNetLib.dll
+  Ludots.Physics.Broadphase -> C:\001_AI\Ludots-gpuskinned-perf\src\Core\Ludots.Physics.Broadphase\bin\Release\net9.0\Ludots.Physics.Broadphase.dll
+  Ludots.Physics2D -> C:\001_AI\Ludots-gpuskinned-perf\src\Core\Ludots.Physics2D\bin\Release\net9.0\Ludots.Physics2D.dll
+  Ludots.Movement.Physics2DBridge -> C:\001_AI\Ludots-gpuskinned-perf\src\Core\Ludots.Movement.Physics2DBridge\bin\Release\net9.0\Ludots.Movement.Physics2DBridge.dll
+  Ludots.Graph.Codegen -> C:\001_AI\Ludots-gpuskinned-perf\src\Graph\Ludots.Graph.Codegen\bin\Release\net9.0\Ludots.Graph.Codegen.dll
+  Ludots.App.Raylib -> C:\001_AI\Ludots-gpuskinned-perf\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net9.0\Ludots.App.Raylib.dll
+
+已成功生成。
+
+C:\001_AI\Ludots-gpuskinned-perf\src\Adapters\Raylib\Ludots.Adapter.Raylib\Services\RaylibSoundConsumer.cs(283,51): warning CS8604: “Sound IRaylibSoundBackend.LoadFromFile(string path)”中的形参“path”可能传入 null 引用实参。 [C:\001_AI\Ludots-gpuskinned-perf\src\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibHostLoop.cs(1212,55): warning CS8602: 解引用可能出现空引用。 [C:\001_AI\Ludots-gpuskinned-perf\src\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj]
+    2 个警告
+    0 个错误
+
+已用时间 00:00:06.33
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。

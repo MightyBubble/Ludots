@@ -1,0 +1,9 @@
+{
+  "frames": 1200,
+  "configuration": "Release",
+  "executable": "C:\\001_AI\\Ludots-gpuskinned-perf\\src\\Apps\\Raylib\\Ludots.App.Raylib\\bin\\Release\\net9.0\\Ludots.App.Raylib.exe",
+  "port": 47931,
+  "pid": 41500,
+  "startedUtc": "2026-09-08T04:47:22.6751148Z",
+  "commit": "ae2076d67c819d2e66032dac7379fe5a61d2ec23"
+}

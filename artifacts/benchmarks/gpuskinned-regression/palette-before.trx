@@ -1,0 +1,91 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="8241d1bb-1c1e-43ff-b550-b8f74a1b925c" name="sietg@CODESEAL 2026-09-08 09:52:59" runUser="CODESEAL\sietg" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-09-08T09:52:59.0519051+08:00" queuing="2026-09-08T09:52:59.0519052+08:00" start="2026-09-08T09:52:55.8080026+08:00" finish="2026-09-08T09:52:59.0629082+08:00" />
+  <TestSettings name="default" id="a058ee3e-e313-437b-a91e-eaf34bb14b94">
+    <Deployment runDeploymentRoot="sietg_CODESEAL_2026-09-08_09_52_59" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="d5228608-4088-4fec-b042-dcb16874f1a0" testId="b18916df-3c63-a9f3-4fee-0bce2862c9d2" testName="SoldierPalette_Accepts615SlotsAndKeepsUploadsInsideTexture" computerName="CODESEAL" duration="00:00:00.6908940" startTime="2026-09-08T09:52:58.1666217+08:00" endTime="2026-09-08T09:52:58.8574538+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d5228608-4088-4fec-b042-dcb16874f1a0">
+      <Output>
+        <ErrorInfo>
+          <Message>System.InvalidOperationException : RaylibPoseTexturePalette requested bone slot capacity 615 exceeds hard cap 512.</Message>
+          <StackTrace>   at Ludots.Raylib.Render.RaylibPoseTexturePalette.EnsureBoneSlotCapacity(Int32 minSlots) in C:\001_AI\Ludots-gpuskinned-perf\src\Client\Ludots.Raylib.Render\Rendering\RaylibPoseTexturePalette.cs:line 61&#xD;
+   at Ludots.Tests.RaylibAdapter.RaylibPoseTexturePaletteTests.SoldierPalette_Accepts615SlotsAndKeepsUploadsInsideTexture() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\RaylibAdapterTests\RaylibPoseTexturePaletteTests.cs:line 22&#xD;
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="SoldierPalette_Accepts615SlotsAndKeepsUploadsInsideTexture" storage="c:\001_ai\ludots-gpuskinned-perf\src\tests\raylibadaptertests\bin\release\net9.0\ludots.adapter.raylib.tests.dll" id="b18916df-3c63-a9f3-4fee-0bce2862c9d2">
+      <Execution id="d5228608-4088-4fec-b042-dcb16874f1a0" />
+      <TestMethod codeBase="C:\001_AI\Ludots-gpuskinned-perf\src\Tests\RaylibAdapterTests\bin\Release\net9.0\Ludots.Adapter.Raylib.Tests.dll" adapterTypeName="executor://nunit3testexecutor/" className="Ludots.Tests.RaylibAdapter.RaylibPoseTexturePaletteTests" name="SoldierPalette_Accepts615SlotsAndKeepsUploadsInsideTexture" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="b18916df-3c63-a9f3-4fee-0bce2862c9d2" executionId="d5228608-4088-4fec-b042-dcb16874f1a0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="1" executed="1" passed="0" failed="1" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>NUnit Adapter 4.6.0.0: Test execution started&#xD;
+Running selected tests in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\RaylibAdapterTests\bin\Release\net9.0\Ludots.Adapter.Raylib.Tests.dll&#xD;
+   NUnit3TestExecutor discovered 1 of 1 NUnit test cases using Current Discovery mode, Non-Explicit run&#xD;
+INFO: Initializing raylib 5.5&#xD;
+INFO: Platform backend: DESKTOP (GLFW)&#xD;
+INFO: Supported raylib modules:&#xD;
+INFO:     &gt; rcore:..... loaded (mandatory)&#xD;
+INFO:     &gt; rlgl:...... loaded (mandatory)&#xD;
+INFO:     &gt; rshapes:... loaded (optional)&#xD;
+INFO:     &gt; rtextures:. loaded (optional)&#xD;
+INFO:     &gt; rtext:..... loaded (optional)&#xD;
+INFO:     &gt; rmodels:... loaded (optional)&#xD;
+INFO:     &gt; raudio:.... loaded (optional)&#xD;
+INFO: DISPLAY: Device initialized successfully&#xD;
+INFO:     &gt; Display size: 1600 x 2560&#xD;
+INFO:     &gt; Screen size:  64 x 64&#xD;
+INFO:     &gt; Render size:  64 x 64&#xD;
+INFO:     &gt; Viewport offsets: 0, 0&#xD;
+INFO: GLAD: OpenGL extensions loaded successfully&#xD;
+INFO: GL: Supported extensions count: 296&#xD;
+INFO: GL: OpenGL device information:&#xD;
+INFO:     &gt; Vendor:   ATI Technologies Inc.&#xD;
+INFO:     &gt; Renderer: AMD Radeon(TM) 8060S Graphics&#xD;
+INFO:     &gt; Version:  3.3.0 Core Profile Context 26.10.32.01.260717&#xD;
+INFO:     &gt; GLSL:     4.60&#xD;
+INFO: GL: VAO extension detected, VAO functions loaded successfully&#xD;
+INFO: GL: NPOT textures extension detected, full NPOT textures supported&#xD;
+INFO: GL: DXT compressed textures supported&#xD;
+INFO: GL: ETC2/EAC compressed textures supported&#xD;
+INFO: PLATFORM: DESKTOP (GLFW - Win32): Initialized successfully&#xD;
+INFO: TEXTURE: [ID 1] Texture loaded successfully (1x1 | R8G8B8A8 | 1 mipmaps)&#xD;
+INFO: TEXTURE: [ID 1] Default texture loaded successfully&#xD;
+INFO: SHADER: [ID 1] Vertex shader compiled successfully&#xD;
+INFO: SHADER: [ID 2] Fragment shader compiled successfully&#xD;
+INFO: SHADER: [ID 3] Program shader loaded successfully&#xD;
+INFO: SHADER: [ID 3] Default shader loaded successfully&#xD;
+INFO: RLGL: Render batch vertex buffers loaded successfully in RAM (CPU)&#xD;
+INFO: RLGL: Render batch vertex buffers loaded successfully in VRAM (GPU)&#xD;
+INFO: RLGL: Default OpenGL state initialized successfully&#xD;
+INFO: TEXTURE: [ID 2] Texture loaded successfully (128x128 | GRAY_ALPHA | 1 mipmaps)&#xD;
+INFO: FONT: Default font loaded successfully (224 glyphs)&#xD;
+INFO: SYSTEM: Working Directory: C:\001_AI\Ludots-gpuskinned-perf\src\Tests\RaylibAdapterTests\bin\Release\net9.0&#xD;
+INFO: TEXTURE: [ID 3] Texture loaded successfully (1024x16 | R32G32B32A32 | 1 mipmaps)&#xD;
+INFO: TEXTURE: [ID 4] Texture loaded successfully (1024x8 | R32G32B32A32 | 1 mipmaps)&#xD;
+INFO: TEXTURE: [ID 3] Unloaded texture data from VRAM (GPU)&#xD;
+INFO: TEXTURE: [ID 4] Unloaded texture data from VRAM (GPU)&#xD;
+INFO: TEXTURE: [ID 2] Unloaded texture data from VRAM (GPU)&#xD;
+INFO: SHADER: [ID 3] Default shader unloaded successfully&#xD;
+INFO: TEXTURE: [ID 1] Default texture unloaded successfully&#xD;
+INFO: Window closed successfully&#xD;
+NUnit Adapter 4.6.0.0: Test execution complete&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

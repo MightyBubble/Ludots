@@ -1,0 +1,212 @@
+{
+  "source": "hud-position-allframes-10k-timing.log",
+  "warmupFrames": 180,
+  "samples": 720,
+  "firstFrame": 181,
+  "lastFrame": 900,
+  "observedFps": 33.754516779210675,
+  "metrics": {
+    "frame": {
+      "mean": 28.476680555555557,
+      "median": 24.03,
+      "p95": 53.57,
+      "max": 59.55
+    },
+    "sim": {
+      "mean": 8.471194444444444,
+      "median": 4.15,
+      "p95": 25.92,
+      "max": 32.83
+    },
+    "presentation": {
+      "mean": 12.930277777777778,
+      "median": 10.114999999999998,
+      "p95": 24.76,
+      "max": 31.94
+    },
+    "transformSync": {
+      "mean": 2.26,
+      "median": 1.145,
+      "p95": 7.01,
+      "max": 9.72
+    },
+    "behavior": {
+      "mean": 0.09147222222222222,
+      "median": 0.01,
+      "p95": 0.24,
+      "max": 0.33
+    },
+    "animator": {
+      "mean": 0.4721666666666667,
+      "median": 0.43,
+      "p95": 0.81,
+      "max": 1.25
+    },
+    "emit": {
+      "mean": 3.7015555555555557,
+      "median": 1.78,
+      "p95": 12.05,
+      "max": 14.9
+    },
+    "emitRetained": {
+      "mean": 2.3161666666666667,
+      "median": 0.175,
+      "p95": 10.68,
+      "max": 13.21
+    },
+    "heightSync": {
+      "mean": 0.345375,
+      "median": 0.32,
+      "p95": 0.56,
+      "max": 0.99
+    },
+    "heightSamples": {
+      "mean": 10009.0,
+      "median": 10009.0,
+      "p95": 10009.0,
+      "max": 10009.0
+    },
+    "cull": {
+      "mean": 2.4516944444444446,
+      "median": 2.5149999999999997,
+      "p95": 3.12,
+      "max": 4.1
+    },
+    "minimapProject": {
+      "mean": 1.749486111111111,
+      "median": 1.6549999999999998,
+      "p95": 2.88,
+      "max": 3.54
+    },
+    "hudProj": {
+      "mean": 0.6968888888888889,
+      "median": 0.655,
+      "p95": 1.11,
+      "max": 1.46
+    },
+    "gpuSkinBuild": {
+      "mean": 0.6540277777777778,
+      "median": 0.59,
+      "p95": 1.23,
+      "max": 1.32
+    },
+    "gpuSkinDraw": {
+      "mean": 0.7358194444444445,
+      "median": 0.695,
+      "p95": 1.13,
+      "max": 1.33
+    },
+    "overlay": {
+      "mean": 3.0254861111111113,
+      "median": 2.94,
+      "p95": 4.26,
+      "max": 4.97
+    },
+    "endDraw": {
+      "mean": 0.16209722222222223,
+      "median": 0.14,
+      "p95": 0.23,
+      "max": 1.02
+    },
+    "gap": {
+      "mean": 1.172236111111111,
+      "median": 1.1,
+      "p95": 1.71,
+      "max": 3.98
+    },
+    "hudPositionOnly": {
+      "mean": 3360.572222222222,
+      "median": 0.0,
+      "p95": 18858.0,
+      "max": 19648.0
+    },
+    "worldHud": {
+      "mean": 20000.0,
+      "median": 20000.0,
+      "p95": 20000.0,
+      "max": 20000.0
+    },
+    "screenBars": {
+      "mean": 10000.0,
+      "median": 10000.0,
+      "p95": 10000.0,
+      "max": 10000.0
+    },
+    "screenText": {
+      "mean": 10000.0,
+      "median": 10000.0,
+      "p95": 10000.0,
+      "max": 10000.0
+    }
+  },
+  "hudMoved": {
+    "samples": 103,
+    "metrics": {
+      "frame": {
+        "mean": 51.21601941747573,
+        "median": 51.77,
+        "p95": 56.93,
+        "max": 59.55
+      },
+      "sim": {
+        "mean": 20.94,
+        "median": 21.5,
+        "p95": 27.22,
+        "max": 29.7
+      },
+      "presentation": {
+        "mean": 24.04776699029126,
+        "median": 24.1,
+        "p95": 27.72,
+        "max": 31.94
+      },
+      "transformSync": {
+        "mean": 6.675436893203884,
+        "median": 6.58,
+        "p95": 8.31,
+        "max": 9.72
+      },
+      "emitRetained": {
+        "mean": 9.92116504854369,
+        "median": 10.41,
+        "p95": 11.56,
+        "max": 13.21
+      }
+    }
+  },
+  "hudQuiet": {
+    "samples": 360,
+    "metrics": {
+      "frame": {
+        "mean": 17.0455,
+        "median": 15.92,
+        "p95": 24.48,
+        "max": 30.17
+      },
+      "sim": {
+        "mean": 0.4840833333333333,
+        "median": 0.16,
+        "p95": 2.24,
+        "max": 8.39
+      },
+      "presentation": {
+        "mean": 9.413388888888889,
+        "median": 9.055,
+        "p95": 12.26,
+        "max": 14.93
+      },
+      "transformSync": {
+        "mean": 1.0108333333333333,
+        "median": 0.93,
+        "p95": 1.51,
+        "max": 2.29
+      },
+      "emitRetained": {
+        "mean": 0.0,
+        "median": 0.0,
+        "p95": 0.0,
+        "max": 0.0
+      }
+    }
+  }
+}

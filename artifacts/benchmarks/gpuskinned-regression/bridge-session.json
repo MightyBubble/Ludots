@@ -1,0 +1,61 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "tick": 0,
+    "pacemaker": "RealtimePacemaker",
+    "mods": [
+      "LudotsCoreMod",
+      "CoreInputMod",
+      "MassNavigationMod",
+      "CapabilityStandardMassNavigationLargeWorld10kMod",
+      "AgentBridgeMod"
+    ],
+    "camera": {
+      "seatId": "seat.0",
+      "targetCm": {
+        "x": 0,
+        "y": 0
+      },
+      "pitch": 42,
+      "distanceCm": 14000
+    },
+    "bridge": {
+      "pendingRequests": 0,
+      "toolCount": 38
+    },
+    "resolution": {
+      "width": 1280,
+      "height": 720
+    },
+    "seats": [
+      {
+        "seatId": "seat.0",
+        "playerId": 1,
+        "schemeId": null,
+        "possessed": true,
+        "possessedEntityId": 7,
+        "logicViewId": "logicview.participant.7",
+        "presentRect": {
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        "presentResolution": {
+          "width": 1280,
+          "height": 720
+        }
+      }
+    ],
+    "localPlayerId": 1,
+    "localSeatId": "seat.0",
+    "mapId": "mass_navigation"
+  },
+  "instance": {
+    "pid": 77452,
+    "port": 47931,
+    "mapId": "mass_navigation",
+    "processPath": "C:\\001_AI\\Ludots-gpuskinned-perf\\src\\Apps\\Raylib\\Ludots.App.Raylib\\bin\\Release\\net9.0\\Ludots.App.Raylib.exe"
+  }
+}

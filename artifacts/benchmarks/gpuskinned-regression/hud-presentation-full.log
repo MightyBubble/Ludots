@@ -1,0 +1,1298 @@
+  Arch -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Arch\src\Arch\bin\Release\net8.0\Arch.dll
+  Arch -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Arch\src\Arch\bin\Release\net6.0\Arch.dll
+  Arch.Persistence -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Arch.Extended\Arch.Persistence\bin\Release\net7.0\Arch.Persistence.dll
+  Arch.Relationships -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Arch.Extended\Arch.Relationships\bin\Release\net7.0\Arch.Relationships.dll
+  Arch.System -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Arch.Extended\Arch.System\bin\Release\net7.0\Arch.System.dll
+  DotRecast.Core -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\DotRecast\src\DotRecast.Core\bin\Release\net9.0\DotRecast.Core.dll
+  DotRecast.Detour -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\DotRecast\src\DotRecast.Detour\bin\Release\net9.0\DotRecast.Detour.dll
+  DotRecast.Recast -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\DotRecast\src\DotRecast.Recast\bin\Release\net9.0\DotRecast.Recast.dll
+  Ludots.Platform.Abstractions -> C:\001_AI\Ludots-gpuskinned-perf\src\Platform\Ludots.Platform.Abstractions\bin\Release\net9.0\Ludots.Platform.Abstractions.dll
+  Ludots.Contracts -> C:\001_AI\Ludots-gpuskinned-perf\src\Contracts\bin\Release\net9.0\Ludots.Contracts.dll
+  Ludots.Graph.Abstractions -> C:\001_AI\Ludots-gpuskinned-perf\src\Graph\Ludots.Graph.Abstractions\bin\Release\net9.0\Ludots.Graph.Abstractions.dll
+  Ludots.Core -> C:\001_AI\Ludots-gpuskinned-perf\src\Core\bin\Release\net9.0\Ludots.Core.dll
+  Ludots.Physics.Broadphase -> C:\001_AI\Ludots-gpuskinned-perf\src\Core\Ludots.Physics.Broadphase\bin\Release\net9.0\Ludots.Physics.Broadphase.dll
+  Ludots.Physics2D -> C:\001_AI\Ludots-gpuskinned-perf\src\Core\Ludots.Physics2D\bin\Release\net9.0\Ludots.Physics2D.dll
+  Ludots.Movement.Physics2DBridge -> C:\001_AI\Ludots-gpuskinned-perf\src\Core\Ludots.Movement.Physics2DBridge\bin\Release\net9.0\Ludots.Movement.Physics2DBridge.dll
+  Ludots.UI -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Ludots.UI\bin\Release\net9.0\Ludots.UI.dll
+  SkiaSharp -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\SkiaSharp\SkiaSharp\bin\Release\net8.0\SkiaSharp.dll
+  ShimSkiaSharp -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Svg.Skia\ShimSkiaSharp\bin\Release\net8.0\ShimSkiaSharp.dll
+  ExCSS -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\ExCSS\bin\Release\net8.0\ExCSS.dll
+  Svg.Generators -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Svg.Skia\externals\SVG\Generators\bin\Release\netstandard2.0\Svg.Generators.dll
+  Svg.Custom -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Svg.Skia\Svg.Custom\bin\Release\net8.0\Svg.Custom.dll
+  Svg.Model -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Svg.Skia\Svg.Model\bin\Release\net8.0\Svg.Model.dll
+  Svg.Skia -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Svg.Skia\Svg.Skia\bin\Release\net8.0\Svg.Skia.dll
+  Ludots.UI.Skia -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Ludots.UI.Skia\bin\Release\net9.0\Ludots.UI.Skia.dll
+  Ludots.Presentation.Skia -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Ludots.Presentation.Skia\bin\Release\net9.0\Ludots.Presentation.Skia.dll
+  Raylib-cs -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Raylib-cs\bin\Release\net9.0\Raylib-cs.dll
+  Ludots.Raylib.Render -> C:\001_AI\Ludots-gpuskinned-perf\src\Client\Ludots.Raylib.Render\bin\Release\net9.0\Ludots.Raylib.Render.dll
+  Ludots.Client.Raylib -> C:\001_AI\Ludots-gpuskinned-perf\src\Client\Ludots.Client.Raylib\bin\Release\net9.0\Ludots.Client.Raylib.dll
+  EntityInfoPanelsMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\capabilities\entityinfo\EntityInfoPanelsMod\bin\net9.0\EntityInfoPanelsMod.dll
+  LudotsCoreMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll
+  CoreInputMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\CoreInputMod\bin\net9.0\CoreInputMod.dll
+  CameraProfilesMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\capabilities\camera\CameraProfilesMod\bin\net9.0\CameraProfilesMod.dll
+  InteractionShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\interaction\InteractionShowcaseMod\bin\net9.0\InteractionShowcaseMod.dll
+  EntityCommandPanelMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\EntityCommandPanelMod\bin\net9.0\EntityCommandPanelMod.dll
+  Ludots.UI.Browser -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Ludots.UI.Browser\bin\Release\net9.0\Ludots.UI.Browser.dll
+  Ludots.WebUI.DataPlane -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Ludots.WebUI.DataPlane\bin\Release\net9.0\Ludots.WebUI.DataPlane.dll
+  Ludots.UI.HtmlEngine -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Ludots.UI.HtmlEngine\bin\Release\net9.0\Ludots.UI.HtmlEngine.dll
+  Ludots.UI.Panels -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Ludots.UI.Panels\bin\Release\net9.0\Ludots.UI.Panels.dll
+  Ludots.WebUI.Browser -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Ludots.WebUI.Browser\bin\Release\net9.0\Ludots.WebUI.Browser.dll
+  EntityCommandPanelShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\entity_command_panel\EntityCommandPanelShowcaseMod\bin\net9.0\EntityCommandPanelShowcaseMod.dll
+  VisualTerrainEditorMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\visual_terrain_editor\VisualTerrainEditorMod\bin\net9.0\VisualTerrainEditorMod.dll
+  FourXDemoMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\fourx_demo\FourXDemoMod\bin\net9.0\FourXDemoMod.dll
+  MobaDemoMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\moba_demo\MobaDemoMod\bin\net9.0\MobaDemoMod.dll
+  RtsDemoMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\rts_demo\RtsDemoMod\bin\net9.0\RtsDemoMod.dll
+  CameraAcceptanceMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\fixtures\camera\CameraAcceptanceMod\bin\net9.0\CameraAcceptanceMod.dll
+  AnimationAcceptanceMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\fixtures\animation\AnimationAcceptanceMod\bin\net9.0\AnimationAcceptanceMod.dll
+  GenreInfoShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\info_panels\GenreInfoShowcaseMod\bin\net9.0\GenreInfoShowcaseMod.dll
+  PresenterBlacksmithShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\presenter_blacksmith\PresenterBlacksmithShowcaseMod\bin\net9.0\PresenterBlacksmithShowcaseMod.dll
+  MassNavigationMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\capabilities\navigation\MassNavigationMod\bin\net9.0\MassNavigationMod.dll
+  CapabilityStandardMassNavigationLargeWorld10kMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\capability_standard\CapabilityStandardMassNavigationLargeWorld10kMod\bin\net9.0\CapabilityStandardMassNavigationLargeWorld10kMod.dll
+  CapabilityStandardCrowdPhysicsArenaMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\capability_standard\CapabilityStandardCrowdPhysicsArenaMod\bin\net9.0\CapabilityStandardCrowdPhysicsArenaMod.dll
+  CapabilityStandardPresenterCommandShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\capability_standard\CapabilityStandardPresenterCommandShowcaseMod\bin\net9.0\CapabilityStandardPresenterCommandShowcaseMod.dll
+  FormationCapabilityShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\formation_capability\FormationCapabilityShowcaseMod\bin\net9.0\FormationCapabilityShowcaseMod.dll
+  RaylibIsmBenchmarkShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\raylib_ism_benchmark\RaylibIsmBenchmarkShowcaseMod\bin\net9.0\RaylibIsmBenchmarkShowcaseMod.dll
+  RaylibVisualAtmosphereShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\raylib_visual_atmosphere\RaylibVisualAtmosphereShowcaseMod\bin\net9.0\RaylibVisualAtmosphereShowcaseMod.dll
+  PresentationTests -> C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll (.NETCoreApp,Version=v9.0)的测试运行
+VSTest 版本 17.14.1 (x64)
+
+正在启动测试执行，请稍候...
+总共 1 个测试文件与指定模式相匹配。
+  失败 Showcase_BootsArenaWithKinematicSquadsDrivenByBridge [1 s]
+  错误消息:
+     All arena squad agents must be fed into the kinematic pose buffer every fixed step.
+Assert.That(feedSystem.LastFedParticipantCount, Is.EqualTo(expectedAgents))
+  Expected: 96
+  But was:  0
+
+  堆栈跟踪:
+     at Ludots.Tests.Presentation.CapabilityStandardCrowdPhysicsArenaProductionPathTests.Showcase_BootsArenaWithKinematicSquadsDrivenByBridge() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\CrowdPhysicsArena\CapabilityStandardCrowdPhysicsArenaProductionPathTests.cs:line 94
+
+1)    at Ludots.Tests.Presentation.CapabilityStandardCrowdPhysicsArenaProductionPathTests.Showcase_BootsArenaWithKinematicSquadsDrivenByBridge() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\CrowdPhysicsArena\CapabilityStandardCrowdPhysicsArenaProductionPathTests.cs:line 94
+
+
+  标准输出消息:
+ [INF][Engine] Initializing with ConfigPipeline...
+ [INF][Engine] Resolving mod dependencies from explicit mod paths: mods=4
+ [INF][ModLoader] Mod Load Order:
+ [INF][ModLoader] - LudotsCoreMod (P:-1000)
+ [INF][ModLoader] - CoreInputMod (P:0)
+ [INF][ModLoader] - MassNavigationMod (P:0)
+ [INF][ModLoader] - CapabilityStandardCrowdPhysicsArenaMod (P:-2000)
+ [INF][ModLoader] Resolved Mod Load Order (launcher graph):
+ [INF][ModLoader] - LudotsCoreMod (P:-1000)
+ [INF][ModLoader] - CoreInputMod (P:0)
+ [INF][ModLoader] - MassNavigationMod (P:0)
+ [INF][ModLoader] - CapabilityStandardCrowdPhysicsArenaMod (P:-2000)
+ [INF][ModLoader] Loading DLL for LudotsCoreMod at C:\001_AI\Ludots-gpuskinned-perf\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll
+ [INF][ModLoader] Scanning 2 types in assembly...
+ [INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+ [INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+ [INF][ModLoader] LudotsCoreMod OnLoad completed.
+ [INF][ModLoader] Loaded LudotsCoreMod
+ [INF][ModLoader] Loading DLL for CoreInputMod at C:\001_AI\Ludots-gpuskinned-perf\mods\CoreInputMod\bin\net9.0\CoreInputMod.dll
+ [INF][ModLoader] Scanning 33 types in assembly...
+ [INF][ModLoader] Instantiated entry for CoreInputMod. Calling OnLoad...
+ [INF][Mod.CoreInputMod] [CoreInputMod] Loaded - generic command-source and GAS input
+ [INF][ModLoader] CoreInputMod OnLoad completed.
+ [INF][ModLoader] Loaded CoreInputMod
+ [INF][ModLoader] Loading DLL for MassNavigationMod at C:\001_AI\Ludots-gpuskinned-perf\mods\capabilities\navigation\MassNavigationMod\bin\net9.0\MassNavigationMod.dll
+ [INF][ModLoader] Scanning 2 types in assembly...
+ [INF][ModLoader] Instantiated entry for MassNavigationMod. Calling OnLoad...
+ [INF][Mod.MassNavigationMod] [MassNavigationMod] Loaded MassNavigation assets and MovePlan order adapter.
+ [INF][ModLoader] MassNavigationMod OnLoad completed.
+ [INF][ModLoader] Loaded MassNavigationMod
+ [INF][ModLoader] Reusing preloaded assembly for CapabilityStandardCrowdPhysicsArenaMod: C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\bin\Release\net9.0\CapabilityStandardCrowdPhysicsArenaMod.dll
+ [INF][ModLoader] Scanning 9 types in assembly...
+ [INF][ModLoader] Instantiated entry for CapabilityStandardCrowdPhysicsArenaMod. Calling OnLoad...
+ [INF][Mod.CapabilityStandardCrowdPhysicsArenaMod] [CapabilityStandardCrowdPhysicsArenaMod] Loaded
+ [INF][ModLoader] CapabilityStandardCrowdPhysicsArenaMod OnLoad completed.
+ [INF][ModLoader] Loaded CapabilityStandardCrowdPhysicsArenaMod
+ [INF][Config] Merged fragment from: Core:game.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/game.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/game.json
+ [INF][Config] Merged fragment from: Core:config_catalog.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json
+ [INF][Engine] Merged GameConfig: StartupMapId=crowd_physics_arena, DefaultCoreMod=LudotsCoreMod
+ [INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3
+ [INF][Engine] Initializing JobScheduler...
+ [INF][Config] Loading DataRegistry<EntityTemplate> from Entities/templates.json...
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Entities/templates.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Entities/templates.json
+ [INF][Config] Loaded 27 DataRegistry<EntityTemplate> items.
+ [INF][Engine] Initializing Core GAS Systems...
+ [INF][Config] Merged fragment from: Core:Engine/clock.json
+ [INF][Config] Merged fragment from: Core:Relationships/catalog.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json
+ [INF][Config] Merged fragment from: Core:Relationships/control_profiles.json
+ [INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json
+ [INF][Config] Merged fragment from: Core:GAS/clock.json
+ [INF][Config] Merged fragment from: Core:Physics2D/clock.json
+ [INF][Config] Merged fragment from: Core:Physics2D/solver.json
+ [INF][Config] Merged fragment from: Core:Physics2D/kinematic.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Physics2D/kinematic.json
+ [INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/attribute_constraints.json
+ [INF][Config] Merged fragment from: Core:Enums/enums.json
+ [INF][Config] Merged fragment from: Core:Vision/fog_layers.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json
+ [INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json
+ [INF][Config] Merged fragment from: Core:GAS/graphs.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs.json
+ [INF][Config] Merged fragment from: Core:GAS/preset_types.json
+ [INF][Config] Merged fragment from: Core:Exchange/operations.json
+ [INF][Config] Merged fragment from: Core:Progression/scopes.json
+ [INF][Config] Merged fragment from: Core:Progression/progressions.json
+ [INF][Config] Merged fragment from: Core:Progression/requirements.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/order_types.json
+ [INF][Config] Merged fragment from: Core:GAS/effects.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/effects.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/GAS/effects.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/GAS/abilities.json
+ [INF][Config] Merged fragment from: Core:GAS/func_lib.json
+ [INF][Config] Merged fragment from: Core:GAS/action_lib.json
+ [INF][Config] Merged fragment from: Core:Items/shapes.json
+ [INF][Config] Merged fragment from: Core:Items/layouts.json
+ [INF][Config] Merged fragment from: Core:Items/definitions.json
+ [INF][Config] Merged fragment from: Core:Exchange/operations.json
+ [INF][Config] Merged fragment from: Core:Panels/panel_templates.json
+ [INF][Config] Merged fragment from: Core:Input/filter_profiles.json
+ [INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json
+ [INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/mesh_assets.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animator_controllers.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_clips.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: CoreInputMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json
+ [INF][Config] Merged fragment from: Core:config_catalog.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: Core:Input/default_input.json
+ [INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Input/default_input.json
+ [INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json
+ [INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Input/command_intent_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json
+ [INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/control_schemes.json
+ [INF][Config] Merged fragment from: Core:Input/interaction_prefs.json
+ [INF][Config] Merged fragment from: Core:Input/interaction_modes.json
+ [INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json
+ [INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json
+ [INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json
+ [INF][Config] Merged fragment from: Core:AI/behavior_trees.json
+ [INF][Config] Merged fragment from: Core:AI/hfsm.json
+ [INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json
+ [INF][Config] Merged fragment from: Core:Presentation/image_assets.json
+ [INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Camera/virtual_cameras.json
+ [INF][Config] Merged fragment from: Core:Story/lines.json
+ [INF][Config] Merged fragment from: Core:Story/presentation_profiles.json
+ [INF][Config] Merged fragment from: Core:Story/speakers.json
+ [INF][Config] Merged fragment from: Core:Dialogue/dialogues.json
+ [INF][Config] Merged fragment from: Core:Sequencer/sequences.json
+ [INF][ModLoader] No registration conflicts detected.
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/host_assets.json
+ [INF][Config] Merged fragment from: Core:config_catalog.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: Core:Input/default_input.json
+ [INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Input/default_input.json
+ [INF][Engine] Firing GameStart event...
+ [LudotsCoreMod] Core systems installed
+ [INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+ [INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+ [INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+ [INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+ [INF][Mod.CoreInputMod] [CoreInputMod] CommandSourceAcquisition, GasInputResponse, SkillBar, CommandSourceDragOverlay, AbilityAimPresentation, CommandActorMovePathPresentation, TabTarget, ViewMode registered
+ [INF][Engine] Loading Map: crowd_physics_arena
+ [INF][Map] Loading Map: crowd_physics_arena
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Maps/crowd_physics_arena.json
+ [INF][Map] Map 'crowd_physics_arena' loaded.
+ [INF][Map] Creating GridBoard 'default' (250x250 macroTiles, cell=100cm)
+ [INF][Engine] Created Board 'default' (type=Grid) for map 'crowd_physics_arena'
+ [INF][Map] Map 'crowd_physics_arena' pushed to focus (stack depth=1).
+ [INF][Engine] ContinuousHeightmap does not cover board 'default' extent 6400000x6400000cm; keeping flat grid terrain.
+ [INF][Engine] Created flat grid LogicTerrainField 64000x64000 cells for board 'default'
+ [INF][Config] Merged fragment from: Core:Navigation/pathing.json
+ [INF][Engine] Pathing bootstrap skipped for map 'crowd_physics_arena': no node-graph board or navmesh query service is loaded.
+ [INF][Engine] Creating Entities from MapConfig...
+ [INF][Engine] Applied DefaultCamera: yaw=45 pitch=42 dist=9000cm fov=55
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/MassNavigationConfig.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/MassNavigationConfig.json
+ [INF][Engine] [MassNavigation runtime] Installed mass-navigation runtime.
+ [INF][Engine] Firing MapLoaded event for crowd_physics_arena...
+ [INF][Engine] Unloading ModLoader contexts...
+ [INF][Engine] Disposing JobScheduler...
+
+
+  失败 Showcase_BoulderWall_BoulderRepelledWhileUnitsStayBitwiseStill [2 s]
+  错误消息:
+   E cast did not spawn the boulder.
+  堆栈跟踪:
+     at Ludots.Tests.Presentation.CapabilityStandardCrowdPhysicsArenaProductionPathTests.WaitUntil(GameEngine engine, Int32 maxFrames, Func`1 condition, Func`1 failMessage) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\CrowdPhysicsArena\CapabilityStandardCrowdPhysicsArenaProductionPathTests.cs:line 570
+   at Ludots.Tests.Presentation.CapabilityStandardCrowdPhysicsArenaProductionPathTests.Showcase_BoulderWall_BoulderRepelledWhileUnitsStayBitwiseStill() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\CrowdPhysicsArena\CapabilityStandardCrowdPhysicsArenaProductionPathTests.cs:line 355
+
+1)    at Ludots.Tests.Presentation.CapabilityStandardCrowdPhysicsArenaProductionPathTests.WaitUntil(GameEngine engine, Int32 maxFrames, Func`1 condition, Func`1 failMessage) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\CrowdPhysicsArena\CapabilityStandardCrowdPhysicsArenaProductionPathTests.cs:line 570
+   at Ludots.Tests.Presentation.CapabilityStandardCrowdPhysicsArenaProductionPathTests.Showcase_BoulderWall_BoulderRepelledWhileUnitsStayBitwiseStill() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\CrowdPhysicsArena\CapabilityStandardCrowdPhysicsArenaProductionPathTests.cs:line 355
+
+
+  标准输出消息:
+ [INF][Engine] Initializing with ConfigPipeline...
+ [INF][Engine] Resolving mod dependencies from explicit mod paths: mods=4
+ [INF][ModLoader] Mod Load Order:
+ [INF][ModLoader] - LudotsCoreMod (P:-1000)
+ [INF][ModLoader] - CoreInputMod (P:0)
+ [INF][ModLoader] - MassNavigationMod (P:0)
+ [INF][ModLoader] - CapabilityStandardCrowdPhysicsArenaMod (P:-2000)
+ [INF][ModLoader] Resolved Mod Load Order (launcher graph):
+ [INF][ModLoader] - LudotsCoreMod (P:-1000)
+ [INF][ModLoader] - CoreInputMod (P:0)
+ [INF][ModLoader] - MassNavigationMod (P:0)
+ [INF][ModLoader] - CapabilityStandardCrowdPhysicsArenaMod (P:-2000)
+ [INF][ModLoader] Loading DLL for LudotsCoreMod at C:\001_AI\Ludots-gpuskinned-perf\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll
+ [INF][ModLoader] Scanning 2 types in assembly...
+ [INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+ [INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+ [INF][ModLoader] LudotsCoreMod OnLoad completed.
+ [INF][ModLoader] Loaded LudotsCoreMod
+ [INF][ModLoader] Reusing preloaded assembly for CoreInputMod: C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\bin\Release\net9.0\CoreInputMod.dll
+ [INF][ModLoader] Scanning 33 types in assembly...
+ [INF][ModLoader] Instantiated entry for CoreInputMod. Calling OnLoad...
+ [INF][Mod.CoreInputMod] [CoreInputMod] Loaded - generic command-source and GAS input
+ [INF][ModLoader] CoreInputMod OnLoad completed.
+ [INF][ModLoader] Loaded CoreInputMod
+ [INF][ModLoader] Loading DLL for MassNavigationMod at C:\001_AI\Ludots-gpuskinned-perf\mods\capabilities\navigation\MassNavigationMod\bin\net9.0\MassNavigationMod.dll
+ [INF][ModLoader] Scanning 2 types in assembly...
+ [INF][ModLoader] Instantiated entry for MassNavigationMod. Calling OnLoad...
+ [INF][Mod.MassNavigationMod] [MassNavigationMod] Loaded MassNavigation assets and MovePlan order adapter.
+ [INF][ModLoader] MassNavigationMod OnLoad completed.
+ [INF][ModLoader] Loaded MassNavigationMod
+ [INF][ModLoader] Reusing preloaded assembly for CapabilityStandardCrowdPhysicsArenaMod: C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\bin\Release\net9.0\CapabilityStandardCrowdPhysicsArenaMod.dll
+ [INF][ModLoader] Scanning 9 types in assembly...
+ [INF][ModLoader] Instantiated entry for CapabilityStandardCrowdPhysicsArenaMod. Calling OnLoad...
+ [INF][Mod.CapabilityStandardCrowdPhysicsArenaMod] [CapabilityStandardCrowdPhysicsArenaMod] Loaded
+ [INF][ModLoader] CapabilityStandardCrowdPhysicsArenaMod OnLoad completed.
+ [INF][ModLoader] Loaded CapabilityStandardCrowdPhysicsArenaMod
+ [INF][Config] Merged fragment from: Core:game.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/game.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/game.json
+ [INF][Config] Merged fragment from: Core:config_catalog.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json
+ [INF][Engine] Merged GameConfig: StartupMapId=crowd_physics_arena, DefaultCoreMod=LudotsCoreMod
+ [INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3
+ [INF][Engine] Initializing JobScheduler...
+ [INF][Config] Loading DataRegistry<EntityTemplate> from Entities/templates.json...
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Entities/templates.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Entities/templates.json
+ [INF][Config] Loaded 27 DataRegistry<EntityTemplate> items.
+ [INF][Engine] Initializing Core GAS Systems...
+ [INF][Config] Merged fragment from: Core:Engine/clock.json
+ [INF][Config] Merged fragment from: Core:Relationships/catalog.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json
+ [INF][Config] Merged fragment from: Core:Relationships/control_profiles.json
+ [INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json
+ [INF][Config] Merged fragment from: Core:GAS/clock.json
+ [INF][Config] Merged fragment from: Core:Physics2D/clock.json
+ [INF][Config] Merged fragment from: Core:Physics2D/solver.json
+ [INF][Config] Merged fragment from: Core:Physics2D/kinematic.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Physics2D/kinematic.json
+ [INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/attribute_constraints.json
+ [INF][Config] Merged fragment from: Core:Enums/enums.json
+ [INF][Config] Merged fragment from: Core:Vision/fog_layers.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json
+ [INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json
+ [INF][Config] Merged fragment from: Core:GAS/graphs.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs.json
+ [INF][Config] Merged fragment from: Core:GAS/preset_types.json
+ [INF][Config] Merged fragment from: Core:Exchange/operations.json
+ [INF][Config] Merged fragment from: Core:Progression/scopes.json
+ [INF][Config] Merged fragment from: Core:Progression/progressions.json
+ [INF][Config] Merged fragment from: Core:Progression/requirements.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/order_types.json
+ [INF][Config] Merged fragment from: Core:GAS/effects.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/effects.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/GAS/effects.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/GAS/abilities.json
+ [INF][Config] Merged fragment from: Core:GAS/func_lib.json
+ [INF][Config] Merged fragment from: Core:GAS/action_lib.json
+ [INF][Config] Merged fragment from: Core:Items/shapes.json
+ [INF][Config] Merged fragment from: Core:Items/layouts.json
+ [INF][Config] Merged fragment from: Core:Items/definitions.json
+ [INF][Config] Merged fragment from: Core:Exchange/operations.json
+ [INF][Config] Merged fragment from: Core:Panels/panel_templates.json
+ [INF][Config] Merged fragment from: Core:Input/filter_profiles.json
+ [INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json
+ [INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/mesh_assets.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animator_controllers.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_clips.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: CoreInputMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json
+ [INF][Config] Merged fragment from: Core:config_catalog.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: Core:Input/default_input.json
+ [INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Input/default_input.json
+ [INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json
+ [INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Input/command_intent_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json
+ [INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/control_schemes.json
+ [INF][Config] Merged fragment from: Core:Input/interaction_prefs.json
+ [INF][Config] Merged fragment from: Core:Input/interaction_modes.json
+ [INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json
+ [INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json
+ [INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json
+ [INF][Config] Merged fragment from: Core:AI/behavior_trees.json
+ [INF][Config] Merged fragment from: Core:AI/hfsm.json
+ [INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json
+ [INF][Config] Merged fragment from: Core:Presentation/image_assets.json
+ [INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Camera/virtual_cameras.json
+ [INF][Config] Merged fragment from: Core:Story/lines.json
+ [INF][Config] Merged fragment from: Core:Story/presentation_profiles.json
+ [INF][Config] Merged fragment from: Core:Story/speakers.json
+ [INF][Config] Merged fragment from: Core:Dialogue/dialogues.json
+ [INF][Config] Merged fragment from: Core:Sequencer/sequences.json
+ [INF][ModLoader] No registration conflicts detected.
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/host_assets.json
+ [INF][Config] Merged fragment from: Core:config_catalog.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: Core:Input/default_input.json
+ [INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Input/default_input.json
+ [INF][Engine] Firing GameStart event...
+ [LudotsCoreMod] Core systems installed
+ [INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+ [INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+ [INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+ [INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+ [INF][Mod.CoreInputMod] [CoreInputMod] CommandSourceAcquisition, GasInputResponse, SkillBar, CommandSourceDragOverlay, AbilityAimPresentation, CommandActorMovePathPresentation, TabTarget, ViewMode registered
+ [INF][Engine] Loading Map: crowd_physics_arena
+ [INF][Map] Loading Map: crowd_physics_arena
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Maps/crowd_physics_arena.json
+ [INF][Map] Map 'crowd_physics_arena' loaded.
+ [INF][Map] Creating GridBoard 'default' (250x250 macroTiles, cell=100cm)
+ [INF][Engine] Created Board 'default' (type=Grid) for map 'crowd_physics_arena'
+ [INF][Map] Map 'crowd_physics_arena' pushed to focus (stack depth=1).
+ [INF][Engine] ContinuousHeightmap does not cover board 'default' extent 6400000x6400000cm; keeping flat grid terrain.
+ [INF][Engine] Created flat grid LogicTerrainField 64000x64000 cells for board 'default'
+ [INF][Config] Merged fragment from: Core:Navigation/pathing.json
+ [INF][Engine] Pathing bootstrap skipped for map 'crowd_physics_arena': no node-graph board or navmesh query service is loaded.
+ [INF][Engine] Creating Entities from MapConfig...
+ [INF][Engine] Applied DefaultCamera: yaw=45 pitch=42 dist=9000cm fov=55
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/MassNavigationConfig.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/MassNavigationConfig.json
+ [INF][Engine] [MassNavigation runtime] Installed mass-navigation runtime.
+ [INF][Engine] Firing MapLoaded event for crowd_physics_arena...
+ [INF][Engine] Unloading ModLoader contexts...
+ [INF][Engine] Disposing JobScheduler...
+
+
+  失败 Showcase_MarchThroughCrates_CratesDisplaceAndSquadArrives [5 s]
+  错误消息:
+   Only 0 of 48 agents arrived within 800cm of <4900, 5000>. lastOrderMemberCount=0, firstAgent=<2598, 5260>, centroid=<2553.6458, 5157.7085>, lastOrder=<unset>, lastGround=<unset>, lastActivation=state=None, rejection=Activated, actor=0, orderId=0
+  堆栈跟踪:
+     at Ludots.Tests.Presentation.CapabilityStandardCrowdPhysicsArenaProductionPathTests.WaitUntil(GameEngine engine, Int32 maxFrames, Func`1 condition, Func`1 failMessage) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\CrowdPhysicsArena\CapabilityStandardCrowdPhysicsArenaProductionPathTests.cs:line 570
+   at Ludots.Tests.Presentation.CapabilityStandardCrowdPhysicsArenaProductionPathTests.Showcase_MarchThroughCrates_CratesDisplaceAndSquadArrives() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\CrowdPhysicsArena\CapabilityStandardCrowdPhysicsArenaProductionPathTests.cs:line 144
+
+1)    at Ludots.Tests.Presentation.CapabilityStandardCrowdPhysicsArenaProductionPathTests.WaitUntil(GameEngine engine, Int32 maxFrames, Func`1 condition, Func`1 failMessage) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\CrowdPhysicsArena\CapabilityStandardCrowdPhysicsArenaProductionPathTests.cs:line 570
+   at Ludots.Tests.Presentation.CapabilityStandardCrowdPhysicsArenaProductionPathTests.Showcase_MarchThroughCrates_CratesDisplaceAndSquadArrives() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\CrowdPhysicsArena\CapabilityStandardCrowdPhysicsArenaProductionPathTests.cs:line 144
+
+
+  标准输出消息:
+ [INF][Engine] Initializing with ConfigPipeline...
+ [INF][Engine] Resolving mod dependencies from explicit mod paths: mods=4
+ [INF][ModLoader] Mod Load Order:
+ [INF][ModLoader] - LudotsCoreMod (P:-1000)
+ [INF][ModLoader] - CoreInputMod (P:0)
+ [INF][ModLoader] - MassNavigationMod (P:0)
+ [INF][ModLoader] - CapabilityStandardCrowdPhysicsArenaMod (P:-2000)
+ [INF][ModLoader] Resolved Mod Load Order (launcher graph):
+ [INF][ModLoader] - LudotsCoreMod (P:-1000)
+ [INF][ModLoader] - CoreInputMod (P:0)
+ [INF][ModLoader] - MassNavigationMod (P:0)
+ [INF][ModLoader] - CapabilityStandardCrowdPhysicsArenaMod (P:-2000)
+ [INF][ModLoader] Loading DLL for LudotsCoreMod at C:\001_AI\Ludots-gpuskinned-perf\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll
+ [INF][ModLoader] Scanning 2 types in assembly...
+ [INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+ [INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+ [INF][ModLoader] LudotsCoreMod OnLoad completed.
+ [INF][ModLoader] Loaded LudotsCoreMod
+ [INF][ModLoader] Reusing preloaded assembly for CoreInputMod: C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\bin\Release\net9.0\CoreInputMod.dll
+ [INF][ModLoader] Scanning 33 types in assembly...
+ [INF][ModLoader] Instantiated entry for CoreInputMod. Calling OnLoad...
+ [INF][Mod.CoreInputMod] [CoreInputMod] Loaded - generic command-source and GAS input
+ [INF][ModLoader] CoreInputMod OnLoad completed.
+ [INF][ModLoader] Loaded CoreInputMod
+ [INF][ModLoader] Loading DLL for MassNavigationMod at C:\001_AI\Ludots-gpuskinned-perf\mods\capabilities\navigation\MassNavigationMod\bin\net9.0\MassNavigationMod.dll
+ [INF][ModLoader] Scanning 2 types in assembly...
+ [INF][ModLoader] Instantiated entry for MassNavigationMod. Calling OnLoad...
+ [INF][Mod.MassNavigationMod] [MassNavigationMod] Loaded MassNavigation assets and MovePlan order adapter.
+ [INF][ModLoader] MassNavigationMod OnLoad completed.
+ [INF][ModLoader] Loaded MassNavigationMod
+ [INF][ModLoader] Reusing preloaded assembly for CapabilityStandardCrowdPhysicsArenaMod: C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\bin\Release\net9.0\CapabilityStandardCrowdPhysicsArenaMod.dll
+ [INF][ModLoader] Scanning 9 types in assembly...
+ [INF][ModLoader] Instantiated entry for CapabilityStandardCrowdPhysicsArenaMod. Calling OnLoad...
+ [INF][Mod.CapabilityStandardCrowdPhysicsArenaMod] [CapabilityStandardCrowdPhysicsArenaMod] Loaded
+ [INF][ModLoader] CapabilityStandardCrowdPhysicsArenaMod OnLoad completed.
+ [INF][ModLoader] Loaded CapabilityStandardCrowdPhysicsArenaMod
+ [INF][Config] Merged fragment from: Core:game.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/game.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/game.json
+ [INF][Config] Merged fragment from: Core:config_catalog.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json
+ [INF][Engine] Merged GameConfig: StartupMapId=crowd_physics_arena, DefaultCoreMod=LudotsCoreMod
+ [INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3
+ [INF][Engine] Initializing JobScheduler...
+ [INF][Config] Loading DataRegistry<EntityTemplate> from Entities/templates.json...
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Entities/templates.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Entities/templates.json
+ [INF][Config] Loaded 27 DataRegistry<EntityTemplate> items.
+ [INF][Engine] Initializing Core GAS Systems...
+ [INF][Config] Merged fragment from: Core:Engine/clock.json
+ [INF][Config] Merged fragment from: Core:Relationships/catalog.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json
+ [INF][Config] Merged fragment from: Core:Relationships/control_profiles.json
+ [INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json
+ [INF][Config] Merged fragment from: Core:GAS/clock.json
+ [INF][Config] Merged fragment from: Core:Physics2D/clock.json
+ [INF][Config] Merged fragment from: Core:Physics2D/solver.json
+ [INF][Config] Merged fragment from: Core:Physics2D/kinematic.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Physics2D/kinematic.json
+ [INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/attribute_constraints.json
+ [INF][Config] Merged fragment from: Core:Enums/enums.json
+ [INF][Config] Merged fragment from: Core:Vision/fog_layers.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json
+ [INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json
+ [INF][Config] Merged fragment from: Core:GAS/graphs.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs.json
+ [INF][Config] Merged fragment from: Core:GAS/preset_types.json
+ [INF][Config] Merged fragment from: Core:Exchange/operations.json
+ [INF][Config] Merged fragment from: Core:Progression/scopes.json
+ [INF][Config] Merged fragment from: Core:Progression/progressions.json
+ [INF][Config] Merged fragment from: Core:Progression/requirements.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/order_types.json
+ [INF][Config] Merged fragment from: Core:GAS/effects.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/effects.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/GAS/effects.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/GAS/abilities.json
+ [INF][Config] Merged fragment from: Core:GAS/func_lib.json
+ [INF][Config] Merged fragment from: Core:GAS/action_lib.json
+ [INF][Config] Merged fragment from: Core:Items/shapes.json
+ [INF][Config] Merged fragment from: Core:Items/layouts.json
+ [INF][Config] Merged fragment from: Core:Items/definitions.json
+ [INF][Config] Merged fragment from: Core:Exchange/operations.json
+ [INF][Config] Merged fragment from: Core:Panels/panel_templates.json
+ [INF][Config] Merged fragment from: Core:Input/filter_profiles.json
+ [INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json
+ [INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/mesh_assets.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animator_controllers.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_clips.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: CoreInputMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json
+ [INF][Config] Merged fragment from: Core:config_catalog.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: Core:Input/default_input.json
+ [INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Input/default_input.json
+ [INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json
+ [INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Input/command_intent_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json
+ [INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/control_schemes.json
+ [INF][Config] Merged fragment from: Core:Input/interaction_prefs.json
+ [INF][Config] Merged fragment from: Core:Input/interaction_modes.json
+ [INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json
+ [INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json
+ [INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json
+ [INF][Config] Merged fragment from: Core:AI/behavior_trees.json
+ [INF][Config] Merged fragment from: Core:AI/hfsm.json
+ [INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json
+ [INF][Config] Merged fragment from: Core:Presentation/image_assets.json
+ [INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Camera/virtual_cameras.json
+ [INF][Config] Merged fragment from: Core:Story/lines.json
+ [INF][Config] Merged fragment from: Core:Story/presentation_profiles.json
+ [INF][Config] Merged fragment from: Core:Story/speakers.json
+ [INF][Config] Merged fragment from: Core:Dialogue/dialogues.json
+ [INF][Config] Merged fragment from: Core:Sequencer/sequences.json
+ [INF][ModLoader] No registration conflicts detected.
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/host_assets.json
+ [INF][Config] Merged fragment from: Core:config_catalog.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: Core:Input/default_input.json
+ [INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Input/default_input.json
+ [INF][Engine] Firing GameStart event...
+ [LudotsCoreMod] Core systems installed
+ [INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+ [INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+ [INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+ [INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+ [INF][Mod.CoreInputMod] [CoreInputMod] CommandSourceAcquisition, GasInputResponse, SkillBar, CommandSourceDragOverlay, AbilityAimPresentation, CommandActorMovePathPresentation, TabTarget, ViewMode registered
+ [INF][Engine] Loading Map: crowd_physics_arena
+ [INF][Map] Loading Map: crowd_physics_arena
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Maps/crowd_physics_arena.json
+ [INF][Map] Map 'crowd_physics_arena' loaded.
+ [INF][Map] Creating GridBoard 'default' (250x250 macroTiles, cell=100cm)
+ [INF][Engine] Created Board 'default' (type=Grid) for map 'crowd_physics_arena'
+ [INF][Map] Map 'crowd_physics_arena' pushed to focus (stack depth=1).
+ [INF][Engine] ContinuousHeightmap does not cover board 'default' extent 6400000x6400000cm; keeping flat grid terrain.
+ [INF][Engine] Created flat grid LogicTerrainField 64000x64000 cells for board 'default'
+ [INF][Config] Merged fragment from: Core:Navigation/pathing.json
+ [INF][Engine] Pathing bootstrap skipped for map 'crowd_physics_arena': no node-graph board or navmesh query service is loaded.
+ [INF][Engine] Creating Entities from MapConfig...
+ [INF][Engine] Applied DefaultCamera: yaw=45 pitch=42 dist=9000cm fov=55
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/MassNavigationConfig.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/MassNavigationConfig.json
+ [INF][Engine] [MassNavigation runtime] Installed mass-navigation runtime.
+ [INF][Engine] Firing MapLoaded event for crowd_physics_arena...
+ [INF][Engine] Unloading ModLoader contexts...
+ [INF][Engine] Disposing JobScheduler...
+
+
+  失败 Showcase_PressurePlate_CountsAgentBeginsAndOpensDoorAtThreshold [3 s]
+  错误消息:
+   Only 0 of 4 plate runners arrived at their lanes. plateBegin=0, plateEnd=0
+  堆栈跟踪:
+     at Ludots.Tests.Presentation.CapabilityStandardCrowdPhysicsArenaProductionPathTests.WaitUntil(GameEngine engine, Int32 maxFrames, Func`1 condition, Func`1 failMessage) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\CrowdPhysicsArena\CapabilityStandardCrowdPhysicsArenaProductionPathTests.cs:line 570
+   at Ludots.Tests.Presentation.CapabilityStandardCrowdPhysicsArenaProductionPathTests.Showcase_PressurePlate_CountsAgentBeginsAndOpensDoorAtThreshold() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\CrowdPhysicsArena\CapabilityStandardCrowdPhysicsArenaProductionPathTests.cs:line 202
+
+1)    at Ludots.Tests.Presentation.CapabilityStandardCrowdPhysicsArenaProductionPathTests.WaitUntil(GameEngine engine, Int32 maxFrames, Func`1 condition, Func`1 failMessage) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\CrowdPhysicsArena\CapabilityStandardCrowdPhysicsArenaProductionPathTests.cs:line 570
+   at Ludots.Tests.Presentation.CapabilityStandardCrowdPhysicsArenaProductionPathTests.Showcase_PressurePlate_CountsAgentBeginsAndOpensDoorAtThreshold() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\CrowdPhysicsArena\CapabilityStandardCrowdPhysicsArenaProductionPathTests.cs:line 202
+
+
+  标准输出消息:
+ [INF][Engine] Initializing with ConfigPipeline...
+ [INF][Engine] Resolving mod dependencies from explicit mod paths: mods=4
+ [INF][ModLoader] Mod Load Order:
+ [INF][ModLoader] - LudotsCoreMod (P:-1000)
+ [INF][ModLoader] - CoreInputMod (P:0)
+ [INF][ModLoader] - MassNavigationMod (P:0)
+ [INF][ModLoader] - CapabilityStandardCrowdPhysicsArenaMod (P:-2000)
+ [INF][ModLoader] Resolved Mod Load Order (launcher graph):
+ [INF][ModLoader] - LudotsCoreMod (P:-1000)
+ [INF][ModLoader] - CoreInputMod (P:0)
+ [INF][ModLoader] - MassNavigationMod (P:0)
+ [INF][ModLoader] - CapabilityStandardCrowdPhysicsArenaMod (P:-2000)
+ [INF][ModLoader] Loading DLL for LudotsCoreMod at C:\001_AI\Ludots-gpuskinned-perf\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll
+ [INF][ModLoader] Scanning 2 types in assembly...
+ [INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+ [INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+ [INF][ModLoader] LudotsCoreMod OnLoad completed.
+ [INF][ModLoader] Loaded LudotsCoreMod
+ [INF][ModLoader] Reusing preloaded assembly for CoreInputMod: C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\bin\Release\net9.0\CoreInputMod.dll
+ [INF][ModLoader] Scanning 33 types in assembly...
+ [INF][ModLoader] Instantiated entry for CoreInputMod. Calling OnLoad...
+ [INF][Mod.CoreInputMod] [CoreInputMod] Loaded - generic command-source and GAS input
+ [INF][ModLoader] CoreInputMod OnLoad completed.
+ [INF][ModLoader] Loaded CoreInputMod
+ [INF][ModLoader] Loading DLL for MassNavigationMod at C:\001_AI\Ludots-gpuskinned-perf\mods\capabilities\navigation\MassNavigationMod\bin\net9.0\MassNavigationMod.dll
+ [INF][ModLoader] Scanning 2 types in assembly...
+ [INF][ModLoader] Instantiated entry for MassNavigationMod. Calling OnLoad...
+ [INF][Mod.MassNavigationMod] [MassNavigationMod] Loaded MassNavigation assets and MovePlan order adapter.
+ [INF][ModLoader] MassNavigationMod OnLoad completed.
+ [INF][ModLoader] Loaded MassNavigationMod
+ [INF][ModLoader] Reusing preloaded assembly for CapabilityStandardCrowdPhysicsArenaMod: C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\bin\Release\net9.0\CapabilityStandardCrowdPhysicsArenaMod.dll
+ [INF][ModLoader] Scanning 9 types in assembly...
+ [INF][ModLoader] Instantiated entry for CapabilityStandardCrowdPhysicsArenaMod. Calling OnLoad...
+ [INF][Mod.CapabilityStandardCrowdPhysicsArenaMod] [CapabilityStandardCrowdPhysicsArenaMod] Loaded
+ [INF][ModLoader] CapabilityStandardCrowdPhysicsArenaMod OnLoad completed.
+ [INF][ModLoader] Loaded CapabilityStandardCrowdPhysicsArenaMod
+ [INF][Config] Merged fragment from: Core:game.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/game.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/game.json
+ [INF][Config] Merged fragment from: Core:config_catalog.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json
+ [INF][Engine] Merged GameConfig: StartupMapId=crowd_physics_arena, DefaultCoreMod=LudotsCoreMod
+ [INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3
+ [INF][Engine] Initializing JobScheduler...
+ [INF][Config] Loading DataRegistry<EntityTemplate> from Entities/templates.json...
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Entities/templates.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Entities/templates.json
+ [INF][Config] Loaded 27 DataRegistry<EntityTemplate> items.
+ [INF][Engine] Initializing Core GAS Systems...
+ [INF][Config] Merged fragment from: Core:Engine/clock.json
+ [INF][Config] Merged fragment from: Core:Relationships/catalog.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json
+ [INF][Config] Merged fragment from: Core:Relationships/control_profiles.json
+ [INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json
+ [INF][Config] Merged fragment from: Core:GAS/clock.json
+ [INF][Config] Merged fragment from: Core:Physics2D/clock.json
+ [INF][Config] Merged fragment from: Core:Physics2D/solver.json
+ [INF][Config] Merged fragment from: Core:Physics2D/kinematic.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Physics2D/kinematic.json
+ [INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/attribute_constraints.json
+ [INF][Config] Merged fragment from: Core:Enums/enums.json
+ [INF][Config] Merged fragment from: Core:Vision/fog_layers.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json
+ [INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json
+ [INF][Config] Merged fragment from: Core:GAS/graphs.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs.json
+ [INF][Config] Merged fragment from: Core:GAS/preset_types.json
+ [INF][Config] Merged fragment from: Core:Exchange/operations.json
+ [INF][Config] Merged fragment from: Core:Progression/scopes.json
+ [INF][Config] Merged fragment from: Core:Progression/progressions.json
+ [INF][Config] Merged fragment from: Core:Progression/requirements.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/order_types.json
+ [INF][Config] Merged fragment from: Core:GAS/effects.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/effects.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/GAS/effects.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/GAS/abilities.json
+ [INF][Config] Merged fragment from: Core:GAS/func_lib.json
+ [INF][Config] Merged fragment from: Core:GAS/action_lib.json
+ [INF][Config] Merged fragment from: Core:Items/shapes.json
+ [INF][Config] Merged fragment from: Core:Items/layouts.json
+ [INF][Config] Merged fragment from: Core:Items/definitions.json
+ [INF][Config] Merged fragment from: Core:Exchange/operations.json
+ [INF][Config] Merged fragment from: Core:Panels/panel_templates.json
+ [INF][Config] Merged fragment from: Core:Input/filter_profiles.json
+ [INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json
+ [INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/mesh_assets.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animator_controllers.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_clips.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: CoreInputMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json
+ [INF][Config] Merged fragment from: Core:config_catalog.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: Core:Input/default_input.json
+ [INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Input/default_input.json
+ [INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json
+ [INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Input/command_intent_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json
+ [INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/control_schemes.json
+ [INF][Config] Merged fragment from: Core:Input/interaction_prefs.json
+ [INF][Config] Merged fragment from: Core:Input/interaction_modes.json
+ [INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json
+ [INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json
+ [INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json
+ [INF][Config] Merged fragment from: Core:AI/behavior_trees.json
+ [INF][Config] Merged fragment from: Core:AI/hfsm.json
+ [INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json
+ [INF][Config] Merged fragment from: Core:Presentation/image_assets.json
+ [INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Camera/virtual_cameras.json
+ [INF][Config] Merged fragment from: Core:Story/lines.json
+ [INF][Config] Merged fragment from: Core:Story/presentation_profiles.json
+ [INF][Config] Merged fragment from: Core:Story/speakers.json
+ [INF][Config] Merged fragment from: Core:Dialogue/dialogues.json
+ [INF][Config] Merged fragment from: Core:Sequencer/sequences.json
+ [INF][ModLoader] No registration conflicts detected.
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/host_assets.json
+ [INF][Config] Merged fragment from: Core:config_catalog.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: Core:Input/default_input.json
+ [INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Input/default_input.json
+ [INF][Engine] Firing GameStart event...
+ [LudotsCoreMod] Core systems installed
+ [INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+ [INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+ [INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+ [INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+ [INF][Mod.CoreInputMod] [CoreInputMod] CommandSourceAcquisition, GasInputResponse, SkillBar, CommandSourceDragOverlay, AbilityAimPresentation, CommandActorMovePathPresentation, TabTarget, ViewMode registered
+ [INF][Engine] Loading Map: crowd_physics_arena
+ [INF][Map] Loading Map: crowd_physics_arena
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Maps/crowd_physics_arena.json
+ [INF][Map] Map 'crowd_physics_arena' loaded.
+ [INF][Map] Creating GridBoard 'default' (250x250 macroTiles, cell=100cm)
+ [INF][Engine] Created Board 'default' (type=Grid) for map 'crowd_physics_arena'
+ [INF][Map] Map 'crowd_physics_arena' pushed to focus (stack depth=1).
+ [INF][Engine] ContinuousHeightmap does not cover board 'default' extent 6400000x6400000cm; keeping flat grid terrain.
+ [INF][Engine] Created flat grid LogicTerrainField 64000x64000 cells for board 'default'
+ [INF][Config] Merged fragment from: Core:Navigation/pathing.json
+ [INF][Engine] Pathing bootstrap skipped for map 'crowd_physics_arena': no node-graph board or navmesh query service is loaded.
+ [INF][Engine] Creating Entities from MapConfig...
+ [INF][Engine] Applied DefaultCamera: yaw=45 pitch=42 dist=9000cm fov=55
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/MassNavigationConfig.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/MassNavigationConfig.json
+ [INF][Engine] [MassNavigation runtime] Installed mass-navigation runtime.
+ [INF][Engine] Firing MapLoaded event for crowd_physics_arena...
+ [INF][Engine] Unloading ModLoader contexts...
+ [INF][Engine] Disposing JobScheduler...
+
+
+  失败 Showcase_ShockwaveKnockback_WindowsRecoverAndSecondCastIsSafe [1 s]
+  错误消息:
+   Q shockwave did not create any displacement effects.
+  堆栈跟踪:
+     at Ludots.Tests.Presentation.CapabilityStandardCrowdPhysicsArenaProductionPathTests.WaitUntil(GameEngine engine, Int32 maxFrames, Func`1 condition, Func`1 failMessage) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\CrowdPhysicsArena\CapabilityStandardCrowdPhysicsArenaProductionPathTests.cs:line 570
+   at Ludots.Tests.Presentation.CapabilityStandardCrowdPhysicsArenaProductionPathTests.Showcase_ShockwaveKnockback_WindowsRecoverAndSecondCastIsSafe() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\CrowdPhysicsArena\CapabilityStandardCrowdPhysicsArenaProductionPathTests.cs:line 268
+
+1)    at Ludots.Tests.Presentation.CapabilityStandardCrowdPhysicsArenaProductionPathTests.WaitUntil(GameEngine engine, Int32 maxFrames, Func`1 condition, Func`1 failMessage) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\CrowdPhysicsArena\CapabilityStandardCrowdPhysicsArenaProductionPathTests.cs:line 570
+   at Ludots.Tests.Presentation.CapabilityStandardCrowdPhysicsArenaProductionPathTests.Showcase_ShockwaveKnockback_WindowsRecoverAndSecondCastIsSafe() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\CrowdPhysicsArena\CapabilityStandardCrowdPhysicsArenaProductionPathTests.cs:line 268
+
+
+  标准输出消息:
+ [INF][Engine] Initializing with ConfigPipeline...
+ [INF][Engine] Resolving mod dependencies from explicit mod paths: mods=4
+ [INF][ModLoader] Mod Load Order:
+ [INF][ModLoader] - LudotsCoreMod (P:-1000)
+ [INF][ModLoader] - CoreInputMod (P:0)
+ [INF][ModLoader] - MassNavigationMod (P:0)
+ [INF][ModLoader] - CapabilityStandardCrowdPhysicsArenaMod (P:-2000)
+ [INF][ModLoader] Resolved Mod Load Order (launcher graph):
+ [INF][ModLoader] - LudotsCoreMod (P:-1000)
+ [INF][ModLoader] - CoreInputMod (P:0)
+ [INF][ModLoader] - MassNavigationMod (P:0)
+ [INF][ModLoader] - CapabilityStandardCrowdPhysicsArenaMod (P:-2000)
+ [INF][ModLoader] Loading DLL for LudotsCoreMod at C:\001_AI\Ludots-gpuskinned-perf\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll
+ [INF][ModLoader] Scanning 2 types in assembly...
+ [INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+ [INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+ [INF][ModLoader] LudotsCoreMod OnLoad completed.
+ [INF][ModLoader] Loaded LudotsCoreMod
+ [INF][ModLoader] Reusing preloaded assembly for CoreInputMod: C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\bin\Release\net9.0\CoreInputMod.dll
+ [INF][ModLoader] Scanning 33 types in assembly...
+ [INF][ModLoader] Instantiated entry for CoreInputMod. Calling OnLoad...
+ [INF][Mod.CoreInputMod] [CoreInputMod] Loaded - generic command-source and GAS input
+ [INF][ModLoader] CoreInputMod OnLoad completed.
+ [INF][ModLoader] Loaded CoreInputMod
+ [INF][ModLoader] Loading DLL for MassNavigationMod at C:\001_AI\Ludots-gpuskinned-perf\mods\capabilities\navigation\MassNavigationMod\bin\net9.0\MassNavigationMod.dll
+ [INF][ModLoader] Scanning 2 types in assembly...
+ [INF][ModLoader] Instantiated entry for MassNavigationMod. Calling OnLoad...
+ [INF][Mod.MassNavigationMod] [MassNavigationMod] Loaded MassNavigation assets and MovePlan order adapter.
+ [INF][ModLoader] MassNavigationMod OnLoad completed.
+ [INF][ModLoader] Loaded MassNavigationMod
+ [INF][ModLoader] Reusing preloaded assembly for CapabilityStandardCrowdPhysicsArenaMod: C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\bin\Release\net9.0\CapabilityStandardCrowdPhysicsArenaMod.dll
+ [INF][ModLoader] Scanning 9 types in assembly...
+ [INF][ModLoader] Instantiated entry for CapabilityStandardCrowdPhysicsArenaMod. Calling OnLoad...
+ [INF][Mod.CapabilityStandardCrowdPhysicsArenaMod] [CapabilityStandardCrowdPhysicsArenaMod] Loaded
+ [INF][ModLoader] CapabilityStandardCrowdPhysicsArenaMod OnLoad completed.
+ [INF][ModLoader] Loaded CapabilityStandardCrowdPhysicsArenaMod
+ [INF][Config] Merged fragment from: Core:game.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/game.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/game.json
+ [INF][Config] Merged fragment from: Core:config_catalog.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json
+ [INF][Engine] Merged GameConfig: StartupMapId=crowd_physics_arena, DefaultCoreMod=LudotsCoreMod
+ [INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3
+ [INF][Engine] Initializing JobScheduler...
+ [INF][Config] Loading DataRegistry<EntityTemplate> from Entities/templates.json...
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Entities/templates.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Entities/templates.json
+ [INF][Config] Loaded 27 DataRegistry<EntityTemplate> items.
+ [INF][Engine] Initializing Core GAS Systems...
+ [INF][Config] Merged fragment from: Core:Engine/clock.json
+ [INF][Config] Merged fragment from: Core:Relationships/catalog.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json
+ [INF][Config] Merged fragment from: Core:Relationships/control_profiles.json
+ [INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json
+ [INF][Config] Merged fragment from: Core:GAS/clock.json
+ [INF][Config] Merged fragment from: Core:Physics2D/clock.json
+ [INF][Config] Merged fragment from: Core:Physics2D/solver.json
+ [INF][Config] Merged fragment from: Core:Physics2D/kinematic.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Physics2D/kinematic.json
+ [INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/attribute_constraints.json
+ [INF][Config] Merged fragment from: Core:Enums/enums.json
+ [INF][Config] Merged fragment from: Core:Vision/fog_layers.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json
+ [INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json
+ [INF][Config] Merged fragment from: Core:GAS/graphs.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs.json
+ [INF][Config] Merged fragment from: Core:GAS/preset_types.json
+ [INF][Config] Merged fragment from: Core:Exchange/operations.json
+ [INF][Config] Merged fragment from: Core:Progression/scopes.json
+ [INF][Config] Merged fragment from: Core:Progression/progressions.json
+ [INF][Config] Merged fragment from: Core:Progression/requirements.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/order_types.json
+ [INF][Config] Merged fragment from: Core:GAS/effects.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/effects.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/GAS/effects.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/GAS/abilities.json
+ [INF][Config] Merged fragment from: Core:GAS/func_lib.json
+ [INF][Config] Merged fragment from: Core:GAS/action_lib.json
+ [INF][Config] Merged fragment from: Core:Items/shapes.json
+ [INF][Config] Merged fragment from: Core:Items/layouts.json
+ [INF][Config] Merged fragment from: Core:Items/definitions.json
+ [INF][Config] Merged fragment from: Core:Exchange/operations.json
+ [INF][Config] Merged fragment from: Core:Panels/panel_templates.json
+ [INF][Config] Merged fragment from: Core:Input/filter_profiles.json
+ [INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json
+ [INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/mesh_assets.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animator_controllers.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_clips.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: CoreInputMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json
+ [INF][Config] Merged fragment from: Core:config_catalog.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: Core:Input/default_input.json
+ [INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Input/default_input.json
+ [INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json
+ [INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Input/command_intent_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json
+ [INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/control_schemes.json
+ [INF][Config] Merged fragment from: Core:Input/interaction_prefs.json
+ [INF][Config] Merged fragment from: Core:Input/interaction_modes.json
+ [INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json
+ [INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json
+ [INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json
+ [INF][Config] Merged fragment from: Core:AI/behavior_trees.json
+ [INF][Config] Merged fragment from: Core:AI/hfsm.json
+ [INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json
+ [INF][Config] Merged fragment from: Core:Presentation/image_assets.json
+ [INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Camera/virtual_cameras.json
+ [INF][Config] Merged fragment from: Core:Story/lines.json
+ [INF][Config] Merged fragment from: Core:Story/presentation_profiles.json
+ [INF][Config] Merged fragment from: Core:Story/speakers.json
+ [INF][Config] Merged fragment from: Core:Dialogue/dialogues.json
+ [INF][Config] Merged fragment from: Core:Sequencer/sequences.json
+ [INF][ModLoader] No registration conflicts detected.
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/host_assets.json
+ [INF][Config] Merged fragment from: Core:config_catalog.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: Core:Input/default_input.json
+ [INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Input/default_input.json
+ [INF][Engine] Firing GameStart event...
+ [LudotsCoreMod] Core systems installed
+ [INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+ [INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+ [INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+ [INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+ [INF][Mod.CoreInputMod] [CoreInputMod] CommandSourceAcquisition, GasInputResponse, SkillBar, CommandSourceDragOverlay, AbilityAimPresentation, CommandActorMovePathPresentation, TabTarget, ViewMode registered
+ [INF][Engine] Loading Map: crowd_physics_arena
+ [INF][Map] Loading Map: crowd_physics_arena
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/Maps/crowd_physics_arena.json
+ [INF][Map] Map 'crowd_physics_arena' loaded.
+ [INF][Map] Creating GridBoard 'default' (250x250 macroTiles, cell=100cm)
+ [INF][Engine] Created Board 'default' (type=Grid) for map 'crowd_physics_arena'
+ [INF][Map] Map 'crowd_physics_arena' pushed to focus (stack depth=1).
+ [INF][Engine] ContinuousHeightmap does not cover board 'default' extent 6400000x6400000cm; keeping flat grid terrain.
+ [INF][Engine] Created flat grid LogicTerrainField 64000x64000 cells for board 'default'
+ [INF][Config] Merged fragment from: Core:Navigation/pathing.json
+ [INF][Engine] Pathing bootstrap skipped for map 'crowd_physics_arena': no node-graph board or navmesh query service is loaded.
+ [INF][Engine] Creating Entities from MapConfig...
+ [INF][Engine] Applied DefaultCamera: yaw=45 pitch=42 dist=9000cm fov=55
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/MassNavigationConfig.json
+ [INF][Config] Merged fragment from: CapabilityStandardCrowdPhysicsArenaMod:assets/MassNavigationConfig.json
+ [INF][Engine] [MassNavigation runtime] Installed mass-navigation runtime.
+ [INF][Engine] Firing MapLoaded event for crowd_physics_arena...
+ [INF][Engine] Unloading ModLoader contexts...
+ [INF][Engine] Disposing JobScheduler...
+
+
+ORDERSRC bind failed actor=Entity = { Id = 0, WorldId = 0, Version = 0 }
+ORDERSRC bind failed actor=Entity = { Id = 0, WorldId = 0, Version = 0 }
+ORDERSRC bind failed actor=Entity = { Id = 0, WorldId = 0, Version = 0 }
+ORDERSRC bind failed actor=Entity = { Id = 0, WorldId = 0, Version = 0 }
+  失败 Showcase_MouseBoxAcquisition_RightClickIssuesOrdersForCommandableAgents [3 s]
+  错误消息:
+     localPlayer=Entity = { Id = 7, WorldId = 0, Version = 1 }, localHasTeam=True, localTeamId=1, hasCurrentView=True, hasKnowledgeResolver=True, visibleSelectable=10000, projected=3966, screenIntersecting=3966, liveVisible=10000, eligible=2500, eligibleIntersecting=1989, currentCommandSourceCount=2001
+Assert.That(simulation.CommandCountFrame, Is.GreaterThan(0))
+  Expected: greater than 0
+  But was:  0
+
+  堆栈跟踪:
+     at Ludots.Tests.Presentation.CapabilityStandardMassNavigationLargeWorld10kProductionPathTests.Showcase_MouseBoxAcquisition_RightClickIssuesOrdersForCommandableAgents() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\MassNavigation\CapabilityStandardMassNavigationLargeWorld10kProductionPathTests.cs:line 366
+
+1)    at Ludots.Tests.Presentation.CapabilityStandardMassNavigationLargeWorld10kProductionPathTests.Showcase_MouseBoxAcquisition_RightClickIssuesOrdersForCommandableAgents() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\MassNavigation\CapabilityStandardMassNavigationLargeWorld10kProductionPathTests.cs:line 366
+
+
+  标准输出消息:
+ [INF][Engine] Initializing with ConfigPipeline...
+ [INF][Engine] Resolving mod dependencies from explicit mod paths: mods=4
+ [INF][ModLoader] Mod Load Order:
+ [INF][ModLoader] - LudotsCoreMod (P:-1000)
+ [INF][ModLoader] - CoreInputMod (P:0)
+ [INF][ModLoader] - MassNavigationMod (P:0)
+ [INF][ModLoader] - CapabilityStandardMassNavigationLargeWorld10kMod (P:-2000)
+ [INF][ModLoader] Resolved Mod Load Order (launcher graph):
+ [INF][ModLoader] - LudotsCoreMod (P:-1000)
+ [INF][ModLoader] - CoreInputMod (P:0)
+ [INF][ModLoader] - MassNavigationMod (P:0)
+ [INF][ModLoader] - CapabilityStandardMassNavigationLargeWorld10kMod (P:-2000)
+ [INF][ModLoader] Loading DLL for LudotsCoreMod at C:\001_AI\Ludots-gpuskinned-perf\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll
+ [INF][ModLoader] Scanning 2 types in assembly...
+ [INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+ [INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+ [INF][ModLoader] LudotsCoreMod OnLoad completed.
+ [INF][ModLoader] Loaded LudotsCoreMod
+ [INF][ModLoader] Reusing preloaded assembly for CoreInputMod: C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\bin\Release\net9.0\CoreInputMod.dll
+ [INF][ModLoader] Scanning 33 types in assembly...
+ [INF][ModLoader] Instantiated entry for CoreInputMod. Calling OnLoad...
+ [INF][Mod.CoreInputMod] [CoreInputMod] Loaded - generic command-source and GAS input
+ [INF][ModLoader] CoreInputMod OnLoad completed.
+ [INF][ModLoader] Loaded CoreInputMod
+ [INF][ModLoader] Loading DLL for MassNavigationMod at C:\001_AI\Ludots-gpuskinned-perf\mods\capabilities\navigation\MassNavigationMod\bin\net9.0\MassNavigationMod.dll
+ [INF][ModLoader] Scanning 2 types in assembly...
+ [INF][ModLoader] Instantiated entry for MassNavigationMod. Calling OnLoad...
+ [INF][Mod.MassNavigationMod] [MassNavigationMod] Loaded MassNavigation assets and MovePlan order adapter.
+ [INF][ModLoader] MassNavigationMod OnLoad completed.
+ [INF][ModLoader] Loaded MassNavigationMod
+ [INF][ModLoader] Reusing preloaded assembly for CapabilityStandardMassNavigationLargeWorld10kMod: C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\bin\Release\net9.0\CapabilityStandardMassNavigationLargeWorld10kMod.dll
+ [INF][ModLoader] Scanning 4 types in assembly...
+ [INF][ModLoader] Instantiated entry for CapabilityStandardMassNavigationLargeWorld10kMod. Calling OnLoad...
+ [INF][Mod.CapabilityStandardMassNavigationLargeWorld10kMod] [CapabilityStandardMassNavigationLargeWorld10kMod] Loaded
+ [INF][ModLoader] CapabilityStandardMassNavigationLargeWorld10kMod OnLoad completed.
+ [INF][ModLoader] Loaded CapabilityStandardMassNavigationLargeWorld10kMod
+ [INF][Config] Merged fragment from: Core:game.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/game.json
+ [INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/game.json
+ [INF][Config] Merged fragment from: Core:config_catalog.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json
+ [INF][Engine] Merged GameConfig: StartupMapId=mass_navigation, DefaultCoreMod=LudotsCoreMod
+ [INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3
+ [INF][Engine] Initializing JobScheduler...
+ [INF][Config] Loading DataRegistry<EntityTemplate> from Entities/templates.json...
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Entities/templates.json
+ [INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Entities/templates.json
+ [INF][Config] Loaded 16 DataRegistry<EntityTemplate> items.
+ [INF][Engine] Initializing Core GAS Systems...
+ [INF][Config] Merged fragment from: Core:Engine/clock.json
+ [INF][Config] Merged fragment from: Core:Relationships/catalog.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json
+ [INF][Config] Merged fragment from: Core:Relationships/control_profiles.json
+ [INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json
+ [INF][Config] Merged fragment from: Core:GAS/clock.json
+ [INF][Config] Merged fragment from: Core:Physics2D/clock.json
+ [INF][Config] Merged fragment from: Core:Physics2D/solver.json
+ [INF][Config] Merged fragment from: Core:Physics2D/kinematic.json
+ [INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/attribute_constraints.json
+ [INF][Config] Merged fragment from: Core:Enums/enums.json
+ [INF][Config] Merged fragment from: Core:Vision/fog_layers.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json
+ [INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json
+ [INF][Config] Merged fragment from: Core:GAS/graphs.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs.json
+ [INF][Config] Merged fragment from: Core:GAS/preset_types.json
+ [INF][Config] Merged fragment from: Core:Exchange/operations.json
+ [INF][Config] Merged fragment from: Core:Progression/scopes.json
+ [INF][Config] Merged fragment from: Core:Progression/progressions.json
+ [INF][Config] Merged fragment from: Core:Progression/requirements.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/order_types.json
+ [INF][Config] Merged fragment from: Core:GAS/effects.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/effects.json
+ [INF][Config] Merged fragment from: Core:GAS/func_lib.json
+ [INF][Config] Merged fragment from: Core:GAS/action_lib.json
+ [INF][Config] Merged fragment from: Core:Items/shapes.json
+ [INF][Config] Merged fragment from: Core:Items/layouts.json
+ [INF][Config] Merged fragment from: Core:Items/definitions.json
+ [INF][Config] Merged fragment from: Core:Exchange/operations.json
+ [INF][Config] Merged fragment from: Core:Panels/panel_templates.json
+ [INF][Config] Merged fragment from: Core:Input/filter_profiles.json
+ [INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json
+ [INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/mesh_assets.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animator_controllers.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_clips.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json
+ [INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: CoreInputMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/presenters.json
+ [INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json
+ [INF][Config] Merged fragment from: Core:config_catalog.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: Core:Input/default_input.json
+ [INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json
+ [INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json
+ [INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json
+ [INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Input/command_intent_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json
+ [INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json
+ [INF][Config] Merged fragment from: Core:Input/control_schemes.json
+ [INF][Config] Merged fragment from: Core:Input/interaction_prefs.json
+ [INF][Config] Merged fragment from: Core:Input/interaction_modes.json
+ [INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json
+ [INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json
+ [INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json
+ [INF][Config] Merged fragment from: Core:AI/behavior_trees.json
+ [INF][Config] Merged fragment from: Core:AI/hfsm.json
+ [INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json
+ [INF][Config] Merged fragment from: Core:Presentation/image_assets.json
+ [INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Camera/virtual_cameras.json
+ [INF][Config] Merged fragment from: Core:Story/lines.json
+ [INF][Config] Merged fragment from: Core:Story/presentation_profiles.json
+ [INF][Config] Merged fragment from: Core:Story/speakers.json
+ [INF][Config] Merged fragment from: Core:Dialogue/dialogues.json
+ [INF][Config] Merged fragment from: Core:Sequencer/sequences.json
+ [INF][ModLoader] No registration conflicts detected.
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/host_assets.json
+ [INF][Config] Merged fragment from: Core:config_catalog.json
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json
+ [INF][Config] Merged fragment from: Core:Input/default_input.json
+ [INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json
+ [INF][Engine] Firing GameStart event...
+ [LudotsCoreMod] Core systems installed
+ [INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+ [INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+ [INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+ [INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+ [INF][Mod.CoreInputMod] [CoreInputMod] CommandSourceAcquisition, GasInputResponse, SkillBar, CommandSourceDragOverlay, AbilityAimPresentation, CommandActorMovePathPresentation, TabTarget, ViewMode registered
+ [INF][Engine] Loading Map: mass_navigation
+ [INF][Map] Loading Map: mass_navigation
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/Maps/mass_navigation.json
+ [INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Maps/mass_navigation.json
+ [INF][Map] Map 'mass_navigation' loaded.
+ [INF][Map] Creating GridBoard 'default' (250x250 macroTiles, cell=100cm)
+ [INF][Engine] Created Board 'default' (type=Grid) for map 'mass_navigation'
+ [INF][Map] Map 'mass_navigation' pushed to focus (stack depth=1).
+ [INF][Engine] ContinuousHeightmap does not cover board 'default' extent 6400000x6400000cm; keeping flat grid terrain.
+ [INF][Engine] Created flat grid LogicTerrainField 64000x64000 cells for board 'default'
+ [INF][Config] Merged fragment from: Core:Navigation/pathing.json
+ [INF][Engine] Pathing bootstrap skipped for map 'mass_navigation': no node-graph board or navmesh query service is loaded.
+ [INF][Engine] Creating Entities from MapConfig...
+ [INF][Engine] Applied DefaultCamera: yaw=45 pitch=42 dist=14000cm fov=60
+ [INF][Config] Merged fragment from: MassNavigationMod:assets/MassNavigationConfig.json
+ [INF][Engine] [MassNavigation runtime] Installed mass-navigation runtime.
+ [INF][Engine] Firing MapLoaded event for mass_navigation...
+ [INF][Engine] Unloading ModLoader contexts...
+ [INF][Engine] Disposing JobScheduler...
+
+  标准错误消息:
+ ORDERSRC bind failed actor=Entity = { Id = 0, WorldId = 0, Version = 0 }
+
+ORDERSRC bind failed actor=Entity = { Id = 0, WorldId = 0, Version = 0 }
+ORDERSRC bind failed actor=Entity = { Id = 0, WorldId = 0, Version = 0 }
+ORDERSRC bind failed actor=Entity = { Id = 0, WorldId = 0, Version = 0 }
+ORDERSRC bind failed actor=Entity = { Id = 0, WorldId = 0, Version = 0 }
+ORDERSRC bind failed actor=Entity = { Id = 0, WorldId = 0, Version = 0 }
+  失败 GenreInfoShowcase_PlayableAcceptance_WritesLocalizedScreensAndArtifacts [1 s]
+  错误消息:
+   System.InvalidOperationException : Map 'genre_info_showcase' launch context LocalSeats[0] playerId 1 references an unbound player.
+  堆栈跟踪:
+     at Ludots.Core.Gameplay.Teams.ParticipantBindingResolver.ResolveLocalSeats(String mapId, MapLaunchContext launchContext, PlayerEntityLookup playerLookup) in C:\001_AI\Ludots-gpuskinned-perf\src\Core\Gameplay\Teams\ParticipantBindingResolver.cs:line 233
+   at Ludots.Core.Gameplay.Teams.ParticipantBindingResolver.Resolve(MapSession session, World world, MapLoadEntityIndex entityIndex, RelationshipRuntime relationships, RelationshipTypeRegistry relationshipTypes, OwnershipResolver ownership, DomainStanceConfig stanceCatalog) in C:\001_AI\Ludots-gpuskinned-perf\src\Core\Gameplay\Teams\ParticipantBindingResolver.cs:line 148
+   at Ludots.Core.Engine.GameEngine.LoadMapCore(MapLoadRequest request) in C:\001_AI\Ludots-gpuskinned-perf\src\Core\Engine\GameEngine.cs:line 2854
+   at Ludots.Core.Engine.GameEngine.LoadMap(MapLoadRequest request) in C:\001_AI\Ludots-gpuskinned-perf\src\Core\Engine\GameEngine.cs:line 2784
+   at Ludots.Core.Engine.GameEngine.LoadMap(String mapId) in C:\001_AI\Ludots-gpuskinned-perf\src\Core\Engine\GameEngine.cs:line 2767
+   at Ludots.Tests.Presentation.GenreInfoShowcasePlayableAcceptanceTests.LoadMap(GameEngine engine, String mapId, Int32 frames) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Showcases\GenreInfoShowcasePlayableAcceptanceTests.cs:line 185
+   at Ludots.Tests.Presentation.GenreInfoShowcasePlayableAcceptanceTests.GenreInfoShowcase_PlayableAcceptance_WritesLocalizedScreensAndArtifacts() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Showcases\GenreInfoShowcasePlayableAcceptanceTests.cs:line 63
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+
+  标准输出消息:
+ [LudotsCoreMod] Core systems installed
+
+
+  失败 MeshAssetConfigLoader_WhenCoreAndModDeclareSameLiveId_ThrowsWithBothSources [12 ms]
+  错误消息:
+     Assert.That(caughtException, expression)
+  Expected: <System.InvalidOperationException>
+  But was:  null
+
+  堆栈跟踪:
+     at Ludots.Tests.Presentation.PresentationAssetConfigLoaderTests.MeshAssetConfigLoader_WhenCoreAndModDeclareSameLiveId_ThrowsWithBothSources() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\PresentationAssetConfigLoaderTests.cs:line 58
+
+1)    at Ludots.Tests.Presentation.PresentationAssetConfigLoaderTests.MeshAssetConfigLoader_WhenCoreAndModDeclareSameLiveId_ThrowsWithBothSources() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\PresentationAssetConfigLoaderTests.cs:line 58
+
+
+  失败 PresentationLodProfileConfigLoader_LoadsConfiguredProfile [2 ms]
+  错误消息:
+     Assert.That(profiles.TryGet("custom_surface_lod", out var profile), Is.True)
+  Expected: True
+  But was:  False
+
+  堆栈跟踪:
+     at Ludots.Tests.Presentation.PresentationAssetConfigLoaderTests.PresentationLodProfileConfigLoader_LoadsConfiguredProfile() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\PresentationAssetConfigLoaderTests.cs:line 117
+
+1)    at Ludots.Tests.Presentation.PresentationAssetConfigLoaderTests.PresentationLodProfileConfigLoader_LoadsConfiguredProfile() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\PresentationAssetConfigLoaderTests.cs:line 117
+
+
+  失败 PresentationLodProfileConfigLoader_WhenDistancesAreOutOfOrder_Throws [2 ms]
+  错误消息:
+     Assert.That(caughtException, expression)
+  Expected: <System.InvalidOperationException>
+  But was:  null
+
+  堆栈跟踪:
+     at Ludots.Tests.Presentation.PresentationAssetConfigLoaderTests.PresentationLodProfileConfigLoader_WhenDistancesAreOutOfOrder_Throws() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\PresentationAssetConfigLoaderTests.cs:line 143
+
+1)    at Ludots.Tests.Presentation.PresentationAssetConfigLoaderTests.PresentationLodProfileConfigLoader_WhenDistancesAreOutOfOrder_Throws() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\PresentationAssetConfigLoaderTests.cs:line 143
+
+
+  失败 WorldHudPresentBehavior_ProjectionChecksAllocateZeroAfterWarmup [685 ms]
+  错误消息:
+     Assert.That(allocated, Is.EqualTo(0))
+  Expected: 0
+  But was:  24
+
+  堆栈跟踪:
+     at Ludots.Tests.Presentation.PresentationFoundationTests.WorldHudPresentBehavior_ProjectionChecksAllocateZeroAfterWarmup() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\PresentationFoundationTests.cs:line 1270
+
+1)    at Ludots.Tests.Presentation.PresentationFoundationTests.WorldHudPresentBehavior_ProjectionChecksAllocateZeroAfterWarmup() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\PresentationFoundationTests.cs:line 1270
+
+
+  失败 PresentationTextCatalogLoader_Fails_OnDuplicateTokenId_AcrossSources [10 ms]
+  错误消息:
+     Assert.That(caughtException, expression)
+  Expected: <System.InvalidOperationException>
+  But was:  null
+
+  堆栈跟踪:
+     at Ludots.Tests.Presentation.PresentationTextContractTests.PresentationTextCatalogLoader_Fails_OnDuplicateTokenId_AcrossSources() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\PresentationTextContractTests.cs:line 262
+
+1)    at Ludots.Tests.Presentation.PresentationTextContractTests.PresentationTextCatalogLoader_Fails_OnDuplicateTokenId_AcrossSources() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\PresentationTextContractTests.cs:line 262
+
+
+  失败 Scatter_3000_ProductionPathRandomDrift_PropagatesToIsmAndScreenHud [3 s]
+  错误消息:
+     Assert.That(screenHud.BarCount, Is.EqualTo(3000))
+  Expected: 3000
+  But was:  2101
+
+  堆栈跟踪:
+     at Ludots.Tests.Presentation.PresenterBlacksmithShowcaseScatterBenchmarkTests.Scatter_3000_ProductionPathRandomDrift_PropagatesToIsmAndScreenHud() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Presenter\PresenterBlacksmithShowcaseScatterBenchmarkTests.cs:line 279
+
+1)    at Ludots.Tests.Presentation.PresenterBlacksmithShowcaseScatterBenchmarkTests.Scatter_3000_ProductionPathRandomDrift_PropagatesToIsmAndScreenHud() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Presenter\PresenterBlacksmithShowcaseScatterBenchmarkTests.cs:line 279
+
+
+  标准输出消息:
+ [LudotsCoreMod] Core systems installed
+ Blacksmith durability spread: count=3000, min=60.05, max=83.68, activeRandomDrift=3000
+
+
+  失败 ScatterHudTextBenchmarkMap_AppliesMetadataInitialTarget [6 s]
+  错误消息:
+     Assert.That(screenHudBars, Is.EqualTo(expected))
+  Expected: 30000
+  But was:  20918
+
+  堆栈跟踪:
+     at Ludots.Tests.Presentation.PresenterBlacksmithShowcaseScatterBenchmarkTests.ScatterHudTextBenchmarkMap_AppliesMetadataInitialTarget() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Presenter\PresenterBlacksmithShowcaseScatterBenchmarkTests.cs:line 141
+
+1)    at Ludots.Tests.Presentation.PresenterBlacksmithShowcaseScatterBenchmarkTests.ScatterHudTextBenchmarkMap_AppliesMetadataInitialTarget() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Presenter\PresenterBlacksmithShowcaseScatterBenchmarkTests.cs:line 141
+
+
+  标准输出消息:
+ [LudotsCoreMod] Core systems installed
+
+
+  失败 Load_RejectsBindingsMissingRequiredSourcePayload("{ \"paramKey\": \"strict.binding\", \"source\": \"graph\" }","Presenter binding graph.sourceId") [14 ms]
+  错误消息:
+     Assert.That(ex.Message, Does.Contain(expectedContext))
+  Expected: String containing "Presenter binding graph.sourceId"
+  But was:  "presenters.json[strict_binding_actor].bindings[0] graph.sourceId must be a semantic string."
+
+  堆栈跟踪:
+     at Ludots.Tests.Presentation.PresenterDefinitionConfigLoaderTests.Load_RejectsBindingsMissingRequiredSourcePayload(String bindingJson, String expectedContext) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Presenter\PresenterDefinitionConfigLoaderTests.cs:line 621
+
+1)    at Ludots.Tests.Presentation.PresenterDefinitionConfigLoaderTests.Load_RejectsBindingsMissingRequiredSourcePayload(String bindingJson, String expectedContext) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Presenter\PresenterDefinitionConfigLoaderTests.cs:line 621
+
+
+活动的测试运行已中止。原因: 测试主机进程崩溃
+
+失败!  - 失败:    15，通过:   776，已跳过:     0，总计:   791，持续时间: 6 m 27 s - PresentationTests.dll (net9.0)
+测试运行已中止。

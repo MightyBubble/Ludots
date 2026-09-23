@@ -1,0 +1,19 @@
+{
+  "frameIndex": 911,
+  "count": 2,
+  "capacity": 32,
+  "events": [
+    {
+      "system": "OrderAdmission",
+      "metric": "OrderAdmissionResultBacklog",
+      "capacity": 49152,
+      "count": 0
+    },
+    {
+      "system": "OrderAdmission",
+      "metric": "OrderAdmissionResultHighWatermark",
+      "capacity": 49152,
+      "count": 0
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "entityId": 34,
+  "name": "MassNavigation.Agent.Azure.Heavy",
+  "tags": [],
+  "attributes": [
+    {
+      "id": 0,
+      "name": "Health",
+      "current": 236,
+      "base": 260
+    }
+  ]
+}

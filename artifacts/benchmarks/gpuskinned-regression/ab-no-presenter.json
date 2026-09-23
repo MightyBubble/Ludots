@@ -1,0 +1,55 @@
+{
+  "profile": "no-presenter",
+  "commit": "a20892f0ebf1db55f0414e84d4e2eb99ae69350a",
+  "rounds": 1,
+  "warmupSeconds": 8,
+  "sampleSeconds": 4,
+  "windowsPerRound": 4,
+  "medianFps": 920.3676337763433,
+  "samples": [
+    {
+      "round": 1,
+      "window": 1,
+      "elapsedSeconds": 4.0288988,
+      "frames": 3633.0,
+      "fps": 901.73523345883,
+      "processCpuMs": 7640.625,
+      "workingSetBytes": 1876156416,
+      "pumpStart": 2147,
+      "pumpEnd": 5780
+    },
+    {
+      "round": 1,
+      "window": 2,
+      "elapsedSeconds": 4.0212192,
+      "frames": 3701.0,
+      "fps": 920.3676337763433,
+      "processCpuMs": 6875.0,
+      "workingSetBytes": 1876156416,
+      "pumpStart": 5837,
+      "pumpEnd": 9538
+    },
+    {
+      "round": 1,
+      "window": 3,
+      "elapsedSeconds": 4.0164002,
+      "frames": 3801.0,
+      "fps": 946.3698363524632,
+      "processCpuMs": 6859.375,
+      "workingSetBytes": 1876156416,
+      "pumpStart": 9543,
+      "pumpEnd": 13344
+    },
+    {
+      "round": 1,
+      "window": 4,
+      "elapsedSeconds": 4.0157909,
+      "frames": 3643.0,
+      "fps": 907.168747257234,
+      "processCpuMs": 7578.125,
+      "workingSetBytes": 1876156416,
+      "pumpStart": 13345,
+      "pumpEnd": 16988
+    }
+  ]
+}

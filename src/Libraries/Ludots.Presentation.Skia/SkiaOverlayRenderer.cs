@@ -25,8 +25,6 @@ namespace Ludots.Presentation.Skia
         private const int MaxMarkerSpriteCacheEntries = 2048;
         private const int ImmediateUnderUiBarThreshold = 48;
         private const int ImmediateUnderUiTextThreshold = 48;
-        private const int DeferredLargeTextChunkSize = 128;
-        private const int DeferredLargeTextChunksPerFrame = 1;
         private const int TextBatchBucketsPerBlob = 256;
         private static readonly PresentationOverlayItemKind[] RenderOrder =
         {
@@ -59,15 +57,13 @@ namespace Ludots.Presentation.Skia
         private readonly int[] _laneVersions = new int[LaneCount];
         private readonly float[] _lanePictureOffsetsX = new float[LaneCount];
         private readonly float[] _lanePictureOffsetsY = new float[LaneCount];
-        private readonly LargeTextLaneState[] _largeTextLaneStates = new LargeTextLaneState[LaneCount];
         private readonly StringBuilder _runText = new();
 
         public SkiaOverlayRenderer()
         {
             Array.Fill(_laneVersions, -1);
-            for (int i = 0; i < _largeTextLaneStates.Length; i++)
+            for (int i = 0; i < LaneCount; i++)
             {
-                _largeTextLaneStates[i] = new LargeTextLaneState();
                 _retainedBarLanes[i] = new RetainedBarLaneState();
                 _retainedTextSpriteLanes[i] = new RetainedTextSpriteLaneState();
             }
@@ -319,11 +315,6 @@ namespace Ludots.Presentation.Skia
             ReadOnlySpan<PresentationOverlayItem> span = scene.GetLaneSpan(layer, kind);
             if (span.Length == 0)
             {
-                if (kind == PresentationOverlayItemKind.Text)
-                {
-                    ClearLargeTextLaneState(laneIndex);
-                }
-
                 if (_laneVersions[laneIndex] != laneVersion)
                 {
                     InvalidateLanePicture(laneIndex);
@@ -344,11 +335,6 @@ namespace Ludots.Presentation.Skia
             {
                 RenderPacedLargeLane(scene, canvas, layer, kind, laneIndex, laneVersion, span, refreshDirtyLane);
                 return;
-            }
-
-            if (kind == PresentationOverlayItemKind.Text)
-            {
-                ClearLargeTextLaneState(laneIndex);
             }
 
             if (isLargeUnderUiLane)
@@ -427,7 +413,6 @@ namespace Ludots.Presentation.Skia
             {
                 _lanePictures[i]?.Dispose();
                 _lanePictures[i] = null;
-                _largeTextLaneStates[i].Clear();
                 _retainedBarLanes[i].DisposeAtlas();
                 _retainedTextSpriteLanes[i].DisposeAtlas();
             }
@@ -695,12 +680,6 @@ namespace Ludots.Presentation.Skia
         {
             if (_laneVersions[laneIndex] == laneVersion)
             {
-                if (kind == PresentationOverlayItemKind.Text)
-                {
-                    RenderDeferredLargeTextLane(canvas, laneIndex, laneVersion, span, allowRefresh: true);
-                    return;
-                }
-
                 DrawLanePictureOrHotpath(canvas, kind, laneIndex, span);
                 return;
             }
@@ -1347,58 +1326,6 @@ namespace Ludots.Presentation.Skia
             RebuiltLaneCountLastFrame++;
         }
 
-        private void RenderDeferredLargeTextLane(
-            SKCanvas canvas,
-            int laneIndex,
-            int laneVersion,
-            ReadOnlySpan<PresentationOverlayItem> span,
-            bool allowRefresh)
-        {
-            LargeTextLaneState state = _largeTextLaneStates[laneIndex];
-            int chunkCount = (span.Length + DeferredLargeTextChunkSize - 1) / DeferredLargeTextChunkSize;
-            bool requiresFullReset = state.ChunkCount != chunkCount;
-            state.EnsureChunkCapacity(chunkCount);
-
-            if (requiresFullReset)
-            {
-                state.InvalidateAll();
-            }
-
-            if (state.HasMissingChunks)
-            {
-                for (int chunkIndex = 0; chunkIndex < chunkCount; chunkIndex++)
-                {
-                    RebuildDeferredLargeTextChunk(state, chunkIndex, laneVersion, span);
-                }
-            }
-            else if (allowRefresh)
-            {
-                int rebuiltChunkCount = 0;
-                while (rebuiltChunkCount < DeferredLargeTextChunksPerFrame)
-                {
-                    int chunkIndex = state.FindNextStaleChunk(laneVersion);
-                    if (chunkIndex < 0)
-                    {
-                        break;
-                    }
-
-                    RebuildDeferredLargeTextChunk(state, chunkIndex, laneVersion, span);
-                    rebuiltChunkCount++;
-                }
-            }
-
-            for (int chunkIndex = 0; chunkIndex < chunkCount; chunkIndex++)
-            {
-                SKPicture? picture = state.GetPicture(chunkIndex);
-                if (picture == null)
-                {
-                    continue;
-                }
-
-                canvas.DrawPicture(picture);
-            }
-        }
-
         private void DrawTextDirect(SKCanvas canvas, ReadOnlySpan<PresentationOverlayItem> span)
         {
             uint currentColorKey = uint.MaxValue;
@@ -1857,26 +1784,6 @@ namespace Ludots.Presentation.Skia
 
             state.AtlasImage = surface.Snapshot();
             state.AtlasDirty = false;
-        }
-
-        private void RebuildDeferredLargeTextChunk(
-            LargeTextLaneState state,
-            int chunkIndex,
-            int laneVersion,
-            ReadOnlySpan<PresentationOverlayItem> span)
-        {
-            int start = chunkIndex * DeferredLargeTextChunkSize;
-            int length = Math.Min(DeferredLargeTextChunkSize, span.Length - start);
-            using var recorder = new SKPictureRecorder();
-            SKCanvas pictureCanvas = recorder.BeginRecording(new SKRect(-1f, -1f, 4096f, 4096f));
-            DrawTextBatched(pictureCanvas, span.Slice(start, length));
-            SKPicture? picture = recorder.EndRecording();
-            state.SetChunk(chunkIndex, picture, laneVersion);
-        }
-
-        private void ClearLargeTextLaneState(int laneIndex)
-        {
-            _largeTextLaneStates[laneIndex].Clear();
         }
 
         private void ClearTextLayoutCache()
@@ -3287,102 +3194,5 @@ namespace Ludots.Presentation.Skia
             }
         }
 
-        private sealed class LargeTextLaneState
-        {
-            private SKPicture?[] _pictures = Array.Empty<SKPicture?>();
-            private int[] _versions = Array.Empty<int>();
-
-            public int ChunkCount { get; private set; }
-
-            public int NextChunkCursor { get; private set; }
-
-            public bool HasMissingChunks
-            {
-                get
-                {
-                    for (int i = 0; i < ChunkCount; i++)
-                    {
-                        if (_pictures[i] == null)
-                        {
-                            return true;
-                        }
-                    }
-
-                    return false;
-                }
-            }
-
-            public void EnsureChunkCapacity(int required)
-            {
-                if (_pictures.Length < required)
-                {
-                    Array.Resize(ref _pictures, required);
-                    Array.Resize(ref _versions, required);
-                }
-
-                ChunkCount = required;
-                if (NextChunkCursor >= ChunkCount)
-                {
-                    NextChunkCursor = 0;
-                }
-            }
-
-            public int FindNextStaleChunk(int version)
-            {
-                if (ChunkCount <= 0)
-                {
-                    return -1;
-                }
-
-                for (int offset = 0; offset < ChunkCount; offset++)
-                {
-                    int index = (NextChunkCursor + offset) % ChunkCount;
-                    if (_pictures[index] == null || _versions[index] != version)
-                    {
-                        NextChunkCursor = (index + 1) % ChunkCount;
-                        return index;
-                    }
-                }
-
-                return -1;
-            }
-
-            public SKPicture? GetPicture(int chunkIndex)
-            {
-                return _pictures[chunkIndex];
-            }
-
-            public void SetChunk(int chunkIndex, SKPicture? picture, int version)
-            {
-                _pictures[chunkIndex]?.Dispose();
-                _pictures[chunkIndex] = picture;
-                _versions[chunkIndex] = version;
-            }
-
-            public void InvalidateAll()
-            {
-                for (int i = 0; i < ChunkCount; i++)
-                {
-                    _versions[i] = -1;
-                    _pictures[i]?.Dispose();
-                    _pictures[i] = null;
-                }
-
-                NextChunkCursor = 0;
-            }
-
-            public void Clear()
-            {
-                for (int i = 0; i < _pictures.Length; i++)
-                {
-                    _pictures[i]?.Dispose();
-                    _pictures[i] = null;
-                    _versions[i] = 0;
-                }
-
-                ChunkCount = 0;
-                NextChunkCursor = 0;
-            }
-        }
     }
 }

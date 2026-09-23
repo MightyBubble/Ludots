@@ -1,0 +1,47 @@
+[INF][Engine] Initializing with ConfigPipeline...
+[INF][Engine] Applying launcher-resolved mod plan: fingerprint=75ec8cb9585dbf2ae7eeededec99c6d8a0f24f5a5bd477465d7f3ac5c4c025a1, schema=1, mods=5
+[INF][ModLoader] Resolved Mod Load Order (launcher graph):
+[INF][ModLoader] - LudotsCoreMod (P:-1000)
+[INF][ModLoader] - CoreInputMod (P:0)
+[INF][ModLoader] - MassNavigationMod (P:0)
+[INF][ModLoader] - CapabilityStandardMassNavigationLargeWorld10kMod (P:-2000)
+[INF][ModLoader] - AgentBridgeMod (P:950)
+[INF][ModLoader] Loading DLL for LudotsCoreMod at C:\001_AI\Ludots-gpuskinned-perf\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll
+[INF][ModLoader] Scanning 2 types in assembly...
+[INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+[INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+[INF][ModLoader] LudotsCoreMod OnLoad completed.
+[INF][ModLoader] Loaded LudotsCoreMod
+[INF][ModLoader] Loading DLL for CoreInputMod at C:\001_AI\Ludots-gpuskinned-perf\mods\CoreInputMod\bin\net9.0\CoreInputMod.dll
+[INF][ModLoader] Scanning 33 types in assembly...
+[INF][ModLoader] Instantiated entry for CoreInputMod. Calling OnLoad...
+[INF][Mod.CoreInputMod] [CoreInputMod] Loaded - generic command-source and GAS input
+[INF][ModLoader] CoreInputMod OnLoad completed.
+[INF][ModLoader] Loaded CoreInputMod
+[INF][ModLoader] Loading DLL for MassNavigationMod at C:\001_AI\Ludots-gpuskinned-perf\mods\capabilities\navigation\MassNavigationMod\bin\net9.0\MassNavigationMod.dll
+[INF][ModLoader] Scanning 2 types in assembly...
+[INF][ModLoader] Instantiated entry for MassNavigationMod. Calling OnLoad...
+[INF][Mod.MassNavigationMod] [MassNavigationMod] Loaded MassNavigation assets and MovePlan order adapter.
+[INF][ModLoader] MassNavigationMod OnLoad completed.
+[INF][ModLoader] Loaded MassNavigationMod
+[INF][ModLoader] Loading DLL for CapabilityStandardMassNavigationLargeWorld10kMod at C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\capability_standard\CapabilityStandardMassNavigationLargeWorld10kMod\bin\net9.0\CapabilityStandardMassNavigationLargeWorld10kMod.dll
+[INF][ModLoader] Scanning 4 types in assembly...
+[INF][ModLoader] Instantiated entry for CapabilityStandardMassNavigationLargeWorld10kMod. Calling OnLoad...
+[INF][Mod.CapabilityStandardMassNavigationLargeWorld10kMod] [CapabilityStandardMassNavigationLargeWorld10kMod] Loaded
+[INF][ModLoader] CapabilityStandardMassNavigationLargeWorld10kMod OnLoad completed.
+[INF][ModLoader] Loaded CapabilityStandardMassNavigationLargeWorld10kMod
+[INF][ModLoader] Loading DLL for AgentBridgeMod at C:\001_AI\Ludots-gpuskinned-perf\mods\AgentBridgeMod\bin\net9.0\AgentBridgeMod.dll
+[INF][ModLoader] Scanning 3 types in assembly...
+[INF][ModLoader] Instantiated entry for AgentBridgeMod. Calling OnLoad...
+[INF][ModLoader] AgentBridgeMod OnLoad completed.
+[INF][ModLoader] Loaded AgentBridgeMod
+[INF][Config] Merged fragment from: Core:game.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/game.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/game.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json
+[INF][Engine] Merged GameConfig: StartupMapId=mass_navigation, DefaultCoreMod=LudotsCoreMod
+[INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3

@@ -1,0 +1,10 @@
+System.OutOfMemoryException: Exception of type 'System.OutOfMemoryException' was thrown.
+   at Ludots.Core.Physics.PhysicsWorld.Initialize(Int32 widthInChunks, Int32 heightInChunks) in C:\001_AI\Ludots-gpuskinned-perf\src\Core\Physics\PhysicsWorld.cs:line 32
+   at Ludots.Core.Physics.PhysicsWorld..ctor(Int32 widthInChunks, Int32 heightInChunks) in C:\001_AI\Ludots-gpuskinned-perf\src\Core\Physics\PhysicsWorld.cs:line 25
+   at Ludots.Core.Engine.GameEngine.InitializeWorld(Int32 widthInMacroTiles, Int32 heightInMacroTiles) in C:\001_AI\Ludots-gpuskinned-perf\src\Core\Engine\GameEngine.cs:line 760
+   at Ludots.Core.Engine.GameEngine.InitializeWithConfigPipelineInternal(List`1 modPaths, ResolvedModLoadPlan modPlan, String assetsRoot) in C:\001_AI\Ludots-gpuskinned-perf\src\Core\Engine\GameEngine.cs:line 540
+   at Ludots.Core.Engine.GameEngine.InitializeWithConfigPipeline(ResolvedModLoadPlan modPlan, String assetsRoot) in C:\001_AI\Ludots-gpuskinned-perf\src\Core\Engine\GameEngine.cs:line 415
+   at Ludots.Core.Hosting.GameBootstrapper.InitializeFromBaseDirectory(String baseDirectory, String gameConfigFile) in C:\001_AI\Ludots-gpuskinned-perf\src\Core\Hosting\GameBootstrapper.cs:line 102
+   at Ludots.Adapter.Raylib.RaylibHostComposer.Compose(String baseDir, String gameConfigFile, Action`1 configure) in C:\001_AI\Ludots-gpuskinned-perf\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibHostComposer.cs:line 47
+   at Ludots.Adapter.Raylib.RaylibAppHost.Initialize(AppInitContext context) in C:\001_AI\Ludots-gpuskinned-perf\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibAppHost.cs:line 61
+   at Program.<Main>$(String[] args) in C:\001_AI\Ludots-gpuskinned-perf\src\Apps\Raylib\Ludots.App.Raylib\Program.cs:line 24

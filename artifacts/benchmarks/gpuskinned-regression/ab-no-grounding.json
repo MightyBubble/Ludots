@@ -1,0 +1,143 @@
+{
+  "profile": "no-grounding",
+  "commit": "a20892f0ebf1db55f0414e84d4e2eb99ae69350a",
+  "rounds": 3,
+  "warmupSeconds": 8,
+  "sampleSeconds": 4,
+  "windowsPerRound": 4,
+  "medianFps": 36.896852082738796,
+  "samples": [
+    {
+      "round": 1,
+      "window": 1,
+      "elapsedSeconds": 4.0250992,
+      "frames": 147.0,
+      "fps": 36.52083903919685,
+      "processCpuMs": 6718.75,
+      "workingSetBytes": 2814189568,
+      "pumpStart": 288,
+      "pumpEnd": 435
+    },
+    {
+      "round": 1,
+      "window": 2,
+      "elapsedSeconds": 4.0231206,
+      "frames": 146.0,
+      "fps": 36.29023698668143,
+      "processCpuMs": 5187.5,
+      "workingSetBytes": 2814189568,
+      "pumpStart": 437,
+      "pumpEnd": 583
+    },
+    {
+      "round": 1,
+      "window": 3,
+      "elapsedSeconds": 4.0111823,
+      "frames": 148.0,
+      "fps": 36.896852082738796,
+      "processCpuMs": 6250.0,
+      "workingSetBytes": 2814189568,
+      "pumpStart": 584,
+      "pumpEnd": 732
+    },
+    {
+      "round": 1,
+      "window": 4,
+      "elapsedSeconds": 4.0066566,
+      "frames": 146.0,
+      "fps": 36.43935943998794,
+      "processCpuMs": 5640.625,
+      "workingSetBytes": 2814189568,
+      "pumpStart": 732,
+      "pumpEnd": 878
+    },
+    {
+      "round": 2,
+      "window": 1,
+      "elapsedSeconds": 4.0173693,
+      "frames": 153.0,
+      "fps": 38.084624184288955,
+      "processCpuMs": 6484.375,
+      "workingSetBytes": 2792292352,
+      "pumpStart": 279,
+      "pumpEnd": 432
+    },
+    {
+      "round": 2,
+      "window": 2,
+      "elapsedSeconds": 4.0101464,
+      "frames": 153.0,
+      "fps": 38.15322054077627,
+      "processCpuMs": 6359.375,
+      "workingSetBytes": 2792292352,
+      "pumpStart": 433,
+      "pumpEnd": 586
+    },
+    {
+      "round": 2,
+      "window": 3,
+      "elapsedSeconds": 4.0070884,
+      "frames": 153.0,
+      "fps": 38.18233708045972,
+      "processCpuMs": 5765.625,
+      "workingSetBytes": 2792292352,
+      "pumpStart": 586,
+      "pumpEnd": 739
+    },
+    {
+      "round": 2,
+      "window": 4,
+      "elapsedSeconds": 4.0069258,
+      "frames": 153.0,
+      "fps": 38.18388650970277,
+      "processCpuMs": 6406.25,
+      "workingSetBytes": 2792292352,
+      "pumpStart": 739,
+      "pumpEnd": 892
+    },
+    {
+      "round": 3,
+      "window": 1,
+      "elapsedSeconds": 4.0220551,
+      "frames": 147.0,
+      "fps": 36.54847990521065,
+      "processCpuMs": 5875.0,
+      "workingSetBytes": 2799104000,
+      "pumpStart": 282,
+      "pumpEnd": 429
+    },
+    {
+      "round": 3,
+      "window": 2,
+      "elapsedSeconds": 4.0186349,
+      "frames": 146.0,
+      "fps": 36.33074504976802,
+      "processCpuMs": 6625.0,
+      "workingSetBytes": 2799104000,
+      "pumpStart": 430,
+      "pumpEnd": 576
+    },
+    {
+      "round": 3,
+      "window": 3,
+      "elapsedSeconds": 4.0149945,
+      "frames": 148.0,
+      "fps": 36.86181886425996,
+      "processCpuMs": 6531.25,
+      "workingSetBytes": 2799104000,
+      "pumpStart": 576,
+      "pumpEnd": 724
+    },
+    {
+      "round": 3,
+      "window": 4,
+      "elapsedSeconds": 4.0066576,
+      "frames": 149.0,
+      "fps": 37.1881041195035,
+      "processCpuMs": 7265.625,
+      "workingSetBytes": 2799104000,
+      "pumpStart": 725,
+      "pumpEnd": 874
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll (.NETCoreApp,Version=v9.0)的测试运行
+VSTest 版本 17.14.1 (x64)
+
+正在启动测试执行，请稍候...
+总共 1 个测试文件与指定模式相匹配。
+NUnit Adapter 4.6.0.0: Test execution started
+Running selected tests in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll
+   NUnit3TestExecutor discovered 5 of 5 NUnit test cases using Current Discovery mode, Non-Explicit run
+NUnit Adapter 4.6.0.0: Test execution complete
+  失败 RetainedLane_PartialMovement_DoesNotTranslateStationaryItems(Text) [121 ms]
+  错误消息:
+     partial-Text-frame-3: retained HUD must draw the same positions as a fresh render of this frame
+Assert.That(equal, Is.True)
+  Expected: True
+  But was:  False
+
+  堆栈跟踪:
+     at Ludots.Tests.Presentation.HudFrameConsistencyTests.AssertSamePixels(SKSurface actual, SKSurface expected, String name) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\HudFrameConsistencyTests.cs:line 114
+   at Ludots.Tests.Presentation.HudFrameConsistencyTests.RetainedLane_PartialMovement_DoesNotTranslateStationaryItems(PresentationOverlayItemKind kind) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\HudFrameConsistencyTests.cs:line 94
+
+1)    at Ludots.Tests.Presentation.HudFrameConsistencyTests.AssertSamePixels(SKSurface actual, SKSurface expected, String name) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\HudFrameConsistencyTests.cs:line 114
+   at Ludots.Tests.Presentation.HudFrameConsistencyTests.RetainedLane_PartialMovement_DoesNotTranslateStationaryItems(PresentationOverlayItemKind kind) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\HudFrameConsistencyTests.cs:line 94
+
+
+  失败 RetainedLane_PartialMovement_DoesNotTranslateStationaryItems(Bar) [25 ms]
+  错误消息:
+     partial-Bar-frame-3: retained HUD must draw the same positions as a fresh render of this frame
+Assert.That(equal, Is.True)
+  Expected: True
+  But was:  False
+
+  堆栈跟踪:
+     at Ludots.Tests.Presentation.HudFrameConsistencyTests.AssertSamePixels(SKSurface actual, SKSurface expected, String name) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\HudFrameConsistencyTests.cs:line 114
+   at Ludots.Tests.Presentation.HudFrameConsistencyTests.RetainedLane_PartialMovement_DoesNotTranslateStationaryItems(PresentationOverlayItemKind kind) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\HudFrameConsistencyTests.cs:line 94
+   at InvokeStub_HudFrameConsistencyTests.RetainedLane_PartialMovement_DoesNotTranslateStationaryItems(Object, Span`1)
+
+1)    at Ludots.Tests.Presentation.HudFrameConsistencyTests.AssertSamePixels(SKSurface actual, SKSurface expected, String name) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\HudFrameConsistencyTests.cs:line 114
+   at Ludots.Tests.Presentation.HudFrameConsistencyTests.RetainedLane_PartialMovement_DoesNotTranslateStationaryItems(PresentationOverlayItemKind kind) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\HudFrameConsistencyTests.cs:line 94
+   at InvokeStub_HudFrameConsistencyTests.RetainedLane_PartialMovement_DoesNotTranslateStationaryItems(Object, Span`1)
+
+
+  失败 RetainedText_MoveThenHold_MatchesCurrentFrame(1000) [32 ms]
+  错误消息:
+     move-hold-1000-frame-3: retained HUD must draw the same positions as a fresh render of this frame
+Assert.That(equal, Is.True)
+  Expected: True
+  But was:  False
+
+  堆栈跟踪:
+     at Ludots.Tests.Presentation.HudFrameConsistencyTests.AssertSamePixels(SKSurface actual, SKSurface expected, String name) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\HudFrameConsistencyTests.cs:line 114
+   at Ludots.Tests.Presentation.HudFrameConsistencyTests.RetainedText_MoveThenHold_MatchesCurrentFrame(Int32 count) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\HudFrameConsistencyTests.cs:line 45
+
+1)    at Ludots.Tests.Presentation.HudFrameConsistencyTests.AssertSamePixels(SKSurface actual, SKSurface expected, String name) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\HudFrameConsistencyTests.cs:line 114
+   at Ludots.Tests.Presentation.HudFrameConsistencyTests.RetainedText_MoveThenHold_MatchesCurrentFrame(Int32 count) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\HudFrameConsistencyTests.cs:line 45
+
+
+  失败 RetainedText_MoveThenHold_MatchesCurrentFrame(5000) [45 ms]
+  错误消息:
+     move-hold-5000-frame-3: retained HUD must draw the same positions as a fresh render of this frame
+Assert.That(equal, Is.True)
+  Expected: True
+  But was:  False
+
+  堆栈跟踪:
+     at Ludots.Tests.Presentation.HudFrameConsistencyTests.AssertSamePixels(SKSurface actual, SKSurface expected, String name) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\HudFrameConsistencyTests.cs:line 114
+   at Ludots.Tests.Presentation.HudFrameConsistencyTests.RetainedText_MoveThenHold_MatchesCurrentFrame(Int32 count) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\HudFrameConsistencyTests.cs:line 45
+   at InvokeStub_HudFrameConsistencyTests.RetainedText_MoveThenHold_MatchesCurrentFrame(Object, Span`1)
+
+1)    at Ludots.Tests.Presentation.HudFrameConsistencyTests.AssertSamePixels(SKSurface actual, SKSurface expected, String name) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\HudFrameConsistencyTests.cs:line 114
+   at Ludots.Tests.Presentation.HudFrameConsistencyTests.RetainedText_MoveThenHold_MatchesCurrentFrame(Int32 count) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\HudFrameConsistencyTests.cs:line 45
+   at InvokeStub_HudFrameConsistencyTests.RetainedText_MoveThenHold_MatchesCurrentFrame(Object, Span`1)
+
+
+  失败 RetainedText_MoveThenHold_MatchesCurrentFrame(10000) [37 ms]
+  错误消息:
+     move-hold-10000-frame-3: retained HUD must draw the same positions as a fresh render of this frame
+Assert.That(equal, Is.True)
+  Expected: True
+  But was:  False
+
+  堆栈跟踪:
+     at Ludots.Tests.Presentation.HudFrameConsistencyTests.AssertSamePixels(SKSurface actual, SKSurface expected, String name) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\HudFrameConsistencyTests.cs:line 114
+   at Ludots.Tests.Presentation.HudFrameConsistencyTests.RetainedText_MoveThenHold_MatchesCurrentFrame(Int32 count) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\HudFrameConsistencyTests.cs:line 45
+   at InvokeStub_HudFrameConsistencyTests.RetainedText_MoveThenHold_MatchesCurrentFrame(Object, Span`1)
+
+1)    at Ludots.Tests.Presentation.HudFrameConsistencyTests.AssertSamePixels(SKSurface actual, SKSurface expected, String name) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\HudFrameConsistencyTests.cs:line 114
+   at Ludots.Tests.Presentation.HudFrameConsistencyTests.RetainedText_MoveThenHold_MatchesCurrentFrame(Int32 count) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\HudFrameConsistencyTests.cs:line 45
+   at InvokeStub_HudFrameConsistencyTests.RetainedText_MoveThenHold_MatchesCurrentFrame(Object, Span`1)
+
+
+
+测试总数: 5
+     失败数: 5
+测试运行失败。
+总时间: 0.8542 秒
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。

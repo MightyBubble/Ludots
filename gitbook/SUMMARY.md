@@ -89,6 +89,8 @@
   - [空间尺度与分辨率 SSOT](architecture/spatial-scale-and-resolution-ssot.md)
   - [Core Field2D](architecture/core-field2d.md)
   - [MapField 作者手册](architecture/mapfield-howto.md)
+  - [Region Volume 教科书](architecture/region-volume-textbook.md)
+  - [接触发射合同](architecture/contact-emission.md)
   - [Field Editor CLI](architecture/field-editor.md)
   - [Global Field Rendering](architecture/global-field-rendering.md)
   - [Presenter-as-Actor 架构设计](architecture/presenter-as-actor-architecture.md)

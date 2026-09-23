@@ -1,0 +1,40 @@
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll (.NETCoreApp,Version=v9.0)的测试运行
+VSTest 版本 17.14.1 (x64)
+
+正在启动测试执行，请稍候...
+总共 1 个测试文件与指定模式相匹配。
+NUnit Adapter 4.6.0.0: Test execution started
+Running selected tests in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll
+   NUnit3TestExecutor discovered 2 of 2 NUnit test cases using Current Discovery mode, Non-Explicit run
+NUnit Adapter 4.6.0.0: Test execution complete
+  失败 WorldHudPresentBehavior_ProjectionChecksAllocateZeroAfterWarmup [78 ms]
+  错误消息:
+     Assert.That(allocated, Is.EqualTo(0))
+  Expected: 0
+  But was:  24
+
+  堆栈跟踪:
+     at Ludots.Tests.Presentation.PresentationFoundationTests.WorldHudPresentBehavior_ProjectionChecksAllocateZeroAfterWarmup() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\PresentationFoundationTests.cs:line 1270
+
+1)    at Ludots.Tests.Presentation.PresentationFoundationTests.WorldHudPresentBehavior_ProjectionChecksAllocateZeroAfterWarmup() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\PresentationFoundationTests.cs:line 1270
+
+
+  失败 PresentationTextCatalogLoader_Fails_OnDuplicateTokenId_AcrossSources [56 ms]
+  错误消息:
+     Assert.That(caughtException, expression)
+  Expected: <System.InvalidOperationException>
+  But was:  null
+
+  堆栈跟踪:
+     at Ludots.Tests.Presentation.PresentationTextContractTests.PresentationTextCatalogLoader_Fails_OnDuplicateTokenId_AcrossSources() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\PresentationTextContractTests.cs:line 262
+
+1)    at Ludots.Tests.Presentation.PresentationTextContractTests.PresentationTextCatalogLoader_Fails_OnDuplicateTokenId_AcrossSources() in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\Core\PresentationTextContractTests.cs:line 262
+
+
+
+测试总数: 2
+     失败数: 2
+测试运行失败。
+总时间: 0.9363 秒
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。

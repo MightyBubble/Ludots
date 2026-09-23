@@ -1,0 +1,529 @@
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll (.NETCoreApp,Version=v9.0)的测试运行
+VSTest 版本 17.14.1 (x64)
+
+正在启动测试执行，请稍候...
+总共 1 个测试文件与指定模式相匹配。
+NUnit Adapter 4.6.0.0: Test execution started
+Running selected tests in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\PresentationTests\bin\Release\net9.0\PresentationTests.dll
+   NUnit3TestExecutor discovered 3 of 3 NUnit test cases using Current Discovery mode, Non-Explicit run
+ORDERSRC bind failed actor=Entity = { Id = 0, WorldId = 0, Version = 0 }
+[INF][Engine] Initializing with ConfigPipeline...
+[INF][Engine] Resolving mod dependencies from explicit mod paths: mods=4
+[INF][ModLoader] Mod Load Order:
+[INF][ModLoader] - LudotsCoreMod (P:-1000)
+[INF][ModLoader] - CoreInputMod (P:0)
+[INF][ModLoader] - MassNavigationMod (P:0)
+[INF][ModLoader] - CapabilityStandardMassNavigationLargeWorld10kMod (P:-2000)
+[INF][ModLoader] Resolved Mod Load Order (launcher graph):
+[INF][ModLoader] - LudotsCoreMod (P:-1000)
+[INF][ModLoader] - CoreInputMod (P:0)
+[INF][ModLoader] - MassNavigationMod (P:0)
+[INF][ModLoader] - CapabilityStandardMassNavigationLargeWorld10kMod (P:-2000)
+[INF][ModLoader] Loading DLL for LudotsCoreMod at C:\001_AI\Ludots-gpuskinned-perf\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll
+[INF][ModLoader] Scanning 2 types in assembly...
+[INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+[INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+[INF][ModLoader] LudotsCoreMod OnLoad completed.
+[INF][ModLoader] Loaded LudotsCoreMod
+[INF][ModLoader] Loading DLL for CoreInputMod at C:\001_AI\Ludots-gpuskinned-perf\mods\CoreInputMod\bin\net9.0\CoreInputMod.dll
+[INF][ModLoader] Scanning 33 types in assembly...
+[INF][ModLoader] Instantiated entry for CoreInputMod. Calling OnLoad...
+[INF][Mod.CoreInputMod] [CoreInputMod] Loaded - generic command-source and GAS input
+[INF][ModLoader] CoreInputMod OnLoad completed.
+[INF][ModLoader] Loaded CoreInputMod
+[INF][ModLoader] Loading DLL for MassNavigationMod at C:\001_AI\Ludots-gpuskinned-perf\mods\capabilities\navigation\MassNavigationMod\bin\net9.0\MassNavigationMod.dll
+[INF][ModLoader] Scanning 2 types in assembly...
+[INF][ModLoader] Instantiated entry for MassNavigationMod. Calling OnLoad...
+[INF][Mod.MassNavigationMod] [MassNavigationMod] Loaded MassNavigation assets and MovePlan order adapter.
+[INF][ModLoader] MassNavigationMod OnLoad completed.
+[INF][ModLoader] Loaded MassNavigationMod
+[INF][ModLoader] Loading DLL for CapabilityStandardMassNavigationLargeWorld10kMod at C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\capability_standard\CapabilityStandardMassNavigationLargeWorld10kMod\bin\net9.0\CapabilityStandardMassNavigationLargeWorld10kMod.dll
+[INF][ModLoader] Scanning 4 types in assembly...
+[INF][ModLoader] Instantiated entry for CapabilityStandardMassNavigationLargeWorld10kMod. Calling OnLoad...
+[INF][Mod.CapabilityStandardMassNavigationLargeWorld10kMod] [CapabilityStandardMassNavigationLargeWorld10kMod] Loaded
+[INF][ModLoader] CapabilityStandardMassNavigationLargeWorld10kMod OnLoad completed.
+[INF][ModLoader] Loaded CapabilityStandardMassNavigationLargeWorld10kMod
+[INF][Config] Merged fragment from: Core:game.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/game.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/game.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json
+[INF][Engine] Merged GameConfig: StartupMapId=mass_navigation, DefaultCoreMod=LudotsCoreMod
+[INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3
+[INF][Engine] Initializing JobScheduler...
+[INF][Config] Loading DataRegistry<EntityTemplate> from Entities/templates.json...
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Entities/templates.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Entities/templates.json
+[INF][Config] Loaded 16 DataRegistry<EntityTemplate> items.
+[INF][Engine] Initializing Core GAS Systems...
+[INF][Config] Merged fragment from: Core:Engine/clock.json
+[INF][Config] Merged fragment from: Core:Relationships/catalog.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json
+[INF][Config] Merged fragment from: Core:Relationships/control_profiles.json
+[INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json
+[INF][Config] Merged fragment from: Core:GAS/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/solver.json
+[INF][Config] Merged fragment from: Core:Physics2D/kinematic.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/attribute_constraints.json
+[INF][Config] Merged fragment from: Core:Enums/enums.json
+[INF][Config] Merged fragment from: Core:Vision/fog_layers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json
+[INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json
+[INF][Config] Merged fragment from: Core:GAS/graphs.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs.json
+[INF][Config] Merged fragment from: Core:GAS/preset_types.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Progression/scopes.json
+[INF][Config] Merged fragment from: Core:Progression/progressions.json
+[INF][Config] Merged fragment from: Core:Progression/requirements.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: Core:GAS/effects.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/effects.json
+[INF][Config] Merged fragment from: Core:GAS/func_lib.json
+[INF][Config] Merged fragment from: Core:GAS/action_lib.json
+[INF][Config] Merged fragment from: Core:Items/shapes.json
+[INF][Config] Merged fragment from: Core:Items/layouts.json
+[INF][Config] Merged fragment from: Core:Items/definitions.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Panels/panel_templates.json
+[INF][Config] Merged fragment from: Core:Input/filter_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animator_controllers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_clips.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_profiles.json
+[INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: CoreInputMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Input/default_input.json
+[INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json
+[INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json
+[INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Input/command_intent_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json
+[INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json
+[INF][Config] Merged fragment from: Core:Input/control_schemes.json
+[INF][Config] Merged fragment from: Core:Input/interaction_prefs.json
+[INF][Config] Merged fragment from: Core:Input/interaction_modes.json
+[INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json
+[INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json
+[INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json
+[INF][Config] Merged fragment from: Core:AI/behavior_trees.json
+[INF][Config] Merged fragment from: Core:AI/hfsm.json
+[INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json
+[INF][Config] Merged fragment from: Core:Presentation/image_assets.json
+[INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Camera/virtual_cameras.json
+[INF][Config] Merged fragment from: Core:Story/lines.json
+[INF][Config] Merged fragment from: Core:Story/presentation_profiles.json
+[INF][Config] Merged fragment from: Core:Story/speakers.json
+[INF][Config] Merged fragment from: Core:Dialogue/dialogues.json
+[INF][Config] Merged fragment from: Core:Sequencer/sequences.json
+[INF][ModLoader] No registration conflicts detected.
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/host_assets.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Input/default_input.json
+[INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json
+[INF][Engine] Firing GameStart event...
+[LudotsCoreMod] Core systems installed
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+[INF][Mod.CoreInputMod] [CoreInputMod] CommandSourceAcquisition, GasInputResponse, SkillBar, CommandSourceDragOverlay, AbilityAimPresentation, CommandActorMovePathPresentation, TabTarget, ViewMode registered
+[INF][Engine] Loading Map: mass_navigation
+[INF][Map] Loading Map: mass_navigation
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Maps/mass_navigation.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Maps/mass_navigation.json
+[INF][Map] Map 'mass_navigation' loaded.
+[INF][Map] Creating GridBoard 'default' (250x250 macroTiles, cell=100cm)
+[INF][Engine] Created Board 'default' (type=Grid) for map 'mass_navigation'
+[INF][Map] Map 'mass_navigation' pushed to focus (stack depth=1).
+[INF][Engine] ContinuousHeightmap does not cover board 'default' extent 6400000x6400000cm; keeping flat grid terrain.
+[INF][Engine] Created flat grid LogicTerrainField 64000x64000 cells for board 'default'
+[INF][Config] Merged fragment from: Core:Navigation/pathing.json
+[INF][Engine] Pathing bootstrap skipped for map 'mass_navigation': no node-graph board or navmesh query service is loaded.
+[INF][Engine] Creating Entities from MapConfig...
+[INF][Engine] Applied DefaultCamera: yaw=45 pitch=42 dist=14000cm fov=60
+[INF][Config] Merged fragment from: MassNavigationMod:assets/MassNavigationConfig.json
+[INF][Engine] [MassNavigation runtime] Installed mass-navigation runtime.
+[INF][Engine] Firing MapLoaded event for mass_navigation...
+Moving agents=1000 sync median=0.708ms p95=1.152ms; emit median=2.235ms p95=2.567ms; allocated=0 B/frame
+[DEBUG-hud] entity/projection/build/buffer/clear ms: 0.111 / 0.507 / 0.139 / 0.166 / 0.053
+[INF][Engine] Unloading ModLoader contexts...
+[INF][Engine] Disposing JobScheduler...
+
+  已通过 Showcase_MovingAgentsKeepBothHudItemsWithoutAllocating(1000) [4 s]
+ORDERSRC bind failed actor=Entity = { Id = 0, WorldId = 0, Version = 0 }
+[INF][Engine] Initializing with ConfigPipeline...
+[INF][Engine] Resolving mod dependencies from explicit mod paths: mods=4
+[INF][ModLoader] Mod Load Order:
+[INF][ModLoader] - LudotsCoreMod (P:-1000)
+[INF][ModLoader] - CoreInputMod (P:0)
+[INF][ModLoader] - MassNavigationMod (P:0)
+[INF][ModLoader] - CapabilityStandardMassNavigationLargeWorld10kMod (P:-2000)
+[INF][ModLoader] Resolved Mod Load Order (launcher graph):
+[INF][ModLoader] - LudotsCoreMod (P:-1000)
+[INF][ModLoader] - CoreInputMod (P:0)
+[INF][ModLoader] - MassNavigationMod (P:0)
+[INF][ModLoader] - CapabilityStandardMassNavigationLargeWorld10kMod (P:-2000)
+[INF][ModLoader] Loading DLL for LudotsCoreMod at C:\001_AI\Ludots-gpuskinned-perf\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll
+[INF][ModLoader] Scanning 2 types in assembly...
+[INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+[INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+[INF][ModLoader] LudotsCoreMod OnLoad completed.
+[INF][ModLoader] Loaded LudotsCoreMod
+[INF][ModLoader] Loading DLL for CoreInputMod at C:\001_AI\Ludots-gpuskinned-perf\mods\CoreInputMod\bin\net9.0\CoreInputMod.dll
+[INF][ModLoader] Scanning 33 types in assembly...
+[INF][ModLoader] Instantiated entry for CoreInputMod. Calling OnLoad...
+[INF][Mod.CoreInputMod] [CoreInputMod] Loaded - generic command-source and GAS input
+[INF][ModLoader] CoreInputMod OnLoad completed.
+[INF][ModLoader] Loaded CoreInputMod
+[INF][ModLoader] Loading DLL for MassNavigationMod at C:\001_AI\Ludots-gpuskinned-perf\mods\capabilities\navigation\MassNavigationMod\bin\net9.0\MassNavigationMod.dll
+[INF][ModLoader] Scanning 2 types in assembly...
+[INF][ModLoader] Instantiated entry for MassNavigationMod. Calling OnLoad...
+[INF][Mod.MassNavigationMod] [MassNavigationMod] Loaded MassNavigation assets and MovePlan order adapter.
+[INF][ModLoader] MassNavigationMod OnLoad completed.
+[INF][ModLoader] Loaded MassNavigationMod
+[INF][ModLoader] Loading DLL for CapabilityStandardMassNavigationLargeWorld10kMod at C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\capability_standard\CapabilityStandardMassNavigationLargeWorld10kMod\bin\net9.0\CapabilityStandardMassNavigationLargeWorld10kMod.dll
+[INF][ModLoader] Scanning 4 types in assembly...
+[INF][ModLoader] Instantiated entry for CapabilityStandardMassNavigationLargeWorld10kMod. Calling OnLoad...
+[INF][Mod.CapabilityStandardMassNavigationLargeWorld10kMod] [CapabilityStandardMassNavigationLargeWorld10kMod] Loaded
+[INF][ModLoader] CapabilityStandardMassNavigationLargeWorld10kMod OnLoad completed.
+[INF][ModLoader] Loaded CapabilityStandardMassNavigationLargeWorld10kMod
+[INF][Config] Merged fragment from: Core:game.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/game.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/game.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json
+[INF][Engine] Merged GameConfig: StartupMapId=mass_navigation, DefaultCoreMod=LudotsCoreMod
+[INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3
+[INF][Engine] Initializing JobScheduler...
+[INF][Config] Loading DataRegistry<EntityTemplate> from Entities/templates.json...
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Entities/templates.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Entities/templates.json
+[INF][Config] Loaded 16 DataRegistry<EntityTemplate> items.
+[INF][Engine] Initializing Core GAS Systems...
+[INF][Config] Merged fragment from: Core:Engine/clock.json
+[INF][Config] Merged fragment from: Core:Relationships/catalog.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json
+[INF][Config] Merged fragment from: Core:Relationships/control_profiles.json
+[INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json
+[INF][Config] Merged fragment from: Core:GAS/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/solver.json
+[INF][Config] Merged fragment from: Core:Physics2D/kinematic.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/attribute_constraints.json
+[INF][Config] Merged fragment from: Core:Enums/enums.json
+[INF][Config] Merged fragment from: Core:Vision/fog_layers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json
+[INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json
+[INF][Config] Merged fragment from: Core:GAS/graphs.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs.json
+[INF][Config] Merged fragment from: Core:GAS/preset_types.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Progression/scopes.json
+[INF][Config] Merged fragment from: Core:Progression/progressions.json
+[INF][Config] Merged fragment from: Core:Progression/requirements.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: Core:GAS/effects.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/effects.json
+[INF][Config] Merged fragment from: Core:GAS/func_lib.json
+[INF][Config] Merged fragment from: Core:GAS/action_lib.json
+[INF][Config] Merged fragment from: Core:Items/shapes.json
+[INF][Config] Merged fragment from: Core:Items/layouts.json
+[INF][Config] Merged fragment from: Core:Items/definitions.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Panels/panel_templates.json
+[INF][Config] Merged fragment from: Core:Input/filter_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animator_controllers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_clips.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_profiles.json
+[INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: CoreInputMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Input/default_input.json
+[INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json
+[INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json
+[INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Input/command_intent_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json
+[INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json
+[INF][Config] Merged fragment from: Core:Input/control_schemes.json
+[INF][Config] Merged fragment from: Core:Input/interaction_prefs.json
+[INF][Config] Merged fragment from: Core:Input/interaction_modes.json
+[INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json
+[INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json
+[INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json
+[INF][Config] Merged fragment from: Core:AI/behavior_trees.json
+[INF][Config] Merged fragment from: Core:AI/hfsm.json
+[INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json
+[INF][Config] Merged fragment from: Core:Presentation/image_assets.json
+[INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Camera/virtual_cameras.json
+[INF][Config] Merged fragment from: Core:Story/lines.json
+[INF][Config] Merged fragment from: Core:Story/presentation_profiles.json
+[INF][Config] Merged fragment from: Core:Story/speakers.json
+[INF][Config] Merged fragment from: Core:Dialogue/dialogues.json
+[INF][Config] Merged fragment from: Core:Sequencer/sequences.json
+[INF][ModLoader] No registration conflicts detected.
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/host_assets.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Input/default_input.json
+[INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json
+[INF][Engine] Firing GameStart event...
+[LudotsCoreMod] Core systems installed
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+[INF][Mod.CoreInputMod] [CoreInputMod] CommandSourceAcquisition, GasInputResponse, SkillBar, CommandSourceDragOverlay, AbilityAimPresentation, CommandActorMovePathPresentation, TabTarget, ViewMode registered
+[INF][Engine] Loading Map: mass_navigation
+[INF][Map] Loading Map: mass_navigation
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Maps/mass_navigation.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Maps/mass_navigation.json
+[INF][Map] Map 'mass_navigation' loaded.
+[INF][Map] Creating GridBoard 'default' (250x250 macroTiles, cell=100cm)
+[INF][Engine] Created Board 'default' (type=Grid) for map 'mass_navigation'
+[INF][Map] Map 'mass_navigation' pushed to focus (stack depth=1).
+[INF][Engine] ContinuousHeightmap does not cover board 'default' extent 6400000x6400000cm; keeping flat grid terrain.
+[INF][Engine] Created flat grid LogicTerrainField 64000x64000 cells for board 'default'
+[INF][Config] Merged fragment from: Core:Navigation/pathing.json
+[INF][Engine] Pathing bootstrap skipped for map 'mass_navigation': no node-graph board or navmesh query service is loaded.
+[INF][Engine] Creating Entities from MapConfig...
+[INF][Engine] Applied DefaultCamera: yaw=45 pitch=42 dist=14000cm fov=60
+[INF][Config] Merged fragment from: MassNavigationMod:assets/MassNavigationConfig.json
+[INF][Engine] [MassNavigation runtime] Installed mass-navigation runtime.
+[INF][Engine] Firing MapLoaded event for mass_navigation...
+Moving agents=5000 sync median=2.134ms p95=4.137ms; emit median=7.633ms p95=13.566ms; allocated=0 B/frame
+[DEBUG-hud] entity/projection/build/buffer/clear ms: 0.709 / 2.866 / 0.917 / 1.088 / 0.271
+[INF][Engine] Unloading ModLoader contexts...
+[INF][Engine] Disposing JobScheduler...
+
+  已通过 Showcase_MovingAgentsKeepBothHudItemsWithoutAllocating(5000) [2 s]
+ORDERSRC bind failed actor=Entity = { Id = 0, WorldId = 0, Version = 0 }
+[INF][Engine] Initializing with ConfigPipeline...
+[INF][Engine] Resolving mod dependencies from explicit mod paths: mods=4
+[INF][ModLoader] Mod Load Order:
+[INF][ModLoader] - LudotsCoreMod (P:-1000)
+[INF][ModLoader] - CoreInputMod (P:0)
+[INF][ModLoader] - MassNavigationMod (P:0)
+[INF][ModLoader] - CapabilityStandardMassNavigationLargeWorld10kMod (P:-2000)
+[INF][ModLoader] Resolved Mod Load Order (launcher graph):
+[INF][ModLoader] - LudotsCoreMod (P:-1000)
+[INF][ModLoader] - CoreInputMod (P:0)
+[INF][ModLoader] - MassNavigationMod (P:0)
+[INF][ModLoader] - CapabilityStandardMassNavigationLargeWorld10kMod (P:-2000)
+[INF][ModLoader] Loading DLL for LudotsCoreMod at C:\001_AI\Ludots-gpuskinned-perf\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll
+[INF][ModLoader] Scanning 2 types in assembly...
+[INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+[INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+[INF][ModLoader] LudotsCoreMod OnLoad completed.
+[INF][ModLoader] Loaded LudotsCoreMod
+[INF][ModLoader] Loading DLL for CoreInputMod at C:\001_AI\Ludots-gpuskinned-perf\mods\CoreInputMod\bin\net9.0\CoreInputMod.dll
+[INF][ModLoader] Scanning 33 types in assembly...
+[INF][ModLoader] Instantiated entry for CoreInputMod. Calling OnLoad...
+[INF][Mod.CoreInputMod] [CoreInputMod] Loaded - generic command-source and GAS input
+[INF][ModLoader] CoreInputMod OnLoad completed.
+[INF][ModLoader] Loaded CoreInputMod
+[INF][ModLoader] Loading DLL for MassNavigationMod at C:\001_AI\Ludots-gpuskinned-perf\mods\capabilities\navigation\MassNavigationMod\bin\net9.0\MassNavigationMod.dll
+[INF][ModLoader] Scanning 2 types in assembly...
+[INF][ModLoader] Instantiated entry for MassNavigationMod. Calling OnLoad...
+[INF][Mod.MassNavigationMod] [MassNavigationMod] Loaded MassNavigation assets and MovePlan order adapter.
+[INF][ModLoader] MassNavigationMod OnLoad completed.
+[INF][ModLoader] Loaded MassNavigationMod
+[INF][ModLoader] Loading DLL for CapabilityStandardMassNavigationLargeWorld10kMod at C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\capability_standard\CapabilityStandardMassNavigationLargeWorld10kMod\bin\net9.0\CapabilityStandardMassNavigationLargeWorld10kMod.dll
+[INF][ModLoader] Scanning 4 types in assembly...
+[INF][ModLoader] Instantiated entry for CapabilityStandardMassNavigationLargeWorld10kMod. Calling OnLoad...
+[INF][Mod.CapabilityStandardMassNavigationLargeWorld10kMod] [CapabilityStandardMassNavigationLargeWorld10kMod] Loaded
+[INF][ModLoader] CapabilityStandardMassNavigationLargeWorld10kMod OnLoad completed.
+[INF][ModLoader] Loaded CapabilityStandardMassNavigationLargeWorld10kMod
+[INF][Config] Merged fragment from: Core:game.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/game.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/game.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json
+[INF][Engine] Merged GameConfig: StartupMapId=mass_navigation, DefaultCoreMod=LudotsCoreMod
+[INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3
+[INF][Engine] Initializing JobScheduler...
+[INF][Config] Loading DataRegistry<EntityTemplate> from Entities/templates.json...
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Entities/templates.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Entities/templates.json
+[INF][Config] Loaded 16 DataRegistry<EntityTemplate> items.
+[INF][Engine] Initializing Core GAS Systems...
+[INF][Config] Merged fragment from: Core:Engine/clock.json
+[INF][Config] Merged fragment from: Core:Relationships/catalog.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json
+[INF][Config] Merged fragment from: Core:Relationships/control_profiles.json
+[INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json
+[INF][Config] Merged fragment from: Core:GAS/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/solver.json
+[INF][Config] Merged fragment from: Core:Physics2D/kinematic.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/attribute_constraints.json
+[INF][Config] Merged fragment from: Core:Enums/enums.json
+[INF][Config] Merged fragment from: Core:Vision/fog_layers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json
+[INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json
+[INF][Config] Merged fragment from: Core:GAS/graphs.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/graphs.json
+[INF][Config] Merged fragment from: Core:GAS/preset_types.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Progression/scopes.json
+[INF][Config] Merged fragment from: Core:Progression/progressions.json
+[INF][Config] Merged fragment from: Core:Progression/requirements.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: Core:GAS/effects.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/GAS/effects.json
+[INF][Config] Merged fragment from: Core:GAS/func_lib.json
+[INF][Config] Merged fragment from: Core:GAS/action_lib.json
+[INF][Config] Merged fragment from: Core:Items/shapes.json
+[INF][Config] Merged fragment from: Core:Items/layouts.json
+[INF][Config] Merged fragment from: Core:Items/definitions.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Panels/panel_templates.json
+[INF][Config] Merged fragment from: Core:Input/filter_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animator_controllers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_clips.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/animation_profiles.json
+[INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: CoreInputMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Input/default_input.json
+[INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json
+[INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json
+[INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Input/command_intent_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json
+[INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json
+[INF][Config] Merged fragment from: Core:Input/control_schemes.json
+[INF][Config] Merged fragment from: Core:Input/interaction_prefs.json
+[INF][Config] Merged fragment from: Core:Input/interaction_modes.json
+[INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json
+[INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json
+[INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json
+[INF][Config] Merged fragment from: Core:AI/behavior_trees.json
+[INF][Config] Merged fragment from: Core:AI/hfsm.json
+[INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json
+[INF][Config] Merged fragment from: Core:Presentation/image_assets.json
+[INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Camera/virtual_cameras.json
+[INF][Config] Merged fragment from: Core:Story/lines.json
+[INF][Config] Merged fragment from: Core:Story/presentation_profiles.json
+[INF][Config] Merged fragment from: Core:Story/speakers.json
+[INF][Config] Merged fragment from: Core:Dialogue/dialogues.json
+[INF][Config] Merged fragment from: Core:Sequencer/sequences.json
+[INF][ModLoader] No registration conflicts detected.
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Presentation/host_assets.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: MassNavigationMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Input/default_input.json
+[INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json
+[INF][Engine] Firing GameStart event...
+[LudotsCoreMod] Core systems installed
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+[INF][Mod.CoreInputMod] [CoreInputMod] CommandSourceAcquisition, GasInputResponse, SkillBar, CommandSourceDragOverlay, AbilityAimPresentation, CommandActorMovePathPresentation, TabTarget, ViewMode registered
+[INF][Engine] Loading Map: mass_navigation
+[INF][Map] Loading Map: mass_navigation
+[INF][Config] Merged fragment from: MassNavigationMod:assets/Maps/mass_navigation.json
+[INF][Config] Merged fragment from: CapabilityStandardMassNavigationLargeWorld10kMod:assets/Maps/mass_navigation.json
+[INF][Map] Map 'mass_navigation' loaded.
+[INF][Map] Creating GridBoard 'default' (250x250 macroTiles, cell=100cm)
+[INF][Engine] Created Board 'default' (type=Grid) for map 'mass_navigation'
+[INF][Map] Map 'mass_navigation' pushed to focus (stack depth=1).
+[INF][Engine] ContinuousHeightmap does not cover board 'default' extent 6400000x6400000cm; keeping flat grid terrain.
+[INF][Engine] Created flat grid LogicTerrainField 64000x64000 cells for board 'default'
+[INF][Config] Merged fragment from: Core:Navigation/pathing.json
+[INF][Engine] Pathing bootstrap skipped for map 'mass_navigation': no node-graph board or navmesh query service is loaded.
+[INF][Engine] Creating Entities from MapConfig...
+[INF][Engine] Applied DefaultCamera: yaw=45 pitch=42 dist=14000cm fov=60
+[INF][Config] Merged fragment from: MassNavigationMod:assets/MassNavigationConfig.json
+[INF][Engine] [MassNavigation runtime] Installed mass-navigation runtime.
+[INF][Engine] Firing MapLoaded event for mass_navigation...
+Moving agents=10000 sync median=4.008ms p95=5.338ms; emit median=15.784ms p95=17.830ms; allocated=0 B/frame
+[DEBUG-hud] entity/projection/build/buffer/clear ms: 1.500 / 5.824 / 1.803 / 2.763 / 0.540
+[INF][Engine] Unloading ModLoader contexts...
+[INF][Engine] Disposing JobScheduler...
+
+NUnit Adapter 4.6.0.0: Test execution complete
+  已通过 Showcase_MovingAgentsKeepBothHudItemsWithoutAllocating(10000) [2 s]
+
+测试运行成功。
+测试总数: 3
+     通过数: 3
+总时间: 10.7728 秒
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。

@@ -1,0 +1,383 @@
+  Ludots.Contracts -> C:\001_AI\Ludots-gpuskinned-perf\src\Contracts\bin\Release\net9.0\Ludots.Contracts.dll
+  Ludots.UI -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Ludots.UI\bin\Release\net9.0\Ludots.UI.dll
+  Ludots.Platform.Abstractions -> C:\001_AI\Ludots-gpuskinned-perf\src\Platform\Ludots.Platform.Abstractions\bin\Release\net9.0\Ludots.Platform.Abstractions.dll
+  Raylib-cs -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Raylib-cs\bin\Release\net9.0\Raylib-cs.dll
+  SkiaSharp -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\SkiaSharp\SkiaSharp\bin\Release\net8.0\SkiaSharp.dll
+  ExCSS -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\ExCSS\bin\Release\net8.0\ExCSS.dll
+  Arch -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Arch\src\Arch\bin\Release\net8.0\Arch.dll
+  Ludots.Graph.Abstractions -> C:\001_AI\Ludots-gpuskinned-perf\src\Graph\Ludots.Graph.Abstractions\bin\Release\net9.0\Ludots.Graph.Abstractions.dll
+  Ludots.UI.Browser -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Ludots.UI.Browser\bin\Release\net9.0\Ludots.UI.Browser.dll
+  ShimSkiaSharp -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Svg.Skia\ShimSkiaSharp\bin\Release\net8.0\ShimSkiaSharp.dll
+  Ludots.Platform.Desktop -> C:\001_AI\Ludots-gpuskinned-perf\src\Platform\Ludots.Platform.Desktop\bin\Release\net9.0\Ludots.Platform.Desktop.dll
+  Arch.System -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Arch.Extended\Arch.System\bin\Release\net7.0\Arch.System.dll
+  Arch -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Arch\src\Arch\bin\Release\net6.0\Arch.dll
+  Svg.Generators -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Svg.Skia\externals\SVG\Generators\bin\Release\netstandard2.0\Svg.Generators.dll
+  Arch.Persistence -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Arch.Extended\Arch.Persistence\bin\Release\net7.0\Arch.Persistence.dll
+  Arch.Relationships -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Arch.Extended\Arch.Relationships\bin\Release\net7.0\Arch.Relationships.dll
+  Svg.Custom -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Svg.Skia\Svg.Custom\bin\Release\net8.0\Svg.Custom.dll
+  DotRecast.Core -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\DotRecast\src\DotRecast.Core\bin\Release\net9.0\DotRecast.Core.dll
+  Svg.Model -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Svg.Skia\Svg.Model\bin\Release\net8.0\Svg.Model.dll
+  DotRecast.Recast -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\DotRecast\src\DotRecast.Recast\bin\Release\net9.0\DotRecast.Recast.dll
+  DotRecast.Detour -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\DotRecast\src\DotRecast.Detour\bin\Release\net9.0\DotRecast.Detour.dll
+  Svg.Skia -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Svg.Skia\Svg.Skia\bin\Release\net8.0\Svg.Skia.dll
+  Ludots.UI.Skia -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Ludots.UI.Skia\bin\Release\net9.0\Ludots.UI.Skia.dll
+  Ludots.Core -> C:\001_AI\Ludots-gpuskinned-perf\src\Core\bin\Release\net9.0\Ludots.Core.dll
+  CameraBootstrapMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\capabilities\camera\CameraBootstrapMod\bin\net9.0\CameraBootstrapMod.dll
+  FourXDemoMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\fourx_demo\FourXDemoMod\bin\net9.0\FourXDemoMod.dll
+  ParticipantViewCapabilityMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\capabilities\participant_view\ParticipantViewCapabilityMod\bin\net9.0\ParticipantViewCapabilityMod.dll
+  CycleBMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\fixtures\cycle_b\CycleBMod\bin\net9.0\CycleBMod.dll
+  VirtualCameraShotsMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\capabilities\camera\VirtualCameraShotsMod\bin\net9.0\VirtualCameraShotsMod.dll
+  SharedVisionSnapshotShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\fog_of_war\SharedVisionSnapshotShowcaseMod\bin\net9.0\SharedVisionSnapshotShowcaseMod.dll
+  ExploredMemoryShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\fog_of_war\ExploredMemoryShowcaseMod\bin\net9.0\ExploredMemoryShowcaseMod.dll
+  TeamResearchShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\team_research\TeamResearchShowcaseMod\bin\net9.0\TeamResearchShowcaseMod.dll
+  AssociationStressShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\association_stress\AssociationStressShowcaseMod\bin\net9.0\AssociationStressShowcaseMod.dll
+  FogVisionDecayShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\fog_vision_decay\FogVisionDecayShowcaseMod\bin\net9.0\FogVisionDecayShowcaseMod.dll
+  Ludots.Graph.Codegen -> C:\001_AI\Ludots-gpuskinned-perf\src\Graph\Ludots.Graph.Codegen\bin\Release\net9.0\Ludots.Graph.Codegen.dll
+  Ludots.Physics.Broadphase -> C:\001_AI\Ludots-gpuskinned-perf\src\Core\Ludots.Physics.Broadphase\bin\Release\net9.0\Ludots.Physics.Broadphase.dll
+  TerrainBenchmarkMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\TerrainBenchmarkMod\bin\net9.0\TerrainBenchmarkMod.dll
+  MissingDepMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\fixtures\missing_dep\MissingDepMod\bin\net9.0\MissingDepMod.dll
+  UtilityAutocastShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\utility_autocast\UtilityAutocastShowcaseMod\bin\net9.0\UtilityAutocastShowcaseMod.dll
+  Ludots.AgentBridge -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Ludots.AgentBridge\bin\Release\net9.0\Ludots.AgentBridge.dll
+  PanelEntityListShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\panel_entity_list\PanelEntityListShowcaseMod\bin\net9.0\PanelEntityListShowcaseMod.dll
+  StealthDetectionShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\fog_of_war\StealthDetectionShowcaseMod\bin\net9.0\StealthDetectionShowcaseMod.dll
+  GapGeneratorShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\fog_of_war\GapGeneratorShowcaseMod\bin\net9.0\GapGeneratorShowcaseMod.dll
+  HtmlTestMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\html_test\HtmlTestMod\bin\net9.0\HtmlTestMod.dll
+  EntityInfoPanelsMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\capabilities\entityinfo\EntityInfoPanelsMod\bin\net9.0\EntityInfoPanelsMod.dll
+  CapabilityStandardTransportNetworkMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\capability_standard\CapabilityStandardTransportNetworkMod\bin\net9.0\CapabilityStandardTransportNetworkMod.dll
+  CoreInputMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\CoreInputMod\bin\net9.0\CoreInputMod.dll
+  ExampleMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\ExampleMod\bin\net9.0\ExampleMod.dll
+  CycleAMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\fixtures\cycle_a\CycleAMod\bin\net9.0\CycleAMod.dll
+  ItemSystemShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\item_system\ItemSystemShowcaseMod\bin\net9.0\ItemSystemShowcaseMod.dll
+  VersionMismatchMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\fixtures\version_mismatch\VersionMismatchMod\bin\net9.0\VersionMismatchMod.dll
+  MassNavigationMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\capabilities\navigation\MassNavigationMod\bin\net9.0\MassNavigationMod.dll
+  CapabilityStandardModExtensibleRuntimeShowcaseShared -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\capability_standard\CapabilityStandardModExtensibleRuntimeShowcaseShared\bin\net9.0\CapabilityStandardModExtensibleRuntimeShowcaseShared.dll
+  UiPlayerAggregateGraphMvpShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\ui_player_aggregate_graph_mvp\UiPlayerAggregateGraphMvpShowcaseMod\bin\net9.0\UiPlayerAggregateGraphMvpShowcaseMod.dll
+  LudotsCoreMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll
+  MultiLayerFogFieldShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\fog_of_war\MultiLayerFogFieldShowcaseMod\bin\net9.0\MultiLayerFogFieldShowcaseMod.dll
+  LineOfSightBrushShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\fog_of_war\LineOfSightBrushShowcaseMod\bin\net9.0\LineOfSightBrushShowcaseMod.dll
+  ScopeSwitchShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\scope_switch\ScopeSwitchShowcaseMod\bin\net9.0\ScopeSwitchShowcaseMod.dll
+  SplineSurfaceUatMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\spline_surface_uat\SplineSurfaceUatMod\bin\net9.0\SplineSurfaceUatMod.dll
+  VisionConeHighGroundShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\fog_of_war\VisionConeHighGroundShowcaseMod\bin\net9.0\VisionConeHighGroundShowcaseMod.dll
+  DepApiMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\fixtures\dep_api\DepApiMod\bin\net9.0\DepApiMod.dll
+  DiplomacyTradeGateShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\diplomacy_trade_gate\DiplomacyTradeGateShowcaseMod\bin\net9.0\DiplomacyTradeGateShowcaseMod.dll
+  DiagnosticsOverlayMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\DiagnosticsOverlayMod\bin\net9.0\DiagnosticsOverlayMod.dll
+  StaticObstaclePhysicsShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\static_obstacle_physics\StaticObstaclePhysicsShowcaseMod\bin\net9.0\StaticObstaclePhysicsShowcaseMod.dll
+  Ludots.WebUI.DataPlane -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Ludots.WebUI.DataPlane\bin\Release\net9.0\Ludots.WebUI.DataPlane.dll
+  DualSeatPanelsShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\dual_seat_panels\DualSeatPanelsShowcaseMod\bin\net9.0\DualSeatPanelsShowcaseMod.dll
+  RtsCncTrainingShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\rts_training_cnc\RtsCncTrainingShowcaseMod\bin\net9.0\RtsCncTrainingShowcaseMod.dll
+  CapabilityStandardGraphBehaviorCommon -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\capability_standard\CapabilityStandardGraphBehaviorCommon\bin\net9.0\CapabilityStandardGraphBehaviorCommon.dll
+  ProgressionScopeShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\progression_scope\ProgressionScopeShowcaseMod\bin\net9.0\ProgressionScopeShowcaseMod.dll
+  OwnershipCascadeShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\ownership_cascade\OwnershipCascadeShowcaseMod\bin\net9.0\OwnershipCascadeShowcaseMod.dll
+  CameraAcceptanceHotpathEntryMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\fixtures\camera\CameraAcceptanceHotpathEntryMod\bin\net9.0\CameraAcceptanceHotpathEntryMod.dll
+  CaseESelectionMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\case_e_selection\CaseESelectionMod\bin\net9.0\CaseESelectionMod.dll
+  FogOfWarShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\fog_of_war\FogOfWarShowcaseMod\bin\net9.0\FogOfWarShowcaseMod.dll
+  RtsSc2TrainingShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\rts_training_sc2\RtsSc2TrainingShowcaseMod\bin\net9.0\RtsSc2TrainingShowcaseMod.dll
+  InteractionShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\interaction\InteractionShowcaseMod\bin\net9.0\InteractionShowcaseMod.dll
+  CameraProfilesMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\capabilities\camera\CameraProfilesMod\bin\net9.0\CameraProfilesMod.dll
+  Ludots.Physics2D -> C:\001_AI\Ludots-gpuskinned-perf\src\Core\Ludots.Physics2D\bin\Release\net9.0\Ludots.Physics2D.dll
+  RtsDemoMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\rts_demo\RtsDemoMod\bin\net9.0\RtsDemoMod.dll
+  CapabilityStandardPresenterCommandExtensionShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\capability_standard\CapabilityStandardPresenterCommandExtensionShowcaseMod\bin\net9.0\CapabilityStandardPresenterCommandExtensionShowcaseMod.dll
+  CapabilityStandardEffectPresetTypeCodeShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\capability_standard\CapabilityStandardEffectPresetTypeCodeShowcaseMod\bin\net9.0\CapabilityStandardEffectPresetTypeCodeShowcaseMod.dll
+  RtsWar3TrainingShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\rts_training_war3\RtsWar3TrainingShowcaseMod\bin\net9.0\RtsWar3TrainingShowcaseMod.dll
+  CapabilityStandardPresenterBehaviorExtensionShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\capability_standard\CapabilityStandardPresenterBehaviorExtensionShowcaseMod\bin\net9.0\CapabilityStandardPresenterBehaviorExtensionShowcaseMod.dll
+  CapabilityStandardGraphOpsNodeGalleryMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\capability_standard\CapabilityStandardGraphOpsNodeGalleryMod\bin\net9.0\CapabilityStandardGraphOpsNodeGalleryMod.dll
+  EntityCommandPanelMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\EntityCommandPanelMod\bin\net9.0\EntityCommandPanelMod.dll
+  CapabilityStandardConfigShardsShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\capability_standard\CapabilityStandardConfigShardsShowcaseMod\bin\net9.0\CapabilityStandardConfigShardsShowcaseMod.dll
+  MobaDemoMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\moba_demo\MobaDemoMod\bin\net9.0\MobaDemoMod.dll
+  CapabilityStandardVirtualCameraShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\capability_standard\CapabilityStandardVirtualCameraShowcaseMod\bin\net9.0\CapabilityStandardVirtualCameraShowcaseMod.dll
+  FourXAssociationShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\fourx_association\FourXAssociationShowcaseMod\bin\net9.0\FourXAssociationShowcaseMod.dll
+  GoldMarketShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\gold_market\GoldMarketShowcaseMod\bin\net9.0\GoldMarketShowcaseMod.dll
+  CapabilityStandardHfsmSentryArenaMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\capability_standard\CapabilityStandardHfsmSentryArenaMod\bin\net9.0\CapabilityStandardHfsmSentryArenaMod.dll
+  CapabilityStandardPhysics2DMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\capability_standard\CapabilityStandardPhysics2DMod\bin\net9.0\CapabilityStandardPhysics2DMod.dll
+  CapabilityStandardAbilityGraphSandboxMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\capability_standard\CapabilityStandardAbilityGraphSandboxMod\bin\net9.0\CapabilityStandardAbilityGraphSandboxMod.dll
+  CapabilityStandardGraphFormalTextShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\capability_standard\CapabilityStandardGraphFormalTextShowcaseMod\bin\net9.0\CapabilityStandardGraphFormalTextShowcaseMod.dll
+  CapabilityStandardPhysics2DShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\capability_standard\CapabilityStandardPhysics2DShowcaseMod\bin\net9.0\CapabilityStandardPhysics2DShowcaseMod.dll
+  CapabilityStandardTimeFlowShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\capability_standard\CapabilityStandardTimeFlowShowcaseMod\bin\net9.0\CapabilityStandardTimeFlowShowcaseMod.dll
+  CapabilityStandardGraphScoreShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\capability_standard\CapabilityStandardGraphScoreShowcaseMod\bin\net9.0\CapabilityStandardGraphScoreShowcaseMod.dll
+  CapabilityStandardBehaviorTreeArenaMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\capability_standard\CapabilityStandardBehaviorTreeArenaMod\bin\net9.0\CapabilityStandardBehaviorTreeArenaMod.dll
+  CameraAcceptanceMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\fixtures\camera\CameraAcceptanceMod\bin\net9.0\CameraAcceptanceMod.dll
+  Ludots.Launcher.Backend -> C:\001_AI\Ludots-gpuskinned-perf\src\Tools\Ludots.Launcher.Backend\bin\Release\net9.0\Ludots.Launcher.Backend.dll
+  CapabilityStandardGraphBehaviorIntegrationMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\capability_standard\CapabilityStandardGraphBehaviorIntegrationMod\bin\net9.0\CapabilityStandardGraphBehaviorIntegrationMod.dll
+  SuperweaponContextShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\superweapon_context\SuperweaponContextShowcaseMod\bin\net9.0\SuperweaponContextShowcaseMod.dll
+  ItemLoadoutShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\item_system\ItemLoadoutShowcaseMod\bin\net9.0\ItemLoadoutShowcaseMod.dll
+  WeaponBenchShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\item_system\WeaponBenchShowcaseMod\bin\net9.0\WeaponBenchShowcaseMod.dll
+  Ludots.Movement.Physics2DBridge -> C:\001_AI\Ludots-gpuskinned-perf\src\Core\Ludots.Movement.Physics2DBridge\bin\Release\net9.0\Ludots.Movement.Physics2DBridge.dll
+  ForgeSocketShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\item_system\ForgeSocketShowcaseMod\bin\net9.0\ForgeSocketShowcaseMod.dll
+  RaidLoopShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\item_system\RaidLoopShowcaseMod\bin\net9.0\RaidLoopShowcaseMod.dll
+  CameraShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\camera\CameraShowcaseMod\bin\net9.0\CameraShowcaseMod.dll
+  RoadNetworkShowcaseData -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\shared\RoadNetworkShowcaseData\bin\net9.0\RoadNetworkShowcaseData.dll
+  CapabilityStandardParticipantViewsMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\capability_standard\CapabilityStandardParticipantViewsMod\bin\net9.0\CapabilityStandardParticipantViewsMod.dll
+  Ludots.WebUI.PanelKit -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Ludots.WebUI.PanelKit\bin\Release\net9.0\Ludots.WebUI.PanelKit.dll
+  CapabilityStandardPhysics2DStressMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\capability_standard\CapabilityStandardPhysics2DStressMod\bin\net9.0\CapabilityStandardPhysics2DStressMod.dll
+  FieldEditor -> C:\001_AI\Ludots-gpuskinned-perf\tools\FieldEditor\bin\Release\net9.0\field-editor.dll
+  CombatStanceBehaviorMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\CombatStanceBehaviorMod\bin\net9.0\CombatStanceBehaviorMod.dll
+  CapabilityStandardScriptFlowSandboxMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\capability_standard\CapabilityStandardScriptFlowSandboxMod\bin\net9.0\CapabilityStandardScriptFlowSandboxMod.dll
+  AIInspectorMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\AIInspectorMod\bin\net9.0\AIInspectorMod.dll
+  ChunkStreamingShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\chunk_streaming\ChunkStreamingShowcaseMod\bin\net9.0\ChunkStreamingShowcaseMod.dll
+  RoadNetworkShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\road_network\RoadNetworkShowcaseMod\bin\net9.0\RoadNetworkShowcaseMod.dll
+  ChampionSkillSandboxMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\champion_skill_sandbox\ChampionSkillSandboxMod\bin\net9.0\ChampionSkillSandboxMod.dll
+  DepConsumerMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\fixtures\dep_consumer\DepConsumerMod\bin\net9.0\DepConsumerMod.dll
+  UxPrototypeMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\ux_prototype\UxPrototypeMod\bin\net9.0\UxPrototypeMod.dll
+  AIDemoMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\ai_demo\AIDemoMod\bin\net9.0\AIDemoMod.dll
+  RtsShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\rts_showcase\RtsShowcaseMod\bin\net9.0\RtsShowcaseMod.dll
+  CapabilityStandardLiveSkillWorkbenchShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\capability_standard\CapabilityStandardLiveSkillWorkbenchShowcaseMod\bin\net9.0\CapabilityStandardLiveSkillWorkbenchShowcaseMod.dll
+  Ludots.UI.HtmlEngine -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Ludots.UI.HtmlEngine\bin\Release\net9.0\Ludots.UI.HtmlEngine.dll
+  TcgDemoMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\tcg_demo\TcgDemoMod\bin\net9.0\TcgDemoMod.dll
+  ArpgDemoMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\arpg_demo\ArpgDemoMod\bin\net9.0\ArpgDemoMod.dll
+  UiTestMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\UiTestMod\bin\net9.0\UiTestMod.dll
+  GasBenchmarkMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\GasBenchmarkMod\bin\net9.0\GasBenchmarkMod.dll
+  PerformanceMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\PerformanceMod\bin\net9.0\PerformanceMod.dll
+  RtsMultiplayerFrontlineMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\rts_multiplayer_frontline\RtsMultiplayerFrontlineMod\bin\net9.0\RtsMultiplayerFrontlineMod.dll
+  ReactiveTestMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\fixtures\reactive_test\ReactiveTestMod\bin\net9.0\ReactiveTestMod.dll
+  Ludots.UI.Panels -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Ludots.UI.Panels\bin\Release\net9.0\Ludots.UI.Panels.dll
+  MinimapShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\minimap\MinimapShowcaseMod\bin\net9.0\MinimapShowcaseMod.dll
+  CombatStanceShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\combat_stance\CombatStanceShowcaseMod\bin\net9.0\CombatStanceShowcaseMod.dll
+  PerformanceVisualizationMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\PerformanceVisualizationMod\bin\net9.0\PerformanceVisualizationMod.dll
+  NarrativeFrontendMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\capabilities\narrativefrontend\NarrativeFrontendMod\bin\net9.0\NarrativeFrontendMod.dll
+  Ludots.WebUI.Browser -> C:\001_AI\Ludots-gpuskinned-perf\src\Libraries\Ludots.WebUI.Browser\bin\Release\net9.0\Ludots.WebUI.Browser.dll
+  EntityQueryTacticsShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\entity_query_tactics\EntityQueryTacticsShowcaseMod\bin\net9.0\EntityQueryTacticsShowcaseMod.dll
+  RelationshipShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\relationship\RelationshipShowcaseMod\bin\net9.0\RelationshipShowcaseMod.dll
+  NarrativeShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\narrative\NarrativeShowcaseMod\bin\net9.0\NarrativeShowcaseMod.dll
+  EntityCommandPanelShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\entity_command_panel\EntityCommandPanelShowcaseMod\bin\net9.0\EntityCommandPanelShowcaseMod.dll
+  BrowserMinimapCompositedOverlayShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\browser_minimap_composited_overlay\BrowserMinimapCompositedOverlayShowcaseMod\bin\net9.0\BrowserMinimapCompositedOverlayShowcaseMod.dll
+  ControlPlaneProjectionShowcaseMod -> C:\001_AI\Ludots-gpuskinned-perf\mods\showcases\control_plane_projection\ControlPlaneProjectionShowcaseMod\bin\net9.0\ControlPlaneProjectionShowcaseMod.dll
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Presentation\PresenterBenchmarkTests.cs(30,7): warning CS0105: “Ludots.Platform.Abstractions”的 using 指令以前在此命名空间中出现过 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Presentation\PresenterEndToEndTests.cs(30,7): warning CS0105: “Ludots.Platform.Abstractions”的 using 指令以前在此命名空间中出现过 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\ProductionModDemoLogTests.cs(14,7): warning CS0105: “Ludots.Core.Gameplay.GAS.Orders”的 using 指令以前在此命名空间中出现过 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Physics2D\Physics2DKinematicBodyTests.cs(515,50): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Physics2D\Physics2DKinematicBodyTests.cs(516,49): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Physics2D\Physics2DKinematicBodyTests.cs(517,49): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Association\ParticipantBindingContractTests.cs(721,43): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Association\ParticipantBindingContractTests.cs(722,53): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Config\ConfigMergeE2ETests.cs(48,58): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasCore\TagEffectArchitectureTests.cs(2990,103): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Effect\PhaseListenerBatchHexTests.cs(1832,36): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Effect\RootBudgetTests.cs(54,10): warning CS0618: “TimeoutAttribute”已过时:“.NET No longer supports aborting threads as it is not a safe thing to do. Update your tests to use CancelAfterAttribute instead” [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\InteractionInput\ControlSchemeRuntimeTests.cs(502,73): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\ProductionAllModsValidationTests.cs(23,42): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\ProductionAllModsValidationTests.cs(24,46): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\RtsStrategicShowcaseAcceptanceTests.cs(658,38): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Ability\ApplyForceEndToEndTests.cs(150,31): warning CS8629: 可为 null 的值类型可为 null。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Ability\AbilityAggregationProfileTests.cs(272,28): warning CS8601: 可能的 null 引用赋值。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Ability\AbilityAggregationProfileTests.cs(276,17): warning CS8602: 解引用可能出现空引用。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Ability\AbilityAggregationProfileTests.cs(282,28): warning CS8601: 可能的 null 引用赋值。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Ability\AbilityAggregationProfileTests.cs(399,80): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Ability\AbilityAggregationProfileTests.cs(400,75): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasCore\TagEffectArchitectureTests.cs(226,18): warning CS8602: 解引用可能出现空引用。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\AI\AiComponentAuthoringTests.cs(40,79): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasCore\TagEffectArchitectureTests.cs(251,18): warning CS8602: 解引用可能出现空引用。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Ability\CommandIntentProfileTests.cs(350,75): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Ability\CommandIntentProfileTests.cs(353,82): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasCore\TagEffectArchitectureTests.cs(318,147): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasCore\TagEffectArchitectureTests.cs(319,18): warning CS8602: 解引用可能出现空引用。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasCore\TagEffectArchitectureTests.cs(324,18): warning CS8602: 解引用可能出现空引用。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Engine\SaveToolsContractTests.cs(198,40): warning CS8604: “JsonNode? IAgentTool.Execute(JsonObject? args, AgentToolContext context)”中的形参“context”可能传入 null 引用实参。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\InteractionInput\InputOrderContractTests.cs(477,21): warning CS8602: 解引用可能出现空引用。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\InteractionInput\InputOrderContractTests.cs(484,21): warning CS8602: 解引用可能出现空引用。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Config\ModRegistrationConflictTests.cs(63,42): warning CS8603: 可能返回 null 引用。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasCore\TagEffectArchitectureTests.cs(714,50): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Graph\EnumCatalogTests.cs(72,21): warning CS8604: “ConfigFragment.ConfigFragment(JsonNode node, string sourceUri)”中的形参“node”可能传入 null 引用实参。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Graph\EnumCatalogTests.cs(73,21): warning CS8604: “ConfigFragment.ConfigFragment(JsonNode node, string sourceUri)”中的形参“node”可能传入 null 引用实参。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Association\ParticipantBindingContractTests.cs(398,78): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Graph\TriggerGraphRenameMigrationTests.cs(205,17): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Graph\TriggerGraphRenameMigrationTests.cs(205,17): warning CS8604: “TriggerGraphMount TriggerGraphMount.ParseObject(JsonObject obj, string context)”中的形参“obj”可能传入 null 引用实参。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Config\ConfigMergerEntriesTests.cs(18,39): warning CS8604: “ConfigFragment.ConfigFragment(JsonNode node, string sourceUri)”中的形参“node”可能传入 null 引用实参。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Graph\GraphFireEventKeyBridgeTests.cs(30,51): warning CS0618: “ContextKeys”已过时:“Use CoreServiceKeys with ServiceKey<T> for type-safe access. This class will be removed in a future release.” [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasCore\Phase2InfrastructureTests.cs(377,17): warning CS0219: 变量“injectedValue”已被赋值，但从未使用过它的值 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Graph\GraphFsmSugarTests.cs(59,25): warning CS8629: 可为 null 的值类型可为 null。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Graph\GraphFsmSugarTests.cs(59,73): warning CS8629: 可为 null 的值类型可为 null。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Map\NavGateShowcaseContractTests.cs(71,51): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Map\NavGateShowcaseContractTests.cs(89,43): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Map\NavGateShowcaseContractTests.cs(163,43): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Config\ConfigMergeE2ETests.cs(302,18): warning CS8602: 解引用可能出现空引用。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Config\ConfigMergeE2ETests.cs(306,18): warning CS8602: 解引用可能出现空引用。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Graph\TriggerGraphPlacedVariableTests.cs(374,36): warning CS8601: 可能的 null 引用赋值。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Config\PresetTypePerformanceTests.cs(302,23): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\AgentBridgePresenterToolsTests.cs(52,31): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\AgentBridgePresenterToolsTests.cs(80,31): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\AgentBridgePresenterToolsTests.cs(82,35): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Graph\GraphFsmSugarTests.cs(358,45): warning CS8629: 可为 null 的值类型可为 null。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Effect\AuditCoverageTests.cs(545,23): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\NightRaidPresenterSyncRegressionTests.cs(148,23): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Graph\MapVariableStoreTests.cs(50,29): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Graph\MapVariableStoreTests.cs(71,29): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Graph\TriggerGraphGasBridgeTests.cs(59,42): warning CS0618: “ContextKeys”已过时:“Use CoreServiceKeys with ServiceKey<T> for type-safe access. This class will be removed in a future release.” [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\AgentBridgePresenterToolsTests.cs(218,23): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Graph\TriggerGraphEntryPayloadTests.cs(120,77): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Graph\MapVariableStoreTests.cs(81,29): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Graph\MapVariableStoreTests.cs(91,29): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Graph\MapVariableStoreTests.cs(101,29): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Graph\MapVariableStoreTests.cs(117,29): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Graph\MapVariableStoreTests.cs(127,29): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Graph\MapVariableStoreTests.cs(137,29): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Graph\MapVariableStoreTests.cs(147,29): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Graph\MapVariableStoreTests.cs(165,29): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Graph\MapVariableStoreTests.cs(186,29): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Graph\TriggerGraphDispatchMapEventTests.cs(201,50): warning CS0618: “ContextKeys”已过时:“Use CoreServiceKeys with ServiceKey<T> for type-safe access. This class will be removed in a future release.” [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasCore\TagEffectArchitectureTests.cs(1804,33): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Graph\TriggerGraphHookTests.cs(447,36): warning CS8601: 可能的 null 引用赋值。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Graph\TriggerGraphGlobalEventTests.cs(359,36): warning CS8601: 可能的 null 引用赋值。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Graph\TriggerGraphMountTests.cs(616,36): warning CS8601: 可能的 null 引用赋值。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Map\LoadedChunksEventTests.cs(37,39): warning CS8618: 在退出构造函数时，不可为 null 的 事件 "ChunkLoaded" 必须包含非 null 值。请考虑添加 "required" 修饰符或将该 事件 声明为可为 null。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Map\LoadedChunksEventTests.cs(38,39): warning CS8618: 在退出构造函数时，不可为 null 的 事件 "ChunkUnloaded" 必须包含非 null 值。请考虑添加 "required" 修饰符或将该 事件 声明为可为 null。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\InteractionInput\InteractionPrefTests.cs(114,100): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\InteractionInput\EffectPresetInteractionModeTests.cs(297,23): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\InteractionInput\ClientLocalSeatInputRuntimeTests.cs(228,38): warning CS8601: 可能的 null 引用赋值。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Networking\RtsMultiplayerFrontlineReplicationTests.cs(857,40): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Networking\RtsMultiplayerFrontlineReplicationTests.cs(865,13): warning CS8602: 解引用可能出现空引用。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Integration\SystemIntegrationTests.cs(57,61): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\InteractionInput\AxisMoveOrderSystemTests.cs(351,55): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Presentation\VisualSyncSystemCullTests.cs(62,30): warning CS0618: “GridVisualSyncSystem”已过时:“推荐使用 WorldToVisualSyncSystem。此系统仅用于纯网格定位的实体。” [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\InteractionInput\ControlSchemeRuntimeTests.cs(494,21): warning CS8604: “ControlSchemeRuntime.ControlSchemeRuntime(StringIntRegistry schemeIdRegistry, OrderTypeRegistry orderTypes, Func<PlayerInputHandler> handlerProvider = null, ClientCastPreferenceStore preferences = null, InputConfigRoot inputConfig = null)”中的形参“handlerProvider”可能传入 null 引用实参。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\InteractionInput\ControlSchemeRuntimeTests.cs(496,34): warning CS8604: “ControlSchemeRuntime.ControlSchemeRuntime(StringIntRegistry schemeIdRegistry, OrderTypeRegistry orderTypes, Func<PlayerInputHandler> handlerProvider = null, ClientCastPreferenceStore preferences = null, InputConfigRoot inputConfig = null)”中的形参“inputConfig”可能传入 null 引用实参。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Integration\MudAbilityChainStressDemoTests.cs(160,21): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Integration\MudAbilityChainStressDemoTests.cs(161,21): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\InteractionInput\ControlSchemeRuntimeTests.cs(453,39): warning CS8618: 在退出构造函数时，不可为 null 的 字段 "Handler" 必须包含非 null 值。请考虑添加 "required" 修饰符或将该 字段 声明为可为 null。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\InteractionInput\ControlSchemeRuntimeTests.cs(454,37): warning CS8618: 在退出构造函数时，不可为 null 的 字段 "Backend" 必须包含非 null 值。请考虑添加 "required" 修饰符或将该 字段 声明为可为 null。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Integration\MudAbilityChainStressDemoTests.cs(337,21): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Integration\MudAbilityChainStressDemoTests.cs(338,21): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Graph\GraphApplyEffectTemplateArgsTests.cs(58,27): warning CS8629: 可为 null 的值类型可为 null。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Graph\GraphNetworkTests.cs(323,66): warning CS8620: 由于引用类型的可为 null 性差异，InterLayerMapping?[] 类型的实参不能用于 MultiLayerGraph.MultiLayerGraph(NodeGraph[] layers, InterLayerMapping[] mappingFineToCoarse) 中 InterLayerMapping[] 类型的形参 mappingFineToCoarse。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Integration\MudSc2AndYgoDemoTests.cs(514,21): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasCore\AttributeAggregatorTests.cs(123,17): warning CS0219: 变量“mods”已被赋值，但从未使用过它的值 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Effect\RootBudgetTests.cs(381,25): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Effect\RootBudgetTests.cs(383,32): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Effect\RootBudgetTests.cs(384,30): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Effect\ResponseWindowRobustnessTests.cs(269,73): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Effect\ResponseWindowRobustnessTests.cs(269,94): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Effect\RootBudgetTests.cs(470,37): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Effect\ResponseWindowRobustnessTests.cs(298,88): warning CS8625: 无法将 null 字面量转换为非 null 的引用类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Graph\MapTriggerRegionTests.cs(379,34): warning CS8601: 可能的 null 引用赋值。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\AcceptanceUiEvidenceWriter.cs(140,90): warning CS0618: “SKPaint.TextSize”已过时:“Use SKFont.Size instead.” [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\AcceptanceUiEvidenceWriter.cs(141,102): warning CS0618: “SKPaint.TextSize”已过时:“Use SKFont.Size instead.” [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\AcceptanceUiEvidenceWriter.cs(142,103): warning CS0618: “SKPaint.TextSize”已过时:“Use SKFont.Size instead.” [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\AcceptanceUiEvidenceWriter.cs(143,102): warning CS0618: “SKPaint.TextSize”已过时:“Use SKFont.Size instead.” [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\AcceptanceUiEvidenceWriter.cs(147,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\AcceptanceUiEvidenceWriter.cs(174,13): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\AcceptanceUiEvidenceWriter.cs(230,9): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\AcceptanceUiEvidenceWriter.cs(231,14): warning CS0618: “SKPaint.TextSize”已过时:“Use SKFont.Size instead.” [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\CapabilityStandardShowcaseTestHarness.cs(144,19): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\CapabilityStandardPhysics2DShowcaseAcceptanceTests.cs(483,23): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\ProductionAllModsValidationTests.cs(326,23): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\PerformanceVisualizationShowcaseAcceptanceTests.cs(214,23): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\EntityQueryTacticsShowcasePlayableAcceptanceTests.cs(993,133): warning CS0618: “SKPaint.TextSize”已过时:“Use SKFont.Size instead.” [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\EntityQueryTacticsShowcasePlayableAcceptanceTests.cs(994,138): warning CS0618: “SKPaint.TextSize”已过时:“Use SKFont.Size instead.” [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\EntityQueryTacticsShowcasePlayableAcceptanceTests.cs(1021,13): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\EntityQueryTacticsShowcasePlayableAcceptanceTests.cs(1022,13): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\EntityQueryTacticsShowcasePlayableAcceptanceTests.cs(1030,17): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\EntityQueryTacticsShowcasePlayableAcceptanceTests.cs(1105,17): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\EntityQueryTacticsShowcasePlayableAcceptanceTests.cs(1109,17): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\EntityQueryTacticsShowcasePlayableAcceptanceTests.cs(1185,13): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\EntityQueryTacticsShowcasePlayableAcceptanceTests.cs(1186,13): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\EntityQueryTacticsShowcasePlayableAcceptanceTests.cs(1187,13): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\EntityQueryTacticsShowcasePlayableAcceptanceTests.cs(1316,13): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\EntityQueryTacticsShowcasePlayableAcceptanceTests.cs(1317,13): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\EntityQueryTacticsShowcasePlayableAcceptanceTests.cs(1318,13): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\EntityQueryTacticsShowcasePlayableAcceptanceTests.cs(1375,13): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\EntityQueryTacticsShowcasePlayableAcceptanceTests.cs(1385,13): warning CS0618: “SKCanvas.DrawText(string, float, float, SKPaint)”已过时:“Use DrawText(string text, float x, float y, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.” [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\RtsSpawnTargetAcceptanceTests.cs(418,23): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\GasProductionFeatureReportTests.cs(501,23): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\StaticObstaclePhysicsShowcaseAcceptanceTests.cs(414,23): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\ItemSystemShowcasePlayableAcceptanceTests.cs(930,33): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\ItemSystemShowcasePlayableAcceptanceTests.cs(936,33): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\ItemSystemShowcasePlayableAcceptanceTests.cs(942,31): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\ProductionModDemoLogTests.cs(1004,23): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\DialogueAuthorKitAcceptanceTests.cs(241,45): warning CS0649: 从未对字段“DialogueAuthorKitAcceptanceTests.TestInputBackend._mousePosition”赋值，字段将一直保持其默认值 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\MinimapShowcaseAcceptanceTests.cs(747,25): warning CS0649: 从未对字段“MinimapShowcaseAcceptanceTests.TestInputBackend._mousePosition”赋值，字段将一直保持其默认值 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\NarrativeTriggerGraphWireAcceptanceTests.cs(212,45): warning CS0649: 从未对字段“NarrativeTriggerGraphWireAcceptanceTests.TestInputBackend._mousePosition”赋值，字段将一直保持其默认值 [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Spatial\ISpatialPartitionWorldTests.cs(43,39): warning CA2014: 潜在的堆栈溢出。将 stackalloc 移出循环。 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca2014) [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Spatial\ISpatialPartitionWorldTests.cs(61,39): warning CA2014: 潜在的堆栈溢出。将 stackalloc 移出循环。 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca2014) [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Spatial\ISpatialPartitionWorldTests.cs(78,39): warning CA2014: 潜在的堆栈溢出。将 stackalloc 移出循环。 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca2014) [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Spatial\ISpatialPartitionWorldTests.cs(109,39): warning CA2014: 潜在的堆栈溢出。将 stackalloc 移出循环。 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca2014) [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Spatial\ISpatialPartitionWorldTests.cs(130,39): warning CA2014: 潜在的堆栈溢出。将 stackalloc 移出循环。 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca2014) [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\AI\FsmRuntimeTests.cs(153,13): warning NUnit1033: The Write methods are wrappers on TestContext.Out (https://github.com/nunit/nunit.analyzers/tree/master/documentation/NUnit1033.md) [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\AI\GraphBehaviorArenaAcceptanceTests.cs(88,13): warning NUnit1033: The Write methods are wrappers on TestContext.Out (https://github.com/nunit/nunit.analyzers/tree/master/documentation/NUnit1033.md) [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\AI\FsmRuntimeTests.cs(229,13): warning NUnit1033: The Write methods are wrappers on TestContext.Out (https://github.com/nunit/nunit.analyzers/tree/master/documentation/NUnit1033.md) [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Physics2D\Physics2DIntegrationTests.cs(83,13): warning NUnit1033: The Write methods are wrappers on TestContext.Out (https://github.com/nunit/nunit.analyzers/tree/master/documentation/NUnit1033.md) [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Graph\GraphFsmSugarTests.cs(447,13): warning NUnit1033: The Write methods are wrappers on TestContext.Out (https://github.com/nunit/nunit.analyzers/tree/master/documentation/NUnit1033.md) [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\GraphBehaviorSeparatedShowcaseAcceptanceTests.cs(163,13): warning NUnit1033: The Write methods are wrappers on TestContext.Out (https://github.com/nunit/nunit.analyzers/tree/master/documentation/NUnit1033.md) [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\GraphBehaviorSeparatedShowcaseAcceptanceTests.cs(243,13): warning NUnit1033: The Write methods are wrappers on TestContext.Out (https://github.com/nunit/nunit.analyzers/tree/master/documentation/NUnit1033.md) [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Production\GraphBehaviorSeparatedShowcaseAcceptanceTests.cs(390,13): warning NUnit1033: The Write methods are wrappers on TestContext.Out (https://github.com/nunit/nunit.analyzers/tree/master/documentation/NUnit1033.md) [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Spatial\SpatialQueryBackendParityTests.cs(52,38): warning CA2014: 潜在的堆栈溢出。将 stackalloc 移出循环。 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca2014) [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Spatial\SpatialQueryBackendParityTests.cs(53,38): warning CA2014: 潜在的堆栈溢出。将 stackalloc 移出循环。 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca2014) [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Spatial\SpatialQueryBackendParityTests.cs(73,38): warning CA2014: 潜在的堆栈溢出。将 stackalloc 移出循环。 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca2014) [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Spatial\SpatialQueryBackendParityTests.cs(74,38): warning CA2014: 潜在的堆栈溢出。将 stackalloc 移出循环。 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca2014) [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Spatial\SpatialQueryBackendParityTests.cs(129,44): warning CA2014: 潜在的堆栈溢出。将 stackalloc 移出循环。 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca2014) [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Spatial\SpatialQueryBackendParityTests.cs(130,47): warning CA2014: 潜在的堆栈溢出。将 stackalloc 移出循环。 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca2014) [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Spatial\SpatialQueryBackendParityTests.cs(158,44): warning CA2014: 潜在的堆栈溢出。将 stackalloc 移出循环。 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca2014) [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Spatial\SpatialQueryBackendParityTests.cs(159,47): warning CA2014: 潜在的堆栈溢出。将 stackalloc 移出循环。 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca2014) [C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\GasTests.csproj]
+  GasTests -> C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\bin\Release\net9.0\GasTests.dll
+C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\bin\Release\net9.0\GasTests.dll (.NETCoreApp,Version=v9.0)的测试运行
+VSTest 版本 17.14.1 (x64)
+
+正在启动测试执行，请稍候...
+总共 1 个测试文件与指定模式相匹配。
+NUnit Adapter 4.6.0.0: Test execution started
+Running selected tests in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\bin\Release\net9.0\GasTests.dll
+   NUnit3TestExecutor discovered 3 of 3 NUnit test cases using Current Discovery mode, Non-Explicit run
+Pointer hit entities=1000 median=0.759ms p95=1.811ms allocated=160 B/call
+
+Pointer hit entities=5000 median=3.637ms p95=4.862ms allocated=160 B/call
+
+Pointer hit entities=10000 median=6.677ms p95=14.273ms allocated=160 B/call
+
+NUnit Adapter 4.6.0.0: Test execution complete
+  失败 PointerHitResolver_ScalesWithoutAllocatingKnowledgeChecksForOffPointerEntities(1000) [83 ms]
+  错误消息:
+     Assert.That(allocated, Is.Zero)
+  Expected: 0
+  But was:  2720
+
+  堆栈跟踪:
+     at Ludots.Tests.GAS.SelectionKnowledgeProjectionTests.PointerHitResolver_ScalesWithoutAllocatingKnowledgeChecksForOffPointerEntities(Int32 entityCount) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Vision\SelectionKnowledgeProjectionTests.cs:line 92
+
+1)    at Ludots.Tests.GAS.SelectionKnowledgeProjectionTests.PointerHitResolver_ScalesWithoutAllocatingKnowledgeChecksForOffPointerEntities(Int32 entityCount) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Vision\SelectionKnowledgeProjectionTests.cs:line 92
+
+
+  标准输出消息:
+ Pointer hit entities=1000 median=0.759ms p95=1.811ms allocated=160 B/call
+
+
+  失败 PointerHitResolver_ScalesWithoutAllocatingKnowledgeChecksForOffPointerEntities(5000) [105 ms]
+  错误消息:
+     Assert.That(allocated, Is.Zero)
+  Expected: 0
+  But was:  2720
+
+  堆栈跟踪:
+     at Ludots.Tests.GAS.SelectionKnowledgeProjectionTests.PointerHitResolver_ScalesWithoutAllocatingKnowledgeChecksForOffPointerEntities(Int32 entityCount) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Vision\SelectionKnowledgeProjectionTests.cs:line 92
+   at InvokeStub_SelectionKnowledgeProjectionTests.PointerHitResolver_ScalesWithoutAllocatingKnowledgeChecksForOffPointerEntities(Object, Span`1)
+
+1)    at Ludots.Tests.GAS.SelectionKnowledgeProjectionTests.PointerHitResolver_ScalesWithoutAllocatingKnowledgeChecksForOffPointerEntities(Int32 entityCount) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Vision\SelectionKnowledgeProjectionTests.cs:line 92
+   at InvokeStub_SelectionKnowledgeProjectionTests.PointerHitResolver_ScalesWithoutAllocatingKnowledgeChecksForOffPointerEntities(Object, Span`1)
+
+
+  标准输出消息:
+ Pointer hit entities=5000 median=3.637ms p95=4.862ms allocated=160 B/call
+
+
+  失败 PointerHitResolver_ScalesWithoutAllocatingKnowledgeChecksForOffPointerEntities(10000) [189 ms]
+  错误消息:
+     Assert.That(allocated, Is.Zero)
+  Expected: 0
+  But was:  2720
+
+  堆栈跟踪:
+     at Ludots.Tests.GAS.SelectionKnowledgeProjectionTests.PointerHitResolver_ScalesWithoutAllocatingKnowledgeChecksForOffPointerEntities(Int32 entityCount) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Vision\SelectionKnowledgeProjectionTests.cs:line 92
+   at InvokeStub_SelectionKnowledgeProjectionTests.PointerHitResolver_ScalesWithoutAllocatingKnowledgeChecksForOffPointerEntities(Object, Span`1)
+
+1)    at Ludots.Tests.GAS.SelectionKnowledgeProjectionTests.PointerHitResolver_ScalesWithoutAllocatingKnowledgeChecksForOffPointerEntities(Int32 entityCount) in C:\001_AI\Ludots-gpuskinned-perf\src\Tests\GasTests\Vision\SelectionKnowledgeProjectionTests.cs:line 92
+   at InvokeStub_SelectionKnowledgeProjectionTests.PointerHitResolver_ScalesWithoutAllocatingKnowledgeChecksForOffPointerEntities(Object, Span`1)
+
+
+  标准输出消息:
+ Pointer hit entities=10000 median=6.677ms p95=14.273ms allocated=160 B/call
+
+
+
+测试总数: 3
+     失败数: 3
+测试运行失败。
+总时间: 1.0752 秒
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。

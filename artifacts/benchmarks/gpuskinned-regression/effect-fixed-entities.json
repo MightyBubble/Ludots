@@ -1,0 +1,58 @@
+{
+  "tick": 909,
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "totalMatched": 10009,
+  "offset": 0,
+  "returned": 5,
+  "dropped": 10004,
+  "entities": [
+    {
+      "entityId": 8,
+      "name": "MassNavigation.Blocker",
+      "worldCm": {
+        "x": 3000,
+        "y": 5000
+      },
+      "onScreen": false
+    },
+    {
+      "entityId": 9,
+      "name": "MassNavigation.Blocker",
+      "worldCm": {
+        "x": 5000,
+        "y": 3000
+      },
+      "onScreen": false
+    },
+    {
+      "entityId": 10,
+      "name": "MassNavigation.Blocker",
+      "worldCm": {
+        "x": 5000,
+        "y": 7000
+      },
+      "onScreen": false
+    },
+    {
+      "entityId": 11,
+      "name": "MassNavigation.Blocker",
+      "worldCm": {
+        "x": 7000,
+        "y": 5000
+      },
+      "onScreen": false
+    },
+    {
+      "entityId": 12,
+      "name": "MassNavigation.Blocker",
+      "worldCm": {
+        "x": 5000,
+        "y": 5000
+      },
+      "onScreen": false
+    }
+  ]
+}

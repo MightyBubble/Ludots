@@ -1,0 +1,19 @@
+{
+  "entityId": 34,
+  "name": "MassNavigation.Agent.Azure.Heavy",
+  "tags": [],
+  "attributes": [
+    {
+      "id": 0,
+      "name": "Health",
+      "current": 235.4,
+      "base": 260
+    }
+  ],
+  "activeEffects": {
+    "count": 1,
+    "effectEntityIds": [
+      52542
+    ]
+  }
+}

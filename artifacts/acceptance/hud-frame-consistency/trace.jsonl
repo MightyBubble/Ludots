@@ -1,0 +1,4 @@
+{"eventId":"hud-red","date":"2026-09-08","source":"hud-frame-red2.log","result":"fail","cases":5,"stage":"before-fix"}
+{"eventId":"hud-green","date":"2026-09-08","source":"hud-final-targeted-serial.log","result":"pass","cases":34,"scales":[1000,5000,10000],"stage":"after-fix"}
+{"eventId":"hud-camera-live","startedAtUtc":"2026-09-08T14:18:06.2693098Z","stoppedAtUtc":"2026-09-08T14:18:18.5116482Z","frames":37,"yaw":[45,50,55,60,65,70,75,75,65,55,45,45],"pitch":42,"distanceCm":14000,"targetCm":[0,0],"result":"captured","visualAcceptance":"incomplete-dense-overlap"}
+{"eventId":"hud-build","date":"2026-09-08","source":"hud-current-build.log","result":"pass","errors":0,"warnings":2}

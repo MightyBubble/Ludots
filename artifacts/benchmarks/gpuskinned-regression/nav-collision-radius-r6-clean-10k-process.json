@@ -1,0 +1,9 @@
+{
+  "startedUtc": "2026-09-08T12:04:43.9731072Z",
+  "port": 47947,
+  "initialPump": 21,
+  "commit": "2940e71a871c4959c4c92d9eed4af4a2b8e6d249",
+  "frames": 1200,
+  "pid": 72604,
+  "systemBreakdown": false
+}

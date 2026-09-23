@@ -1,0 +1,32 @@
+{
+  "executable": null,
+  "timingInterval": 1,
+  "frames": 900,
+  "pid": 17880,
+  "shadows": "off",
+  "configuration": "Release",
+  "gpu": [
+    {
+      "Name": "OrayIddDriver Device",
+      "DriverVersion": "17.50.19.949"
+    },
+    {
+      "Name": "IdeaDisplay(App)",
+      "DriverVersion": "17.4.21.827"
+    },
+    {
+      "Name": "AMD Radeon(TM) 8060S Graphics",
+      "DriverVersion": "32.0.31032.1003"
+    }
+  ],
+  "launchPlanFingerprint": "75ec8cb9585dbf2ae7eeededec99c6d8a0f24f5a5bd477465d7f3ac5c4c025a1",
+  "cpu": {
+    "Name": "AMD RYZEN AI MAX+ 395 w/ Radeon 8060S          ",
+    "NumberOfCores": 16,
+    "NumberOfLogicalProcessors": 32
+  },
+  "commit": "2940e71a871c4959c4c92d9eed4af4a2b8e6d249",
+  "port": 47946,
+  "tieredCompilation": null,
+  "startedUtc": "2026-09-08T09:10:45.7328798Z"
+}

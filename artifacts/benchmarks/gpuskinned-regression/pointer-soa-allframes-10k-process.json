@@ -1,0 +1,32 @@
+{
+  "shadows": "off",
+  "frames": 900,
+  "tieredCompilation": null,
+  "configuration": "Release",
+  "startedUtc": "2026-09-08T10:22:18.3536334Z",
+  "cpu": {
+    "Name": "AMD RYZEN AI MAX+ 395 w/ Radeon 8060S          ",
+    "NumberOfCores": 16,
+    "NumberOfLogicalProcessors": 32
+  },
+  "commit": "2940e71a871c4959c4c92d9eed4af4a2b8e6d249",
+  "gpu": [
+    {
+      "Name": "OrayIddDriver Device",
+      "DriverVersion": "17.50.19.949"
+    },
+    {
+      "Name": "IdeaDisplay(App)",
+      "DriverVersion": "17.4.21.827"
+    },
+    {
+      "Name": "AMD Radeon(TM) 8060S Graphics",
+      "DriverVersion": "32.0.31032.1003"
+    }
+  ],
+  "pid": 79116,
+  "timingInterval": 1,
+  "port": 47933,
+  "launchPlanFingerprint": "75ec8cb9585dbf2ae7eeededec99c6d8a0f24f5a5bd477465d7f3ac5c4c025a1",
+  "executable": "C:\\001_AI\\Ludots-gpuskinned-perf\\src\\Apps\\Raylib\\Ludots.App.Raylib\\bin\\Release\\net9.0\\Ludots.App.Raylib.exe"
+}

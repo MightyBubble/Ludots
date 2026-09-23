@@ -1,0 +1,22 @@
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "tick": 159,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "totalMatched": 0,
+    "offset": 0,
+    "returned": 0,
+    "dropped": 0,
+    "entities": []
+  },
+  "instance": {
+    "pid": 77452,
+    "port": 47931,
+    "mapId": "mass_navigation",
+    "processPath": "C:\\001_AI\\Ludots-gpuskinned-perf\\src\\Apps\\Raylib\\Ludots.App.Raylib\\bin\\Release\\net9.0\\Ludots.App.Raylib.exe"
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "tick": 1525,
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "totalMatched": 10000,
+  "offset": 0,
+  "returned": 3,
+  "dropped": 9997,
+  "entities": [
+    {
+      "entityId": 34,
+      "name": "MassNavigation.Agent.Azure.Heavy",
+      "worldCm": {
+        "x": -2366,
+        "y": 938
+      },
+      "screenRect": {
+        "x": 658,
+        "y": 713.2,
+        "w": 0,
+        "h": 0
+      },
+      "screenCoverage": 0,
+      "onScreen": true
+    },
+    {
+      "entityId": 40,
+      "name": "MassNavigation.Agent.Azure.Light",
+      "worldCm": {
+        "x": -2569,
+        "y": 1045
+      },
+      "screenRect": {
+        "x": 659.1,
+        "y": 708.9,
+        "w": 0,
+        "h": 0
+      },
+      "screenCoverage": 0,
+      "onScreen": true
+    },
+    {
+      "entityId": 46,
+      "name": "MassNavigation.Agent.Azure.Light",
+      "worldCm": {
+        "x": -2592,
+        "y": 1174
+      },
+      "screenRect": {
+        "x": 657.7,
+        "y": 706.9,
+        "w": 0,
+        "h": 0
+      },
+      "screenCoverage": 0,
+      "onScreen": true
+    }
+  ]
+}
