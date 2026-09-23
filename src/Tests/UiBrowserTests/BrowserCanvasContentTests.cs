@@ -16,6 +16,41 @@ namespace Ludots.Tests.UiBrowser;
 public sealed class BrowserCanvasContentTests
 {
 	[Test]
+	public void BrowserSurfaceCanvasContent_DefaultsToBeforeSkiaOverlay()
+	{
+		BrowserFrame frame = CreateSolidFrame(2, 2, b: 10, g: 20, r: 30, a: 255);
+		var surface = new TestBrowserSurface(frame);
+		var content = new BrowserSurfaceCanvasContent(surface);
+
+		Assert.That(content.CompositeOrder, Is.EqualTo(BrowserSurfaceCompositeOrder.BeforeSkiaOverlay));
+		Assert.That(content.AlphaMode, Is.EqualTo(BrowserSurfaceAlphaMode.Preserve));
+	}
+
+	[Test]
+	public void BrowserSurfaceCanvasContent_CanRenderAfterSkiaOverlay()
+	{
+		BrowserFrame frame = CreateSolidFrame(2, 2, b: 10, g: 20, r: 30, a: 255);
+		var surface = new TestBrowserSurface(frame);
+		var content = new BrowserSurfaceCanvasContent(
+			surface,
+			compositeOrder: BrowserSurfaceCompositeOrder.AfterSkiaOverlay);
+
+		Assert.That(content.CompositeOrder, Is.EqualTo(BrowserSurfaceCompositeOrder.AfterSkiaOverlay));
+	}
+
+	[Test]
+	public void BrowserSurfaceCanvasContent_CanPromoteNonTransparentPixelsToOpaque()
+	{
+		BrowserFrame frame = CreateSolidFrame(2, 2, b: 10, g: 20, r: 30, a: 255);
+		var surface = new TestBrowserSurface(frame);
+		var content = new BrowserSurfaceCanvasContent(
+			surface,
+			alphaMode: BrowserSurfaceAlphaMode.PromoteNonTransparentToOpaque);
+
+		Assert.That(content.AlphaMode, Is.EqualTo(BrowserSurfaceAlphaMode.PromoteNonTransparentToOpaque));
+	}
+
+	[Test]
 	public void DrawFrame_RendersBgraFrameIntoSkiaCanvas()
 	{
 		BrowserFrame frame = CreateSolidFrame(2, 2, b: 10, g: 20, r: 200, a: 255);
@@ -118,6 +153,57 @@ public sealed class BrowserCanvasContentTests
 		Assert.That(surface.InputEvents[0], Is.TypeOf<BrowserFocusEvent>());
 		Assert.That(surface.InputEvents[1], Is.EqualTo(new BrowserPointerEvent(BrowserPointerEventType.Down, 0, 40, 30, BrowserPointerButton.Left, true)));
 		Assert.That(surface.InputEvents[2], Is.EqualTo(new BrowserPointerEvent(BrowserPointerEventType.Move, 0, 60, 45, BrowserPointerButton.Left, true)));
+	}
+
+	[Test]
+	public void HandleInput_SecondClickWithinDoubleClickWindow_SendsBrowserClickCountTwo()
+	{
+		BrowserFrame frame = CreateSolidFrame(200, 100, b: 10, g: 20, r: 30, a: 255);
+		var surface = new TestBrowserSurface(frame);
+		var content = new ClockedBrowserSurfaceCanvasContent(surface)
+		{
+			NowMilliseconds = 1_000
+		};
+		var root = CreateInputRoot(() => Ui.Canvas(content).Width(200).Height(100), 200, 100);
+
+		root.HandleInput(new PointerEvent
+		{
+			PointerId = 0,
+			Action = PointerAction.Down,
+			Button = PointerButton.Left,
+			X = 40,
+			Y = 30
+		});
+		root.HandleInput(new PointerEvent
+		{
+			PointerId = 0,
+			Action = PointerAction.Up,
+			Button = PointerButton.Left,
+			X = 40,
+			Y = 30
+		});
+		content.NowMilliseconds += 120;
+		root.HandleInput(new PointerEvent
+		{
+			PointerId = 0,
+			Action = PointerAction.Down,
+			Button = PointerButton.Left,
+			X = 42,
+			Y = 31
+		});
+		root.HandleInput(new PointerEvent
+		{
+			PointerId = 0,
+			Action = PointerAction.Up,
+			Button = PointerButton.Left,
+			X = 42,
+			Y = 31
+		});
+
+		Assert.That(surface.InputEvents[1], Is.EqualTo(new BrowserPointerEvent(BrowserPointerEventType.Down, 0, 40, 30, BrowserPointerButton.Left, true, ClickCount: 1)));
+		Assert.That(surface.InputEvents[2], Is.EqualTo(new BrowserPointerEvent(BrowserPointerEventType.Up, 0, 40, 30, BrowserPointerButton.Left, false, ClickCount: 1)));
+		Assert.That(surface.InputEvents[3], Is.EqualTo(new BrowserPointerEvent(BrowserPointerEventType.Down, 0, 42, 31, BrowserPointerButton.Left, true, ClickCount: 2)));
+		Assert.That(surface.InputEvents[4], Is.EqualTo(new BrowserPointerEvent(BrowserPointerEventType.Up, 0, 42, 31, BrowserPointerButton.Left, false, ClickCount: 2)));
 	}
 
 	[Test]
@@ -422,6 +508,21 @@ public sealed class BrowserCanvasContentTests
 			2 * BrowserFrameBuffer.BytesPerPixel,
 			new[] { new BrowserDirtyRect(0, 0, 2, 1) },
 			1);
+	}
+
+	private sealed class ClockedBrowserSurfaceCanvasContent : BrowserSurfaceCanvasContent
+	{
+		public ClockedBrowserSurfaceCanvasContent(TestBrowserSurface surface)
+			: base(surface)
+		{
+		}
+
+		public long NowMilliseconds { get; set; }
+
+		protected override long GetMonotonicMilliseconds()
+		{
+			return NowMilliseconds;
+		}
 	}
 
 	private sealed class TestBrowserSurface : IBrowserSurface

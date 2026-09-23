@@ -377,10 +377,10 @@ internal sealed class CefBrowserSurface : IBrowserSurface, IBrowserSharedBufferS
 				host.SendMouseMoveEvent(new MouseEvent(x, y, flags), mouseLeave: true);
 				break;
 			case BrowserPointerEventType.Down:
-				host.SendMouseClickEvent(new MouseEvent(x, y, flags), ToMouseButton(pointer.Button), mouseUp: false, clickCount: 1);
+				host.SendMouseClickEvent(new MouseEvent(x, y, flags), ToMouseButton(pointer.Button), mouseUp: false, clickCount: pointer.ClickCount);
 				break;
 			case BrowserPointerEventType.Up:
-				host.SendMouseClickEvent(new MouseEvent(x, y, CefEventFlags.None), ToMouseButton(pointer.Button), mouseUp: true, clickCount: 1);
+				host.SendMouseClickEvent(new MouseEvent(x, y, CefEventFlags.None), ToMouseButton(pointer.Button), mouseUp: true, clickCount: pointer.ClickCount);
 				break;
 			default:
 				throw new ArgumentOutOfRangeException(nameof(pointer), pointer, "Unsupported pointer event type.");

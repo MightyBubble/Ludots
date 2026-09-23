@@ -11,7 +11,7 @@ internal sealed class BrowserMinimapCompositedOverlayBrowserCanvasContent : Brow
 		IBrowserSurface surface,
 		BrowserMinimapCompositedOverlayLayoutState layoutState,
 		BrowserSurfaceHitTestOptions? hitTestOptions = null)
-		: base(surface, hitTestOptions)
+		: base(surface, hitTestOptions: hitTestOptions)
 	{
 		_layoutState = layoutState ?? throw new ArgumentNullException(nameof(layoutState));
 	}

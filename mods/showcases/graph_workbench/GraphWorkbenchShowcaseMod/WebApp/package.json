@@ -6,7 +6,7 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite --host 127.0.0.1",
-    "test": "node --test src/dataplane/client.test.mjs"
+    "test": "node --test src/dataplane/client.test.mjs src/interaction.contract.test.mjs"
   },
   "dependencies": {
     "@xyflow/react": "12.11.0",

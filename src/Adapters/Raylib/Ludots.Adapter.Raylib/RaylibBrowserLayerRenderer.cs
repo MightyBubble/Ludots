@@ -12,7 +12,11 @@ namespace Ludots.Adapter.Raylib
         private readonly Dictionary<BrowserSurfaceId, BrowserLayerState> _states = new();
         private readonly HashSet<BrowserSurfaceId> _seenThisFrame = new();
 
-        public void Render(UiScene? scene, int width, int height)
+        public void Render(
+            UiScene? scene,
+            int width,
+            int height,
+            BrowserSurfaceCompositeOrder compositeOrder = BrowserSurfaceCompositeOrder.BeforeSkiaOverlay)
         {
             _seenThisFrame.Clear();
             if (scene?.Root == null || width <= 0 || height <= 0)
@@ -25,7 +29,7 @@ namespace Ludots.Adapter.Raylib
 
             foreach (UiNode node in scene.EnumerateVisualNodes())
             {
-                if (!IsRenderableBrowserNode(node, out IUiBrowserCanvasContent? content) || content == null)
+                if (!IsRenderableBrowserNode(node, compositeOrder, out IUiBrowserCanvasContent? content) || content == null)
                 {
                     continue;
                 }
@@ -46,9 +50,11 @@ namespace Ludots.Adapter.Raylib
                     _states.Add(id, state);
                 }
 
-                if (content.TryReadLatestFrame(state, static (in BrowserFrameAccess frame, BrowserLayerState layerState) =>
+                BrowserSurfaceAlphaMode alphaMode = GetAlphaMode(content);
+                var upload = new BrowserFrameUpload(state, alphaMode);
+                if (content.TryReadLatestFrame(upload, static (in BrowserFrameAccess frame, BrowserFrameUpload uploadState) =>
                     {
-                        layerState.Update(frame);
+                        uploadState.LayerState.Update(frame, uploadState.AlphaMode);
                     }))
                 {
                     state.Draw(rect);
@@ -69,7 +75,10 @@ namespace Ludots.Adapter.Raylib
             _seenThisFrame.Clear();
         }
 
-        private static bool IsRenderableBrowserNode(UiNode node, out IUiBrowserCanvasContent? content)
+        private static bool IsRenderableBrowserNode(
+            UiNode node,
+            BrowserSurfaceCompositeOrder compositeOrder,
+            out IUiBrowserCanvasContent? content)
         {
             content = node.CanvasContent as IUiBrowserCanvasContent;
             if (content == null)
@@ -77,8 +86,43 @@ namespace Ludots.Adapter.Raylib
                 return false;
             }
 
+            BrowserSurfaceCompositeOrder nodeCompositeOrder = content is BrowserSurfaceCanvasContent browserContent
+                ? browserContent.CompositeOrder
+                : BrowserSurfaceCompositeOrder.BeforeSkiaOverlay;
+            if (nodeCompositeOrder != compositeOrder)
+            {
+                return false;
+            }
+
             UiStyle style = node.RenderStyle;
             return style.Visible && style.Display != UiDisplay.None;
+        }
+
+        private static BrowserSurfaceAlphaMode GetAlphaMode(IUiBrowserCanvasContent content)
+        {
+            return content is BrowserSurfaceCanvasContent browserContent
+                ? browserContent.AlphaMode
+                : BrowserSurfaceAlphaMode.Preserve;
+        }
+
+        internal static void ApplyAlphaMode(Span<byte> rgbaPixels, BrowserSurfaceAlphaMode alphaMode)
+        {
+            switch (alphaMode)
+            {
+                case BrowserSurfaceAlphaMode.Preserve:
+                    return;
+                case BrowserSurfaceAlphaMode.PromoteNonTransparentToOpaque:
+                    for (int i = 3; i < rgbaPixels.Length; i += BrowserFrameBuffer.BytesPerPixel)
+                    {
+                        if (rgbaPixels[i] != 0)
+                        {
+                            rgbaPixels[i] = 255;
+                        }
+                    }
+                    return;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(alphaMode), alphaMode, "Unsupported browser surface alpha mode.");
+            }
         }
 
         private void ReleaseStaleStates()
@@ -120,7 +164,7 @@ namespace Ludots.Adapter.Raylib
             private int _height;
             private long _uploadedSequence = -1;
 
-            public void Update(in BrowserFrameAccess frame)
+            public void Update(in BrowserFrameAccess frame, BrowserSurfaceAlphaMode alphaMode)
             {
                 EnsureTexture(frame.Viewport.Width, frame.Viewport.Height);
                 if (frame.Sequence == _uploadedSequence)
@@ -134,7 +178,7 @@ namespace Ludots.Adapter.Raylib
 
                 foreach (BrowserDirtyRect rect in dirtyRects)
                 {
-                    UploadRect(frame, rect);
+                    UploadRect(frame, rect, alphaMode);
                 }
 
                 _uploadedSequence = frame.Sequence;
@@ -192,7 +236,7 @@ namespace Ludots.Adapter.Raylib
                 _uploadedSequence = -1;
             }
 
-            private void UploadRect(in BrowserFrameAccess frame, BrowserDirtyRect rect)
+            private void UploadRect(in BrowserFrameAccess frame, BrowserDirtyRect rect, BrowserSurfaceAlphaMode alphaMode)
             {
                 int byteCount = checked(rect.Width * rect.Height * BrowserFrameBuffer.BytesPerPixel);
                 EnsureScratch(byteCount);
@@ -209,6 +253,7 @@ namespace Ludots.Adapter.Raylib
                     default:
                         throw new ArgumentOutOfRangeException(nameof(frame), frame.PixelFormat, "Unsupported browser frame pixel format.");
                 }
+                ApplyAlphaMode(target, alphaMode);
 
                 unsafe
                 {
@@ -269,5 +314,7 @@ namespace Ludots.Adapter.Raylib
                 }
             }
         }
+
+        private readonly record struct BrowserFrameUpload(BrowserLayerState LayerState, BrowserSurfaceAlphaMode AlphaMode);
     }
 }

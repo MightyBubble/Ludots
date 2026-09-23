@@ -205,7 +205,8 @@ namespace Ludots.Adapter.Raylib
                 config.WindowHeight = screenHeight;
 
                 using var overlayCompositor = new RaylibOverlayCompositor(screenWidth, screenHeight);
-                using var browserLayerRenderer = new RaylibBrowserLayerRenderer();
+                using var browserBeforeOverlayRenderer = new RaylibBrowserLayerRenderer();
+                using var browserAfterOverlayRenderer = new RaylibBrowserLayerRenderer();
                 var windowRepaintGuard = new RaylibWindowRepaintGuard();
                 uiRoot.Resize(screenWidth, screenHeight);
 
@@ -618,7 +619,11 @@ namespace Ludots.Adapter.Raylib
 
                         if (drawSkiaUi)
                         {
-                            browserLayerRenderer.Render(uiRoot.Scene, lastW, lastH);
+                            browserBeforeOverlayRenderer.Render(
+                                uiRoot.Scene,
+                                lastW,
+                                lastH,
+                                BrowserSurfaceCompositeOrder.BeforeSkiaOverlay);
                         }
 
                         long overlayStart = Stopwatch.GetTimestamp();
@@ -646,6 +651,15 @@ namespace Ludots.Adapter.Raylib
                             AppendRaylibDiagnostic(
                                 diagnosticPath,
                                 $"overlay-lanes backend=skia underBar={overlaySkiaRenderer.LastUnderUiBarMs:F2} underText={overlaySkiaRenderer.LastUnderUiTextMs:F2} barBuild={overlaySkiaRenderer.LastBarBatchBuildMs:F2} barDraw={overlaySkiaRenderer.LastBarBatchDrawMs:F2} barBuckets={overlaySkiaRenderer.LastBarBatchBucketCount} barCache={overlaySkiaRenderer.LastBarSpriteCacheHits}/{overlaySkiaRenderer.LastBarSpriteCacheMisses}/clear{overlaySkiaRenderer.LastBarSpriteCacheClears}/size{overlaySkiaRenderer.BarSpriteCacheCount} textBuild={overlaySkiaRenderer.LastTextBatchBuildMs:F2} textDraw={overlaySkiaRenderer.LastTextBatchDrawMs:F2} textBuckets={overlaySkiaRenderer.LastTextSpriteBatchBucketCount} markerBuild={overlaySkiaRenderer.LastMinimapMarkerBatchBuildMs:F2} markerDraw={overlaySkiaRenderer.LastMinimapMarkerBatchDrawMs:F2} markerBuckets={overlaySkiaRenderer.LastMinimapMarkerBatchBucketCount}/{overlaySkiaRenderer.LastMinimapMarkerOrientationBatchBucketCount} markerSpriteCache={overlaySkiaRenderer.LastMinimapMarkerSpriteCacheHits}/{overlaySkiaRenderer.LastMinimapMarkerSpriteCacheMisses}/clear{overlaySkiaRenderer.LastMinimapMarkerSpriteCacheClears}/size{overlaySkiaRenderer.MarkerSpriteCacheCount} textSpriteCache={overlaySkiaRenderer.LastTextSpriteCacheHits}/{overlaySkiaRenderer.LastTextSpriteCacheMisses}/clear{overlaySkiaRenderer.LastTextSpriteCacheClears}/size{overlaySkiaRenderer.TextSpriteCacheCount} textLayout={overlaySkiaRenderer.LastTextLayoutCacheHits}/{overlaySkiaRenderer.LastTextLayoutCacheMisses}/clear{overlaySkiaRenderer.LastTextLayoutCacheClears}/size{overlaySkiaRenderer.CachedTextLayoutCount}");
+                        }
+
+                        if (drawSkiaUi)
+                        {
+                            browserAfterOverlayRenderer.Render(
+                                uiRoot.Scene,
+                                lastW,
+                                lastH,
+                                BrowserSurfaceCompositeOrder.AfterSkiaOverlay);
                         }
 
                         bool drawLightweightDiagnosticHud = lightweightDiagnosticHudEnabled;

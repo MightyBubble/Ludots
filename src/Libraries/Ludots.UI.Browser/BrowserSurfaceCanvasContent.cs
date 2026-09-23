@@ -8,7 +8,12 @@ public class BrowserSurfaceCanvasContent : IUiCanvasContent, IUiBrowserCanvasCon
 {
 	private readonly IBrowserSurface _surface;
 	private readonly BrowserSurfaceHitTestOptions _hitTestOptions;
+	private readonly BrowserSurfacePointerClickOptions _pointerClickOptions;
 	private PointerButton? _activePointerButton;
+	private int _activePointerClickCount = 1;
+	private bool _activePointerClickCandidate;
+	private float _activePointerClickStartX;
+	private float _activePointerClickStartY;
 	private bool _focused;
 	private bool _disposed;
 	private bool _hasPointerMapping;
@@ -18,17 +23,39 @@ public class BrowserSurfaceCanvasContent : IUiCanvasContent, IUiBrowserCanvasCon
 	private float _pointerMappingScaleY;
 	private bool _hasActivePointerContentRect;
 	private UiRect _activePointerContentRect;
+	private bool _hasLastPointerClick;
+	private BrowserPointerClickSnapshot _lastPointerClick;
 
 	public BrowserSurfaceCanvasContent(
 		IBrowserSurface surface,
-		BrowserSurfaceHitTestOptions? hitTestOptions = null)
+		BrowserSurfaceCompositeOrder compositeOrder = BrowserSurfaceCompositeOrder.BeforeSkiaOverlay,
+		BrowserSurfaceHitTestOptions? hitTestOptions = null,
+		BrowserSurfaceAlphaMode alphaMode = BrowserSurfaceAlphaMode.Preserve)
+		: this(surface, null, compositeOrder, hitTestOptions, alphaMode)
+	{
+	}
+
+	public BrowserSurfaceCanvasContent(
+		IBrowserSurface surface,
+		BrowserSurfacePointerClickOptions? pointerClickOptions,
+		BrowserSurfaceCompositeOrder compositeOrder = BrowserSurfaceCompositeOrder.BeforeSkiaOverlay,
+		BrowserSurfaceHitTestOptions? hitTestOptions = null,
+		BrowserSurfaceAlphaMode alphaMode = BrowserSurfaceAlphaMode.Preserve)
 	{
 		_surface = surface ?? throw new ArgumentNullException(nameof(surface));
+		CompositeOrder = compositeOrder;
+		AlphaMode = alphaMode;
 		_hitTestOptions = hitTestOptions ?? BrowserSurfaceHitTestOptions.Bounds;
 		_hitTestOptions.Validate();
+		_pointerClickOptions = pointerClickOptions ?? new BrowserSurfacePointerClickOptions();
+		_pointerClickOptions.Validate();
 	}
 
 	public IBrowserSurface Surface => _surface;
+
+	public BrowserSurfaceCompositeOrder CompositeOrder { get; }
+
+	public BrowserSurfaceAlphaMode AlphaMode { get; }
 
 	public BrowserFrame? LatestFrame => _surface.TryGetLatestFrame();
 
@@ -116,12 +143,26 @@ public class BrowserSurfaceCanvasContent : IUiCanvasContent, IUiBrowserCanvasCon
 			PointerButton.Right => BrowserPointerButton.Right,
 			_ => BrowserPointerButton.None
 		};
+		if (pointerEvent.Action == PointerAction.Down)
+		{
+			_activePointerClickCount = ResolveClickCount(browserButton, localX, localY, GetMonotonicMilliseconds());
+			_activePointerClickCandidate = browserButton != BrowserPointerButton.None;
+			_activePointerClickStartX = localX;
+			_activePointerClickStartY = localY;
+		}
+		else if (pointerEvent.Action == PointerAction.Move &&
+			_activePointerClickCandidate &&
+			HasExceededClickDistance(localX, localY, _activePointerClickStartX, _activePointerClickStartY))
+		{
+			_activePointerClickCandidate = false;
+		}
+
 		bool buttonDown = activeButton.HasValue && pointerEvent.Action != PointerAction.Up && pointerEvent.Action != PointerAction.Cancel;
 		BrowserInputEvent? browserEvent = pointerEvent.Action switch
 		{
 			PointerAction.Move => new BrowserPointerEvent(BrowserPointerEventType.Move, pointerEvent.PointerId, localX, localY, browserButton, buttonDown),
-			PointerAction.Down => new BrowserPointerEvent(BrowserPointerEventType.Down, pointerEvent.PointerId, localX, localY, browserButton, true),
-			PointerAction.Up => new BrowserPointerEvent(BrowserPointerEventType.Up, pointerEvent.PointerId, localX, localY, browserButton, false),
+			PointerAction.Down => new BrowserPointerEvent(BrowserPointerEventType.Down, pointerEvent.PointerId, localX, localY, browserButton, true, _activePointerClickCount),
+			PointerAction.Up => new BrowserPointerEvent(BrowserPointerEventType.Up, pointerEvent.PointerId, localX, localY, browserButton, false, _activePointerClickCount),
 			PointerAction.Scroll => new BrowserWheelEvent(localX, localY, pointerEvent.DeltaX * pointerMapping.ScaleX, pointerEvent.DeltaY * pointerMapping.ScaleY),
 			PointerAction.Cancel => new BrowserPointerEvent(BrowserPointerEventType.Leave, pointerEvent.PointerId, localX, localY, BrowserPointerButton.None, false),
 			_ => null
@@ -135,8 +176,25 @@ public class BrowserSurfaceCanvasContent : IUiCanvasContent, IUiBrowserCanvasCon
 		_ = _surface.SendInputAsync(browserEvent);
 		if (pointerEvent.Action is PointerAction.Up or PointerAction.Cancel)
 		{
+			if (pointerEvent.Action == PointerAction.Up && _activePointerClickCandidate)
+			{
+				_lastPointerClick = new BrowserPointerClickSnapshot(
+					browserButton,
+					localX,
+					localY,
+					GetMonotonicMilliseconds(),
+					_activePointerClickCount);
+				_hasLastPointerClick = true;
+			}
+			else if (pointerEvent.Action == PointerAction.Cancel || !_activePointerClickCandidate)
+			{
+				_hasLastPointerClick = false;
+			}
+
 			_activePointerButton = null;
 			_hasActivePointerContentRect = false;
+			_activePointerClickCandidate = false;
+			_activePointerClickCount = 1;
 		}
 
 		return true;
@@ -207,6 +265,11 @@ public class BrowserSurfaceCanvasContent : IUiCanvasContent, IUiBrowserCanvasCon
 	public virtual UiRect GetContentRect(UiNode node)
 	{
 		return ResolveContentRect(node);
+	}
+
+	protected virtual long GetMonotonicMilliseconds()
+	{
+		return Environment.TickCount64;
 	}
 
 	public bool TryReadLatestFrame<TState>(TState state, BrowserFrameReadAction<TState> readFrame)
@@ -286,6 +349,34 @@ public class BrowserSurfaceCanvasContent : IUiCanvasContent, IUiBrowserCanvasCon
 		return new BrowserPointerMapping(viewport, scaleX, scaleY);
 	}
 
+	private int ResolveClickCount(BrowserPointerButton button, float x, float y, long timestampMilliseconds)
+	{
+		if (button == BrowserPointerButton.None ||
+			!_hasLastPointerClick ||
+			_lastPointerClick.Button != button)
+		{
+			return 1;
+		}
+
+		long elapsedMilliseconds = timestampMilliseconds - _lastPointerClick.TimestampMilliseconds;
+		if (elapsedMilliseconds < 0 ||
+			elapsedMilliseconds > _pointerClickOptions.DoubleClickMaxDelayMilliseconds ||
+			HasExceededClickDistance(x, y, _lastPointerClick.X, _lastPointerClick.Y))
+		{
+			return 1;
+		}
+
+		return Math.Min(_lastPointerClick.ClickCount + 1, 2);
+	}
+
+	private bool HasExceededClickDistance(float x, float y, float previousX, float previousY)
+	{
+		float maxDistance = _pointerClickOptions.DoubleClickMaxDistancePixels;
+		float dx = x - previousX;
+		float dy = y - previousY;
+		return (dx * dx) + (dy * dy) > maxDistance * maxDistance;
+	}
+
 	private BrowserViewport EnsureSurfaceViewportResolved(float width, float height)
 	{
 		BrowserViewport viewport = _surface.Viewport;
@@ -349,6 +440,13 @@ public class BrowserSurfaceCanvasContent : IUiCanvasContent, IUiBrowserCanvasCon
 
 		public bool IsOpaque { get; set; }
 	}
+
+	private readonly record struct BrowserPointerClickSnapshot(
+		BrowserPointerButton Button,
+		float X,
+		float Y,
+		long TimestampMilliseconds,
+		int ClickCount);
 
 	private readonly record struct BrowserPointerMapping(BrowserViewport Viewport, float ScaleX, float ScaleY);
 }

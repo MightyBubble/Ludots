@@ -17,6 +17,12 @@ public sealed class CefBrowserNavigationTests
 		await RunOnCefThreadAsync(NavigatePackagedLocalAppAsync);
 	}
 
+	[Test]
+	public async Task SendInputAsync_SecondClickCountTwo_RaisesDomDoubleClick()
+	{
+		await RunOnCefThreadAsync(SendDoubleClickInputAsync);
+	}
+
 	private static async Task NavigatePackagedLocalAppAsync()
 	{
 		string appRoot = CreateTempDirectory("ludots-cef-app-");
@@ -50,6 +56,91 @@ public sealed class CefBrowserNavigationTests
 				BrowserFrame frame = await WaitForPaintedFrameAsync(surface);
 				Assert.That(frame.PixelFormat, Is.EqualTo(BrowserPixelFormat.Bgra8888Premultiplied));
 				Assert.That(HasOpaqueBluePixel(frame), Is.True);
+			}
+			finally
+			{
+				if (surface != null)
+				{
+					await surface.DisposeAsync();
+				}
+
+				await runtime.DisposeAsync();
+			}
+		}
+		finally
+		{
+			TryDeleteDirectory(appRoot);
+			TryDeleteDirectory(cacheRoot);
+		}
+	}
+
+	private static async Task SendDoubleClickInputAsync()
+	{
+		string appRoot = CreateTempDirectory("ludots-cef-dblclick-app-");
+		string cacheRoot = CreateTempDirectory("ludots-cef-dblclick-cache-");
+		try
+		{
+			string html = """
+				<!doctype html>
+				<html>
+				<head>
+					<meta charset="UTF-8" />
+					<style>
+						html, body { margin: 0; width: 100%; height: 100%; background: rgb(20, 40, 220); }
+						#target { position: absolute; left: 0; top: 0; width: 96px; height: 96px; }
+					</style>
+				</head>
+				<body>
+					<button id="target" type="button">Open</button>
+					<script>
+						const target = document.getElementById('target');
+						function post(payload) {
+							if (!window.CefSharp || typeof window.CefSharp.PostMessage !== 'function') {
+								return false;
+							}
+
+							window.CefSharp.PostMessage(JSON.stringify(payload));
+							return true;
+						}
+
+						const readyTimer = setInterval(() => {
+							if (post({ type: 'ready' })) {
+								clearInterval(readyTimer);
+							}
+						}, 20);
+						target.addEventListener('dblclick', event => {
+							post({ type: 'dblclick', detail: event.detail, x: event.clientX, y: event.clientY });
+						});
+					</script>
+				</body>
+				</html>
+				""";
+			File.WriteAllText(Path.Combine(appRoot, "index.html"), html, Encoding.UTF8);
+
+			var runtime = new CefBrowserRuntime(new CefBrowserRuntimeOptions(AppContext.BaseDirectory, cacheRoot));
+			IBrowserSurface? surface = null;
+			try
+			{
+				surface = await runtime.CreateSurfaceAsync(
+					new BrowserViewport(128, 128),
+					new BrowserAppResourceResolver(appRoot));
+
+				Task<string> ready = WaitForMessageContainingAsync(surface, "\"type\":\"ready\"");
+				await surface.NavigateAsync(new BrowserNavigationRequest(BrowserLocalAppUri.Root));
+				await ready;
+				await WaitForPaintedFrameAsync(surface);
+
+				Task<string> doubleClick = WaitForMessageContainingAsync(surface, "\"type\":\"dblclick\"");
+				await surface.SendInputAsync(new BrowserFocusEvent(true));
+				await surface.SendInputAsync(new BrowserPointerEvent(BrowserPointerEventType.Move, 0, 32, 32));
+				await surface.SendInputAsync(new BrowserPointerEvent(BrowserPointerEventType.Down, 0, 32, 32, BrowserPointerButton.Left, true, ClickCount: 1));
+				await surface.SendInputAsync(new BrowserPointerEvent(BrowserPointerEventType.Up, 0, 32, 32, BrowserPointerButton.Left, false, ClickCount: 1));
+				await Task.Delay(80);
+				await surface.SendInputAsync(new BrowserPointerEvent(BrowserPointerEventType.Down, 0, 32, 32, BrowserPointerButton.Left, true, ClickCount: 2));
+				await surface.SendInputAsync(new BrowserPointerEvent(BrowserPointerEventType.Up, 0, 32, 32, BrowserPointerButton.Left, false, ClickCount: 2));
+
+				string payload = await doubleClick;
+				Assert.That(payload, Does.Contain("\"detail\":2"));
 			}
 			finally
 			{
@@ -138,6 +229,35 @@ public sealed class CefBrowserNavigationTests
 
 		Assert.Fail($"CEF local app did not paint the expected frame. Last sequence: {lastFrame?.Sequence.ToString() ?? "<none>"}.");
 		throw new InvalidOperationException("Unreachable after Assert.Fail.");
+	}
+
+	private static async Task<string> WaitForMessageContainingAsync(IBrowserSurface surface, string expected)
+	{
+		var completion = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+		void Handler(object? _, BrowserScriptMessage message)
+		{
+			if (message.Payload.Contains(expected, StringComparison.Ordinal))
+			{
+				completion.TrySetResult(message.Payload);
+			}
+		}
+
+		surface.Messages.MessageReceived += Handler;
+		try
+		{
+			Task completed = await Task.WhenAny(completion.Task, Task.Delay(TimeSpan.FromSeconds(5)));
+			if (completed == completion.Task)
+			{
+				return await completion.Task;
+			}
+
+			Assert.Fail($"CEF page did not send expected message '{expected}'.");
+			throw new InvalidOperationException("Unreachable after Assert.Fail.");
+		}
+		finally
+		{
+			surface.Messages.MessageReceived -= Handler;
+		}
 	}
 
 	private static bool HasOpaqueBluePixel(BrowserFrame frame)

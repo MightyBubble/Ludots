@@ -26,7 +26,8 @@ public sealed record BrowserPointerEvent(
 	float X,
 	float Y,
 	BrowserPointerButton Button = BrowserPointerButton.None,
-	bool IsPrimaryButtonDown = false) : BrowserInputEvent;
+	bool IsPrimaryButtonDown = false,
+	int ClickCount = 1) : BrowserInputEvent;
 
 /// <summary>
 /// Browser wheel input in DOM WheelEvent coordinates. Positive DeltaY means scrolling down.

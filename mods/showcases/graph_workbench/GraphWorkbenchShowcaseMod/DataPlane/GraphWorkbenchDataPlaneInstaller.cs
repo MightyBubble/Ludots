@@ -16,6 +16,9 @@ public static class GraphWorkbenchDataPlaneInstaller
 {
     private const string AssetIndexPath = "GraphWorkbenchShowcaseMod:Assets/graph-workbench-app/index.html";
     private const float TopicPublishIntervalSeconds = 0.08f;
+    private const float DockedWorkbenchWidthPercent = 48f;
+    private const int MinimumWorkbenchViewportWidth = 560;
+    private const int MinimumWorkbenchViewportHeight = 720;
 
     public static async Task<GraphWorkbenchDataPlaneInstallation> InstallAsync(
         GameEngine engine,
@@ -36,7 +39,7 @@ public static class GraphWorkbenchDataPlaneInstaller
             ?? throw new InvalidOperationException("UIRoot service is missing.");
 
         string assetRoot = ResolveAssetRoot(engine);
-        var producer = new GraphWorkbenchDataPlane(engine.World);
+        var producer = new GraphWorkbenchDataPlane(engine);
         var router = new WebUiCommandRouter(
             new GraphWorkbenchGenerationResolver(),
             new GraphWorkbenchPermissionValidator());
@@ -52,8 +55,8 @@ public static class GraphWorkbenchDataPlaneInstaller
 
         var resolver = new BrowserAppResourceResolver(assetRoot);
         var viewport = new BrowserViewport(
-            Math.Max(1280, (int)MathF.Ceiling(root.Width)),
-            Math.Max(720, (int)MathF.Ceiling(root.Height)));
+            Math.Max(MinimumWorkbenchViewportWidth, (int)MathF.Ceiling(root.Width * DockedWorkbenchWidthPercent / 100f)),
+            Math.Max(MinimumWorkbenchViewportHeight, (int)MathF.Ceiling(root.Height)));
         IBrowserSurface surface = await browserRuntime
             .CreateSurfaceAsync(viewport, resolver)
             .ConfigureAwait(false);
@@ -71,12 +74,14 @@ public static class GraphWorkbenchDataPlaneInstaller
 
         var browserContent = new BrowserSurfaceCanvasContent(
             surface,
-            hitTestOptions: BrowserSurfaceHitTestOptions.Alpha());
+            compositeOrder: BrowserSurfaceCompositeOrder.AfterSkiaOverlay,
+            hitTestOptions: BrowserSurfaceHitTestOptions.Alpha(),
+            alphaMode: BrowserSurfaceAlphaMode.PromoteNonTransparentToOpaque);
         UiSurfaceLeaseHandle lease = surfaceHost.Acquire(new UiSurfaceLeaseRequest(
             "GraphWorkbench.Showcase",
             UiSurfaceSegment.Main,
             priority: 55,
-            exclusive: true));
+            exclusive: false));
         surfaceHost.Publish(
             lease,
             UiSurfaceContribution.FromBuilder(() => BuildBrowserRoot(browserContent)));
@@ -97,11 +102,21 @@ public static class GraphWorkbenchDataPlaneInstaller
 
     private static UiElementBuilder BuildBrowserRoot(BrowserSurfaceCanvasContent browserContent)
     {
-        return Ui.Canvas(browserContent)
-            .Id("graph-workbench-browser-surface")
+        return Ui.Row(
+                new UiElementBuilder(UiNodeKind.Container, "div")
+                    .Id("graph-workbench-game-test-space")
+                    .FlexGrow(1f)
+                    .HeightPercent(100f)
+                    .PointerEvents(UiPointerEvents.None),
+                Ui.Canvas(browserContent)
+                    .Id("graph-workbench-browser-surface")
+                    .WidthPercent(DockedWorkbenchWidthPercent)
+                    .HeightPercent(100f))
+            .Id("graph-workbench-docked-root")
             .WidthPercent(100f)
             .HeightPercent(100f)
             .Absolute(0f, 0f)
+            .PointerEvents(UiPointerEvents.None)
             .ZIndex(45);
     }
 

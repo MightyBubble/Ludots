@@ -115,10 +115,123 @@ public static class GraphWorkbenchDocumentCompiler
         }
 
         ValidateEdges(graph.Id, graph.Nodes, graph.Edges, diagnostics);
+        ValidateGraphPortEdges(graph, diagnostics);
+        ValidateGraphOutputs(graph, diagnostics);
         var nodeIds = new HashSet<string>(graph.Nodes.Select(static node => node.Id), StringComparer.Ordinal);
         if (!string.IsNullOrWhiteSpace(graph.EntryNodeId) && !nodeIds.Contains(graph.EntryNodeId))
         {
             diagnostics.Add(Error(graph.Id, graph.EntryNodeId, "GW0101", $"Graph entry node '{graph.EntryNodeId}' is missing."));
+        }
+    }
+
+    private static void ValidateGraphPortEdges(GraphWorkbenchGraphDocument graph, List<GraphWorkbenchDiagnostic> diagnostics)
+    {
+        var nodesById = graph.Nodes
+            .Where(static node => !string.IsNullOrWhiteSpace(node.Id))
+            .GroupBy(static node => node.Id, StringComparer.Ordinal)
+            .ToDictionary(static group => group.Key, static group => group.First(), StringComparer.Ordinal);
+        var connectedInputs = new HashSet<string>(StringComparer.Ordinal);
+
+        for (int i = 0; i < graph.Edges.Count; i++)
+        {
+            GraphWorkbenchEdgeDocument edge = graph.Edges[i];
+            bool isInputEdge = IsInputPort(edge.TargetPort);
+            bool isExecEdge = string.Equals(edge.SourcePort, "exec:next", StringComparison.Ordinal) ||
+                              string.Equals(edge.TargetPort, "exec:in", StringComparison.Ordinal);
+
+            if (isInputEdge)
+            {
+                ValidateGraphInputEdge(graph, edge, nodesById, connectedInputs, diagnostics);
+                continue;
+            }
+
+            if (isExecEdge)
+            {
+                if (!string.Equals(edge.SourcePort, "exec:next", StringComparison.Ordinal) ||
+                    !string.Equals(edge.TargetPort, "exec:in", StringComparison.Ordinal))
+                {
+                    diagnostics.Add(Error(graph.Id, edge.Target, "GW0314", $"Graph exec edge '{edge.Id}' must connect exec:next to exec:in."));
+                }
+
+                continue;
+            }
+
+            if (!string.IsNullOrWhiteSpace(edge.SourcePort) || !string.IsNullOrWhiteSpace(edge.TargetPort))
+            {
+                diagnostics.Add(Error(graph.Id, edge.Target, "GW0315", $"Graph edge '{edge.Id}' uses unsupported ports '{edge.SourcePort}' -> '{edge.TargetPort}'."));
+            }
+        }
+
+        for (int n = 0; n < graph.Nodes.Count; n++)
+        {
+            GraphWorkbenchNodeDocument node = graph.Nodes[n];
+            for (int i = 0; i < node.Inputs.Count; i++)
+            {
+                if (string.IsNullOrWhiteSpace(node.Inputs[i]))
+                {
+                    continue;
+                }
+
+                if (!connectedInputs.Contains(InputConnectionKey(node.Id, i)))
+                {
+                    diagnostics.Add(Error(graph.Id, node.Id, "GW0316", $"Node '{node.Id}' input[{i}] has no visible edge to target port in:{i}."));
+                }
+            }
+        }
+    }
+
+    private static void ValidateGraphInputEdge(
+        GraphWorkbenchGraphDocument graph,
+        GraphWorkbenchEdgeDocument edge,
+        Dictionary<string, GraphWorkbenchNodeDocument> nodesById,
+        HashSet<string> connectedInputs,
+        List<GraphWorkbenchDiagnostic> diagnostics)
+    {
+        if (!nodesById.TryGetValue(edge.Target, out GraphWorkbenchNodeDocument? targetNode))
+        {
+            return;
+        }
+
+        if (!TryParseInputPort(edge.TargetPort, out int inputIndex))
+        {
+            diagnostics.Add(Error(graph.Id, edge.Target, "GW0310", $"Graph input edge '{edge.Id}' has invalid target port '{edge.TargetPort}'."));
+            return;
+        }
+
+        if (!IsValueSourcePort(edge.SourcePort))
+        {
+            diagnostics.Add(Error(graph.Id, edge.Target, "GW0311", $"Graph input edge '{edge.Id}' must connect from a value output port."));
+            return;
+        }
+
+        if (inputIndex < 0 || inputIndex >= targetNode.Inputs.Count)
+        {
+            diagnostics.Add(Error(graph.Id, targetNode.Id, "GW0312", $"Graph input edge '{edge.Id}' targets input[{inputIndex}], but node '{targetNode.Id}' declares {targetNode.Inputs.Count} inputs."));
+            return;
+        }
+
+        string key = InputConnectionKey(targetNode.Id, inputIndex);
+        if (!connectedInputs.Add(key))
+        {
+            diagnostics.Add(Error(graph.Id, targetNode.Id, "GW0313", $"Node '{targetNode.Id}' input[{inputIndex}] has more than one visible edge."));
+            return;
+        }
+
+        if (!nodesById.TryGetValue(edge.Source, out GraphWorkbenchNodeDocument? sourceNode))
+        {
+            return;
+        }
+
+        if (!TryResolveSourceValue(edge, sourceNode, out string sourceValue, out string error))
+        {
+            diagnostics.Add(Error(graph.Id, sourceNode.Id, "GW0317", error));
+            return;
+        }
+
+        string expected = targetNode.Inputs[inputIndex];
+        if (!string.Equals(expected, sourceValue, StringComparison.Ordinal))
+        {
+            diagnostics.Add(Error(graph.Id, targetNode.Id, "GW0318", $"Node '{targetNode.Id}' input[{inputIndex}] expects '{expected}', but visible edge '{edge.Id}' carries '{sourceValue}'."));
         }
     }
 
@@ -143,6 +256,19 @@ public static class GraphWorkbenchDocumentCompiler
                     node.Id,
                     "GW0200",
                     $"Node '{node.Id}' references missing implementation graph '{node.ImplementationGraphId}'."));
+            }
+        }
+    }
+
+    private static void ValidateGraphOutputs(GraphWorkbenchGraphDocument graph, List<GraphWorkbenchDiagnostic> diagnostics)
+    {
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        for (int i = 0; i < graph.Outputs.Count; i++)
+        {
+            GraphWorkbenchGraphOutputDocument output = graph.Outputs[i];
+            if (!RequireId(output.Id, "output", i, diagnostics) || !ids.Add(output.Id))
+            {
+                diagnostics.Add(Error(graph.Id, output.Id, "GW0110", $"Duplicate or missing graph output id '{output.Id}'."));
             }
         }
     }
@@ -178,9 +304,10 @@ public static class GraphWorkbenchDocumentCompiler
         }
     }
 
-    private static GraphConfig ToGraphConfig(GraphWorkbenchGraphDocument graph)
+    public static GraphConfig ToGraphConfig(GraphWorkbenchGraphDocument graph)
     {
         var nextBySource = new Dictionary<string, string>(StringComparer.Ordinal);
+        var inputsByTarget = BuildInputsByTarget(graph);
         for (int i = 0; i < graph.Edges.Count; i++)
         {
             GraphWorkbenchEdgeDocument edge = graph.Edges[i];
@@ -209,18 +336,167 @@ public static class GraphWorkbenchDocumentCompiler
                 Id = node.Id,
                 Op = string.IsNullOrWhiteSpace(node.Op) ? "ConstInt" : node.Op,
                 Next = next,
-                Inputs = node.Inputs.ToList(),
+                Inputs = inputsByTarget.TryGetValue(node.Id, out List<string>? visibleInputs)
+                    ? visibleInputs
+                    : node.Inputs?.ToList() ?? new List<string>(),
                 IntValue = node.IntValue,
                 FloatValue = node.FloatValue,
                 BoolValue = node.BoolValue,
                 Tag = EmptyToNull(node.Tag),
                 Attribute = EmptyToNull(node.Attribute),
-                EffectTemplate = EmptyToNull(node.EffectTemplate)
+                Template = EmptyToNull(node.Template),
+                CollectionKey = EmptyToNull(node.CollectionKey),
+                EffectTemplate = EmptyToNull(node.EffectTemplate),
+                BlackboardKey = EmptyToNull(node.BlackboardKey),
+                ConfigKey = EmptyToNull(node.ConfigKey),
+                ValidOutput = EmptyToNull(node.ValidOutput),
+                DroppedOutput = EmptyToNull(node.DroppedOutput),
+                QueryCapacityPolicy = EmptyToNull(node.QueryCapacityPolicy),
+                RadiusCm = node.RadiusCm,
+                RangeCm = node.RangeCm,
+                DirectionDeg = node.DirectionDeg,
+                HalfAngleDeg = node.HalfAngleDeg,
+                LengthCm = node.LengthCm,
+                HalfWidthCm = node.HalfWidthCm,
+                HalfHeightCm = node.HalfHeightCm,
+                RotationDeg = node.RotationDeg,
+                HexRadius = node.HexRadius,
+                LayerMask = node.LayerMask,
+                RelationshipMode = EmptyToNull(node.RelationshipMode),
+                Limit = node.Limit,
+                TeamId = node.TeamId,
+                Sort = EmptyToNull(node.Sort),
+                RelationshipType = EmptyToNull(node.RelationshipType),
+                Metric = EmptyToNull(node.Metric),
+                Flag = EmptyToNull(node.Flag),
+                Reason = EmptyToNull(node.Reason),
+                PayloadPreset = EmptyToNull(node.PayloadPreset),
+                BuiltinHandler = EmptyToNull(node.BuiltinHandler),
+                Descending = node.Descending,
+                Slot = node.Slot
+            });
+        }
+
+        for (int i = 0; i < graph.Outputs.Count; i++)
+        {
+            GraphWorkbenchGraphOutputDocument output = graph.Outputs[i];
+            config.Outputs.Add(new GraphOutputConfig
+            {
+                Id = output.Id,
+                Destination = output.Destination,
+                Type = output.Type,
+                Source = output.Source,
+                Key = output.Key,
+                CollectionKey = output.CollectionKey,
+                Role = output.Role,
+                Title = output.Title,
+                Summary = output.Summary
             });
         }
 
         return config;
     }
+
+    private static Dictionary<string, List<string>> BuildInputsByTarget(GraphWorkbenchGraphDocument graph)
+    {
+        var nodesById = graph.Nodes
+            .Where(static node => !string.IsNullOrWhiteSpace(node.Id))
+            .GroupBy(static node => node.Id, StringComparer.Ordinal)
+            .ToDictionary(static group => group.Key, static group => group.First(), StringComparer.Ordinal);
+        var result = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+
+        for (int i = 0; i < graph.Edges.Count; i++)
+        {
+            GraphWorkbenchEdgeDocument edge = graph.Edges[i];
+            if (!TryParseInputPort(edge.TargetPort, out int inputIndex) ||
+                !nodesById.TryGetValue(edge.Source, out GraphWorkbenchNodeDocument? sourceNode) ||
+                !TryResolveSourceValue(edge, sourceNode, out string sourceValue, out _))
+            {
+                continue;
+            }
+
+            if (!result.TryGetValue(edge.Target, out List<string>? inputs))
+            {
+                inputs = new List<string>();
+                result[edge.Target] = inputs;
+            }
+
+            while (inputs.Count <= inputIndex)
+            {
+                inputs.Add(string.Empty);
+            }
+
+            inputs[inputIndex] = sourceValue;
+        }
+
+        return result;
+    }
+
+    private static bool TryResolveSourceValue(
+        GraphWorkbenchEdgeDocument edge,
+        GraphWorkbenchNodeDocument sourceNode,
+        out string sourceValue,
+        out string error)
+    {
+        sourceValue = string.Empty;
+        error = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(edge.SourcePort) ||
+            string.Equals(edge.SourcePort, "out:value", StringComparison.Ordinal))
+        {
+            sourceValue = sourceNode.Id;
+            return true;
+        }
+
+        if (string.Equals(edge.SourcePort, "out:valid", StringComparison.Ordinal))
+        {
+            if (string.IsNullOrWhiteSpace(sourceNode.ValidOutput))
+            {
+                error = $"Node '{sourceNode.Id}' source port out:valid requires validOutput.";
+                return false;
+            }
+
+            sourceValue = sourceNode.ValidOutput;
+            return true;
+        }
+
+        if (string.Equals(edge.SourcePort, "out:dropped", StringComparison.Ordinal))
+        {
+            if (string.IsNullOrWhiteSpace(sourceNode.DroppedOutput))
+            {
+                error = $"Node '{sourceNode.Id}' source port out:dropped requires droppedOutput.";
+                return false;
+            }
+
+            sourceValue = sourceNode.DroppedOutput;
+            return true;
+        }
+
+        error = $"Node '{sourceNode.Id}' uses unsupported value source port '{edge.SourcePort}'.";
+        return false;
+    }
+
+    private static bool IsInputPort(string port) =>
+        TryParseInputPort(port, out _);
+
+    private static bool TryParseInputPort(string port, out int inputIndex)
+    {
+        inputIndex = -1;
+        const string Prefix = "in:";
+        return !string.IsNullOrWhiteSpace(port) &&
+               port.StartsWith(Prefix, StringComparison.Ordinal) &&
+               int.TryParse(port.AsSpan(Prefix.Length), out inputIndex) &&
+               inputIndex >= 0;
+    }
+
+    private static bool IsValueSourcePort(string port) =>
+        string.IsNullOrWhiteSpace(port) ||
+        string.Equals(port, "out:value", StringComparison.Ordinal) ||
+        string.Equals(port, "out:valid", StringComparison.Ordinal) ||
+        string.Equals(port, "out:dropped", StringComparison.Ordinal);
+
+    private static string InputConnectionKey(string nodeId, int inputIndex) =>
+        $"{nodeId}\u001F{inputIndex}";
 
     private static bool HasErrors(List<GraphWorkbenchDiagnostic> diagnostics)
     {

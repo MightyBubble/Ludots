@@ -202,7 +202,72 @@
       "browserRuntime": {
         "enabled": true,
         "required": true,
-        "provider": "cef"
+        "provider": "cef",
+        "cacheRootPath": "%TEMP%/Ludots/CefGraphWorkbench/standalone"
+      }
+    },
+    {
+      "id": "graph_level_blueprint_workbench_cef_raylib",
+      "name": "Graph Level Blueprint + Workbench CEF Raylib",
+      "selectors": [
+        "$graph_level_blueprint_showcase",
+        "$graph_workbench_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "cef",
+        "cacheRootPath": "%TEMP%/Ludots/CefGraphWorkbench/level-blueprint"
+      }
+    },
+    {
+      "id": "graph_stance_fsm_workbench_cef_raylib",
+      "name": "Graph RTS Stance FSM + Workbench CEF Raylib",
+      "selectors": [
+        "$graph_stance_fsm_showcase",
+        "$graph_workbench_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "cef",
+        "cacheRootPath": "%TEMP%/Ludots/CefGraphWorkbench/stance-fsm"
+      }
+    },
+    {
+      "id": "graph_complex_bt_workbench_cef_raylib",
+      "name": "Graph Behavior Tree + Workbench CEF Raylib",
+      "selectors": [
+        "$graph_complex_bt_showcase",
+        "$graph_workbench_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "cef",
+        "cacheRootPath": "%TEMP%/Ludots/CefGraphWorkbench/complex-bt"
+      }
+    },
+    {
+      "id": "graph_stress_field_workbench_cef_raylib",
+      "name": "Graph AI 50k Benchmark + Workbench CEF Raylib",
+      "selectors": [
+        "$graph_stress_field_showcase",
+        "$graph_workbench_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "cef",
+        "cacheRootPath": "%TEMP%/Ludots/CefGraphWorkbench/stress-field"
       }
     },
     {

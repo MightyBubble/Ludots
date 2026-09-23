@@ -14,7 +14,7 @@ public sealed class BrowserCanvasContent : BrowserSurfaceCanvasContent, ISkiaUiC
 		IBrowserSurface surface,
 		SkiaBrowserFrameRenderer? renderer = null,
 		BrowserSurfaceHitTestOptions? hitTestOptions = null)
-		: base(surface, hitTestOptions)
+		: base(surface, hitTestOptions: hitTestOptions)
 	{
 		_renderer = renderer ?? new SkiaBrowserFrameRenderer();
 		_ownsRenderer = renderer == null;

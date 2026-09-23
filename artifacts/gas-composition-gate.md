@@ -2,6 +2,121 @@
 
 Current closeouts and prior issue reviews follow.
 
+## GAS Composition Gate - Graph Workbench Port-Faithful Graph Ops - 2026-07-29
+
+- **Task / Issue**: Repair Graph Workbench so atomic Graph ops expose parameter pins, exec pins, auxiliary outputs, and graph outputs instead of flattened node-level wiring.
+- **Date**: 2026-07-29
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+Primary delivery: A. Existing graph nodes, fields, outputs, and connections are represented faithfully in the Workbench document and ReactFlow editor.
+
+Result: PASS
+
+Reason: This repair adds no graph opcode, effect preset enum, profile field, JSON gameplay schema, loader, runtime fallback, or parallel interpreter. It only makes the showcase editor preserve and display the existing `GraphConfig`, `GraphNodeConfig`, and `GraphOutputConfig` contract.
+
+### 2. Layer assignment
+
+| Step / capability | Layer | Implementation carrier |
+|---|---:|---|
+| Workbench node parameter field coverage | 2 | `GraphWorkbenchNodeDocument` mapped to existing `GraphNodeConfig` |
+| Port-level edges | 2 | `GraphWorkbenchEdgeDocument.SourcePort/TargetPort` mapped to `Next` and `Inputs[index]` |
+| Graph-level outputs | 2 | `GraphWorkbenchGraphDocument.Outputs` mapped to existing `GraphOutputConfig` |
+| ReactFlow pins and live debug display | N/A | Workbench WebApp only |
+
+### 3. Reuse list
+
+- Handlers: no new handler.
+- Queues / Systems: existing CEF DataPlane, Graph Workbench compiler, Raylib showcase host.
+- Resolvers / Registries: existing `GraphCompiler`, `GraphNodeOpParser`, graph output validation.
+- Existing presets / graphs: existing Level Blueprint, Skill GAS, FSM, BT, and stress showcase documents.
+
+### 4. New Layer 0 ops
+
+N/A. No opcode, effect operation, builtin handler, preset, or gameplay schema is added.
+
+### 5. Transaction boundary
+
+N/A. Compile remains all-or-error. Invalid drafts must not update the running document revision.
+
+### 6. Config SSOT
+
+Behavior remains in existing graph composition. Workbench JSON is an editor DTO only and maps into `GraphConfig`.
+
+New JSON schema: NO for gameplay runtime.
+
+### 7. Red flag scan
+
+- [x] No profile inherit/placement enum added
+- [x] No parallel graph/FSM/BT runtime added
+- [x] No silent fallback or compile bypass added
+- [x] No hard-coded replacement for existing graph op contracts added
+
+### 8. Next variant test
+
+The next level trigger, GAS skill, FSM state, or BT task variant changes graph nodes, pins, and graph outputs. It must not add a Core enum or a second interpreter.
+
+---
+
+## GAS Composition Gate - Graph Workbench Atomic Node Navigation Repair - 2026-07-28
+
+- **Task / Issue**: Repair the Graph Workbench showcase so Level Blueprint, RTS FSM, and Complex BT nodes open implementation graphs made of atomic opcode nodes.
+- **Date**: 2026-07-28
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+Primary delivery: A. Existing top-level graph/FSM/BT documents bind nodes to existing graph-op compositions.
+
+Result: PASS
+
+Reason: This repair adds no gameplay opcode, effect preset enum, profile field, schema loader, runtime fallback, or parallel FSM/BT interpreter. The visible showcase now makes the business-level nodes navigate into Layer 2 graph programs whose nodes are Layer 0-style opcode labels such as `ConstInt`, `AddInt`, `CompareLtInt`, `CompareEqInt`, `JumpIfFalse`, and `Jump`.
+
+### 2. Layer assignment
+
+| Step / capability | Layer | Implementation carrier |
+|---|---:|---|
+| Level Blueprint trigger node implementation links | 2 | `GraphWorkbenchSeedDocument` implementation graph ids |
+| RTS stance FSM state implementation links | 2 | `rts_stance_fsm` graph document |
+| Complex BT task implementation links | 2 | `complex_bt_selector` graph document |
+| Live debug highlight mapping | 2 | `GraphWorkbenchRuntimeBridge` node id mapping |
+| Docked editor usability | N/A | Existing ReactFlow WebApp CSS only |
+
+### 3. Reuse list
+
+- Handlers: no new handler.
+- Queues / Systems: existing Raylib showcase systems, CEF surface host, Web UI DataPlane, Graph Workbench compiler.
+- Resolvers / Registries: existing showcase selectors, launcher presets, graph document compiler.
+- Existing presets / graphs: existing graph workbench presets and document DTOs.
+
+### 4. New Layer 0 ops
+
+N/A. No opcode, effect operation, builtin handler, preset, or gameplay schema was added.
+
+### 5. Transaction boundary
+
+N/A. The repair only changes editable showcase documents, navigation, and live debug mapping. Compile remains all-or-error and does not publish partial invalid documents.
+
+### 6. Config SSOT
+
+Behavior remains in the Graph Workbench showcase document graph composition. No gameplay JSON schema was added.
+
+New JSON schema: NO.
+
+### 7. Red flag scan
+
+- [x] No profile inherit/placement enum added
+- [x] No parallel FSM, BT, trigger, GAS, or graph runtime added
+- [x] No silent fallback or compatibility bypass added
+- [x] No hard-coded runtime success path added outside showcase sample data
+
+### 8. Next variant test
+
+The next level trigger, skill, FSM state, or BT task variant changes graph nodes and edges. It must not add a Core enum or a second interpreter.
+
+---
+
 ## GAS Composition Gate - Universal Graph Workbench - 2026-07-28
 
 - **Task / Issue**: Add a universal Graph Workbench showcase and repair the missing common Graph executor required by Graph-driven FSM/BT showcase programs.

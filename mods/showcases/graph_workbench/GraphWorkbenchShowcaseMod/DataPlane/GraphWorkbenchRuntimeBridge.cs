@@ -1,72 +1,62 @@
-using Arch.Core;
 using GraphWorkbenchShowcaseMod.Domain;
+using Ludots.Core.Engine;
 
 namespace GraphWorkbenchShowcaseMod.DataPlane;
 
 public sealed class GraphWorkbenchRuntimeBridge
 {
-    private const string Source = "ecs-runtime";
-    private readonly World _world;
-    private readonly Entity[] _entities;
-    private string _selectedEntityId;
+    private const string InactiveSource = "no-active-3d-showcase";
+    private const string LevelGraphId = "level_blueprint_opening";
+    private const string StanceGraphId = "rts_stance_fsm";
+    private const string StanceFsmId = "rts.stance";
+    private const string BehaviorGraphId = "complex_bt_selector";
+    private const string BehaviorTreeId = "unit.assault_bt";
+    private const string StressFsmGraphId = "stress_field_fsm";
+    private const string StressBtGraphId = "stress_field_bt";
+
+    private static readonly LiveRuntimeDescriptor[] RuntimeDescriptors =
+    [
+        new("GraphAiShowcase.LevelBlueprint.Runtime", "Level Blueprint"),
+        new("GraphAiShowcase.StanceFsm.Runtime", "RTS Stance FSM"),
+        new("GraphAiShowcase.ComplexBt.Runtime", "Complex Behavior Tree"),
+        new("GraphAiShowcase.StressField.Runtime", "50k FSM+BT Benchmark")
+    ];
+
+    private readonly GameEngine? _engine;
+    private string _selectedEntityId = string.Empty;
     private int _tick;
     private int _appliedRevision;
 
-    public GraphWorkbenchRuntimeBridge(
-        World world,
-        GraphWorkbenchDocument document,
-        int appliedRevision)
+    public GraphWorkbenchRuntimeBridge(GameEngine? engine)
     {
-        _world = world ?? throw new ArgumentNullException(nameof(world));
-        _appliedRevision = appliedRevision;
-        _entities =
-        [
-            _world.Create(
-                new GraphWorkbenchRuntimeIdentity(
-                    "entity.level-director",
-                    "Level Director",
-                    "Level Blueprint",
-                    "level.open_gate_impl",
-                    string.Empty,
-                    string.Empty,
-                    42,
-                    30),
-                GraphWorkbenchRuntimeCursor.Empty),
-            _world.Create(
-                new GraphWorkbenchRuntimeIdentity(
-                    "entity.fire-mage",
-                    "Fire Mage",
-                    "GAS Skill Graph",
-                    "gas.fireball_cost_impl",
-                    string.Empty,
-                    string.Empty,
-                    70,
-                    58),
-                GraphWorkbenchRuntimeCursor.Empty),
-            _world.Create(
-                new GraphWorkbenchRuntimeIdentity(
-                    "entity.rifle-squad",
-                    "Rifle Squad",
-                    "RTS FSM + BT",
-                    "fsm.return_fire_impl",
-                    "rts.stance",
-                    "unit.assault_bt",
-                    58,
-                    76),
-                GraphWorkbenchRuntimeCursor.Empty)
-        ];
-        _selectedEntityId = "entity.level-director";
-        Refresh(document);
+        _engine = engine;
     }
 
     public int Tick => _tick;
 
-    public bool TrySelectEntity(string entityId)
+    public string ResolveActiveDocumentScope()
     {
-        for (int i = 0; i < _entities.Length; i++)
+        if (!TryReadActiveRuntime(out _, out object runtime))
         {
-            ref GraphWorkbenchRuntimeIdentity identity = ref _world.Get<GraphWorkbenchRuntimeIdentity>(_entities[i]);
-            if (string.Equals(identity.Id, entityId, StringComparison.Ordinal))
+            return GraphWorkbenchDocumentScopes.Library;
+        }
+
+        object runtimeSnapshot = ReadRequired<object>(runtime, "Snapshot");
+        string mode = ReadRequired<string>(runtimeSnapshot, "Mode");
+        return ResolveDocumentScope(mode);
+    }
+
+    public bool TrySelectEntity(GraphWorkbenchDocument document, int appliedRevision, string entityId)
+    {
+        if (string.IsNullOrWhiteSpace(entityId))
+        {
+            return false;
+        }
+
+        GraphWorkbenchRuntimeSnapshot snapshot = CreateSnapshot(document, appliedRevision);
+        for (int i = 0; i < snapshot.Entities.Length; i++)
+        {
+            if (string.Equals(snapshot.Entities[i].Id, entityId, StringComparison.Ordinal))
             {
                 _selectedEntityId = entityId;
                 return true;
@@ -78,129 +68,422 @@ public sealed class GraphWorkbenchRuntimeBridge
 
     public void ApplyDocument(GraphWorkbenchDocument document, int appliedRevision)
     {
+        ArgumentNullException.ThrowIfNull(document);
         _appliedRevision = appliedRevision;
-        Refresh(document);
+        _tick++;
     }
 
     public void Advance(GraphWorkbenchDocument document, int appliedRevision, float dt)
     {
+        ArgumentNullException.ThrowIfNull(document);
+        if (!float.IsFinite(dt) || dt < 0f)
+        {
+            throw new InvalidOperationException($"Graph Workbench received invalid runtime dt '{dt}'.");
+        }
+
         _appliedRevision = appliedRevision;
         _tick++;
-        Refresh(document);
     }
 
     public GraphWorkbenchRuntimeSnapshot CreateSnapshot(GraphWorkbenchDocument document, int appliedRevision)
     {
+        ArgumentNullException.ThrowIfNull(document);
         _appliedRevision = appliedRevision;
-        var rows = new GraphWorkbenchEntityDebug[_entities.Length];
-        GraphWorkbenchEntityDebug selected = default!;
-        for (int i = 0; i < _entities.Length; i++)
+        if (TryCreateLiveSnapshot(document, out GraphWorkbenchRuntimeSnapshot? snapshot) && snapshot != null)
         {
-            Entity entity = _entities[i];
-            ref GraphWorkbenchRuntimeIdentity identity = ref _world.Get<GraphWorkbenchRuntimeIdentity>(entity);
-            ref GraphWorkbenchRuntimeCursor cursor = ref _world.Get<GraphWorkbenchRuntimeCursor>(entity);
+            return snapshot;
+        }
+
+        return new GraphWorkbenchRuntimeSnapshot(
+            InactiveSource,
+            string.Empty,
+            _appliedRevision,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            Array.Empty<GraphWorkbenchEntityDebug>(),
+            Array.Empty<GraphWorkbenchAggregate>());
+    }
+
+    private bool TryCreateLiveSnapshot(
+        GraphWorkbenchDocument document,
+        out GraphWorkbenchRuntimeSnapshot? snapshot)
+    {
+        snapshot = null;
+        if (!TryReadActiveRuntime(out LiveRuntimeDescriptor descriptor, out object runtime))
+        {
+            return false;
+        }
+
+        object runtimeSnapshot = ReadRequired<object>(runtime, "Snapshot");
+        LiveShowcaseSnapshot live = ReadLiveSnapshot(runtimeSnapshot, descriptor.DisplayDomain);
+        _tick = Math.Max(_tick, live.Tick);
+        snapshot = live.Mode switch
+        {
+            "LevelBlueprint" => CreateLevelBlueprintSnapshot(document, live),
+            "StanceFsm" => CreateStanceFsmSnapshot(document, live),
+            "ComplexBt" => CreateComplexBtSnapshot(document, live),
+            "StressField" => CreateStressFieldSnapshot(document, live),
+            _ => throw new InvalidOperationException($"Graph Workbench does not understand graph showcase mode '{live.Mode}'.")
+        };
+        return true;
+    }
+
+    private bool TryReadActiveRuntime(out LiveRuntimeDescriptor descriptor, out object runtime)
+    {
+        descriptor = default;
+        runtime = null!;
+        if (_engine == null)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < RuntimeDescriptors.Length; i++)
+        {
+            LiveRuntimeDescriptor candidate = RuntimeDescriptors[i];
+            if (!_engine.GlobalContext.TryGetValue(candidate.RuntimeKey, out object? candidateRuntime) ||
+                candidateRuntime == null)
+            {
+                continue;
+            }
+
+            if (!ReadRequired<bool>(candidateRuntime, "IsActive"))
+            {
+                continue;
+            }
+
+            descriptor = candidate;
+            runtime = candidateRuntime;
+            return true;
+        }
+
+        return false;
+    }
+
+    private GraphWorkbenchRuntimeSnapshot CreateLevelBlueprintSnapshot(
+        GraphWorkbenchDocument document,
+        LiveShowcaseSnapshot live)
+    {
+        string graphNodeId = ResolveLevelGraphNode(live.State);
+        return new GraphWorkbenchRuntimeSnapshot(
+            SourceName(live),
+            string.Empty,
+            _appliedRevision,
+            LevelGraphId,
+            graphNodeId,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            Array.Empty<GraphWorkbenchEntityDebug>(),
+            [
+                new("3D scene", 1),
+                new("completed triggers", live.CompletedTasks)
+            ]);
+    }
+
+    private GraphWorkbenchRuntimeSnapshot CreateStanceFsmSnapshot(
+        GraphWorkbenchDocument document,
+        LiveShowcaseSnapshot live)
+    {
+        var rows = new GraphWorkbenchEntityDebug[live.Actors.Length];
+        for (int i = 0; i < live.Actors.Length; i++)
+        {
+            LiveActorSnapshot actor = live.Actors[i];
+            string fsmNodeId = ResolveStanceNode(actor.State);
             rows[i] = new GraphWorkbenchEntityDebug(
-                identity.Id,
-                identity.Label,
-                identity.Domain,
-                identity.X,
-                identity.Y,
-                cursor.CurrentGraphId,
-                cursor.CurrentGraphNodeId,
-                cursor.CurrentGraphLabel,
-                cursor.CurrentStateMachineId,
-                cursor.CurrentStateNodeId,
-                cursor.CurrentStateLabel,
-                cursor.CurrentBehaviorTreeId,
-                cursor.CurrentBehaviorNodeId,
-                cursor.CurrentBehaviorLabel);
-            if (string.Equals(identity.Id, _selectedEntityId, StringComparison.Ordinal))
+                actor.InstanceId,
+                actor.Name,
+                live.Title,
+                actor.WorldXCm,
+                actor.WorldYCm,
+                StanceGraphId,
+                ResolveStanceGraphNode(actor.State),
+                ResolveNodeLabel(document, StanceGraphId, ResolveStanceGraphNode(actor.State), actor.StateLabel),
+                StanceFsmId,
+                fsmNodeId,
+                actor.StateLabel,
+                string.Empty,
+                string.Empty,
+                string.Empty);
+        }
+
+        return CreateSelectedSnapshot(SourceName(live), rows, StanceGraphId, StanceFsmId, string.Empty);
+    }
+
+    private GraphWorkbenchRuntimeSnapshot CreateComplexBtSnapshot(
+        GraphWorkbenchDocument document,
+        LiveShowcaseSnapshot live)
+    {
+        var rows = new GraphWorkbenchEntityDebug[live.Actors.Length];
+        for (int i = 0; i < live.Actors.Length; i++)
+        {
+            LiveActorSnapshot actor = live.Actors[i];
+            string behaviorNodeId = ResolveBehaviorNode(actor.TaskId);
+            string graphNodeId = ResolveBehaviorGraphNode(actor.TaskId);
+            rows[i] = new GraphWorkbenchEntityDebug(
+                actor.InstanceId,
+                actor.Name,
+                live.Title,
+                actor.WorldXCm,
+                actor.WorldYCm,
+                BehaviorGraphId,
+                graphNodeId,
+                ResolveNodeLabel(document, BehaviorGraphId, graphNodeId, actor.TaskLabel),
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                BehaviorTreeId,
+                behaviorNodeId,
+                actor.TaskLabel);
+        }
+
+        return CreateSelectedSnapshot(SourceName(live), rows, BehaviorGraphId, string.Empty, BehaviorTreeId);
+    }
+
+    private GraphWorkbenchRuntimeSnapshot CreateStressFieldSnapshot(
+        GraphWorkbenchDocument document,
+        LiveShowcaseSnapshot live)
+    {
+        LiveStressFieldSnapshot stress = live.StressField;
+        string currentGraphId = stress.BtGraphExecutionsLastTick > 0 ? StressBtGraphId : StressFsmGraphId;
+        string currentGraphNodeId = string.Equals(currentGraphId, StressBtGraphId, StringComparison.Ordinal)
+            ? "stress.bt.task"
+            : "stress.fsm.branch";
+
+        return new GraphWorkbenchRuntimeSnapshot(
+            SourceName(live),
+            string.Empty,
+            _appliedRevision,
+            currentGraphId,
+            currentGraphNodeId,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            Array.Empty<GraphWorkbenchEntityDebug>(),
+            [
+                new("ECS entities", stress.EcsEntityCount),
+                new("visible dots", stress.VisiblePrimitiveCount),
+                new("FSM branches", stress.FsmBranchMask),
+                new("BT tasks", stress.BtTaskMask)
+            ]);
+    }
+
+    private GraphWorkbenchRuntimeSnapshot CreateSelectedSnapshot(
+        string source,
+        GraphWorkbenchEntityDebug[] rows,
+        string fallbackGraphId,
+        string fallbackFsmId,
+        string fallbackBehaviorTreeId)
+    {
+        GraphWorkbenchEntityDebug? selected = null;
+        for (int i = 0; i < rows.Length; i++)
+        {
+            if (string.Equals(rows[i].Id, _selectedEntityId, StringComparison.Ordinal))
             {
                 selected = rows[i];
+                break;
             }
         }
 
-        selected ??= rows[0];
+        selected ??= rows.Length > 0 ? rows[0] : null;
+        _selectedEntityId = selected?.Id ?? string.Empty;
         return new GraphWorkbenchRuntimeSnapshot(
-            Source,
+            source,
             _selectedEntityId,
             _appliedRevision,
-            selected.CurrentGraphId,
-            selected.CurrentGraphNodeId,
-            selected.CurrentStateMachineId,
-            selected.CurrentStateNodeId,
-            selected.CurrentBehaviorTreeId,
-            selected.CurrentBehaviorNodeId,
+            selected?.CurrentGraphId ?? fallbackGraphId,
+            selected?.CurrentGraphNodeId ?? string.Empty,
+            selected?.CurrentStateMachineId ?? fallbackFsmId,
+            selected?.CurrentStateNodeId ?? string.Empty,
+            selected?.CurrentBehaviorTreeId ?? fallbackBehaviorTreeId,
+            selected?.CurrentBehaviorNodeId ?? string.Empty,
             rows,
             CountByDomain(rows));
     }
 
-    private void Refresh(GraphWorkbenchDocument document)
+    private static LiveShowcaseSnapshot ReadLiveSnapshot(object snapshot, string displayDomain)
     {
-        for (int i = 0; i < _entities.Length; i++)
+        object[] actorObjects = ReadArray(snapshot, "Actors");
+        var actors = new LiveActorSnapshot[actorObjects.Length];
+        for (int i = 0; i < actorObjects.Length; i++)
         {
-            Entity entity = _entities[i];
-            ref GraphWorkbenchRuntimeIdentity identity = ref _world.Get<GraphWorkbenchRuntimeIdentity>(entity);
-            _world.Get<GraphWorkbenchRuntimeCursor>(entity) = CreateCursor(document, in identity);
+            object actor = actorObjects[i];
+            actors[i] = new LiveActorSnapshot(
+                ReadRequired<string>(actor, "Name"),
+                ReadRequired<string>(actor, "InstanceId"),
+                ReadRequired<int>(actor, "State"),
+                ReadRequired<string>(actor, "StateLabel"),
+                ReadRequired<int>(actor, "Intent"),
+                ReadRequired<string>(actor, "IntentLabel"),
+                ReadRequired<string>(actor, "ActionLabel"),
+                ReadRequired<int>(actor, "BtNode"),
+                ReadRequired<int>(actor, "TaskId"),
+                ReadRequired<string>(actor, "TaskLabel"),
+                ReadRequired<int>(actor, "TaskRemainingTicks"),
+                ReadRequired<int>(actor, "Health"),
+                ReadRequired<int>(actor, "EnemyDistanceCm"),
+                ReadRequired<int>(actor, "WorldXCm"),
+                ReadRequired<int>(actor, "WorldYCm"));
         }
+
+        object stress = ReadRequired<object>(snapshot, "StressField");
+        return new LiveShowcaseSnapshot(
+            ReadRequired<string>(snapshot, "ShowcaseId"),
+            ReadRequired<string>(snapshot, "Mode"),
+            ReadRequired<string>(snapshot, "Title"),
+            ReadRequired<string>(snapshot, "GraphProgramId"),
+            ReadRequired<int>(snapshot, "Tick"),
+            ReadRequired<int>(snapshot, "State"),
+            ReadRequired<string>(snapshot, "StateLabel"),
+            ReadRequired<int>(snapshot, "Intent"),
+            ReadRequired<string>(snapshot, "IntentLabel"),
+            ReadRequired<int>(snapshot, "CompletedTasks"),
+            string.IsNullOrWhiteSpace(displayDomain) ? ReadRequired<string>(snapshot, "Title") : displayDomain,
+            ReadStressField(stress),
+            actors);
     }
 
-    private GraphWorkbenchRuntimeCursor CreateCursor(
-        GraphWorkbenchDocument document,
-        in GraphWorkbenchRuntimeIdentity identity)
+    private static LiveStressFieldSnapshot ReadStressField(object stress)
     {
-        string fsmNodeId = string.Empty;
-        string fsmLabel = string.Empty;
-        string btNodeId = string.Empty;
-        string btLabel = string.Empty;
-        string graphId = identity.GraphId;
+        return new LiveStressFieldSnapshot(
+            ReadRequired<int>(stress, "EcsEntityCount"),
+            ReadRequired<int>(stress, "VisiblePrimitiveCount"),
+            ReadRequired<long>(stress, "FsmGraphExecutionsLastTick"),
+            ReadRequired<long>(stress, "BtGraphExecutionsLastTick"),
+            ReadRequired<int>(stress, "FsmBranchMask"),
+            ReadRequired<int>(stress, "BtTaskMask"));
+    }
 
-        if (!string.IsNullOrWhiteSpace(identity.StateMachineId) &&
-            TryFindStateMachine(document, identity.StateMachineId, out GraphWorkbenchStateMachineDocument? fsm) &&
-            fsm != null)
+    private static string ResolveDocumentScope(string mode) => mode switch
+    {
+        "LevelBlueprint" => GraphWorkbenchDocumentScopes.LevelBlueprint,
+        "StanceFsm" => GraphWorkbenchDocumentScopes.StanceFsm,
+        "ComplexBt" => GraphWorkbenchDocumentScopes.ComplexBt,
+        "StressField" => GraphWorkbenchDocumentScopes.StressField,
+        _ => throw new InvalidOperationException($"Graph Workbench cannot resolve a document scope for graph showcase mode '{mode}'.")
+    };
+
+    private static string ResolveLevelGraphNode(int state) => state switch
+    {
+        0 => "level.door_trigger",
+        1 => "level.patrol_trigger",
+        2 => "level.beacon_trigger",
+        3 => "level.exit_trigger",
+        _ => "level.door_trigger"
+    };
+
+    private static string ResolveStanceNode(int state) => state switch
+    {
+        0 => "stance.hold",
+        1 => "stance.return",
+        2 => "stance.defend",
+        3 => "stance.attack",
+        _ => "stance.hold"
+    };
+
+    private static string ResolveStanceGraphNode(int state) => state switch
+    {
+        0 => "rts.write.hold_state",
+        1 => "rts.write.return_state",
+        2 => "rts.write.defend_state",
+        3 => "rts.write.attack_state",
+        _ => "rts.write.hold_state"
+    };
+
+    private static string ResolveBehaviorNode(int taskId) => taskId switch
+    {
+        1 => "bt.select_cover",
+        2 => "bt.suppress_target",
+        3 => "bt.call_reinforcement",
+        4 => "bt.scout_sweep",
+        5 => "bt.reposition",
+        _ => "bt.selector"
+    };
+
+    private static string ResolveBehaviorGraphNode(int taskId) => taskId switch
+    {
+        1 => "bt.task.select_cover",
+        2 => "bt.task.suppress_target",
+        3 => "bt.task.call_reinforcement",
+        4 => "bt.task.scout_sweep",
+        5 => "bt.task.reposition",
+        _ => "bt.health"
+    };
+
+    private static string ResolveStressFsmNode(int branchMask)
+    {
+        if ((branchMask & 8) != 0)
         {
-            GraphWorkbenchNodeDocument node = PickNode(fsm.Nodes, _tick / 3);
-            fsmNodeId = node.Id;
-            fsmLabel = node.Label;
-            if (!string.IsNullOrWhiteSpace(node.ImplementationGraphId))
+            return "stance.attack";
+        }
+
+        if ((branchMask & 4) != 0)
+        {
+            return "stance.defend";
+        }
+
+        if ((branchMask & 2) != 0)
+        {
+            return "stance.return";
+        }
+
+        return "stance.hold";
+    }
+
+    private static string ResolveStressBehaviorNode(int taskMask)
+    {
+        if ((taskMask & 16) != 0)
+        {
+            return "bt.reposition";
+        }
+
+        if ((taskMask & 8) != 0)
+        {
+            return "bt.scout_sweep";
+        }
+
+        if ((taskMask & 4) != 0)
+        {
+            return "bt.call_reinforcement";
+        }
+
+        if ((taskMask & 2) != 0)
+        {
+            return "bt.suppress_target";
+        }
+
+        return "bt.select_cover";
+    }
+
+    private static string ResolveNodeLabel(
+        GraphWorkbenchDocument document,
+        string graphId,
+        string nodeId,
+        string fallback)
+    {
+        for (int i = 0; i < document.Graphs.Count; i++)
+        {
+            GraphWorkbenchGraphDocument graph = document.Graphs[i];
+            if (!string.Equals(graph.Id, graphId, StringComparison.Ordinal))
             {
-                graphId = node.ImplementationGraphId;
+                continue;
+            }
+
+            for (int n = 0; n < graph.Nodes.Count; n++)
+            {
+                if (string.Equals(graph.Nodes[n].Id, nodeId, StringComparison.Ordinal))
+                {
+                    return graph.Nodes[n].Label;
+                }
             }
         }
 
-        if (!string.IsNullOrWhiteSpace(identity.BehaviorTreeId) &&
-            TryFindBehaviorTree(document, identity.BehaviorTreeId, out GraphWorkbenchBehaviorTreeDocument? bt) &&
-            bt != null)
-        {
-            GraphWorkbenchNodeDocument node = PickNode(bt.Nodes, _tick / 2);
-            btNodeId = node.Id;
-            btLabel = node.Label;
-            if (!string.IsNullOrWhiteSpace(node.ImplementationGraphId))
-            {
-                graphId = node.ImplementationGraphId;
-            }
-        }
-
-        string graphNodeId = string.Empty;
-        string graphLabel = string.Empty;
-        if (TryFindGraph(document, graphId, out GraphWorkbenchGraphDocument? graph) &&
-            graph != null)
-        {
-            GraphWorkbenchNodeDocument node = PickNode(graph.Nodes, _tick);
-            graphNodeId = node.Id;
-            graphLabel = node.Label;
-        }
-
-        return new GraphWorkbenchRuntimeCursor(
-            graphId,
-            graphNodeId,
-            graphLabel,
-            identity.StateMachineId,
-            fsmNodeId,
-            fsmLabel,
-            identity.BehaviorTreeId,
-            btNodeId,
-            btLabel);
+        return fallback;
     }
 
     private static GraphWorkbenchAggregate[] CountByDomain(GraphWorkbenchEntityDebug[] rows)
@@ -212,116 +495,95 @@ public sealed class GraphWorkbenchRuntimeBridge
             .ToArray();
     }
 
-    private static GraphWorkbenchNodeDocument PickNode(List<GraphWorkbenchNodeDocument> nodes, int cursor)
+    private static string SourceName(LiveShowcaseSnapshot live) =>
+        $"live-3d:{live.ShowcaseId}";
+
+    private static object? ReadProperty(object source, string propertyName)
     {
-        if (nodes.Count == 0)
+        var property = source.GetType().GetProperty(propertyName);
+        if (property == null)
         {
-            return new GraphWorkbenchNodeDocument();
+            throw new InvalidOperationException(
+                $"Graph Workbench expected property '{propertyName}' on runtime type '{source.GetType().FullName}'.");
         }
 
-        int index = Math.Abs(cursor) % nodes.Count;
-        return nodes[index];
+        return property.GetValue(source);
     }
 
-    private static bool TryFindGraph(GraphWorkbenchDocument document, string graphId, out GraphWorkbenchGraphDocument? graph)
+    private static T ReadRequired<T>(object source, string propertyName)
     {
-        graph = document.Graphs.FirstOrDefault(item => string.Equals(item.Id, graphId, StringComparison.Ordinal));
-        return graph != null;
+        object? value = ReadProperty(source, propertyName);
+        if (value == null)
+        {
+            throw new InvalidOperationException($"Graph Workbench runtime property '{propertyName}' was null.");
+        }
+
+        if (value is T typed)
+        {
+            return typed;
+        }
+
+        throw new InvalidOperationException(
+            $"Graph Workbench expected property '{propertyName}' on '{source.GetType().FullName}' to be {typeof(T).Name}, got {value.GetType().Name}.");
     }
 
-    private static bool TryFindStateMachine(
-        GraphWorkbenchDocument document,
-        string stateMachineId,
-        out GraphWorkbenchStateMachineDocument? stateMachine)
+    private static object[] ReadArray(object source, string propertyName)
     {
-        stateMachine = document.StateMachines.FirstOrDefault(item => string.Equals(item.Id, stateMachineId, StringComparison.Ordinal));
-        return stateMachine != null;
+        object value = ReadRequired<object>(source, propertyName);
+        if (value is not Array array)
+        {
+            throw new InvalidOperationException($"Graph Workbench expected property '{propertyName}' to be an array.");
+        }
+
+        var items = new object[array.Length];
+        for (int i = 0; i < array.Length; i++)
+        {
+            items[i] = array.GetValue(i)
+                ?? throw new InvalidOperationException($"Graph Workbench runtime array '{propertyName}' contained null.");
+        }
+
+        return items;
     }
 
-    private static bool TryFindBehaviorTree(
-        GraphWorkbenchDocument document,
-        string behaviorTreeId,
-        out GraphWorkbenchBehaviorTreeDocument? behaviorTree)
-    {
-        behaviorTree = document.BehaviorTrees.FirstOrDefault(item => string.Equals(item.Id, behaviorTreeId, StringComparison.Ordinal));
-        return behaviorTree != null;
-    }
-}
+    private readonly record struct LiveRuntimeDescriptor(string RuntimeKey, string DisplayDomain);
 
-internal struct GraphWorkbenchRuntimeIdentity
-{
-    public GraphWorkbenchRuntimeIdentity(
-        string id,
-        string label,
-        string domain,
-        string graphId,
-        string stateMachineId,
-        string behaviorTreeId,
-        int x,
-        int y)
-    {
-        Id = id;
-        Label = label;
-        Domain = domain;
-        GraphId = graphId;
-        StateMachineId = stateMachineId;
-        BehaviorTreeId = behaviorTreeId;
-        X = x;
-        Y = y;
-    }
+    private sealed record LiveShowcaseSnapshot(
+        string ShowcaseId,
+        string Mode,
+        string Title,
+        string GraphProgramId,
+        int Tick,
+        int State,
+        string StateLabel,
+        int Intent,
+        string IntentLabel,
+        int CompletedTasks,
+        string DisplayDomain,
+        LiveStressFieldSnapshot StressField,
+        LiveActorSnapshot[] Actors);
 
-    public string Id;
-    public string Label;
-    public string Domain;
-    public string GraphId;
-    public string StateMachineId;
-    public string BehaviorTreeId;
-    public int X;
-    public int Y;
-}
+    private sealed record LiveActorSnapshot(
+        string Name,
+        string InstanceId,
+        int State,
+        string StateLabel,
+        int Intent,
+        string IntentLabel,
+        string ActionLabel,
+        int BtNode,
+        int TaskId,
+        string TaskLabel,
+        int TaskRemainingTicks,
+        int Health,
+        int EnemyDistanceCm,
+        int WorldXCm,
+        int WorldYCm);
 
-internal struct GraphWorkbenchRuntimeCursor
-{
-    public static readonly GraphWorkbenchRuntimeCursor Empty = new(
-        string.Empty,
-        string.Empty,
-        string.Empty,
-        string.Empty,
-        string.Empty,
-        string.Empty,
-        string.Empty,
-        string.Empty,
-        string.Empty);
-
-    public GraphWorkbenchRuntimeCursor(
-        string currentGraphId,
-        string currentGraphNodeId,
-        string currentGraphLabel,
-        string currentStateMachineId,
-        string currentStateNodeId,
-        string currentStateLabel,
-        string currentBehaviorTreeId,
-        string currentBehaviorNodeId,
-        string currentBehaviorLabel)
-    {
-        CurrentGraphId = currentGraphId;
-        CurrentGraphNodeId = currentGraphNodeId;
-        CurrentGraphLabel = currentGraphLabel;
-        CurrentStateMachineId = currentStateMachineId;
-        CurrentStateNodeId = currentStateNodeId;
-        CurrentStateLabel = currentStateLabel;
-        CurrentBehaviorTreeId = currentBehaviorTreeId;
-        CurrentBehaviorNodeId = currentBehaviorNodeId;
-        CurrentBehaviorLabel = currentBehaviorLabel;
-    }
-
-    public string CurrentGraphId;
-    public string CurrentGraphNodeId;
-    public string CurrentGraphLabel;
-    public string CurrentStateMachineId;
-    public string CurrentStateNodeId;
-    public string CurrentStateLabel;
-    public string CurrentBehaviorTreeId;
-    public string CurrentBehaviorNodeId;
-    public string CurrentBehaviorLabel;
+    private sealed record LiveStressFieldSnapshot(
+        int EcsEntityCount,
+        int VisiblePrimitiveCount,
+        long FsmGraphExecutionsLastTick,
+        long BtGraphExecutionsLastTick,
+        int FsmBranchMask,
+        int BtTaskMask);
 }

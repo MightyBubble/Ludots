@@ -1,7 +1,7 @@
 :root {
   color-scheme: dark;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #101214;
+  background: transparent;
   color: #eef5f2;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -17,6 +17,7 @@ body,
   width: 100%;
   height: 100%;
   margin: 0;
+  background: transparent;
 }
 
 button,
@@ -61,20 +62,22 @@ button {
 
 .workbench-shell {
   display: grid;
-  grid-template-rows: 60px minmax(0, 1fr);
+  grid-template-rows: 72px minmax(0, 1fr);
   width: 100%;
   height: 100%;
   overflow: hidden;
   background: #101214;
+  border-left: 1px solid #334245;
+  box-shadow: -16px 0 32px rgba(0, 0, 0, 0.26);
 }
 
 .topbar {
   display: grid;
-  grid-template-columns: 280px minmax(360px, 1fr) 370px;
+  grid-template-columns: minmax(150px, 220px) minmax(210px, 1fr) auto;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
   border-bottom: 1px solid #2a3334;
-  padding: 0 16px;
+  padding: 0 12px;
   background: #161a1b;
 }
 
@@ -127,15 +130,62 @@ button {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 12px;
+  gap: 8px;
+  min-width: 0;
 }
 
 .compile-strip button {
   height: 34px;
-  padding: 0 18px;
+  padding: 0 14px;
   background: #e9b85d;
   color: #17140d;
   font-weight: 700;
+}
+
+.compile-strip .dock-toggle {
+  background: #1b2122;
+  color: #dce8e3;
+  font-weight: 600;
+}
+
+.workbench-shell.collapsed {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  background: transparent;
+  border-left: 0;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.expand-tab {
+  pointer-events: auto;
+  display: grid;
+  gap: 5px;
+  width: min(210px, calc(100% - 24px));
+  margin: 12px;
+  border: 1px solid #66d6c0;
+  border-radius: 8px;
+  padding: 11px 12px;
+  background: rgba(20, 28, 29, 0.94);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.34);
+  text-align: left;
+}
+
+.expand-tab strong {
+  overflow: hidden;
+  color: #f5fffb;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.expand-tab span {
+  overflow: hidden;
+  color: #a8b9b2;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .compile-ok {
@@ -149,6 +199,7 @@ button {
 .content-grid {
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr) 340px;
+  min-width: 0;
   min-height: 0;
 }
 
@@ -284,15 +335,14 @@ button {
 
 .workbench-node {
   position: relative;
-  display: grid;
-  min-width: 160px;
-  max-width: 210px;
+  display: block;
+  min-width: 230px;
+  max-width: 320px;
   min-height: 74px;
-  gap: 4px;
   border: 1px solid #4b5f66;
   border-left: 4px solid #7ea6ff;
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: 10px;
   background: #1b2224;
   box-shadow: 0 14px 24px rgba(0, 0, 0, 0.24);
 }
@@ -303,6 +353,76 @@ button {
 
 .workbench-node.bt {
   border-left-color: #e9b85d;
+}
+
+.graph-output-node {
+  min-width: 190px;
+  border-left-color: #e9b85d;
+  background: #241f16;
+}
+
+.node-shell {
+  display: grid;
+  grid-template-columns: minmax(48px, auto) minmax(96px, 1fr) minmax(54px, auto);
+  gap: 8px;
+  align-items: start;
+}
+
+.node-body {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.port-column {
+  display: grid;
+  gap: 6px;
+  padding-top: 2px;
+}
+
+.port-row {
+  position: relative;
+  display: flex;
+  min-height: 18px;
+  align-items: center;
+  gap: 5px;
+  color: #9eb0ab;
+  font-size: 10px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.output-ports .port-row {
+  justify-content: flex-end;
+}
+
+.port-row .react-flow__handle {
+  position: relative;
+  top: auto;
+  right: auto;
+  left: auto;
+  transform: none;
+}
+
+.exec-handle {
+  width: 10px;
+  height: 10px;
+  border: 2px solid #ffe08a;
+  background: #3b2f12;
+}
+
+.value-handle {
+  width: 10px;
+  height: 10px;
+  border: 2px solid #66d6c0;
+  background: #14352f;
+}
+
+.graph-output-node > .react-flow__handle {
+  width: 11px;
+  height: 11px;
+  border: 2px solid #e9b85d;
+  background: #3a2710;
 }
 
 .workbench-node.runtime-active {
@@ -327,6 +447,26 @@ button {
   white-space: nowrap;
 }
 
+.param-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.param-chips em {
+  max-width: 132px;
+  overflow: hidden;
+  border: 1px solid #324044;
+  border-radius: 5px;
+  padding: 2px 5px;
+  color: #cbd9d4;
+  font-size: 10px;
+  font-style: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .workbench-node i,
 .node-kind {
   width: fit-content;
@@ -347,6 +487,14 @@ button {
 
 .runtime-edge .react-flow__edge-path {
   stroke: #ffe08a;
+}
+
+.data-edge .react-flow__edge-path {
+  stroke-dasharray: 5 4;
+}
+
+.output-edge .react-flow__edge-path {
+  stroke-dasharray: 2 3;
 }
 
 .mini-map {
@@ -441,6 +589,47 @@ button {
   color: #eef5f2;
 }
 
+.field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 8px;
+}
+
+.inline-check {
+  display: flex !important;
+  min-height: 34px;
+  align-items: center;
+  grid-template-columns: auto 1fr;
+}
+
+.inline-check input {
+  width: 16px;
+  height: 16px;
+}
+
+.port-summary {
+  display: grid;
+  gap: 5px;
+  margin-top: 10px;
+  border: 1px solid #2d3a3c;
+  border-radius: 7px;
+  padding: 8px;
+  background: #111617;
+}
+
+.port-summary strong {
+  color: #dce8e3;
+  font-size: 11px;
+}
+
+.port-summary span {
+  overflow: hidden;
+  color: #9fb1ad;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .node-meta {
   display: flex;
   justify-content: space-between;
@@ -477,23 +666,152 @@ button {
 }
 
 @media (max-width: 1100px) {
-  .topbar {
-    grid-template-columns: 210px 1fr;
+  .workbench-shell {
+    grid-template-rows: 92px minmax(0, 1fr);
   }
 
-  .compile-strip {
+  .topbar {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: 32px 36px;
+    align-content: center;
+    row-gap: 8px;
+  }
+
+  .brand-block {
+    min-width: 0;
+  }
+
+  .brand-block h1 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mode-tabs {
+    grid-column: 1 / -1;
+    justify-content: stretch;
+  }
+
+  .mode-tabs button {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .compile-strip span:nth-of-type(2) {
     display: none;
+  }
+
+  .compile-strip button {
+    padding: 0 9px;
   }
 
   .content-grid {
-    grid-template-columns: 220px minmax(0, 1fr);
+    grid-template-columns: 172px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) 172px;
+  }
+
+  .left-rail {
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .rail-section,
+  .inspector,
+  .compile-panel {
+    padding: 10px;
+  }
+
+  .rail-section h2,
+  .inspector h2,
+  .compile-panel h2 {
+    margin-bottom: 8px;
+  }
+
+  .doc-list,
+  .entity-list,
+  .palette-grid {
+    gap: 6px;
+  }
+
+  .doc-list button,
+  .entity-list button {
+    min-height: 44px;
+    padding: 7px 8px;
+  }
+
+  .doc-list strong,
+  .entity-list strong,
+  .doc-list span,
+  .entity-list span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .palette-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .canvas-column {
+    grid-template-rows: 36px minmax(0, 1fr) 54px;
+  }
+
+  .breadcrumbs {
+    gap: 6px;
+    padding: 0 10px;
+  }
+
+  .breadcrumbs button,
+  .breadcrumbs strong {
+    max-width: 170px;
+  }
+
+  .workbench-node {
+    min-width: 210px;
+    max-width: 260px;
+    min-height: 68px;
+    padding: 9px;
+  }
+
+  .node-shell {
+    grid-template-columns: minmax(42px, auto) minmax(80px, 1fr) minmax(48px, auto);
+    gap: 6px;
+  }
+
+  .workbench-node strong {
+    font-size: 12px;
+  }
+
+  .port-row {
+    font-size: 9px;
   }
 
   .right-rail {
-    display: none;
+    display: grid;
+    min-height: 0;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px;
+    overflow: hidden;
+    border-left: 0;
+    border-top: 1px solid #273132;
+    padding: 10px;
+  }
+
+  .right-rail .inspector,
+  .right-rail .compile-panel {
+    min-height: 0;
+    overflow: auto;
   }
 
   .runtime-strip {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .runtime-strip p {
+    display: none;
   }
 }
