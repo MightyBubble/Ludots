@@ -2,8 +2,8 @@
   "Id": "mass_navigation",
   "DefaultCamera": {
     "VirtualCameraId": "MassNavigation.Camera.LargeWorldHeightmap",
-    "TargetXCm": 0,
-    "TargetYCm": 0,
+    "TargetXCm": 3200000,
+    "TargetYCm": 3200000,
     "Yaw": 45,
     "Pitch": 42,
     "DistanceCm": 14000,
