@@ -1,0 +1,20 @@
+{
+  "manifestId": "panel-kit.showcase.resource-bar.solo",
+  "hostOwnerId": "panel-kit.showcase.resource-bar",
+  "panels": [
+    {
+      "panelId": "hud.resource-bar",
+      "panelType": "resource-bar",
+      "surfaceRegionId": "region.top-left",
+      "surfaceSegment": "Overlay",
+      "surfacePriority": 10,
+      "anchor": "top-left",
+      "visibleConditionId": "condition.always",
+      "topic": "panel-kit.showcase.resource-bar",
+      "profileId": "profile.resource.bar.showcase",
+      "layoutId": "layout.bar.horizontal",
+      "densityId": "density.comfortable",
+      "inputCapabilityId": "input.none"
+    }
+  ]
+}

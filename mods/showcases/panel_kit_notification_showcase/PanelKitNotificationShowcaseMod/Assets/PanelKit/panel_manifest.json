@@ -1,0 +1,20 @@
+{
+  "manifestId": "panel-kit.showcase.notification.solo",
+  "hostOwnerId": "panel-kit.showcase.notification",
+  "panels": [
+    {
+      "panelId": "hud.notification",
+      "panelType": "notification",
+      "surfaceRegionId": "region.top-center",
+      "surfaceSegment": "Overlay",
+      "surfacePriority": 10,
+      "anchor": "top-center",
+      "visibleConditionId": "condition.always",
+      "topic": "panel-kit.showcase.notification",
+      "profileId": "profile.notification.showcase",
+      "layoutId": "layout.toast.stack",
+      "densityId": "density.comfortable",
+      "inputCapabilityId": "input.notification-action"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "profileId": "profile.command-deck.showcase",
+  "genre": "rts",
+  "displayMode": "global",
+  "coachLine": "Tap Train Scout on the global deck. No unit selection required.",
+  "slots": [
+    {"slotId": "slot.train.scout", "displayTokenId": "token.command.rts.train.scout", "tooltipTargetId": "tooltip.rts.scout", "costPrimary": 50},
+    {"slotId": "slot.build.depot", "displayTokenId": "token.command.rts.build.depot", "tooltipTargetId": "tooltip.rts.depot", "costPrimary": 100}
+  ],
+  "tokens": {
+    "token.command.rts.train.scout": "Train Scout",
+    "token.command.rts.build.depot": "Build Depot"
+  }
+}

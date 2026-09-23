@@ -1,0 +1,12 @@
+{
+  "profileId": "profile.notification.showcase",
+  "genre": "rts",
+  "coachLine": "When training finishes, a toast confirms Scout is ready.",
+  "seed": [
+    {"messageTokenId": "token.notification.rts.train.complete", "categoryId": "category.production"}
+  ],
+  "tokens": {
+    "token.notification.rts.train.complete": "Scout ready for deployment.",
+    "token.notification.rts.goal.complete": "Starter objective complete. Keep the production bay busy."
+  }
+}

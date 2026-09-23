@@ -1,0 +1,12 @@
+{
+  "name": "PanelKitTechTreeProgressionShowcaseMod",
+  "version": "1.0.0",
+  "description": "WPK-10 small showcase for the techtree panel only. RTS and 4X semantics come from PanelKit profile JSON, not generic PanelKit C#.",
+  "main": "bin/net8.0/PanelKitTechTreeProgressionShowcaseMod.dll",
+  "priority": 50,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "panel-kit", "wpk-10", "techtree"]
+}

@@ -1,0 +1,16 @@
+{
+  "profileId": "profile.techtree.showcase",
+  "genre": "rts",
+  "coachLine": "RTS still uses progression nodes for unlock gates; open the tree before you warp.",
+  "nodes": [
+    {"nodeId": "node.barracks", "displayTokenId": "token.progression.rts.node.barracks", "state": "completed"},
+    {"nodeId": "node.scout", "displayTokenId": "token.progression.rts.node.scout", "state": "available"},
+    {"nodeId": "node.radar", "displayTokenId": "token.progression.rts.node.radar", "state": "locked", "blockedReasonTokenId": "token.progression.rts.blocked.requires-scout"}
+  ],
+  "tokens": {
+    "token.progression.rts.node.barracks": "Barracks",
+    "token.progression.rts.node.scout": "Scout Doctrine",
+    "token.progression.rts.node.radar": "Radar Net",
+    "token.progression.rts.blocked.requires-scout": "Requires Scout Doctrine"
+  }
+}

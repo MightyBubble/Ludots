@@ -2,7 +2,7 @@ namespace Ludots.WebUI.PanelKit;
 
 /// <summary>
 /// Builds a reference catalog suitable for the checked-in sample panel kit manifest.
-/// Ids are generic panel-kit vocabulary only â€?no game/unit/resource names.
+/// Ids are generic panel-kit vocabulary only — no game/unit/resource names.
 /// </summary>
 public static class WebUiPanelKitSampleCatalog
 {
@@ -10,13 +10,14 @@ public static class WebUiPanelKitSampleCatalog
 	public const string CommandTopic = "panel-kit.sample.command";
 	public const string ObjectiveTopic = "panel-kit.sample.objective";
 	public const string ProductionTopic = "panel-kit.sample.production";
+	public const string NotificationTopic = "panel-kit.sample.notification";
+	public const string TechTreeTopic = WebUiTechTreeSampleCatalog.Topic;
 
 	public const string CommandDeckGlobalProfileId = "profile.command-deck.global";
 	public const string CommandDeckEntityProfileId = "profile.command-deck.entity";
 	public const string CommandDeckAggregateProfileId = "profile.command-deck.aggregate";
 	public const string CommandDeckPinnedProfileId = "profile.command-deck.conditional-pinned";
 	public const string ProductionOverviewProfileId = "profile.production-overview.generic";
-	public const string NotificationTopic = "panel-kit.sample.notification";
 
 	/// <summary>
 	/// Every topic declared by <see cref="SampleManifestPath"/>. Callers that load the full sample
@@ -27,7 +28,9 @@ public static class WebUiPanelKitSampleCatalog
 		ResourceTopic,
 		CommandTopic,
 		ObjectiveTopic,
-		NotificationTopic
+		ProductionTopic,
+		NotificationTopic,
+		TechTreeTopic
 	];
 
 	public static WebUiPanelKitReferenceCatalog Create(Func<string, bool> isTopicRegistered)
@@ -35,8 +38,14 @@ public static class WebUiPanelKitSampleCatalog
 		ArgumentNullException.ThrowIfNull(isTopicRegistered);
 
 		var surfaceRegions = new WebUiPanelIdRegistry("surface region");
-		surfaceRegions.RegisterAll(["region.top-left", "region.top-right", "region.bottom-center", "region.bottom-left"]);
-		surfaceRegions.RegisterAll(["region.top-left", "region.top-right", "region.bottom-center", "region.top-center"]);
+		surfaceRegions.RegisterAll([
+			"region.top-left",
+			"region.top-right",
+			"region.top-center",
+			"region.bottom-center",
+			"region.bottom-left",
+			"region.center"
+		]);
 
 		var profiles = new WebUiPanelIdRegistry("profile");
 		profiles.RegisterAll([
@@ -47,16 +56,9 @@ public static class WebUiPanelKitSampleCatalog
 			CommandDeckGlobalProfileId,
 			CommandDeckEntityProfileId,
 			CommandDeckAggregateProfileId,
-			CommandDeckPinnedProfileId
-		]);
-
-		var layouts = new WebUiPanelIdRegistry("layout");
-		layouts.RegisterAll(["layout.bar.horizontal", "layout.deck.grid", "layout.list.vertical", "layout.overview.split"]);
-			WebUiNotificationPanelDescriptors.GenericProfileId
-		]);
-
-		var layouts = new WebUiPanelIdRegistry("layout");
-			WebUiNotificationPanelDescriptors.GenericProfileId
+			CommandDeckPinnedProfileId,
+			WebUiNotificationPanelDescriptors.GenericProfileId,
+			WebUiTechTreeSampleCatalog.ProfileId
 		]);
 
 		var layouts = new WebUiPanelIdRegistry("layout");
@@ -64,14 +66,21 @@ public static class WebUiPanelKitSampleCatalog
 			"layout.bar.horizontal",
 			"layout.deck.grid",
 			"layout.list.vertical",
-			WebUiNotificationPanelDescriptors.ToastStackLayoutId
+			"layout.overview.split",
+			WebUiNotificationPanelDescriptors.ToastStackLayoutId,
+			WebUiTechTreeSampleCatalog.LayoutId
 		]);
 
 		var densities = new WebUiPanelIdRegistry("density");
 		densities.RegisterAll(["density.compact", "density.comfortable"]);
 
 		var inputCapabilities = new WebUiPanelIdRegistry("input capability");
-		inputCapabilities.RegisterAll(["input.none", "input.activate-slot", "input.notification-action"]);
+		inputCapabilities.RegisterAll([
+			"input.none",
+			"input.activate-slot",
+			"input.notification-action",
+			"input.activate-node"
+		]);
 
 		var visibleConditions = new WebUiPanelIdRegistry("visible condition");
 		visibleConditions.RegisterAll(["condition.always", "condition.binding-flag"]);

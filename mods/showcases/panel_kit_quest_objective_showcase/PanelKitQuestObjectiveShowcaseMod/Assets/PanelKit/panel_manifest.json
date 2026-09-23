@@ -1,0 +1,20 @@
+{
+  "manifestId": "panel-kit.showcase.objective.solo",
+  "hostOwnerId": "panel-kit.showcase.objective",
+  "panels": [
+    {
+      "panelId": "hud.objective",
+      "panelType": "objective",
+      "surfaceRegionId": "region.top-right",
+      "surfaceSegment": "Overlay",
+      "surfacePriority": 10,
+      "anchor": "top-right",
+      "visibleConditionId": "condition.always",
+      "topic": "panel-kit.showcase.objective",
+      "profileId": "profile.objective.showcase",
+      "layoutId": "layout.list.vertical",
+      "densityId": "density.comfortable",
+      "inputCapabilityId": "input.none"
+    }
+  ]
+}

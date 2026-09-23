@@ -1,0 +1,16 @@
+{
+  "profileId": "profile.objective.showcase",
+  "genre": "rts",
+  "coachLine": "Your only job: field the first Scout.",
+  "objective": {
+    "questId": "quest.rts.train-first-unit",
+    "titleTokenId": "token.objective.rts.train.title",
+    "detailTokenId": "token.objective.rts.train.detail",
+    "progressCurrent": 0,
+    "progressTarget": 1
+  },
+  "tokens": {
+    "token.objective.rts.train.title": "Field your first Scout",
+    "token.objective.rts.train.detail": "Use the global train button. No unit selection required."
+  }
+}

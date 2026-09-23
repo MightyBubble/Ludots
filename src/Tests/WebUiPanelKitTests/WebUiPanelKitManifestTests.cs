@@ -14,7 +14,7 @@ namespace Ludots.Tests.WebUiPanelKit;
 public sealed class WebUiPanelKitManifestTests
 {
 	[Test]
-	public void LoadSampleManifest_RegistersFourPanels_OnSameUiSurfaceHost()
+	public void LoadSampleManifest_RegistersSixPanels_OnSameUiSurfaceHost()
 	{
 		using var runtime = new WebUiDataPlaneRuntime();
 		RegisterSampleTopics(runtime);
@@ -23,27 +23,29 @@ public sealed class WebUiPanelKitManifestTests
 			WebUiPanelKitSampleCatalog.SampleManifestPath(),
 			catalog);
 
-		Assert.That(manifest.Panels, Has.Count.EqualTo(4));
+		Assert.That(manifest.Panels, Has.Count.EqualTo(6));
 		Assert.That(manifest.Panels.Select(panel => panel.PanelId), Is.EquivalentTo(new[]
 		{
 			"hud.resource-bar",
 			"hud.command-deck",
 			"hud.objective",
-			"hud.production-overview"
-			"hud.notification"
+			"hud.production-overview",
+			"hud.notification",
+			"hud.techtree"
 		}));
 
 		UIRoot root = CreateRoot(out UiSurfaceHost host);
 		using var binder = new WebUiPanelKitSurfaceBinder(host, manifest);
 		binder.Bind();
 
-		Assert.That(binder.BoundPanelIds, Has.Count.EqualTo(4));
+		Assert.That(binder.BoundPanelIds, Has.Count.EqualTo(6));
 		Assert.That(root.Scene, Is.SameAs(host.Scene));
 		Assert.That(root.Scene!.FindByElementId("panel-kit-hud.resource-bar"), Is.Not.Null);
 		Assert.That(root.Scene.FindByElementId("panel-kit-hud.command-deck"), Is.Not.Null);
 		Assert.That(root.Scene.FindByElementId("panel-kit-hud.objective"), Is.Not.Null);
 		Assert.That(root.Scene.FindByElementId("panel-kit-hud.production-overview"), Is.Not.Null);
 		Assert.That(root.Scene.FindByElementId("panel-kit-hud.notification"), Is.Not.Null);
+		Assert.That(root.Scene.FindByElementId("panel-kit-hud.techtree"), Is.Not.Null);
 	}
 
 	[Test]
@@ -142,13 +144,6 @@ public sealed class WebUiPanelKitManifestTests
 		using var binder = new WebUiPanelKitSurfaceBinder(host, manifest);
 		binder.Bind();
 
-		Assert.That(binder.BrowserSubscriptionTopics, Is.EqualTo(new[]
-		{
-			WebUiPanelKitSampleCatalog.ResourceTopic,
-			WebUiPanelKitSampleCatalog.CommandTopic,
-			WebUiPanelKitSampleCatalog.ObjectiveTopic,
-			WebUiPanelKitSampleCatalog.ProductionTopic
-		}));
 		Assert.That(binder.BrowserSubscriptionTopics, Is.EqualTo(WebUiPanelKitSampleCatalog.SampleTopics));
 		Assert.That(binder.BrowserSubscriptionTopics, Does.Not.Contain("panel-kit.extra.unrelated"));
 		Assert.That(manifest.DeclaredTopics, Is.EqualTo(binder.BrowserSubscriptionTopics));
@@ -206,10 +201,6 @@ public sealed class WebUiPanelKitManifestTests
 
 	private static void RegisterSampleTopics(WebUiDataPlaneRuntime runtime)
 	{
-		runtime.RegisterTopic(new StubTopicProducer(WebUiPanelKitSampleCatalog.ResourceTopic));
-		runtime.RegisterTopic(new StubTopicProducer(WebUiPanelKitSampleCatalog.CommandTopic));
-		runtime.RegisterTopic(new StubTopicProducer(WebUiPanelKitSampleCatalog.ObjectiveTopic));
-		runtime.RegisterTopic(new StubTopicProducer(WebUiPanelKitSampleCatalog.ProductionTopic));
 		foreach (string topic in WebUiPanelKitSampleCatalog.SampleTopics)
 		{
 			runtime.RegisterTopic(new StubTopicProducer(topic));

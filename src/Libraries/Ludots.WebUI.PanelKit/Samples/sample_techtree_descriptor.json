@@ -1,0 +1,46 @@
+{
+  "descriptorId": "panel-kit.sample.techtree",
+  "profileId": "profile.techtree.generic",
+  "layoutId": "layout.tree.generic",
+  "localeId": "locale.sample",
+  "nodes": [
+    {
+      "nodeId": "node.root",
+      "progressionId": "progression.sample.root",
+      "scopeKeyId": "scope.sample.host",
+      "unlockRequirementId": "requirement.sample.root.unlock",
+      "titleTokenId": "token.techtree.node.root.title",
+      "bodyTokenId": "token.techtree.node.root.body",
+      "effectTokenId": "token.techtree.node.root.effect",
+      "blockedReasonTokenId": "token.techtree.node.root.blocked",
+      "groupId": "group.layer.a",
+      "sortOrder": 10,
+      "layoutX": 0,
+      "layoutY": 0,
+      "actionKind": "progression",
+      "actionId": "action.progression.research",
+      "tooltipDescriptorId": "panel-kit.sample.tooltip",
+      "prerequisiteProgressionIds": []
+    },
+    {
+      "nodeId": "node.branch",
+      "progressionId": "progression.sample.branch",
+      "scopeKeyId": "scope.sample.host",
+      "unlockRequirementId": "requirement.sample.branch.unlock",
+      "titleTokenId": "token.techtree.node.branch.title",
+      "bodyTokenId": "token.techtree.node.branch.body",
+      "effectTokenId": "token.techtree.node.branch.effect",
+      "blockedReasonTokenId": "token.techtree.node.branch.blocked",
+      "groupId": "group.layer.b",
+      "sortOrder": 20,
+      "layoutX": 1,
+      "layoutY": 0,
+      "actionKind": "command",
+      "actionId": "action.progression.research",
+      "tooltipDescriptorId": "panel-kit.sample.tooltip",
+      "prerequisiteProgressionIds": [
+        "progression.sample.root"
+      ]
+    }
+  ]
+}

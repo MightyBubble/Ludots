@@ -1,0 +1,12 @@
+{
+  "profileId": "profile.notification.showcase",
+  "genre": "fourx",
+  "coachLine": "When research finishes, a toast confirms Colony Charter unlocked.",
+  "seed": [
+    {"messageTokenId": "token.notification.fourx.node.unlocked", "categoryId": "category.research"}
+  ],
+  "tokens": {
+    "token.notification.fourx.node.unlocked": "Colony Charter unlocked.",
+    "token.notification.fourx.goal.complete": "Next development step is clear. Orbital Yard is now the blocker to watch."
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "profileId": "profile.tooltip.showcase",
+  "genre": "fourx",
+  "coachLine": "Hover Colony Charter to see why it unlocks expansion.",
+  "entries": {
+    "tooltip.fourx.next-node": {
+      "titleTokenId": "token.tooltip.fourx.next.title",
+      "bodyTokenId": "token.tooltip.fourx.next.body"
+    }
+  },
+  "tokens": {
+    "token.tooltip.fourx.next.title": "Colony Charter",
+    "token.tooltip.fourx.next.body": "Opens colonial expansion. Clears the current objective when research finishes."
+  }
+}
