@@ -7510,6 +7510,30 @@
       ]
     },
     {
+      "id": "navmesh_openworld_showcase",
+      "path": "mods/showcases/navmesh_openworld/NavMeshOpenWorldShowcaseMod",
+      "title": "NavMesh 开放世界·四兵种分层通行",
+      "summary": "2km 海峡战场上，陆军走陆面、山地军翻山面、水军依吃水走水道、两栖部队经码头与滩头换乘跨层：四条路线因通行能力而分流，每条都能看到所属 layer、经过的 Link 与 tile revision。",
+      "tier": "T1",
+      "category": "capability",
+      "binding": "navmesh_openworld",
+      "preset": "navmesh_openworld_raylib",
+      "docsPath": "mods/showcases/navmesh_openworld/NavMeshOpenWorldShowcaseMod/README.md",
+      "readmePath": "mods/showcases/navmesh_openworld/NavMeshOpenWorldShowcaseMod/README.md",
+      "acceptanceTest": "NavMeshOpenWorldShowcaseRuntimeTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "navmesh",
+        "openworld",
+        "multi-layer",
+        "amphibious",
+        "water",
+        "showcase"
+      ]
+    },
+    {
       "id": "engine_raylib_primitives",
       "path": "projects/engine_gallery",
       "projectPath": "project.json",

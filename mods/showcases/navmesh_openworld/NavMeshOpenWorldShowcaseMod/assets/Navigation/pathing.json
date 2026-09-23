@@ -1,0 +1,139 @@
+{
+  "agentTypes": [
+    {
+      "id": "LandInfantry",
+      "profileId": "land_infantry",
+      "selection": {
+        "mode": "PreferMesh",
+        "graphBias": 0.0,
+        "meshBias": 0.0,
+        "graphCostWeight": 1.0,
+        "meshCostWeight": 1.0
+      },
+      "navMesh": {
+        "areaCosts": [
+          { "areaId": 0, "cost": 1.0 },
+          { "areaId": 1, "cost": 0.6 },
+          { "areaId": 2, "cost": 1.8 },
+          { "areaId": 3, "cost": 3.0 },
+          { "areaId": 4, "cost": 1.0 }
+        ]
+      },
+      "nodeGraph": {
+        "projectionMaxRadiusCm": 204800,
+        "useDynamicOverlay": false,
+        "requiredTagsAll": [],
+        "forbiddenTagsAny": [],
+        "tagCostRules": []
+      }
+    },
+    {
+      "id": "MountainCorps",
+      "profileId": "mountain_corps",
+      "selection": {
+        "mode": "PreferMesh",
+        "graphBias": 0.0,
+        "meshBias": 0.0,
+        "graphCostWeight": 1.0,
+        "meshCostWeight": 1.0
+      },
+      "navMesh": {
+        "areaCosts": [
+          { "areaId": 0, "cost": 1.0 },
+          { "areaId": 1, "cost": 0.6 },
+          { "areaId": 2, "cost": 0.5 },
+          { "areaId": 3, "cost": 3.0 },
+          { "areaId": 4, "cost": 1.0 }
+        ]
+      },
+      "nodeGraph": {
+        "projectionMaxRadiusCm": 204800,
+        "useDynamicOverlay": false,
+        "requiredTagsAll": [],
+        "forbiddenTagsAny": [],
+        "tagCostRules": []
+      }
+    },
+    {
+      "id": "NavalShallow",
+      "profileId": "naval_shallow",
+      "selection": {
+        "mode": "PreferMesh",
+        "graphBias": 0.0,
+        "meshBias": 0.0,
+        "graphCostWeight": 1.0,
+        "meshCostWeight": 1.0
+      },
+      "navMesh": {
+        "areaCosts": [
+          { "areaId": 0, "cost": 1.0 },
+          { "areaId": 1, "cost": 0.6 },
+          { "areaId": 2, "cost": 1.8 },
+          { "areaId": 3, "cost": 1.0 },
+          { "areaId": 4, "cost": 1.0 }
+        ]
+      },
+      "nodeGraph": {
+        "projectionMaxRadiusCm": 204800,
+        "useDynamicOverlay": false,
+        "requiredTagsAll": [],
+        "forbiddenTagsAny": [],
+        "tagCostRules": []
+      }
+    },
+    {
+      "id": "NavalDeep",
+      "profileId": "naval_deep",
+      "selection": {
+        "mode": "PreferMesh",
+        "graphBias": 0.0,
+        "meshBias": 0.0,
+        "graphCostWeight": 1.0,
+        "meshCostWeight": 1.0
+      },
+      "navMesh": {
+        "areaCosts": [
+          { "areaId": 0, "cost": 1.0 },
+          { "areaId": 1, "cost": 0.6 },
+          { "areaId": 2, "cost": 1.8 },
+          { "areaId": 3, "cost": 12.0 },
+          { "areaId": 4, "cost": 1.0 }
+        ]
+      },
+      "nodeGraph": {
+        "projectionMaxRadiusCm": 204800,
+        "useDynamicOverlay": false,
+        "requiredTagsAll": [],
+        "forbiddenTagsAny": [],
+        "tagCostRules": []
+      }
+    },
+    {
+      "id": "Amphibious",
+      "profileId": "amphibious",
+      "selection": {
+        "mode": "PreferMesh",
+        "graphBias": 0.0,
+        "meshBias": 0.0,
+        "graphCostWeight": 1.0,
+        "meshCostWeight": 1.0
+      },
+      "navMesh": {
+        "areaCosts": [
+          { "areaId": 0, "cost": 1.0 },
+          { "areaId": 1, "cost": 0.6 },
+          { "areaId": 2, "cost": 1.8 },
+          { "areaId": 3, "cost": 1.5 },
+          { "areaId": 4, "cost": 1.0 }
+        ]
+      },
+      "nodeGraph": {
+        "projectionMaxRadiusCm": 204800,
+        "useDynamicOverlay": false,
+        "requiredTagsAll": [],
+        "forbiddenTagsAny": [],
+        "tagCostRules": []
+      }
+    }
+  ]
+}

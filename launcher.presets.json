@@ -2402,6 +2402,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "navmesh_openworld_raylib",
+      "name": "NavMesh Open World Strait Raylib",
+      "selectors": [
+        "$navmesh_openworld"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "engine_raylib_lighting",
       "name": "引擎画廊·光照全效",
       "selectors": [

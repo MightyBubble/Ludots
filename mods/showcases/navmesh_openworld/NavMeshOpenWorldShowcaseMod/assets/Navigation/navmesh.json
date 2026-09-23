@@ -1,0 +1,168 @@
+{
+  "mode": "offline",
+  "algorithm": "recast",
+  "profiles": [
+    {
+      "id": "land_infantry",
+      "maxClimbCm": 45,
+      "maxSlopeDeg": 35
+    },
+    {
+      "id": "mountain_corps",
+      "maxClimbCm": 140,
+      "maxSlopeDeg": 55
+    },
+    {
+      "id": "naval_shallow",
+      "maxClimbCm": 0,
+      "maxSlopeDeg": 1
+    },
+    {
+      "id": "naval_deep",
+      "maxClimbCm": 0,
+      "maxSlopeDeg": 1
+    },
+    {
+      "id": "amphibious",
+      "maxClimbCm": 45,
+      "maxSlopeDeg": 35
+    }
+  ],
+  "layers": [
+    {
+      "id": "Ground",
+      "layer": 0
+    },
+    {
+      "id": "Mountain",
+      "layer": 1
+    },
+    {
+      "id": "Water",
+      "layer": 2
+    }
+  ],
+  "areas": [
+    {
+      "id": "Default",
+      "areaId": 0,
+      "cost": 1.0
+    },
+    {
+      "id": "Road",
+      "areaId": 1,
+      "cost": 0.6
+    },
+    {
+      "id": "MountainPass",
+      "areaId": 2,
+      "cost": 1.8
+    },
+    {
+      "id": "Shallow",
+      "areaId": 3,
+      "cost": 3.0
+    },
+    {
+      "id": "DeepChannel",
+      "areaId": 4,
+      "cost": 1.0
+    }
+  ],
+  "runtimeIncremental": {
+    "tileBudgetPerFixedTick": 1,
+    "includeNeighborTiles": true,
+    "heightScaleMeters": 1.0,
+    "minWalkableUpDot": 0.6,
+    "cliffHeightThreshold": 1
+  },
+  "maps": {
+    "navmesh_openworld_strait": {
+      "boards": {
+        "mainland": {
+          "tileWorldWidthCm": 6400,
+          "tileWorldHeightCm": 6400
+        }
+      }
+    }
+  },
+  "links": [
+    {
+      "id": "bridge_upper",
+      "from": {
+        "layer": "Ground",
+        "xCm": 51200,
+        "yCm": 102400
+      },
+      "to": {
+        "layer": "Ground",
+        "xCm": 153600,
+        "yCm": 102400
+      },
+      "bidirectional": true,
+      "allowedProfiles": [
+        "land_infantry",
+        "mountain_corps",
+        "amphibious"
+      ],
+      "cost": 10.0
+    },
+    {
+      "id": "mountain_pass",
+      "from": {
+        "layer": "Ground",
+        "xCm": 61440,
+        "yCm": 51200
+      },
+      "to": {
+        "layer": "Mountain",
+        "xCm": 63488,
+        "yCm": 53248
+      },
+      "bidirectional": true,
+      "allowedProfiles": [
+        "mountain_corps"
+      ],
+      "cost": 20.0,
+      "action": "climb"
+    },
+    {
+      "id": "land_to_water_pier_a",
+      "from": {
+        "layer": "Ground",
+        "xCm": 40960,
+        "yCm": 38912
+      },
+      "to": {
+        "layer": "Water",
+        "xCm": 46080,
+        "yCm": 39936
+      },
+      "bidirectional": true,
+      "allowedProfiles": [
+        "amphibious"
+      ],
+      "cost": 50.0,
+      "action": "boarding"
+    },
+    {
+      "id": "water_to_land_beach",
+      "from": {
+        "layer": "Water",
+        "xCm": 40960,
+        "yCm": 165888
+      },
+      "to": {
+        "layer": "Ground",
+        "xCm": 46080,
+        "yCm": 168960
+      },
+      "bidirectional": false,
+      "allowedProfiles": [
+        "amphibious"
+      ],
+      "cost": 50.0,
+      "action": "landing"
+    }
+  ]
+}

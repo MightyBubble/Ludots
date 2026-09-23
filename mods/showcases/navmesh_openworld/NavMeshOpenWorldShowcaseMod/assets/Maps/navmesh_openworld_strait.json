@@ -1,0 +1,424 @@
+{
+  "Id": "navmesh_openworld_strait",
+  "Tuning": {
+    "PartitionChunkCells": 64,
+    "LoadedChunkCapacity": 512
+  },
+  "Tags": [
+    "showcase",
+    "navmesh",
+    "openworld",
+    "multi-layer",
+    "Feature.NavMesh:On",
+    "Raylib.DebugGuides:Off"
+  ],
+  "RootBoard": "mainland",
+  "Boards": [
+    {
+      "Name": "mainland",
+      "SpatialType": "Grid",
+      "WidthCm": 204800,
+      "HeightCm": 204800,
+      "TerrainHeightStepCm": 100,
+      "TerrainBlockedAtOrBelowHeightCm": 0,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      }
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "openworld_team"
+    }
+  ],
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "openworld_player"
+    }
+  ],
+  "Entities": [
+    {
+      "InstanceId": "openworld_team",
+      "Template": "openworld_team",
+      "Overrides": {
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "openworld_player",
+      "Template": "openworld_player",
+      "Relations": [
+        {
+          "to": "land_0",
+          "type": "Owns"
+        },
+        {
+          "to": "land_1",
+          "type": "Owns"
+        },
+        {
+          "to": "land_2",
+          "type": "Owns"
+        },
+        {
+          "to": "land_3",
+          "type": "Owns"
+        },
+        {
+          "to": "mountain_0",
+          "type": "Owns"
+        },
+        {
+          "to": "mountain_1",
+          "type": "Owns"
+        },
+        {
+          "to": "mountain_2",
+          "type": "Owns"
+        },
+        {
+          "to": "naval_shallow_0",
+          "type": "Owns"
+        },
+        {
+          "to": "naval_shallow_1",
+          "type": "Owns"
+        },
+        {
+          "to": "naval_shallow_2",
+          "type": "Owns"
+        },
+        {
+          "to": "naval_deep_0",
+          "type": "Owns"
+        },
+        {
+          "to": "naval_deep_1",
+          "type": "Owns"
+        },
+        {
+          "to": "amphib_0",
+          "type": "Owns"
+        },
+        {
+          "to": "amphib_1",
+          "type": "Owns"
+        },
+        {
+          "to": "amphib_2",
+          "type": "Owns"
+        }
+      ],
+      "Overrides": {
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "land_0",
+      "Template": "openworld_land_infantry",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 42400,
+            "Y": 62400
+          }
+        }
+      },
+      "Relations": [
+        {
+          "to": "openworld_team",
+          "type": "MemberOf"
+        }
+      ]
+    },
+    {
+      "InstanceId": "land_1",
+      "Template": "openworld_land_infantry",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 43600,
+            "Y": 62400
+          }
+        }
+      },
+      "Relations": [
+        {
+          "to": "openworld_team",
+          "type": "MemberOf"
+        }
+      ]
+    },
+    {
+      "InstanceId": "land_2",
+      "Template": "openworld_land_infantry",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 42400,
+            "Y": 63600
+          }
+        }
+      },
+      "Relations": [
+        {
+          "to": "openworld_team",
+          "type": "MemberOf"
+        }
+      ]
+    },
+    {
+      "InstanceId": "land_3",
+      "Template": "openworld_land_infantry",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 43600,
+            "Y": 63600
+          }
+        }
+      },
+      "Relations": [
+        {
+          "to": "openworld_team",
+          "type": "MemberOf"
+        }
+      ]
+    },
+    {
+      "InstanceId": "mountain_0",
+      "Template": "openworld_mountain_corps",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 12400,
+            "Y": 82400
+          }
+        }
+      },
+      "Relations": [
+        {
+          "to": "openworld_team",
+          "type": "MemberOf"
+        }
+      ]
+    },
+    {
+      "InstanceId": "mountain_1",
+      "Template": "openworld_mountain_corps",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 13600,
+            "Y": 82400
+          }
+        }
+      },
+      "Relations": [
+        {
+          "to": "openworld_team",
+          "type": "MemberOf"
+        }
+      ]
+    },
+    {
+      "InstanceId": "mountain_2",
+      "Template": "openworld_mountain_corps",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 12400,
+            "Y": 83600
+          }
+        }
+      },
+      "Relations": [
+        {
+          "to": "openworld_team",
+          "type": "MemberOf"
+        }
+      ]
+    },
+    {
+      "InstanceId": "naval_shallow_0",
+      "Template": "openworld_naval_shallow",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 102400,
+            "Y": 62400
+          }
+        }
+      },
+      "Relations": [
+        {
+          "to": "openworld_team",
+          "type": "MemberOf"
+        }
+      ]
+    },
+    {
+      "InstanceId": "naval_shallow_1",
+      "Template": "openworld_naval_shallow",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 103900,
+            "Y": 62400
+          }
+        }
+      },
+      "Relations": [
+        {
+          "to": "openworld_team",
+          "type": "MemberOf"
+        }
+      ]
+    },
+    {
+      "InstanceId": "naval_shallow_2",
+      "Template": "openworld_naval_shallow",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 102400,
+            "Y": 63900
+          }
+        }
+      },
+      "Relations": [
+        {
+          "to": "openworld_team",
+          "type": "MemberOf"
+        }
+      ]
+    },
+    {
+      "InstanceId": "naval_deep_0",
+      "Template": "openworld_naval_deep",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 102400,
+            "Y": 142400
+          }
+        }
+      },
+      "Relations": [
+        {
+          "to": "openworld_team",
+          "type": "MemberOf"
+        }
+      ]
+    },
+    {
+      "InstanceId": "naval_deep_1",
+      "Template": "openworld_naval_deep",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 104400,
+            "Y": 142400
+          }
+        }
+      },
+      "Relations": [
+        {
+          "to": "openworld_team",
+          "type": "MemberOf"
+        }
+      ]
+    },
+    {
+      "InstanceId": "amphib_0",
+      "Template": "openworld_amphibious",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 57400,
+            "Y": 52400
+          }
+        }
+      },
+      "Relations": [
+        {
+          "to": "openworld_team",
+          "type": "MemberOf"
+        }
+      ]
+    },
+    {
+      "InstanceId": "amphib_1",
+      "Template": "openworld_amphibious",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 58600,
+            "Y": 52400
+          }
+        }
+      },
+      "Relations": [
+        {
+          "to": "openworld_team",
+          "type": "MemberOf"
+        }
+      ]
+    },
+    {
+      "InstanceId": "amphib_2",
+      "Template": "openworld_amphibious",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 57400,
+            "Y": 53600
+          }
+        }
+      },
+      "Relations": [
+        {
+          "to": "openworld_team",
+          "type": "MemberOf"
+        }
+      ]
+    }
+  ],
+  "TriggerTypes": [],
+  "DefaultCamera": {
+    "VirtualCameraId": "NavDebug.OpenWorld",
+    "TargetXCm": 102400,
+    "TargetYCm": 102400,
+    "Yaw": 180,
+    "Pitch": 50,
+    "DistanceCm": 150000,
+    "FovYDeg": 60
+  },
+  "ContinuousHeightmap": {
+    "Asset": "assets/terrain/openworld_strait.height",
+    "RenderProfile": {
+      "AbsoluteColorPeakSpanCm": 1200,
+      "ColorContrast": 2.5
+    }
+  },
+  "Metadata": {
+    "openworld": {
+      "comment": "2km x 2km theatre on one 204800cm board. Ground and Mountain are navigation layers over the same heightfield, separated by agent profile slope/climb capability.",
+      "theatreWidthCm": 204800,
+      "theatreHeightCm": 204800
+    }
+  }
+}

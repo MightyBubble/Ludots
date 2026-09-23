@@ -1,0 +1,19 @@
+{
+  "name": "NavMeshOpenWorldShowcaseMod",
+  "version": "1.0.0",
+  "description": "Data-only open-world strait theatre expressing four passage capabilities (land infantry / mountain corps / naval / amphibious) through navigation layers, bake profiles and cross-surface links. Contains no C#.",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "MassNavigationMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "navmesh",
+    "openworld",
+    "multi-layer",
+    "amphibious",
+    "asset-only"
+  ]
+}

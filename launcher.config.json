@@ -1677,6 +1677,13 @@
       }
     },
     {
+      "name": "navmesh_openworld",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/navmesh_openworld/NavMeshOpenWorldShowcaseMod"
+      }
+    },
+    {
       "name": "capability_standard_graph_op_HidePanel",
       "target": {
         "type": "path",

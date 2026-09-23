@@ -326,6 +326,15 @@ namespace Ludots.Tool
             });
             navCommand.AddCommand(bakeHeightmapNavCommand);
 
+            var genOpenWorldCommand = new Command("gen-openworld", "Generate the deterministic openworld strait ContinuousHeightmap (.height)");
+            var genOpenWorldOutOption = new Option<string>("--out", "Output .height path") { IsRequired = true };
+            genOpenWorldCommand.AddOption(genOpenWorldOutOption);
+            genOpenWorldCommand.SetHandler((InvocationContext ctx) =>
+            {
+                ctx.ExitCode = OpenWorldHeightmapGenerator.Run(ctx.ParseResult.GetValueForOption(genOpenWorldOutOption)!);
+            });
+            navCommand.AddCommand(genOpenWorldCommand);
+
             var exportWalkabilityCommand = new Command("export-walkability-texture", "Rasterize NavTile walkability and area ids to an RGBA PNG");
             var textureInDirOption = new Option<string?>("--inDir", () => null, "Directory containing .ntil files");
             var textureMapIdOption = new Option<string?>("--mapId", () => null, "Map id used to resolve the NavTile directory");
