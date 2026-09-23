@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics.FixedPoint;
@@ -47,6 +49,31 @@ namespace Ludots.Tests.GAS
 
         // 环样本：载体自身无模板 children，环藏在 InlineChildren 的模板引用里（x 自引用）。
         // 只供运行时 lane（直接装配 registry，不经 LoadTemplates 环校验）使用。
+        private static readonly string NamePathTemplates = """
+        [
+          {
+            "id": "name.camp",
+            "components": {
+              "Name": { "Value": "Camp" },
+              "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+              "FacingDirection": { "AngleRad": 0 }
+            },
+            "children": [
+              { "localId": "hq", "template": "name.tent", "overrides": { "Name": { "Value": "Shared Tent" } }, {{POSE}} },
+              {
+                "localId": "radio", "template": "name.radio", {{POSE}},
+                "children": [ { "localId": "coil", "template": "name.coil", {{POSE}} } ]
+              },
+              { "localId": "guard", "template": "name.guard", {{POSE}} }
+            ]
+          },
+          { "id": "name.tent", "components": { "Name": { "Value": "Tent" } } },
+          { "id": "name.radio", "components": { "Name": { "Value": "Radio" } } },
+          { "id": "name.coil", "components": { "Name": { "Value": "Coil" } } },
+          { "id": "name.guard", "components": { "Name": { "Value": "Guard" }, "Team": { "Id": 1 } } }
+        ]
+        """.Replace("{{POSE}}", Pose);
+
         private static readonly string InlineCycleTemplates = """
         [
           { "id": "cyc3.carrier2", "components": { "Name": { "Value": "Cyc3Carrier2" } } },
@@ -77,6 +104,88 @@ namespace Ludots.Tests.GAS
                 Assert.That(hqB, Is.Not.EqualTo(hqA), "两个实例的子代必须各自独立物化");
                 Assert.That(CountByName(world, "S3BatchRoot"), Is.EqualTo(2));
             });
+        }
+
+        [Test]
+        public void MapInstance_NamePaths_RenameAddressedChildrenAndKeepTheRest()
+        {
+            using var world = World.Create();
+            MapLoader loader = CreateMapLoader(world, NamePathTemplates);
+            var map = new MapConfig { Id = "name_path_map" };
+            map.Entities.Add(CreateNamedCamp("camp.harbor", "Harbor Camp", renameChildren: true));
+            map.Entities.Add(CreateNamedCamp("camp.alpine", "Alpine Camp", renameChildren: false));
+
+            MapLoadEntityIndex index = loader.LoadEntitiesAndIndex(map);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(world.Get<Name>(RequireInstance(index, "camp.harbor")).Value, Is.EqualTo("Harbor Camp"));
+                Assert.That(world.Get<Name>(RequireInstance(index, "camp.alpine")).Value, Is.EqualTo("Alpine Camp"));
+                Assert.That(world.Get<Name>(RequirePath(index, "camp.harbor.hq")).Value, Is.EqualTo("Harbor Tent"));
+                Assert.That(world.Get<Name>(RequirePath(index, "camp.alpine.hq")).Value, Is.EqualTo("Shared Tent"));
+                Assert.That(world.Get<Name>(RequirePath(index, "camp.harbor.radio")).Value, Is.EqualTo("Radio"));
+                Assert.That(world.Get<Name>(RequirePath(index, "camp.harbor.radio.coil")).Value, Is.EqualTo("Harbor Coil"));
+                Assert.That(world.Get<Name>(RequirePath(index, "camp.alpine.radio.coil")).Value, Is.EqualTo("Coil"));
+                Entity harborGuard = RequirePath(index, "camp.harbor.guard");
+                Assert.That(world.Get<Name>(harborGuard).Value, Is.EqualTo("Harbor Guard"));
+                Assert.That(world.Get<Team>(harborGuard).Id, Is.EqualTo(1));
+                Assert.That(world.Get<Name>(RequirePath(index, "camp.alpine.guard")).Value, Is.EqualTo("Guard"));
+            });
+        }
+
+        [Test]
+        public void MapInstance_NamePath_UnknownChildFails()
+        {
+            using var world = World.Create();
+            MapLoader loader = CreateMapLoader(world, NamePathTemplates);
+            var map = new MapConfig { Id = "name_path_missing" };
+            EntitySpawnData spawn = CreateNamedCamp("camp.harbor", "Harbor Camp", renameChildren: false);
+            spawn.OverridePaths = new List<EntityPathNameOverride>
+            {
+                NamePath("tower", "Tower"),
+            };
+            map.Entities.Add(spawn);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.LoadEntitiesAndIndex(map))!;
+            Assert.That(ex.Message, Does.Contain("does not address a child"));
+        }
+
+        [Test]
+        public void MapInstance_NamePath_RejectsNonNameSet()
+        {
+            using var world = World.Create();
+            MapLoader loader = CreateMapLoader(world, NamePathTemplates);
+            var map = new MapConfig { Id = "name_path_team" };
+            EntitySpawnData spawn = CreateNamedCamp("camp.harbor", "Harbor Camp", renameChildren: false);
+            spawn.OverridePaths = new List<EntityPathNameOverride>
+            {
+                new EntityPathNameOverride
+                {
+                    Path = "guard",
+                    Set = new Dictionary<string, JsonNode>
+                    {
+                        ["Team"] = JsonNode.Parse(@"{ ""Id"": 4 }")!,
+                    },
+                },
+            };
+            map.Entities.Add(spawn);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.LoadEntitiesAndIndex(map))!;
+            Assert.That(ex.Message, Does.Contain("only accepts Name"));
+        }
+
+        [Test]
+        public void MapInstance_NamePath_EmptyNameFails()
+        {
+            using var world = World.Create();
+            MapLoader loader = CreateMapLoader(world, NamePathTemplates);
+            var map = new MapConfig { Id = "name_path_empty" };
+            EntitySpawnData spawn = CreateNamedCamp("camp.harbor", "Harbor Camp", renameChildren: false);
+            spawn.OverridePaths = new List<EntityPathNameOverride> { NamePath("hq", " ") };
+            map.Entities.Add(spawn);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.LoadEntitiesAndIndex(map))!;
+            Assert.That(ex.Message, Does.Contain("non-empty"));
         }
 
         [Test]
@@ -196,6 +305,54 @@ namespace Ludots.Tests.GAS
                 harness.System.Update(0f))!;
             Assert.That(ex.Message, Does.Contain("环"));
         }
+        private static EntitySpawnData CreateNamedCamp(string instanceId, string campName, bool renameChildren)
+        {
+            var spawn = new EntitySpawnData
+            {
+                InstanceId = instanceId,
+                Template = "name.camp",
+                Overrides = new Dictionary<string, JsonNode>
+                {
+                    ["Name"] = JsonNode.Parse($$"""{ "Value": "{{campName}}" }""")!,
+                },
+            };
+            if (renameChildren)
+            {
+                spawn.OverridePaths = new List<EntityPathNameOverride>
+                {
+                    NamePath("hq", "Harbor Tent"),
+                    NamePath("radio.coil", "Harbor Coil"),
+                    NamePath("guard", "Harbor Guard"),
+                };
+            }
+
+            return spawn;
+        }
+
+        private static EntityPathNameOverride NamePath(string path, string name)
+        {
+            return new EntityPathNameOverride
+            {
+                Path = path,
+                Set = new Dictionary<string, JsonNode>
+                {
+                    ["Name"] = JsonNode.Parse($$"""{ "Value": "{{name}}" }""")!,
+                },
+            };
+        }
+
+        private static Entity RequireInstance(MapLoadEntityIndex index, string instanceId)
+        {
+            Assert.That(index.TryGet(instanceId, out Entity entity), Is.True, instanceId);
+            return entity;
+        }
+
+        private static Entity RequirePath(MapLoadEntityIndex index, string path)
+        {
+            Assert.That(index.TryGetByLocalPath(path, out Entity entity), Is.True, path);
+            return entity;
+        }
+
         private static int CountByName(World world, string name)
         {
             int count = 0;

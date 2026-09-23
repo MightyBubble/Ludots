@@ -777,6 +777,10 @@ namespace Ludots.Core.Systems
                         "the placed instance root must declare a non-empty, trimmed InstanceId to prefix addressable paths.");
                 }
 
+                Dictionary<string, JsonNode> childNames = IndexChildNameOverrides(
+                    mapConfig.Id,
+                    entityData,
+                    templates);
                 bool isBatchCompatible = _templateBatchSpawner.IsBatchCompatible(entityData.Template, templates[entityData.Template]);
                 if (isBatchCompatible && TryBuildBatchRequest(
                         mapConfig.Id,
@@ -861,7 +865,8 @@ namespace Ludots.Core.Systems
                     entity,
                     mapEntityTag,
                     entityIndex,
-                    string.IsNullOrWhiteSpace(entityData.InstanceId) ? null : entityData.InstanceId);
+                    string.IsNullOrWhiteSpace(entityData.InstanceId) ? null : entityData.InstanceId,
+                    childNames);
             }
 
             FlushPendingTemplateBatch();
@@ -926,7 +931,8 @@ namespace Ludots.Core.Systems
             Entity parent,
             MapEntity mapEntityTag,
             MapLoadEntityIndex entityIndex,
-            string? parentLocalPath)
+            string? parentLocalPath,
+            System.Collections.Generic.Dictionary<string, JsonNode> childNames)
         {
             EntityTemplate parentTemplate = templates[parentTemplateId];
             SpawnTemplateChildNodes(
@@ -938,7 +944,8 @@ namespace Ludots.Core.Systems
                 parent,
                 mapEntityTag,
                 entityIndex,
-                parentLocalPath);
+                parentLocalPath,
+                childNames);
         }
 
         private void SpawnTemplateChildNodes(
@@ -950,44 +957,159 @@ namespace Ludots.Core.Systems
             Entity parent,
             MapEntity mapEntityTag,
             MapLoadEntityIndex entityIndex,
-            string? parentLocalPath)
+            string? parentLocalPath,
+            System.Collections.Generic.Dictionary<string, JsonNode> childNames)
         {
             if (children is not { Count: > 0 })
             {
                 return;
             }
 
-            for (int i = 0; i < children.Count; i++)
+            int index = 0;
+            while (index < children.Count)
             {
-                EntityTemplateChild child = children[i];
-                string context = $"Map template children '{ownerTemplateId}'[{i}] '{child.Template}'";
-                builder
-                    .UseTemplate(child.Template)
-                    .WithEntityContext(context);
-                if (child.Overrides != null)
+                if (!TryGetNameOnlyRun(templates, children, index, out int run))
                 {
-                    foreach (var kvp in child.Overrides)
-                    {
-                        builder.WithOverride(kvp.Key, kvp.Value);
-                    }
+                    SpawnTemplateChildSlow(
+                        builder,
+                        templates,
+                        mapId,
+                        ownerTemplateId,
+                        children[index],
+                        index,
+                        parent,
+                        mapEntityTag,
+                        entityIndex,
+                        parentLocalPath,
+                        childNames);
+                    index++;
+                    continue;
                 }
 
-                var childEntity = builder.Build();
-                TryApplyTemplateKey(childEntity, child.Template);
-                _world.Add(childEntity, mapEntityTag);
-                PublishTemplateOnSpawnEffect(childEntity, child.Template);
-                BufferEntityTriggerGraphs(childEntity, child.Template, templates[child.Template]);
+                SpawnNameOnlyChildRun(
+                    templates,
+                    mapId,
+                    ownerTemplateId,
+                    children,
+                    index,
+                    run,
+                    parent,
+                    mapEntityTag,
+                    entityIndex,
+                    parentLocalPath,
+                    childNames,
+                    builder);
+                index += run;
+            }
+        }
 
-                string? childLocalPath = null;
-                if (!string.IsNullOrWhiteSpace(child.LocalId))
+        private static bool TryGetNameOnlyRun(
+            System.Collections.Generic.Dictionary<string, EntityTemplate> templates,
+            System.Collections.Generic.List<EntityTemplateChild> children,
+            int start,
+            out int run)
+        {
+            run = 0;
+            while (start + run < children.Count && IsNameOnlyChild(templates, children[start + run]))
+            {
+                run++;
+            }
+
+            return run > 0;
+        }
+
+        private static bool IsNameOnlyChild(
+            System.Collections.Generic.Dictionary<string, EntityTemplate> templates,
+            EntityTemplateChild child)
+        {
+            if (child == null || string.IsNullOrWhiteSpace(child.Template) || !templates.TryGetValue(child.Template, out EntityTemplate template))
+            {
+                return false;
+            }
+
+            if (template.Components == null ||
+                template.Components.Count != 1 ||
+                !template.Components.ContainsKey("Name"))
+            {
+                return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(template.OnSpawnEffect) ||
+                template.TriggerGraphs is { Count: > 0 } ||
+                !string.IsNullOrWhiteSpace(template.InitialInteractionContext))
+            {
+                return false;
+            }
+
+            if (child.Overrides == null)
+            {
+                return true;
+            }
+
+            foreach (string key in child.Overrides.Keys)
+            {
+                if (!string.Equals(key, "Name", StringComparison.Ordinal))
                 {
-                    childLocalPath = string.IsNullOrEmpty(parentLocalPath)
-                        ? child.LocalId
-                        : parentLocalPath + "." + child.LocalId;
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private void SpawnNameOnlyChildRun(
+            System.Collections.Generic.Dictionary<string, EntityTemplate> templates,
+            string mapId,
+            string ownerTemplateId,
+            System.Collections.Generic.List<EntityTemplateChild> children,
+            int start,
+            int run,
+            Entity parent,
+            MapEntity mapEntityTag,
+            MapLoadEntityIndex entityIndex,
+            string? parentLocalPath,
+            System.Collections.Generic.Dictionary<string, JsonNode> childNames,
+            EntityBuilder builder)
+        {
+            var names = new Name[run];
+            var templateKeyIds = new int[run];
+            var addressablePaths = new string[run];
+            for (int offset = 0; offset < run; offset++)
+            {
+                EntityTemplateChild child = children[start + offset];
+                EntityTemplate template = templates[child.Template];
+                string context = $"Map template children '{ownerTemplateId}'[{start + offset}] '{child.Template}'";
+                string? relativePath = ChildRelativePath(parentLocalPath, child.LocalId);
+                JsonNode childName = null;
+                if (child.Overrides != null && child.Overrides.TryGetValue("Name", out JsonNode authored))
+                {
+                    childName = authored;
+                }
+
+                JsonNode instanceName = null;
+                if (relativePath != null && childNames != null)
+                {
+                    childNames.TryGetValue(relativePath, out instanceName);
+                }
+
+                names[offset] = TemplateEntityBatchSpawner.ResolveAuthoredName(context, template, childName, instanceName);
+                templateKeyIds[offset] = ResolveTemplateKeyId(child.Template);
+                addressablePaths[offset] = relativePath;
+            }
+
+            var created = new Entity[run];
+            _templateBatchSpawner.CreateNameOnlyChildren(names, templateKeyIds, in mapEntityTag, created);
+            for (int offset = 0; offset < run; offset++)
+            {
+                EntityTemplateChild child = children[start + offset];
+                string context = $"Map template children '{ownerTemplateId}'[{start + offset}] '{child.Template}'";
+                Entity childEntity = created[offset];
+                string? childLocalPath = addressablePaths[offset];
+                if (!string.IsNullOrEmpty(childLocalPath))
+                {
                     entityIndex.RegisterLocalPath(mapId, childLocalPath, childEntity);
                 }
 
-                // attach:false 的独立出生属切E；本切仍走结构挂接，保留标记与禁令豁免。
                 Ludots.Core.Gameplay.Attachment.AttachmentOps.Attach(
                     _world,
                     arbiter: null,
@@ -995,7 +1117,6 @@ namespace Ludots.Core.Systems
                     parent,
                     Ludots.Core.Gameplay.Attachment.AttachedLocalPoseAuthoring.Parse(child.LocalPose, context));
 
-                // 先展开被引用模板自身的 children（main 既有先例），再展开本节点的内联 children。
                 SpawnTemplateChildrenAtMapLoad(
                     builder,
                     templates,
@@ -1004,7 +1125,8 @@ namespace Ludots.Core.Systems
                     childEntity,
                     mapEntityTag,
                     entityIndex,
-                    childLocalPath);
+                    childLocalPath,
+                    childNames);
                 SpawnTemplateChildNodes(
                     builder,
                     templates,
@@ -1014,7 +1136,225 @@ namespace Ludots.Core.Systems
                     childEntity,
                     mapEntityTag,
                     entityIndex,
-                    childLocalPath);
+                    childLocalPath,
+                    childNames);
+            }
+        }
+
+        private void SpawnTemplateChildSlow(
+            EntityBuilder builder,
+            System.Collections.Generic.Dictionary<string, EntityTemplate> templates,
+            string mapId,
+            string ownerTemplateId,
+            EntityTemplateChild child,
+            int index,
+            Entity parent,
+            MapEntity mapEntityTag,
+            MapLoadEntityIndex entityIndex,
+            string? parentLocalPath,
+            System.Collections.Generic.Dictionary<string, JsonNode> childNames)
+        {
+            string context = $"Map template children '{ownerTemplateId}'[{index}] '{child.Template}'";
+            builder
+                .UseTemplate(child.Template)
+                .WithEntityContext(context);
+            string? childLocalPath = ChildRelativePath(parentLocalPath, child.LocalId);
+            JsonNode instanceName = null;
+            if (childLocalPath != null && childNames != null)
+            {
+                childNames.TryGetValue(childLocalPath, out instanceName);
+            }
+
+            if (child.Overrides != null)
+            {
+                foreach (var kvp in child.Overrides)
+                {
+                    if (string.Equals(kvp.Key, "Name", StringComparison.Ordinal) && instanceName != null)
+                    {
+                        continue;
+                    }
+
+                    builder.WithOverride(kvp.Key, kvp.Value);
+                }
+            }
+
+            if (instanceName != null)
+            {
+                JsonNode childName = null;
+                if (child.Overrides != null)
+                {
+                    child.Overrides.TryGetValue("Name", out childName);
+                }
+
+                JsonNode nameOverride = childName == null
+                    ? instanceName
+                    : EntityBuilder.MergeComponentOverride(childName, instanceName);
+                builder.WithOverride("Name", nameOverride);
+            }
+
+            var childEntity = builder.Build();
+            TryApplyTemplateKey(childEntity, child.Template);
+            _world.Add(childEntity, mapEntityTag);
+            PublishTemplateOnSpawnEffect(childEntity, child.Template);
+            BufferEntityTriggerGraphs(childEntity, child.Template, templates[child.Template]);
+
+            if (!string.IsNullOrEmpty(childLocalPath))
+            {
+                entityIndex.RegisterLocalPath(mapId, childLocalPath, childEntity);
+            }
+
+            // attach:false 的独立出生属切E；本切仍走结构挂接，保留标记与禁令豁免。
+            Ludots.Core.Gameplay.Attachment.AttachmentOps.Attach(
+                _world,
+                arbiter: null,
+                childEntity,
+                parent,
+                Ludots.Core.Gameplay.Attachment.AttachedLocalPoseAuthoring.Parse(child.LocalPose, context));
+
+            // 先展开被引用模板自身的 children（main 既有先例），再展开本节点的内联 children。
+            SpawnTemplateChildrenAtMapLoad(
+                builder,
+                templates,
+                mapId,
+                child.Template,
+                childEntity,
+                mapEntityTag,
+                entityIndex,
+                childLocalPath,
+                childNames);
+            SpawnTemplateChildNodes(
+                builder,
+                templates,
+                mapId,
+                ownerTemplateId,
+                child.Children,
+                childEntity,
+                mapEntityTag,
+                entityIndex,
+                childLocalPath,
+                childNames);
+        }
+
+        private static string? ChildRelativePath(string? parentLocalPath, string? localId)
+        {
+            if (string.IsNullOrWhiteSpace(localId))
+            {
+                return null;
+            }
+
+            return string.IsNullOrEmpty(parentLocalPath)
+                ? localId
+                : parentLocalPath + "." + localId;
+        }
+
+        private static Dictionary<string, JsonNode> IndexChildNameOverrides(
+            string mapId,
+            EntitySpawnData entityData,
+            System.Collections.Generic.Dictionary<string, EntityTemplate> templates)
+        {
+            List<EntityPathNameOverride> paths = entityData.OverridePaths;
+            if (paths == null || paths.Count == 0)
+            {
+                return null;
+            }
+
+            string rootPath = string.IsNullOrWhiteSpace(entityData.InstanceId) ? null : entityData.InstanceId;
+            var addressed = new Dictionary<string, string>(StringComparer.Ordinal);
+            CollectChildTemplates(
+                templates,
+                entityData.Template,
+                templates[entityData.Template].Children,
+                rootPath,
+                addressed);
+            var names = new Dictionary<string, JsonNode>(paths.Count, StringComparer.Ordinal);
+            string instance = rootPath ?? entityData.Template;
+            for (int i = 0; i < paths.Count; i++)
+            {
+                EntityPathNameOverride entry = paths[i];
+                string context = $"Map '{mapId}' entity '{instance}' overridePaths[{i}]";
+                if (entry == null)
+                {
+                    throw new InvalidOperationException($"{context} requires an object payload.");
+                }
+
+                if (string.IsNullOrWhiteSpace(entry.Path) || !string.Equals(entry.Path, entry.Path.Trim(), StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException($"{context}.path requires a trimmed non-empty localId path.");
+                }
+
+                if (entry.Set == null || entry.Set.Count == 0)
+                {
+                    throw new InvalidOperationException($"{context}.set requires Name.");
+                }
+
+                foreach (string key in entry.Set.Keys)
+                {
+                    if (!string.Equals(key, "Name", StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException($"{context}.set only accepts Name.");
+                    }
+                }
+
+                if (!entry.Set.TryGetValue("Name", out JsonNode nameNode) || nameNode == null)
+                {
+                    throw new InvalidOperationException($"{context}.set requires Name.");
+                }
+
+                string fullPath = string.IsNullOrEmpty(rootPath) ? entry.Path : rootPath + "." + entry.Path;
+                if (!addressed.TryGetValue(fullPath, out string childTemplateId))
+                {
+                    throw new InvalidOperationException($"{context}.path '{entry.Path}' does not address a child.");
+                }
+
+                if (names.ContainsKey(fullPath))
+                {
+                    throw new InvalidOperationException($"{context}.path '{entry.Path}' is duplicated.");
+                }
+
+                TemplateEntityBatchSpawner.ResolveAuthoredName(
+                    context,
+                    templates[childTemplateId],
+                    childNameOverride: null,
+                    instanceNameOverride: nameNode);
+                names.Add(fullPath, nameNode);
+            }
+
+            return names;
+        }
+
+        private static void CollectChildTemplates(
+            System.Collections.Generic.Dictionary<string, EntityTemplate> templates,
+            string ownerTemplateId,
+            System.Collections.Generic.List<EntityTemplateChild> children,
+            string? parentLocalPath,
+            Dictionary<string, string> addressed)
+        {
+            if (children == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < children.Count; i++)
+            {
+                EntityTemplateChild child = children[i];
+                if (child == null || string.IsNullOrWhiteSpace(child.Template) || !templates.ContainsKey(child.Template))
+                {
+                    throw new InvalidOperationException(
+                        $"Map entity template '{ownerTemplateId}' children[{i}] references unknown template '{child?.Template}'.");
+                }
+
+                string? relativePath = ChildRelativePath(parentLocalPath, child.LocalId);
+                if (relativePath != null)
+                {
+                    if (!addressed.TryAdd(relativePath, child.Template))
+                    {
+                        throw new InvalidOperationException(
+                            $"Map entity template '{ownerTemplateId}' child path '{relativePath}' is duplicated.");
+                    }
+                }
+
+                CollectChildTemplates(templates, child.Template, templates[child.Template].Children, relativePath, addressed);
+                CollectChildTemplates(templates, ownerTemplateId, child.Children, relativePath, addressed);
             }
         }
 

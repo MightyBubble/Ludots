@@ -216,6 +216,102 @@ namespace Ludots.Core.Config
             return true;
         }
 
+        /// <summary>
+        /// 只带 Name 的子实体。位姿由挂接后写，这里不补放置组件，避免改掉它们的原型。
+        /// </summary>
+        public void CreateNameOnlyChildren(
+            ReadOnlySpan<Name> names,
+            ReadOnlySpan<int> templateKeyIds,
+            in MapEntity mapEntity,
+            Span<Entity> destination)
+        {
+            if (names.Length == 0)
+            {
+                return;
+            }
+
+            if (names.Length != templateKeyIds.Length || names.Length != destination.Length)
+            {
+                throw new InvalidOperationException("Name-only child batch requires equal name, template key, and destination lengths.");
+            }
+
+            if (names.Length > _scratchEntities.Length)
+            {
+                throw new InvalidOperationException(
+                    $"Name-only child batch of {names.Length} exceeds scratch capacity {_scratchEntities.Length}.");
+            }
+
+            Signature signature =
+                Component<Name>.Signature +
+                Component<EntityTemplateKeyRef>.Signature +
+                Component<MapEntity>.Signature;
+            _world.Create(_scratchEntities.AsSpan(0, names.Length), signature, names.Length);
+            FillNameOnlyChildren(names, templateKeyIds, in mapEntity, _scratchEntities.AsSpan(0, names.Length));
+            _scratchEntities.AsSpan(0, names.Length).CopyTo(destination);
+        }
+
+        internal static Name ResolveAuthoredName(
+            string context,
+            EntityTemplate template,
+            JsonNode childNameOverride,
+            JsonNode instanceNameOverride)
+        {
+            if (template?.Components == null ||
+                !template.Components.TryGetValue("Name", out JsonNode templateName) ||
+                templateName == null)
+            {
+                throw new InvalidOperationException($"{context} requires the template to declare Name.");
+            }
+
+            JsonNode node = templateName;
+            if (childNameOverride != null)
+            {
+                node = EntityBuilder.MergeComponentOverride(node, childNameOverride);
+            }
+
+            if (instanceNameOverride != null)
+            {
+                node = EntityBuilder.MergeComponentOverride(node, instanceNameOverride);
+            }
+
+            var components = new Dictionary<string, JsonNode>(1) { ["Name"] = node };
+            return TemplateSpawnDescriptor.ParseName(context, components);
+        }
+
+        private void FillNameOnlyChildren(
+            ReadOnlySpan<Name> names,
+            ReadOnlySpan<int> templateKeyIds,
+            in MapEntity mapEntity,
+            ReadOnlySpan<Entity> created)
+        {
+            Entity first = created[0];
+            Archetype archetype = _world.GetEntityDataArray()[first.Id].Archetype;
+            Slot slot = _world.GetSlot(first);
+            int batchIndex = 0;
+            int chunkIndex = slot.ChunkIndex;
+            int row = slot.Index;
+            while (batchIndex < created.Length)
+            {
+                ref Chunk chunk = ref archetype.GetChunk(chunkIndex);
+                int run = Math.Min(created.Length - batchIndex, chunk.Count - row);
+                Span<Name> nameSpan = chunk.GetSpan<Name>();
+                Span<EntityTemplateKeyRef> templateKeys = chunk.GetSpan<EntityTemplateKeyRef>();
+                Span<MapEntity> mapEntities = chunk.GetSpan<MapEntity>();
+                for (int offset = 0; offset < run; offset++)
+                {
+                    int index = batchIndex + offset;
+                    int componentIndex = row + offset;
+                    nameSpan[componentIndex] = names[index];
+                    templateKeys[componentIndex] = new EntityTemplateKeyRef { TemplateKeyId = templateKeyIds[index] };
+                    mapEntities[componentIndex] = mapEntity;
+                }
+
+                batchIndex += run;
+                chunkIndex++;
+                row = 0;
+            }
+        }
+
         private static double ElapsedMs(long startTimestamp)
         {
             return (Stopwatch.GetTimestamp() - startTimestamp) * 1000d / Stopwatch.Frequency;
