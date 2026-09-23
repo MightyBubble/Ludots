@@ -22,6 +22,9 @@
       },
       "Grid": {
         "CellSizeCm": 100
+      },
+      "TransportNetwork": {
+        "AssetPath": "TransportNetwork/transport_network.json"
       }
     }
   ],

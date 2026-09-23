@@ -754,6 +754,17 @@ namespace Ludots.Core.Map
                     throw new InvalidOperationException(
                         $"Map '{mapId}' board '{board.Name}' has unknown SpatialType '{spatialType}'; use Grid/HexGrid/NodeGraph.");
                 }
+
+                if (board.TransportNetwork is { } transportDeclaration)
+                {
+                    if (!spatialType.Equals("NodeGraph", StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new InvalidOperationException(
+                            $"Map '{mapId}' board '{board.Name}' declares TransportNetwork but SpatialType is '{spatialType}'; transport networks require a NodeGraph board.");
+                    }
+
+                    transportDeclaration.Validate(mapId.Value, board.Name);
+                }
             }
 
             BoardConfig root = ResolveRootBoard(config, mapId);

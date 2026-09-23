@@ -120,7 +120,6 @@
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardGraphOpExtensionShowcaseMod\CapabilityStandardGraphOpExtensionShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPresenterBehaviorExtensionShowcaseMod\CapabilityStandardPresenterBehaviorExtensionShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPresenterCommandExtensionShowcaseMod\CapabilityStandardPresenterCommandExtensionShowcaseMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardTransportNetworkMod\CapabilityStandardTransportNetworkMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardVirtualCameraShowcaseMod\CapabilityStandardVirtualCameraShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\progression_scope\ProgressionScopeShowcaseMod\ProgressionScopeShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\association_stress\AssociationStressShowcaseMod\AssociationStressShowcaseMod.csproj" />
