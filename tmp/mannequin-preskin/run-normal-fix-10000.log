@@ -1,0 +1,115 @@
+INFO: Initializing raylib 5.5
+INFO: Platform backend: DESKTOP (GLFW)
+INFO: Supported raylib modules:
+INFO:     > rcore:..... loaded (mandatory)
+INFO:     > rlgl:...... loaded (mandatory)
+INFO:     > rshapes:... loaded (optional)
+INFO:     > rtextures:. loaded (optional)
+INFO:     > rtext:..... loaded (optional)
+INFO:     > rmodels:... loaded (optional)
+INFO:     > raudio:.... loaded (optional)
+INFO: DISPLAY: Device initialized successfully
+INFO:     > Display size: 2560 x 1600
+INFO:     > Screen size:  1280 x 720
+INFO:     > Render size:  1280 x 720
+INFO:     > Viewport offsets: 0, 0
+INFO: GLAD: OpenGL extensions loaded successfully
+INFO: GL: Supported extensions count: 296
+INFO: GL: OpenGL device information:
+INFO:     > Vendor:   ATI Technologies Inc.
+INFO:     > Renderer: AMD Radeon(TM) 8060S Graphics
+INFO:     > Version:  3.3.0 Core Profile Context 26.10.32.01.260717
+INFO:     > GLSL:     4.60
+INFO: GL: VAO extension detected, VAO functions loaded successfully
+INFO: GL: NPOT textures extension detected, full NPOT textures supported
+INFO: GL: DXT compressed textures supported
+INFO: GL: ETC2/EAC compressed textures supported
+INFO: PLATFORM: DESKTOP (GLFW - Win32): Initialized successfully
+INFO: TEXTURE: [ID 1] Texture loaded successfully (1x1 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Default texture loaded successfully
+INFO: SHADER: [ID 1] Vertex shader compiled successfully
+INFO: SHADER: [ID 2] Fragment shader compiled successfully
+INFO: SHADER: [ID 3] Program shader loaded successfully
+INFO: SHADER: [ID 3] Default shader loaded successfully
+INFO: RLGL: Render batch vertex buffers loaded successfully in RAM (CPU)
+INFO: RLGL: Render batch vertex buffers loaded successfully in VRAM (GPU)
+INFO: RLGL: Default OpenGL state initialized successfully
+INFO: TEXTURE: [ID 2] Texture loaded successfully (128x128 | GRAY_ALPHA | 1 mipmaps)
+INFO: FONT: Default font loaded successfully (224 glyphs)
+INFO: SYSTEM: Working Directory: C:\001_AI\Ludots-gpu-10k-opt\tmp\mannequin-preskin\bin\Release\net9.0
+INFO: FILEIO: [C:\001_AI\Ludots-gpu-10k-opt\projects/engine_gallery/Models/mannequin_large_walk.glb] File loaded successfully
+INFO: MODEL: [C:\001_AI\Ludots-gpu-10k-opt\projects/engine_gallery/Models/mannequin_large_walk.glb] Model basic data (glb) loaded successfully
+INFO:     > Meshes count: 6
+INFO:     > Materials count: 1 (+1 default)
+INFO: IMAGE: Data loaded successfully (512x512 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 3] Texture loaded successfully (512x512 | R8G8B8A8 | 1 mipmaps)
+INFO: VAO: [ID 2] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 3] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 4] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 5] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 6] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 7] Mesh uploaded successfully to VRAM (GPU)
+INFO: FILEIO: [C:\001_AI\Ludots-gpu-10k-opt\projects/engine_gallery/Models/mannequin_large_walk.glb] File loaded successfully
+INFO: MODEL: [C:\001_AI\Ludots-gpu-10k-opt\projects/engine_gallery/Models/mannequin_large_walk.glb] Loaded animation: retarget_Walking_A_Rig_Large.001 (62 frames, 1.041667s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-10k-opt\projects/engine_gallery/Models/mannequin_large_walk.glb] Loaded animation: Running_A_Rig_Large.001 (62 frames, 1.041667s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-10k-opt\projects/engine_gallery/Models/mannequin_large_walk.glb] Loaded animation: T-Pose_Rig_Large.001 (1 frames, 0.000000s)
+INFO: MODEL: [C:\001_AI\Ludots-gpu-10k-opt\projects/engine_gallery/Models/mannequin_large_walk.glb] Loaded animation: Walking_A_Rig_Large.001 (62 frames, 1.041667s)
+INFO: TEXTURE: [ID 4] Texture loaded successfully (2048x2048 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: FILEIO: [C:\001_AI\Ludots-gpu-10k-opt\tmp\mannequin-preskin\bin\Release\net9.0\shadow_depth.vs] Text file loaded successfully
+INFO: FILEIO: [C:\001_AI\Ludots-gpu-10k-opt\tmp\mannequin-preskin\bin\Release\net9.0\shadow_depth.fs] Text file loaded successfully
+INFO: SHADER: [ID 4] Vertex shader compiled successfully
+INFO: SHADER: [ID 5] Fragment shader compiled successfully
+INFO: SHADER: [ID 6] Program shader loaded successfully
+INFO: FILEIO: [C:\001_AI\Ludots-gpu-10k-opt\tmp\mannequin-preskin\bin\Release\net9.0\shadow_depth_instanced.vs] Text file loaded successfully
+INFO: FILEIO: [C:\001_AI\Ludots-gpu-10k-opt\tmp\mannequin-preskin\bin\Release\net9.0\shadow_depth.fs] Text file loaded successfully
+INFO: SHADER: [ID 4] Vertex shader compiled successfully
+INFO: SHADER: [ID 5] Fragment shader compiled successfully
+INFO: SHADER: [ID 7] Program shader loaded successfully
+INFO: FILEIO: [C:\001_AI\Ludots-gpu-10k-opt\tmp\mannequin-preskin\bin\Release\net9.0\shadow_depth_skinning_pose_texture.vs] Text file loaded successfully
+INFO: FILEIO: [C:\001_AI\Ludots-gpu-10k-opt\tmp\mannequin-preskin\bin\Release\net9.0\shadow_depth.fs] Text file loaded successfully
+INFO: SHADER: [ID 4] Vertex shader compiled successfully
+INFO: SHADER: [ID 5] Fragment shader compiled successfully
+INFO: SHADER: [ID 8] Program shader loaded successfully
+INFO: FILEIO: [C:\001_AI\Ludots-gpu-10k-opt\tmp\mannequin-preskin\bin\Release\net9.0\shadow_depth_cutout.vs] Text file loaded successfully
+INFO: FILEIO: [C:\001_AI\Ludots-gpu-10k-opt\tmp\mannequin-preskin\bin\Release\net9.0\shadow_depth_cutout.fs] Text file loaded successfully
+INFO: SHADER: [ID 4] Vertex shader compiled successfully
+INFO: SHADER: [ID 5] Fragment shader compiled successfully
+INFO: SHADER: [ID 9] Program shader loaded successfully
+{"population":10000,"frames":192,"warmup":64,"model":"C:\\001_AI\\Ludots-gpu-10k-opt\\projects/engine_gallery/Models/mannequin_large_walk.glb","model_sha256":"89291EDF3AC38B19CAA10D0C9A625FAC8E411641173C9F373A1429FD06A77372","renderer_source_sha256":"158bc8ce03ab8dbe17af8a822db290b7b31e8c330e67f2d79e175a77f564d838","gl_vendor":"ATI Technologies Inc.","gl_renderer":"AMD Radeon(TM) 8060S Graphics","gl_version":"3.3.0 Core Profile Context 26.10.32.01.260717","screen_width":1280,"screen_height":720,"framebuffer_width":1280,"framebuffer_height":720,"viewport":[0,0,1280,720],"mesh_count":6,"bones":23,"animation_count":4,"selected_clip":3,"native_geometry_upload_bytes":214896,"normal_correction_upload_bytes":107448,"normal_correction_source_sha256":"01F63DCE3C6C17A5D0DC0FC827310130CA75FC4D7B34A93E161A585822CCAA95","normal_correction":"After native UpdateModelAnimation, recalculate animNormals with the weighted upper 3x3 bone matrix and original normals, excluding translation; upload VBO 2 again. Both computation and second normal upload are included in preskin and frame totals.","schedule":"ABBA; frames 0/1 share a pose, 2/3 share the next pose; A=GPU texture skin, B=CPU skin once \u002B identity skin shader","timing":"Native GL timestamps: prepare, shadow draw, main draw. Wall total includes per-frame glFinish. Restore original VBOs and drain before baseline outside timed frame. Synchronized renderer-only experiment; not whole application FPS.","capture":"EndMode3D -\u003E glFinish -\u003E framebuffer readback -\u003E EndDrawing; three matching-pose pairs after timed frames"}
+INFO: TEXTURE: [ID 5] Texture loaded successfully (1024x16 | R32G32B32A32 | 1 mipmaps)
+INFO: TEXTURE: [ID 6] Texture loaded successfully (1024x20 | R32G32B32A32 | 1 mipmaps)
+INFO: SHADER: [ID 4] Vertex shader compiled successfully
+INFO: SHADER: [ID 5] Fragment shader compiled successfully
+INFO: SHADER: [ID 10] Program shader loaded successfully
+Completed 32/192 paired frames.
+Completed 64/192 paired frames.
+Completed 96/192 paired frames.
+Completed 128/192 paired frames.
+Completed 160/192 paired frames.
+Completed 192/192 paired frames.
+Completed; raw frames, metadata, three matching-pose pairs and pixel differences: C:\001_AI\Ludots-gpu-10k-opt\tmp/mannequin-preskin\results-10000-normal-fix
+INFO: SHADER: [ID 0] Unloaded shader program data from VRAM (GPU)
+INFO: SHADER: [ID 0] Unloaded shader program data from VRAM (GPU)
+INFO: SHADER: [ID 0] Unloaded shader program data from VRAM (GPU)
+INFO: SHADER: [ID 0] Unloaded shader program data from VRAM (GPU)
+INFO: SHADER: [ID 6] Unloaded shader program data from VRAM (GPU)
+INFO: SHADER: [ID 7] Unloaded shader program data from VRAM (GPU)
+INFO: SHADER: [ID 8] Unloaded shader program data from VRAM (GPU)
+INFO: SHADER: [ID 9] Unloaded shader program data from VRAM (GPU)
+INFO: FBO: [ID 1] Unloaded framebuffer from VRAM (GPU)
+INFO: TEXTURE: [ID 5] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 6] Unloaded texture data from VRAM (GPU)
+INFO: SHADER: [ID 10] Unloaded shader program data from VRAM (GPU)
+INFO: VAO: [ID 2] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 3] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 4] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 5] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 6] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 7] Unloaded vertex array data from VRAM (GPU)
+INFO: MODEL: Unloaded model (and meshes) from RAM and VRAM
+INFO: TEXTURE: [ID 2] Unloaded texture data from VRAM (GPU)
+INFO: SHADER: [ID 3] Default shader unloaded successfully
+INFO: TEXTURE: [ID 1] Default texture unloaded successfully
+INFO: Window closed successfully

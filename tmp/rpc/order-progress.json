@@ -1,0 +1,82 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "entity": {
+      "entityId": 34,
+      "hasOrderBuffer": true,
+      "active": null,
+      "pending": null,
+      "queued": []
+    },
+    "admission": {
+      "count": 0,
+      "generation": 773,
+      "overflowCount": 0,
+      "highWatermark": 2,
+      "recent": []
+    },
+    "terminal": {
+      "count": 0,
+      "recent": []
+    },
+    "orderTypes": [
+      {
+        "id": 1,
+        "key": "chainPass",
+        "label": "Pass"
+      },
+      {
+        "id": 2,
+        "key": "chainNegate",
+        "label": "Negate"
+      },
+      {
+        "id": 3,
+        "key": "chainActivateEffect",
+        "label": "Chain"
+      },
+      {
+        "id": 4,
+        "key": "massNavigationMove",
+        "label": "Mass Navigation Move"
+      },
+      {
+        "id": 100,
+        "key": "castAbility",
+        "label": "Cast Ability"
+      },
+      {
+        "id": 101,
+        "key": "moveTo",
+        "label": "Move To"
+      },
+      {
+        "id": 102,
+        "key": "attackTarget",
+        "label": "Attack Target"
+      },
+      {
+        "id": 103,
+        "key": "stop",
+        "label": "Stop"
+      },
+      {
+        "id": 104,
+        "key": "castAbility.Start",
+        "label": "Cast Ability Start"
+      },
+      {
+        "id": 105,
+        "key": "castAbility.End",
+        "label": "Cast Ability End"
+      }
+    ]
+  },
+  "instance": {
+    "pid": 13836,
+    "port": 47931,
+    "mapId": "mass_navigation",
+    "processPath": "C:\\Program Files\\dotnet\\dotnet.exe"
+  }
+}

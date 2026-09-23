@@ -1,0 +1,792 @@
+{
+  "dll": "C:\\001_AI\\Ludots-gpu-10k-opt\\src\\Platforms\\Desktop\\raylib.dll",
+  "dll_sha256": "c8d29fbda31417b900bb0220cfb6c288544264a93764f5ea7cf5727feec76994",
+  "animation_count": 11,
+  "animations": [
+    {
+      "index": 0,
+      "name": "Death_A",
+      "frames": 99,
+      "bones": 23,
+      "moving_bones": [
+        {
+          "bone": "hips",
+          "max_component_delta": 0.7403594711162569
+        },
+        {
+          "bone": "spine",
+          "max_component_delta": 1.124312893769961
+        },
+        {
+          "bone": "chest",
+          "max_component_delta": 1.916273768991232
+        },
+        {
+          "bone": "upperarm.l",
+          "max_component_delta": 2.372578129172325
+        },
+        {
+          "bone": "lowerarm.l",
+          "max_component_delta": 2.2655624747276306
+        },
+        {
+          "bone": "wrist.l",
+          "max_component_delta": 2.2727685272693634
+        },
+        {
+          "bone": "hand.l",
+          "max_component_delta": 2.2765288054943085
+        },
+        {
+          "bone": "handslot.l",
+          "max_component_delta": 2.213188052177429
+        },
+        {
+          "bone": "head",
+          "max_component_delta": 3.0008248686790466
+        },
+        {
+          "bone": "upperarm.r",
+          "max_component_delta": 2.526491403579712
+        },
+        {
+          "bone": "lowerarm.r",
+          "max_component_delta": 2.2965944409370422
+        },
+        {
+          "bone": "wrist.r",
+          "max_component_delta": 2.2029584646224976
+        },
+        {
+          "bone": "hand.r",
+          "max_component_delta": 2.1902048736810684
+        },
+        {
+          "bone": "handslot.r",
+          "max_component_delta": 3.0619595497846603
+        },
+        {
+          "bone": "upperleg.l",
+          "max_component_delta": 1.7102194428443909
+        },
+        {
+          "bone": "lowerleg.l",
+          "max_component_delta": 1.7708739638328552
+        },
+        {
+          "bone": "foot.l",
+          "max_component_delta": 1.3295413851737976
+        },
+        {
+          "bone": "toes.l",
+          "max_component_delta": 1.6360759139060974
+        },
+        {
+          "bone": "upperleg.r",
+          "max_component_delta": 1.7234559059143066
+        },
+        {
+          "bone": "lowerleg.r",
+          "max_component_delta": 1.8627655506134033
+        },
+        {
+          "bone": "foot.r",
+          "max_component_delta": 1.459181010723114
+        },
+        {
+          "bone": "toes.r",
+          "max_component_delta": 1.6824488639831543
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "name": "Death_A_Pose",
+      "frames": 1,
+      "bones": 23,
+      "moving_bones": []
+    },
+    {
+      "index": 2,
+      "name": "Hit_A",
+      "frames": 40,
+      "bones": 23,
+      "moving_bones": [
+        {
+          "bone": "hips",
+          "max_component_delta": 0.3013555565216066
+        },
+        {
+          "bone": "spine",
+          "max_component_delta": 0.3388880354382735
+        },
+        {
+          "bone": "chest",
+          "max_component_delta": 0.42156363278627396
+        },
+        {
+          "bone": "upperarm.l",
+          "max_component_delta": 0.3266187533736229
+        },
+        {
+          "bone": "lowerarm.l",
+          "max_component_delta": 0.2051759958267212
+        },
+        {
+          "bone": "wrist.l",
+          "max_component_delta": 0.3992612361907959
+        },
+        {
+          "bone": "hand.l",
+          "max_component_delta": 0.4567333459854126
+        },
+        {
+          "bone": "handslot.l",
+          "max_component_delta": 0.5557615756988525
+        },
+        {
+          "bone": "head",
+          "max_component_delta": 0.3401865065097809
+        },
+        {
+          "bone": "upperarm.r",
+          "max_component_delta": 0.3222815841436386
+        },
+        {
+          "bone": "lowerarm.r",
+          "max_component_delta": 0.26236093044281006
+        },
+        {
+          "bone": "wrist.r",
+          "max_component_delta": 0.29927778244018555
+        },
+        {
+          "bone": "hand.r",
+          "max_component_delta": 0.36388134956359863
+        },
+        {
+          "bone": "handslot.r",
+          "max_component_delta": 0.4650871753692627
+        },
+        {
+          "bone": "upperleg.l",
+          "max_component_delta": 0.3226283937692642
+        },
+        {
+          "bone": "lowerleg.l",
+          "max_component_delta": 0.22815382853150368
+        },
+        {
+          "bone": "foot.l",
+          "max_component_delta": 0.003222137689590454
+        },
+        {
+          "bone": "toes.l",
+          "max_component_delta": 1.3983322381973267
+        },
+        {
+          "bone": "upperleg.r",
+          "max_component_delta": 0.32370607554912567
+        },
+        {
+          "bone": "lowerleg.r",
+          "max_component_delta": 0.14430035650730133
+        },
+        {
+          "bone": "foot.r",
+          "max_component_delta": 0.0029267966747283936
+        },
+        {
+          "bone": "toes.r",
+          "max_component_delta": 0.002904251217842102
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "name": "Idle_A",
+      "frames": 116,
+      "bones": 23,
+      "moving_bones": [
+        {
+          "bone": "hips",
+          "max_component_delta": 0.06773388385772705
+        },
+        {
+          "bone": "spine",
+          "max_component_delta": 0.06812334060668945
+        },
+        {
+          "bone": "chest",
+          "max_component_delta": 0.07083487510681152
+        },
+        {
+          "bone": "upperarm.l",
+          "max_component_delta": 0.07360994815826416
+        },
+        {
+          "bone": "lowerarm.l",
+          "max_component_delta": 0.018960952758789062
+        },
+        {
+          "bone": "wrist.l",
+          "max_component_delta": 0.022171974182128906
+        },
+        {
+          "bone": "hand.l",
+          "max_component_delta": 0.023142337799072266
+        },
+        {
+          "bone": "handslot.l",
+          "max_component_delta": 0.027017831802368164
+        },
+        {
+          "bone": "head",
+          "max_component_delta": 0.09700542688369751
+        },
+        {
+          "bone": "upperarm.r",
+          "max_component_delta": 0.07605934143066406
+        },
+        {
+          "bone": "lowerarm.r",
+          "max_component_delta": 0.018799543380737305
+        },
+        {
+          "bone": "wrist.r",
+          "max_component_delta": 0.022756338119506836
+        },
+        {
+          "bone": "hand.r",
+          "max_component_delta": 0.024152517318725586
+        },
+        {
+          "bone": "handslot.r",
+          "max_component_delta": 0.02822709083557129
+        },
+        {
+          "bone": "upperleg.l",
+          "max_component_delta": 0.06271195411682129
+        },
+        {
+          "bone": "lowerleg.l",
+          "max_component_delta": 0.08655284345149994
+        },
+        {
+          "bone": "foot.l",
+          "max_component_delta": 0.0038333237171173096
+        },
+        {
+          "bone": "toes.l",
+          "max_component_delta": 0.004314303398132324
+        },
+        {
+          "bone": "upperleg.r",
+          "max_component_delta": 0.07321667671203613
+        },
+        {
+          "bone": "lowerleg.r",
+          "max_component_delta": 0.10406950116157532
+        },
+        {
+          "bone": "foot.r",
+          "max_component_delta": 0.009675413370132446
+        },
+        {
+          "bone": "toes.r",
+          "max_component_delta": 0.011536210775375366
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "name": "Idle_B",
+      "frames": 353,
+      "bones": 23,
+      "moving_bones": [
+        {
+          "bone": "hips",
+          "max_component_delta": 0.11369752883911133
+        },
+        {
+          "bone": "spine",
+          "max_component_delta": 0.11369752883911133
+        },
+        {
+          "bone": "chest",
+          "max_component_delta": 0.11471891403198242
+        },
+        {
+          "bone": "upperarm.l",
+          "max_component_delta": 0.1742706298828125
+        },
+        {
+          "bone": "lowerarm.l",
+          "max_component_delta": 0.09292265772819519
+        },
+        {
+          "bone": "wrist.l",
+          "max_component_delta": 0.09623703360557556
+        },
+        {
+          "bone": "hand.l",
+          "max_component_delta": 0.10095322132110596
+        },
+        {
+          "bone": "handslot.l",
+          "max_component_delta": 0.14532539248466492
+        },
+        {
+          "bone": "head",
+          "max_component_delta": 0.11620736122131348
+        },
+        {
+          "bone": "upperarm.r",
+          "max_component_delta": 0.11309266090393066
+        },
+        {
+          "bone": "lowerarm.r",
+          "max_component_delta": 0.05206386744976044
+        },
+        {
+          "bone": "wrist.r",
+          "max_component_delta": 0.09624454379081726
+        },
+        {
+          "bone": "hand.r",
+          "max_component_delta": 0.11155140399932861
+        },
+        {
+          "bone": "handslot.r",
+          "max_component_delta": 0.15594357252120972
+        },
+        {
+          "bone": "upperleg.l",
+          "max_component_delta": 0.11369752883911133
+        },
+        {
+          "bone": "lowerleg.l",
+          "max_component_delta": 0.09520900249481201
+        },
+        {
+          "bone": "foot.l",
+          "max_component_delta": 0.0002270340919494629
+        },
+        {
+          "bone": "toes.l",
+          "max_component_delta": 0.00014442205429077148
+        },
+        {
+          "bone": "upperleg.r",
+          "max_component_delta": 0.11369752883911133
+        },
+        {
+          "bone": "lowerleg.r",
+          "max_component_delta": 0.09713000059127808
+        },
+        {
+          "bone": "foot.r",
+          "max_component_delta": 0.00013777613639831543
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "name": "retarget_Idle_A",
+      "frames": 116,
+      "bones": 23,
+      "moving_bones": [
+        {
+          "bone": "hips",
+          "max_component_delta": 0.06773388385772705
+        },
+        {
+          "bone": "spine",
+          "max_component_delta": 0.06812357902526855
+        },
+        {
+          "bone": "chest",
+          "max_component_delta": 0.07083535194396973
+        },
+        {
+          "bone": "upperarm.l",
+          "max_component_delta": 0.0736098475754261
+        },
+        {
+          "bone": "lowerarm.l",
+          "max_component_delta": 0.018961668014526367
+        },
+        {
+          "bone": "wrist.l",
+          "max_component_delta": 0.022173404693603516
+        },
+        {
+          "bone": "hand.l",
+          "max_component_delta": 0.023143887519836426
+        },
+        {
+          "bone": "handslot.l",
+          "max_component_delta": 0.027019619941711426
+        },
+        {
+          "bone": "head",
+          "max_component_delta": 0.09700539708137512
+        },
+        {
+          "bone": "upperarm.r",
+          "max_component_delta": 0.07605957984924316
+        },
+        {
+          "bone": "lowerarm.r",
+          "max_component_delta": 0.018799781799316406
+        },
+        {
+          "bone": "wrist.r",
+          "max_component_delta": 0.022755742073059082
+        },
+        {
+          "bone": "hand.r",
+          "max_component_delta": 0.024151921272277832
+        },
+        {
+          "bone": "handslot.r",
+          "max_component_delta": 0.028226256370544434
+        },
+        {
+          "bone": "upperleg.l",
+          "max_component_delta": 0.06271195411682129
+        },
+        {
+          "bone": "lowerleg.l",
+          "max_component_delta": 0.0865529328584671
+        },
+        {
+          "bone": "foot.l",
+          "max_component_delta": 0.003833293914794922
+        },
+        {
+          "bone": "toes.l",
+          "max_component_delta": 0.00431409478187561
+        },
+        {
+          "bone": "upperleg.r",
+          "max_component_delta": 0.07321691513061523
+        },
+        {
+          "bone": "lowerleg.r",
+          "max_component_delta": 0.10400253534317017
+        },
+        {
+          "bone": "foot.r",
+          "max_component_delta": 0.003906726837158203
+        },
+        {
+          "bone": "toes.r",
+          "max_component_delta": 0.004392996430397034
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "name": "retarget_Walking_A",
+      "frames": 62,
+      "bones": 23,
+      "moving_bones": [
+        {
+          "bone": "hips",
+          "max_component_delta": 0.06975364685058594
+        },
+        {
+          "bone": "spine",
+          "max_component_delta": 0.08699432387948036
+        },
+        {
+          "bone": "chest",
+          "max_component_delta": 0.1303638145327568
+        },
+        {
+          "bone": "upperarm.l",
+          "max_component_delta": 0.25558895617723465
+        },
+        {
+          "bone": "lowerarm.l",
+          "max_component_delta": 0.29415521025657654
+        },
+        {
+          "bone": "wrist.l",
+          "max_component_delta": 0.6665636599063873
+        },
+        {
+          "bone": "hand.l",
+          "max_component_delta": 0.7883134186267853
+        },
+        {
+          "bone": "handslot.l",
+          "max_component_delta": 0.813482940196991
+        },
+        {
+          "bone": "head",
+          "max_component_delta": 0.19296132028102875
+        },
+        {
+          "bone": "upperarm.r",
+          "max_component_delta": 0.24879159778356552
+        },
+        {
+          "bone": "lowerarm.r",
+          "max_component_delta": 0.2855164557695389
+        },
+        {
+          "bone": "wrist.r",
+          "max_component_delta": 0.6596899926662445
+        },
+        {
+          "bone": "hand.r",
+          "max_component_delta": 0.7840475738048553
+        },
+        {
+          "bone": "handslot.r",
+          "max_component_delta": 0.8119790852069855
+        },
+        {
+          "bone": "upperleg.l",
+          "max_component_delta": 1.9586840867996216
+        },
+        {
+          "bone": "lowerleg.l",
+          "max_component_delta": 1.9780787229537964
+        },
+        {
+          "bone": "foot.l",
+          "max_component_delta": 1.79848974943161
+        },
+        {
+          "bone": "toes.l",
+          "max_component_delta": 1.573759913444519
+        },
+        {
+          "bone": "upperleg.r",
+          "max_component_delta": 1.9930499196052551
+        },
+        {
+          "bone": "lowerleg.r",
+          "max_component_delta": 1.7601099014282227
+        },
+        {
+          "bone": "foot.r",
+          "max_component_delta": 1.9998613595962524
+        },
+        {
+          "bone": "toes.r",
+          "max_component_delta": 1.9099673628807068
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "name": "Running_A",
+      "frames": 62,
+      "bones": 23,
+      "moving_bones": [
+        {
+          "bone": "hips",
+          "max_component_delta": 0.23808503150939941
+        },
+        {
+          "bone": "spine",
+          "max_component_delta": 0.2591974437236786
+        },
+        {
+          "bone": "chest",
+          "max_component_delta": 0.2615617513656616
+        },
+        {
+          "bone": "upperarm.l",
+          "max_component_delta": 0.6501488536596298
+        },
+        {
+          "bone": "lowerarm.l",
+          "max_component_delta": 0.946286678314209
+        },
+        {
+          "bone": "wrist.l",
+          "max_component_delta": 1.5939334034919739
+        },
+        {
+          "bone": "hand.l",
+          "max_component_delta": 1.7844823598861694
+        },
+        {
+          "bone": "handslot.l",
+          "max_component_delta": 2.0151705741882324
+        },
+        {
+          "bone": "head",
+          "max_component_delta": 0.388897180557251
+        },
+        {
+          "bone": "upperarm.r",
+          "max_component_delta": 0.6493927836418152
+        },
+        {
+          "bone": "lowerarm.r",
+          "max_component_delta": 0.9573529064655304
+        },
+        {
+          "bone": "wrist.r",
+          "max_component_delta": 1.5941640734672546
+        },
+        {
+          "bone": "hand.r",
+          "max_component_delta": 1.7846969366073608
+        },
+        {
+          "bone": "handslot.r",
+          "max_component_delta": 2.014467179775238
+        },
+        {
+          "bone": "upperleg.l",
+          "max_component_delta": 1.9197689294815063
+        },
+        {
+          "bone": "lowerleg.l",
+          "max_component_delta": 1.8334747552871704
+        },
+        {
+          "bone": "foot.l",
+          "max_component_delta": 1.659405767917633
+        },
+        {
+          "bone": "toes.l",
+          "max_component_delta": 1.9762235879898071
+        },
+        {
+          "bone": "upperleg.r",
+          "max_component_delta": 1.9943363070487976
+        },
+        {
+          "bone": "lowerleg.r",
+          "max_component_delta": 1.766102135181427
+        },
+        {
+          "bone": "foot.r",
+          "max_component_delta": 1.8581836819648743
+        },
+        {
+          "bone": "toes.r",
+          "max_component_delta": 1.9907370209693909
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "name": "T-Pose",
+      "frames": 1,
+      "bones": 23,
+      "moving_bones": []
+    },
+    {
+      "index": 9,
+      "name": "T-Pose.001",
+      "frames": 1,
+      "bones": 23,
+      "moving_bones": []
+    },
+    {
+      "index": 10,
+      "name": "Walking_A",
+      "frames": 62,
+      "bones": 23,
+      "moving_bones": [
+        {
+          "bone": "hips",
+          "max_component_delta": 0.06975358724594116
+        },
+        {
+          "bone": "spine",
+          "max_component_delta": 0.08699432015419006
+        },
+        {
+          "bone": "chest",
+          "max_component_delta": 0.13036379218101501
+        },
+        {
+          "bone": "upperarm.l",
+          "max_component_delta": 0.2556556537747383
+        },
+        {
+          "bone": "lowerarm.l",
+          "max_component_delta": 0.3015831857919693
+        },
+        {
+          "bone": "wrist.l",
+          "max_component_delta": 0.6725684702396393
+        },
+        {
+          "bone": "hand.l",
+          "max_component_delta": 0.7961852252483368
+        },
+        {
+          "bone": "handslot.l",
+          "max_component_delta": 0.8246538043022156
+        },
+        {
+          "bone": "head",
+          "max_component_delta": 0.17492253333330154
+        },
+        {
+          "bone": "upperarm.r",
+          "max_component_delta": 0.24767086654901505
+        },
+        {
+          "bone": "lowerarm.r",
+          "max_component_delta": 0.2805144786834717
+        },
+        {
+          "bone": "wrist.r",
+          "max_component_delta": 0.6548187136650085
+        },
+        {
+          "bone": "hand.r",
+          "max_component_delta": 0.7772009521722794
+        },
+        {
+          "bone": "handslot.r",
+          "max_component_delta": 0.7992200553417206
+        },
+        {
+          "bone": "upperleg.l",
+          "max_component_delta": 1.9585636258125305
+        },
+        {
+          "bone": "lowerleg.l",
+          "max_component_delta": 1.994541049003601
+        },
+        {
+          "bone": "foot.l",
+          "max_component_delta": 1.7982306480407715
+        },
+        {
+          "bone": "toes.l",
+          "max_component_delta": 1.6513281464576721
+        },
+        {
+          "bone": "upperleg.r",
+          "max_component_delta": 1.9930499196052551
+        },
+        {
+          "bone": "lowerleg.r",
+          "max_component_delta": 1.7612609267234802
+        },
+        {
+          "bone": "foot.r",
+          "max_component_delta": 1.9997803568840027
+        },
+        {
+          "bone": "toes.r",
+          "max_component_delta": 1.9119020104408264
+        }
+      ]
+    }
+  ]
+}

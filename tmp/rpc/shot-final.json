@@ -1,0 +1,16 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "path": "C:\\001_AI\\Ludots-gpu-10k-opt\\artifacts\\agent-bridge\\shots\\mannequin-10k-ready.png",
+    "bytes": 1757567,
+    "width": 1600,
+    "height": 900
+  },
+  "instance": {
+    "pid": 168216,
+    "port": 47931,
+    "mapId": "mass_navigation",
+    "processPath": "C:\\Program Files\\dotnet\\dotnet.exe"
+  }
+}

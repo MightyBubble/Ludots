@@ -1,0 +1,163 @@
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  Raylib-cs -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Raylib-cs\bin\Release\net9.0\Raylib-cs.dll
+  Ludots.Contracts -> C:\001_AI\Ludots-gpu-10k-opt\src\Contracts\bin\Release\net9.0\Ludots.Contracts.dll
+  Ludots.UI -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Ludots.UI\bin\Release\net9.0\Ludots.UI.dll
+  ExCSS -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\ExCSS\bin\Release\net8.0\ExCSS.dll
+  SkiaSharp -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\SkiaSharp\SkiaSharp\bin\Release\net8.0\SkiaSharp.dll
+  Ludots.Platform.Abstractions -> C:\001_AI\Ludots-gpu-10k-opt\src\Platform\Ludots.Platform.Abstractions\bin\Release\net9.0\Ludots.Platform.Abstractions.dll
+  Arch -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Arch\src\Arch\bin\Release\net8.0\Arch.dll
+  Ludots.UI.Browser -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Ludots.UI.Browser\bin\Release\net9.0\Ludots.UI.Browser.dll
+  Svg.Generators -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Svg.Skia\externals\SVG\Generators\bin\Release\netstandard2.0\Svg.Generators.dll
+  ShimSkiaSharp -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Svg.Skia\ShimSkiaSharp\bin\Release\net8.0\ShimSkiaSharp.dll
+  Ludots.Graph.Abstractions -> C:\001_AI\Ludots-gpu-10k-opt\src\Graph\Ludots.Graph.Abstractions\bin\Release\net9.0\Ludots.Graph.Abstractions.dll
+  Ludots.Platform.Desktop -> C:\001_AI\Ludots-gpu-10k-opt\src\Platform\Ludots.Platform.Desktop\bin\Release\net9.0\Ludots.Platform.Desktop.dll
+  Ludots.Raylib.SceneKit -> C:\001_AI\Ludots-gpu-10k-opt\src\Client\Ludots.Raylib.SceneKit\bin\Release\net9.0\Ludots.Raylib.SceneKit.dll
+  Arch.System -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Arch.Extended\Arch.System\bin\Release\net7.0\Arch.System.dll
+  Ludots.Raylib.Render -> C:\001_AI\Ludots-gpu-10k-opt\src\Client\Ludots.Raylib.Render\bin\Release\net9.0\Ludots.Raylib.Render.dll
+  Svg.Custom -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Svg.Skia\Svg.Custom\bin\Release\net8.0\Svg.Custom.dll
+  Arch -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Arch\src\Arch\bin\Release\net6.0\Arch.dll
+  Svg.Model -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Svg.Skia\Svg.Model\bin\Release\net8.0\Svg.Model.dll
+  Arch.Relationships -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Arch.Extended\Arch.Relationships\bin\Release\net7.0\Arch.Relationships.dll
+  Svg.Skia -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Svg.Skia\Svg.Skia\bin\Release\net8.0\Svg.Skia.dll
+C:\001_AI\Ludots-gpu-10k-opt\src\Content\Ludots.Content.EngineGallery\Components\AnimatorComponent.cs(87,38): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpu-10k-opt\src\Content\Ludots.Content.EngineGallery\Ludots.Content.EngineGallery.csproj]
+  Ludots.UI.Skia -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Ludots.UI.Skia\bin\Release\net9.0\Ludots.UI.Skia.dll
+  Arch.Persistence -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Arch.Extended\Arch.Persistence\bin\Release\net7.0\Arch.Persistence.dll
+  Ludots.Content.EngineGallery -> C:\001_AI\Ludots-gpu-10k-opt\src\Content\Ludots.Content.EngineGallery\bin\Release\net9.0\Ludots.Content.EngineGallery.dll
+  DotRecast.Core -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\DotRecast\src\DotRecast.Core\bin\Release\net9.0\DotRecast.Core.dll
+  DotRecast.Recast -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\DotRecast\src\DotRecast.Recast\bin\Release\net9.0\DotRecast.Recast.dll
+  DotRecast.Detour -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\DotRecast\src\DotRecast.Detour\bin\Release\net9.0\DotRecast.Detour.dll
+  Ludots.Core -> C:\001_AI\Ludots-gpu-10k-opt\src\Core\bin\Release\net9.0\Ludots.Core.dll
+  LudotsCoreMod -> C:\001_AI\Ludots-gpu-10k-opt\mods\LudotsCoreMod\bin\net9.0\LudotsCoreMod.dll
+  CoreInputMod -> C:\001_AI\Ludots-gpu-10k-opt\mods\CoreInputMod\bin\net9.0\CoreInputMod.dll
+  Ludots.Client.Raylib -> C:\001_AI\Ludots-gpu-10k-opt\src\Client\Ludots.Client.Raylib\bin\Release\net9.0\Ludots.Client.Raylib.dll
+  InstancedBatchDemoMod -> C:\001_AI\Ludots-gpu-10k-opt\mods\fixtures\instanced_batch\InstancedBatchDemoMod\bin\net9.0\InstancedBatchDemoMod.dll
+  Ludots.WebUI.DataPlane -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Ludots.WebUI.DataPlane\bin\Release\net9.0\Ludots.WebUI.DataPlane.dll
+  Ludots.UI.HtmlEngine -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Ludots.UI.HtmlEngine\bin\Release\net9.0\Ludots.UI.HtmlEngine.dll
+  Ludots.Presentation.Skia -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Ludots.Presentation.Skia\bin\Release\net9.0\Ludots.Presentation.Skia.dll
+  Ludots.UI.Panels -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Ludots.UI.Panels\bin\Release\net9.0\Ludots.UI.Panels.dll
+  Ludots.WebUI.Browser -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Ludots.WebUI.Browser\bin\Release\net9.0\Ludots.WebUI.Browser.dll
+  Ludots.Adapter.Raylib -> C:\001_AI\Ludots-gpu-10k-opt\src\Adapters\Raylib\Ludots.Adapter.Raylib\bin\Release\net9.0\Ludots.Adapter.Raylib.dll
+C:\001_AI\Ludots-gpu-10k-opt\src\Tests\RaylibAdapterTests\RaylibAssetStoreConsumerTests.cs(178,43): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpu-10k-opt\src\Tests\RaylibAdapterTests\RaylibAdapterTests.csproj]
+C:\001_AI\Ludots-gpu-10k-opt\src\Tests\RaylibAdapterTests\RaylibAssetStoreConsumerTests.cs(179,21): warning CS8602: 解引用可能出现空引用。 [C:\001_AI\Ludots-gpu-10k-opt\src\Tests\RaylibAdapterTests\RaylibAdapterTests.csproj]
+C:\001_AI\Ludots-gpu-10k-opt\src\Tests\RaylibAdapterTests\RaylibAssetStoreTests.cs(199,47): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpu-10k-opt\src\Tests\RaylibAdapterTests\RaylibAdapterTests.csproj]
+C:\001_AI\Ludots-gpu-10k-opt\src\Tests\RaylibAdapterTests\RaylibAssetStoreTests.cs(201,21): warning CS8602: 解引用可能出现空引用。 [C:\001_AI\Ludots-gpu-10k-opt\src\Tests\RaylibAdapterTests\RaylibAdapterTests.csproj]
+C:\001_AI\Ludots-gpu-10k-opt\src\Tests\RaylibAdapterTests\RaylibInstancedBatchDemoIntegrationTests.cs(131,52): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpu-10k-opt\src\Tests\RaylibAdapterTests\RaylibAdapterTests.csproj]
+C:\001_AI\Ludots-gpu-10k-opt\src\Tests\RaylibAdapterTests\RaylibScreenshotEvidenceTests.cs(13,27): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpu-10k-opt\src\Tests\RaylibAdapterTests\RaylibAdapterTests.csproj]
+C:\001_AI\Ludots-gpu-10k-opt\src\Tests\RaylibAdapterTests\RaylibScreenshotEvidenceTests.cs(29,27): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpu-10k-opt\src\Tests\RaylibAdapterTests\RaylibAdapterTests.csproj]
+C:\001_AI\Ludots-gpu-10k-opt\src\Tests\RaylibAdapterTests\RaylibScreenshotEvidenceTests.cs(44,31): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpu-10k-opt\src\Tests\RaylibAdapterTests\RaylibAdapterTests.csproj]
+C:\001_AI\Ludots-gpu-10k-opt\src\Tests\RaylibAdapterTests\RaylibScreenshotEvidenceTests.cs(45,37): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpu-10k-opt\src\Tests\RaylibAdapterTests\RaylibAdapterTests.csproj]
+C:\001_AI\Ludots-gpu-10k-opt\src\Tests\RaylibAdapterTests\RaylibSoundNativeDeviceTests.cs(136,25): warning CS8600: 将 null 文本或可能的 null 值转换为不可为 null 类型。 [C:\001_AI\Ludots-gpu-10k-opt\src\Tests\RaylibAdapterTests\RaylibAdapterTests.csproj]
+  RaylibAdapterTests -> C:\001_AI\Ludots-gpu-10k-opt\src\Tests\RaylibAdapterTests\bin\Release\net9.0\Ludots.Adapter.Raylib.Tests.dll
+C:\001_AI\Ludots-gpu-10k-opt\src\Tests\RaylibAdapterTests\bin\Release\net9.0\Ludots.Adapter.Raylib.Tests.dll (.NETCoreApp,Version=v9.0)的测试运行
+总共 1 个测试文件与指定模式相匹配。
+NUnit Adapter 4.6.0.0: Test execution started
+Running selected tests in C:\001_AI\Ludots-gpu-10k-opt\src\Tests\RaylibAdapterTests\bin\Release\net9.0\Ludots.Adapter.Raylib.Tests.dll
+   NUnit3TestExecutor discovered 40 of 40 NUnit test cases using Current Discovery mode, Non-Explicit run
+  已通过 AnimatedNonJointAttachmentOrAncestor_IsRejected(1) [36 ms]
+  已通过 AnimatedNonJointAttachmentOrAncestor_IsRejected(2) [11 ms]
+  已通过 AnimatedNonJointAttachmentOrAncestor_IsRejected(5) [10 ms]
+  已通过 JointAnimation_IsRepresentable(0) [11 ms]
+  已通过 JointAnimation_IsRepresentable(3) [10 ms]
+  已通过 MalformedGlb_IsRejected("magic") [18 ms]
+  已通过 MalformedGlb_IsRejected("version") [9 ms]
+  已通过 MalformedGlb_IsRejected("file_length") [12 ms]
+  已通过 MalformedGlb_IsRejected("chunk_type") [12 ms]
+  已通过 MalformedGlb_IsRejected("chunk_length") [10 ms]
+  已通过 MalformedGlb_IsRejected("duplicate_json") [9 ms]
+  已通过 MalformedOrUnsupportedBindings_AreRejected("missing_weights","together") [12 ms]
+  已通过 MalformedOrUnsupportedBindings_AreRejected("missing_joints","together") [9 ms]
+  已通过 MalformedOrUnsupportedBindings_AreRejected("missing_skin","must agree") [7 ms]
+  已通过 MalformedOrUnsupportedBindings_AreRejected("skin_without_attributes","must agree") [7 ms]
+  已通过 MalformedOrUnsupportedBindings_AreRejected("invalid_skin","outside count") [8 ms]
+  已通过 MalformedOrUnsupportedBindings_AreRejected("multiple_skins","one skin") [6 ms]
+  已通过 MalformedOrUnsupportedBindings_AreRejected("duplicate_joint","more than once") [8 ms]
+  已通过 MalformedOrUnsupportedBindings_AreRejected("duplicate_name","ambiguous name") [10 ms]
+  已通过 MalformedOrUnsupportedBindings_AreRejected("missing_name","name") [8 ms]
+  已通过 MalformedOrUnsupportedBindings_AreRejected("multiple_parents","multiple parent") [13 ms]
+  已通过 MalformedOrUnsupportedBindings_AreRejected("cycle","cycle") [7 ms]
+  已通过 MalformedOrUnsupportedBindings_AreRejected("invalid_child","outside count") [6 ms]
+  已通过 MalformedOrUnsupportedBindings_AreRejected("invalid_mesh","outside count") [8 ms]
+  已通过 MalformedOrUnsupportedBindings_AreRejected("non_triangles","non-triangle") [6 ms]
+  已通过 MalformedOrUnsupportedBindings_AreRejected("extra_weights","Unsupported skin attribute") [7 ms]
+  已通过 MalformedOrUnsupportedBindings_AreRejected("invalid_accessor","outside count") [6 ms]
+  已通过 MalformedOrUnsupportedBindings_AreRejected("morph_targets","morph targets") [6 ms]
+  已通过 MalformedOrUnsupportedBindings_AreRejected("animation_weights","Animation path") [9 ms]
+  已通过 MalformedOrUnsupportedBindings_AreRejected("invalid_animation_node","outside count") [5 ms]
+  已通过 NativeBoneCapacityOverflow_IsRejectedBeforeReadingSource [1 ms]
+  已通过 NativeBoneOrderMismatch_IsRejected [8 ms]
+  已通过 NativeMeshCountMismatch_IsRejected(2) [2 ms]
+  已通过 NativeMeshCountMismatch_IsRejected(4) [2 ms]
+  已通过 NestedRigidAttachment_UsesNearestJoint_AndStaticMeshUsesIdentity(False) [2 ms]
+  已通过 NestedRigidAttachment_UsesNearestJoint_AndStaticMeshUsesIdentity(True) [2 ms]
+INFO: Initializing raylib 5.5
+INFO: Platform backend: DESKTOP (GLFW)
+INFO: Supported raylib modules:
+INFO:     > rcore:..... loaded (mandatory)
+INFO:     > rlgl:...... loaded (mandatory)
+INFO:     > rshapes:... loaded (optional)
+INFO:     > rtextures:. loaded (optional)
+INFO:     > rtext:..... loaded (optional)
+INFO:     > rmodels:... loaded (optional)
+INFO:     > raudio:.... loaded (optional)
+INFO: DISPLAY: Device initialized successfully
+INFO:     > Display size: 2560 x 1600
+INFO:     > Screen size:  192 x 192
+INFO:     > Render size:  192 x 192
+INFO:     > Viewport offsets: 0, 0
+INFO: GLAD: OpenGL extensions loaded successfully
+INFO: GL: Supported extensions count: 296
+INFO: GL: OpenGL device information:
+INFO:     > Vendor:   ATI Technologies Inc.
+INFO:     > Renderer: AMD Radeon(TM) 8060S Graphics
+INFO:     > Version:  3.3.0 Core Profile Context 26.10.32.01.260717
+INFO:     > GLSL:     4.60
+INFO: GL: VAO extension detected, VAO functions loaded successfully
+INFO: GL: NPOT textures extension detected, full NPOT textures supported
+INFO: GL: DXT compressed textures supported
+INFO: GL: ETC2/EAC compressed textures supported
+INFO: PLATFORM: DESKTOP (GLFW - Win32): Initialized successfully
+INFO: TEXTURE: [ID 1] Texture loaded successfully (1x1 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Default texture loaded successfully
+INFO: SHADER: [ID 1] Vertex shader compiled successfully
+INFO: SHADER: [ID 2] Fragment shader compiled successfully
+INFO: SHADER: [ID 3] Program shader loaded successfully
+INFO: SHADER: [ID 3] Default shader loaded successfully
+INFO: RLGL: Render batch vertex buffers loaded successfully in RAM (CPU)
+INFO: RLGL: Render batch vertex buffers loaded successfully in VRAM (GPU)
+INFO: RLGL: Default OpenGL state initialized successfully
+INFO: TEXTURE: [ID 2] Texture loaded successfully (128x128 | GRAY_ALPHA | 1 mipmaps)
+INFO: FONT: Default font loaded successfully (224 glyphs)
+INFO: SYSTEM: Working Directory: C:\001_AI\Ludots-gpu-10k-opt\src\Tests\RaylibAdapterTests\bin\Release\net9.0
+INFO: VAO: [ID 2] Mesh uploaded successfully to VRAM (GPU)
+INFO: SHADER: [ID 4] Vertex shader compiled successfully
+INFO: SHADER: [ID 5] Fragment shader compiled successfully
+INFO: SHADER: [ID 6] Program shader loaded successfully
+INFO: SHADER: [ID 4] Vertex shader compiled successfully
+INFO: SHADER: [ID 5] Fragment shader compiled successfully
+INFO: SHADER: [ID 7] Program shader loaded successfully
+INFO: TEXTURE: [ID 3] Texture loaded successfully (1024x16 | R32G32B32A32 | 1 mipmaps)
+INFO: TEXTURE: [ID 4] Texture loaded successfully (1024x2 | R32G32B32A32 | 1 mipmaps)
+INFO: TEXTURE: [ID 3] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 3] Texture loaded successfully (1024x32 | R32G32B32A32 | 1 mipmaps)
+  已通过 NodeOrder_PrimitiveOrder_AndRepeatedMeshReferencesMatchNativeLoader [9 ms]
+  已通过 Soldier_AttachmentsFollowTheirNamedBones_InNativeMeshOrder [47 ms]
+  已通过 StaticModelWithoutSkin_UsesIdentityWithoutReadingExternalBuffers [7 ms]
+INFO: SHADER: [ID 6] Unloaded shader program data from VRAM (GPU)
+INFO: SHADER: [ID 7] Unloaded shader program data from VRAM (GPU)
+INFO: VAO: [ID 2] Unloaded vertex array data from VRAM (GPU)
+INFO: TEXTURE: [ID 3] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 4] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 2] Unloaded texture data from VRAM (GPU)
+INFO: SHADER: [ID 3] Default shader unloaded successfully
+INFO: TEXTURE: [ID 1] Default texture unloaded successfully
+INFO: Window closed successfully
+NUnit Adapter 4.6.0.0: Test execution complete
+  已通过 RigidAndStaticBindings_PreserveGeometryAcrossMainShadowAndPalettePages [1 s]
+
+测试运行成功。
+测试总数: 40
+     通过数: 40
+总时间: 4.2490 秒
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。

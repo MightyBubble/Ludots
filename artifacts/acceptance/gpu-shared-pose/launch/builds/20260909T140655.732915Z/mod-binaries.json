@@ -1,0 +1,27 @@
+[
+  {
+    "path": "C:\\001_AI\\Ludots-gpu-10k-opt\\mods\\LudotsCoreMod\\bin\\net9.0\\LudotsCoreMod.dll",
+    "bytes": 5632,
+    "sha256": "c63488ec6310c0234a258f60a864140055e908154b6c9aea60f169dcee0100ea"
+  },
+  {
+    "path": "C:\\001_AI\\Ludots-gpu-10k-opt\\mods\\CoreInputMod\\bin\\net9.0\\CoreInputMod.dll",
+    "bytes": 74240,
+    "sha256": "d3cec67ecb63e0d802f70cea8e22004852b8684385cc3cde00cebd35cfaf9b82"
+  },
+  {
+    "path": "C:\\001_AI\\Ludots-gpu-10k-opt\\mods\\capabilities\\navigation\\MassNavigationMod\\bin\\net9.0\\MassNavigationMod.dll",
+    "bytes": 7168,
+    "sha256": "8fe8c3883efa7904d5ddf0a9bc8969b0e4066ef41c64754e94b4236582da3516"
+  },
+  {
+    "path": "C:\\001_AI\\Ludots-gpu-10k-opt\\mods\\showcases\\capability_standard\\CapabilityStandardMassNavigationLargeWorld10kMod\\bin\\net9.0\\CapabilityStandardMassNavigationLargeWorld10kMod.dll",
+    "bytes": 15360,
+    "sha256": "8abe781c86d2ca23704d4ef50c18ab5d25555dff7823637156b8c22e1a797102"
+  },
+  {
+    "path": "C:\\001_AI\\Ludots-gpu-10k-opt\\mods\\AgentBridgeMod\\bin\\net9.0\\AgentBridgeMod.dll",
+    "bytes": 7680,
+    "sha256": "5063cbbd3e3c1d87cc4edd9cb0f31cd349873413908ec82a66197567df50f8ca"
+  }
+]

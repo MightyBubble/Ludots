@@ -1,0 +1,74 @@
+{
+  "archive": "C:\\001_AI\\Ludots-Assets\\animations\\KayKit-Character-Animations-Free-1.1.zip",
+  "archive_sha256": "65882f31f905ad2e953819648a59287cdeab8f623908d5ef701971d3758be20f",
+  "sources": [
+    {
+      "zip_entry": "KayKit_Character_Animations_1.1/Mannequin Character/characters/Mannequin_Large.glb",
+      "extracted_path": "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp\\mannequin-assets\\Mannequin_Large.glb",
+      "sha256": "21a55e38b9d989dc243a7dd2bbf3c21766695925b875c33da9423e6a07e8528a",
+      "meshes": 6,
+      "skin_joint_counts": [
+        23
+      ],
+      "animations": []
+    },
+    {
+      "zip_entry": "KayKit_Character_Animations_1.1/Animations/gltf/Rig_Large/Rig_Large_General.glb",
+      "extracted_path": "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp\\mannequin-assets\\Rig_Large_General.glb",
+      "sha256": "ec263b40704d996692033fc716fc0fcaa11a5089393845fe27877e5f773b2f3e",
+      "meshes": 6,
+      "skin_joint_counts": [
+        23
+      ],
+      "animations": [
+        {
+          "index": 0,
+          "name": "Death_A"
+        },
+        {
+          "index": 1,
+          "name": "Death_A_Pose"
+        },
+        {
+          "index": 2,
+          "name": "Hit_A"
+        },
+        {
+          "index": 3,
+          "name": "Idle_A"
+        },
+        {
+          "index": 4,
+          "name": "Idle_B"
+        },
+        {
+          "index": 5,
+          "name": "T-Pose"
+        }
+      ]
+    },
+    {
+      "zip_entry": "KayKit_Character_Animations_1.1/Animations/gltf/Rig_Large/Rig_Large_MovementBasic.glb",
+      "extracted_path": "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp\\mannequin-assets\\Rig_Large_MovementBasic.glb",
+      "sha256": "2798a62b6f2a1f0f73b8481468fc0aeb7dd3118ceeb1be7db2fc947b7a1221ad",
+      "meshes": 6,
+      "skin_joint_counts": [
+        23
+      ],
+      "animations": [
+        {
+          "index": 0,
+          "name": "Running_A"
+        },
+        {
+          "index": 1,
+          "name": "T-Pose"
+        },
+        {
+          "index": 2,
+          "name": "Walking_A"
+        }
+      ]
+    }
+  ]
+}

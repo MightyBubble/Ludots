@@ -48,13 +48,20 @@ namespace Ludots.Raylib.Render
         private float _frameShadowTexelWorld = 0.04f;
         private RaylibPoseTexturePalette? _posePalette;
         private readonly Dictionary<(int MeshAssetId, int ClipIndex, int FrameIndex), int> _poseRowByKey = new();
-        private readonly List<(int PoseRow, int MeshAssetId, int ClipIndex, int FrameIndex)> _dirtyPoseRows = new();
+        private readonly List<(int PoseRow, GpuSkinnedInstanceBatch Batch, int ClipIndex, int FrameIndex)> _dirtyPoseRows = new();
         private int _locBonePaletteSampler = -1;
         private int _locInstanceTableSampler = -1;
         private int _locInstanceBase = -1;
         private int _locBoneBase = -1;
         private int _locPaletteSlotsPerRow = -1;
         private int _locPaletteSlotRows = -1;
+        private int _locRigidBoneIndex = -1;
+        private int _locUseSharedPose = -1;
+        private int _locSharedBones = -1;
+
+        internal bool EnableSharedPoseUniforms { get; set; }
+        internal Func<int, string, IReadOnlyDictionary<int, int>?>? AnimationStateMapResolver { get; set; }
+        public int LastSharedPoseInstances { get; private set; }
 
         public RaylibGpuSkinnedBatchRenderer(
             RaylibGpuSkinnedModelCache modelCache,
@@ -91,6 +98,7 @@ namespace Ludots.Raylib.Render
             LastShadowSubmitCpuMs = 0d;
             LastUniquePoses = 0;
             LastTextureUploadBytes = 0;
+            LastSharedPoseInstances = 0;
         }
 
         public void ApplyFrameLighting(RaylibFrameLighting lighting, Vector3 viewPos, RaylibDirectionalShadowMap? shadow, float shadowTexelWorld)
@@ -161,7 +169,7 @@ namespace Ludots.Raylib.Render
                 in animator,
                 entry.Animations,
                 entry.AnimCount,
-                stateToClipMap: null,
+                stateToClipMap: RaylibSkinnedPlayback.ResolveStateMap(item.AnimationProfileId, entry.SourcePath, AnimationStateMapResolver),
                 out int clipIndex,
                 out int frameIndex);
 
@@ -180,6 +188,11 @@ namespace Ludots.Raylib.Render
                 batch.Model = entry.Model;
                 batch.Animations = entry.Animations;
                 batch.AnimCount = entry.AnimCount;
+                if (entry.MeshRigidBoneIndices.Length != entry.Model.meshCount)
+                {
+                    throw new InvalidOperationException($"GpuSkinned meshAssetId={item.MeshAssetId} requires one skin binding per mesh.");
+                }
+                batch.MeshRigidBoneIndices = entry.MeshRigidBoneIndices;
                 _activeGpuSkinnedInstanceBatches.Add(batch);
             }
 
@@ -195,7 +208,7 @@ namespace Ludots.Raylib.Render
                 _posePalette ??= new RaylibPoseTexturePalette();
                 poseRow = _poseRowByKey.Count;
                 _poseRowByKey[poseKey] = poseRow;
-                _dirtyPoseRows.Add((poseRow, item.MeshAssetId, clipIndex, frameIndex));
+                _dirtyPoseRows.Add((poseRow, batch, clipIndex, frameIndex));
             }
 
             batch.Add(
@@ -226,6 +239,7 @@ namespace Ludots.Raylib.Render
                     }
 
                     LastInstances += batch.Count;
+                    if (EnableSharedPoseUniforms && _dirtyPoseRows.Count == 1) LastSharedPoseInstances += batch.Count;
                     LastBatches += DrawBatch(batch, instancingShader, in instancingPbrLocs, skyIbl);
                 }
 
@@ -276,11 +290,11 @@ namespace Ludots.Raylib.Render
             // 骨骼槽位 = mesh 局部 boneId + 前序 mesh 的 boneCount 累计（多 mesh 合同）。
             for (int i = 0; i < _dirtyPoseRows.Count; i++)
             {
-                (int poseRow, int meshAssetId, int clipIndex, int frameIndex) = _dirtyPoseRows[i];
-                var batch = _activeGpuSkinnedInstanceBatches.FirstOrDefault(b => b.Key.MeshAssetId == meshAssetId);
-                if (batch == null || batch.Animations == null)
+                (int poseRow, GpuSkinnedInstanceBatch batch, int clipIndex, int frameIndex) = _dirtyPoseRows[i];
+                int meshAssetId = batch.Key.MeshAssetId;
+                if (batch.Animations == null)
                 {
-                    continue;
+                    throw new InvalidOperationException($"GpuSkinned meshAssetId={meshAssetId} pose requires loaded animations.");
                 }
 
                 Model model = batch.Model;
@@ -431,6 +445,16 @@ namespace Ludots.Raylib.Render
                             BindPoseTextures(ref material);
                             SetPaletteStrideUniforms();
                             SetBoneBaseUniform(boneBase);
+                            float rigidBoneIndex = batch.MeshRigidBoneIndices.Span[meshIndex];
+                            Rl.SetShaderValue(_skinningShader, _locRigidBoneIndex, &rigidBoneIndex, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+                            bool useSharedPose = EnableSharedPoseUniforms && _dirtyPoseRows.Count == 1;
+                            float sharedPose = useSharedPose ? 1 : 0;
+                            Rl.SetShaderValue(_skinningShader, _locUseSharedPose, &sharedPose, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+                            if (useSharedPose)
+                            {
+                                Rl.rlEnableShader(_skinningShader.id);
+                                Rl.rlSetUniformMatrices(_locSharedBones, mesh.boneMatrices, mesh.boneCount);
+                            }
                             for (int offset = 0; offset < batch.Count; offset += _maxModelInstancesPerDraw)
                             {
                                 int chunkCount = Math.Min(_maxModelInstancesPerDraw, batch.Count - offset);
@@ -489,7 +513,9 @@ namespace Ludots.Raylib.Render
                                 batch.GlobalInstanceBase + offset,
                                 boneBase,
                                 RaylibPoseTexturePalette.BoneSlotsPerRow,
-                                _posePalette.SlotRowsPerPose);
+                                _posePalette.SlotRowsPerPose,
+                                batch.MeshRigidBoneIndices.Span[meshIndex],
+                                EnableSharedPoseUniforms && _dirtyPoseRows.Count == 1);
                         }
                     }
 
@@ -550,6 +576,9 @@ namespace Ludots.Raylib.Render
             _locBoneBase = Rl.GetShaderLocation(_skinningShader, "uBoneBase");
             _locPaletteSlotsPerRow = Rl.GetShaderLocation(_skinningShader, "uPaletteSlotsPerRow");
             _locPaletteSlotRows = Rl.GetShaderLocation(_skinningShader, "uPaletteSlotRows");
+            _locRigidBoneIndex = RaylibShaderBindingGuard.RequireUniform(_skinningShader, "uRigidBoneIndex", "skinning_instanced");
+            _locUseSharedPose = RaylibShaderBindingGuard.RequireUniform(_skinningShader, "uUseSharedPose", "skinning_instanced");
+            _locSharedBones = RaylibShaderBindingGuard.RequireUniform(_skinningShader, "uSharedBones[0]", "skinning_instanced");
             _locSkinningColDiffuse = Rl.GetShaderLocation(_skinningShader, "colDiffuse");
             _locSkinningRoughness = Rl.GetShaderLocation(_skinningShader, "uRoughness");
             _locSkinningMetallic = Rl.GetShaderLocation(_skinningShader, "uMetallic");
@@ -693,6 +722,7 @@ namespace Ludots.Raylib.Render
             public int AnimCount;
             public bool BonesPrepared;
             public int GlobalInstanceBase;
+            public ReadOnlyMemory<int> MeshRigidBoneIndices;
 
             public GpuSkinnedInstanceBatch(GpuSkinnedInstanceBatchKey key, int initialCapacity = 256)
             {

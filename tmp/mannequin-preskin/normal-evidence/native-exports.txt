@@ -1,0 +1,5 @@
+        765  2FC 0008AD50 UpdateModelAnimation
+        766  2FD 0008B480 UpdateModelAnimationBones
+        838  345 0005A350 Vector3Transform
+       2025  7E8 0006F0F0 rlUpdateVertexBuffer
+       2026  7E9 0006F140 rlUpdateVertexBufferElements

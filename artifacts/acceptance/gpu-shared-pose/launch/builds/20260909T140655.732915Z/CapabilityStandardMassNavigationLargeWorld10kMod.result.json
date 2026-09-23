@@ -1,0 +1,15 @@
+{
+  "command": [
+    "dotnet",
+    "build",
+    "C:\\001_AI\\Ludots-gpu-10k-opt\\mods\\showcases\\capability_standard\\CapabilityStandardMassNavigationLargeWorld10kMod\\CapabilityStandardMassNavigationLargeWorld10kMod.csproj",
+    "-c",
+    "Release",
+    "--nologo",
+    "-m:1",
+    "-v:minimal"
+  ],
+  "exitCode": 0,
+  "log": "C:\\001_AI\\Ludots-gpu-10k-opt\\artifacts\\acceptance\\gpu-shared-pose\\launch\\builds\\20260909T140655.732915Z\\CapabilityStandardMassNavigationLargeWorld10kMod.log",
+  "completedAtUtc": "20260909T140723.453158Z"
+}

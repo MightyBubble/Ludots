@@ -1,0 +1,83 @@
+{
+  "dll": "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp\\mannequin-preskin\\runtime-snapshot\\raylib.dll",
+  "dll_sha256": "c8d29fbda31417b900bb0220cfb6c288544264a93764f5ea7cf5727feec76994",
+  "sources": {
+    "rmodels.c": {
+      "url": "https://raw.githubusercontent.com/raysan5/raylib/5.5/src/rmodels.c",
+      "sha256": "cff36dd39936244eed169674bf2884209cda89d3887f3bdb8e50508af4d4c893"
+    },
+    "raymath.h": {
+      "url": "https://raw.githubusercontent.com/raysan5/raylib/5.5/src/raymath.h",
+      "sha256": "9fa884cf6b6a4701bc13a7000d6e303a9f2db3695d6b45d4b20ff6e18b971d31"
+    }
+  },
+  "native_functions_rva": {
+    "UpdateModelAnimation": "0x8ad50",
+    "UpdateModelAnimationBones": "0x8b480",
+    "Vector3Transform": "0x5a350",
+    "rlUpdateVertexBuffer": "0x6f0f0"
+  },
+  "cpu_only_native_check": {
+    "entry_point": "Vector3Transform",
+    "gpu_initialized": false,
+    "input_normal": [
+      0,
+      1,
+      0
+    ],
+    "linear_matrix": "identity",
+    "translation": [
+      2,
+      -3,
+      4
+    ],
+    "native_output": [
+      2.0,
+      -2.0,
+      4.0
+    ],
+    "shader_mat3_output": [
+      0,
+      1,
+      0
+    ],
+    "native_formula": "sum(weight * (linearBone * normal + translationBone))",
+    "shader_formula": "linearPart(sum(weight * boneMatrix)) * normal",
+    "difference": "sum(weight * translationBone)"
+  },
+  "observed_silhouettes": [
+    {
+      "pose": 0,
+      "background_baseline": 68433,
+      "background_preskin": 68433,
+      "background_mask_xor_pixels": 0,
+      "foreground_mean_preskin_minus_baseline_rgb": [
+        -3.048693866499759,
+        -2.428928920129353,
+        -2.1240073748750246
+      ]
+    },
+    {
+      "pose": 1,
+      "background_baseline": 72565,
+      "background_preskin": 72565,
+      "background_mask_xor_pixels": 0,
+      "foreground_mean_preskin_minus_baseline_rgb": [
+        -4.359193672816786,
+        -2.4389677692910188,
+        -1.5032442714375733
+      ]
+    },
+    {
+      "pose": 2,
+      "background_baseline": 68360,
+      "background_preskin": 68360,
+      "background_mask_xor_pixels": 0,
+      "foreground_mean_preskin_minus_baseline_rgb": [
+        -3.546482818433266,
+        -2.5381381557357834,
+        -2.2643605550607098
+      ]
+    }
+  ]
+}

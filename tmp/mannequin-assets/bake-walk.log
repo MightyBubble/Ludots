@@ -1,0 +1,38 @@
+02:19:24 | INFO: Data are loaded, start creating Blender stuff
+02:19:24 | INFO: Blender create Mesh node MannequinLarge_ArmLeft
+02:19:24 | INFO: Blender create Mesh node MannequinLarge_ArmRight
+02:19:24 | INFO: Blender create Mesh node MannequinLarge_Body
+02:19:24 | INFO: Blender create Mesh node MannequinLarge_Head
+02:19:24 | INFO: Blender create Mesh node MannequinLarge_LegLeft
+02:19:24 | INFO: Blender create Mesh node MannequinLarge_LegRight
+02:19:24 | INFO: glTF import finished in 0.22s
+02:19:24 | INFO: Data are loaded, start creating Blender stuff
+02:19:24 | INFO: Blender create Mesh node MannequinLarge_ArmLeft
+02:19:24 | INFO: Blender create Mesh node MannequinLarge_ArmRight
+02:19:24 | INFO: Blender create Mesh node MannequinLarge_Body
+02:19:24 | INFO: Blender create Mesh node MannequinLarge_Head
+02:19:24 | INFO: Blender create Mesh node MannequinLarge_LegLeft
+02:19:24 | INFO: Blender create Mesh node MannequinLarge_LegRight
+02:19:24 | INFO: glTF import finished in 0.14s
+INFO: mappedBones=23 missingSource=0 missingTarget=0 sourceActions=1
+INFO Draco mesh compression is available, use library at C:\001_AI\BlenderLab\versions\4.5.12-lts-x64\4.5\scripts\addons_core\io_scene_gltf2\extern_draco.dll
+02:19:24 | INFO: Starting glTF 2.0 export
+02:19:24 | INFO: Extracting primitive: MannequinLarge_ArmLeft
+02:19:25 | INFO: Primitives created: 1
+02:19:25 | INFO: Extracting primitive: MannequinLarge_ArmRight
+02:19:25 | INFO: Primitives created: 1
+02:19:25 | INFO: Extracting primitive: MannequinLarge_Body
+02:19:25 | INFO: Primitives created: 1
+02:19:25 | INFO: Extracting primitive: MannequinLarge_Head
+02:19:25 | INFO: Primitives created: 1
+02:19:25 | INFO: Extracting primitive: MannequinLarge_LegLeft
+02:19:25 | INFO: Primitives created: 1
+02:19:25 | INFO: Extracting primitive: MannequinLarge_LegRight
+02:19:25 | INFO: Primitives created: 1
+02:19:29 | INFO: Finished glTF 2.0 export in 4.509400844573975 s
+
+OK: wrote C:\001_AI\Ludots-gpu-10k-opt\tmp\mannequin-assets\mannequin_large_idle_walk.glb bakedActions=1 mappedBones=23
+ACTION: retarget_Walking_A
+Blender 4.5.12 LTS (hash 84afd5f785f7 built 2026-07-21 01:33:53)
+
+Blender quit

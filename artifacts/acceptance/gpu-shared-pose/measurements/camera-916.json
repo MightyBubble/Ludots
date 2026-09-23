@@ -1,0 +1,24 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "seatId": "seat.0",
+    "targetCm": {
+      "x": 0,
+      "y": 0
+    },
+    "targetHeightCm": 28770,
+    "yaw": 45,
+    "pitch": 45,
+    "distanceCm": 3500,
+    "activeCameraId": "MassNavigation.Camera.LargeWorldHeightmap",
+    "isBlending": false,
+    "followTargetCm": null
+  },
+  "instance": {
+    "pid": 98944,
+    "port": 47931,
+    "mapId": "mass_navigation",
+    "processPath": "C:\\Program Files\\dotnet\\dotnet.exe"
+  }
+}

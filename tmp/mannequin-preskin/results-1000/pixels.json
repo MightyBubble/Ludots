@@ -1,0 +1,53 @@
+[
+  {
+    "normalized_time": 0,
+    "baseline": "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp/mannequin-preskin\\results-1000\\pose-0-baseline.png",
+    "preskin": "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp/mannequin-preskin\\results-1000\\pose-0-preskin.png",
+    "diffPath": "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp/mannequin-preskin\\results-1000\\pose-0-difference-x8.png",
+    "width": 1280,
+    "height": 720,
+    "pixel_exact": false,
+    "changed_pixels": 554787,
+    "changed_fraction": 0.601982421875,
+    "pixels_over_8": 148375,
+    "fraction_over_8": 0.16099717881944445,
+    "max_rgb_error": 223,
+    "mean_rgb_error": 2.8226001880787037,
+    "foreground_pixels": 625227,
+    "foreground_mean_rgb_error": 4.160582209874707
+  },
+  {
+    "normalized_time": 0.25,
+    "baseline": "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp/mannequin-preskin\\results-1000\\pose-1-baseline.png",
+    "preskin": "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp/mannequin-preskin\\results-1000\\pose-1-preskin.png",
+    "diffPath": "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp/mannequin-preskin\\results-1000\\pose-1-difference-x8.png",
+    "width": 1280,
+    "height": 720,
+    "pixel_exact": false,
+    "changed_pixels": 605369,
+    "changed_fraction": 0.6568674045138889,
+    "pixels_over_8": 209174,
+    "fraction_over_8": 0.22696831597222222,
+    "max_rgb_error": 214,
+    "mean_rgb_error": 3.469302300347222,
+    "foreground_pixels": 622886,
+    "foreground_mean_rgb_error": 5.133056450136944
+  },
+  {
+    "normalized_time": 0.5,
+    "baseline": "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp/mannequin-preskin\\results-1000\\pose-2-baseline.png",
+    "preskin": "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp/mannequin-preskin\\results-1000\\pose-2-preskin.png",
+    "diffPath": "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp/mannequin-preskin\\results-1000\\pose-2-difference-x8.png",
+    "width": 1280,
+    "height": 720,
+    "pixel_exact": false,
+    "changed_pixels": 589972,
+    "changed_fraction": 0.6401605902777778,
+    "pixels_over_8": 137304,
+    "fraction_over_8": 0.148984375,
+    "max_rgb_error": 220,
+    "mean_rgb_error": 2.676837745949074,
+    "foreground_pixels": 625447,
+    "foreground_mean_rgb_error": 3.944336876932285
+  }
+]

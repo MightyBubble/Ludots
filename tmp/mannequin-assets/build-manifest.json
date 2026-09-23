@@ -1,0 +1,74 @@
+{
+  "blender": "C:/001_AI/BlenderLab/versions/4.5.12-lts-x64/blender.exe",
+  "blender_version": "Blender 4.5.12 LTS 84afd5f785f7",
+  "tools": [
+    {
+      "path": "C:\\001_AI\\Ludots-gpu-10k-opt\\tools\\animation_retarget\\retarget_bake.py",
+      "sha256": "ad71f9f2e9f43f949206ca956afacf016d40b091be3dded4e1ac8cfaa69d2400"
+    },
+    {
+      "path": "C:\\001_AI\\Ludots-gpu-10k-opt\\tools\\animation_retarget\\mappings\\kaykit_name_identity.json",
+      "sha256": "c804a874a143b391c56105d61755994a6ca78936097643f2c39de6baa05374fb"
+    }
+  ],
+  "commands": [
+    [
+      "C:/001_AI/BlenderLab/versions/4.5.12-lts-x64/blender.exe",
+      "--background",
+      "--factory-startup",
+      "--python",
+      "tools/animation_retarget/retarget_bake.py",
+      "--",
+      "--source",
+      "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp\\mannequin-assets\\Rig_Large_General.glb",
+      "--target",
+      "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp\\mannequin-assets\\Mannequin_Large.glb",
+      "--mapping",
+      "tools/animation_retarget/mappings/kaykit_name_identity.json",
+      "--out",
+      "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp\\mannequin-assets\\mannequin_large_idle.glb",
+      "--action",
+      "Idle_A"
+    ],
+    [
+      "C:/001_AI/BlenderLab/versions/4.5.12-lts-x64/blender.exe",
+      "--background",
+      "--factory-startup",
+      "--python",
+      "tools/animation_retarget/retarget_bake.py",
+      "--",
+      "--source",
+      "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp\\mannequin-assets\\Rig_Large_MovementBasic.glb",
+      "--target",
+      "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp\\mannequin-assets\\mannequin_large_idle.glb",
+      "--mapping",
+      "tools/animation_retarget/mappings/kaykit_name_identity.json",
+      "--out",
+      "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp\\mannequin-assets\\mannequin_large_idle_walk.glb",
+      "--action",
+      "Walking_A"
+    ]
+  ],
+  "validation_command": [
+    "python",
+    "tmp/mannequin-assets/inspect_native_animations.py"
+  ],
+  "output_metadata": "mannequin_large_idle_walk.metadata.json",
+  "native_validation": "native-animation-validation.json",
+  "source_provenance": "sources.json",
+  "selected_clips": {
+    "41_idle": {
+      "index": 5,
+      "name": "retarget_Idle_A",
+      "native_frames": 116,
+      "duration_seconds": 1.9583333333333333
+    },
+    "42_walk": {
+      "index": 6,
+      "name": "retarget_Walking_A",
+      "native_frames": 62,
+      "duration_seconds": 1.0416666666666667
+    }
+  },
+  "tool_behavior": "--action selects which source action is baked, but ACTIONS export preserves all imported actions; result has 11 animations, including the two selected baked actions. No new import pipeline or production assets were modified."
+}

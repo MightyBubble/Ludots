@@ -1,0 +1,32 @@
+{
+  "population": 10000,
+  "frames": 192,
+  "warmup": 64,
+  "model": "C:\\001_AI\\Ludots-gpu-10k-opt\\projects/engine_gallery/Models/mannequin_large_walk.glb",
+  "model_sha256": "89291EDF3AC38B19CAA10D0C9A625FAC8E411641173C9F373A1429FD06A77372",
+  "renderer_source_sha256": "158bc8ce03ab8dbe17af8a822db290b7b31e8c330e67f2d79e175a77f564d838",
+  "gl_vendor": "ATI Technologies Inc.",
+  "gl_renderer": "AMD Radeon(TM) 8060S Graphics",
+  "gl_version": "3.3.0 Core Profile Context 26.10.32.01.260717",
+  "screen_width": 1280,
+  "screen_height": 720,
+  "framebuffer_width": 1280,
+  "framebuffer_height": 720,
+  "viewport": [
+    0,
+    0,
+    1280,
+    720
+  ],
+  "mesh_count": 6,
+  "bones": 23,
+  "animation_count": 4,
+  "selected_clip": 3,
+  "native_geometry_upload_bytes": 214896,
+  "normal_correction_upload_bytes": 107448,
+  "normal_correction_source_sha256": "01F63DCE3C6C17A5D0DC0FC827310130CA75FC4D7B34A93E161A585822CCAA95",
+  "normal_correction": "After native UpdateModelAnimation, recalculate animNormals with the weighted upper 3x3 bone matrix and original normals, excluding translation; upload VBO 2 again. Both computation and second normal upload are included in preskin and frame totals.",
+  "schedule": "ABBA; frames 0/1 share a pose, 2/3 share the next pose; A=GPU texture skin, B=CPU skin once \u002B identity skin shader",
+  "timing": "Native GL timestamps: prepare, shadow draw, main draw. Wall total includes per-frame glFinish. Restore original VBOs and drain before baseline outside timed frame. Synchronized renderer-only experiment; not whole application FPS.",
+  "capture": "EndMode3D -\u003E glFinish -\u003E framebuffer readback -\u003E EndDrawing; three matching-pose pairs after timed frames"
+}

@@ -1,0 +1,39 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "tick": 483,
+    "viewport": {
+      "width": 1600,
+      "height": 900
+    },
+    "totalMatched": 10000,
+    "offset": 0,
+    "returned": 1,
+    "dropped": 9999,
+    "entities": [
+      {
+        "entityId": 34,
+        "name": "MassNavigation.Agent.Azure.Heavy",
+        "worldCm": {
+          "x": -2420,
+          "y": 1275
+        },
+        "screenRect": {
+          "x": 817.9,
+          "y": 884.8,
+          "w": 0,
+          "h": 0
+        },
+        "screenCoverage": 0,
+        "onScreen": true
+      }
+    ]
+  },
+  "instance": {
+    "pid": 98944,
+    "port": 47931,
+    "mapId": "mass_navigation",
+    "processPath": "C:\\Program Files\\dotnet\\dotnet.exe"
+  }
+}

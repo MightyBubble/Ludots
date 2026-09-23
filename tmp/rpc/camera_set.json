@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":5,"method":"ludots.camera.control","params":{"action":"set","distanceCm":30000,"pitch":55,"yaw":45}}

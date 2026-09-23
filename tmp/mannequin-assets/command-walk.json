@@ -1,0 +1,18 @@
+[
+  "C:/001_AI/BlenderLab/versions/4.5.12-lts-x64/blender.exe",
+  "--background",
+  "--factory-startup",
+  "--python",
+  "tools/animation_retarget/retarget_bake.py",
+  "--",
+  "--source",
+  "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp\\mannequin-assets\\Rig_Large_MovementBasic.glb",
+  "--target",
+  "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp\\mannequin-assets\\mannequin_large_idle.glb",
+  "--mapping",
+  "tools/animation_retarget/mappings/kaykit_name_identity.json",
+  "--out",
+  "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp\\mannequin-assets\\mannequin_large_idle_walk.glb",
+  "--action",
+  "Walking_A"
+]

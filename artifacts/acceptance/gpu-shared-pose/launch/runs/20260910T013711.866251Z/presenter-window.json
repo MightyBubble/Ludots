@@ -1,0 +1,1455 @@
+{
+  "label": "before",
+  "started": "2026-09-10T01:37:29.589867+00:00",
+  "ended": "2026-09-10T01:38:14.590045+00:00",
+  "run": "C:\\001_AI\\Ludots-gpu-10k-opt\\artifacts\\acceptance\\gpu-shared-pose\\launch\\runs\\20260910T013711.866251Z",
+  "camera": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "seatId": "seat.0",
+      "targetCm": {
+        "x": 0,
+        "y": 0
+      },
+      "targetHeightCm": 28770,
+      "yaw": 45,
+      "pitch": 45,
+      "distanceCm": 3500,
+      "activeCameraId": "MassNavigation.Camera.LargeWorldHeightmap",
+      "isBlending": false,
+      "followTargetCm": null
+    },
+    "instance": {
+      "pid": 133924,
+      "port": 47931,
+      "mapId": "mass_navigation",
+      "processPath": "C:\\Program Files\\dotnet\\dotnet.exe"
+    }
+  },
+  "entities": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "tick": 5,
+      "viewport": {
+        "width": 1600,
+        "height": 900
+      },
+      "totalMatched": 10000,
+      "offset": 0,
+      "returned": 3,
+      "dropped": 9997,
+      "entities": [
+        {
+          "entityId": 34,
+          "name": "MassNavigation.Agent.Azure.Heavy",
+          "worldCm": {
+            "x": -2489,
+            "y": 1103
+          },
+          "onScreen": false
+        },
+        {
+          "entityId": 40,
+          "name": "MassNavigation.Agent.Azure.Light",
+          "worldCm": {
+            "x": -2533,
+            "y": 1119
+          },
+          "onScreen": false
+        },
+        {
+          "entityId": 46,
+          "name": "MassNavigation.Agent.Azure.Light",
+          "worldCm": {
+            "x": -2530,
+            "y": 1076
+          },
+          "onScreen": false
+        }
+      ]
+    },
+    "instance": {
+      "pid": 133924,
+      "port": 47931,
+      "mapId": "mass_navigation",
+      "processPath": "C:\\Program Files\\dotnet\\dotnet.exe"
+    }
+  },
+  "positions": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "tick": 422,
+      "plane": "world",
+      "totalMatched": 30907,
+      "offset": 0,
+      "returned": 20,
+      "dropped": 30887,
+      "presenters": [
+        {
+          "presenterEntityId": 37,
+          "defId": 51,
+          "stableId": 19,
+          "scopeId": 18,
+          "anchorKind": "Entity",
+          "owner": {
+            "entityId": 34,
+            "name": "MassNavigation.Agent.Azure.Heavy",
+            "alive": true
+          },
+          "logicCm": {
+            "x": -2430,
+            "y": 1003
+          },
+          "visualPos": {
+            "x": -24.3,
+            "y": 279.951,
+            "z": 10.03
+          },
+          "ownerPayloadRoots": 1,
+          "presenterPos": {
+            "x": -24.3,
+            "y": 279.951,
+            "z": 10.03
+          },
+          "presenterPlaneCm": {
+            "x": -2430,
+            "y": 1003
+          },
+          "presenterYawDeg": 0,
+          "presenterFacingDeg": 0,
+          "presenterScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "markers": {
+            "transformSyncTick": true,
+            "ownerPayloadSync": true,
+            "staticStable": false,
+            "bootstrapPending": false,
+            "emitDirty": false,
+            "transformSource": "EntityTransform"
+          },
+          "emit": {
+            "staticDirty": 0,
+            "retainedDirty": 0,
+            "cachedVersion": 2,
+            "stableVisualPresent": 0,
+            "lastEmitPos": {
+              "x": -24.3,
+              "y": 279.951,
+              "z": 10.03
+            }
+          },
+          "cull": {
+            "ownerCullVisible": true,
+            "lod": "High"
+          },
+          "behaviorActiveMask": 29,
+          "adapterDrawn": null
+        },
+        {
+          "presenterEntityId": 38,
+          "defId": 47,
+          "stableId": 20,
+          "scopeId": 1,
+          "anchorKind": "Entity",
+          "owner": {
+            "entityId": 34,
+            "name": "MassNavigation.Agent.Azure.Heavy",
+            "alive": true
+          },
+          "logicCm": {
+            "x": -2430,
+            "y": 1003
+          },
+          "visualPos": {
+            "x": -24.3,
+            "y": 279.951,
+            "z": 10.03
+          },
+          "ownerPayloadRoots": 1,
+          "presenterPos": {
+            "x": -24.3,
+            "y": 281.501,
+            "z": 10.03
+          },
+          "presenterPlaneCm": {
+            "x": -2430,
+            "y": 1003
+          },
+          "presenterYawDeg": 0,
+          "presenterFacingDeg": 0,
+          "presenterScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "markers": {
+            "transformSyncTick": false,
+            "ownerPayloadSync": false,
+            "staticStable": false,
+            "bootstrapPending": false,
+            "emitDirty": false,
+            "transformSource": "AttachedToParent"
+          },
+          "emit": {
+            "staticDirty": 0,
+            "retainedDirty": 0,
+            "cachedVersion": 11,
+            "stableVisualPresent": 0,
+            "lastEmitPos": {
+              "x": -24.3,
+              "y": 281.501,
+              "z": 10.03
+            }
+          },
+          "cull": {
+            "ownerCullVisible": true,
+            "lod": "High"
+          },
+          "behaviorActiveMask": 8195,
+          "adapterDrawn": null
+        },
+        {
+          "presenterEntityId": 39,
+          "defId": 49,
+          "stableId": 21,
+          "scopeId": 1,
+          "anchorKind": "Entity",
+          "owner": {
+            "entityId": 34,
+            "name": "MassNavigation.Agent.Azure.Heavy",
+            "alive": true
+          },
+          "logicCm": {
+            "x": -2430,
+            "y": 1003
+          },
+          "visualPos": {
+            "x": -24.3,
+            "y": 279.951,
+            "z": 10.03
+          },
+          "ownerPayloadRoots": 1,
+          "presenterPos": {
+            "x": -24.3,
+            "y": 281.711,
+            "z": 10.03
+          },
+          "presenterPlaneCm": {
+            "x": -2430,
+            "y": 1003
+          },
+          "presenterYawDeg": 0,
+          "presenterFacingDeg": 0,
+          "presenterScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "markers": {
+            "transformSyncTick": false,
+            "ownerPayloadSync": false,
+            "staticStable": false,
+            "bootstrapPending": false,
+            "emitDirty": false,
+            "transformSource": "AttachedToParent"
+          },
+          "emit": {
+            "staticDirty": 0,
+            "retainedDirty": 0,
+            "cachedVersion": 12,
+            "stableVisualPresent": 0,
+            "lastEmitPos": {
+              "x": -24.3,
+              "y": 281.711,
+              "z": 10.03
+            }
+          },
+          "cull": {
+            "ownerCullVisible": true,
+            "lod": "High"
+          },
+          "behaviorActiveMask": 49155,
+          "adapterDrawn": null
+        },
+        {
+          "presenterEntityId": 43,
+          "defId": 50,
+          "stableId": 23,
+          "scopeId": 22,
+          "anchorKind": "Entity",
+          "owner": {
+            "entityId": 40,
+            "name": "MassNavigation.Agent.Azure.Light",
+            "alive": true
+          },
+          "logicCm": {
+            "x": -2380,
+            "y": 1207
+          },
+          "visualPos": {
+            "x": -23.8,
+            "y": 280.904,
+            "z": 12.07
+          },
+          "ownerPayloadRoots": 1,
+          "presenterPos": {
+            "x": -23.8,
+            "y": 280.904,
+            "z": 12.07
+          },
+          "presenterPlaneCm": {
+            "x": -2380,
+            "y": 1207
+          },
+          "presenterYawDeg": 0,
+          "presenterFacingDeg": 0,
+          "presenterScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "markers": {
+            "transformSyncTick": true,
+            "ownerPayloadSync": true,
+            "staticStable": false,
+            "bootstrapPending": false,
+            "emitDirty": false,
+            "transformSource": "EntityTransform"
+          },
+          "emit": {
+            "staticDirty": 0,
+            "retainedDirty": 0,
+            "cachedVersion": 2,
+            "stableVisualPresent": 0,
+            "lastEmitPos": {
+              "x": -23.8,
+              "y": 280.904,
+              "z": 12.07
+            }
+          },
+          "cull": {
+            "ownerCullVisible": true,
+            "lod": "High"
+          },
+          "behaviorActiveMask": 29,
+          "adapterDrawn": null
+        },
+        {
+          "presenterEntityId": 44,
+          "defId": 46,
+          "stableId": 24,
+          "scopeId": 1,
+          "anchorKind": "Entity",
+          "owner": {
+            "entityId": 40,
+            "name": "MassNavigation.Agent.Azure.Light",
+            "alive": true
+          },
+          "logicCm": {
+            "x": -2380,
+            "y": 1207
+          },
+          "visualPos": {
+            "x": -23.8,
+            "y": 280.904,
+            "z": 12.07
+          },
+          "ownerPayloadRoots": 1,
+          "presenterPos": {
+            "x": -23.8,
+            "y": 282.154,
+            "z": 12.07
+          },
+          "presenterPlaneCm": {
+            "x": -2380,
+            "y": 1207
+          },
+          "presenterYawDeg": 0,
+          "presenterFacingDeg": 0,
+          "presenterScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "markers": {
+            "transformSyncTick": false,
+            "ownerPayloadSync": false,
+            "staticStable": false,
+            "bootstrapPending": false,
+            "emitDirty": false,
+            "transformSource": "AttachedToParent"
+          },
+          "emit": {
+            "staticDirty": 0,
+            "retainedDirty": 0,
+            "cachedVersion": 11,
+            "stableVisualPresent": 0,
+            "lastEmitPos": {
+              "x": -23.8,
+              "y": 282.154,
+              "z": 12.07
+            }
+          },
+          "cull": {
+            "ownerCullVisible": true,
+            "lod": "High"
+          },
+          "behaviorActiveMask": 8195,
+          "adapterDrawn": null
+        },
+        {
+          "presenterEntityId": 45,
+          "defId": 48,
+          "stableId": 25,
+          "scopeId": 1,
+          "anchorKind": "Entity",
+          "owner": {
+            "entityId": 40,
+            "name": "MassNavigation.Agent.Azure.Light",
+            "alive": true
+          },
+          "logicCm": {
+            "x": -2380,
+            "y": 1207
+          },
+          "visualPos": {
+            "x": -23.8,
+            "y": 280.904,
+            "z": 12.07
+          },
+          "ownerPayloadRoots": 1,
+          "presenterPos": {
+            "x": -23.8,
+            "y": 282.324,
+            "z": 12.07
+          },
+          "presenterPlaneCm": {
+            "x": -2380,
+            "y": 1207
+          },
+          "presenterYawDeg": 0,
+          "presenterFacingDeg": 0,
+          "presenterScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "markers": {
+            "transformSyncTick": false,
+            "ownerPayloadSync": false,
+            "staticStable": false,
+            "bootstrapPending": false,
+            "emitDirty": false,
+            "transformSource": "AttachedToParent"
+          },
+          "emit": {
+            "staticDirty": 0,
+            "retainedDirty": 0,
+            "cachedVersion": 12,
+            "stableVisualPresent": 0,
+            "lastEmitPos": {
+              "x": -23.8,
+              "y": 282.324,
+              "z": 12.07
+            }
+          },
+          "cull": {
+            "ownerCullVisible": true,
+            "lod": "High"
+          },
+          "behaviorActiveMask": 49155,
+          "adapterDrawn": null
+        },
+        {
+          "presenterEntityId": 49,
+          "defId": 50,
+          "stableId": 27,
+          "scopeId": 26,
+          "anchorKind": "Entity",
+          "owner": {
+            "entityId": 46,
+            "name": "MassNavigation.Agent.Azure.Light",
+            "alive": true
+          },
+          "logicCm": {
+            "x": -2414,
+            "y": 1127
+          },
+          "visualPos": {
+            "x": -24.14,
+            "y": 280.463,
+            "z": 11.27
+          },
+          "ownerPayloadRoots": 1,
+          "presenterPos": {
+            "x": -24.14,
+            "y": 280.463,
+            "z": 11.27
+          },
+          "presenterPlaneCm": {
+            "x": -2414,
+            "y": 1127
+          },
+          "presenterYawDeg": 0,
+          "presenterFacingDeg": 0,
+          "presenterScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "markers": {
+            "transformSyncTick": true,
+            "ownerPayloadSync": true,
+            "staticStable": false,
+            "bootstrapPending": false,
+            "emitDirty": false,
+            "transformSource": "EntityTransform"
+          },
+          "emit": {
+            "staticDirty": 0,
+            "retainedDirty": 0,
+            "cachedVersion": 2,
+            "stableVisualPresent": 0,
+            "lastEmitPos": {
+              "x": -24.14,
+              "y": 280.463,
+              "z": 11.27
+            }
+          },
+          "cull": {
+            "ownerCullVisible": true,
+            "lod": "High"
+          },
+          "behaviorActiveMask": 29,
+          "adapterDrawn": null
+        },
+        {
+          "presenterEntityId": 50,
+          "defId": 46,
+          "stableId": 28,
+          "scopeId": 1,
+          "anchorKind": "Entity",
+          "owner": {
+            "entityId": 46,
+            "name": "MassNavigation.Agent.Azure.Light",
+            "alive": true
+          },
+          "logicCm": {
+            "x": -2414,
+            "y": 1127
+          },
+          "visualPos": {
+            "x": -24.14,
+            "y": 280.463,
+            "z": 11.27
+          },
+          "ownerPayloadRoots": 1,
+          "presenterPos": {
+            "x": -24.14,
+            "y": 281.713,
+            "z": 11.27
+          },
+          "presenterPlaneCm": {
+            "x": -2414,
+            "y": 1127
+          },
+          "presenterYawDeg": 0,
+          "presenterFacingDeg": 0,
+          "presenterScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "markers": {
+            "transformSyncTick": false,
+            "ownerPayloadSync": false,
+            "staticStable": false,
+            "bootstrapPending": false,
+            "emitDirty": false,
+            "transformSource": "AttachedToParent"
+          },
+          "emit": {
+            "staticDirty": 0,
+            "retainedDirty": 0,
+            "cachedVersion": 11,
+            "stableVisualPresent": 0,
+            "lastEmitPos": {
+              "x": -24.14,
+              "y": 281.713,
+              "z": 11.27
+            }
+          },
+          "cull": {
+            "ownerCullVisible": true,
+            "lod": "High"
+          },
+          "behaviorActiveMask": 8195,
+          "adapterDrawn": null
+        },
+        {
+          "presenterEntityId": 51,
+          "defId": 48,
+          "stableId": 29,
+          "scopeId": 1,
+          "anchorKind": "Entity",
+          "owner": {
+            "entityId": 46,
+            "name": "MassNavigation.Agent.Azure.Light",
+            "alive": true
+          },
+          "logicCm": {
+            "x": -2414,
+            "y": 1127
+          },
+          "visualPos": {
+            "x": -24.14,
+            "y": 280.463,
+            "z": 11.27
+          },
+          "ownerPayloadRoots": 1,
+          "presenterPos": {
+            "x": -24.14,
+            "y": 281.883,
+            "z": 11.27
+          },
+          "presenterPlaneCm": {
+            "x": -2414,
+            "y": 1127
+          },
+          "presenterYawDeg": 0,
+          "presenterFacingDeg": 0,
+          "presenterScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "markers": {
+            "transformSyncTick": false,
+            "ownerPayloadSync": false,
+            "staticStable": false,
+            "bootstrapPending": false,
+            "emitDirty": false,
+            "transformSource": "AttachedToParent"
+          },
+          "emit": {
+            "staticDirty": 0,
+            "retainedDirty": 0,
+            "cachedVersion": 12,
+            "stableVisualPresent": 0,
+            "lastEmitPos": {
+              "x": -24.14,
+              "y": 281.883,
+              "z": 11.27
+            }
+          },
+          "cull": {
+            "ownerCullVisible": true,
+            "lod": "High"
+          },
+          "behaviorActiveMask": 49155,
+          "adapterDrawn": null
+        },
+        {
+          "presenterEntityId": 55,
+          "defId": 50,
+          "stableId": 31,
+          "scopeId": 30,
+          "anchorKind": "Entity",
+          "owner": {
+            "entityId": 52,
+            "name": "MassNavigation.Agent.Azure.Light",
+            "alive": true
+          },
+          "logicCm": {
+            "x": -2434,
+            "y": 1166
+          },
+          "visualPos": {
+            "x": -24.34,
+            "y": 280.507,
+            "z": 11.66
+          },
+          "ownerPayloadRoots": 1,
+          "presenterPos": {
+            "x": -24.34,
+            "y": 280.507,
+            "z": 11.66
+          },
+          "presenterPlaneCm": {
+            "x": -2434,
+            "y": 1166
+          },
+          "presenterYawDeg": 0,
+          "presenterFacingDeg": 0,
+          "presenterScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "markers": {
+            "transformSyncTick": true,
+            "ownerPayloadSync": true,
+            "staticStable": false,
+            "bootstrapPending": false,
+            "emitDirty": false,
+            "transformSource": "EntityTransform"
+          },
+          "emit": {
+            "staticDirty": 0,
+            "retainedDirty": 0,
+            "cachedVersion": 2,
+            "stableVisualPresent": 0,
+            "lastEmitPos": {
+              "x": -24.34,
+              "y": 280.507,
+              "z": 11.66
+            }
+          },
+          "cull": {
+            "ownerCullVisible": true,
+            "lod": "High"
+          },
+          "behaviorActiveMask": 29,
+          "adapterDrawn": null
+        },
+        {
+          "presenterEntityId": 56,
+          "defId": 46,
+          "stableId": 32,
+          "scopeId": 1,
+          "anchorKind": "Entity",
+          "owner": {
+            "entityId": 52,
+            "name": "MassNavigation.Agent.Azure.Light",
+            "alive": true
+          },
+          "logicCm": {
+            "x": -2434,
+            "y": 1166
+          },
+          "visualPos": {
+            "x": -24.34,
+            "y": 280.507,
+            "z": 11.66
+          },
+          "ownerPayloadRoots": 1,
+          "presenterPos": {
+            "x": -24.34,
+            "y": 281.757,
+            "z": 11.66
+          },
+          "presenterPlaneCm": {
+            "x": -2434,
+            "y": 1166
+          },
+          "presenterYawDeg": 0,
+          "presenterFacingDeg": 0,
+          "presenterScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "markers": {
+            "transformSyncTick": false,
+            "ownerPayloadSync": false,
+            "staticStable": false,
+            "bootstrapPending": false,
+            "emitDirty": false,
+            "transformSource": "AttachedToParent"
+          },
+          "emit": {
+            "staticDirty": 0,
+            "retainedDirty": 0,
+            "cachedVersion": 11,
+            "stableVisualPresent": 0,
+            "lastEmitPos": {
+              "x": -24.34,
+              "y": 281.757,
+              "z": 11.66
+            }
+          },
+          "cull": {
+            "ownerCullVisible": true,
+            "lod": "High"
+          },
+          "behaviorActiveMask": 8195,
+          "adapterDrawn": null
+        },
+        {
+          "presenterEntityId": 57,
+          "defId": 48,
+          "stableId": 33,
+          "scopeId": 1,
+          "anchorKind": "Entity",
+          "owner": {
+            "entityId": 52,
+            "name": "MassNavigation.Agent.Azure.Light",
+            "alive": true
+          },
+          "logicCm": {
+            "x": -2434,
+            "y": 1166
+          },
+          "visualPos": {
+            "x": -24.34,
+            "y": 280.507,
+            "z": 11.66
+          },
+          "ownerPayloadRoots": 1,
+          "presenterPos": {
+            "x": -24.34,
+            "y": 281.927,
+            "z": 11.66
+          },
+          "presenterPlaneCm": {
+            "x": -2434,
+            "y": 1166
+          },
+          "presenterYawDeg": 0,
+          "presenterFacingDeg": 0,
+          "presenterScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "markers": {
+            "transformSyncTick": false,
+            "ownerPayloadSync": false,
+            "staticStable": false,
+            "bootstrapPending": false,
+            "emitDirty": false,
+            "transformSource": "AttachedToParent"
+          },
+          "emit": {
+            "staticDirty": 0,
+            "retainedDirty": 0,
+            "cachedVersion": 12,
+            "stableVisualPresent": 0,
+            "lastEmitPos": {
+              "x": -24.34,
+              "y": 281.927,
+              "z": 11.66
+            }
+          },
+          "cull": {
+            "ownerCullVisible": true,
+            "lod": "High"
+          },
+          "behaviorActiveMask": 49155,
+          "adapterDrawn": null
+        },
+        {
+          "presenterEntityId": 61,
+          "defId": 50,
+          "stableId": 35,
+          "scopeId": 34,
+          "anchorKind": "Entity",
+          "owner": {
+            "entityId": 58,
+            "name": "MassNavigation.Agent.Azure.Light",
+            "alive": true
+          },
+          "logicCm": {
+            "x": -2607,
+            "y": 986
+          },
+          "visualPos": {
+            "x": -26.07,
+            "y": 279.07,
+            "z": 9.86
+          },
+          "ownerPayloadRoots": 1,
+          "presenterPos": {
+            "x": -26.07,
+            "y": 279.07,
+            "z": 9.86
+          },
+          "presenterPlaneCm": {
+            "x": -2607,
+            "y": 986
+          },
+          "presenterYawDeg": 0,
+          "presenterFacingDeg": 0,
+          "presenterScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "markers": {
+            "transformSyncTick": true,
+            "ownerPayloadSync": true,
+            "staticStable": false,
+            "bootstrapPending": false,
+            "emitDirty": false,
+            "transformSource": "EntityTransform"
+          },
+          "emit": {
+            "staticDirty": 0,
+            "retainedDirty": 0,
+            "cachedVersion": 2,
+            "stableVisualPresent": 0,
+            "lastEmitPos": {
+              "x": -26.07,
+              "y": 279.07,
+              "z": 9.86
+            }
+          },
+          "cull": {
+            "ownerCullVisible": true,
+            "lod": "High"
+          },
+          "behaviorActiveMask": 29,
+          "adapterDrawn": null
+        },
+        {
+          "presenterEntityId": 62,
+          "defId": 46,
+          "stableId": 36,
+          "scopeId": 1,
+          "anchorKind": "Entity",
+          "owner": {
+            "entityId": 58,
+            "name": "MassNavigation.Agent.Azure.Light",
+            "alive": true
+          },
+          "logicCm": {
+            "x": -2607,
+            "y": 986
+          },
+          "visualPos": {
+            "x": -26.07,
+            "y": 279.07,
+            "z": 9.86
+          },
+          "ownerPayloadRoots": 1,
+          "presenterPos": {
+            "x": -26.07,
+            "y": 280.32,
+            "z": 9.86
+          },
+          "presenterPlaneCm": {
+            "x": -2607,
+            "y": 986
+          },
+          "presenterYawDeg": 0,
+          "presenterFacingDeg": 0,
+          "presenterScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "markers": {
+            "transformSyncTick": false,
+            "ownerPayloadSync": false,
+            "staticStable": false,
+            "bootstrapPending": false,
+            "emitDirty": false,
+            "transformSource": "AttachedToParent"
+          },
+          "emit": {
+            "staticDirty": 0,
+            "retainedDirty": 0,
+            "cachedVersion": 11,
+            "stableVisualPresent": 0,
+            "lastEmitPos": {
+              "x": -26.07,
+              "y": 280.32,
+              "z": 9.86
+            }
+          },
+          "cull": {
+            "ownerCullVisible": true,
+            "lod": "High"
+          },
+          "behaviorActiveMask": 8195,
+          "adapterDrawn": null
+        },
+        {
+          "presenterEntityId": 63,
+          "defId": 48,
+          "stableId": 37,
+          "scopeId": 1,
+          "anchorKind": "Entity",
+          "owner": {
+            "entityId": 58,
+            "name": "MassNavigation.Agent.Azure.Light",
+            "alive": true
+          },
+          "logicCm": {
+            "x": -2607,
+            "y": 986
+          },
+          "visualPos": {
+            "x": -26.07,
+            "y": 279.07,
+            "z": 9.86
+          },
+          "ownerPayloadRoots": 1,
+          "presenterPos": {
+            "x": -26.07,
+            "y": 280.49,
+            "z": 9.86
+          },
+          "presenterPlaneCm": {
+            "x": -2607,
+            "y": 986
+          },
+          "presenterYawDeg": 0,
+          "presenterFacingDeg": 0,
+          "presenterScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "markers": {
+            "transformSyncTick": false,
+            "ownerPayloadSync": false,
+            "staticStable": false,
+            "bootstrapPending": false,
+            "emitDirty": false,
+            "transformSource": "AttachedToParent"
+          },
+          "emit": {
+            "staticDirty": 0,
+            "retainedDirty": 0,
+            "cachedVersion": 12,
+            "stableVisualPresent": 0,
+            "lastEmitPos": {
+              "x": -26.07,
+              "y": 280.49,
+              "z": 9.86
+            }
+          },
+          "cull": {
+            "ownerCullVisible": true,
+            "lod": "High"
+          },
+          "behaviorActiveMask": 49155,
+          "adapterDrawn": null
+        },
+        {
+          "presenterEntityId": 67,
+          "defId": 50,
+          "stableId": 39,
+          "scopeId": 38,
+          "anchorKind": "Entity",
+          "owner": {
+            "entityId": 64,
+            "name": "MassNavigation.Agent.Azure.Light",
+            "alive": true
+          },
+          "logicCm": {
+            "x": -2467,
+            "y": 1175
+          },
+          "visualPos": {
+            "x": -24.67,
+            "y": 280.386,
+            "z": 11.75
+          },
+          "ownerPayloadRoots": 1,
+          "presenterPos": {
+            "x": -24.67,
+            "y": 280.386,
+            "z": 11.75
+          },
+          "presenterPlaneCm": {
+            "x": -2467,
+            "y": 1175
+          },
+          "presenterYawDeg": 0,
+          "presenterFacingDeg": 0,
+          "presenterScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "markers": {
+            "transformSyncTick": true,
+            "ownerPayloadSync": true,
+            "staticStable": false,
+            "bootstrapPending": false,
+            "emitDirty": false,
+            "transformSource": "EntityTransform"
+          },
+          "emit": {
+            "staticDirty": 0,
+            "retainedDirty": 0,
+            "cachedVersion": 2,
+            "stableVisualPresent": 0,
+            "lastEmitPos": {
+              "x": -24.67,
+              "y": 280.386,
+              "z": 11.75
+            }
+          },
+          "cull": {
+            "ownerCullVisible": true,
+            "lod": "High"
+          },
+          "behaviorActiveMask": 29,
+          "adapterDrawn": null
+        },
+        {
+          "presenterEntityId": 68,
+          "defId": 46,
+          "stableId": 40,
+          "scopeId": 1,
+          "anchorKind": "Entity",
+          "owner": {
+            "entityId": 64,
+            "name": "MassNavigation.Agent.Azure.Light",
+            "alive": true
+          },
+          "logicCm": {
+            "x": -2467,
+            "y": 1175
+          },
+          "visualPos": {
+            "x": -24.67,
+            "y": 280.386,
+            "z": 11.75
+          },
+          "ownerPayloadRoots": 1,
+          "presenterPos": {
+            "x": -24.67,
+            "y": 281.636,
+            "z": 11.75
+          },
+          "presenterPlaneCm": {
+            "x": -2467,
+            "y": 1175
+          },
+          "presenterYawDeg": 0,
+          "presenterFacingDeg": 0,
+          "presenterScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "markers": {
+            "transformSyncTick": false,
+            "ownerPayloadSync": false,
+            "staticStable": false,
+            "bootstrapPending": false,
+            "emitDirty": false,
+            "transformSource": "AttachedToParent"
+          },
+          "emit": {
+            "staticDirty": 0,
+            "retainedDirty": 0,
+            "cachedVersion": 11,
+            "stableVisualPresent": 0,
+            "lastEmitPos": {
+              "x": -24.67,
+              "y": 281.636,
+              "z": 11.75
+            }
+          },
+          "cull": {
+            "ownerCullVisible": true,
+            "lod": "High"
+          },
+          "behaviorActiveMask": 8195,
+          "adapterDrawn": null
+        },
+        {
+          "presenterEntityId": 69,
+          "defId": 48,
+          "stableId": 41,
+          "scopeId": 1,
+          "anchorKind": "Entity",
+          "owner": {
+            "entityId": 64,
+            "name": "MassNavigation.Agent.Azure.Light",
+            "alive": true
+          },
+          "logicCm": {
+            "x": -2467,
+            "y": 1175
+          },
+          "visualPos": {
+            "x": -24.67,
+            "y": 280.386,
+            "z": 11.75
+          },
+          "ownerPayloadRoots": 1,
+          "presenterPos": {
+            "x": -24.67,
+            "y": 281.806,
+            "z": 11.75
+          },
+          "presenterPlaneCm": {
+            "x": -2467,
+            "y": 1175
+          },
+          "presenterYawDeg": 0,
+          "presenterFacingDeg": 0,
+          "presenterScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "markers": {
+            "transformSyncTick": false,
+            "ownerPayloadSync": false,
+            "staticStable": false,
+            "bootstrapPending": false,
+            "emitDirty": false,
+            "transformSource": "AttachedToParent"
+          },
+          "emit": {
+            "staticDirty": 0,
+            "retainedDirty": 0,
+            "cachedVersion": 12,
+            "stableVisualPresent": 0,
+            "lastEmitPos": {
+              "x": -24.67,
+              "y": 281.806,
+              "z": 11.75
+            }
+          },
+          "cull": {
+            "ownerCullVisible": true,
+            "lod": "High"
+          },
+          "behaviorActiveMask": 49155,
+          "adapterDrawn": null
+        },
+        {
+          "presenterEntityId": 73,
+          "defId": 50,
+          "stableId": 43,
+          "scopeId": 42,
+          "anchorKind": "Entity",
+          "owner": {
+            "entityId": 70,
+            "name": "MassNavigation.Agent.Azure.Light",
+            "alive": true
+          },
+          "logicCm": {
+            "x": -2472,
+            "y": 1125
+          },
+          "visualPos": {
+            "x": -24.72,
+            "y": 280.187,
+            "z": 11.25
+          },
+          "ownerPayloadRoots": 1,
+          "presenterPos": {
+            "x": -24.72,
+            "y": 280.187,
+            "z": 11.25
+          },
+          "presenterPlaneCm": {
+            "x": -2472,
+            "y": 1125
+          },
+          "presenterYawDeg": 0,
+          "presenterFacingDeg": 0,
+          "presenterScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "markers": {
+            "transformSyncTick": true,
+            "ownerPayloadSync": true,
+            "staticStable": false,
+            "bootstrapPending": false,
+            "emitDirty": false,
+            "transformSource": "EntityTransform"
+          },
+          "emit": {
+            "staticDirty": 0,
+            "retainedDirty": 0,
+            "cachedVersion": 2,
+            "stableVisualPresent": 0,
+            "lastEmitPos": {
+              "x": -24.72,
+              "y": 280.187,
+              "z": 11.25
+            }
+          },
+          "cull": {
+            "ownerCullVisible": true,
+            "lod": "High"
+          },
+          "behaviorActiveMask": 29,
+          "adapterDrawn": null
+        },
+        {
+          "presenterEntityId": 74,
+          "defId": 46,
+          "stableId": 44,
+          "scopeId": 1,
+          "anchorKind": "Entity",
+          "owner": {
+            "entityId": 70,
+            "name": "MassNavigation.Agent.Azure.Light",
+            "alive": true
+          },
+          "logicCm": {
+            "x": -2472,
+            "y": 1125
+          },
+          "visualPos": {
+            "x": -24.72,
+            "y": 280.187,
+            "z": 11.25
+          },
+          "ownerPayloadRoots": 1,
+          "presenterPos": {
+            "x": -24.72,
+            "y": 281.437,
+            "z": 11.25
+          },
+          "presenterPlaneCm": {
+            "x": -2472,
+            "y": 1125
+          },
+          "presenterYawDeg": 0,
+          "presenterFacingDeg": 0,
+          "presenterScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "markers": {
+            "transformSyncTick": false,
+            "ownerPayloadSync": false,
+            "staticStable": false,
+            "bootstrapPending": false,
+            "emitDirty": false,
+            "transformSource": "AttachedToParent"
+          },
+          "emit": {
+            "staticDirty": 0,
+            "retainedDirty": 0,
+            "cachedVersion": 11,
+            "stableVisualPresent": 0,
+            "lastEmitPos": {
+              "x": -24.72,
+              "y": 281.437,
+              "z": 11.25
+            }
+          },
+          "cull": {
+            "ownerCullVisible": true,
+            "lod": "High"
+          },
+          "behaviorActiveMask": 8195,
+          "adapterDrawn": null
+        }
+      ]
+    },
+    "instance": {
+      "pid": 133924,
+      "port": 47931,
+      "mapId": "mass_navigation",
+      "processPath": "C:\\Program Files\\dotnet\\dotnet.exe"
+    }
+  },
+  "shot": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "path": "C:\\001_AI\\Ludots-gpu-10k-opt\\artifacts\\agent-bridge\\shots\\presenter-before.png",
+      "bytes": 6162989,
+      "width": 2560,
+      "height": 1511
+    },
+    "instance": {
+      "pid": 133924,
+      "port": 47931,
+      "mapId": "mass_navigation",
+      "processPath": "C:\\Program Files\\dotnet\\dotnet.exe"
+    }
+  },
+  "health": {
+    "ok": true,
+    "instance": {
+      "pid": 133924,
+      "port": 47931,
+      "mapId": "mass_navigation",
+      "processPath": "C:\\Program Files\\dotnet\\dotnet.exe"
+    },
+    "pendingRequests": 0,
+    "pumpCount": 1311,
+    "lastPumpUtc": "2026-09-10T01:38:14.5522163Z"
+  },
+  "session": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "tick": 1,
+      "pacemaker": "RealtimePacemaker",
+      "mods": [
+        "LudotsCoreMod",
+        "CoreInputMod",
+        "SelectionInteractionMod",
+        "MassNavigationMod",
+        "CapabilityStandardMassNavigationLargeWorld10kMod",
+        "AgentBridgeMod"
+      ],
+      "camera": {
+        "seatId": "seat.0",
+        "targetCm": {
+          "x": 0,
+          "y": 0
+        },
+        "pitch": 42,
+        "distanceCm": 14000
+      },
+      "bridge": {
+        "pendingRequests": 0,
+        "toolCount": 38
+      },
+      "resolution": {
+        "width": 1600,
+        "height": 900
+      },
+      "seats": [
+        {
+          "seatId": "seat.0",
+          "playerId": 1,
+          "schemeId": null,
+          "possessed": true,
+          "possessedEntityId": 7,
+          "logicViewId": "logicview.participant.7",
+          "presentRect": {
+            "x": 0,
+            "y": 0,
+            "w": 1,
+            "h": 1
+          },
+          "presentResolution": {
+            "width": 1600,
+            "height": 900
+          }
+        }
+      ],
+      "localPlayerId": 1,
+      "localSeatId": "seat.0",
+      "mapId": "mass_navigation"
+    },
+    "instance": {
+      "pid": 133924,
+      "port": 47931,
+      "mapId": "mass_navigation",
+      "processPath": "C:\\Program Files\\dotnet\\dotnet.exe"
+    }
+  },
+  "binaryHashes": {
+    "Ludots.Core.dll": "747c93484603c0ee2efe4f76b0659e2cfc49c2fed362d334a744b999028b8315",
+    "Ludots.Adapter.Raylib.dll": "eceb7585cf65e08e8d876670f88d254646fa9e7a6bffe428b1ea5f36339db5c2",
+    "Ludots.Raylib.Render.dll": "e5ebbd67b1369c5302f6cdd54e2951c0c40471c9239640fa75d4a35db6cc301f"
+  }
+}

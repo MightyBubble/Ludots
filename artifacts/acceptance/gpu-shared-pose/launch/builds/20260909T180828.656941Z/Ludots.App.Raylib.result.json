@@ -1,0 +1,15 @@
+{
+  "command": [
+    "dotnet",
+    "build",
+    "C:\\001_AI\\Ludots-gpu-10k-opt\\src\\Apps\\Raylib\\Ludots.App.Raylib\\Ludots.App.Raylib.csproj",
+    "-c",
+    "Release",
+    "--nologo",
+    "-m:1",
+    "-v:minimal"
+  ],
+  "exitCode": 0,
+  "log": "C:\\001_AI\\Ludots-gpu-10k-opt\\artifacts\\acceptance\\gpu-shared-pose\\launch\\builds\\20260909T180828.656941Z\\Ludots.App.Raylib.log",
+  "completedAtUtc": "20260909T180845.091711Z"
+}

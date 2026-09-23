@@ -1,0 +1,732 @@
+{
+  "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+  "scope": "Static source audit of MassNavigation simulation paths. Timing causation remains unmeasured unless stated.",
+  "effective_10k_config": {
+    "agents": 10000,
+    "teams": 4,
+    "agents_per_team": 2500,
+    "flow_grid": "100x100 (10000 cells)",
+    "obstacle_capacity": 64,
+    "parallel_workers": 8,
+    "cadence_source": "mods/capabilities/navigation/MassNavigationMod/assets/MassNavigationConfig.json:149-158; standard10K has no separate MassNavigationConfig.json",
+    "cadence": {
+      "simulationHz": 15,
+      "targetUpdateHz": 15,
+      "flowStepHz": 5,
+      "flowCrowdStampHz": 5,
+      "flowObstacleStampHz": 2,
+      "hardResolveHz": 10,
+      "entitySyncHz": 15,
+      "maxStepsPerFixedTick": 1,
+      "hardResolveCandidateThresholdAgents": 1
+    },
+    "flow": {
+      "enabled": false,
+      "iterationsPerStep": 4096,
+      "maxIterationsPerStep": 131072,
+      "forceRefreshFlow": false,
+      "forceRefreshCrowd": false,
+      "forceRefreshObstacles": false
+    },
+    "runtime_capacity": {
+      "navigationGroupCapacity": 256,
+      "groupMembershipAgentCapacity": 160000,
+      "groupMemberCapacity": 10000,
+      "movePlanExecutionGroupCapacity": 256,
+      "movePlanExecutionMemberCapacity": 10000,
+      "routeStateCapacity": 10000,
+      "routeMaxExpandedPerRequest": 2048,
+      "routeWaypointCapacityPerAgent": 64,
+      "loadedChunkCapacity": 256,
+      "relationshipDomainCapacity": 4,
+      "displacedAgentCapacity": 64
+    },
+    "status": "Exact committed base config, not a claim that an instrumented runtime has no overrides"
+  },
+  "findings": [
+    {
+      "id": "MN-001",
+      "severity": "high",
+      "title": "Local steering scans every occupant even after the neighbor scratch limit is reached, and scans every obstacle for every active unit",
+      "source": [
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+          "lines": "1677-1716",
+          "line": 1677,
+          "end_line": 1716
+        },
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+          "lines": "1951-2009",
+          "line": 1951,
+          "end_line": 2009
+        },
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+          "lines": "2011-2034",
+          "line": 2011,
+          "end_line": 2034
+        },
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+          "lines": "2036-2048",
+          "line": 2036,
+          "end_line": 2048
+        }
+      ],
+      "call_chain": "GameEngine.Tick:4896-4945 -> RealtimePacemaker.Update (IPacemaker.cs:89-98) -> PhaseOrderedCooperativeSimulation.Step:33-75 -> PostMovement systems registered by MassNavigationRuntime:131-140 -> MassNavigationSimulationStepSystem.Update:45-80 -> MassNavigationSimulationRuntime.CadenceScheduler.NextSimulationStep -> MassNavigationFlowSolverState.Step:932-1047 -> StepRange:1677 -> separation hash bucket loops:1962-1970 -> occupant checks:1970-2009; then obstacle loop:2013-2034; settled/time-held early hold only at 2042-2048.",
+      "frequency": "15 simulation steps per simulation-second with committed config; one StepRange partition per scheduled worker but total outer iterations N, not N*workers. At 1K serial; 5K/10K use up to 8 workers (parallel threshold 2048). Render frames can contain zero/one/multiple logical steps.",
+      "complexity": "O(N + B + P_local + N*O) per step. P_local is actual occupants in each agent's searched hash cells. A dense cell can produce N*(N-1) directed visits. MaxNeighbors only limits writes to _avoidanceNeighborScratch at 1980-1984; it does not stop the 1986-2005 arithmetic. Obstacle work is N*ObstacleCount even for agents that later hold position.",
+      "gc": "No managed allocation is visible in these loops; arrays and scratch are preallocated. Scheduler allocation classification is separate and not inferred here.",
+      "ecs_structure": "None in StepRange; this is solver-owned SoA. Entity structural changes are not performed.",
+      "capacity_behavior": "Separation hash stores all N agents in preallocated arrays; no per-cell truncation. Obstacle snapshots reject count > _maxObstacleCount (64) at MassNavigationFlowSolverState.cs:612-618 with InvalidOperationException.",
+      "why_10k": "At 10,000 units, even a modest local occupancy multiplies directed pair work by 10,000. With 64 obstacles the unconditional obstacle loop adds up to 640,000 distance checks per simulation step; stationary units still pay this cost because the hold branch is after both scans.",
+      "introduced_by_target": "Retained from pre-PR implementation; ac8ab86af0 changed hard-candidate gating and removed a fallback hard scan, but did not change these StepRange loops.",
+      "ab_method": "Run identical 1K/5K/10K scenes with (A) current code and (B) an instrumented build that counts bucket occupants and obstacle iterations, then a semantics-preserving spatial obstacle broad phase or a bounded occupant iterator. Capture StepPrep/LocalSteering ms, pair checks, obstacle checks, and allocations for static sparse, static dense, moving sparse, and moving dense. Falsify as a primary cause if steering ms and counted checks do not scale with P_local or N*O, or if replacing the loops changes neither timing nor frame time within measurement error. Do not skip settled scans without a wake-up correctness test.",
+      "evidence_status": "Source-verified work pattern; timing impact UNMEASURED, no runtime A/B performed by this audit",
+      "measured_frame_budget_recoverable_ms": null,
+      "ab_result": "NOT_RUN",
+      "ten_k_worst_case_arithmetic": {
+        "dense_directed_neighbor_visits_upper_bound": 99990000,
+        "obstacle_visits_if_capacity_64": 640000,
+        "note": "Arithmetic bounds only; not observed production counts. Existing dense production-layout test expects hard pairs <12N."
+      }
+    },
+    {
+      "id": "MN-002",
+      "severity": "high",
+      "title": "Flow rebuild copies a full grid and recomputes an obstacle stencil for every flow state; enabled=false still computes flow",
+      "source": [
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+          "lines": "1059-1097",
+          "line": 1059,
+          "end_line": 1097
+        },
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+          "lines": "1359-1417",
+          "line": 1359,
+          "end_line": 1417
+        },
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+          "lines": "1385-1403",
+          "line": 1385,
+          "end_line": 1403
+        },
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+          "lines": "1540-1605",
+          "line": 1540,
+          "end_line": 1605
+        }
+      ],
+      "call_chain": "GameEngine.Tick:4896-4945 -> RealtimePacemaker.Update (IPacemaker.cs:89-98) -> PhaseOrderedCooperativeSimulation.Step:33-75 -> PostMovement systems registered by MassNavigationRuntime:131-140 -> MassNavigationSimulationStepSystem.Update:61-69 -> MassNavigationFlowSolverState.AdvanceFlowPipeline -> AdvanceFlowPipelineCore:1066-1090 -> ComputeFlowFields:1359-1367 -> RebuildFlowCostForState:1398-1403 (Array.Copy) -> ComputeFlow:1540-1605. Obstacle refresh calls RebuildStaticObstacleCost:1385-1396 -> IsObstacle (all configured obstacles). ForceFlowRebuild:1376-1382 uses the same path.",
+      "frequency": "Warm stable config: FlowStepHz=5 and FlowCrowdStampHz=5 are coincident triggers; FlowObstacleStampHz=2 is another trigger. Each triggered refresh can recompute all F flow states even when tuning.enabled=false. With aligned zero remainders and 15 simulation steps/second, expected refresh steps are 3,6,8,9,12,15 (6 rebuilds/s); dirty/window/profile changes can add rebuilds. Cold Reset/ResetAuthoredAgents/ResetRuntimeObstaclesFromWorld use ForceFlowRebuild separately. No rebuild when _flowDirty=false and all cadence flags=false (1072-1074).",
+      "complexity": "For F flow states and G grid cells: O(G*O) on static obstacle refresh + O(F*G) full cost copies + O(F*G*R^2) flow stencil, where G=10000 and R=FlowObstacleNeighborRadiusCells (4 => up to 80 neighbor offsets per cell). Crowd stamping adds O(F*min(N,budget)*9).",
+      "gc": "Array.Copy and numeric loops allocate no managed objects; flow-state creation is a cold/configuration event and may allocate large arrays.",
+      "ecs_structure": "No ECS structural changes in rebuild; operates on solver arrays.",
+      "capacity_behavior": "G is fixed by solver dimensions. Agent arrays locked to configured capacity. ResolveFlowStateIndex:2684-2707 scans F and, only on allowCreate=true cold/binding calls, creates FlowRuntimeState plus 2G float array; List may grow. Unknown combination with allowCreate=false throws explicitly. No independent configurable F limit was found in this method, so many team/layer combinations are an event-capacity concern, not demonstrated 10K steady allocation.",
+      "why_10k": "A 100x100 field means every rebuild touches 10,000 cells per flow state. Four team flow states repeat the copy and stencil. crowdStampBudget=0 (the path used by ForceFlowRebuild and also when FlowTuning.Enabled is false) skips crowd stamping only; it does not skip Array.Copy or ComputeFlow.",
+      "introduced_by_target": "Retained implementation; target only adds telemetry accessors around simulation. No target diff removes the repeated copy/stencil.",
+      "ab_method": "First count actual F, refresh reasons, full-grid cells and obstacle-stencil visits with committed cadence, for static and moving 1K/5K/10K. Compare A=current with B=cache the blocked-cell avoidance vector once per obstacle revision while crowd stamping is disabled; preserve target vector calculation and identical output vectors. Compare steady snapshots with all three flow cadences set to 0 after initial rebuild as an explicitly frozen-navigation diagnostic control, not a shipping fix. Falsify performance relevance if per-refresh cost and total frame time do not decline beyond run variance. When crowd stamping is enabled, share only data whose blocked-cell classification is proven equal across interaction domains.",
+      "evidence_status": "Source-verified work pattern; timing impact UNMEASURED, no runtime A/B performed by this audit",
+      "measured_frame_budget_recoverable_ms": null,
+      "ab_result": "NOT_RUN",
+      "enabled_false_contract": "At 1090 Enabled only selects crowd stamp budget: false=>0. ComputeFlowFields still loops F and calls both RebuildFlowCostForState and ComputeFlow. The enabled flag is not a total flow or MassNavigation disable switch."
+    },
+    {
+      "id": "MN-003",
+      "severity": "medium",
+      "title": "Every simulation step copies position/velocity snapshots and scans all units for dirty ECS synchronization",
+      "source": [
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+          "lines": "947-974",
+          "line": 947,
+          "end_line": 974
+        },
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+          "lines": "995-997",
+          "line": 995,
+          "end_line": 997
+        },
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+          "lines": "1521-1538",
+          "line": 1521,
+          "end_line": 1538
+        },
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverEntitySync.cs",
+          "lines": "10-58",
+          "line": 10,
+          "end_line": 58
+        },
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+          "line": 56,
+          "end_line": 59,
+          "lines": "56-59"
+        },
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverSpatialHash.cs",
+          "line": 33,
+          "end_line": 69,
+          "lines": "33-69"
+        }
+      ],
+      "call_chain": "GameEngine.Tick:4896-4945 -> RealtimePacemaker.Update (IPacemaker.cs:89-98) -> PhaseOrderedCooperativeSimulation.Step:33-75 -> PostMovement systems registered by MassNavigationRuntime:131-140 -> StepSystem.Update:45-80 -> FlowSolverState.Step:947-974 Array.Copy(_positionsCm/_velocitiesCm) -> steering/hard resolve -> UpdateSettledUnitCount -> MarkMovedEntitiesDirty:1521-1538 (full N scan) -> on entity-sync cadence StepSystem:83-91 -> SyncDisplacedAgentPoses + SyncEntities:10-58, each dirty entity does world.IsAlive and world.Get<WorldPositionCm>.",
+      "frequency": "Snapshot copies and MarkMovedEntitiesDirty execute every simulation step. SyncEntities executes only when EntitySyncHz distributor fires, over D dirty agents; MarkAllEntitiesDirty can enqueue all N after a reset/window change.",
+      "complexity": "Two copies, each of 2N float elements: 2 copies * 2N * 4 bytes = 16N bytes of payload per simulation step (source read plus destination write traffic is about 32N bytes). Types are float[] at FlowSolverState:56-59, not Vector2[]. Plus O(N) dirty comparison and O(D) random ECS writes. BuildBucketHash adds O(N+B) count clear/prefix/two population passes every step, plus hard-hash rebuild on hard ticks.",
+      "gc": "Array.Copy, flag scans, and dirty-list writes use preallocated arrays; no per-step managed allocation observed. ECS world.Get/IsAlive do not imply GC.",
+      "ecs_structure": "SyncEntities writes existing WorldPositionCm only; it performs no Add/Remove/Create/Destroy. Structural changes occur in separate binding/rebuild paths, not this steady loop.",
+      "capacity_behavior": "Dirty arrays are sized with solver capacity. MarkEntityDirty deduplicates via byte flags; exceeding configured agent capacity is rejected during preallocation/reset rather than resized in the hot loop.",
+      "why_10k": "At 10K, each simulation step copies about 160 KB of position/velocity payload and performs 10K movement comparisons even if no unit moved. A full dirty sync adds 10K ECS lookups/writes and can compete with presentation cache locality.",
+      "introduced_by_target": "Retained from pre-PR solver; target adds observer timing only. Entity sync code was not structurally changed by 91618843a4.",
+      "ab_method": "EntitySyncHz=0 is a valid config value (MassNavigationCadenceConfig.Validate:26 uses allowZero:true). Use it only as a short diagnostic control that intentionally freezes ECS writeback, with simulation state captured and reset identically; it is not a semantics-preserving fix. Main corrective A/B should compare current dirty-index ECS writes with a Chunk/Inline Query writeback keyed by existing stable solver index, at D=0, sparse D, and D=N; compare exact final WorldPositionCm. Measure prep, sync, whole-frame timing and current-thread/all-worker allocation separately. Snapshot removal requires a double-buffer or equivalent preservation of read consistency and the dirty-change reference state.",
+      "evidence_status": "Source-verified work pattern; timing impact UNMEASURED, no runtime A/B performed by this audit",
+      "measured_frame_budget_recoverable_ms": null,
+      "ab_result": "NOT_RUN"
+    },
+    {
+      "id": "MN-004",
+      "severity": "medium",
+      "title": "Hard resolve is spatially bounded by searched buckets but remains quadratic for a dense candidate bucket",
+      "evidence_status": "Source-verified bound; current 10K production pair count and timing UNMEASURED",
+      "source": [
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+          "line": 2445,
+          "end_line": 2526,
+          "lines": "2445-2526"
+        },
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+          "line": 2619,
+          "end_line": 2649,
+          "lines": "2619-2649"
+        }
+      ],
+      "call_chain": "GameEngine.Tick:4896-4945 -> RealtimePacemaker.Update (IPacemaker.cs:89-98) -> PhaseOrderedCooperativeSimulation.Step:33-75 -> PostMovement systems registered by MassNavigationRuntime:131-140 -> MassNavigationSimulationStepSystem.Update:72-80 -> FlowSolverState.Step:989-992 or 1039-1042 -> ResolveHardPenetration:2445 -> BuildHardResolveHash:2460 -> candidate count:2467 -> candidate-agent hash neighborhoods:2494-2519 -> ResolveObstaclePenetration:2619-2649.",
+      "frequency": "Committed HardResolveHz=10 per simulation-second. Hash rebuild and N candidate count scan happen even if candidate count becomes zero.",
+      "complexity": "O(N+B_hard+P_hard+C*O). Candidate gate skips noncandidate agents; j>i avoids duplicate unordered checks. In a bucket containing all candidates, worst P_hard=N*(N-1)/2. At N=10K the arithmetic bound is 49,995,000, not an observed production count.",
+      "gc": "No managed allocation visible in hard loops or bucket rebuild; buffers preallocated.",
+      "ecs_structure": "None. SeparateAgents writes solver-owned position/velocity arrays.",
+      "capacity_behavior": "Per-cell membership is uncapped and never silently truncated; total agent arrays use configured locked capacity. Current obstacle count above configured max throws.",
+      "introduced_by_target": "ac8ab86af0 removed the old noncandidate fallback neighborhood probe and reduced physical collision hash radius. This is an improvement, not a newly introduced quadratic scan. New LastHardResolveCandidateAgentCount adds one O(N) byte sum only on hard ticks.",
+      "why_10k": "Cost follows actual occupancy and candidates rather than just total population. Dense crowds can dominate a frame even with 0 allocation; sparse settled crowds should have zero hard pairs after ac8.",
+      "ab_method": "Replay identical seeded 1K/5K/10K production dense and sparse layouts at ac8 parent and ac8/target. Record candidates, hard pairs, penetrating pairs, max overlap and hard ms per actual hard tick. Existing tests at MassNavigationFlowSolverStateConfigurationTests:349-443 provide fixtures but are single-worker microtests, not whole-frame evidence. Falsify regression claim if target reduces pairs and timing at equal correctness, and only extreme synthetic occupancy is quadratic.",
+      "ab_result": "NOT_RUN",
+      "measured_frame_budget_recoverable_ms": null
+    }
+  ],
+  "coverage_gaps": [
+    "No runtime A/B timings or test runs were produced by this static audit. Parent runtime harness owns required scene matrix and GPU/presentation counters.",
+    "ZeroAllocJobScheduler 1.1.2 Schedule/Flush/Complete allocation was not independently decompiled or measured. Cached UnitStepJob objects and observer delegates remove visible per-step object creation, but package name does not prove 0 allocation.",
+    "Existing 1K/5K/10K candidate tests measure solver only and include single-worker dense cases; do not equate them with whole-frame FPS or worker allocation.",
+    "Only exact target source was read for findings. Historical blame records identify retained code lineage, not measured introduction of a regression.",
+    "Large model and native animation validation were a separate task; this file contains no evidence of duplicate visible draw."
+  ],
+  "requested_baseline": "origin/main",
+  "current_origin_main": "de3dddd1bb5f8fe2e855d3f3c270e9cf24302df2",
+  "current_origin_contains_target": true,
+  "historical_pr_base": "be8f0f69d2947613559f717d6e993631fb2533f4",
+  "baseline_explanation": "Current origin/main already contains the target: origin/main...target is empty for the reviewed files. Reconstruct original PR changes against be8f0f69d2 (first parent of the merge), while reading all audited source from exact target.",
+  "current_requested_diff_numstat": "",
+  "historical_pr_diff": "diff --git a/src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs b/src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs\nindex 5c9cd76e53..609ffba8c3 100644\n--- a/src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs\n+++ b/src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs\n@@ -122,6 +122,11 @@ public sealed partial class MassNavigationFlowSolverState\n     public int PendingEntitySyncCount => _entitySyncDirtyCount;\n     public int PendingArrivalEventCount => _arrivalEventCount;\n     public float LastFlowFieldRebuildMs { get; private set; }\n+    public int LastHardResolveCandidateAgentCount { get; private set; }\n+    public int LastHardResolveFallbackProbeAgentCount { get; private set; }\n+    public long LastHardResolveFallbackPairCheckCount { get; private set; }\n+    public long LastHardResolvePairCheckCount { get; private set; }\n+    public int LastHardResolvePenetratingPairCount { get; private set; }\n     public MassNavigationFlowArrivalTuning ArrivalTuning { get; } = new();\n     public MassNavigationFlowAvoidanceTuning AvoidanceTuning { get; } = new();\n     public MassNavigationCrowdSemantics Semantics { get; } = new();\n@@ -951,6 +956,10 @@ public sealed partial class MassNavigationFlowSolverState\n         if (_useCandidateGating)\n         {\n             Array.Clear(_hardResolveCandidates, 0, UnitCount);\n+            for (int displacedIndex = 0; displacedIndex < _displacedAgentCount; displacedIndex++)\n+            {\n+                _hardResolveCandidates[_displacedAgents[displacedIndex]] = 1;\n+            }\n         }\n \n         float sepRadiusCm = Semantics.Steering.SeparationRadiusCm;\n@@ -2315,8 +2324,8 @@ public sealed partial class MassNavigationFlowSolverState\n \n     private int ResolveHardResolveHashSearchRadiusCells(int selfUnitIndex)\n     {\n-        float maxCandidateDistanceCm = _bodyRadiiCm[selfUnitIndex] + ResolveMaxInteractingBodyRadiusCm(selfUnitIndex) + Semantics.Obstacle.HardResolveCandidateDistanceCm;\n-        return Math.Max(_hardResolveHashMinSearchRadiusCells, (int)MathF.Ceiling(maxCandidateDistanceCm / _hardResolveHashCellSizeCm));\n+        float maxPenetrationDistanceCm = _bodyRadiiCm[selfUnitIndex] + ResolveMaxInteractingBodyRadiusCm(selfUnitIndex);\n+        return Math.Max(_hardResolveHashMinSearchRadiusCells, (int)MathF.Ceiling(maxPenetrationDistanceCm / _hardResolveHashCellSizeCm));\n     }\n \n     private MassNavigationFlowPairAvoidancePolicy ResolvePolicy(bool cooperative, float selfMass, float otherMass)\n@@ -2435,6 +2444,12 @@ public sealed partial class MassNavigationFlowSolverState\n \n     private void ResolveHardPenetration()\n     {\n+        LastHardResolveCandidateAgentCount = 0;\n+        LastHardResolveFallbackProbeAgentCount = 0;\n+        LastHardResolveFallbackPairCheckCount = 0;\n+        LastHardResolvePairCheckCount = 0;\n+        LastHardResolvePenetratingPairCount = 0;\n+\n         if (UnitCount <= 1)\n         {\n             ResolveObstaclePenetration();\n@@ -2447,6 +2462,14 @@ public sealed partial class MassNavigationFlowSolverState\n         int hwm1 = _hardResolveHashWidth - 1;\n         int hhm1 = _hardResolveHashHeight - 1;\n \n+        if (_useCandidateGating)\n+        {\n+            for (int i = 0; i < UnitCount; i++)\n+            {\n+                LastHardResolveCandidateAgentCount += _hardResolveCandidates[i];\n+            }\n+        }\n+\n         for (int i = 0; i < UnitCount; i++)\n         {\n             int i2 = i << 1;\n@@ -2468,9 +2491,7 @@ public sealed partial class MassNavigationFlowSolverState\n             int minX = Math.Max(0, cellX - hardResolveSearchRadius);\n             int maxX = Math.Min(hwm1, cellX + hardResolveSearchRadius);\n \n-            if (_useCandidateGating &&\n-                _hardResolveCandidates[i] == 0 &&\n-                !HasHardResolveAgentPenetrationCandidate(i, minX, maxX, minY, maxY))\n+            if (_useCandidateGating && _hardResolveCandidates[i] == 0)\n             {\n                 continue;\n             }\n@@ -2488,11 +2509,13 @@ public sealed partial class MassNavigationFlowSolverState\n                         int j = _hardResolveAgents[hashIndex];\n                         if (j > i)\n                         {\n+                            LastHardResolvePairCheckCount++;\n                             if (!CanAgentsInteract(i, j) || !AreAgentsPenetrating(i, j))\n                             {\n                                 continue;\n                             }\n \n+                            LastHardResolvePenetratingPairCount++;\n                             SeparateAgents(i, j);\n                         }\n                     }\n@@ -2503,35 +2526,6 @@ public sealed partial class MassNavigationFlowSolverState\n         ResolveObstaclePenetration();\n     }\n \n-    private bool HasHardResolveAgentPenetrationCandidate(int i, int minX, int maxX, int minY, int maxY)\n-    {\n-        for (int neighborY = minY; neighborY <= maxY; neighborY++)\n-        {\n-            int rowBase = neighborY * _hardResolveHashWidth;\n-            for (int neighborX = minX; neighborX <= maxX; neighborX++)\n-            {\n-                int cell = rowBase + neighborX;\n-                int start = _hardResolveCellOffsets[cell];\n-                int end = start + _hardResolveCellCounts[cell];\n-                for (int hashIndex = start; hashIndex < end; hashIndex++)\n-                {\n-                    int j = _hardResolveAgents[hashIndex];\n-                    if (j <= i || !CanAgentsInteract(i, j))\n-                    {\n-                        continue;\n-                    }\n-\n-                    if (AreAgentsPenetrating(i, j))\n-                    {\n-                        return true;\n-                    }\n-                }\n-            }\n-        }\n-\n-        return false;\n-    }\n-\n     private bool AreAgentsPenetrating(int i, int j)\n     {\n         int i2 = i << 1;\ndiff --git a/src/Core/MassNavigation/Runtime/MassNavigationSimulationRuntime.cs b/src/Core/MassNavigation/Runtime/MassNavigationSimulationRuntime.cs\nindex d2f9c6e9b4..6c67643b97 100644\n--- a/src/Core/MassNavigation/Runtime/MassNavigationSimulationRuntime.cs\n+++ b/src/Core/MassNavigation/Runtime/MassNavigationSimulationRuntime.cs\n@@ -173,6 +173,18 @@ public sealed class MassNavigationSimulationRuntime\n     public float SimStepMs => Telemetry.SimStepMs;\n     public float HardResolveMs => Telemetry.HardResolveMs;\n     public float EntitySyncMs => Telemetry.EntitySyncMs;\n+    public float LastGroupTargetUpdateMs => Telemetry.LastGroupTargetUpdateMs;\n+    public float LastFlowFieldRebuildMs => Telemetry.LastFlowFieldRebuildMs;\n+    public float LastStepPrepMs => Telemetry.LastStepPrepMs;\n+    public float LastLocalSteeringMs => Telemetry.LastLocalSteeringMs;\n+    public float LastSimStepMs => Telemetry.LastSimStepMs;\n+    public float LastHardResolveMs => Telemetry.LastHardResolveMs;\n+    public int LastHardResolveCandidateAgentCount => MassNavigationFlow.LastHardResolveCandidateAgentCount;\n+    public int LastHardResolveFallbackProbeAgentCount => MassNavigationFlow.LastHardResolveFallbackProbeAgentCount;\n+    public long LastHardResolveFallbackPairCheckCount => MassNavigationFlow.LastHardResolveFallbackPairCheckCount;\n+    public long LastHardResolvePairCheckCount => MassNavigationFlow.LastHardResolvePairCheckCount;\n+    public int LastHardResolvePenetratingPairCount => MassNavigationFlow.LastHardResolvePenetratingPairCount;\n+    public float LastEntitySyncMs => Telemetry.LastEntitySyncMs;\n     public float PresenterCommandMs => Telemetry.PresenterCommandMs;\n     public float ControlHzObserved => Telemetry.ControlHzObserved;\n     public float CommandHzObserved => Telemetry.CommandHzObserved;\ndiff --git a/src/Core/MassNavigation/Systems/MassNavigationSimulationStepSystem.cs b/src/Core/MassNavigation/Systems/MassNavigationSimulationStepSystem.cs\nindex d82c0df3b9..ccddfaece7 100644\n--- a/src/Core/MassNavigation/Systems/MassNavigationSimulationStepSystem.cs\n+++ b/src/Core/MassNavigation/Systems/MassNavigationSimulationStepSystem.cs\n@@ -3,6 +3,8 @@ using System.Diagnostics;\n using Arch.System;\n using Ludots.Core.Engine;\n using Ludots.Core.MassNavigation.Runtime;\n+using Ludots.Core.Presentation.Hud;\n+using Ludots.Core.Scripting;\n \n namespace Ludots.Core.MassNavigation.Systems;\n \n@@ -14,10 +16,12 @@ internal sealed class MassNavigationSimulationStepSystem : ISystem<float>\n     private Action<double>? _observeLocalSteering;\n     private Action<double>? _observeHardResolve;\n     private Action<double>? _observeFlowFieldRebuild;\n+    private readonly PresentationTimingDiagnostics? _timingDiagnostics;\n \n     public MassNavigationSimulationStepSystem(GameEngine engine)\n     {\n         _engine = engine;\n+        _timingDiagnostics = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);\n     }\n \n     public void Initialize() { }\n@@ -87,6 +91,16 @@ internal sealed class MassNavigationSimulationStepSystem : ISystem<float>\n                 simulation.ObserveEntitySync((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);\n             }\n         }\n+\n+        _timingDiagnostics?.ObserveMassNavigation(\n+            simulation.LastGroupTargetUpdateMs,\n+            simulation.LastFlowFieldRebuildMs,\n+            simulation.LastStepPrepMs,\n+            simulation.LastLocalSteeringMs,\n+            simulation.LastSimStepMs,\n+            simulation.LastHardResolveMs,\n+            simulation.LastEntitySyncMs,\n+            simulation.MassNavigationFlow.PendingEntitySyncCount);\n     }\n \n     private void EnsureObserverCache(MassNavigationSimulationRuntime simulation)\n",
+  "measurement_issues": [
+    {
+      "id": "MN-METRICS-001",
+      "status": "SOURCE_VERIFIED",
+      "title": "Navigation diagnostics overwrite samples by logic tick and are not a render-frame accumulator",
+      "source": [
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationRuntime.cs",
+          "line": 263,
+          "end_line": 269
+        },
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationTelemetry.cs",
+          "line": 54,
+          "end_line": 113
+        },
+        {
+          "file": "src/Core/MassNavigation/Systems/MassNavigationSimulationStepSystem.cs",
+          "line": 95,
+          "end_line": 103
+        },
+        {
+          "file": "src/Core/Presentation/Hud/PresentationTimingDiagnostics.cs",
+          "line": 553,
+          "end_line": 570
+        },
+        {
+          "file": "src/Core/Engine/Pacemaker/IPacemaker.cs",
+          "line": 89,
+          "end_line": 98
+        }
+      ],
+      "call_chain": "GameEngine.Tick -> Pacemaker fixed-step loop -> PostMovement PreSimulationStep.Update -> SimulationRuntime.BeginFrame -> Telemetry.BeginFrame resets Last fields -> StepSystem writes latest navigation step samples -> PresentationTimingDiagnostics.ObserveMassNavigation assigns (=).",
+      "behavior": "A render frame with multiple fixed ticks can overwrite prior work. Last fixed tick without a nav step writes zero. A render frame with no fixed step can retain the previous diagnostics sample. Navigation Telemetry.FrameMs/Fps is calculated from fixed dt at 69-70, not wall-clock render duration.",
+      "hard_pair_issue": "Pair/candidate fields reset only inside ResolveHardPenetration:2447-2451, so a no-hard-step tick may expose previous hard counts. PendingEntitySyncCount is passed after SyncEntities cleared the list, usually 0; it is not number of writes performed.",
+      "missing_counters": [
+        "steering bucket occupant visits",
+        "obstacle distance checks",
+        "true per-render-frame navigation step count and summed timings",
+        "sync write count",
+        "worker-thread allocation"
+      ],
+      "verification": "Replay a host frame with 0,1,2+ fixed ticks and compare sum of instrumented invocations with existing Last fields. Record per-worker counters in preallocated slots and aggregate after jobs complete; avoid atomics on every pair.",
+      "impact": "Measurement correctness; does not establish a performance root cause."
+    }
+  ],
+  "source_evidence": [
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+      "line": 56,
+      "end_line": 93,
+      "text": "56:    private float[] _positionsCm = Array.Empty<float>();\n57:    private float[] _velocitiesCm = Array.Empty<float>();\n58:    private float[] _readPositionsCm = Array.Empty<float>();\n59:    private float[] _readVelocitiesCm = Array.Empty<float>();\n60:    private float[] _unitProgressAnchorCm = Array.Empty<float>();\n61:    private float[] _unitSettledAnchorCm = Array.Empty<float>();\n62:    private int[] _teams = Array.Empty<int>();\n63:    private int[] _teamRuntimeIndices = Array.Empty<int>();\n64:    private int[] _teamLocalIndices = Array.Empty<int>();\n65:    private int[] _flowRuntimeIndices = Array.Empty<int>();\n66:    private uint[] _layerCategoryMasks = Array.Empty<uint>();\n67:    private uint[] _layerInteractionMasks = Array.Empty<uint>();\n68:    private float[] _navMasses = Array.Empty<float>();\n69:    private float[] _visualScales = Array.Empty<float>();\n70:    private float[] _bodyRadiiCm = Array.Empty<float>();\n71:    private float[] _speedsCmPerSecond = Array.Empty<float>();\n72:    private int[] _separationHashSearchRadiusCellsByAgent = Array.Empty<int>();\n73:    private int[] _hardResolveHashSearchRadiusCellsByAgent = Array.Empty<int>();\n74:    private float[] _unitTargetsCm = Array.Empty<float>();\n75:    private float[] _unitTargetStopThresholdsCm = Array.Empty<float>();\n76:    private byte[] _hasUnitTarget = Array.Empty<byte>();\n77:    private byte[] _hardResolveCandidates = Array.Empty<byte>();\n78:    private byte[] _heavyProfileFlags = Array.Empty<byte>();\n79:    private byte[] _entitySyncDirtyFlags = Array.Empty<byte>();\n80:    private byte[] _unitSettledFlags = Array.Empty<byte>();\n81:    private byte[] _arrivalEventEmittedFlags = Array.Empty<byte>();\n82:    private byte[] _unitRetryCounts = Array.Empty<byte>();\n83:    private float[] _unitStuckSeconds = Array.Empty<float>();\n84:    private int[] _separationAgents = Array.Empty<int>();\n85:    private int[] _hardResolveAgents = Array.Empty<int>();\n86:    private int[] _entitySyncDirtyAgents = Array.Empty<int>();\n87:    private int[] _arrivalEventAgentIndices = Array.Empty<int>();\n88:    private int[] _avoidanceNeighborScratch = Array.Empty<int>();\n89:    private OrcaSolver2D.OrcaLine[] _orcaLineScratch = Array.Empty<OrcaSolver2D.OrcaLine>();\n90:    private OrcaSolver2D.OrcaLine[] _orcaProjectionLineScratch = Array.Empty<OrcaSolver2D.OrcaLine>();\n91:    private SonarSolver2D.Interval[] _sonarIntervalScratch = Array.Empty<SonarSolver2D.Interval>();\n92:    private readonly UnitStepJob[] _stepJobs;\n93:    private readonly JobHandle[] _stepHandles;"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+      "line": 209,
+      "end_line": 218,
+      "text": "209:    internal void PreallocateAgentCapacity(int unitCapacity)\n210:    {\n211:        if (unitCapacity < 0)\n212:        {\n213:            throw new InvalidOperationException(\"MassNavigationFlowSolverState agent capacity preallocation requires unitCapacity >= 0.\");\n214:        }\n215:\n216:        EnsureCapacity(unitCapacity);\n217:        _lockedAgentCapacity = unitCapacity;\n218:    }"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+      "line": 313,
+      "end_line": 346,
+      "text": "313:    public void ShiftLocalFrame(float deltaXCm, float deltaYCm)\n314:    {\n315:        if (deltaXCm == 0f && deltaYCm == 0f)\n316:        {\n317:            return;\n318:        }\n319:\n320:        int scalarCount = UnitCount * 2;\n321:        for (int offset = 0; offset < scalarCount; offset += 2)\n322:        {\n323:            _positionsCm[offset] -= deltaXCm;\n324:            _positionsCm[offset + 1] -= deltaYCm;\n325:            _readPositionsCm[offset] -= deltaXCm;\n326:            _readPositionsCm[offset + 1] -= deltaYCm;\n327:            _unitProgressAnchorCm[offset] -= deltaXCm;\n328:            _unitProgressAnchorCm[offset + 1] -= deltaYCm;\n329:            _unitSettledAnchorCm[offset] -= deltaXCm;\n330:            _unitSettledAnchorCm[offset + 1] -= deltaYCm;\n331:            if (_hasUnitTarget[offset >> 1] != 0)\n332:            {\n333:                _unitTargetsCm[offset] -= deltaXCm;\n334:                _unitTargetsCm[offset + 1] -= deltaYCm;\n335:            }\n336:        }\n337:\n338:        for (int teamIndex = 0; teamIndex < _teamStates.Count; teamIndex++)\n339:        {\n340:            TeamRuntimeState team = _teamStates[teamIndex];\n341:            team.TargetX -= deltaXCm;\n342:            team.TargetY -= deltaYCm;\n343:        }\n344:\n345:        MarkFlowDirty();\n346:        MarkAllEntitiesDirty();"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+      "line": 479,
+      "end_line": 543,
+      "text": "479:    public bool SetUnitRuntimeProfile(\n480:        int index,\n481:        int teamId,\n482:        float navMass,\n483:        float visualScale,\n484:        float bodyRadiusCm,\n485:        float speedCmPerSecond,\n486:        MassNavigationAgentLayer layer)\n487:    {\n488:        if ((uint)index >= (uint)UnitCount)\n489:        {\n490:            throw new InvalidOperationException(\n491:                $\"MassNavigationFlow runtime profile agent index {index} exceeds current unit count {UnitCount}.\");\n492:        }\n493:\n494:        ValidateRuntimeProfile(index, navMass, visualScale, bodyRadiusCm, speedCmPerSecond);\n495:        uint categoryMask = layer.CategoryMask;\n496:        uint interactionMask = layer.InteractionMask;\n497:        bool changed =\n498:            _teams[index] != teamId ||\n499:            MathF.Abs(_navMasses[index] - navMass) > float.Epsilon ||\n500:            MathF.Abs(_visualScales[index] - visualScale) > float.Epsilon ||\n501:            MathF.Abs(_bodyRadiiCm[index] - bodyRadiusCm) > float.Epsilon ||\n502:            MathF.Abs(_speedsCmPerSecond[index] - speedCmPerSecond) > float.Epsilon ||\n503:            _layerCategoryMasks[index] != categoryMask ||\n504:            _layerInteractionMasks[index] != interactionMask;\n505:        if (!changed)\n506:        {\n507:            return false;\n508:        }\n509:\n510:        float previousBodyRadiusCm = _bodyRadiiCm[index];\n511:        bool teamOrLayerChanged =\n512:            _teams[index] != teamId ||\n513:            _layerCategoryMasks[index] != categoryMask ||\n514:            _layerInteractionMasks[index] != interactionMask;\n515:        _teams[index] = teamId;\n516:        if (_teamStateIndexById.TryGetValue(teamId, out int teamStateIndex))\n517:        {\n518:            _teamRuntimeIndices[index] = teamStateIndex;\n519:        }\n520:\n521:        _navMasses[index] = navMass;\n522:        _visualScales[index] = visualScale;\n523:        _bodyRadiiCm[index] = bodyRadiusCm;\n524:        _speedsCmPerSecond[index] = speedCmPerSecond;\n525:        if (bodyRadiusCm >= _maxBodyRadiusCm)\n526:        {\n527:            _maxBodyRadiusCm = bodyRadiusCm;\n528:        }\n529:        else if (MathF.Abs(previousBodyRadiusCm - _maxBodyRadiusCm) <= float.Epsilon)\n530:        {\n531:            RecomputeMaxBodyRadiusCm();\n532:        }\n533:\n534:        _layerCategoryMasks[index] = categoryMask;\n535:        _layerInteractionMasks[index] = interactionMask;\n536:        _maxInteractingBodyRadiiDirty = true;\n537:        if ((uint)_teamRuntimeIndices[index] < (uint)_teamStates.Count)\n538:        {\n539:            _flowRuntimeIndices[index] = ResolveFlowStateIndex(_teamRuntimeIndices[index], layer, allowCreate: false);\n540:            if (teamOrLayerChanged || MathF.Abs(previousBodyRadiusCm - bodyRadiusCm) > float.Epsilon)\n541:            {\n542:                MarkFlowDirty();\n543:            }"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+      "line": 612,
+      "end_line": 635,
+      "text": "612:    public void ResetRuntimeObstaclesFromWorld(ReadOnlySpan<MassNavigationObstacleSnapshot> obstacles)\n613:    {\n614:        if (obstacles.Length > _maxObstacleCount)\n615:        {\n616:            throw new InvalidOperationException(\n617:                $\"MassNavigationFlowSolverState runtime obstacle count {obstacles.Length} exceeds solver capacity {_maxObstacleCount}.\");\n618:        }\n619:\n620:        int previousCount = ObstacleCount;\n621:        ObstacleCount = obstacles.Length;\n622:        for (int i = 0; i < obstacles.Length; i++)\n623:        {\n624:            MassNavigationObstacleSnapshot obstacle = obstacles[i];\n625:            if (!(obstacle.RadiusCm > 0f))\n626:            {\n627:                throw new InvalidOperationException(\"MassNavigationFlowSolverState runtime obstacle radius requires radiusCm > 0.\");\n628:            }\n629:\n630:            Vector2 localCm = WorldToLocalCm(new Vector2(obstacle.WorldXCm, obstacle.WorldYCm));\n631:            CacheObstacle(i, localCm.X, localCm.Y, obstacle.RadiusCm);\n632:        }\n633:\n634:        ClearStaleObstacles(ObstacleCount, previousCount);\n635:        ForceFlowRebuild();"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+      "line": 932,
+      "end_line": 1047,
+      "text": "932:    internal void Step(\n933:        float dt,\n934:        World world,\n935:        MassNavigationGroupRuntime navGroupRuntime,\n936:        bool runHardResolve,\n937:        int hardResolveCandidateThresholdAgents,\n938:        Action<double>? observeStepPrep = null,\n939:        Action<double>? observeLocalSteering = null,\n940:        Action<double>? observeHardResolve = null)\n941:    {\n942:        if (UnitCount <= 0)\n943:        {\n944:            return;\n945:        }\n946:\n947:        long prepStart = System.Diagnostics.Stopwatch.GetTimestamp();\n948:        RefreshTeamRelationshipMatrixIfStale();\n949:\n950:        float clampedDt = Math.Clamp(dt, 0f, Semantics.Solver.MaxStepDtSeconds);\n951:        _frameCount++;\n952:        int scalarCount = UnitCount * 2;\n953:        Array.Copy(_positionsCm, _readPositionsCm, scalarCount);\n954:        Array.Copy(_velocitiesCm, _readVelocitiesCm, scalarCount);\n955:        _useCandidateGating = UnitCount >= Math.Max(1, hardResolveCandidateThresholdAgents);\n956:        if (_useCandidateGating)\n957:        {\n958:            Array.Clear(_hardResolveCandidates, 0, UnitCount);\n959:            for (int displacedIndex = 0; displacedIndex < _displacedAgentCount; displacedIndex++)\n960:            {\n961:                _hardResolveCandidates[_displacedAgents[displacedIndex]] = 1;\n962:            }\n963:        }\n964:\n965:        float sepRadiusCm = Semantics.Steering.SeparationRadiusCm;\n966:        float sepRadiusSq = sepRadiusCm * sepRadiusCm;\n967:        float arrivalRadiusCm = Semantics.Steering.GoalArrivalRadiusCm;\n968:        float arrivalRadiusSq = arrivalRadiusCm * arrivalRadiusCm;\n969:        float unitTargetStopThresholdCm = Semantics.Group.UnitTargetStopThresholdCm;\n970:        float unitTargetStopThresholdSq = unitTargetStopThresholdCm * unitTargetStopThresholdCm;\n971:\n972:        RecomputeMaxInteractingBodyRadiiCmIfDirty();\n973:        BuildSeparationHash(_readPositionsCm);\n974:        observeStepPrep?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - prepStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);\n975:\n976:        int hwm1 = _separationHashWidth - 1;\n977:        int hhm1 = _separationHashHeight - 1;\n978:        float invHashCell = 1f / _separationHashCellSizeCm;\n979:        int flowObstacleNeighborRadiusCells = Semantics.Solver.FlowObstacleNeighborRadiusCells;\n980:\n981:        int workerCount = Math.Min(_parallelWorkerCount, UnitCount);\n982:        if (workerCount <= 1 || UnitCount < Semantics.Solver.ParallelStepMinAgents)\n983:        {\n984:            long steeringStart = System.Diagnostics.Stopwatch.GetTimestamp();\n985:            StepRange(0, UnitCount, scratchWorkerIndex: 0, clampedDt, navGroupRuntime, sepRadiusSq, sepRadiusCm, arrivalRadiusCm, arrivalRadiusSq, unitTargetStopThresholdSq, hwm1, hhm1, invHashCell, flowObstacleNeighborRadiusCells, _useCandidateGating);\n986:            observeLocalSteering?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - steeringStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);\n987:            ClampAllPositionsToWorldBounds();\n988:            long resolveStart = System.Diagnostics.Stopwatch.GetTimestamp();\n989:            if (runHardResolve)\n990:            {\n991:                ResolveHardPenetration();\n992:                ClampAllPositionsToWorldBounds();\n993:            }\n994:            observeHardResolve?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - resolveStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);\n995:            UpdateSettledUnitCount();\n996:            MarkMovedEntitiesDirty();\n997:            return;\n998:        }\n999:\n1000:        var scheduler = World.SharedJobScheduler ?? throw new InvalidOperationException(\n1001:            \"MassNavigationFlowSolverState requires World.SharedJobScheduler when solver.parallelWorkerCount requests parallel stepping.\");\n1002:        int baseCount = UnitCount / workerCount;\n1003:        int remainder = UnitCount % workerCount;\n1004:        int startIndex = 0;\n1005:        long threadedSteeringStart = System.Diagnostics.Stopwatch.GetTimestamp();\n1006:        for (int workerIndex = 0; workerIndex < workerCount; workerIndex++)\n1007:        {\n1008:            int length = baseCount + (workerIndex < remainder ? 1 : 0);\n1009:            var job = _stepJobs[workerIndex];\n1010:            job.Owner = this;\n1011:            job.StartIndex = startIndex;\n1012:            job.EndIndex = startIndex + length;\n1013:            job.ScratchWorkerIndex = workerIndex;\n1014:            job.Dt = clampedDt;\n1015:            job.NavGroupRuntime = navGroupRuntime;\n1016:            job.SepRadiusSq = sepRadiusSq;\n1017:            job.SepRadiusCm = sepRadiusCm;\n1018:            job.ArrivalRadiusCm = arrivalRadiusCm;\n1019:            job.ArrivalRadiusSq = arrivalRadiusSq;\n1020:            job.UnitTargetStopThresholdSq = unitTargetStopThresholdSq;\n1021:            job.HashWidthMinusOne = hwm1;\n1022:            job.HashHeightMinusOne = hhm1;\n1023:            job.InvHashCell = invHashCell;\n1024:            job.FlowObstacleNeighborRadiusCells = flowObstacleNeighborRadiusCells;\n1025:            job.UseCandidateGating = _useCandidateGating;\n1026:            _stepHandles[workerIndex] = scheduler.Schedule(job);\n1027:            startIndex += length;\n1028:        }\n1029:\n1030:        scheduler.Flush();\n1031:        for (int workerIndex = 0; workerIndex < workerCount; workerIndex++)\n1032:        {\n1033:            _stepHandles[workerIndex].Complete();\n1034:        }\n1035:        observeLocalSteering?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - threadedSteeringStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);\n1036:\n1037:        ClampAllPositionsToWorldBounds();\n1038:        long hardResolveStart = System.Diagnostics.Stopwatch.GetTimestamp();\n1039:        if (runHardResolve)\n1040:        {\n1041:            ResolveHardPenetration();\n1042:            ClampAllPositionsToWorldBounds();\n1043:        }\n1044:        observeHardResolve?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - hardResolveStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);\n1045:        UpdateSettledUnitCount();\n1046:        MarkMovedEntitiesDirty();\n1047:    }"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+      "line": 1049,
+      "end_line": 1097,
+      "text": "1049:    public bool AdvanceFlowPipeline(\n1050:        MassNavigationFlowTuning tuning,\n1051:        bool refreshFlow,\n1052:        bool refreshCrowd,\n1053:        bool refreshObstacles,\n1054:        Action<double>? observeFlowFieldRebuild = null)\n1055:    {\n1056:        return AdvanceFlowPipelineCore(tuning, refreshFlow, refreshCrowd, refreshObstacles, observeFlowFieldRebuild);\n1057:    }\n1058:\n1059:    private bool AdvanceFlowPipelineCore(\n1060:        MassNavigationFlowTuning tuning,\n1061:        bool forceRefreshFlow,\n1062:        bool forceRefreshCrowd,\n1063:        bool forceRefreshObstacles,\n1064:        Action<double>? observeFlowFieldRebuild)\n1065:    {\n1066:        bool refreshObstacles = _flowDirty || forceRefreshObstacles;\n1067:        bool refreshCrowd = _flowDirty || forceRefreshCrowd;\n1068:        bool refreshFlow = _flowDirty || forceRefreshFlow;\n1069:        tuning.ForceRefreshFlow = false;\n1070:        tuning.ForceRefreshCrowd = false;\n1071:        tuning.ForceRefreshObstacles = false;\n1072:        if (!refreshObstacles && !refreshCrowd && !refreshFlow)\n1073:        {\n1074:            return false;\n1075:        }\n1076:\n1077:        long start = System.Diagnostics.Stopwatch.GetTimestamp();\n1078:        if (refreshObstacles)\n1079:        {\n1080:            RebuildStaticObstacleCost();\n1081:        }\n1082:\n1083:        if (refreshCrowd || refreshObstacles)\n1084:        {\n1085:            refreshFlow = true;\n1086:        }\n1087:\n1088:        if (refreshFlow)\n1089:        {\n1090:            ComputeFlowFields(tuning.Enabled ? tuning.IterationsPerStep : 0);\n1091:            _flowDirty = false;\n1092:        }\n1093:\n1094:        LastFlowFieldRebuildMs = (System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000f / System.Diagnostics.Stopwatch.Frequency;\n1095:        observeFlowFieldRebuild?.Invoke(LastFlowFieldRebuildMs);\n1096:        return true;\n1097:    }"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+      "line": 1099,
+      "end_line": 1111,
+      "text": "1099:    private void EnsureCapacity(int unitCount)\n1100:    {\n1101:        if (_lockedAgentCapacity > 0 && unitCount > _lockedAgentCapacity)\n1102:        {\n1103:            throw new InvalidOperationException(\n1104:                $\"MassNavigationFlowSolverState requires {unitCount} agents, exceeding cold-phase preallocated capacity {_lockedAgentCapacity}.\");\n1105:        }\n1106:\n1107:        int vectorLength = Math.Max(0, unitCount * 2);\n1108:        if (_positionsCm.Length < vectorLength)\n1109:        {\n1110:            Array.Resize(ref _positionsCm, vectorLength);\n1111:            Array.Resize(ref _velocitiesCm, vectorLength);"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+      "line": 1359,
+      "end_line": 1417,
+      "text": "1359:    private void ComputeFlowFields(int crowdStampBudgetUnits)\n1360:    {\n1361:        for (int i = 0; i < _flowStates.Count; i++)\n1362:        {\n1363:            FlowRuntimeState flowState = _flowStates[i];\n1364:            TeamRuntimeState team = _teamStates[flowState.TeamStateIndex];\n1365:            RebuildFlowCostForState(flowState, crowdStampBudgetUnits);\n1366:            ComputeFlow(flowState.Flow, team.TargetX, team.TargetY);\n1367:        }\n1368:\n1369:        if (crowdStampBudgetUnits > 0 && UnitCount > 0)\n1370:        {\n1371:            int budget = Math.Min(UnitCount, crowdStampBudgetUnits);\n1372:            _crowdStampCursor = (_crowdStampCursor + budget) % UnitCount;\n1373:        }\n1374:    }\n1375:\n1376:    private void ForceFlowRebuild()\n1377:    {\n1378:        RebuildStaticObstacleCost();\n1379:        long start = System.Diagnostics.Stopwatch.GetTimestamp();\n1380:        ComputeFlowFields(crowdStampBudgetUnits: 0);\n1381:        LastFlowFieldRebuildMs = (System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000f / System.Diagnostics.Stopwatch.Frequency;\n1382:        _flowDirty = false;\n1383:    }\n1384:\n1385:    private void RebuildStaticObstacleCost()\n1386:    {\n1387:        for (int y = 0; y < _gridHeight; y++)\n1388:        {\n1389:            for (int x = 0; x < _gridWidth; x++)\n1390:            {\n1391:                float wx = (x + 0.5f) * _flowCellSizeCm;\n1392:                float wy = (y + 0.5f) * _flowCellSizeCm;\n1393:                _staticCost[(y * _gridWidth) + x] = IsObstacle(wx, wy) ? Semantics.Solver.FlowBlockedCellCost : 1f;\n1394:            }\n1395:        }\n1396:    }\n1397:\n1398:    private void RebuildFlowCostForState(FlowRuntimeState flowState, int crowdStampBudgetUnits)\n1399:    {\n1400:        Array.Copy(_staticCost, _cost, _staticCost.Length);\n1401:        if (crowdStampBudgetUnits <= 0 || UnitCount <= 0)\n1402:        {\n1403:            return;\n1404:        }\n1405:\n1406:        int budget = Math.Min(UnitCount, crowdStampBudgetUnits);\n1407:        for (int sample = 0; sample < budget; sample++)\n1408:        {\n1409:            int unitIndex = (_crowdStampCursor + sample) % UnitCount;\n1410:            if (!CanFlowStateObserveAgent(flowState, unitIndex))\n1411:            {\n1412:                continue;\n1413:            }\n1414:\n1415:            int offset = unitIndex << 1;\n1416:            StampCrowdCost(_positionsCm[offset], _positionsCm[offset + 1]);\n1417:        }"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+      "line": 1521,
+      "end_line": 1610,
+      "text": "1521:    private void MarkMovedEntitiesDirty()\n1522:    {\n1523:        float positionEpsilonSq = Semantics.Solver.EntitySyncPositionEpsilonSq;\n1524:        float velocityEpsilonSq = Semantics.Solver.EntitySyncVelocityEpsilonSq;\n1525:        for (int i = 0; i < UnitCount; i++)\n1526:        {\n1527:            int i2 = i << 1;\n1528:            float dx = _positionsCm[i2] - _readPositionsCm[i2];\n1529:            float dy = _positionsCm[i2 + 1] - _readPositionsCm[i2 + 1];\n1530:            float dvx = _velocitiesCm[i2] - _readVelocitiesCm[i2];\n1531:            float dvy = _velocitiesCm[i2 + 1] - _readVelocitiesCm[i2 + 1];\n1532:            if ((dx * dx) + (dy * dy) > positionEpsilonSq ||\n1533:                (dvx * dvx) + (dvy * dvy) > velocityEpsilonSq)\n1534:            {\n1535:                MarkEntityDirty(i);\n1536:            }\n1537:        }\n1538:    }\n1539:\n1540:    private void ComputeFlow(float[] flow, float targetX, float targetY)\n1541:    {\n1542:        for (int y = 0; y < _gridHeight; y++)\n1543:        {\n1544:            for (int x = 0; x < _gridWidth; x++)\n1545:            {\n1546:                int idx = (y * _gridWidth) + x;\n1547:                int flowIndex = idx << 1;\n1548:                if (_cost[idx] > Semantics.Solver.FlowBlockedCellThreshold)\n1549:                {\n1550:                    flow[flowIndex] = 0f;\n1551:                    flow[flowIndex + 1] = 0f;\n1552:                    continue;\n1553:                }\n1554:\n1555:                float wx = (x + 0.5f) * _flowCellSizeCm;\n1556:                float wy = (y + 0.5f) * _flowCellSizeCm;\n1557:                float dx = targetX - wx;\n1558:                float dy = targetY - wy;\n1559:                float distSq = dx * dx + dy * dy;\n1560:                if (distSq < Semantics.Solver.FlowTargetStopDistanceSq)\n1561:                {\n1562:                    flow[flowIndex] = 0f;\n1563:                    flow[flowIndex + 1] = 0f;\n1564:                    continue;\n1565:                }\n1566:\n1567:                float invDist = SafeInverseSqrt(distSq);\n1568:                dx *= invDist;\n1569:                dy *= invDist;\n1570:\n1571:                float avoidX = 0f;\n1572:                float avoidY = 0f;\n1573:                int obstacleNeighborRadiusCells = Semantics.Solver.FlowObstacleNeighborRadiusCells;\n1574:                for (int offsetY = -obstacleNeighborRadiusCells; offsetY <= obstacleNeighborRadiusCells; offsetY++)\n1575:                {\n1576:                    for (int offsetX = -obstacleNeighborRadiusCells; offsetX <= obstacleNeighborRadiusCells; offsetX++)\n1577:                    {\n1578:                        if (offsetX == 0 && offsetY == 0)\n1579:                        {\n1580:                            continue;\n1581:                        }\n1582:\n1583:                        int nx = x + offsetX;\n1584:                        int ny = y + offsetY;\n1585:                        if ((uint)nx >= (uint)_gridWidth || (uint)ny >= (uint)_gridHeight)\n1586:                        {\n1587:                            continue;\n1588:                        }\n1589:\n1590:                        if (_cost[(ny * _gridWidth) + nx] > Semantics.Solver.FlowBlockedCellThreshold)\n1591:                        {\n1592:                            float ovx = -offsetX;\n1593:                            float ovy = -offsetY;\n1594:                            float obstacleDistSq = (ovx * ovx) + (ovy * ovy);\n1595:                            if (obstacleDistSq > Semantics.Solver.NormalizationEpsilonSq)\n1596:                            {\n1597:                                float invObstacleDist = SafeInverseSqrt(obstacleDistSq);\n1598:                                float obstacleDist = obstacleDistSq * invObstacleDist;\n1599:                                float obstacleWeight = Semantics.Solver.FlowObstacleNeighborWeight / (obstacleDist * obstacleDist);\n1600:                                avoidX += (ovx * invObstacleDist) * obstacleWeight;\n1601:                                avoidY += (ovy * invObstacleDist) * obstacleWeight;\n1602:                            }\n1603:                        }\n1604:                    }\n1605:                }\n1606:\n1607:                float flowX = dx + (avoidX * Semantics.Solver.FlowObstacleAvoidanceWeight);\n1608:                float flowY = dy + (avoidY * Semantics.Solver.FlowObstacleAvoidanceWeight);\n1609:                float flowLengthSq = flowX * flowX + flowY * flowY;\n1610:                if (flowLengthSq < Semantics.Solver.NormalizationEpsilonSq)"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+      "line": 1677,
+      "end_line": 1716,
+      "text": "1677:    private void StepRange(\n1678:        int startIndex,\n1679:        int endIndex,\n1680:        int scratchWorkerIndex,\n1681:        float clampedDt,\n1682:        MassNavigationGroupRuntime navGroupRuntime,\n1683:        float sepRadiusSq,\n1684:        float sepRadiusCm,\n1685:        float arrivalRadiusCm,\n1686:        float arrivalRadiusSq,\n1687:        float unitTargetStopThresholdSq,\n1688:        int hashWidthMinusOne,\n1689:        int hashHeightMinusOne,\n1690:        float invHashCell,\n1691:        int flowObstacleNeighborRadiusCells,\n1692:        bool useCandidateGating)\n1693:    {\n1694:        _ = sepRadiusSq;\n1695:        for (int i = startIndex; i < endIndex; i++)\n1696:        {\n1697:            int i2 = i << 1;\n1698:            float px = _readPositionsCm[i2];\n1699:            float py = _readPositionsCm[i2 + 1];\n1700:\n1701:            // Displaced agents: the external pose-authority holder drives their\n1702:            // committed pose; the solver holds them in place here so neighbors keep avoiding\n1703:            // them through the separation hash while their own integration is skipped.\n1704:            if (_displacedAgentFlags[i] != 0)\n1705:            {\n1706:                _velocitiesCm[i2] = 0f;\n1707:                _velocitiesCm[i2 + 1] = 0f;\n1708:                _positionsCm[i2] = px;\n1709:                _positionsCm[i2 + 1] = py;\n1710:                continue;\n1711:            }\n1712:\n1713:            int teamStateIndex = _teamRuntimeIndices[i];\n1714:            TeamRuntimeState team = _teamStates[teamStateIndex];\n1715:            FlowRuntimeState flowState = _flowStates[_flowRuntimeIndices[i]];\n1716:            bool inOrderGroup = navGroupRuntime.HasGroup(i);"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+      "line": 1784,
+      "end_line": 1819,
+      "text": "1784:                        int gx = (int)(px / _flowCellSizeCm);\n1785:                        int gy = (int)(py / _flowCellSizeCm);\n1786:                        float avoidX = 0f;\n1787:                        float avoidY = 0f;\n1788:                        for (int oy = -flowObstacleNeighborRadiusCells; oy <= flowObstacleNeighborRadiusCells; oy++)\n1789:                        {\n1790:                            int ny = gy + oy;\n1791:                            if ((uint)ny >= (uint)_gridHeight)\n1792:                            {\n1793:                                continue;\n1794:                            }\n1795:\n1796:                            int rowOffset = ny * _gridWidth;\n1797:                            for (int ox = -flowObstacleNeighborRadiusCells; ox <= flowObstacleNeighborRadiusCells; ox++)\n1798:                            {\n1799:                                if (ox == 0 && oy == 0)\n1800:                                {\n1801:                                    continue;\n1802:                                }\n1803:\n1804:                                int nx = gx + ox;\n1805:                                if ((uint)nx >= (uint)_gridWidth)\n1806:                                {\n1807:                                    continue;\n1808:                                }\n1809:\n1810:                                if (_staticCost[rowOffset + nx] > Semantics.Solver.FlowBlockedCellThreshold)\n1811:                                {\n1812:                                    float obstacleDistanceSq = ox * ox + oy * oy;\n1813:                                    float invObstacleDistance = SafeInverseSqrt(obstacleDistanceSq);\n1814:                                    float invObstacleDistanceSq = invObstacleDistance * invObstacleDistance;\n1815:                                    avoidX += (-ox * invObstacleDistance) * (Semantics.Solver.FlowObstacleNeighborWeight * invObstacleDistanceSq);\n1816:                                    avoidY += (-oy * invObstacleDistance) * (Semantics.Solver.FlowObstacleNeighborWeight * invObstacleDistanceSq);\n1817:                                }\n1818:                            }\n1819:                        }"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+      "line": 1943,
+      "end_line": 2048,
+      "text": "1943:            int neighborScratchBase = scratchWorkerIndex * MassNavigationFlowAvoidanceTuning.MaxKernelNeighbors;\n1944:            int avoidanceNeighborCount = 0;\n1945:            int avoidanceNeighborLimit = AvoidanceTuning.ParsedMode switch\n1946:            {\n1947:                MassNavigationFlowAvoidanceMode.Orca => AvoidanceTuning.Orca.MaxNeighbors,\n1948:                MassNavigationFlowAvoidanceMode.Sonar => AvoidanceTuning.Sonar.MaxNeighbors,\n1949:                _ => 0\n1950:            };\n1951:            int cellX = (int)(px * invHashCell);\n1952:            int cellY = (int)(py * invHashCell);\n1953:            cellX = cellX < 0 ? 0 : (cellX > hashWidthMinusOne ? hashWidthMinusOne : cellX);\n1954:            cellY = cellY < 0 ? 0 : (cellY > hashHeightMinusOne ? hashHeightMinusOne : cellY);\n1955:\n1956:            int separationHashSearchRadius = _separationHashSearchRadiusCellsByAgent[i];\n1957:            int minY = Math.Max(0, cellY - separationHashSearchRadius);\n1958:            int maxY = Math.Min(hashHeightMinusOne, cellY + separationHashSearchRadius);\n1959:            int minX = Math.Max(0, cellX - separationHashSearchRadius);\n1960:            int maxX = Math.Min(hashWidthMinusOne, cellX + separationHashSearchRadius);\n1961:\n1962:            for (int neighborY = minY; neighborY <= maxY; neighborY++)\n1963:            {\n1964:                int rowBase = neighborY * _separationHashWidth;\n1965:                for (int neighborX = minX; neighborX <= maxX; neighborX++)\n1966:                {\n1967:                    int cell = rowBase + neighborX;\n1968:                    int start = _separationCellOffsets[cell];\n1969:                    int end = start + _separationCellCounts[cell];\n1970:                    for (int hashIndex = start; hashIndex < end; hashIndex++)\n1971:                    {\n1972:                        int j = _separationAgents[hashIndex];\n1973:                        if (j != i)\n1974:                        {\n1975:                            if (!CanAgentsInteract(i, j))\n1976:                            {\n1977:                                continue;\n1978:                            }\n1979:\n1980:                            if (avoidanceNeighborCount < avoidanceNeighborLimit)\n1981:                            {\n1982:                                _avoidanceNeighborScratch[neighborScratchBase + avoidanceNeighborCount] = j;\n1983:                                avoidanceNeighborCount++;\n1984:                            }\n1985:\n1986:                            int j2 = j << 1;\n1987:                            float dx = px - _readPositionsCm[j2];\n1988:                            float dy = py - _readPositionsCm[j2 + 1];\n1989:                            float d2 = dx * dx + dy * dy;\n1990:                            float pairHardCandidateDistance = ResolvePairHardCandidateDistanceCm(i, j);\n1991:                            if (useCandidateGating && d2 < pairHardCandidateDistance * pairHardCandidateDistance)\n1992:                            {\n1993:                                _hardResolveCandidates[i] = 1;\n1994:                            }\n1995:\n1996:                            float pairSeparationRadius = ResolvePairSeparationRadiusCm(i, j, sepRadiusCm);\n1997:                            if (d2 < pairSeparationRadius * pairSeparationRadius && d2 > Semantics.Solver.DirectionEpsilonSq)\n1998:                            {\n1999:                                float invD = SafeInverseSqrt(d2);\n2000:                                float d = d2 * invD;\n2001:                                float force = 1f - (d / pairSeparationRadius);\n2002:                                float response = ComputeSeparationResponse(teamStateIndex, _teamRuntimeIndices[j], i, j);\n2003:                                separationX += dx * invD * force * response;\n2004:                                separationY += dy * invD * force * response;\n2005:                            }\n2006:                        }\n2007:                    }\n2008:                }\n2009:            }\n2010:\n2011:            float obstaclePushX = 0f;\n2012:            float obstaclePushY = 0f;\n2013:            for (int obstacleIndex = 0; obstacleIndex < ObstacleCount; obstacleIndex++)\n2014:            {\n2015:                float dx = px - _obsX[obstacleIndex];\n2016:                float dy = py - _obsY[obstacleIndex];\n2017:                float d2 = dx * dx + dy * dy;\n2018:                float minDistance = _obsRadius[obstacleIndex] + _bodyRadiiCm[i] + Semantics.Obstacle.HardResolveCandidateDistanceCm;\n2019:                if (useCandidateGating && d2 < minDistance * minDistance)\n2020:                {\n2021:                    _hardResolveCandidates[i] = 1;\n2022:                }\n2023:\n2024:                float pushRadius = _obsRadius[obstacleIndex] + _bodyRadiiCm[i] + Semantics.Obstacle.SoftPushPaddingCm;\n2025:                if (d2 < pushRadius * pushRadius && d2 > Semantics.Solver.DirectionEpsilonSq)\n2026:                {\n2027:                    float invD = SafeInverseSqrt(d2);\n2028:                    float d = d2 * invD;\n2029:                    float pushStrength = (pushRadius - d) / pushRadius;\n2030:                    float pushForce = pushStrength * pushStrength * Semantics.Obstacle.SoftPushForceScale;\n2031:                    obstaclePushX += dx * invD * pushForce;\n2032:                    obstaclePushY += dy * invD * pushForce;\n2033:                }\n2034:            }\n2035:\n2036:            // Settled agents hold position and velocity to avoid post-arrival jitter, but only\n2037:            // after the scans above have marked hard-resolve candidates: real body overlap must\n2038:            // still be separated by ResolveHardPenetration, which can wake them via the\n2039:            // arrival-recovery push threshold.\n2040:            // TimeFlow pause uses the same hold path after the scans, so navigation cannot move\n2041:            // while simulation time is blocked.\n2042:            if (!simulationTimeActive || suppressTargetMotion)\n2043:            {\n2044:                _velocitiesCm[i2] = 0f;\n2045:                _velocitiesCm[i2 + 1] = 0f;\n2046:                _positionsCm[i2] = px;\n2047:                _positionsCm[i2 + 1] = py;\n2048:                continue;"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+      "line": 2089,
+      "end_line": 2118,
+      "text": "2089:    private void ClampAllPositionsToWorldBounds()\n2090:    {\n2091:        if (!HasWorldBounds())\n2092:        {\n2093:            return;\n2094:        }\n2095:\n2096:        for (int i = 0; i < UnitCount; i++)\n2097:        {\n2098:            int offset = i << 1;\n2099:            float xCm = _positionsCm[offset];\n2100:            float yCm = _positionsCm[offset + 1];\n2101:            float bodyRadiusCm = _bodyRadiiCm[i];\n2102:            bool clampedX = ClampLocalXToWorldBounds(ref xCm, bodyRadiusCm);\n2103:            bool clampedY = ClampLocalYToWorldBounds(ref yCm, bodyRadiusCm);\n2104:            if (!clampedX && !clampedY)\n2105:            {\n2106:                continue;\n2107:            }\n2108:\n2109:            _positionsCm[offset] = xCm;\n2110:            _positionsCm[offset + 1] = yCm;\n2111:            if (clampedX)\n2112:            {\n2113:                _velocitiesCm[offset] = 0f;\n2114:            }\n2115:\n2116:            if (clampedY)\n2117:            {\n2118:                _velocitiesCm[offset + 1] = 0f;"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+      "line": 2430,
+      "end_line": 2526,
+      "text": "2430:    private void UpdateSettledUnitCount()\n2431:    {\n2432:        int settled = 0;\n2433:        for (int i = 0; i < UnitCount; i++)\n2434:        {\n2435:            if (_unitSettledFlags[i] != 0)\n2436:            {\n2437:                settled++;\n2438:                EnqueueArrivalEvent(i);\n2439:            }\n2440:        }\n2441:\n2442:        SettledUnitCount = settled;\n2443:    }\n2444:\n2445:    private void ResolveHardPenetration()\n2446:    {\n2447:        LastHardResolveCandidateAgentCount = 0;\n2448:        LastHardResolveFallbackProbeAgentCount = 0;\n2449:        LastHardResolveFallbackPairCheckCount = 0;\n2450:        LastHardResolvePairCheckCount = 0;\n2451:        LastHardResolvePenetratingPairCount = 0;\n2452:\n2453:        if (UnitCount <= 1)\n2454:        {\n2455:            ResolveObstaclePenetration();\n2456:            return;\n2457:        }\n2458:\n2459:        RecomputeMaxInteractingBodyRadiiCmIfDirty();\n2460:        BuildHardResolveHash(_positionsCm);\n2461:        float invHashCell = 1f / _hardResolveHashCellSizeCm;\n2462:        int hwm1 = _hardResolveHashWidth - 1;\n2463:        int hhm1 = _hardResolveHashHeight - 1;\n2464:\n2465:        if (_useCandidateGating)\n2466:        {\n2467:            for (int i = 0; i < UnitCount; i++)\n2468:            {\n2469:                LastHardResolveCandidateAgentCount += _hardResolveCandidates[i];\n2470:            }\n2471:        }\n2472:\n2473:        for (int i = 0; i < UnitCount; i++)\n2474:        {\n2475:            int i2 = i << 1;\n2476:            float px = _positionsCm[i2];\n2477:            float py = _positionsCm[i2 + 1];\n2478:            if (!IsInsideTacticalField(px, py))\n2479:            {\n2480:                continue;\n2481:            }\n2482:\n2483:            int cellX = (int)(px * invHashCell);\n2484:            int cellY = (int)(py * invHashCell);\n2485:            cellX = cellX < 0 ? 0 : (cellX > hwm1 ? hwm1 : cellX);\n2486:            cellY = cellY < 0 ? 0 : (cellY > hhm1 ? hhm1 : cellY);\n2487:\n2488:            int hardResolveSearchRadius = _hardResolveHashSearchRadiusCellsByAgent[i];\n2489:            int minY = Math.Max(0, cellY - hardResolveSearchRadius);\n2490:            int maxY = Math.Min(hhm1, cellY + hardResolveSearchRadius);\n2491:            int minX = Math.Max(0, cellX - hardResolveSearchRadius);\n2492:            int maxX = Math.Min(hwm1, cellX + hardResolveSearchRadius);\n2493:\n2494:            if (_useCandidateGating && _hardResolveCandidates[i] == 0)\n2495:            {\n2496:                continue;\n2497:            }\n2498:\n2499:            for (int neighborY = minY; neighborY <= maxY; neighborY++)\n2500:            {\n2501:                int rowBase = neighborY * _hardResolveHashWidth;\n2502:                for (int neighborX = minX; neighborX <= maxX; neighborX++)\n2503:                {\n2504:                    int cell = rowBase + neighborX;\n2505:                    int start = _hardResolveCellOffsets[cell];\n2506:                    int end = start + _hardResolveCellCounts[cell];\n2507:                    for (int hashIndex = start; hashIndex < end; hashIndex++)\n2508:                    {\n2509:                        int j = _hardResolveAgents[hashIndex];\n2510:                        if (j > i)\n2511:                        {\n2512:                            LastHardResolvePairCheckCount++;\n2513:                            if (!CanAgentsInteract(i, j) || !AreAgentsPenetrating(i, j))\n2514:                            {\n2515:                                continue;\n2516:                            }\n2517:\n2518:                            LastHardResolvePenetratingPairCount++;\n2519:                            SeparateAgents(i, j);\n2520:                        }\n2521:                    }\n2522:                }\n2523:            }\n2524:        }\n2525:\n2526:        ResolveObstaclePenetration();"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+      "line": 2619,
+      "end_line": 2649,
+      "text": "2619:    private void ResolveObstaclePenetration()\n2620:    {\n2621:        for (int i = 0; i < UnitCount; i++)\n2622:        {\n2623:            // Displaced agents: obstacle push-out must not fight the external\n2624:            // pose-authority holder writing this agent's pose.\n2625:            if (_displacedAgentFlags[i] != 0)\n2626:            {\n2627:                continue;\n2628:            }\n2629:\n2630:            if (_useCandidateGating && _hardResolveCandidates[i] == 0)\n2631:            {\n2632:                continue;\n2633:            }\n2634:\n2635:            int i2 = i << 1;\n2636:            float px = _positionsCm[i2];\n2637:            float py = _positionsCm[i2 + 1];\n2638:            if (!IsInsideTacticalField(px, py))\n2639:            {\n2640:                continue;\n2641:            }\n2642:\n2643:            for (int obstacleIndex = 0; obstacleIndex < ObstacleCount; obstacleIndex++)\n2644:            {\n2645:                float dx = px - _obsX[obstacleIndex];\n2646:                float dy = py - _obsY[obstacleIndex];\n2647:                float minDistance = _obsRadius[obstacleIndex] + _bodyRadiiCm[i];\n2648:                float d2 = dx * dx + dy * dy;\n2649:                if (d2 >= minDistance * minDistance)"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+      "line": 2684,
+      "end_line": 2716,
+      "text": "2684:    private int ResolveFlowStateIndex(int teamStateIndex, MassNavigationAgentLayer layer, bool allowCreate)\n2685:    {\n2686:        for (int i = 0; i < _flowStates.Count; i++)\n2687:        {\n2688:            FlowRuntimeState existing = _flowStates[i];\n2689:            if (existing.TeamStateIndex == teamStateIndex &&\n2690:                existing.CategoryMask == layer.CategoryMask &&\n2691:                existing.InteractionMask == layer.InteractionMask)\n2692:            {\n2693:                return i;\n2694:            }\n2695:        }\n2696:\n2697:        if (!allowCreate)\n2698:        {\n2699:            throw new InvalidOperationException(\n2700:                $\"MassNavigation flow state for teamStateIndex {teamStateIndex} \" +\n2701:                $\"layer categoryMask={layer.CategoryMask} interactionMask={layer.InteractionMask} \" +\n2702:                \"is not registered. FlowRuntimeState combinations must be established on cold paths \" +\n2703:                \"(Reset/ResetAuthoredAgents/AppendAuthoredAgents); SetUnitRuntimeProfile must not allocate.\");\n2704:        }\n2705:\n2706:        _flowStates.Add(new FlowRuntimeState(teamStateIndex, layer.CategoryMask, layer.InteractionMask, _gridCellCount));\n2707:        return _flowStates.Count - 1;\n2708:    }\n2709:\n2710:    private static UnitStepJob[] CreateStepJobs(int count)\n2711:    {\n2712:        var jobs = new UnitStepJob[count];\n2713:        for (int i = 0; i < count; i++)\n2714:        {\n2715:            jobs[i] = new UnitStepJob();\n2716:        }"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+      "line": 2751,
+      "end_line": 2763,
+      "text": "2751:    private bool IsObstacle(float wx, float wy)\n2752:    {\n2753:        for (int i = 0; i < ObstacleCount; i++)\n2754:        {\n2755:            float dx = wx - _obsX[i];\n2756:            float dy = wy - _obsY[i];\n2757:            if ((dx * dx) + (dy * dy) < _obsR2[i])\n2758:            {\n2759:                return true;\n2760:            }\n2761:        }\n2762:\n2763:        return false;"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverEntitySync.cs",
+      "line": 10,
+      "end_line": 85,
+      "text": "10:    internal void SyncEntities(World world, MassNavigationAgentState agentState)\n11:    {\n12:        if (UnitCount <= 0 || _entitySyncDirtyCount <= 0)\n13:        {\n14:            return;\n15:        }\n16:\n17:        int dirtyCount = _entitySyncDirtyCount;\n18:        for (int dirtyIndex = 0; dirtyIndex < dirtyCount; dirtyIndex++)\n19:        {\n20:            int i = _entitySyncDirtyAgents[dirtyIndex];\n21:            if ((uint)i >= (uint)UnitCount)\n22:            {\n23:                throw new InvalidOperationException(\n24:                    $\"MassNavigationFlowSolverState dirty agent index {i} exceeds unit count {UnitCount}.\");\n25:            }\n26:\n27:            _entitySyncDirtyFlags[i] = 0;\n28:            // Displaced agents: pose authority belongs to an external writer for\n29:            // the duration of the window, so the solver must not write WorldPositionCm back.\n30:            // The committed pose is re-ingested via SyncDisplacedAgentPoses instead.\n31:            if (_displacedAgentFlags[i] != 0)\n32:            {\n33:                continue;\n34:            }\n35:\n36:            if (!agentState.TryGetAgentEntity(i, out Entity entity))\n37:            {\n38:                throw new InvalidOperationException(\n39:                    $\"MassNavigationFlowSolverState cannot sync unit {i} because no tracked agent entity is registered.\");\n40:            }\n41:\n42:            if (!world.IsAlive(entity))\n43:            {\n44:                throw new InvalidOperationException(\n45:                    $\"MassNavigationFlowSolverState cannot sync unit {i} because tracked entity {entity.Id} is not alive.\");\n46:            }\n47:\n48:            int i2 = i << 1;\n49:            float xCm = _positionsCm[i2];\n50:            float yCm = _positionsCm[i2 + 1];\n51:            float worldXCm = _worldOriginXCm + xCm;\n52:            float worldYCm = _worldOriginYCm + yCm;\n53:            Fix64Vec2 worldValue = Fix64Vec2.FromInt((int)MathF.Round(worldXCm), (int)MathF.Round(worldYCm));\n54:            ref WorldPositionCm worldPosition = ref world.Get<WorldPositionCm>(entity);\n55:            worldPosition.Value = worldValue;\n56:        }\n57:\n58:        _entitySyncDirtyCount = 0;\n59:    }\n60:\n61:    private void MarkEntityDirty(int index)\n62:    {\n63:        if ((uint)index >= (uint)UnitCount || _entitySyncDirtyFlags[index] != 0)\n64:        {\n65:            return;\n66:        }\n67:\n68:        _entitySyncDirtyFlags[index] = 1;\n69:        _entitySyncDirtyAgents[_entitySyncDirtyCount++] = index;\n70:    }\n71:\n72:    private void MarkAllEntitiesDirty()\n73:    {\n74:        _entitySyncDirtyCount = 0;\n75:        Array.Clear(_entitySyncDirtyFlags, 0, _entitySyncDirtyFlags.Length);\n76:        if (UnitCount <= 0)\n77:        {\n78:            return;\n79:        }\n80:\n81:        for (int i = 0; i < UnitCount; i++)\n82:        {\n83:            _entitySyncDirtyFlags[i] = 1;\n84:            _entitySyncDirtyAgents[_entitySyncDirtyCount++] = i;\n85:        }"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Systems/MassNavigationSimulationStepSystem.cs",
+      "line": 32,
+      "end_line": 117,
+      "text": "32:    public void Update(in float dt)\n33:    {\n34:        if (!MassNavigationIds.TryGetCurrentNavigationRuntime(_engine, out MassNavigationSimulationRuntime simulation))\n35:        {\n36:            return;\n37:        }\n38:\n39:        EnsureObserverCache(simulation);\n40:        if (!simulation.AgentState.HasBoundAgents(simulation.MassNavigationFlow.UnitCount))\n41:        {\n42:            return;\n43:        }\n44:\n45:        int stepsToRun = simulation.CadenceScheduler.BeginFixedTick(dt);\n46:        for (int stepIndex = 0; stepIndex < stepsToRun; stepIndex++)\n47:        {\n48:            MassNavigationCadenceStep step = simulation.CadenceScheduler.NextSimulationStep();\n49:            simulation.ObserveSimTick();\n50:\n51:            if (step.UpdateTargets)\n52:            {\n53:                long targetStart = Stopwatch.GetTimestamp();\n54:                simulation.NavGroupRuntime.UpdateTargets(\n55:                    simulation.MassNavigationFlow,\n56:                    simulation.FrameIndex);\n57:                ApplyRouteExecutionTargets(simulation);\n58:                simulation.ObserveGroupTargetUpdate((Stopwatch.GetTimestamp() - targetStart) * 1000.0 / Stopwatch.Frequency);\n59:            }\n60:\n61:            if (simulation.MassNavigationFlow.AdvanceFlowPipeline(\n62:                    simulation.FlowTuning,\n63:                    step.RefreshFlow,\n64:                    step.RefreshCrowd,\n65:                    step.RefreshObstacles,\n66:                    _observeFlowFieldRebuild!))\n67:            {\n68:                simulation.MarkFlowReconcile();\n69:            }\n70:\n71:            long start = Stopwatch.GetTimestamp();\n72:            simulation.MassNavigationFlow.Step(\n73:                step.SimulationDt,\n74:                _engine.World,\n75:                simulation.NavGroupRuntime,\n76:                step.RunHardResolve,\n77:                simulation.Cadence.HardResolveCandidateThresholdAgents,\n78:                _observeStepPrep!,\n79:                _observeLocalSteering!,\n80:                _observeHardResolve!);\n81:            simulation.ObserveSimStep((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);\n82:\n83:            if (step.SyncEntities)\n84:            {\n85:                start = Stopwatch.GetTimestamp();\n86:                // Displaced agents: re-ingest the externally committed WorldPositionCm\n87:                // before syncing, so neighbors keep avoiding the displaced agent at its real pose\n88:                // while SyncEntities skips writing it.\n89:                simulation.MassNavigationFlow.SyncDisplacedAgentPoses(_engine.World, simulation.AgentState);\n90:                simulation.MassNavigationFlow.SyncEntities(_engine.World, simulation.AgentState);\n91:                simulation.ObserveEntitySync((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);\n92:            }\n93:        }\n94:\n95:        _timingDiagnostics?.ObserveMassNavigation(\n96:            simulation.LastGroupTargetUpdateMs,\n97:            simulation.LastFlowFieldRebuildMs,\n98:            simulation.LastStepPrepMs,\n99:            simulation.LastLocalSteeringMs,\n100:            simulation.LastSimStepMs,\n101:            simulation.LastHardResolveMs,\n102:            simulation.LastEntitySyncMs,\n103:            simulation.MassNavigationFlow.PendingEntitySyncCount);\n104:    }\n105:\n106:    private void EnsureObserverCache(MassNavigationSimulationRuntime simulation)\n107:    {\n108:        if (ReferenceEquals(_cachedObserverRuntime, simulation))\n109:        {\n110:            return;\n111:        }\n112:\n113:        _cachedObserverRuntime = simulation;\n114:        _observeStepPrep = simulation.ObserveStepPrep;\n115:        _observeLocalSteering = simulation.ObserveLocalSteering;\n116:        _observeHardResolve = simulation.ObserveHardResolve;\n117:        _observeFlowFieldRebuild = simulation.ObserveFlowFieldRebuild;"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationCadenceConfig.cs",
+      "line": 18,
+      "end_line": 35,
+      "text": "18:    public void Validate()\n19:    {\n20:        ValidateHz(nameof(SimulationHz), SimulationHz, allowZero: false);\n21:        ValidateHz(nameof(TargetUpdateHz), TargetUpdateHz, allowZero: true);\n22:        ValidateHz(nameof(FlowStepHz), FlowStepHz, allowZero: true);\n23:        ValidateHz(nameof(FlowCrowdStampHz), FlowCrowdStampHz, allowZero: true);\n24:        ValidateHz(nameof(FlowObstacleStampHz), FlowObstacleStampHz, allowZero: true);\n25:        ValidateHz(nameof(HardResolveHz), HardResolveHz, allowZero: true);\n26:        ValidateHz(nameof(EntitySyncHz), EntitySyncHz, allowZero: true);\n27:\n28:        if (MaxStepsPerFixedTick < 1)\n29:        {\n30:            throw new InvalidOperationException(\"MassNavigation cadence requires MaxStepsPerFixedTick >= 1.\");\n31:        }\n32:\n33:        if (HardResolveCandidateThresholdAgents < 1)\n34:        {\n35:            throw new InvalidOperationException(\"MassNavigation cadence requires HardResolveCandidateThresholdAgents >= 1.\");"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationCadenceConfig.cs",
+      "line": 86,
+      "end_line": 107,
+      "text": "86:    public int BeginFixedTick(float fixedDt)\n87:    {\n88:        if (fixedDt <= 0f)\n89:        {\n90:            return 0;\n91:        }\n92:\n93:        EnsureFixedCadence(fixedDt);\n94:        return _simulation!.NextStepCount();\n95:    }\n96:\n97:    public MassNavigationCadenceStep NextSimulationStep()\n98:    {\n99:        EnsureSimulationCadence();\n100:        return new MassNavigationCadenceStep(\n101:            _simulation!.TargetDeltaTime,\n102:            ShouldRun(_targetUpdate),\n103:            ShouldRun(_flowStep),\n104:            ShouldRun(_flowCrowd),\n105:            ShouldRun(_flowObstacle),\n106:            ShouldRun(_hardResolve),\n107:            ShouldRun(_entitySync));"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationCadenceConfig.cs",
+      "line": 141,
+      "end_line": 154,
+      "text": "141:        int simHz = _config.SimulationHz;\n142:        _targetUpdateHz = _config.TargetUpdateHz;\n143:        _flowStepHz = _config.FlowStepHz;\n144:        _flowCrowdStampHz = _config.FlowCrowdStampHz;\n145:        _flowObstacleStampHz = _config.FlowObstacleStampHz;\n146:        _hardResolveHz = _config.HardResolveHz;\n147:        _entitySyncHz = _config.EntitySyncHz;\n148:        _targetUpdate = Reset(_targetUpdate, simHz, _config.TargetUpdateHz, 1);\n149:        _flowStep = Reset(_flowStep, simHz, _config.FlowStepHz, 1);\n150:        _flowCrowd = Reset(_flowCrowd, simHz, _config.FlowCrowdStampHz, 1);\n151:        _flowObstacle = Reset(_flowObstacle, simHz, _config.FlowObstacleStampHz, 1);\n152:        _hardResolve = Reset(_hardResolve, simHz, _config.HardResolveHz, 1);\n153:        _entitySync = Reset(_entitySync, simHz, _config.EntitySyncHz, 1);\n154:    }"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationCadenceConfig.cs",
+      "line": 166,
+      "end_line": 183,
+      "text": "166:    private static DiscreteRateTickDistributor Reset(\n167:        DiscreteRateTickDistributor? distributor,\n168:        int fixedHz,\n169:        int targetHz,\n170:        int maxStepsPerFixedTick)\n171:    {\n172:        if (distributor == null)\n173:        {\n174:            return new DiscreteRateTickDistributor(fixedHz, targetHz, maxStepsPerFixedTick);\n175:        }\n176:\n177:        distributor.Reset(fixedHz, targetHz, maxStepsPerFixedTick);\n178:        return distributor;\n179:    }\n180:\n181:    private static bool ShouldRun(DiscreteRateTickDistributor? distributor)\n182:    {\n183:        return distributor != null && distributor.NextStepCount() > 0;"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationSimulationRuntime.cs",
+      "line": 268,
+      "end_line": 311,
+      "text": "268:    public MassNavigationSimulationRuntime(MassNavigationConfig config)\n269:    {\n270:        Config = config ?? throw new ArgumentNullException(nameof(config));\n271:        int membershipCapacity = config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity;\n272:        if (membershipCapacity <= 0)\n273:        {\n274:            throw new InvalidOperationException(\n275:                \"MassNavigationSimulationRuntime requires scenarioRuntime.runtimeCapacity.groupMembershipAgentCapacity > 0.\");\n276:        }\n277:\n278:        AgentState = new MassNavigationAgentState(membershipCapacity);\n279:        _authoredBindingSeenEntities = new HashSet<Entity>(membershipCapacity);\n280:        MassNavigationFlow = new MassNavigationFlowSolverState(config.Solver);\n281:        MassNavigationFlow.PreallocateAgentCapacity(membershipCapacity);\n282:        MassNavigationFlow.PreallocateDomainRelationshipCapacity(config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity);\n283:        MassNavigationFlow.PreallocateDisplacedAgentCapacity(config.ScenarioRuntime.RuntimeCapacity.DisplacedAgentCapacity);\n284:        WorldConfig = config.World ?? throw new InvalidOperationException(\"MassNavigationSimulationRuntime requires explicit world config.\");\n285:        MassNavigationHotZoneConfig activeHotZone = WorldConfig.GetRequiredHotZone(WorldConfig.ActiveHotZoneId);\n286:        _activeHotZoneId = activeHotZone.Id;\n287:        _activeHotZoneLabel = activeHotZone.Label;\n288:        _activeHotZoneCenterXCm = activeHotZone.CenterXCm;\n289:        _activeHotZoneCenterYCm = activeHotZone.CenterYCm;\n290:        _activeHotZoneWidthCm = activeHotZone.WidthCm;\n291:        _activeHotZoneHeightCm = activeHotZone.HeightCm;\n292:        Cadence = config.Cadence;\n293:        CadenceScheduler = new MassNavigationCadenceScheduler(Cadence);\n294:        _loadedChunkCapacity = config.ScenarioRuntime.RuntimeCapacity.LoadedChunkCapacity;\n295:        _loadedChunkLastTouchedSeconds = new Dictionary<long, float>(_loadedChunkCapacity);\n296:        _loadedChunksToEvict = new List<long>(_loadedChunkCapacity);\n297:        _loadedChunksAddedDuringUpdate = new List<long>(_loadedChunkCapacity);\n298:        _simWindowWidthCm = WorldConfig.SolverWindowWidthCm;\n299:        _simWindowHeightCm = WorldConfig.SolverWindowHeightCm;\n300:        _simWindowCenterXCm = _activeHotZoneCenterXCm;\n301:        _simWindowCenterYCm = _activeHotZoneCenterYCm;\n302:        _flowWorkAreaCenterXCm = _simWindowCenterXCm;\n303:        _flowWorkAreaCenterYCm = _simWindowCenterYCm;\n304:        _flowWorkAreaWidthCm = _simWindowWidthCm;\n305:        _flowWorkAreaHeightCm = _simWindowHeightCm;\n306:        FlowTuning = config.Flow;\n307:        NavGroupRuntime = new MassNavigationGroupRuntime(config.Semantics.Group, config.ScenarioRuntime.RuntimeCapacity);\n308:        ConfigureScenarioTeams(CreateTeamIdArray(config.Scenario.Teams));\n309:        MassNavigationFlow.ArrivalTuning.CopyFrom(config.Arrival);\n310:        MassNavigationFlow.AvoidanceTuning.CopyFrom(config.Avoidance);\n311:        MassNavigationFlow.Semantics.CopyFrom(config.Semantics);"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationSimulationRuntime.cs",
+      "line": 368,
+      "end_line": 405,
+      "text": "368:    public void BeginFrame(float dt)\n369:    {\n370:        _frameIndex++;\n371:        Telemetry.BeginFrame(dt);\n372:        _streamingClockSeconds += MathF.Max(0f, dt);\n373:        AdvanceCommandFocus();\n374:    }\n375:\n376:    internal void SetDomainRelationshipProjection(MassNavigationDomainStanceProjection projection)\n377:    {\n378:        _domainStanceProjection = projection ?? throw new ArgumentNullException(nameof(projection));\n379:        MassNavigationFlow.SetDomainRelationshipProjection(projection);\n380:    }\n381:\n382:    private void AdvanceCommandFocus()\n383:    {\n384:        if (_commandFocusTicksRemaining <= 0)\n385:        {\n386:            _hasCommandFocus = false;\n387:            return;\n388:        }\n389:\n390:        FocusState previous = CaptureFocusState();\n391:        _commandFocusTicksRemaining--;\n392:        if (_commandFocusTicksRemaining == 0)\n393:        {\n394:            try\n395:            {\n396:                _hasCommandFocus = false;\n397:                UpdateStreamingWindow(ResolveStreamingFocus());\n398:            }\n399:            catch\n400:            {\n401:                RestoreFocusState(in previous);\n402:                throw;\n403:            }\n404:        }\n405:    }"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationSimulationRuntime.cs",
+      "line": 603,
+      "end_line": 641,
+      "text": "603:    public void RebuildFromAuthoredAgents(\n604:        World world,\n605:        ReadOnlySpan<Entity> entities,\n606:        ReadOnlySpan<MassNavigationAgentSeed> agentSeeds,\n607:        ReadOnlySpan<bool> controllableFlags)\n608:    {\n609:        if (entities.Length != agentSeeds.Length || entities.Length != controllableFlags.Length)\n610:        {\n611:            throw new InvalidOperationException(\"MassNavigation authored rebuild requires matching entity, seed, and controllable spans.\");\n612:        }\n613:\n614:        int membershipCapacity = Config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity;\n615:        if (agentSeeds.Length > membershipCapacity)\n616:        {\n617:            throw new InvalidOperationException(\n618:                $\"MassNavigation authored rebuild required {agentSeeds.Length} agent slots, exceeding configured scenarioRuntime.runtimeCapacity.groupMembershipAgentCapacity {membershipCapacity}.\");\n619:        }\n620:\n621:        PreflightAuthoredAgentBindings(\n622:            world,\n623:            entities,\n624:            controllableFlags,\n625:            startIndex: 0,\n626:            unitCountAfterCommit: agentSeeds.Length,\n627:            allowExistingRuntimeBinding: true);\n628:\n629:        var previousGroupSnapshot = NavGroupRuntime.CaptureAuthoredRebuildSnapshot();\n630:        _domainStanceProjection?.ValidateResetDomains(agentSeeds);\n631:        ClearAuthoredRuntimeBindings(world);\n632:        _domainStanceProjection?.ResetDomains(agentSeeds);\n633:        MassNavigationFlow.ResetAuthoredAgents(agentSeeds);\n634:        for (int i = 0; i < entities.Length; i++)\n635:        {\n636:            BindSpawnedAgent(world, entities[i], i, controllableFlags[i]);\n637:        }\n638:\n639:        NavGroupRuntime.RestoreAuthoredRebuildSnapshot(world, MassNavigationFlow, AgentState, previousGroupSnapshot);\n640:        MarkStructuralChange();\n641:    }"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationSimulationRuntime.cs",
+      "line": 1038,
+      "end_line": 1093,
+      "text": "1038:    public void BindSpawnedAgent(\n1039:        World world,\n1040:        Entity entity,\n1041:        int agentIndex,\n1042:        bool controllable)\n1043:    {\n1044:        ArgumentNullException.ThrowIfNull(world);\n1045:        MassNavigationAgent agent = ValidateSpawnedAgentBinding(\n1046:            world,\n1047:            entity,\n1048:            agentIndex,\n1049:            controllable,\n1050:            MassNavigationFlow.UnitCount,\n1051:            allowExistingRuntimeBinding: false);\n1052:        int profileId = agent.ProfileId;\n1053:        world.Add(entity, new MassNavigationAgentIndex { Value = agentIndex });\n1054:        world.Add(entity, new MassNavigationAgentProfile\n1055:        {\n1056:            ProfileId = profileId,\n1057:            Heavy = MassNavigationFlow.IsHeavyProfile(agentIndex),\n1058:            VisualScale = MassNavigationFlow.GetVisualScale(agentIndex),\n1059:            SpeedCmPerSecond = MassNavigationFlow.GetSpeedCmPerSecond(agentIndex),\n1060:        });\n1061:        if (world.Has<MovePlanExecutionIntent>(entity))\n1062:        {\n1063:            world.Set(entity, default(MovePlanExecutionIntent));\n1064:        }\n1065:        else\n1066:        {\n1067:            world.Add(entity, default(MovePlanExecutionIntent));\n1068:        }\n1069:\n1070:        if (world.Has<MovePlanExecutionResult>(entity))\n1071:        {\n1072:            world.Set(entity, default(MovePlanExecutionResult));\n1073:        }\n1074:        else\n1075:        {\n1076:            world.Add(entity, default(MovePlanExecutionResult));\n1077:        }\n1078:        AgentState.RegisterAgentAtIndex(entity, agentIndex, controllable);\n1079:    }\n1080:\n1081:    private void PreflightAuthoredAgentBindings(\n1082:        World world,\n1083:        ReadOnlySpan<Entity> entities,\n1084:        ReadOnlySpan<bool> controllableFlags,\n1085:        int startIndex,\n1086:        int unitCountAfterCommit,\n1087:        bool allowExistingRuntimeBinding)\n1088:    {\n1089:        ArgumentNullException.ThrowIfNull(world);\n1090:        if (entities.Length != controllableFlags.Length)\n1091:        {\n1092:            throw new InvalidOperationException(\"MassNavigation authored binding preflight requires matching entity and controllable spans.\");\n1093:        }"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationSimulationRuntime.cs",
+      "line": 1212,
+      "end_line": 1271,
+      "text": "1212:    public void UpdateStreamingWindow(System.Numerics.Vector2 worldCenterCm)\n1213:    {\n1214:        int centerX = (int)MathF.Round(worldCenterCm.X);\n1215:        int centerY = (int)MathF.Round(worldCenterCm.Y);\n1216:        int radius = Streaming.RadiusCm;\n1217:        int chunkSize = RequireLoadedChunks().ChunkSizeCm;\n1218:        int minChunkX = MathUtil.FloorDiv(centerX - radius, chunkSize);\n1219:        int maxChunkX = MathUtil.FloorDiv(centerX + radius, chunkSize);\n1220:        int minChunkY = MathUtil.FloorDiv(centerY - radius, chunkSize);\n1221:        int maxChunkY = MathUtil.FloorDiv(centerY + radius, chunkSize);\n1222:        bool changed = minChunkX != _streamingMinChunkX ||\n1223:            maxChunkX != _streamingMaxChunkX ||\n1224:            minChunkY != _streamingMinChunkY ||\n1225:            maxChunkY != _streamingMaxChunkY ||\n1226:            radius != _streamingRadiusCm;\n1227:        ValidateStreamingWindowCapacity(worldCenterCm);\n1228:        _loadedChunksAddedDuringUpdate.Clear();\n1229:        try\n1230:        {\n1231:            for (int chunkY = minChunkY; chunkY <= maxChunkY; chunkY++)\n1232:            {\n1233:                for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++)\n1234:                {\n1235:                    long chunkKey = GraphChunkKey.Pack(chunkX, chunkY);\n1236:                    bool wasTracked = _loadedChunkLastTouchedSeconds.ContainsKey(chunkKey);\n1237:                    TouchStreamingChunk(chunkKey);\n1238:                    if (!wasTracked)\n1239:                    {\n1240:                        _loadedChunksAddedDuringUpdate.Add(chunkKey);\n1241:                    }\n1242:                }\n1243:            }\n1244:\n1245:            EvictExpiredStreamingChunks(minChunkX, maxChunkX, minChunkY, maxChunkY);\n1246:            _streamingMinChunkX = minChunkX;\n1247:            _streamingMaxChunkX = maxChunkX;\n1248:            _streamingMinChunkY = minChunkY;\n1249:            _streamingMaxChunkY = maxChunkY;\n1250:            _streamingRadiusCm = radius;\n1251:        }\n1252:        catch\n1253:        {\n1254:            for (int i = _loadedChunksAddedDuringUpdate.Count - 1; i >= 0; i--)\n1255:            {\n1256:                long chunkKey = _loadedChunksAddedDuringUpdate[i];\n1257:                if (_loadedChunkLastTouchedSeconds.Remove(chunkKey))\n1258:                {\n1259:                    RequireLoadedChunkContributor().SetLoaded(chunkKey, false);\n1260:                }\n1261:            }\n1262:\n1263:            InvalidateStreamingWindowCache();\n1264:            throw;\n1265:        }\n1266:\n1267:        if (changed)\n1268:        {\n1269:            Telemetry.MarkStreamingWindowUpdated();\n1270:        }\n1271:    }"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationSimulationRuntime.cs",
+      "line": 1328,
+      "end_line": 1390,
+      "text": "1328:        foreach (KeyValuePair<long, float> pair in _loadedChunkLastTouchedSeconds)\n1329:        {\n1330:            (int chunkX, int chunkY) = GraphChunkKey.Unpack(pair.Key);\n1331:            bool inCurrentWindow = chunkX >= currentMinChunkX && chunkX <= currentMaxChunkX &&\n1332:                chunkY >= currentMinChunkY && chunkY <= currentMaxChunkY;\n1333:            if (!inCurrentWindow && _streamingClockSeconds - pair.Value > retainSeconds)\n1334:            {\n1335:                _loadedChunksToEvict.Add(pair.Key);\n1336:            }\n1337:        }\n1338:\n1339:        for (int i = 0; i < _loadedChunksToEvict.Count; i++)\n1340:        {\n1341:            long chunkKey = _loadedChunksToEvict[i];\n1342:            _loadedChunkLastTouchedSeconds.Remove(chunkKey);\n1343:            RequireLoadedChunkContributor().SetLoaded(chunkKey, false);\n1344:        }\n1345:    }\n1346:\n1347:    private void TouchStreamingChunk(long chunkKey)\n1348:    {\n1349:        ref float lastTouchedSeconds = ref CollectionsMarshal.GetValueRefOrNullRef(_loadedChunkLastTouchedSeconds, chunkKey);\n1350:        if (Unsafe.IsNullRef(ref lastTouchedSeconds))\n1351:        {\n1352:            if (_loadedChunkLastTouchedSeconds.Count >= _loadedChunkCapacity)\n1353:            {\n1354:                throw new InvalidOperationException(\n1355:                    $\"MassNavigation streaming required more than configured scenarioRuntime.runtimeCapacity.loadedChunkCapacity {_loadedChunkCapacity} chunks.\");\n1356:            }\n1357:\n1358:            _loadedChunkLastTouchedSeconds.Add(chunkKey, _streamingClockSeconds);\n1359:            RequireLoadedChunkContributor().SetLoaded(chunkKey, true);\n1360:            return;\n1361:        }\n1362:\n1363:        lastTouchedSeconds = _streamingClockSeconds;\n1364:    }\n1365:\n1366:    private void MoveSolverWindow(System.Numerics.Vector2 requestedCenterCm, string reason)\n1367:    {\n1368:        float nextCenterX = requestedCenterCm.X;\n1369:        float nextCenterY = requestedCenterCm.Y;\n1370:        ClampSolverWindowCenter(ref nextCenterX, ref nextCenterY);\n1371:        if (MathF.Abs(nextCenterX - _simWindowCenterXCm) < 0.5f &&\n1372:            MathF.Abs(nextCenterY - _simWindowCenterYCm) < 0.5f)\n1373:        {\n1374:            return;\n1375:        }\n1376:\n1377:        float previousOriginX = MassNavigationFlow.WorldOriginXCm;\n1378:        float previousOriginY = MassNavigationFlow.WorldOriginYCm;\n1379:        _simWindowCenterXCm = nextCenterX;\n1380:        _simWindowCenterYCm = nextCenterY;\n1381:        float nextOriginX = SolverWindowMinXCm;\n1382:        float nextOriginY = SolverWindowMinYCm;\n1383:        MassNavigationFlow.ShiftLocalFrame(nextOriginX - previousOriginX, nextOriginY - previousOriginY);\n1384:        MassNavigationFlow.SetWorldOrigin(nextOriginX, nextOriginY);\n1385:        MassNavigationFlow.RequestFlowRebuild();\n1386:        Telemetry.MarkSolverWindowMoved();\n1387:        _solverWindowDriver = reason;\n1388:    }\n1389:\n1390:    private void ClampSolverWindowCenter(ref float centerX, ref float centerY)"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverSpatialHash.cs",
+      "line": 1,
+      "end_line": 91,
+      "text": "1:using System;\n2:\n3:namespace Ludots.Core.MassNavigation.Runtime;\n4:\n5:public sealed partial class MassNavigationFlowSolverState\n6:{\n7:    private void BuildSeparationHash(float[] positionsCm)\n8:    {\n9:        BuildBucketHash(\n10:            positionsCm,\n11:            _separationHashWidth,\n12:            _separationHashHeight,\n13:            1f / _separationHashCellSizeCm,\n14:            _separationCellCounts,\n15:            _separationCellOffsets,\n16:            _separationCellCursor,\n17:            _separationAgents);\n18:    }\n19:\n20:    private void BuildHardResolveHash(float[] positionsCm)\n21:    {\n22:        BuildBucketHash(\n23:            positionsCm,\n24:            _hardResolveHashWidth,\n25:            _hardResolveHashHeight,\n26:            1f / _hardResolveHashCellSizeCm,\n27:            _hardResolveCellCounts,\n28:            _hardResolveCellOffsets,\n29:            _hardResolveCellCursor,\n30:            _hardResolveAgents);\n31:    }\n32:\n33:    private void BuildBucketHash(\n34:        float[] positionsCm,\n35:        int hashWidth,\n36:        int hashHeight,\n37:        float invHashCell,\n38:        int[] cellCounts,\n39:        int[] cellOffsets,\n40:        int[] cellCursor,\n41:        int[] cellAgents)\n42:    {\n43:        Array.Clear(cellCounts, 0, cellCounts.Length);\n44:        int hashWidthMinusOne = hashWidth - 1;\n45:        int hashHeightMinusOne = hashHeight - 1;\n46:\n47:        for (int i = 0; i < UnitCount; i++)\n48:        {\n49:            if (TryGetHashCell(positionsCm, i, invHashCell, hashWidthMinusOne, hashHeightMinusOne, hashWidth, out int cell))\n50:            {\n51:                cellCounts[cell]++;\n52:            }\n53:        }\n54:\n55:        int offset = 0;\n56:        for (int cell = 0; cell < cellCounts.Length; cell++)\n57:        {\n58:            cellOffsets[cell] = offset;\n59:            cellCursor[cell] = offset;\n60:            offset += cellCounts[cell];\n61:        }\n62:\n63:        for (int i = 0; i < UnitCount; i++)\n64:        {\n65:            if (TryGetHashCell(positionsCm, i, invHashCell, hashWidthMinusOne, hashHeightMinusOne, hashWidth, out int cell))\n66:            {\n67:                cellAgents[cellCursor[cell]++] = i;\n68:            }\n69:        }\n70:    }\n71:\n72:    private static bool TryGetHashCell(\n73:        float[] positionsCm,\n74:        int index,\n75:        float invHashCell,\n76:        int hashWidthMinusOne,\n77:        int hashHeightMinusOne,\n78:        int hashWidth,\n79:        out int cell)\n80:    {\n81:        int i2 = index << 1;\n82:        int cellX = (int)(positionsCm[i2] * invHashCell);\n83:        int cellY = (int)(positionsCm[i2 + 1] * invHashCell);\n84:        if ((uint)cellX > (uint)hashWidthMinusOne || (uint)cellY > (uint)hashHeightMinusOne)\n85:        {\n86:            cell = -1;\n87:            return false;\n88:        }\n89:\n90:        cell = (cellY * hashWidth) + cellX;\n91:        return true;"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverDisplacement.cs",
+      "line": 169,
+      "end_line": 189,
+      "text": "169:    internal void SyncDisplacedAgentPoses(World world, MassNavigationAgentState agentState)\n170:    {\n171:        ArgumentNullException.ThrowIfNull(agentState);\n172:        for (int i = 0; i < _displacedAgentCount; i++)\n173:        {\n174:            int index = _displacedAgents[i];\n175:            if (!agentState.TryGetAgentEntity(index, out Entity entity))\n176:            {\n177:                throw new InvalidOperationException(\n178:                    $\"MassNavigationFlow cannot sync displaced agent {index} because no tracked agent entity is registered.\");\n179:            }\n180:\n181:            if (!world.IsAlive(entity))\n182:            {\n183:                throw new InvalidOperationException(\n184:                    $\"MassNavigationFlow cannot sync displaced agent {index} because tracked entity {entity.Id} is not alive.\");\n185:            }\n186:\n187:            ref WorldPositionCm worldPosition = ref world.Get<WorldPositionCm>(entity);\n188:            ApplyCommittedWorldPose(index, worldPosition.Value.X.ToFloat(), worldPosition.Value.Y.ToFloat());\n189:        }"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationAgentState.cs",
+      "line": 18,
+      "end_line": 29,
+      "text": "18:    public MassNavigationAgentState(int agentCapacity)\n19:    {\n20:        if (agentCapacity <= 0)\n21:        {\n22:            throw new System.ArgumentOutOfRangeException(nameof(agentCapacity));\n23:        }\n24:\n25:        _spawnedEntities = new System.Collections.Generic.List<Entity>(agentCapacity);\n26:        _spawnedEntityIds = new System.Collections.Generic.HashSet<int>(agentCapacity);\n27:        _allAgents = new System.Collections.Generic.List<Entity>(agentCapacity);\n28:        _controllableAgents = new System.Collections.Generic.List<Entity>(agentCapacity);\n29:        _controllableIndexByEntityId = new System.Collections.Generic.Dictionary<int, int>(agentCapacity);"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationAgentState.cs",
+      "line": 93,
+      "end_line": 102,
+      "text": "93:    public bool TryGetAgentEntity(int agentIndex, out Entity entity)\n94:    {\n95:        if ((uint)agentIndex >= (uint)_allAgents.Count)\n96:        {\n97:            entity = Entity.Null;\n98:            return false;\n99:        }\n100:\n101:        entity = _allAgents[agentIndex];\n102:        return entity != Entity.Null;"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationTelemetry.cs",
+      "line": 54,
+      "end_line": 113,
+      "text": "54:    public void BeginFrame(float dt)\n55:    {\n56:        CommandCountFrame = 0;\n57:        StructuralChangesFrame = 0;\n58:        FlowReconcileCountFrame = 0;\n59:        StreamingWindowUpdatesFrame = 0;\n60:        FocusBudgetUpdatesFrame = 0;\n61:        SolverWindowMovesFrame = 0;\n62:        LastGroupTargetUpdateMs = 0f;\n63:        LastFlowFieldRebuildMs = 0f;\n64:        LastStepPrepMs = 0f;\n65:        LastLocalSteeringMs = 0f;\n66:        LastSimStepMs = 0f;\n67:        LastHardResolveMs = 0f;\n68:        LastEntitySyncMs = 0f;\n69:        FrameMs = dt > 0f ? dt * 1000f : 0f;\n70:        Fps = FrameMs > 0.001f ? 1000f / FrameMs : 0f;\n71:    }\n72:\n73:    public void ObserveGroupTargetUpdate(double sampleMs)\n74:    {\n75:        LastGroupTargetUpdateMs = (float)Math.Max(0d, sampleMs);\n76:        GroupTargetUpdateMs = Smooth(GroupTargetUpdateMs, LastGroupTargetUpdateMs);\n77:    }\n78:\n79:    public void ObserveFlowFieldRebuild(double sampleMs)\n80:    {\n81:        LastFlowFieldRebuildMs = (float)Math.Max(0d, sampleMs);\n82:        FlowFieldRebuildMs = Smooth(FlowFieldRebuildMs, LastFlowFieldRebuildMs);\n83:    }\n84:\n85:    public void ObserveStepPrep(double sampleMs)\n86:    {\n87:        LastStepPrepMs = (float)Math.Max(0d, sampleMs);\n88:        StepPrepMs = Smooth(StepPrepMs, LastStepPrepMs);\n89:    }\n90:\n91:    public void ObserveLocalSteering(double sampleMs)\n92:    {\n93:        LastLocalSteeringMs = (float)Math.Max(0d, sampleMs);\n94:        LocalSteeringMs = Smooth(LocalSteeringMs, LastLocalSteeringMs);\n95:    }\n96:\n97:    public void ObserveSimStep(double sampleMs)\n98:    {\n99:        LastSimStepMs = (float)Math.Max(0d, sampleMs);\n100:        SimStepMs = Smooth(SimStepMs, LastSimStepMs);\n101:    }\n102:\n103:    public void ObserveHardResolve(double sampleMs)\n104:    {\n105:        LastHardResolveMs = (float)Math.Max(0d, sampleMs);\n106:        HardResolveMs = Smooth(HardResolveMs, LastHardResolveMs);\n107:    }\n108:\n109:    public void ObserveEntitySync(double sampleMs)\n110:    {\n111:        LastEntitySyncMs = (float)Math.Max(0d, sampleMs);\n112:        EntitySyncMs = Smooth(EntitySyncMs, LastEntitySyncMs);\n113:    }"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationRuntime.cs",
+      "line": 130,
+      "end_line": 140,
+      "text": "130:        engine.RegisterSystem(new MassNavigationAgentMetadataSyncSystem(engine, config), SystemGroup.InputCollection);\n131:        engine.RegisterSystem(new MassNavigationSimulationStepSystem(engine), SystemGroup.PostMovement);\n132:        engine.RegisterSystem(\n133:            new MassNavigationAuthoredAgentBindingSystem(engine, config),\n134:            SystemGroup.RuntimeEntityBinding);\n135:        engine.RegisterSystem(\n136:            new MassNavigationEnvironmentBindingSystem(engine),\n137:            SystemGroup.RuntimeEntityBinding);\n138:        engine.InsertSystemBeforeRequired<MassNavigationSimulationStepSystem>(\n139:            new MassNavigationPreSimulationStepSystem(engine),\n140:            SystemGroup.PostMovement);"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationRuntime.cs",
+      "line": 252,
+      "end_line": 269,
+      "text": "252:public sealed class MassNavigationPreSimulationStepSystem : ISystem<float>\n253:{\n254:    private readonly GameEngine _engine;\n255:\n256:    public MassNavigationPreSimulationStepSystem(GameEngine engine)\n257:    {\n258:        _engine = engine ?? throw new ArgumentNullException(nameof(engine));\n259:    }\n260:\n261:    public void Initialize() { }\n262:    public void BeforeUpdate(in float dt) { }\n263:    public void Update(in float dt)\n264:    {\n265:        if (MassNavigationIds.TryGetCurrentNavigationRuntime(_engine, out MassNavigationSimulationRuntime simulation))\n266:        {\n267:            simulation.BeginFrame(dt);\n268:            simulation.ObserveControlTick();\n269:        }"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/Presentation/Hud/PresentationTimingDiagnostics.cs",
+      "line": 553,
+      "end_line": 570,
+      "text": "553:        public void ObserveMassNavigation(\n554:            float targetMs,\n555:            float flowMs,\n556:            float prepMs,\n557:            float steeringMs,\n558:            float stepMs,\n559:            float hardResolveMs,\n560:            float entitySyncMs,\n561:            int pendingEntitySync)\n562:        {\n563:            LastMassNavigationTargetMs = targetMs;\n564:            LastMassNavigationFlowMs = flowMs;\n565:            LastMassNavigationPrepMs = prepMs;\n566:            LastMassNavigationSteeringMs = steeringMs;\n567:            LastMassNavigationStepMs = stepMs;\n568:            LastMassNavigationHardResolveMs = hardResolveMs;\n569:            LastMassNavigationEntitySyncMs = entitySyncMs;\n570:            LastMassNavigationPendingEntitySync = pendingEntitySync;"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/Engine/GameEngine.cs",
+      "line": 4930,
+      "end_line": 4946,
+      "text": "4930:            // 1. Simulation Loop (GAS, Physics, AI) - Controlled by Pacemaker\n4931:            if (networkRole == NetworkProcessRole.ReplicatedClient)\n4932:            {\n4933:                networkRuntime!.PumpReplicatedClient(dt);\n4934:                UpdateReplicatedClientLocalInput(dt);\n4935:            }\n4936:            else if (!_simulationBudgetFused)\n4937:            {\n4938:                long simulationStart = System.Diagnostics.Stopwatch.GetTimestamp();\n4939:                int tickBefore = GameSession.CurrentTick;\n4940:                if (presentationTiming?.SystemBreakdownEnabled == true)\n4941:                {\n4942:                    presentationTiming.BeginSimulationSystemBreakdown();\n4943:                }\n4944:\n4945:                Pacemaker.Update(dt, _cooperativeSimulation, SimulationBudgetMsPerFrame, SimulationMaxSlicesPerLogicFrame);\n4946:                presentationTiming?.ObserveSimulation((System.Diagnostics.Stopwatch.GetTimestamp() - simulationStart) * 1000d / System.Diagnostics.Stopwatch.Frequency);"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/Engine/Pacemaker/IPacemaker.cs",
+      "line": 89,
+      "end_line": 110,
+      "text": "89:            while (_stepInProgress || _accumulator >= Time.FixedDeltaTime)\n90:            {\n91:                long elapsed = System.Diagnostics.Stopwatch.GetTimestamp() - start;\n92:                long remainingTicks = budgetTicks - elapsed;\n93:                if (remainingTicks <= 0) break;\n94:\n95:                int remainingMs = (int)(remainingTicks * 1000 / System.Diagnostics.Stopwatch.Frequency);\n96:                if (remainingMs <= 0) remainingMs = 1;\n97:\n98:                bool completed = cooperativeSimulation.Step(Time.FixedDeltaTime, remainingMs);\n99:                _stepInProgress = !completed;\n100:\n101:                if (completed)\n102:                {\n103:                    _accumulator -= Time.FixedDeltaTime;\n104:                    Time.FixedTotalTime += Time.FixedDeltaTime;\n105:                    _slicesInCurrentStep = 0;\n106:                }\n107:                else\n108:                {\n109:                    _slicesInCurrentStep++;\n110:                    if (_slicesInCurrentStep >= maxSlicesPerLogicFrame)"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/Engine/Pacemaker/PhaseOrderedCooperativeSimulation.cs",
+      "line": 33,
+      "end_line": 75,
+      "text": "33:        public bool Step(float fixedDt, int timeBudgetMs)\n34:        {\n35:            if (!_stepActive)\n36:            {\n37:                _stepActive = true;\n38:                _phaseIndex = 0;\n39:                _systemIndex = 0;\n40:                _onStepStarted?.Invoke(fixedDt);\n41:            }\n42:\n43:            if (timeBudgetMs <= 0) timeBudgetMs = 1;\n44:            var start = System.Diagnostics.Stopwatch.GetTimestamp();\n45:            long budgetTicks = timeBudgetMs * (System.Diagnostics.Stopwatch.Frequency / 1000);\n46:\n47:            IReadOnlyList<SystemGroup> phases = SystemGroupOrder.All;\n48:            while (_phaseIndex < phases.Count)\n49:            {\n50:                var phase = phases[_phaseIndex];\n51:                if (_systemGroups.TryGetValue(phase, out var systems))\n52:                {\n53:                    for (int i = _systemIndex; i < systems.Count; i++)\n54:                    {\n55:                        var sys = systems[i];\n56:                        long systemStart = _timingDiagnostics?.SystemBreakdownEnabled == true\n57:                            ? System.Diagnostics.Stopwatch.GetTimestamp()\n58:                            : 0L;\n59:                        if (sys is ITimeSlicedSystem timeSliced)\n60:                        {\n61:                            long elapsed = System.Diagnostics.Stopwatch.GetTimestamp() - start;\n62:                            int remainingMs = (int)((budgetTicks - elapsed) * 1000 / System.Diagnostics.Stopwatch.Frequency);\n63:                            if (remainingMs <= 0) remainingMs = 1;\n64:                            if (!timeSliced.UpdateSlice(fixedDt, remainingMs))\n65:                            {\n66:                                ObserveSystemTiming(sys, systemStart);\n67:                                _systemIndex = i;\n68:                                return false;\n69:                            }\n70:                        }\n71:                        else\n72:                        {\n73:                            sys.Update(fixedDt);\n74:                        }\n75:                        ObserveSystemTiming(sys, systemStart);"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/Engine/TimeFlow/DiscreteRateTickDistributor.cs",
+      "line": 15,
+      "end_line": 16,
+      "text": "15:        public int TargetHz => _targetHz;\n16:        public int MaxStepsPerFixedTick => _maxStepsPerFixedTick;"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Core/Engine/TimeFlow/DiscreteRateTickDistributor.cs",
+      "line": 35,
+      "end_line": 72,
+      "text": "35:\n36:        public void Reset(int fixedHz, int targetHz, int maxStepsPerFixedTick)\n37:        {\n38:            if (fixedHz < 1) throw new ArgumentOutOfRangeException(nameof(fixedHz));\n39:            if (targetHz < 0) throw new ArgumentOutOfRangeException(nameof(targetHz));\n40:            if (maxStepsPerFixedTick < 1) throw new ArgumentOutOfRangeException(nameof(maxStepsPerFixedTick));\n41:\n42:            _fixedHz = fixedHz;\n43:            _targetHz = targetHz;\n44:            _maxStepsPerFixedTick = maxStepsPerFixedTick;\n45:\n46:            if (targetHz == 0)\n47:            {\n48:                _numerator = 0;\n49:                _denominator = 1;\n50:                _remainder = 0;\n51:                return;\n52:            }\n53:\n54:            int maxStepsNeeded = (targetHz + fixedHz - 1) / fixedHz;\n55:            if (maxStepsNeeded > maxStepsPerFixedTick)\n56:            {\n57:                throw new InvalidOperationException($\"Tick rate requires up to {maxStepsNeeded} steps per fixed tick, exceeding MaxStepsPerFixedTick={maxStepsPerFixedTick}.\");\n58:            }\n59:\n60:            _numerator = targetHz;\n61:            _denominator = fixedHz;\n62:            _remainder = 0;\n63:        }\n64:\n65:        public int NextStepCount()\n66:        {\n67:            int carry = _remainder + _numerator;\n68:            int steps = carry / _denominator;\n69:            _remainder = carry - steps * _denominator;\n70:            return steps;\n71:        }\n72:    }"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "mods/capabilities/navigation/MassNavigationMod/assets/MassNavigationConfig.json",
+      "line": 47,
+      "end_line": 60,
+      "text": "47:  \"solver\": {\n48:    \"fieldWidthCm\": 10000,\n49:    \"fieldHeightCm\": 10000,\n50:    \"flowCellSizeCm\": 100,\n51:    \"maxObstacleCount\": 64,\n52:    \"parallelWorkerCount\": 8,\n53:    \"separationHashCellSizeCm\": 100,\n54:    \"separationHashMinSearchRadiusCells\": 2,\n55:    \"hardResolveHashCellSizeCm\": 50,\n56:    \"hardResolveHashMinSearchRadiusCells\": 1,\n57:    \"playAreaMinXCm\": 50,\n58:    \"playAreaMaxXCm\": 9950,\n59:    \"playAreaMinYCm\": 50,\n60:    \"playAreaMaxYCm\": 9950"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "mods/capabilities/navigation/MassNavigationMod/assets/MassNavigationConfig.json",
+      "line": 132,
+      "end_line": 158,
+      "text": "132:  },\n133:  \"scenarioRuntime\": {\n134:    \"autoSpawnConfiguredScenario\": true,\n135:    \"runtimeCapacity\": {\n136:      \"navigationGroupCapacity\": 256,\n137:      \"groupMembershipAgentCapacity\": 160000,\n138:      \"groupMemberCapacity\": 10000,\n139:      \"movePlanExecutionGroupCapacity\": 256,\n140:      \"movePlanExecutionMemberCapacity\": 10000,\n141:      \"routeStateCapacity\": 10000,\n142:      \"routeMaxExpandedPerRequest\": 2048,\n143:      \"routeWaypointCapacityPerAgent\": 64,\n144:      \"loadedChunkCapacity\": 256,\n145:      \"relationshipDomainCapacity\": 4,\n146:      \"displacedAgentCapacity\": 64\n147:    }\n148:  },\n149:  \"cadence\": {\n150:    \"simulationHz\": 15,\n151:    \"targetUpdateHz\": 15,\n152:    \"flowStepHz\": 5,\n153:    \"flowCrowdStampHz\": 5,\n154:    \"flowObstacleStampHz\": 2,\n155:    \"hardResolveHz\": 10,\n156:    \"entitySyncHz\": 15,\n157:    \"maxStepsPerFixedTick\": 1,\n158:    \"hardResolveCandidateThresholdAgents\": 1"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "mods/capabilities/navigation/MassNavigationMod/assets/MassNavigationConfig.json",
+      "line": 195,
+      "end_line": 201,
+      "text": "195:  \"flow\": {\n196:    \"enabled\": false,\n197:    \"iterationsPerStep\": 4096,\n198:    \"maxIterationsPerStep\": 131072,\n199:    \"forceRefreshFlow\": false,\n200:    \"forceRefreshCrowd\": false,\n201:    \"forceRefreshObstacles\": false"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "mods/capabilities/navigation/MassNavigationMod/assets/MassNavigationConfig.json",
+      "line": 292,
+      "end_line": 300,
+      "text": "292:    },\n293:    \"solver\": {\n294:      \"minNavMass\": 0.001,\n295:      \"minVisualScale\": 0.01,\n296:      \"maxStepDtSeconds\": 0.05,\n297:      \"parallelStepMinAgents\": 2048,\n298:      \"directionEpsilonSq\": 0.0001,\n299:      \"normalizationEpsilonSq\": 0.000001,\n300:      \"inverseSqrtMinValue\": 1e-8,"
+    },
+    {
+      "commit": "91618843a4be547611363e7971282fcc489ca9ee",
+      "file": "src/Tests/PresentationTests/MassNavigation/MassNavigationFlowSolverStateConfigurationTests.cs",
+      "line": 349,
+      "end_line": 443,
+      "text": "349:        [TestCase(1_000)]\n350:        [TestCase(5_000)]\n351:        [TestCase(10_000)]\n352:        public void HardResolveCandidateGating_SparseSettledAgentsSkipFallbackWithoutAllocating(int agentCount)\n353:        {\n354:            var flow = CreateSparseConfiguredFlow();\n355:            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);\n356:            var seeds = new MassNavigationAgentSeed[agentCount];\n357:            const int columns = 100;\n358:            const float spacingCm = 180f;\n359:            for (int i = 0; i < agentCount; i++)\n360:            {\n361:                seeds[i] = CreateSeed(\n362:                    localX: 500f + ((i % columns) * spacingCm),\n363:                    localY: 500f + ((i / columns) * spacingCm),\n364:                    layer);\n365:            }\n366:\n367:            flow.ResetAuthoredAgents(seeds);\n368:            TeamManager.LoadConfig(new TeamConfig\n369:            {\n370:                DefaultRelationship = \"Friendly\",\n371:                Relationships = new List<RelationshipEntry>(),\n372:            });\n373:            for (int i = 0; i < agentCount; i++)\n374:            {\n375:                flow.SetUnitTarget(i, flow.GetPositionX(i), flow.GetPositionY(i), resetRecovery: true);\n376:            }\n377:\n378:            using var world = World.Create();\n379:            var navGroups = CreateNavGroupRuntime(agentCount);\n380:            flow.Step(0f, world, navGroups, runHardResolve: true, hardResolveCandidateThresholdAgents: 1);\n381:\n382:            long allocatedBefore = GC.GetAllocatedBytesForCurrentThread();\n383:            long started = Stopwatch.GetTimestamp();\n384:            flow.Step(0f, world, navGroups, runHardResolve: true, hardResolveCandidateThresholdAgents: 1);\n385:            double elapsedMs = Stopwatch.GetElapsedTime(started).TotalMilliseconds;\n386:            long allocated = GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;\n387:\n388:            TestContext.WriteLine(\n389:                $\"agents={agentCount} elapsedMs={elapsedMs:F3} candidates={flow.LastHardResolveCandidateAgentCount} \" +\n390:                $\"fallbackAgents={flow.LastHardResolveFallbackProbeAgentCount} fallbackPairs={flow.LastHardResolveFallbackPairCheckCount} \" +\n391:                $\"pairs={flow.LastHardResolvePairCheckCount} allocated={allocated}\");\n392:            Assert.That(flow.LastHardResolveCandidateAgentCount, Is.Zero);\n393:            Assert.That(flow.LastHardResolveFallbackProbeAgentCount, Is.Zero,\n394:                \"Sparse settled agents must retain the candidate gate instead of probing every agent neighborhood.\");\n395:            Assert.That(flow.LastHardResolveFallbackPairCheckCount, Is.Zero);\n396:            Assert.That(allocated, Is.Zero);\n397:        }\n398:\n399:        [TestCase(1_000)]\n400:        [TestCase(5_000)]\n401:        [TestCase(10_000)]\n402:        public void HardResolve_DenseProductionLayout_BoundsCollisionNeighborhoodWithoutAllocating(int agentCount)\n403:        {\n404:            const int teamCount = 4;\n405:            Assert.That(agentCount % teamCount, Is.Zero);\n406:\n407:            var flow = CreateConfiguredFlow(parallelWorkerCount: 1);\n408:            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);\n409:            flow.Reset(\n410:                new[] { 1, 2, 3, 4 },\n411:                unitsPerTeam: agentCount / teamCount,\n412:                CreateProfileSet(),\n413:                layer,\n414:                CreateSpawnLayout(randomSeed: 12_648_430));\n415:            TeamManager.LoadConfig(new TeamConfig\n416:            {\n417:                DefaultRelationship = \"Friendly\",\n418:                Relationships = new List<RelationshipEntry>(),\n419:            });\n420:\n421:            using var world = World.Create();\n422:            var navGroups = CreateNavGroupRuntime(agentCount);\n423:            double hardResolveMs = 0d;\n424:            Action<double> observeHardResolve = sample => hardResolveMs = sample;\n425:\n426:            long allocatedBefore = GC.GetAllocatedBytesForCurrentThread();\n427:            flow.Step(\n428:                dt: 1f / 15f,\n429:                world,\n430:                navGroups,\n431:                runHardResolve: true,\n432:                hardResolveCandidateThresholdAgents: 1,\n433:                observeHardResolve: observeHardResolve);\n434:            long allocated = GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;\n435:\n436:            TestContext.WriteLine(\n437:                $\"agents={agentCount} hardResolveMs={hardResolveMs:F3} candidates={flow.LastHardResolveCandidateAgentCount} \" +\n438:                $\"pairs={flow.LastHardResolvePairCheckCount} penetrating={flow.LastHardResolvePenetratingPairCount} allocated={allocated}\");\n439:            Assert.That(flow.LastHardResolveCandidateAgentCount, Is.GreaterThan(agentCount * 0.9));\n440:            Assert.That(flow.LastHardResolvePairCheckCount, Is.LessThan(agentCount * 12L),\n441:                \"Hard resolution must scan the actual collision radius, not the wider candidate-warning radius.\");\n442:            Assert.That(flow.LastHardResolvePenetratingPairCount, Is.GreaterThan(0));\n443:            Assert.That(allocated, Is.Zero);"
+    }
+  ],
+  "historical_line_provenance": [
+    {
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+      "line": 1970,
+      "commit": "2bc361900d857f5dbd2fda2c4a25c0907726a614",
+      "commit_metadata": "2bc361900d857f5dbd2fda2c4a25c0907726a614\n2026-05-08T04:09:42+08:00\nfeat(mass-nav): integrate performer minimap parity path",
+      "blame": "2bc361900d857f5dbd2fda2c4a25c0907726a614 1260 1970 1\nauthor Codex\nauthor-mail <codex@example.com>\nauthor-time 1778184582\nauthor-tz +0800\ncommitter Codex\ncommitter-mail <codex@example.com>\ncommitter-time 1778231335\ncommitter-tz +0800\nsummary feat(mass-nav): integrate performer minimap parity path\nfilename mods/showcases/navigation/MassNavWebParityMod/Runtime/MassNavWebParitySimState.cs\n\t                    for (int hashIndex = start; hashIndex < end; hashIndex++)\n"
+    },
+    {
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+      "line": 2013,
+      "commit": "2bc361900d857f5dbd2fda2c4a25c0907726a614",
+      "commit_metadata": "2bc361900d857f5dbd2fda2c4a25c0907726a614\n2026-05-08T04:09:42+08:00\nfeat(mass-nav): integrate performer minimap parity path",
+      "blame": "2bc361900d857f5dbd2fda2c4a25c0907726a614 1290 2013 1\nauthor Codex\nauthor-mail <codex@example.com>\nauthor-time 1778184582\nauthor-tz +0800\ncommitter Codex\ncommitter-mail <codex@example.com>\ncommitter-time 1778231335\ncommitter-tz +0800\nsummary feat(mass-nav): integrate performer minimap parity path\nfilename mods/showcases/navigation/MassNavWebParityMod/Runtime/MassNavWebParitySimState.cs\n\t            for (int obstacleIndex = 0; obstacleIndex < ObstacleCount; obstacleIndex++)\n"
+    },
+    {
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+      "line": 2042,
+      "commit": "265928d69f9e9d85691b00ba0b910d68ef289a75",
+      "commit_metadata": "265928d69f9e9d85691b00ba0b910d68ef289a75\n2026-07-09T19:17:25+08:00\nMerge remote-tracking branch 'origin/main' into codex/pr501-time-main-audit-20260709",
+      "blame": "265928d69f9e9d85691b00ba0b910d68ef289a75 2077 2042 1\nauthor Codex\nauthor-mail <codex@example.com>\nauthor-time 1783595845\nauthor-tz +0800\ncommitter Codex\ncommitter-mail <codex@example.com>\ncommitter-time 1783595845\ncommitter-tz +0800\nsummary Merge remote-tracking branch 'origin/main' into codex/pr501-time-main-audit-20260709\nprevious c520970671a3ca010e851930540880e696e5b2c8 src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs\nfilename src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs\n\t            if (!simulationTimeActive || suppressTargetMotion)\n"
+    },
+    {
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+      "line": 1400,
+      "commit": "2bc361900d857f5dbd2fda2c4a25c0907726a614",
+      "commit_metadata": "2bc361900d857f5dbd2fda2c4a25c0907726a614\n2026-05-08T04:09:42+08:00\nfeat(mass-nav): integrate performer minimap parity path",
+      "blame": "2bc361900d857f5dbd2fda2c4a25c0907726a614 767 1400 1\nauthor Codex\nauthor-mail <codex@example.com>\nauthor-time 1778184582\nauthor-tz +0800\ncommitter Codex\ncommitter-mail <codex@example.com>\ncommitter-time 1778231335\ncommitter-tz +0800\nsummary feat(mass-nav): integrate performer minimap parity path\nfilename mods/showcases/navigation/MassNavWebParityMod/Runtime/MassNavWebParitySimState.cs\n\t        Array.Copy(_staticCost, _cost, _staticCost.Length);\n"
+    },
+    {
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+      "line": 1366,
+      "commit": "c8de5658ec351022d477320b48d2813d54974c4c",
+      "commit_metadata": "c8de5658ec351022d477320b48d2813d54974c4c\n2026-05-12T10:59:27Z\nFinalize Total War mass navigation showcase",
+      "blame": "c8de5658ec351022d477320b48d2813d54974c4c 1126 1366 1\nauthor Codex\nauthor-mail <codex@example.com>\nauthor-time 1778583567\nauthor-tz +0000\ncommitter Codex\ncommitter-mail <codex@example.com>\ncommitter-time 1778583567\ncommitter-tz +0000\nsummary Finalize Total War mass navigation showcase\nprevious 5c6eb77d9ec8f36aaee3b43b819a3f1eca2c7592 mods/capabilities/navigation/MassNavigationMod/Runtime/MassFlowSimulationState.cs\nfilename mods/capabilities/navigation/MassNavigationMod/Runtime/MassFlowSimulationState.cs\n\t            ComputeFlow(flowState.Flow, team.TargetX, team.TargetY);\n"
+    },
+    {
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+      "line": 953,
+      "commit": "2bc361900d857f5dbd2fda2c4a25c0907726a614",
+      "commit_metadata": "2bc361900d857f5dbd2fda2c4a25c0907726a614\n2026-05-08T04:09:42+08:00\nfeat(mass-nav): integrate performer minimap parity path",
+      "blame": "2bc361900d857f5dbd2fda2c4a25c0907726a614 403 953 1\nauthor Codex\nauthor-mail <codex@example.com>\nauthor-time 1778184582\nauthor-tz +0800\ncommitter Codex\ncommitter-mail <codex@example.com>\ncommitter-time 1778231335\ncommitter-tz +0800\nsummary feat(mass-nav): integrate performer minimap parity path\nfilename mods/showcases/navigation/MassNavWebParityMod/Runtime/MassNavWebParitySimState.cs\n\t        Array.Copy(_positionsCm, _readPositionsCm, scalarCount);\n"
+    },
+    {
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+      "line": 2467,
+      "commit": "ac8ab86af0564ba2363de795dcff42f873455abd",
+      "commit_metadata": "ac8ab86af0564ba2363de795dcff42f873455abd\n2026-09-09T15:21:09+08:00\nperf(showcase): remove 10k presenter and collision hot paths",
+      "blame": "ac8ab86af0564ba2363de795dcff42f873455abd 2467 2467 1\nauthor Codex\nauthor-mail <codex@example.com>\nauthor-time 1788938469\nauthor-tz +0800\ncommitter Codex\ncommitter-mail <codex@example.com>\ncommitter-time 1788938469\ncommitter-tz +0800\nsummary perf(showcase): remove 10k presenter and collision hot paths\nprevious 0f1036ba53826780375d6aba59abd99c21c84778 src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs\nfilename src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs\n\t            for (int i = 0; i < UnitCount; i++)\n"
+    },
+    {
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+      "line": 2494,
+      "commit": "ac8ab86af0564ba2363de795dcff42f873455abd",
+      "commit_metadata": "ac8ab86af0564ba2363de795dcff42f873455abd\n2026-09-09T15:21:09+08:00\nperf(showcase): remove 10k presenter and collision hot paths",
+      "blame": "ac8ab86af0564ba2363de795dcff42f873455abd 2494 2494 1\nauthor Codex\nauthor-mail <codex@example.com>\nauthor-time 1788938469\nauthor-tz +0800\ncommitter Codex\ncommitter-mail <codex@example.com>\ncommitter-time 1788938469\ncommitter-tz +0800\nsummary perf(showcase): remove 10k presenter and collision hot paths\nprevious 0f1036ba53826780375d6aba59abd99c21c84778 src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs\nfilename src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs\n\t            if (_useCandidateGating && _hardResolveCandidates[i] == 0)\n"
+    },
+    {
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+      "line": 2507,
+      "commit": "2bc361900d857f5dbd2fda2c4a25c0907726a614",
+      "commit_metadata": "2bc361900d857f5dbd2fda2c4a25c0907726a614\n2026-05-08T04:09:42+08:00\nfeat(mass-nav): integrate performer minimap parity path",
+      "blame": "2bc361900d857f5dbd2fda2c4a25c0907726a614 1632 2507 1\nauthor Codex\nauthor-mail <codex@example.com>\nauthor-time 1778184582\nauthor-tz +0800\ncommitter Codex\ncommitter-mail <codex@example.com>\ncommitter-time 1778231335\ncommitter-tz +0800\nsummary feat(mass-nav): integrate performer minimap parity path\nfilename mods/showcases/navigation/MassNavWebParityMod/Runtime/MassNavWebParitySimState.cs\n\t                    for (int hashIndex = start; hashIndex < end; hashIndex++)\n"
+    },
+    {
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverEntitySync.cs",
+      "line": 54,
+      "commit": "023c85b175a7c56ec49ba747dde1fc244dee6e70",
+      "commit_metadata": "023c85b175a7c56ec49ba747dde1fc244dee6e70\n2026-06-27T03:58:44+08:00\nComplete mass navigation remediation epic",
+      "blame": "023c85b175a7c56ec49ba747dde1fc244dee6e70 47 54 1\nauthor Codex\nauthor-mail <codex@example.com>\nauthor-time 1782503924\nauthor-tz +0800\ncommitter Codex\ncommitter-mail <codex@example.com>\ncommitter-time 1782503924\ncommitter-tz +0800\nsummary Complete mass navigation remediation epic\nfilename src/Core/MassNavigation/Runtime/MassNavigationFlowSolverEntitySync.cs\n\t            ref WorldPositionCm worldPosition = ref world.Get<WorldPositionCm>(entity);\n"
+    },
+    {
+      "file": "src/Core/MassNavigation/Runtime/MassNavigationCadenceConfig.cs",
+      "line": 26,
+      "commit": "d41505637cd5ca67489f17face7b5f869190a72a",
+      "commit_metadata": "d41505637cd5ca67489f17face7b5f869190a72a\n2026-05-08T20:22:47+08:00\nfix(mass-nav): restore hud and raylib material sampling",
+      "blame": "d41505637cd5ca67489f17face7b5f869190a72a 26 26 1\nauthor Codex\nauthor-mail <codex@example.com>\nauthor-time 1778242967\nauthor-tz +0800\ncommitter Codex\ncommitter-mail <codex@example.com>\ncommitter-time 1778242967\ncommitter-tz +0800\nsummary fix(mass-nav): restore hud and raylib material sampling\nfilename mods/showcases/navigation/MassNavWebParityMod/Runtime/MassNavCadenceConfig.cs\n\t        ValidateHz(nameof(EntitySyncHz), EntitySyncHz, allowZero: true);\n"
+    },
+    {
+      "file": "src/Core/Presentation/Hud/PresentationTimingDiagnostics.cs",
+      "line": 563,
+      "commit": "ac8ab86af0564ba2363de795dcff42f873455abd",
+      "commit_metadata": "ac8ab86af0564ba2363de795dcff42f873455abd\n2026-09-09T15:21:09+08:00\nperf(showcase): remove 10k presenter and collision hot paths",
+      "blame": "ac8ab86af0564ba2363de795dcff42f873455abd 563 563 1\nauthor Codex\nauthor-mail <codex@example.com>\nauthor-time 1788938469\nauthor-tz +0800\ncommitter Codex\ncommitter-mail <codex@example.com>\ncommitter-time 1788938469\ncommitter-tz +0800\nsummary perf(showcase): remove 10k presenter and collision hot paths\nprevious 0f1036ba53826780375d6aba59abd99c21c84778 src/Core/Presentation/Hud/PresentationTimingDiagnostics.cs\nfilename src/Core/Presentation/Hud/PresentationTimingDiagnostics.cs\n\t            LastMassNavigationTargetMs = targetMs;\n"
+    }
+  ],
+  "runtime_event_capacity_notes": [
+    {
+      "source": "src/Core/MassNavigation/Runtime/MassNavigationSimulationRuntime.cs:268-311; src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs:209-218,1099-1173",
+      "behavior": "Agent property arrays, lists, HashSets and dictionaries reserve configured 160K agent capacity at construction. Therefore visible Array.Resize branches are not evidence of per10K-frame growth. Exceeding locked solver capacity throws before resize."
+    },
+    {
+      "source": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs:2684-2707",
+      "behavior": "ResolveFlowStateIndex performs O(F) linear scan of team/layer combinations, not entity-to-agent lookup. It is used only on reset/append or changed runtime profile; unknown hot combination throws rather than allocating."
+    },
+    {
+      "source": "src/Core/MassNavigation/Runtime/MassNavigationAgentState.cs:93-102",
+      "behavior": "Agent-index to Entity sync lookup is direct List indexing O(1), not a linear entity search."
+    },
+    {
+      "source": "src/Core/MassNavigation/Runtime/MassNavigationSimulationRuntime.cs:1038-1093",
+      "behavior": "BindSpawnedAgent does direct world.Add and component checks on binding/event path. Separate binding audit must classify execution boundary; not evidence Step or SyncEntities does hot structural mutation."
+    },
+    {
+      "source": "src/Core/MassNavigation/Runtime/MassNavigationSimulationRuntime.cs:1212-1271,1328-1390",
+      "behavior": "Streaming window loops loaded chunks and uses preallocated dictionary/scratch (configured capacity256); overflow throws. Window shift scans N positions only when center changes. This bounded event/path has no confirmed 10K frame-time causation."
+    }
+  ]
+}

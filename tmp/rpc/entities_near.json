@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":12,"method":"ludots.spatial.query","params":{"shape":"radius","centerXCm":-2377,"centerYCm":896,"radiusCm":300,"limit":512}}

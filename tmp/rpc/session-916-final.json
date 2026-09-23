@@ -1,0 +1,62 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "tick": 3478,
+    "pacemaker": "RealtimePacemaker",
+    "mods": [
+      "LudotsCoreMod",
+      "CoreInputMod",
+      "SelectionInteractionMod",
+      "MassNavigationMod",
+      "CapabilityStandardMassNavigationLargeWorld10kMod",
+      "AgentBridgeMod"
+    ],
+    "camera": {
+      "seatId": "seat.0",
+      "targetCm": {
+        "x": 0,
+        "y": 0
+      },
+      "pitch": 45,
+      "distanceCm": 3500
+    },
+    "bridge": {
+      "pendingRequests": 0,
+      "toolCount": 38
+    },
+    "resolution": {
+      "width": 1600,
+      "height": 900
+    },
+    "seats": [
+      {
+        "seatId": "seat.0",
+        "playerId": 1,
+        "schemeId": null,
+        "possessed": true,
+        "possessedEntityId": 7,
+        "logicViewId": "logicview.participant.7",
+        "presentRect": {
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        },
+        "presentResolution": {
+          "width": 1600,
+          "height": 900
+        }
+      }
+    ],
+    "localPlayerId": 1,
+    "localSeatId": "seat.0",
+    "mapId": "mass_navigation"
+  },
+  "instance": {
+    "pid": 98944,
+    "port": 47931,
+    "mapId": "mass_navigation",
+    "processPath": "C:\\Program Files\\dotnet\\dotnet.exe"
+  }
+}

@@ -1,0 +1,385 @@
+{
+  "schemaVersion": 1,
+  "commit": "91618843a4",
+  "historicalPrBase": "be8f0f69d2947613559f717d6e993631fb2533f4",
+  "date": "2026-09-10",
+  "scope": "只读审计五个指定系统。源码通过 git show 91618843a4:path 读取。未运行游戏、未触碰 47921、未修改产品代码。没有本子任务的性能采样或 A/B 数据。",
+  "diffEvidence": "git diff --quiet be8f0f69d2947613559f717d6e993631fb2533f4 91618843a4 -- 五个指定文件，exit 0；五个文件均为 PR 保留代码，不是 PR 新增。origin/main 已包含审查提交，不能把当前空三点差分当作历史 PR 差分。",
+  "units": {
+    "N": "导航单位数",
+    "V": "可见且带 PresenterFloatParams 的 Presenter 数，可大于单位数",
+    "K": "活跃命令成员总数",
+    "R": "活跃路由数",
+    "W": "每路由实际路点数，配置上限64",
+    "B": "障碍实体数",
+    "P": "障碍投影片段总数",
+    "M": "地图标记数",
+    "C": "流场网格格子数",
+    "F": "流场状态数",
+    "T": "一个呈现帧内实际运行的 fixed tick 数",
+    "U": "一个呈现帧内 cadence.UpdateTargets 为 true 的导航步数"
+  },
+  "schedule": {
+    "registration": "src/Core/MassNavigation/Runtime/MassNavigationRuntime.cs:130-145",
+    "fixed": "AuthoredAgentBinding/EnvironmentBinding 注册于 RuntimeEntityBinding；MovePlanExecution 注册于 AbilityActivation。调用次数是每 fixed tick 一次，不能直接当每渲染帧一次。",
+    "presentation": "Locomotion 注册在 AnimatorRuntimeSystem 前，每 presentation frame 一次。",
+    "routeApply": "MassNavigationSimulationStepSystem.cs:45-58,120-134，只有 target-update cadence 才执行路由 Apply；资产配置 simulationHz=15、targetUpdateHz=15、maxStepsPerFixedTick=1。实际 T/U 需随帧采样。"
+  },
+  "configuration": {
+    "source": "mods/capabilities/navigation/MassNavigationMod/assets/MassNavigationConfig.json@91618843a4",
+    "values": {
+      "groupMembershipAgentCapacity": 160000,
+      "movePlanExecutionGroupCapacity": 256,
+      "movePlanExecutionMemberCapacity": 10000,
+      "routeStateCapacity": 10000,
+      "routeWaypointCapacityPerAgent": 64,
+      "maxObstacleCount": 64,
+      "flowEnabled": false
+    },
+    "mapEvidence": "mass_navigation.json 定义五个 ManifestationObstacleIntent2D Circle；ManifestationObstacleBridge2DSystem.cs:556-584 用 SetPiece(0,...) 生成单片投影。因此配置证据不支持默认五障碍会触发复合计数问题。运行时可增加障碍，仍需取证。"
+  },
+  "findings": [
+    {
+      "id": "MB-01",
+      "priority": "P1 conditional",
+      "status": "静态逻辑缺陷已确认；当前10K触发及时间损失未实测",
+      "title": "复合障碍数量比较混用实体数与片段数，环境静止时仍重建全部流场",
+      "locations": [
+        {
+          "file": "src/Core/MassNavigation/Systems/MassNavigationEnvironmentBindingSystem.cs",
+          "line": 60,
+          "detail": "与 AgentState.BlockerCount 比较"
+        },
+        {
+          "file": "src/Core/MassNavigation/Systems/MassNavigationEnvironmentBindingSystem.cs",
+          "line": 96,
+          "detail": "blockerCount += blocker.PieceCount"
+        },
+        {
+          "file": "src/Core/MassNavigation/Systems/MassNavigationEnvironmentBindingSystem.cs",
+          "line": 178,
+          "detail": "每实体仅 RegisterBlocker 一次"
+        },
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationAgentState.cs",
+          "line": 67,
+          "detail": "BlockerCount++"
+        },
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+          "line": 635,
+          "detail": "ResetRuntimeObstaclesFromWorld 强制 ForceFlowRebuild"
+        },
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+          "line": 1376,
+          "detail": "无条件重建静态障碍代价与全部流场"
+        },
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+          "line": 1393,
+          "detail": "每格调用线性 IsObstacle"
+        },
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs",
+          "line": 2753,
+          "detail": "扫描全部障碍"
+        }
+      ],
+      "callChain": "RuntimeEntityBinding -> EnvironmentBinding.Update:58 -> ComputeSignature:81 -> P!=B 导致 :59-65 缓存命中分支失效 -> ClearEnvironmentCounts:67 -> BindBlockers:68/:131 -> RebuildRuntimeObstacles:187 -> SimulationRuntime:860 -> FlowSolver.ResetRuntimeObstaclesFromWorld:612 -> ForceFlowRebuild:1376 -> RebuildStaticObstacleCost:1385 / ComputeFlowFields:1359 -> RebuildFlowCostForState:1398 / ComputeFlow",
+      "counts": "每 fixed tick 扫描 B 个实体、P 个片段、M 个标记。任一合法多片障碍使 P>B；后续每 tick 重绑一次、强制全量流场重建一次。每呈现帧乘实际 T。此链路没有检查 FlowTuning.Enabled，flow=false 仍会强制重建。",
+      "complexity": "签名/重绑 O(B+P+M)；静态代价 O(C*P)，每流场复制 C 个浮点数并做 ComputeFlow，后者完整复杂度未在本子任务展开。",
+      "gc": "List<MassNavigationObstacleSnapshot> 在 :27 用默认容量创建，首次/增加片段超过已分配容量时会扩容分配；稳定 P 下 Clear/Add 不产生按帧扩容。CommandBuffer、下游 solver 的分配需实测，未声称整帧0B。",
+      "ecsStructural": "存在缺失 BlockerProfile 时 :175 通过 CommandBuffer.Add、:184 在 chunk 遍历之后 Playback。已有 profile 时只有 World.Set，不发生 ECS 结构变更。:71 MarkStructuralChange 只是 Telemetry 计数（SimulationRuntime:528-531），不能把它当 ECS 变更证据。",
+      "capacity": "_blockerObstacles 无显式上限，收集完成后 FlowSolver:614-617 才检查 solver.maxObstacleCount=64 并抛异常；异常前已经可能扩容、写 profile 和清环境计数。",
+      "impact10k": "问题取决于复合障碍/网格大小，不能归因于单位数；若触发会挤占与10K模拟共享的CPU预算。默认地图五个单片障碍目前不支持触发假设。",
+      "introduced": {
+        "commit": "02073678b87c52b359bbb015c2765e0539d674cb",
+        "date": "2026-06-21",
+        "evidence": "git show 02073678b87 -- src/Core/MassCrowd/Systems/MassCrowdEnvironmentBindingSystem.cs 把 blockerCount++ 改成 += PieceCount，RegisterBlocker仍每实体一次。数量比较在9205acd3fc时已存在。d6aed282edf只是后续改写引用，不是引入点。"
+      },
+      "ab": "同一物理几何：A=一个2片障碍，B=两个1片障碍；预热一次后冻结姿态，跑300 fixed ticks，记环境重建数、ForceFlowRebuild数、CPU/GC。A预期每tick重建、B预期0。实验修正计数单位后要求几何/轨迹相同且两者重建均0。",
+      "budgetReleasedMs": null
+    },
+    {
+      "id": "MB-02",
+      "priority": "P1 spike candidate",
+      "status": "结构变更调用已确认；只在绑定变化帧触发，未证明常态掉帧",
+      "title": "删除、挂起或改变一个单位的作者绑定，可全量移除并重新添加10K单位组件",
+      "locations": [
+        {
+          "file": "src/Core/MassNavigation/Systems/MassNavigationAuthoredAgentBindingSystem.cs",
+          "line": 123,
+          "detail": "只有数量/签名/域一致才返回"
+        },
+        {
+          "file": "src/Core/MassNavigation/Systems/MassNavigationAuthoredAgentBindingSystem.cs",
+          "line": 141,
+          "detail": "不能追加则全量 RebuildAuthoredAgents"
+        },
+        {
+          "file": "src/Core/MassNavigation/Systems/MassNavigationAuthoredAgentBindingSystem.cs",
+          "line": 366,
+          "detail": "重收集并排序所有单位"
+        },
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationSimulationRuntime.cs",
+          "line": 631,
+          "detail": "清全部绑定后重新 BindSpawnedAgent"
+        },
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationAgentState.cs",
+          "line": 187,
+          "detail": "直接 World.Remove 多种组件"
+        },
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationSimulationRuntime.cs",
+          "line": 1053,
+          "detail": "直接 World.Add Index/Profile；1067、1076 Add MovePlan组件"
+        }
+      ],
+      "callChain": "RuntimeEntityBinding -> AuthoredBinding.Update -> ScanAuthoredAgentBindingState -> 无稳态命中且 TryAppendUnboundAuthoredAgents 返回false -> RebuildAuthoredAgents -> SortCollectedAgentsByEntityId -> SimulationRuntime.RebuildFromAuthoredAgents -> Preflight/CaptureAuthoredRebuildSnapshot -> ClearAuthoredRuntimeBindings -> AgentState.ClearRuntimeBindings -> RemoveMassNavigationRuntimeBindings -> ResetAuthoredAgents -> 每实体 BindSpawnedAgent -> RestoreAuthoredRebuildSnapshot",
+      "counts": "稳定帧零。单个既有单位减少/作者签名改变触发一次全量 rebuild；按当前带4个运行时组件的存活agent，每实体最多4次Remove+4次Add。10K存活单位约80K直接结构操作（另有障碍profile移除）；具体组件在场数必须采样。",
+      "complexity": "收集O(N)、排序O(N logN)、复制O(N)、逐实体结构变更O(N)次；下游重播种/组快照可能另有分配与成本，本子任务未实测。",
+      "gc": "收集List和排序scratch预分配到160K，但World Add/Remove新archetype/chunk和CaptureAuthoredRebuildSnapshot的分配不能由这几个文件排除。常态无结构变化不可据此声称每帧GC。",
+      "ecsStructural": "是，直接 World.Remove/Add，发生在 RuntimeEntityBinding system 的 change-triggered 分支。当前代码避开chunk迭代内写结构，但没有通过CommandBuffer统一延迟。",
+      "capacity": "重建/追加前检查groupMembershipAgentCapacity；超过160K显式抛异常。已有窗口取消和快照恢复合同必须保留，不能简单跳过重建。",
+      "impact10k": "单个单位变化扩大为全体archetype迁移和求解器状态重建，表现应是尖峰。不能解释无绑定变化的常态GPU耗时。",
+      "introduced": {
+        "commit": "819601379ce",
+        "date": "2026-07-19",
+        "evidence": "AgentState:204-211 新增MovePlanIntent/Result移除；作者绑定/Index/Profile重绑早于此提交。未完成从最早作者绑定重建到6月流畅提交的完整历史定位。"
+      },
+      "ab": "分别在1K/5K/10K稳态执行一次 Suspend/恢复或删除单单位，记录绑定rebuild数、Add/Remove数、archetype/chunk数、分配和该fixed tick。B在独立实验用预建组件+稳定SoA槽位/延迟生命周期批处理保留索引与命令；必须同时验证执行中move与位移窗口行为。",
+      "budgetReleasedMs": null
+    },
+    {
+      "id": "MB-03",
+      "priority": "P2 steady candidate",
+      "status": "重复工作静态确认；启用路由的当前整机贡献待测",
+      "title": "每个命令tick重复验证和同步路由，每个目标更新步重新排序路由并复制全部路点",
+      "locations": [
+        {
+          "file": "src/Core/MassNavigation/Systems/MassNavigationMovePlanExecutionSystem.cs",
+          "line": 365,
+          "detail": "第一次ResolveBoundAgent+ValidateRouteTarget"
+        },
+        {
+          "file": "src/Core/MassNavigation/Systems/MassNavigationMovePlanExecutionSystem.cs",
+          "line": 408,
+          "detail": "第二次ResolveBoundAgent+TrackRouteTarget"
+        },
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationRouteExecutionSink.cs",
+          "line": 174,
+          "detail": "TrackRouteTarget内部再次ValidateRouteTarget"
+        },
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationRouteExecutionSink.cs",
+          "line": 188,
+          "detail": "验证TryGet后再World.Get"
+        },
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationRouteExecutionSink.cs",
+          "line": 315,
+          "detail": "EndSync重复Preflight"
+        },
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationRouteExecutionSink.cs",
+          "line": 509,
+          "detail": "每路由复制X/Y实际路点到回滚快照"
+        },
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationRouteExecutionSink.cs",
+          "line": 541,
+          "detail": "每次Apply重新Array.Sort"
+        }
+      ],
+      "callChain": "AbilityActivation -> MovePlan.Update:85 Chunk扫描 -> PrepareCommandGroups:197 -> GroupRuntime.PrepareOrderMoveCommand:300 (未改命令也HaveSameMembers并复制target:341-345) -> ValidateRoutedCommandGroups:349 -> ResolveBoundAgent:459 + sink.Validate:230 -> PrepareRouteSync:389 -> ResolveBoundAgent + Track:161 -> Validate:230 + World.Get:188 -> Preflight:298 -> EndSync:308 -> Preflight:353 + ReleaseInactiveRoutes:379 + ApplyRouteTrackPlan:396; PostMovement -> SimulationStep.Update:51 -> ApplyRouteExecutionTargets:120 -> sink.TryApplyTrackedRouteTargets:444 -> CopyRoutesForApply:533 -> Array.Sort:541 -> CaptureApplySnapshot:497 -> TryPrepareRouteTarget:545 -> CommitPreparedRouteTarget:628",
+      "counts": "健康未变命令且服务启用：每成员每fixed tick，ResolveBoundAgent两次（2 IsAlive + 2 Has<Result>）、Validate两次（2 IsAlive + 2 TryGet<Agent>）、Track再次Get<Agent>一次；合计每K至少4 IsAlive+2 Has+2 TryGet+1 Get。目标Apply每U再IsAlive+TryGet<Agent>各R次。预检容量两遍、路由同步全量一遍。每次Apply复制2*sum(W_i)个int，R=10K,W=64时写5.12MB路点快照（不含读和其他字段）。",
+      "complexity": "固定tick O(N+K+R) 的多遍工作；目标Apply O(R logR + sumW)加需要重解路线时的PathService成本。没有在正常唯一成员分组路径证明O(N²)。",
+      "gc": "Dictionary/HashSet/List/RouteState与route arrays均构造时按容量预分配，正常唯一键不应触发按帧扩容；没有LINQ/热闭包。RouteState为class且每实例两路点数组，属于AoS对象追踪；30K左右对象在routeCapacity=10K构造期产生，不能计为每帧GC。PathService下游GC未核验。",
+      "ecsStructural": "此链路World.Get写Result等组件数据；未发现Create/Add/Remove/Destroy。runtime group变更不是ECS结构变更。",
+      "capacity": "MovePlan组256、成员总量10K，检查后显式抛异常；路由10K/路点64预分配，溢出在Track/Preflight/EnsurePointCapacity显式抛异常。bucket列表每组预分配10K成员，256组约10.24MB int数据（冷期）；List<int>.Clear不应被错误描述为每帧清10.24MB。",
+      "impact10k": "一份未变的10K移动命令仍造成至少90K上述ECS检查/访问（4+2+2+1）每fixed tick；再加路由Apply与拷贝，可能解释移动状态额外CPU时间。必须先采样ActiveRouteCount，默认服务启用与实际K/R未由本子任务运行确认。",
+      "introduced": [
+        {
+          "commit": "d6aed282edf",
+          "date": "2026-07-15",
+          "evidence": "git log -S CaptureApplySnapshot 与 git blame确认路由事务快照/排序在此新增"
+        },
+        {
+          "commit": "819601379ce",
+          "date": "2026-07-19",
+          "evidence": "ValidateRoutedCommandGroups/typed MovePlan整合在此加入"
+        }
+      ],
+      "ab": "同一1K/5K/10K单组直线路线，记录K/R/W、9K重复访问计数、排序比较数、快照字节、路径solve次数和时间。B把一次已验证的SoA/Span路线计划复用到Track，成员集合未变时复用排序，只有即将变更路点的路由才做回滚快照；保持路径/失败原子性完全相同。静止无命令K=R=0作为控制。关闭整个路径服务只能界定上限，不能单独证明哪一步是根因。",
+      "budgetReleasedMs": null
+    },
+    {
+      "id": "MB-04",
+      "priority": "P2 steady candidate",
+      "status": "稳态逐实体访问确认；时间贡献待测",
+      "title": "作者绑定每tick对全部单位计算签名，并逐实体查EntityLayer",
+      "locations": [
+        {
+          "file": "src/Core/MassNavigation/Systems/MassNavigationAuthoredAgentBindingSystem.cs",
+          "line": 100
+        },
+        {
+          "file": "src/Core/MassNavigation/Systems/MassNavigationAuthoredAgentBindingSystem.cs",
+          "line": 224
+        },
+        {
+          "file": "src/Core/MassNavigation/Systems/MassNavigationAuthoredAgentBindingSystem.cs",
+          "line": 290
+        }
+      ],
+      "callChain": "RuntimeEntityBinding -> AuthoredBinding.Update -> ResolveRelationshipRevision -> ScanAuthoredAgentBindingState -> chunk spans MassNavigationAgent/Index -> RequireProjectedDomain -> ComputeEntityAuthoringHash -> World.TryGet<EntityLayer>",
+      "counts": "N次World.TryGet<EntityLayer>/fixed tick，包括完全静止无变化场景；呈现帧为T*N。全局relationshipRevision变动另触发N次domain解析，即使变动不涉及导航单位。投影缓存已避免稳态重复domain查询。",
+      "complexity": "O(N)稳态；实体到agent索引用组件和数组O(1)，不是线性查找。",
+      "gc": "稳态无可见new/闭包/LINQ；List预分配160K且有数量上限。具体0B需采样。",
+      "ecsStructural": "稳态无；变动路径见MB-02。",
+      "capacity": "超过_agentCapacity或projected数组范围显式报错，不能静默增长。CreateSeed的Layer缺失显式报错；稳态Hash缺Layer会mix0。",
+      "impact10k": "10K逻辑单位每tick仍进行完整hash+随机component lookup，移动/Animator/HUD全关也保留此CPU成本。没有测量证据可为它指定ms。",
+      "introduced": {
+        "commit": "ae13d7451fc",
+        "date": "2026-07-03",
+        "evidence": "git blame确认EntityLayer访问/Category Mask签名加入；全量作者扫描从6月已有。"
+      },
+      "ab": "A当前代码，B在同样chunk query中用chunk.Has<EntityLayer>/GetSpan取得layer，保持Hash逐位一致；1K/5K/10K静止/移动分别记绑定system ms、World.TryGet次数和GC。进一步使用正确生命周期版本替代全量扫描需要单独正确性设计，不先跳过检查。",
+      "budgetReleasedMs": null
+    },
+    {
+      "id": "MB-05",
+      "priority": "P2 candidate plus capacity defect",
+      "status": "遍历与容量行为静态确认；当前10K参数未证满",
+      "title": "可见Presenter每帧重复解析owner索引；参数槽满会静默丢speed并每帧递增Version",
+      "locations": [
+        {
+          "file": "src/Core/MassNavigation/Systems/MassNavigationLocomotionAnimatorParamSystem.cs",
+          "line": 39
+        },
+        {
+          "file": "src/Core/MassNavigation/Systems/MassNavigationLocomotionAnimatorParamSystem.cs",
+          "line": 47
+        },
+        {
+          "file": "src/Core/MassNavigation/Systems/MassNavigationLocomotionAnimatorParamSystem.cs",
+          "line": 66
+        },
+        {
+          "file": "src/Core/MassNavigation/Runtime/MassNavigationSimulationRuntime.cs",
+          "line": 1012
+        },
+        {
+          "file": "src/Core/Presentation/Presenters/PresenterFloatParams.cs",
+          "line": 14
+        },
+        {
+          "file": "src/Core/Presentation/Presenters/PresenterFloatParams.cs",
+          "line": 48
+        }
+      ],
+      "callChain": "Presentation -> LocomotionAnimatorParam.Update -> World.Query chunks -> cull check -> TryResolveAgentIndex -> World.IsAlive(owner)/TryGet<MassNavigationAgentIndex> -> SimulationRuntime.TryGetAgentLocomotionSpeedNormalized -> target/settled arrays then velocity.Length/authoredSpeed -> PresenterFloatParams.TryGet -> (only changed) Set -> State.Version++",
+      "counts": "每presentation frame扫描所有带State/FloatParams/CullState的Presenter，仅可见V个执行owner查找。每个可见presenter各1次IsAlive+TryGet；同owner有多Presenter会重复。速度未变时不Set/Version++。导航15Hz而呈现高于15Hz时仍每帧计算速度。若Count=16且speed key缺失，TryGet/Set都线性扫描16项，Set无写入但Version仍++，以后每帧重试。",
+      "complexity": "O(PresenterCount + V*parameterCount)，parameterCount上限16；无每单位单位扫描。",
+      "gc": "固定内联16槽，没有数组扩容/堆分配；未实测整帧0B。",
+      "ecsStructural": "无，仅组件数据修改。",
+      "capacity": "MAX_ENTRIES=16硬编码；Set:48满容量直接return，不报错且没有返回成功状态，违反显式超限合同。该行为是底层PresenterFloatParams现有问题，非#1485新增。",
+      "impact10k": "常态即使速度稳定仍进行V次owner随机访问与参数查找；参数满的情况下会持续制造无效Version变动。不能把它宣称为当前重影根因。",
+      "introduced": {
+        "commit": "1187024353e",
+        "date": "2026-06-18",
+        "evidence": "git show1187024353的同名Mod系统已使用Chunk+Span、cull门、owner.TryGet、速度epsilon保护；7月15日重构调用SimulationRuntime不改变这部分重复工作。Performer->Presenter为8月11日c39ae77123重命名。"
+      },
+      "ab": "普通路径：相同固定导航轨迹，将profile速度SoA按navigation step生成并投影到预编译参数槽，比较V=1K/5K/10K system ms和写入数，帧间参数必须一致。容量缺陷：16个无speed参数的单Presenter连续Update两帧，观察speed缺失且Version+2；修复应在配置绑定时显式拒绝超限。当前场景先记录Count/key在场再决定是否相关。",
+      "budgetReleasedMs": null
+    }
+  ],
+  "nonFindings": [
+    "五个系统中查询使用Chunk+Span，没有Query委托、每帧闭包或LINQ。不能以没有Inline Query API调用字样判性能错误。",
+    "MovePlan buckets、活动token集合和route集合均预分配并检查上限；不因List/Dictionary/HashSet类名认定每帧GC。",
+    "Route TrackRouteTarget:215有重复key时线性扫描_syncPlans；正常一个实体只落一个命令bucket且Track每成员一次，未证明该重复键分支能在当前系统形成N²，不列为当前热点。",
+    "Route RemoveOrderToken:430每完成一个token扫描全部route，O(completedTokens*R)但仅完成帧，当前组上限256；若完成帧采样显示热点再做token范围索引。",
+    "Locator系统本身没有地形查询、GPU upload、draw call，不能用这些静态路径解释GPU主/阴影25ms等指标。",
+    "World.IsAlive/Has/TryGet不是自动GC或结构变更。只有确认World.Add/Remove与CommandBuffer.Playback才算结构操作。"
+  ],
+  "abData": {
+    "status": "未执行",
+    "populations": [
+      1000,
+      5000,
+      10000
+    ],
+    "requiredDimensions": [
+      "静止/移动",
+      "稀疏/拥挤",
+      "HUD开关",
+      "地形遮挡开关",
+      "Animator开关",
+      "MassNavigation开关",
+      "持续Effect开关",
+      "Minimap开关"
+    ],
+    "samples": []
+  },
+  "timeline": [
+    {
+      "date": "2026-06-18",
+      "commit": "1187024353e",
+      "behavior": "可见Presenter owner索引查找及速度变化写保护已存在"
+    },
+    {
+      "date": "2026-06-21",
+      "commit": "02073678b87",
+      "behavior": "障碍片段数替代实体数但缓存比较没统一单位，复合障碍重复重建条件开始成立"
+    },
+    {
+      "date": "2026-07-03",
+      "commit": "ae13d7451fc",
+      "behavior": "作者签名加入逐实体EntityLayer查询"
+    },
+    {
+      "date": "2026-07-15",
+      "commit": "d6aed282edf",
+      "behavior": "路由Apply加入排序与回滚快照拷贝"
+    },
+    {
+      "date": "2026-07-19",
+      "commit": "819601379ce",
+      "behavior": "typed MovePlan重复路由验证以及Intent/Result重绑"
+    },
+    {
+      "date": "2026-08-29",
+      "commit": "5a45d7e9ec",
+      "behavior": "作者重绑顺序按实体ID排序，防止archetype拓扑改变导致导航索引重排；修复需保留此合同"
+    },
+    {
+      "date": "2026-08-29",
+      "commit": "c63b18844d",
+      "behavior": "settled路由允许前推一个waypoint，修复堵塞后无法到达"
+    },
+    {
+      "commit": "91618843a4",
+      "behavior": "上述五个文件相对PR历史基线未变；本审计没有选定/运行用户所说6月流畅提交，因此这些引入时间不是整机性能回退结论"
+    }
+  ],
+  "recommendedOrder": [
+    "先采样T/U、K/R/W、复合障碍数与作者rebuild数，确认上述哪条链路在当前帧执行。",
+    "若复合障碍触发，统一实体/片段计数并在收集前检查配置容量，回归复合障碍静止不重建。",
+    "若绑定变动帧尖峰突出，设计稳定SoA槽与预建组件/CommandBuffer生命周期批处理，保留执行中move和位移窗口合同。",
+    "若路由CPU成本突出，复用已验证Span计划、缓存稳定排序、只快照会变路点的路线；保持原子失败语义。",
+    "用Chunk EntityLayer span消除作者签名随机Get；将locomotion按导航版本缓存速度并显式验证参数槽容量。"
+  ],
+  "estimatedReleasedFrameBudgetMs": null,
+  "unexplainedFrameTime": "本子任务没有计时数据，不能给出ms释放预算或扣除剩余帧时间。所有性能贡献均待同画面同轨迹A/B。",
+  "evidenceCommands": [
+    "git diff --quiet be8f0f69d2947613559f717d6e993631fb2533f4 91618843a4 -- <five target files> : exit0",
+    "git show 02073678b87 -- src/Core/MassCrowd/Systems/MassCrowdEnvironmentBindingSystem.cs",
+    "git log 91618843a4 -S CaptureApplySnapshot -- src/Core/MassNavigation/Runtime/MassNavigationRouteExecutionSink.cs",
+    "git show 1187024353:mods/capabilities/navigation/MassNavigationMod/Systems/MassNavigationLocomotionAnimatorParamSystem.cs",
+    "git show 91618843a4:mods/capabilities/navigation/MassNavigationMod/assets/Maps/mass_navigation.json"
+  ]
+}

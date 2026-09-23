@@ -1,0 +1,16 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "entityId": 34,
+    "orderTypeId": 4,
+    "result": "Queued",
+    "accepted": true
+  },
+  "instance": {
+    "pid": 13836,
+    "port": 47931,
+    "mapId": "mass_navigation",
+    "processPath": "C:\\Program Files\\dotnet\\dotnet.exe"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "returned": 3,
+    "ringCount": 28,
+    "capacity": 2048,
+    "totalWritten": 28,
+    "entries": [
+      {
+        "utc": "2026-09-09T18:22:28.5959676Z",
+        "level": "Warning",
+        "channel": "Engine",
+        "message": "Duplicate registration for trigger type TriggerGraphMountTrigger. Keeping original."
+      },
+      {
+        "utc": "2026-09-09T18:22:28.5964508Z",
+        "level": "Warning",
+        "channel": "Engine",
+        "message": "Duplicate registration for trigger type TriggerGraphResumeTrigger. Keeping original."
+      },
+      {
+        "utc": "2026-09-09T18:22:30.8403284Z",
+        "level": "Warning",
+        "channel": "Presentation",
+        "message": "Raylib renderer skipped model shadow draw: meshAssetId=7 could not be loaded. No placeholder model is drawn."
+      }
+    ]
+  },
+  "instance": {
+    "pid": 13836,
+    "port": 47931,
+    "mapId": "mass_navigation",
+    "processPath": "C:\\Program Files\\dotnet\\dotnet.exe"
+  }
+}

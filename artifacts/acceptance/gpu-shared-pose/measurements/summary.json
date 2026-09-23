@@ -1,0 +1,368 @@
+{
+  "1000": {
+    "uniform": {
+      "baseline": {
+        "samples": 64,
+        "main_gpu_ms": {
+          "mean": 11.681441874999999,
+          "max": 11.83868
+        },
+        "shadow_gpu_ms": {
+          "mean": 5.828156875,
+          "max": 5.90604
+        },
+        "total_ms": {
+          "mean": 18.0165140625,
+          "max": 18.992
+        },
+        "alloc_bytes": {
+          "mean": 0.0,
+          "max": 0.0
+        }
+      },
+      "optimized": {
+        "samples": 64,
+        "main_gpu_ms": {
+          "mean": 11.02295375,
+          "max": 11.19652
+        },
+        "shadow_gpu_ms": {
+          "mean": 5.269489375,
+          "max": 5.34116
+        },
+        "total_ms": {
+          "mean": 16.78423125,
+          "max": 17.444
+        },
+        "alloc_bytes": {
+          "mean": 0.0,
+          "max": 0.0
+        }
+      }
+    },
+    "preskin": {
+      "baseline": {
+        "samples": 64,
+        "main_gpu_ms": {
+          "mean": 10.4115175,
+          "max": 11.62144
+        },
+        "shadow_gpu_ms": {
+          "mean": 4.133244375,
+          "max": 5.79384
+        },
+        "total_sync_ms": {
+          "mean": 15.9837953125,
+          "max": 18.9725
+        },
+        "prep_cpu_ms": {
+          "mean": 0.0449609375,
+          "max": 0.0641
+        },
+        "preskin_cpu_upload_ms": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "geometry_upload_bytes": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "alloc_bytes": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "gen0": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "gen1": {
+          "mean": 0.0,
+          "max": 0.0
+        }
+      },
+      "preskin": {
+        "samples": 64,
+        "main_gpu_ms": {
+          "mean": 7.3162625,
+          "max": 9.08312
+        },
+        "shadow_gpu_ms": {
+          "mean": 3.41511875,
+          "max": 4.55484
+        },
+        "total_sync_ms": {
+          "mean": 12.6608625,
+          "max": 15.6029
+        },
+        "prep_cpu_ms": {
+          "mean": 0.5072640625,
+          "max": 0.7287
+        },
+        "preskin_cpu_upload_ms": {
+          "mean": 0.4827296875,
+          "max": 0.6986
+        },
+        "geometry_upload_bytes": {
+          "mean": 322344.0,
+          "max": 322344.0
+        },
+        "alloc_bytes": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "gen0": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "gen1": {
+          "mean": 0.0,
+          "max": 0.0
+        }
+      }
+    }
+  },
+  "5000": {
+    "uniform": {
+      "baseline": {
+        "samples": 64,
+        "main_gpu_ms": {
+          "mean": 46.9357725,
+          "max": 48.51396
+        },
+        "shadow_gpu_ms": {
+          "mean": 26.204109375,
+          "max": 29.51772
+        },
+        "total_ms": {
+          "mean": 73.7148484375,
+          "max": 79.478
+        },
+        "alloc_bytes": {
+          "mean": 0.0,
+          "max": 0.0
+        }
+      },
+      "optimized": {
+        "samples": 64,
+        "main_gpu_ms": {
+          "mean": 42.34445125,
+          "max": 44.96424
+        },
+        "shadow_gpu_ms": {
+          "mean": 21.907540625,
+          "max": 26.65128
+        },
+        "total_ms": {
+          "mean": 64.8139640625,
+          "max": 72.0751
+        },
+        "alloc_bytes": {
+          "mean": 0.0,
+          "max": 0.0
+        }
+      }
+    },
+    "preskin": {
+      "baseline": {
+        "samples": 64,
+        "main_gpu_ms": {
+          "mean": 46.4038325,
+          "max": 48.49304
+        },
+        "shadow_gpu_ms": {
+          "mean": 21.904106875,
+          "max": 29.3768
+        },
+        "total_sync_ms": {
+          "mean": 71.81600625,
+          "max": 81.8463
+        },
+        "prep_cpu_ms": {
+          "mean": 0.0743375,
+          "max": 0.1287
+        },
+        "preskin_cpu_upload_ms": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "geometry_upload_bytes": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "alloc_bytes": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "gen0": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "gen1": {
+          "mean": 0.0,
+          "max": 0.0
+        }
+      },
+      "preskin": {
+        "samples": 64,
+        "main_gpu_ms": {
+          "mean": 33.29316875,
+          "max": 38.577
+        },
+        "shadow_gpu_ms": {
+          "mean": 15.576264375,
+          "max": 17.78356
+        },
+        "total_sync_ms": {
+          "mean": 52.9018609375,
+          "max": 58.857
+        },
+        "prep_cpu_ms": {
+          "mean": 0.505459375,
+          "max": 0.7529
+        },
+        "preskin_cpu_upload_ms": {
+          "mean": 0.4500609375,
+          "max": 0.6801
+        },
+        "geometry_upload_bytes": {
+          "mean": 322344.0,
+          "max": 322344.0
+        },
+        "alloc_bytes": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "gen0": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "gen1": {
+          "mean": 0.0,
+          "max": 0.0
+        }
+      }
+    }
+  },
+  "10000": {
+    "uniform": {
+      "baseline": {
+        "samples": 64,
+        "main_gpu_ms": {
+          "mean": 91.298423125,
+          "max": 93.11436
+        },
+        "shadow_gpu_ms": {
+          "mean": 54.584986875,
+          "max": 59.4902
+        },
+        "total_ms": {
+          "mean": 146.63375,
+          "max": 153.9928
+        },
+        "alloc_bytes": {
+          "mean": 0.0,
+          "max": 0.0
+        }
+      },
+      "optimized": {
+        "samples": 64,
+        "main_gpu_ms": {
+          "mean": 83.392515625,
+          "max": 86.33572
+        },
+        "shadow_gpu_ms": {
+          "mean": 47.27744,
+          "max": 53.70172
+        },
+        "total_ms": {
+          "mean": 131.48234375,
+          "max": 142.0763
+        },
+        "alloc_bytes": {
+          "mean": 0.0,
+          "max": 0.0
+        }
+      }
+    },
+    "preskin": {
+      "baseline": {
+        "samples": 64,
+        "main_gpu_ms": {
+          "mean": 89.31278125,
+          "max": 92.17712
+        },
+        "shadow_gpu_ms": {
+          "mean": 47.455301875,
+          "max": 58.74972
+        },
+        "total_sync_ms": {
+          "mean": 142.5055421875,
+          "max": 159.5857
+        },
+        "prep_cpu_ms": {
+          "mean": 0.10753125,
+          "max": 0.1537
+        },
+        "preskin_cpu_upload_ms": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "geometry_upload_bytes": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "alloc_bytes": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "gen0": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "gen1": {
+          "mean": 0.0,
+          "max": 0.0
+        }
+      },
+      "preskin": {
+        "samples": 64,
+        "main_gpu_ms": {
+          "mean": 64.31603125,
+          "max": 73.23672
+        },
+        "shadow_gpu_ms": {
+          "mean": 31.9580075,
+          "max": 44.2454
+        },
+        "total_sync_ms": {
+          "mean": 102.3724546875,
+          "max": 125.7671
+        },
+        "prep_cpu_ms": {
+          "mean": 0.4821046875,
+          "max": 0.8512
+        },
+        "preskin_cpu_upload_ms": {
+          "mean": 0.40171250000000003,
+          "max": 0.7145
+        },
+        "geometry_upload_bytes": {
+          "mean": 322344.0,
+          "max": 322344.0
+        },
+        "alloc_bytes": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "gen0": {
+          "mean": 0.0,
+          "max": 0.0
+        },
+        "gen1": {
+          "mean": 0.0,
+          "max": 0.0
+        }
+      }
+    }
+  }
+}

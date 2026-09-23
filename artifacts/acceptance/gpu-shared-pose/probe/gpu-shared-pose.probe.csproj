@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>Ludots.Adapter.Raylib.Tests</AssemblyName>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\src\Client\Ludots.Raylib.Render\Ludots.Raylib.Render.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Core\Ludots.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\..\src\Platforms\Desktop\*.vs" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\..\..\src\Platforms\Desktop\*.fs" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\..\..\src\Client\Ludots.Raylib.Render\Resources\*.json" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

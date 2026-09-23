@@ -1,0 +1,31 @@
+  失败 OwnerGrounding_PositionOffsetRetainsPresenterSampling(False) [1 ms]
+  错误消息:
+     Assert.That(heightmap.HeightSampleCount - samplesBefore, Is.EqualTo(count * (requiresPresenterGrounding ? 2 : 1)))
+  Expected: 2
+  But was:  1
+
+  堆栈跟踪:
+     at Ludots.Tests.Presentation.PresenterGroundingAndGlobalEventTests.AssertOwnerGroundingChain(Boolean batch, Int32 firstSampled, Int32 secondSampled, Single offset, Single positionOffsetX) in C:\001_AI\Ludots-gpu-10k-opt\src\Tests\PresentationTests\Presenter\PresenterGroundingAndGlobalEventTests.cs:line 1333
+   at Ludots.Tests.Presentation.PresenterGroundingAndGlobalEventTests.OwnerGrounding_PositionOffsetRetainsPresenterSampling(Boolean batch) in C:\001_AI\Ludots-gpu-10k-opt\src\Tests\PresentationTests\Presenter\PresenterGroundingAndGlobalEventTests.cs:line 1267
+
+1)    at Ludots.Tests.Presentation.PresenterGroundingAndGlobalEventTests.AssertOwnerGroundingChain(Boolean batch, Int32 firstSampled, Int32 secondSampled, Single offset, Single positionOffsetX) in C:\001_AI\Ludots-gpu-10k-opt\src\Tests\PresentationTests\Presenter\PresenterGroundingAndGlobalEventTests.cs:line 1333
+   at Ludots.Tests.Presentation.PresenterGroundingAndGlobalEventTests.OwnerGrounding_PositionOffsetRetainsPresenterSampling(Boolean batch) in C:\001_AI\Ludots-gpu-10k-opt\src\Tests\PresentationTests\Presenter\PresenterGroundingAndGlobalEventTests.cs:line 1267
+
+
+  失败 OwnerGrounding_PositionOffsetRetainsPresenterSampling(True) [1 ms]
+  错误消息:
+     Assert.That(heightmap.HeightSampleCount - samplesBefore, Is.EqualTo(count * (requiresPresenterGrounding ? 2 : 1)))
+  Expected: 4
+  But was:  2
+
+  堆栈跟踪:
+     at Ludots.Tests.Presentation.PresenterGroundingAndGlobalEventTests.AssertOwnerGroundingChain(Boolean batch, Int32 firstSampled, Int32 secondSampled, Single offset, Single positionOffsetX) in C:\001_AI\Ludots-gpu-10k-opt\src\Tests\PresentationTests\Presenter\PresenterGroundingAndGlobalEventTests.cs:line 1333
+   at Ludots.Tests.Presentation.PresenterGroundingAndGlobalEventTests.OwnerGrounding_PositionOffsetRetainsPresenterSampling(Boolean batch) in C:\001_AI\Ludots-gpu-10k-opt\src\Tests\PresentationTests\Presenter\PresenterGroundingAndGlobalEventTests.cs:line 1267
+   at InvokeStub_PresenterGroundingAndGlobalEventTests.OwnerGrounding_PositionOffsetRetainsPresenterSampling(Object, Span`1)
+
+1)    at Ludots.Tests.Presentation.PresenterGroundingAndGlobalEventTests.AssertOwnerGroundingChain(Boolean batch, Int32 firstSampled, Int32 secondSampled, Single offset, Single positionOffsetX) in C:\001_AI\Ludots-gpu-10k-opt\src\Tests\PresentationTests\Presenter\PresenterGroundingAndGlobalEventTests.cs:line 1333
+   at Ludots.Tests.Presentation.PresenterGroundingAndGlobalEventTests.OwnerGrounding_PositionOffsetRetainsPresenterSampling(Boolean batch) in C:\001_AI\Ludots-gpu-10k-opt\src\Tests\PresentationTests\Presenter\PresenterGroundingAndGlobalEventTests.cs:line 1267
+   at InvokeStub_PresenterGroundingAndGlobalEventTests.OwnerGrounding_PositionOffsetRetainsPresenterSampling(Object, Span`1)
+
+
+

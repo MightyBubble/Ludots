@@ -1,0 +1,26 @@
+[
+  {
+    "ok": true,
+    "instance": {
+      "pid": 13836,
+      "port": 47931,
+      "mapId": "mass_navigation",
+      "processPath": "C:\\Program Files\\dotnet\\dotnet.exe"
+    },
+    "pendingRequests": 0,
+    "pumpCount": 234,
+    "lastPumpUtc": "2026-09-09T18:22:59.2570638Z"
+  },
+  {
+    "ok": true,
+    "instance": {
+      "pid": 13836,
+      "port": 47931,
+      "mapId": "mass_navigation",
+      "processPath": "C:\\Program Files\\dotnet\\dotnet.exe"
+    },
+    "pendingRequests": 0,
+    "pumpCount": 243,
+    "lastPumpUtc": "2026-09-09T18:23:00.3147716Z"
+  }
+]

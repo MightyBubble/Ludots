@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":6,"method":"ludots.presenters.query","params":{"plane":"world","definitionId":51,"limit":20}}

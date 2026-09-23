@@ -1,0 +1,17 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "error": {
+    "code": -32000,
+    "message": "No UiScene is currently mounted on the UIRoot.",
+    "data": {
+      "code": "ui.scene_not_mounted"
+    }
+  },
+  "instance": {
+    "pid": 165448,
+    "port": 47931,
+    "mapId": "mass_navigation",
+    "processPath": "C:\\Program Files\\dotnet\\dotnet.exe"
+  }
+}

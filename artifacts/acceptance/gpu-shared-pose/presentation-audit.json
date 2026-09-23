@@ -1,0 +1,960 @@
+{
+  "schema_version": 1,
+  "audit_kind": "exact-commit read-only static audit with separately identified cross-run evidence",
+  "commit": "91618843a4",
+  "historical_pr_baseline": "be8f0f69d2947613559f717d6e993631fb2533f4",
+  "historical_merge_reference": "ffd11358f7929544c9f1f193b96aeb1eb28616d3",
+  "workspace": "C:/001_AI/Ludots-gpu-10k-opt",
+  "scope": [
+    "PresenterEntityTransformSyncSystem",
+    "PresenterBehaviorSystem",
+    "PresenterEmitSystem",
+    "WorldHudToScreenSystem"
+  ],
+  "provenance": "Source inspected via git show 91618843a4:path. Current origin/main contains the target; its three-dot diff is empty, so the explicitly named historical PR parent is reported separately. No code changes, no GPU run.",
+  "notation": {
+    "N": "owner units",
+    "P": "presenters",
+    "H": "HUD items",
+    "D": "dirty retained presenters",
+    "K": "distinct owner + exact HUD world-position groups",
+    "R": "terrain-ray sample/cell work",
+    "B": "active bindings per presenter"
+  },
+  "call_root": [
+    {
+      "file": "src/Adapters/Raylib/Ludots.Adapter.Raylib/RaylibHostLoop.cs",
+      "line": 626,
+      "call": "engine.Tick(dt)"
+    },
+    {
+      "file": "src/Core/Engine/GameEngine.cs",
+      "line": 5018,
+      "call": "Update(float dt)"
+    },
+    {
+      "file": "src/Core/Engine/GameEngine.cs",
+      "line": 5042,
+      "call": "each _presentationSystems[i].Update(dt) once per presentation frame"
+    },
+    {
+      "file": "src/Core/Engine/GameEngine.cs",
+      "line": 2521,
+      "call": "PresenterEntityTransformSyncSystem registered before Behavior:2523, Animator:2524, Emit:2528"
+    },
+    {
+      "file": "src/Adapters/Raylib/Ludots.Adapter.Raylib/RaylibHostLoop.cs",
+      "line": 681,
+      "call": "hudProjection.Update(dt) after engine.Tick; HUD projection is adapter post work, not inside GameEngine presentation system loop"
+    }
+  ],
+  "timeline": [
+    {
+      "commit": "d92aa08d69d5732b9413dd22cc000b58e14acb56",
+      "date": "2026-07-10T19:52:12+08:00",
+      "change": "Adds Sampled==0 owner-height provenance guard to individual and batch grounding scheduling, originally PerformerEntityRuntime. This is the semantic introduction, found using git log --follow -G and git show."
+    },
+    {
+      "commit": "c39ae77123",
+      "date": "2026-08-11",
+      "change": "Performer renamed to Presenter; not the semantic introduction."
+    },
+    {
+      "commit": "0a386d8cb02c10a47d67a072cdedf1bb41356286",
+      "date": "2026-08-30",
+      "change": "VisualHeightmap naming changed to ContinuousHeightmap. git blame:1958 points here, but this rename did not introduce the condition."
+    },
+    {
+      "commit": "0f1036ba53",
+      "date": "2026-09-09T15:01:51+08:00",
+      "change": "Adds terrain visibility work to world-HUD projection. Correctness improvement has an additional ray-query cost."
+    },
+    {
+      "commit": "ac8ab86af0",
+      "date": "2026-09-09T15:21:09+08:00",
+      "change": "Integrates Presenter owner/child transform fast paths and retained HUD direct update work. BehaviorSystem itself is unchanged from the historical PR baseline."
+    },
+    {
+      "commit": "91618843a4",
+      "change": "Required audited target. Historical diff of these four systems: transform sync, emit, HUD changed; BehaviorSystem unchanged."
+    },
+    {
+      "commit": "951f77bb6d744751b9dfa314b0ab8821118bcdd1",
+      "date": "2026-09-08T15:04:39+08:00",
+      "change": "Separate branch commit present in ffd merge, absent from 916: deletes individual owner Sampled==0 scheduling guard. Graph ancestry, not author-date sorting, determines presence. BatchRequiresGroundingTick:2059 still has a separate guard; not assumed fixed by this one-line change."
+    }
+  ],
+  "findings": [
+    {
+      "id": "PRES-01",
+      "priority": "P1",
+      "title": "首次采样状态被用来选择长期行为队列，10K 单位保留每帧工作",
+      "evidence_status": "Source-confirmed mechanism plus two-launch counter/timing A/B; not a frame-paired whole-machine causal estimate.",
+      "locations": [
+        {
+          "file": "src/Core/Presentation/Presenters/PresenterEntityRuntime.cs",
+          "line": 1958
+        },
+        {
+          "file": "src/Core/Presentation/Presenters/PresenterEntityRuntime.cs",
+          "line": 1497
+        },
+        {
+          "file": "src/Core/Presentation/Presenters/PresenterEntityRuntime.cs",
+          "line": 1562
+        },
+        {
+          "file": "src/Core/Presentation/Systems/PresenterBehaviorSystem.cs",
+          "line": 96
+        },
+        {
+          "file": "src/Core/Presentation/Systems/PresenterBehaviorSystem.cs",
+          "line": 676
+        },
+        {
+          "file": "src/Core/Presentation/Systems/PresenterBehaviorSystem.cs",
+          "line": 764
+        },
+        {
+          "file": "src/Core/Presentation/Systems/PresenterBehaviorSystem.cs",
+          "line": 932
+        },
+        {
+          "file": "src/Core/Presentation/Systems/TerrainHeightSyncSystem.cs",
+          "line": 207
+        }
+      ],
+      "call_chain": "Presenter creation/behavior activation -> AddBehaviorMarkers:1712 or SyncTickBehaviorMarkers:1444 -> GroundingRequiresPresenterTick:1928 -> CanUseOwnerHeightmapSampleForSnapToGround:1947 rejects Sampled==0 -> SyncTickBehaviorMarker<PerfHasGrounding>:1562 -> each GameEngine.Update -> PresenterBehaviorSystem.Update:198 -> _tickDrivenQuery:94 -> ProcessTickDrivenPresenters:667. Homogeneous eligible chunks can cheaply skip height work; mixed-definition chunks go through ProcessPresenter:906, CaptureWorldTransform:932, ResolveTransform:962 and ApplyGrounding:984 before its owner-sample skip.",
+      "trigger": "Entity-anchored zero-offset EveryFrame SnapToGround presenter; owner has VisualTransform and ContinuousHeightmapSampleState; PresenterTransformSource=EntityTransform; owner.Sampled==0 when markers are synchronized. The presence of the component expresses owner grounding capability, while Sampled expresses transient readiness. TerrainHeightSync later changes Sampled, but does not call SyncTickBehaviorMarkers to reclassify presenters.",
+      "frequency_per_frame": "Marker decision occurs at creation/activation refresh. Thereafter each erroneously marked presenter remains in the tick query: observed 10000/frame at 916, 0/frame in ffd reference. Homogeneous chunks still scan to validate definitions and skip grounding; mixed definitions may process individually.",
+      "complexity": "O(P_tick * (component reads + active tick behaviors)); no N². Work can remain even when height sampling is skipped.",
+      "gc": {
+        "steady": "No inherent allocation from the marker check or span loops. General ProcessPresenter depends on configured bindings; graph lane is separate PRES-08.",
+        "first_or_growth": "Archetype/command capacity during marker setup and grounding staging first-use growth may allocate."
+      },
+      "ecs_structure": "PerfHasGrounding add/remove changes archetype at scheduling time. Runtime marker helper uses a CommandBuffer when deferred scope is bound; ordinary steady frames only retain the marker. Removing a marker every frame is not an acceptable replacement design.",
+      "capacity": "ECS/chunk capacities are elsewhere. Grounding stage uses nine arrays grown from at least 256 via doubling. BatchRequiresGroundingTick:2059 retains its own Sampled guard and requires separate coverage.",
+      "impact_10k": "Parent's same-model experimental application runs switch behaviorTick 0 -> 10000 and approximately 0.01 -> 5.16–5.18ms in quiet sampled frames. Filtered full-log aggregates are attached separately; all filters and confounds must remain visible.",
+      "ab": {
+        "status": "cross-run partially measured",
+        "method": "Create otherwise identical owners before their first height sample versus after Sampled=1. Record marker count at creation, after first sample, and after 120 frames. Compare exact 916 and reference with only 1958 removed in isolated experiments, while keeping geometry/config/camera and sampled owner counts fixed. Include mixed/homogeneous presenter definition chunks and the batch creation API.",
+        "falsifier": "If tick marker count follows Sampled transition automatically or the counts/timing do not change with the one-line scheduling guard, the latch explanation is incomplete."
+      },
+      "history": "Condition introduced d92aa08d69; retained in 916; individual scheduling correction 951f77bb6d only in reference merge.",
+      "expected_budget_release_ms": "About 5ms is supported as a workload-specific candidate from the separate launches. No exact whole-frame saving or FPS guarantee; confirm with paired controlled runs."
+    },
+    {
+      "id": "PRES-02",
+      "priority": "P1",
+      "title": "HUD 全量投影触发逐位置地形射线",
+      "evidence_status": "Source-confirmed added work; isolated ray count and time unmeasured.",
+      "locations": [
+        {
+          "file": "src/Core/Presentation/Systems/WorldHudToScreenSystem.cs",
+          "line": 80
+        },
+        {
+          "file": "src/Core/Presentation/Systems/WorldHudToScreenSystem.cs",
+          "line": 142
+        },
+        {
+          "file": "src/Core/Presentation/Systems/WorldHudToScreenSystem.cs",
+          "line": 174
+        },
+        {
+          "file": "src/Core/Presentation/Systems/WorldHudToScreenSystem.cs",
+          "line": 478
+        },
+        {
+          "file": "src/Core/Presentation/Terrain/ContinuousHeightmapQueries.cs",
+          "line": 137
+        },
+        {
+          "file": "src/Core/Presentation/Terrain/ContinuousHeightmapQueries.cs",
+          "line": 157
+        },
+        {
+          "file": "src/Core/Presentation/Terrain/ContinuousHeightmapQueries.cs",
+          "line": 186
+        }
+      ],
+      "call_chain": "RaylibHostLoop:681 -> WorldHudToScreenSystem.Update -> revision invalidation -> full WorldHudItem span scan -> IsOwnerVisible -> coarse cull -> TryGetOwnerFrameProjection -> ProjectWorldToScreenFast -> IsTerrainVisible -> IContinuousHeightmap.TryRaycastGround -> concrete provider (ContinuousHeightmapRuntime:139 -> ContinuousHeightmapQueries:137; VertexMapContinuousHeightmap:79 -> ray marching:249).",
+      "frequency_per_frame": "One full scan when camera, HUD projection, culling visibility or terrain revision changes. Per eligible owner+exact world-position cache miss one ray. Adjacent items with the same owner AND position share one ray; cache stores only the last position per owner, so differing bar/text anchor heights or interleaving can raise calls toward H, not necessarily N. Revisions unchanged: O(1) early exit; content-only dirty updates bypass projection.",
+      "complexity": "O(H + K*R). Exact terrain provider traverses ray-intersected cells; marching provider performs bounded steps/refinement. VertexMap marching clamps steps 8..2048. No evidence of N×obstacle loop here.",
+      "gc": {
+        "steady": "No direct managed allocation in projection/ray setup; owner caches must already cover entity IDs. Concrete provider allocation must be independently measured.",
+        "first_or_growth": "Owner visibility/projection arrays resize, see PRES-03."
+      },
+      "ecs_structure": "None; only reads owner CullState and writes HUD buffers.",
+      "capacity": "HUD buffers fixed capacity, owner caches unbounded doubling. Ray API has no target-distance parameter, so IsTerrainVisible asks for a general ground hit then compares hit.DistanceMeters to targetDistance. Traversal work beyond required visibility interval may remain provider-dependent.",
+      "impact_10k": "10K owners and 20K HUD items can create O(10K–20K) terrain queries on moving/full-projection frames. Current experimental application hudProj around 9–15ms is contextual evidence; it is not the measured ray-query share at an unmodified 916 baseline.",
+      "ab": {
+        "status": "pending",
+        "method": "At 1K/5K/10K compare fixed camera/static units, moving units, camera-only movement; instrument ray count, cells/steps and cache hits. Toggle only HUD occlusion in an isolated experiment while preserving ground rendering and unit grounding. Verify hidden-behind-terrain correctness in both paths before accepting any replacement.",
+        "falsifier": "If ray count is low or disabling/replacing ray work does not reduce projection time, projection buffer/index work is the dominant cost."
+      },
+      "history": "Terrain visibility addition is 0f1036ba53. Projection retention/cache paths also predate that change.",
+      "expected_budget_release_ms": null
+    },
+    {
+      "id": "PRES-03",
+      "priority": "P2",
+      "title": "HUD 缓存按最大实体 ID 扩容，稳定帧与容量帧表现不同",
+      "evidence_status": "Source confirmed capacity contract risk; no steady-frame GC attributed.",
+      "locations": [
+        {
+          "file": "src/Core/Presentation/Systems/WorldHudToScreenSystem.cs",
+          "line": 35
+        },
+        {
+          "file": "src/Core/Presentation/Systems/WorldHudToScreenSystem.cs",
+          "line": 443
+        },
+        {
+          "file": "src/Core/Presentation/Systems/WorldHudToScreenSystem.cs",
+          "line": 539
+        },
+        {
+          "file": "src/Core/Presentation/Systems/WorldHudToScreenSystem.cs",
+          "line": 552
+        },
+        {
+          "file": "src/Core/Presentation/Systems/WorldHudToScreenSystem.cs",
+          "line": 597
+        }
+      ],
+      "call_chain": "HUD.Update -> IsOwnerVisible -> SetOwnerVisible -> Array.Resize; independently CacheOwnerFrameProjection -> Array.Resize. ResolveOwnerCacheKey uses owner.Id+1. Frame stamps invalidate logically; arrays clear only on int.MaxValue wrap.",
+      "frequency_per_frame": "Two possible growth events when the largest encountered owner key exceeds each cache; zero growth after warmup until a larger entity ID appears. No per-frame full array clear except stamp wrap approximately once in 2.1 billion projection rebuilds.",
+      "complexity": "Stable O(1) lookup; growth O(new maximum entity ID) allocation/zeroing/copy; memory depends on max ID, not live N.",
+      "gc": {
+        "steady": "0 B from cache lookup/write.",
+        "first_or_growth": "Array.Resize allocates replacement arrays and copies old content. Capacity doubles from 1024 with no configured cap."
+      },
+      "ecs_structure": "None.",
+      "capacity": "Unbounded int doubling until memory/array/runtime limits, not explicit configured failure. Long-lived sessions with many effect/presenter entities can make max owner ID much larger than N.",
+      "impact_10k": "Can produce startup/spawn spikes and excess retained memory even with few HUD owners; it does not explain stable 10K milliseconds by itself.",
+      "ab": {
+        "status": "pending",
+        "method": "Compare identical 10K HUD owners with dense low IDs and IDs after a large throwaway entity population. Measure initial allocations/peak cache length separately from 120 warmed frames; repeat at capacity and capacity+1.",
+        "falsifier": "If IDs are kept within prewarmed arrays, this is not a source of recurring frame allocations."
+      },
+      "history": "Cache behavior retained at target; do not label Array.Clear:597 as every-frame work.",
+      "expected_budget_release_ms": null
+    },
+    {
+      "id": "PRES-04",
+      "priority": "P2",
+      "title": "Transform 同步用 Chunk 读本体，但跨 owner/presenter 的访问仍然逐实体",
+      "evidence_status": "Source confirmed; performance share pending controlled A/B.",
+      "locations": [
+        {
+          "file": "src/Core/Presentation/Systems/PresenterEntityTransformSyncSystem.cs",
+          "line": 195
+        },
+        {
+          "file": "src/Core/Presentation/Systems/PresenterEntityTransformSyncSystem.cs",
+          "line": 210
+        },
+        {
+          "file": "src/Core/Presentation/Systems/PresenterEntityTransformSyncSystem.cs",
+          "line": 232
+        },
+        {
+          "file": "src/Core/Presentation/Systems/PresenterEntityTransformSyncSystem.cs",
+          "line": 239
+        },
+        {
+          "file": "src/Core/Presentation/Systems/PresenterEntityTransformSyncSystem.cs",
+          "line": 324
+        },
+        {
+          "file": "src/Core/Presentation/Systems/PresenterEntityTransformSyncSystem.cs",
+          "line": 121
+        }
+      ],
+      "call_chain": "GameEngine.Update -> TransformSync.Update -> SyncSingleRootOwnerPayloads -> spans over owner WorldPosition/VisualTransform/payload -> 6 Has checks plus state Has/Get and 5 individual Get calls on root presenter -> compare/update -> MarkEmitDirty -> SyncFastAttachedChildren. If any owner changes, SyncOwnerPayloadAttachedChildren scans its entire query and fetches parent transform tuple per child. Separate EntityAnchoredQuery reads owner Has/Get individually.",
+      "frequency_per_frame": "Every eligible owner is checked, static or moving. If any root changed, all eligible owner-payload attached children are scanned, not only children of changed owners. A health bar and text each fetch their parent transform.",
+      "complexity": "O(N + P_entityAnchored + C_children when any root changed + changed hierarchy edges). No global N²; cache locality of cross-entity lookups remains.",
+      "gc": {
+        "steady": "No direct allocation in these loops.",
+        "first_or_growth": "Dirty retained queue can grow, see PRES-05."
+      },
+      "ecs_structure": "Component writes are nonstructural. MarkEmitDirty can reach scheduling marker creation on a missing-marker transition, see PRES-09.",
+      "capacity": "No local growing storage. Parent child limits and runtime queue capacities are external; dirty queue unbounded doubles.",
+      "impact_10k": "~70K Has and 60K Get operations are present per 10K single-root owners before dirty propagation in the common state-present branch, plus up to 20K parent tuple fetches for two child HUD presenters. Counts are source-derived, not sampled.",
+      "ab": {
+        "status": "pending",
+        "method": "Measure 0%,1%,100% moved owners with 0/1/2 attached children, using same camera/culling. Compare existing scan to a configured SoA dense owner-to-root mapping and generation-validated dirty owner list in temporary worktree; no unsafe persistent ref caching. Count Has/Get and total child scans.",
+        "falsifier": "If Has/Get consolidation or restricting child work yields no measurable difference, this is not a meaningful frame-budget opportunity."
+      },
+      "history": "ac8ab86af0 adds optimized child chunk path while retaining cross-entity parent fetches. Existing Chunk/Span usage is a positive, not a missing optimization.",
+      "expected_budget_release_ms": null
+    },
+    {
+      "id": "PRES-05",
+      "priority": "P2",
+      "title": "移动或血量变化后，HUD 脏队列再逐实体读取并复制条目",
+      "evidence_status": "Source confirmed linear work and capacity behavior; not a measured root cause.",
+      "locations": [
+        {
+          "file": "src/Core/Presentation/Systems/PresenterEmitSystem.cs",
+          "line": 232
+        },
+        {
+          "file": "src/Core/Presentation/Systems/PresenterEmitSystem.cs",
+          "line": 324
+        },
+        {
+          "file": "src/Core/Presentation/Systems/PresenterEmitSystem.cs",
+          "line": 334
+        },
+        {
+          "file": "src/Core/Presentation/Systems/PresenterEmitSystem.cs",
+          "line": 340
+        },
+        {
+          "file": "src/Core/Presentation/Systems/PresenterEmitSystem.cs",
+          "line": 372
+        },
+        {
+          "file": "src/Core/Presentation/Systems/PresenterEmitSystem.cs",
+          "line": 471
+        },
+        {
+          "file": "src/Core/Presentation/Presenters/PresenterEntityRuntime.cs",
+          "line": 4660
+        },
+        {
+          "file": "src/Core/Presentation/Presenters/PresenterEntityRuntime.cs",
+          "line": 5184
+        }
+      ],
+      "call_chain": "TransformSync or dirty owner bindings -> Runtime.Mark*EmitDirty -> MarkRetainedPresentationRequestDirty flag deduplication -> AppendRetainedPresentationDirtyEntity -> Emit.Update -> ProcessDirtyRetainedPresentationRequestEntities -> ProcessRetainedPresentationDirtyList -> position-only direct update or component gather + TryUpdateRetainedWorldHudDirect -> WorldHudBatchBuffer.UpdatePosition/TryAdd -> Runtime.ClearStaticDirty -> ClearConsumedRetainedPresentationDirtyEntities.",
+      "frequency_per_frame": "D dirty presenters per frame; flags deduplicate while dirty. Position-only path still reads emit cache and world position, and ClearStaticDirty fetches cache again. Content/full direct path fetches state,cull,position,rotation,facing,scale individually. Queue clears D Entity values after consumption.",
+      "complexity": "O(D * cross-entity reads + D * required-attribute comparison + output copy). Cached phase projection only reuses the immediately preceding matching owner/LOD/required attributes, not all owner groups.",
+      "gc": {
+        "steady": "0 B when arrays/dictionaries warm. Array.Empty<int> reset is singleton, not an allocation; WorldHudItem construction is a struct.",
+        "first_or_growth": "Retained queue Array.Resize doubles from 256; WorldHud stable-ID Dictionary first key/resize allocates. ClearConsumed uses Array.Clear but Entity is a value type; it is O(D) writes without allocation."
+      },
+      "ecs_structure": "Dirty flags/buffer changes nonstructural on the direct retained path.",
+      "capacity": "Runtime retained queue has no configured bound or explicit cap. WorldHud buffer fixed; direct update throws on capacity failure at Emit:524-528.",
+      "impact_10k": "With two moving HUD child presenters, D can reach 20K each frame. SoA ECS storage is gathered into an AoS WorldHudItem buffer, then scanned/projected again. Existing direct and position-only shortcuts already remove substantial work; their hit rate must be measured.",
+      "ab": {
+        "status": "pending",
+        "method": "Record D, position-only/direct/full path hits, phase projection reuses and emitted HUD changes for still+effects, moving+effects off, moving+effects on. Compare owner-interleaved versus owner-adjacent dirty order; compare generation-stamped queue versus zeroing value array while preserving dedup and lifetime identity.",
+        "falsifier": "If D is small or position-only path already dominates with low CPU, the candidate benefit is small."
+      },
+      "history": "Direct retained HUD changes included ac8ab86af0. Queue and value-array clear retained behavior.",
+      "expected_budget_release_ms": null
+    },
+    {
+      "id": "PRES-06",
+      "priority": "P2",
+      "title": "持续属性事件按 owner 展开到各个 Presenter，再查相同属性工作",
+      "evidence_status": "Source-confirmed indexed fan-out; not a linear search over all units.",
+      "locations": [
+        {
+          "file": "src/Core/Presentation/Systems/PresenterBehaviorSystem.cs",
+          "line": 529
+        },
+        {
+          "file": "src/Core/Presentation/Systems/PresenterBehaviorSystem.cs",
+          "line": 556
+        },
+        {
+          "file": "src/Core/Presentation/Systems/PresenterBehaviorSystem.cs",
+          "line": 573
+        },
+        {
+          "file": "src/Core/Presentation/Systems/PresenterBehaviorSystem.cs",
+          "line": 610
+        },
+        {
+          "file": "src/Core/Presentation/Presenters/PresenterDefinition.cs",
+          "line": 1166
+        },
+        {
+          "file": "src/Core/Presentation/Presenters/PresenterEntityRuntime.cs",
+          "line": 1078
+        },
+        {
+          "file": "src/Core/Presentation/Events/PresentationOwnerChangeBuffer.cs",
+          "line": 62
+        }
+      ],
+      "call_chain": "GAS/presentation owner-change publication -> PresentationOwnerChangeBuffer -> Behavior.Update -> ProcessOwnerChanges -> ProcessOwnerAttributeChange -> Dictionary owner bucket -> each presenter -> definition lookup -> binary search compiled attribute work -> ApplyOwnerAttributeWork -> SetParam -> dirty retained outputs.",
+      "frequency_per_frame": "One entry per published owner attribute/tag event, then each presenter for that owner. No dedup shown in PresentationOwnerChangeBuffer itself. Current bar/text definitions bind Health ratio/current/base; their work executes on change events, not by polling all 10K every frame.",
+      "complexity": "O(E * (A_owner * log W + active binding work)), where E event entries and A_owner attached presenter count. Owner-to-presenter lookup expected O(1), compiled attribute search O(log W); not O(N²).",
+      "gc": {
+        "steady": "No direct allocation in standard attribute work lookup. Param storage behavior depends on precreated slots.",
+        "first_or_growth": "Definition index refresh at version change builds List/ToArray and dictionaries; it is not repeated per steady frame. Owner bucket creation/resizing occurs in lifecycle."
+      },
+      "ecs_structure": "Behavior wraps runtime mutations in CommandBuffer; dirty param updates may schedule material markers. Buffer publication itself nonstructural.",
+      "capacity": "PresentationOwnerChangeBuffer fixed constructor capacity; TryAdd increments Dropped counters and returns false at capacity. Caller handling must be traced before claiming explicit failure. Does not grow itself.",
+      "impact_10k": "Continuous effect cadence determines E; provided runtime windows commonly show ~170 changed owners, far below 10K, so this should not be credited with the 10000 behaviorTick delta.",
+      "ab": {
+        "status": "pending",
+        "method": "At each population hold transforms still and toggle continuous Health effects; record E, unique owner+attribute count, per-owner presenter count, binding writes and dirty HUD items. Compare event cadence and duplicate same-owner/same-attribute events with identical final health values.",
+        "falsifier": "If event counts stay low and Behavior cost remains after effects off, owner-change processing is not dominant."
+      },
+      "history": "PresenterBehaviorSystem unchanged between historical PR base and target.",
+      "expected_budget_release_ms": null
+    },
+    {
+      "id": "PRES-07",
+      "priority": "P2",
+      "title": "Skinned 发射每帧写 AoS 条目，但清空只重置计数",
+      "evidence_status": "Source-confirmed layout/work; no measured cache penalty and no proven duplicate draw here.",
+      "locations": [
+        {
+          "file": "src/Core/Presentation/Systems/PresenterEmitSystem.cs",
+          "line": 101
+        },
+        {
+          "file": "src/Core/Presentation/Systems/PresenterEmitSystem.cs",
+          "line": 105
+        },
+        {
+          "file": "src/Core/Presentation/Systems/PresenterEmitSystem.cs",
+          "line": 1231
+        },
+        {
+          "file": "src/Core/Presentation/Systems/PresenterEmitSystem.cs",
+          "line": 1583
+        },
+        {
+          "file": "src/Core/Presentation/Rendering/SkinnedVisualBatchBuffer.cs",
+          "line": 9
+        },
+        {
+          "file": "src/Core/Presentation/Rendering/SkinnedVisualBatchBuffer.cs",
+          "line": 46
+        }
+      ],
+      "call_chain": "Emit.Update -> _skinnedVisualBatchBuffer.Clear (count reset) -> EmitQuery chunk spans -> fast visual definition -> EmitVisualProxyFast -> TryEmitSkinnedVisualBatchFast -> resolve asset/material/animator -> append SkinnedVisualBatchItem -> adapter reads span.",
+      "frequency_per_frame": "One full struct write per visible active skinned asset binding per presenter each presentation frame, even when transforms are stationary because animation can vary. Typical 10K one-binding path yields 10K writes.",
+      "complexity": "O(P_visible * A_assetBindings + parameter lookups). Asset swap table scans are linear in that table, not in unit count.",
+      "gc": {
+        "steady": "Struct item construction and counter Clear are 0 B. No array clearing/copy in Clear; Array.Empty and new value structs must not be counted as managed allocations.",
+        "first_or_growth": "Buffer is allocated once with constructor capacity. No buffer growth."
+      },
+      "ecs_structure": "Normal fast emission nonstructural; lifecycle destruction is separate PRES-09.",
+      "capacity": "SkinnedVisualBatchBuffer default constructor capacity 4096; engine configuration can supply another value. TryAdd false increments dropped counters; fast Emit throws explicitly:1605-1608. Exact 10K runtime configured capacity must be read from launch config, not inferred from default.",
+      "impact_10k": "AoS payload includes transform, color, animator, metadata and overlay fields, all rebuilt/copy-appended per active unit. This is a potential bandwidth cost, not proof AoS causes current slowdown. The main ECS iteration already uses Chunk/Span and AnimatorSlot spans.",
+      "ab": {
+        "status": "pending",
+        "method": "Measure emitted item count, append/copy bytes and time with animator static/off/on; compare a temporary fixed-capacity SoA emission snapshot retaining equivalent fields and order. Verify no main or shadow membership changes and no extra layer submissions.",
+        "falsifier": "If changing payload layout/copy work does not change CPU time, retain current path; do not infer duplicate drawing from names."
+      },
+      "history": "Fast paths integrated by ac8ab86af0; no assertion that this path creates the reported mesh ghost.",
+      "expected_budget_release_ms": null
+    },
+    {
+      "id": "PRES-08",
+      "priority": "P2 conditional",
+      "title": "Graph 参数路径即使成功也分配说明字符串，并逐次清整组寄存器",
+      "evidence_status": "Source-confirmed allocation in successful graph path; not shown active in MassNavigation definitions.",
+      "locations": [
+        {
+          "file": "src/Core/Presentation/Systems/PresenterBehaviorSystem.cs",
+          "line": 1410
+        },
+        {
+          "file": "src/Core/Presentation/Systems/PresenterBehaviorSystem.cs",
+          "line": 1422
+        },
+        {
+          "file": "src/Core/Presentation/Systems/PresenterBehaviorSystem.cs",
+          "line": 1466
+        },
+        {
+          "file": "src/Core/Presentation/Systems/PresenterBehaviorSystem.cs",
+          "line": 1471
+        }
+      ],
+      "call_chain": "Behavior.Update -> ProcessTickDrivenPresenters -> ProcessPresenter -> ApplyGraphParamBindings -> graph binding evaluation -> constructs bindingPath interpolated string unconditionally -> ProgramWritesFloatResultRegister -> SeedGraphInputRegisters -> clears float/int/bool/entity/callstack arrays -> walks parameter ancestry -> GraphExecutor.Execute.",
+      "frequency_per_frame": "Once per executed graph binding; continuous lane can be per presenter/frame. Zero executions when graph bindings absent.",
+      "complexity": "O(G * (program length scan + register capacity + ancestry params + graph instructions)), G graph binding executions.",
+      "gc": {
+        "steady": "bindingPath interpolation at 1410 allocates a new string on successful graph evaluation. This is not limited to warning/error branch.",
+        "first_or_growth": "HashSet warnings also grow on first distinct warning; error interpolation may allocate additional strings."
+      },
+      "ecs_structure": "Param/marker updates use Behavior deferred scope when called through normal Update.",
+      "capacity": "Graph register arrays fixed at GraphVmLimits. Warning HashSets have no configured cap. Failure paths warn and retain blackboard values at 1414/1451/1457, contrary to requested no-fallback policy for new fixes.",
+      "impact_10k": "Would break 0Alloc if enabled for 10K presenters. A source search of MassNavigation presenter configuration did not show graph bindings; do not assign this cost to current 10K evidence.",
+      "ab": {
+        "status": "pending",
+        "method": "Run a minimal valid graph parameter binding 1K/5K/10K with no errors; measure current-thread allocated bytes and graph call counts. Move diagnostic message construction to error path in a temporary A/B and compare. Separately profile register seeding, preserving NaN/zero semantic contracts.",
+        "falsifier": "If graph execution count is zero in MassNavigation, this finding has no direct frame cost there."
+      },
+      "history": "Retained pre-PR behavior, not introduced by the target diff.",
+      "expected_budget_release_ms": null
+    },
+    {
+      "id": "PRES-09",
+      "priority": "P2 conditional",
+      "title": "仍有结构变更边界：缺失发射标记与销毁尾部",
+      "evidence_status": "Source-confirmed conditional mutation; not evidence of every-frame archetype churn in 10K.",
+      "locations": [
+        {
+          "file": "src/Core/Presentation/Systems/PresenterEntityTransformSyncSystem.cs",
+          "line": 563
+        },
+        {
+          "file": "src/Core/Presentation/Presenters/PresenterEntityRuntime.cs",
+          "line": 4737
+        },
+        {
+          "file": "src/Core/Presentation/Presenters/PresenterEntityRuntime.cs",
+          "line": 1848
+        },
+        {
+          "file": "src/Core/Presentation/Systems/PresenterEmitSystem.cs",
+          "line": 171
+        },
+        {
+          "file": "src/Core/Presentation/Presenters/PresenterEntityRuntime.cs",
+          "line": 672
+        },
+        {
+          "file": "src/Core/Presentation/Systems/PresenterBehaviorSystem.cs",
+          "line": 190
+        },
+        {
+          "file": "src/Core/Presentation/Systems/PresenterBehaviorSystem.cs",
+          "line": 207
+        }
+      ],
+      "call_chain": "TransformSync -> MarkTransform(Position)DrivenEmitDirty -> EnsureRequestBackedEmitWorkScheduled -> AddMarker<PerfHasEmitWork> -> immediate World.Add when no deferred scope. Separately Emit.Update queues dead/expired presenter in _pendingDestroy, then Runtime.Destroy recursively unlinks/removes indexes and calls World.Destroy after query loops.",
+      "frequency_per_frame": "Only missing-marker transitions or presenter destruction/lifetime events. Stable alive scene with initialized markers need not perform any structure changes.",
+      "complexity": "O(number of transitions * archetype move work + destroyed hierarchy size).",
+      "gc": {
+        "steady": "No unavoidable allocation without transitions.",
+        "first_or_growth": "_pendingDestroy List initial capacity 256 can expand; ECS destination chunks, index maintenance and CommandBuffer growth can allocate on lifecycle bursts."
+      },
+      "ecs_structure": "Yes. Behavior has explicit CommandBuffer deferral. TransformSync is scheduled before that scope and Emit.Destroy executes after query traversal but not through a shared finalization CommandBuffer.",
+      "capacity": "No configured _pendingDestroy list cap. ECS and runtime child/index capacities external. AddMarker falls directly to World.Add instead of throwing when scope absent.",
+      "impact_10k": "Mass deaths, spawning or reactivation can produce spikes; stable navigation cannot be blamed without mutation counters. Existing GameEngine also registers a separate presentation finalization stage at 2532, so ownership/order of destruction should be reviewed before moving mutations.",
+      "ab": {
+        "status": "pending",
+        "method": "Instrument Create/Add/Remove/Destroy counts and archetype version deltas per stage. Use no-lifecycle baseline, 1% turnover, 10K batch destruction and missing-marker reactivation; compare explicit finalization CommandBuffer with identical lifecycle callbacks and resource ownership.",
+        "falsifier": "Zero structural mutation count on slow steady frames excludes this as their cause."
+      },
+      "history": "Retained runtime lifecycle behavior. Do not claim Behavior violates query-safety merely because its deferred playback changes structure.",
+      "expected_budget_release_ms": null
+    },
+    {
+      "id": "PRES-10",
+      "priority": "P2 contract",
+      "title": "Screen HUD 超限沿投影路径丢条目，未显式失败",
+      "evidence_status": "Source-confirmed overflow behavior; no drops observed in supplied 20K run.",
+      "locations": [
+        {
+          "file": "src/Core/Presentation/Systems/WorldHudToScreenSystem.cs",
+          "line": 303
+        },
+        {
+          "file": "src/Core/Presentation/Systems/WorldHudToScreenSystem.cs",
+          "line": 356
+        },
+        {
+          "file": "src/Core/Presentation/Hud/ScreenHudBatchBuffer.cs",
+          "line": 60
+        },
+        {
+          "file": "src/Core/Presentation/Hud/ScreenHudBatchBuffer.cs",
+          "line": 243
+        },
+        {
+          "file": "src/Core/Presentation/Hud/ScreenHudBatchBuffer.cs",
+          "line": 388
+        }
+      ],
+      "call_chain": "HUD.Update -> ProjectAdjacentOwnerItems -> ProjectSingleItem -> TryUpsertProjectedBar/Text -> ScreenHud.TryAddBar/Text returns false and increments dropped counters -> caller increments attempted output index and continues without exception.",
+      "frequency_per_frame": "Only when projected retained/transient items exceed shared _flattened capacity. At 20K items with default 65536 no expected overflow.",
+      "complexity": "O(H) attempts; failed insert O(1).",
+      "gc": {
+        "steady": "Fixed arrays and preallocated stable dictionaries support zero allocation below capacity.",
+        "first_or_growth": "ScreenHud constructor allocates multiple arrays/dictionaries for capacity; no ordinary auto-resize of item arrays."
+      },
+      "ecs_structure": "None.",
+      "capacity": "Constructor-configurable fixed capacity (default 65536); overflow reported by counters and false, but projection does not surface an explicit error. This differs from direct retained world HUD and skinned Emit paths that throw.",
+      "impact_10k": "Correctness/capacity contract, not demonstrated performance loss at current counts. A misleadingly lower item count could otherwise appear faster after overflow.",
+      "ab": {
+        "status": "pending",
+        "method": "Use configured capacity-1, capacity, capacity+1 projected items; verify explicit failure, projected count, dropped counters and stable retained removal semantics. Run 1K/5K/10K with capacity sufficient so performance comparison never relies on dropped HUD.",
+        "falsifier": "Observed screenHudDrops=0 means overflow does not explain that run."
+      },
+      "history": "Retained at target.",
+      "expected_budget_release_ms": null
+    }
+  ],
+  "confirmed_non_findings": [
+    "All four inspected Update hot loops use ReadOnlySpan or ECS Chunk/GetSpan and direct for/foreach iteration. No World.Query delegate closure or LINQ was identified in their normal hot loops. Existing constructor Func delegates are invoked, not recreated per frame.",
+    "World/Screen HUD and skinned output buffers are AoS structs; ECS component access via Chunk/GetSpan is column-oriented. Neither using Span nor a suspect class name alone proves a performance problem.",
+    "No entity-to-index full linear search or all-unit×all-unit/all-obstacle scan found in these four systems. Owner buckets use Dictionary keys containing full owner identity; definition attribute work uses binary search.",
+    "WorldHud cache stamp wrap Array.Clear and ScreenHud projected stamp wrap Clear are extremely infrequent, not per-frame array clears.",
+    "SkinnedVisualBatchBuffer.Clear and PresentationOwnerChangeBuffer.Clear reset count/counters only; do not clear full arrays.",
+    "Bootstrap/definition refresh List/ToArray allocations and staging growth are first-use/change events; stable 0B observations do not prove all capacity paths are allocation-free.",
+    "Owner-backed grounding skip already avoids repeated actual height queries after sample readiness, even while an incorrect tick marker continues to cost component work."
+  ],
+  "required_measurements_status": {
+    "completed_in_this_subtask": "Read-only exact-source audit, historical diffs/blame, image-independent source verification, and parsing parent-provided application logs.",
+    "not_completed": [
+      "Unmodified 916 whole-machine 1K/5K/10K factorial or balanced A/B matrix",
+      "per-frame current-thread allocation and Gen0/Gen1 for these four exact-source paths in application",
+      "terrain query and ray sample counts",
+      "per-entity World.Has/Get counters",
+      "structural mutation counts per stage",
+      "same-seed paired regression run of 1958 guard"
+    ],
+    "matrix": "At each N=1K/5K/10K compare still/moving and sparse/crowded; independently toggle HUD, terrain occlusion, Animator, MassNavigation, periodic Effect, Minimap. Each comparison preserves camera/view/population/seed and records total, simulation, presentation, post-HUD separately.",
+    "warning": "Experimental red/blue mannequin/GPU changes in the parent launches mean log totals are not a clean original Knight/916 whole-machine baseline; do not combine them with local GPU microbench timings."
+  },
+  "minimal_fix_order": [
+    "First validate the durable grounding scheduling contract against both individual and batch creation, late terrain readiness, failures and static owners. Use existing owner terrain capability to select lane; preserve grounding readiness correctness. No hot-frame marker toggling.",
+    "Measure HUD per-owner+position terrain rays and provider traversal share; replace repeated work only with a bounded, correctness-equivalent visibility query/cache, not an occlusion-off production shortcut.",
+    "Preallocate configured HUD owner/retained queue capacities with explicit overflow behavior; distinguish this capacity reliability fix from steady-frame speedups.",
+    "Consolidate cross-entity transform/HUD work into generation-safe SoA/Chunk/Span batches if A/B verifies a benefit; retain model/HUD ownership and projection correctness.",
+    "Move diagnostic graph strings to failure-only construction if that lane is in scope; instrument relevant configurations before claiming 10K benefit."
+  ],
+  "remaining_frame_budget": "Only the behavior scheduling difference has a source-supported application timing signal (~5ms in quiet cross-run samples). HUD projection remains substantial after it. All other release estimates are null until isolated A/B; remaining simulation/presentation/adapter/GPU/wait work is outside this four-system static audit.",
+  "application_log_evidence": {
+    "capture_utc": "2026-09-09T19:05:46.687532+00:00",
+    "filter": "timing lines with skinnedRaw=10000, hudRaw=20000, behaviorBoot=0",
+    "sample_selection": "first filtered row with behaviorOwner=0 in each log; all filtered rows summarized separately",
+    "limitations": "Separate application launches, not alternating paired frames. GPU/model experimental work present. Logs can continue growing after this read; hashes identify bytes read.",
+    "runs": [
+      {
+        "run": "20260909T182222.511476Z",
+        "path": "artifacts\\acceptance\\gpu-shared-pose\\launch\\runs\\20260909T182222.511476Z\\timing.log",
+        "sha256_at_read": "dfbcb88c125131299bce027f630aeadac787415964cb214eb9eaa719a5fb36c8",
+        "filtered_rows": 21,
+        "quiet_rows": 18,
+        "stats": {
+          "behavior": {
+            "mean": 0.05238095238095238,
+            "median": 0.01,
+            "min": 0.01,
+            "max": 0.34
+          },
+          "behaviorTick": {
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          },
+          "behaviorOwner": {
+            "mean": 23.61904761904762,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 179.0
+          },
+          "hudProj": {
+            "mean": 11.877619047619048,
+            "median": 13.43,
+            "min": 8.82,
+            "max": 14.65
+          },
+          "presentation": {
+            "mean": 17.01,
+            "median": 17.16,
+            "min": 12.92,
+            "max": 23.78
+          },
+          "transformSync": {
+            "mean": 2.7176190476190474,
+            "median": 1.81,
+            "min": 1.5,
+            "max": 6.67
+          },
+          "emit": {
+            "mean": 2.7842857142857143,
+            "median": 2.33,
+            "min": 2.12,
+            "max": 4.89
+          }
+        },
+        "sample": {
+          "source_line": 4,
+          "raw": "[2026-09-09T18:22:38.1499884Z] timing frame=120.34ms fps=8.3 cleanPerf=0 visibleEntities=10006 presenterActive=30009 presenterDefs=mass_navigation_agent_health_text_light:8568,mass_navigation_agent_health_hud_light:8568,mass_navigation_agent_azure_light:2142,mass_navigation_agent_crimson_light:2142,mass_navigation_agent_amber_light:2142,mass_navigation_agent_emerald_light:2142,mass_navigation_agent_health_text_heavy:1432,mass_navigation_agent_health_hud_heavy:1432 primitiveRaw=6 primitiveStaticRaw=6 skinnedRaw=10000 gpuSkinned=10000/6 gpuSkinBuild=1.16 gpuSkinDraw=0.63 gap=0.00 poll=0.00 pre=0.06 tick=17.01 post=13.49 begin=0.00 sim=0.44 simTop1=EffectProcessingLoopSystem:0.43 simTop2=:0.00 simTop3=:0.00 presentation=16.39 presTop1=CameraCullingSystem:3.86 presTop2=MinimapPresentationSystem:3.78 presTop3=PresenterEmitSystem:2.36 behavior=0.02 behaviorBoot=0 behaviorOwner=0 behaviorAttr=0 behaviorTag=0 behaviorTick=0 animator=1.15 transformSync=1.55 minimapCollect=0.37 minimapMarkers=10009/0 minimapProject=3.76 minimapScreen=10000/0 heightSync=0.69 heightSamples=10009 requestFlush=0.00 spawnBatch=0.00/0.00/0.00/0.00 spawnPerf=0.00/0.00/0.00 spawnPerfParts=0.00/0.00/0.00/0.00/0.00/0.00 spawnPerfChildParts=0.00/0.00/0.00/0.00/0.00 cull=3.86 cullSpatial=2.73 cullStatic=0.01 cullDyn=1.09 cullEntity=3.85 cullSync=0.00 hudProj=13.43 hudRaw=20000 hudProjected=20000 hudDensitySkip=0 mode3D=2.66 terrain=0.04 terrainChunks=4/0 field=0.01 fieldCount=0 fieldDirty=0 fieldArea=0 fieldDraws=0 primitive=2.57 primSync=0.00 primBucket=0.04 primImmediate=0.01 primImmediateSkip=6 primBuild=0.00 primDraw=0.02 primInstances=6 primBatches=2 primCache=2/0 ground=0.00 groundCount=0 groundRaw=0 spline=0.00 splineCount=0 splineRaw=0 debugDraw=0.00 debugDrawCount=0 debugDrawRaw=0 overlay=2.82 overlayBuild=0.02 overlayDirtyLanes=1 overlayItems=20038 overlayRebuilt=0 overlayPaint=1.64 overlayComposite=0.00 uiRender=0.00 uiUpload=0.00 overlayFinal=1.06 nativeDiag=0.00 emit=2.35 emitDirty=0.00 emitDirtyCount=0 emitRetained=0.00 emitRetainedCount=0 hudPositionOnly=0 emitRetainedDirectPath=0/0/0 endDraw=80.04 screenshot=0.00 worldHud=20000 screenBars=10000 screenText=10000 worldHudDrops=0 screenHudDrops=0 overlaySceneDrops=0",
+          "values": {
+            "frame": "120.34ms",
+            "fps": "8.3",
+            "cleanPerf": "0",
+            "visibleEntities": "10006",
+            "presenterActive": "30009",
+            "presenterDefs": "mass_navigation_agent_health_text_light:8568,mass_navigation_agent_health_hud_light:8568,mass_navigation_agent_azure_light:2142,mass_navigation_agent_crimson_light:2142,mass_navigation_agent_amber_light:2142,mass_navigation_agent_emerald_light:2142,mass_navigation_agent_health_text_heavy:1432,mass_navigation_agent_health_hud_heavy:1432",
+            "primitiveRaw": "6",
+            "primitiveStaticRaw": "6",
+            "skinnedRaw": "10000",
+            "gpuSkinned": "10000/6",
+            "gpuSkinBuild": "1.16",
+            "gpuSkinDraw": "0.63",
+            "gap": "0.00",
+            "poll": "0.00",
+            "pre": "0.06",
+            "tick": "17.01",
+            "post": "13.49",
+            "begin": "0.00",
+            "sim": "0.44",
+            "simTop1": "EffectProcessingLoopSystem:0.43",
+            "simTop2": ":0.00",
+            "simTop3": ":0.00",
+            "presentation": "16.39",
+            "presTop1": "CameraCullingSystem:3.86",
+            "presTop2": "MinimapPresentationSystem:3.78",
+            "presTop3": "PresenterEmitSystem:2.36",
+            "behavior": "0.02",
+            "behaviorBoot": "0",
+            "behaviorOwner": "0",
+            "behaviorAttr": "0",
+            "behaviorTag": "0",
+            "behaviorTick": "0",
+            "animator": "1.15",
+            "transformSync": "1.55",
+            "minimapCollect": "0.37",
+            "minimapMarkers": "10009/0",
+            "minimapProject": "3.76",
+            "minimapScreen": "10000/0",
+            "heightSync": "0.69",
+            "heightSamples": "10009",
+            "requestFlush": "0.00",
+            "spawnBatch": "0.00/0.00/0.00/0.00",
+            "spawnPerf": "0.00/0.00/0.00",
+            "spawnPerfParts": "0.00/0.00/0.00/0.00/0.00/0.00",
+            "spawnPerfChildParts": "0.00/0.00/0.00/0.00/0.00",
+            "cull": "3.86",
+            "cullSpatial": "2.73",
+            "cullStatic": "0.01",
+            "cullDyn": "1.09",
+            "cullEntity": "3.85",
+            "cullSync": "0.00",
+            "hudProj": "13.43",
+            "hudRaw": "20000",
+            "hudProjected": "20000",
+            "hudDensitySkip": "0",
+            "mode3D": "2.66",
+            "terrain": "0.04",
+            "terrainChunks": "4/0",
+            "field": "0.01",
+            "fieldCount": "0",
+            "fieldDirty": "0",
+            "fieldArea": "0",
+            "fieldDraws": "0",
+            "primitive": "2.57",
+            "primSync": "0.00",
+            "primBucket": "0.04",
+            "primImmediate": "0.01",
+            "primImmediateSkip": "6",
+            "primBuild": "0.00",
+            "primDraw": "0.02",
+            "primInstances": "6",
+            "primBatches": "2",
+            "primCache": "2/0",
+            "ground": "0.00",
+            "groundCount": "0",
+            "groundRaw": "0",
+            "spline": "0.00",
+            "splineCount": "0",
+            "splineRaw": "0",
+            "debugDraw": "0.00",
+            "debugDrawCount": "0",
+            "debugDrawRaw": "0",
+            "overlay": "2.82",
+            "overlayBuild": "0.02",
+            "overlayDirtyLanes": "1",
+            "overlayItems": "20038",
+            "overlayRebuilt": "0",
+            "overlayPaint": "1.64",
+            "overlayComposite": "0.00",
+            "uiRender": "0.00",
+            "uiUpload": "0.00",
+            "overlayFinal": "1.06",
+            "nativeDiag": "0.00",
+            "emit": "2.35",
+            "emitDirty": "0.00",
+            "emitDirtyCount": "0",
+            "emitRetained": "0.00",
+            "emitRetainedCount": "0",
+            "hudPositionOnly": "0",
+            "emitRetainedDirectPath": "0/0/0",
+            "endDraw": "80.04",
+            "screenshot": "0.00",
+            "worldHud": "20000",
+            "screenBars": "10000",
+            "screenText": "10000",
+            "worldHudDrops": "0",
+            "screenHudDrops": "0",
+            "overlaySceneDrops": "0"
+          }
+        }
+      },
+      {
+        "run": "20260909T184451.329584Z",
+        "path": "artifacts\\acceptance\\gpu-shared-pose\\launch\\runs\\20260909T184451.329584Z\\timing.log",
+        "sha256_at_read": "599e796cc6b30eaa12986d1467c41ce2c7dcbbbfa3137e17374aba85125302fa",
+        "filtered_rows": 161,
+        "quiet_rows": 114,
+        "stats": {
+          "behavior": {
+            "mean": 5.77335403726708,
+            "median": 5.4,
+            "min": 4.88,
+            "max": 25.32
+          },
+          "behaviorTick": {
+            "mean": 10000.0,
+            "median": 10000.0,
+            "min": 10000.0,
+            "max": 10000.0
+          },
+          "behaviorOwner": {
+            "mean": 47.98757763975155,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 189.0
+          },
+          "hudProj": {
+            "mean": 10.209068322981366,
+            "median": 8.77,
+            "min": 7.94,
+            "max": 35.69
+          },
+          "presentation": {
+            "mean": 22.792298136645964,
+            "median": 19.77,
+            "min": 18.01,
+            "max": 112.51
+          },
+          "transformSync": {
+            "mean": 2.7813664596273293,
+            "median": 1.84,
+            "min": 1.42,
+            "max": 31.0
+          },
+          "emit": {
+            "mean": 2.9885714285714284,
+            "median": 2.85,
+            "min": 2.13,
+            "max": 18.52
+          }
+        },
+        "sample": {
+          "source_line": 4,
+          "raw": "[2026-09-09T18:45:08.2662571Z] timing frame=120.12ms fps=8.3 cleanPerf=0 visibleEntities=10006 presenterActive=30009 presenterDefs=mass_navigation_agent_health_text_light:8568,mass_navigation_agent_health_hud_light:8568,mass_navigation_agent_azure_light:2142,mass_navigation_agent_crimson_light:2142,mass_navigation_agent_amber_light:2142,mass_navigation_agent_emerald_light:2142,mass_navigation_agent_health_text_heavy:1432,mass_navigation_agent_health_hud_heavy:1432 primitiveRaw=6 primitiveStaticRaw=6 skinnedRaw=10000 gpuSkinned=10000/6 gpuSkinBuild=1.20 gpuSkinDraw=0.65 gap=0.00 poll=0.00 pre=0.08 tick=23.94 post=14.21 begin=0.01 sim=3.16 simTop1=EffectProcessingLoopSystem:3.14 simTop2=:0.00 simTop3=:0.00 presentation=20.60 presTop1=PresenterBehaviorSystem:4.88 presTop2=MinimapPresentationSystem:3.59 presTop3=CameraCullingSystem:3.55 behavior=4.88 behaviorBoot=0 behaviorOwner=0 behaviorAttr=0 behaviorTag=0 behaviorTick=10000 animator=1.04 transformSync=1.42 minimapCollect=0.39 minimapMarkers=10009/0 minimapProject=3.58 minimapScreen=10000/0 heightSync=0.60 heightSamples=10009 requestFlush=0.01 spawnBatch=0.00/0.00/0.00/0.00 spawnPerf=0.00/0.00/0.00 spawnPerfParts=0.00/0.00/0.00/0.00/0.00/0.00 spawnPerfChildParts=0.00/0.00/0.00/0.00/0.00 cull=3.55 cullSpatial=2.54 cullStatic=0.01 cullDyn=0.98 cullEntity=3.54 cullSync=0.00 hudProj=14.15 hudRaw=20000 hudProjected=20000 hudDensitySkip=0 mode3D=2.76 terrain=0.04 terrainChunks=4/0 field=0.01 fieldCount=0 fieldDirty=0 fieldArea=0 fieldDraws=0 primitive=2.68 primSync=0.00 primBucket=0.05 primImmediate=0.02 primImmediateSkip=6 primBuild=0.00 primDraw=0.03 primInstances=6 primBatches=2 primCache=2/0 ground=0.00 groundCount=0 groundRaw=0 spline=0.00 splineCount=0 splineRaw=0 debugDraw=0.00 debugDrawCount=0 debugDrawRaw=0 overlay=2.81 overlayBuild=0.02 overlayDirtyLanes=1 overlayItems=20038 overlayRebuilt=0 overlayPaint=1.55 overlayComposite=0.00 uiRender=0.00 uiUpload=0.00 overlayFinal=1.03 nativeDiag=0.00 emit=2.62 emitDirty=0.00 emitDirtyCount=0 emitRetained=0.00 emitRetainedCount=0 hudPositionOnly=0 emitRetainedDirectPath=0/0/0 endDraw=71.89 screenshot=0.00 worldHud=20000 screenBars=10000 screenText=10000 worldHudDrops=0 screenHudDrops=0 overlaySceneDrops=0",
+          "values": {
+            "frame": "120.12ms",
+            "fps": "8.3",
+            "cleanPerf": "0",
+            "visibleEntities": "10006",
+            "presenterActive": "30009",
+            "presenterDefs": "mass_navigation_agent_health_text_light:8568,mass_navigation_agent_health_hud_light:8568,mass_navigation_agent_azure_light:2142,mass_navigation_agent_crimson_light:2142,mass_navigation_agent_amber_light:2142,mass_navigation_agent_emerald_light:2142,mass_navigation_agent_health_text_heavy:1432,mass_navigation_agent_health_hud_heavy:1432",
+            "primitiveRaw": "6",
+            "primitiveStaticRaw": "6",
+            "skinnedRaw": "10000",
+            "gpuSkinned": "10000/6",
+            "gpuSkinBuild": "1.20",
+            "gpuSkinDraw": "0.65",
+            "gap": "0.00",
+            "poll": "0.00",
+            "pre": "0.08",
+            "tick": "23.94",
+            "post": "14.21",
+            "begin": "0.01",
+            "sim": "3.16",
+            "simTop1": "EffectProcessingLoopSystem:3.14",
+            "simTop2": ":0.00",
+            "simTop3": ":0.00",
+            "presentation": "20.60",
+            "presTop1": "PresenterBehaviorSystem:4.88",
+            "presTop2": "MinimapPresentationSystem:3.59",
+            "presTop3": "CameraCullingSystem:3.55",
+            "behavior": "4.88",
+            "behaviorBoot": "0",
+            "behaviorOwner": "0",
+            "behaviorAttr": "0",
+            "behaviorTag": "0",
+            "behaviorTick": "10000",
+            "animator": "1.04",
+            "transformSync": "1.42",
+            "minimapCollect": "0.39",
+            "minimapMarkers": "10009/0",
+            "minimapProject": "3.58",
+            "minimapScreen": "10000/0",
+            "heightSync": "0.60",
+            "heightSamples": "10009",
+            "requestFlush": "0.01",
+            "spawnBatch": "0.00/0.00/0.00/0.00",
+            "spawnPerf": "0.00/0.00/0.00",
+            "spawnPerfParts": "0.00/0.00/0.00/0.00/0.00/0.00",
+            "spawnPerfChildParts": "0.00/0.00/0.00/0.00/0.00",
+            "cull": "3.55",
+            "cullSpatial": "2.54",
+            "cullStatic": "0.01",
+            "cullDyn": "0.98",
+            "cullEntity": "3.54",
+            "cullSync": "0.00",
+            "hudProj": "14.15",
+            "hudRaw": "20000",
+            "hudProjected": "20000",
+            "hudDensitySkip": "0",
+            "mode3D": "2.76",
+            "terrain": "0.04",
+            "terrainChunks": "4/0",
+            "field": "0.01",
+            "fieldCount": "0",
+            "fieldDirty": "0",
+            "fieldArea": "0",
+            "fieldDraws": "0",
+            "primitive": "2.68",
+            "primSync": "0.00",
+            "primBucket": "0.05",
+            "primImmediate": "0.02",
+            "primImmediateSkip": "6",
+            "primBuild": "0.00",
+            "primDraw": "0.03",
+            "primInstances": "6",
+            "primBatches": "2",
+            "primCache": "2/0",
+            "ground": "0.00",
+            "groundCount": "0",
+            "groundRaw": "0",
+            "spline": "0.00",
+            "splineCount": "0",
+            "splineRaw": "0",
+            "debugDraw": "0.00",
+            "debugDrawCount": "0",
+            "debugDrawRaw": "0",
+            "overlay": "2.81",
+            "overlayBuild": "0.02",
+            "overlayDirtyLanes": "1",
+            "overlayItems": "20038",
+            "overlayRebuilt": "0",
+            "overlayPaint": "1.55",
+            "overlayComposite": "0.00",
+            "uiRender": "0.00",
+            "uiUpload": "0.00",
+            "overlayFinal": "1.03",
+            "nativeDiag": "0.00",
+            "emit": "2.62",
+            "emitDirty": "0.00",
+            "emitDirtyCount": "0",
+            "emitRetained": "0.00",
+            "emitRetainedCount": "0",
+            "hudPositionOnly": "0",
+            "emitRetainedDirectPath": "0/0/0",
+            "endDraw": "71.89",
+            "screenshot": "0.00",
+            "worldHud": "20000",
+            "screenBars": "10000",
+            "screenText": "10000",
+            "worldHudDrops": "0",
+            "screenHudDrops": "0",
+            "overlaySceneDrops": "0"
+          }
+        }
+      }
+    ]
+  }
+}

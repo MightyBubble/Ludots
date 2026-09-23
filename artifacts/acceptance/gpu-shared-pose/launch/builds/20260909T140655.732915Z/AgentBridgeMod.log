@@ -1,0 +1,38 @@
+  正在确定要还原的项目…
+  已还原 C:\001_AI\Ludots-gpu-10k-opt\mods\AgentBridgeMod\AgentBridgeMod.csproj (用时 181 毫秒)。
+  已还原 C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Ludots.AgentBridge\Ludots.AgentBridge.csproj (用时 182 毫秒)。
+  12 个项目(共 14 个)是最新的，无法还原。
+  Ludots.UI -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Ludots.UI\bin\Release\net9.0\Ludots.UI.dll
+  Arch -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Arch\src\Arch\bin\Release\net8.0\Arch.dll
+  Arch -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Arch\src\Arch\bin\Release\net6.0\Arch.dll
+  Arch.Persistence -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Arch.Extended\Arch.Persistence\bin\Release\net7.0\Arch.Persistence.dll
+  Arch.Relationships -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Arch.Extended\Arch.Relationships\bin\Release\net7.0\Arch.Relationships.dll
+  Arch.System -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Arch.Extended\Arch.System\bin\Release\net7.0\Arch.System.dll
+  DotRecast.Core -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\DotRecast\src\DotRecast.Core\bin\Release\net9.0\DotRecast.Core.dll
+  DotRecast.Detour -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\DotRecast\src\DotRecast.Detour\bin\Release\net9.0\DotRecast.Detour.dll
+  DotRecast.Recast -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\DotRecast\src\DotRecast.Recast\bin\Release\net9.0\DotRecast.Recast.dll
+  Ludots.Platform.Abstractions -> C:\001_AI\Ludots-gpu-10k-opt\src\Platform\Ludots.Platform.Abstractions\bin\Release\net9.0\Ludots.Platform.Abstractions.dll
+  Ludots.Contracts -> C:\001_AI\Ludots-gpu-10k-opt\src\Contracts\bin\Release\net9.0\Ludots.Contracts.dll
+  Ludots.Graph.Abstractions -> C:\001_AI\Ludots-gpu-10k-opt\src\Graph\Ludots.Graph.Abstractions\bin\Release\net9.0\Ludots.Graph.Abstractions.dll
+  Ludots.Core -> C:\001_AI\Ludots-gpu-10k-opt\src\Core\bin\Release\net9.0\Ludots.Core.dll
+C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Ludots.AgentBridge\AgentToolException.cs(30,28): warning CS0114: “AgentToolException.Data”隐藏继承的成员“Exception.Data”。若要使当前成员重写该实现，请添加关键字 override。否则，添加关键字 new。 [C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Ludots.AgentBridge\Ludots.AgentBridge.csproj]
+C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Ludots.AgentBridge\Tools\PresenterTools.cs(1138,21): warning CS8602: 解引用可能出现空引用。 [C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Ludots.AgentBridge\Ludots.AgentBridge.csproj]
+C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Ludots.AgentBridge\Tools\PresenterTools.cs(1168,38): warning CS0649: 从未对字段“PresentersScreenTool.drawnTargetsLocal”赋值，字段将一直保持其默认值 null [C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Ludots.AgentBridge\Ludots.AgentBridge.csproj]
+  Ludots.AgentBridge -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Ludots.AgentBridge\bin\Release\net9.0\Ludots.AgentBridge.dll
+C:\001_AI\Ludots-gpu-10k-opt\mods\AgentBridgeMod\AgentBridgeModEntry.cs(35,30): warning CS0618: “ScriptContextExtensions.GetEngine(ScriptContext)”已过时:“Do not take the concrete GameEngine from ScriptContext. Use IModContext and existing ScriptContext ports (GetWorld, CoreServiceKeys). Do not add new call sites.” [C:\001_AI\Ludots-gpu-10k-opt\mods\AgentBridgeMod\AgentBridgeMod.csproj]
+C:\001_AI\Ludots-gpu-10k-opt\mods\AgentBridgeMod\AgentBridgeModEntry.cs(57,30): warning CS0618: “ScriptContextExtensions.GetEngine(ScriptContext)”已过时:“Do not take the concrete GameEngine from ScriptContext. Use IModContext and existing ScriptContext ports (GetWorld, CoreServiceKeys). Do not add new call sites.” [C:\001_AI\Ludots-gpu-10k-opt\mods\AgentBridgeMod\AgentBridgeMod.csproj]
+  AgentBridgeMod -> C:\001_AI\Ludots-gpu-10k-opt\mods\AgentBridgeMod\bin\net9.0\AgentBridgeMod.dll
+
+已成功生成。
+
+C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Ludots.AgentBridge\AgentToolException.cs(30,28): warning CS0114: “AgentToolException.Data”隐藏继承的成员“Exception.Data”。若要使当前成员重写该实现，请添加关键字 override。否则，添加关键字 new。 [C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Ludots.AgentBridge\Ludots.AgentBridge.csproj]
+C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Ludots.AgentBridge\Tools\PresenterTools.cs(1138,21): warning CS8602: 解引用可能出现空引用。 [C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Ludots.AgentBridge\Ludots.AgentBridge.csproj]
+C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Ludots.AgentBridge\Tools\PresenterTools.cs(1168,38): warning CS0649: 从未对字段“PresentersScreenTool.drawnTargetsLocal”赋值，字段将一直保持其默认值 null [C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Ludots.AgentBridge\Ludots.AgentBridge.csproj]
+C:\001_AI\Ludots-gpu-10k-opt\mods\AgentBridgeMod\AgentBridgeModEntry.cs(35,30): warning CS0618: “ScriptContextExtensions.GetEngine(ScriptContext)”已过时:“Do not take the concrete GameEngine from ScriptContext. Use IModContext and existing ScriptContext ports (GetWorld, CoreServiceKeys). Do not add new call sites.” [C:\001_AI\Ludots-gpu-10k-opt\mods\AgentBridgeMod\AgentBridgeMod.csproj]
+C:\001_AI\Ludots-gpu-10k-opt\mods\AgentBridgeMod\AgentBridgeModEntry.cs(57,30): warning CS0618: “ScriptContextExtensions.GetEngine(ScriptContext)”已过时:“Do not take the concrete GameEngine from ScriptContext. Use IModContext and existing ScriptContext ports (GetWorld, CoreServiceKeys). Do not add new call sites.” [C:\001_AI\Ludots-gpu-10k-opt\mods\AgentBridgeMod\AgentBridgeMod.csproj]
+    5 个警告
+    0 个错误
+
+已用时间 00:00:07.99
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。

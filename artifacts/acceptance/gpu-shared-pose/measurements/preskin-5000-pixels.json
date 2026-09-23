@@ -1,0 +1,53 @@
+[
+  {
+    "normalized_time": 0,
+    "baseline": "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp/mannequin-preskin\\results-5000-normal-fix\\pose-0-baseline.png",
+    "preskin": "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp/mannequin-preskin\\results-5000-normal-fix\\pose-0-preskin.png",
+    "diffPath": "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp/mannequin-preskin\\results-5000-normal-fix\\pose-0-difference-x8.png",
+    "width": 1280,
+    "height": 720,
+    "pixel_exact": false,
+    "changed_pixels": 406,
+    "changed_fraction": 0.00044053819444444446,
+    "pixels_over_8": 360,
+    "fraction_over_8": 0.000390625,
+    "max_rgb_error": 224,
+    "mean_rgb_error": 0.04462203414351852,
+    "foreground_pixels": 797071,
+    "foreground_mean_rgb_error": 0.05159347996184363
+  },
+  {
+    "normalized_time": 0.25,
+    "baseline": "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp/mannequin-preskin\\results-5000-normal-fix\\pose-1-baseline.png",
+    "preskin": "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp/mannequin-preskin\\results-5000-normal-fix\\pose-1-preskin.png",
+    "diffPath": "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp/mannequin-preskin\\results-5000-normal-fix\\pose-1-difference-x8.png",
+    "width": 1280,
+    "height": 720,
+    "pixel_exact": false,
+    "changed_pixels": 129,
+    "changed_fraction": 0.00013997395833333334,
+    "pixels_over_8": 103,
+    "fraction_over_8": 0.00011176215277777778,
+    "max_rgb_error": 222,
+    "mean_rgb_error": 0.010764612268518518,
+    "foreground_pixels": 792970,
+    "foreground_mean_rgb_error": 0.012510771739998571
+  },
+  {
+    "normalized_time": 0.5,
+    "baseline": "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp/mannequin-preskin\\results-5000-normal-fix\\pose-2-baseline.png",
+    "preskin": "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp/mannequin-preskin\\results-5000-normal-fix\\pose-2-preskin.png",
+    "diffPath": "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp/mannequin-preskin\\results-5000-normal-fix\\pose-2-difference-x8.png",
+    "width": 1280,
+    "height": 720,
+    "pixel_exact": false,
+    "changed_pixels": 472,
+    "changed_fraction": 0.0005121527777777778,
+    "pixels_over_8": 430,
+    "fraction_over_8": 0.00046657986111111113,
+    "max_rgb_error": 206,
+    "mean_rgb_error": 0.05519712094907407,
+    "foreground_pixels": 797250,
+    "foreground_mean_rgb_error": 0.06380641789484687
+  }
+]

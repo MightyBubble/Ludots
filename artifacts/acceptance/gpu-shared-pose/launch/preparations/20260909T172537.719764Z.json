@@ -1,0 +1,152 @@
+{
+  "preparedAtUtc": "20260909T172537.719764Z",
+  "root": "C:\\001_AI\\Ludots-gpu-10k-opt",
+  "commit": "ffd11358f7929544c9f1f193b96aeb1eb28616d3",
+  "bridgePort": 47931,
+  "appOutput": "C:\\001_AI\\Ludots-gpu-10k-opt\\src\\Apps\\Raylib\\Ludots.App.Raylib\\bin\\Release\\net9.0",
+  "mods": [
+    {
+      "id": "LudotsCoreMod",
+      "root": "C:\\001_AI\\Ludots-gpu-10k-opt\\mods\\LudotsCoreMod",
+      "project": "C:\\001_AI\\Ludots-gpu-10k-opt\\mods\\LudotsCoreMod\\LudotsCoreMod.csproj",
+      "binary": "C:\\001_AI\\Ludots-gpu-10k-opt\\mods\\LudotsCoreMod\\bin\\net9.0\\LudotsCoreMod.dll"
+    },
+    {
+      "id": "CoreInputMod",
+      "root": "C:\\001_AI\\Ludots-gpu-10k-opt\\mods\\CoreInputMod",
+      "project": "C:\\001_AI\\Ludots-gpu-10k-opt\\mods\\CoreInputMod\\CoreInputMod.csproj",
+      "binary": "C:\\001_AI\\Ludots-gpu-10k-opt\\mods\\CoreInputMod\\bin\\net9.0\\CoreInputMod.dll"
+    },
+    {
+      "id": "SelectionInteractionMod",
+      "root": "C:\\001_AI\\Ludots-gpu-10k-opt\\mods\\capabilities\\input\\SelectionInteractionMod",
+      "project": null,
+      "binary": null
+    },
+    {
+      "id": "MassNavigationMod",
+      "root": "C:\\001_AI\\Ludots-gpu-10k-opt\\mods\\capabilities\\navigation\\MassNavigationMod",
+      "project": "C:\\001_AI\\Ludots-gpu-10k-opt\\mods\\capabilities\\navigation\\MassNavigationMod\\MassNavigationMod.csproj",
+      "binary": "C:\\001_AI\\Ludots-gpu-10k-opt\\mods\\capabilities\\navigation\\MassNavigationMod\\bin\\net9.0\\MassNavigationMod.dll"
+    },
+    {
+      "id": "CapabilityStandardMassNavigationLargeWorld10kMod",
+      "root": "C:\\001_AI\\Ludots-gpu-10k-opt\\mods\\showcases\\capability_standard\\CapabilityStandardMassNavigationLargeWorld10kMod",
+      "project": "C:\\001_AI\\Ludots-gpu-10k-opt\\mods\\showcases\\capability_standard\\CapabilityStandardMassNavigationLargeWorld10kMod\\CapabilityStandardMassNavigationLargeWorld10kMod.csproj",
+      "binary": "C:\\001_AI\\Ludots-gpu-10k-opt\\mods\\showcases\\capability_standard\\CapabilityStandardMassNavigationLargeWorld10kMod\\bin\\net9.0\\CapabilityStandardMassNavigationLargeWorld10kMod.dll"
+    },
+    {
+      "id": "AgentBridgeMod",
+      "root": "C:\\001_AI\\Ludots-gpu-10k-opt\\mods\\AgentBridgeMod",
+      "project": "C:\\001_AI\\Ludots-gpu-10k-opt\\mods\\AgentBridgeMod\\AgentBridgeMod.csproj",
+      "binary": "C:\\001_AI\\Ludots-gpu-10k-opt\\mods\\AgentBridgeMod\\bin\\net9.0\\AgentBridgeMod.dll"
+    }
+  ],
+  "mode": {
+    "configuredAgents": 10000,
+    "agentsPerTeam": 2500,
+    "teams": 4,
+    "hud": "bar and text",
+    "persistentEffect": {
+      "id": "Effect.MassNavigation.Agent.HealthDrift",
+      "presetType": "Buff",
+      "lifetime": "Infinite",
+      "participatesInResponse": false,
+      "duration": {
+        "durationTicks": 0,
+        "periodTicks": 60,
+        "clockId": "FixedFrame"
+      },
+      "phaseGraphs": {
+        "OnApply": {
+          "post": "Graph.MassNavigation.Agent.HealthDrift"
+        },
+        "OnPeriod": {
+          "post": "Graph.MassNavigation.Agent.HealthDrift"
+        }
+      },
+      "categories": [
+        "Effect.MassNavigation.Agent.HealthDrift"
+      ]
+    },
+    "minimap": "visible at startup",
+    "animation": "GpuSkinnedInstance with locomotion controller; explicit move orders required",
+    "agentTemplates": [
+      "mass_navigation_agent_azure_light",
+      "mass_navigation_agent_azure_heavy",
+      "mass_navigation_agent_crimson_light",
+      "mass_navigation_agent_crimson_heavy",
+      "mass_navigation_agent_amber_light",
+      "mass_navigation_agent_amber_heavy",
+      "mass_navigation_agent_emerald_light",
+      "mass_navigation_agent_emerald_heavy"
+    ],
+    "sourceEvidence": [
+      {
+        "path": "C:\\001_AI\\Ludots-gpu-10k-opt\\mods\\capabilities\\navigation\\MassNavigationMod\\assets\\MassNavigationConfig.json",
+        "bytes": 8974,
+        "sha256": "04740147c785d48802e205bc2f41be2d9ba7143601613282bfd80ca7958e4d13"
+      },
+      {
+        "path": "C:\\001_AI\\Ludots-gpu-10k-opt\\mods\\capabilities\\navigation\\MassNavigationMod\\assets\\Entities\\templates.json",
+        "bytes": 10367,
+        "sha256": "8e3cef81ded7dadcdb4c5265a74648f850a06cc206bc2f7b78764849b29b43d1"
+      },
+      {
+        "path": "C:\\001_AI\\Ludots-gpu-10k-opt\\mods\\capabilities\\navigation\\MassNavigationMod\\assets\\GAS\\effects.json",
+        "bytes": 534,
+        "sha256": "20b059217f54f471e004ffd9c253563e8983b0ae1d88eecc9306093685936afd"
+      },
+      {
+        "path": "C:\\001_AI\\Ludots-gpu-10k-opt\\mods\\capabilities\\navigation\\MassNavigationMod\\assets\\GAS\\graphs.json",
+        "bytes": 2030,
+        "sha256": "c86c645ea7fb9e7758e98463139bddf581bdfd9ebd7da520612d4b01c0629e55"
+      },
+      {
+        "path": "C:\\001_AI\\Ludots-gpu-10k-opt\\mods\\capabilities\\navigation\\MassNavigationMod\\assets\\Presentation\\presenters.json",
+        "bytes": 26925,
+        "sha256": "5302f56cf5180041d40afeffa99429a828778f4f545cf570e3f23d4b6bfdd555"
+      },
+      {
+        "path": "C:\\001_AI\\Ludots-gpu-10k-opt\\mods\\capabilities\\navigation\\MassNavigationMod\\assets\\Presentation\\animator_controllers.json",
+        "bytes": 1203,
+        "sha256": "fc8c426452db94ff093b989c8de22fc58ef18e04c280c5c5ace4ed7cf8cb0f2e"
+      },
+      {
+        "path": "C:\\001_AI\\Ludots-gpu-10k-opt\\mods\\capabilities\\navigation\\MassNavigationMod\\assets\\Presentation\\animation_clips.json",
+        "bytes": 475,
+        "sha256": "2230ead4d1b510776402c8e99f95d4918f3e85f03cb2b499865ef7fde718b1cb"
+      },
+      {
+        "path": "C:\\001_AI\\Ludots-gpu-10k-opt\\mods\\showcases\\capability_standard\\CapabilityStandardMassNavigationLargeWorld10kMod\\assets\\game.json",
+        "bytes": 2136,
+        "sha256": "2c2b471ee915500f60c7fead812e674589f46e461b2ef4a21acebb53c35026d9"
+      },
+      {
+        "path": "C:\\001_AI\\Ludots-gpu-10k-opt\\mods\\showcases\\capability_standard\\CapabilityStandardMassNavigationLargeWorld10kMod\\CapabilityStandardMassNavigationLargeWorld10kModEntry.cs",
+        "bytes": 3414,
+        "sha256": "88cbe987a3ee4e82a1fa394e4c7feb13109d4c5ada5c6e77a85d45ba50f9f59d"
+      }
+    ]
+  },
+  "bootstrap": {
+    "path": "C:\\001_AI\\Ludots-gpu-10k-opt\\artifacts\\acceptance\\gpu-shared-pose\\launch\\launcher.mass-navigation-10k-hud.runtime.json",
+    "bytes": 106,
+    "sha256": "19634990754f84e091e818ecc8baf48576960a8b38baf4773097286b4bfb4e36"
+  },
+  "graph": {
+    "path": "C:\\001_AI\\Ludots-gpu-10k-opt\\artifacts\\acceptance\\gpu-shared-pose\\launch\\raylib.mass-navigation-10k-hud.launch.graph.json",
+    "bytes": 1199,
+    "sha256": "ccf9b3da0a306bfa678456627559e9a40b3e84e1d9e553d009c5f1687675bd84"
+  },
+  "sourceRuntime": {
+    "path": "C:\\001_AI\\Ludots-gpu-10k-opt\\src\\Apps\\Raylib\\Ludots.App.Raylib\\launcher.mass-navigation-10k-hud.runtime.json",
+    "bytes": 102,
+    "sha256": "9656e808c2be63559cf3120a4e2ec10f745405b23bf451f2cfde53b6b86dc239"
+  },
+  "sourceGraph": {
+    "path": "C:\\001_AI\\Ludots-gpu-10k-opt\\src\\Apps\\Raylib\\Ludots.App.Raylib\\raylib.mass-navigation-10k-hud.launch.graph.json",
+    "bytes": 1083,
+    "sha256": "5ca86f13be5d4a268fbe8e15b6913173c29ba90b6c8af1c187c9ea43717cf47a"
+  }
+}

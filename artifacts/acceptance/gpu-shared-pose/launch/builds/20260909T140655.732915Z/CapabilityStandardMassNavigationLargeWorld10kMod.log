@@ -1,0 +1,28 @@
+  正在确定要还原的项目…
+  已还原 C:\001_AI\Ludots-gpu-10k-opt\mods\showcases\capability_standard\CapabilityStandardMassNavigationLargeWorld10kMod\CapabilityStandardMassNavigationLargeWorld10kMod.csproj (用时 171 毫秒)。
+  12 个项目(共 13 个)是最新的，无法还原。
+  Arch -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Arch\src\Arch\bin\Release\net8.0\Arch.dll
+  Arch -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Arch\src\Arch\bin\Release\net6.0\Arch.dll
+  Arch.Persistence -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Arch.Extended\Arch.Persistence\bin\Release\net7.0\Arch.Persistence.dll
+  Arch.Relationships -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Arch.Extended\Arch.Relationships\bin\Release\net7.0\Arch.Relationships.dll
+  Arch.System -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Arch.Extended\Arch.System\bin\Release\net7.0\Arch.System.dll
+  DotRecast.Core -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\DotRecast\src\DotRecast.Core\bin\Release\net9.0\DotRecast.Core.dll
+  DotRecast.Detour -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\DotRecast\src\DotRecast.Detour\bin\Release\net9.0\DotRecast.Detour.dll
+  DotRecast.Recast -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\DotRecast\src\DotRecast.Recast\bin\Release\net9.0\DotRecast.Recast.dll
+  Ludots.Platform.Abstractions -> C:\001_AI\Ludots-gpu-10k-opt\src\Platform\Ludots.Platform.Abstractions\bin\Release\net9.0\Ludots.Platform.Abstractions.dll
+  Ludots.Contracts -> C:\001_AI\Ludots-gpu-10k-opt\src\Contracts\bin\Release\net9.0\Ludots.Contracts.dll
+  Ludots.Graph.Abstractions -> C:\001_AI\Ludots-gpu-10k-opt\src\Graph\Ludots.Graph.Abstractions\bin\Release\net9.0\Ludots.Graph.Abstractions.dll
+  Ludots.Core -> C:\001_AI\Ludots-gpu-10k-opt\src\Core\bin\Release\net9.0\Ludots.Core.dll
+  CoreInputMod -> C:\001_AI\Ludots-gpu-10k-opt\mods\CoreInputMod\bin\net9.0\CoreInputMod.dll
+C:\001_AI\Ludots-gpu-10k-opt\mods\showcases\capability_standard\CapabilityStandardMassNavigationLargeWorld10kMod\CapabilityStandardMassNavigationLargeWorld10kModEntry.cs(35,30): warning CS0618: “ScriptContextExtensions.GetEngine(ScriptContext)”已过时:“Do not take the concrete GameEngine from ScriptContext. Use IModContext and existing ScriptContext ports (GetWorld, CoreServiceKeys). Do not add new call sites.” [C:\001_AI\Ludots-gpu-10k-opt\mods\showcases\capability_standard\CapabilityStandardMassNavigationLargeWorld10kMod\CapabilityStandardMassNavigationLargeWorld10kMod.csproj]
+  CapabilityStandardMassNavigationLargeWorld10kMod -> C:\001_AI\Ludots-gpu-10k-opt\mods\showcases\capability_standard\CapabilityStandardMassNavigationLargeWorld10kMod\bin\net9.0\CapabilityStandardMassNavigationLargeWorld10kMod.dll
+
+已成功生成。
+
+C:\001_AI\Ludots-gpu-10k-opt\mods\showcases\capability_standard\CapabilityStandardMassNavigationLargeWorld10kMod\CapabilityStandardMassNavigationLargeWorld10kModEntry.cs(35,30): warning CS0618: “ScriptContextExtensions.GetEngine(ScriptContext)”已过时:“Do not take the concrete GameEngine from ScriptContext. Use IModContext and existing ScriptContext ports (GetWorld, CoreServiceKeys). Do not add new call sites.” [C:\001_AI\Ludots-gpu-10k-opt\mods\showcases\capability_standard\CapabilityStandardMassNavigationLargeWorld10kMod\CapabilityStandardMassNavigationLargeWorld10kMod.csproj]
+    1 个警告
+    0 个错误
+
+已用时间 00:00:06.66
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。

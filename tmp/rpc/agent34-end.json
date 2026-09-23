@@ -1,0 +1,31 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "entityId": 34,
+    "name": "MassNavigation.Agent.Azure.Heavy",
+    "tags": [
+      "Unit.Commandable"
+    ],
+    "attributes": [
+      {
+        "id": 0,
+        "name": "Health",
+        "current": 237.919,
+        "base": 260
+      }
+    ],
+    "activeEffects": {
+      "count": 1,
+      "effectEntityIds": [
+        52542
+      ]
+    }
+  },
+  "instance": {
+    "pid": 13836,
+    "port": 47931,
+    "mapId": "mass_navigation",
+    "processPath": "C:\\Program Files\\dotnet\\dotnet.exe"
+  }
+}

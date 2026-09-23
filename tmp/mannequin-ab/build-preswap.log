@@ -1,0 +1,15 @@
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  Ludots.Platform.Abstractions -> C:\001_AI\Ludots-gpu-10k-opt\src\Platform\Ludots.Platform.Abstractions\bin\Release\net9.0\Ludots.Platform.Abstractions.dll
+  Raylib-cs -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\Raylib-cs\bin\Release\net9.0\Raylib-cs.dll
+  SkiaSharp -> C:\001_AI\Ludots-gpu-10k-opt\src\Libraries\SkiaSharp\SkiaSharp\bin\Release\net8.0\SkiaSharp.dll
+  Ludots.Raylib.Render -> C:\001_AI\Ludots-gpu-10k-opt\src\Client\Ludots.Raylib.Render\bin\Release\net9.0\Ludots.Raylib.Render.dll
+  MannequinAb -> C:\001_AI\Ludots-gpu-10k-opt\tmp\mannequin-ab\bin\Release\net9.0\Ludots.Adapter.Raylib.Tests.dll
+
+已成功生成。
+    0 个警告
+    0 个错误
+
+已用时间 00:00:03.09
+
+有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。

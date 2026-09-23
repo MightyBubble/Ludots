@@ -1,0 +1,78 @@
+{
+  "path": "C:\\001_AI\\Ludots-gpu-10k-opt\\tmp\\mannequin-assets\\mannequin_large_idle_walk.glb",
+  "sha256": "216ab24a531fbb42196dbf746fea8094690ec5015acb350e6d9681057c2d3aa6",
+  "bytes": 845552,
+  "meshes": 6,
+  "primitives": 6,
+  "skin_joint_counts": [
+    23
+  ],
+  "animation_order": [
+    {
+      "index": 0,
+      "name": "Death_A",
+      "channels": 69,
+      "duration": 1.6666666666666667
+    },
+    {
+      "index": 1,
+      "name": "Death_A_Pose",
+      "channels": 69,
+      "duration": 0
+    },
+    {
+      "index": 2,
+      "name": "Hit_A",
+      "channels": 69,
+      "duration": 0.6666666666666666
+    },
+    {
+      "index": 3,
+      "name": "Idle_A",
+      "channels": 69,
+      "duration": 1.9583333333333333
+    },
+    {
+      "index": 4,
+      "name": "Idle_B",
+      "channels": 69,
+      "duration": 6
+    },
+    {
+      "index": 5,
+      "name": "retarget_Idle_A",
+      "channels": 69,
+      "duration": 1.9583333333333333
+    },
+    {
+      "index": 6,
+      "name": "retarget_Walking_A",
+      "channels": 69,
+      "duration": 1.0416666666666667
+    },
+    {
+      "index": 7,
+      "name": "Running_A",
+      "channels": 69,
+      "duration": 1.0416666666666667
+    },
+    {
+      "index": 8,
+      "name": "T-Pose",
+      "channels": 69,
+      "duration": 0
+    },
+    {
+      "index": 9,
+      "name": "T-Pose.001",
+      "channels": 69,
+      "duration": 0
+    },
+    {
+      "index": 10,
+      "name": "Walking_A",
+      "channels": 69,
+      "duration": 1.0416666666666667
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "tick": 3209,
+    "plane": "world",
+    "totalMatched": 1074,
+    "offset": 0,
+    "returned": 1,
+    "dropped": 1073,
+    "presenters": [
+      {
+        "presenterEntityId": 37,
+        "defId": 51,
+        "stableId": 19,
+        "scopeId": 18,
+        "anchorKind": "Entity",
+        "owner": {
+          "entityId": 34,
+          "name": "MassNavigation.Agent.Azure.Heavy",
+          "alive": true
+        },
+        "logicCm": {
+          "x": -7259,
+          "y": 47
+        },
+        "visualPos": {
+          "x": -72.59,
+          "y": 253.037,
+          "z": 0.47
+        },
+        "ownerPayloadRoots": 1,
+        "presenterPos": {
+          "x": -72.59,
+          "y": 253.037,
+          "z": 0.47
+        },
+        "presenterPlaneCm": {
+          "x": -7259,
+          "y": 47
+        },
+        "presenterYawDeg": 0,
+        "presenterFacingDeg": 0,
+        "presenterScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "markers": {
+          "transformSyncTick": true,
+          "ownerPayloadSync": true,
+          "staticStable": false,
+          "bootstrapPending": false,
+          "emitDirty": false,
+          "transformSource": "EntityTransform"
+        },
+        "emit": {
+          "staticDirty": 0,
+          "retainedDirty": 0,
+          "cachedVersion": 120,
+          "stableVisualPresent": 0,
+          "lastEmitPos": {
+            "x": -72.59,
+            "y": 253.037,
+            "z": 0.47
+          }
+        },
+        "cull": {
+          "ownerCullVisible": true,
+          "lod": "High"
+        },
+        "behaviorActiveMask": 29,
+        "adapterDrawn": null
+      }
+    ]
+  },
+  "instance": {
+    "pid": 13836,
+    "port": 47931,
+    "mapId": "mass_navigation",
+    "processPath": "C:\\Program Files\\dotnet\\dotnet.exe"
+  }
+}

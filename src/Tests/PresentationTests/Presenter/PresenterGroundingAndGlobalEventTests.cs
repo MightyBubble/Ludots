@@ -10,6 +10,7 @@ using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Requests;
@@ -1242,24 +1243,73 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void BehaviorSystem_DoesNotSkipOwnerBackedSnapToGround_WhenOwnerSampleStateUnresolved()
+        public void BehaviorSystem_PendingOwnerGrounding_FollowsTerrainWithoutRetainingTick()
+        {
+            AssertOwnerGroundingChain(batch: false, firstSampled: 0, secondSampled: 0, offset: 0f);
+        }
+
+        [TestCase(0, 0, 0f)]
+        [TestCase(1, 1, 0f)]
+        [TestCase(0, 1, 0f)]
+        [TestCase(0, 1, 1.25f)]
+        public void EntityAnchoredRootBatch_OwnerGrounding_FollowsTerrainAndPreservesOffsets(
+            int firstSampled,
+            int secondSampled,
+            float offset)
+        {
+            AssertOwnerGroundingChain(batch: true, firstSampled, secondSampled, offset);
+        }
+
+        [Test]
+        public void BehaviorSystem_MixedDefinitionOwnerGrounding_FollowsTerrainWithoutRetainingTick()
+        {
+            AssertOwnerGroundingChain(batch: false, firstSampled: 0, secondSampled: 1, offset: 0f, mixedDefinitions: true);
+        }
+
+        private static void AssertOwnerGroundingChain(
+            bool batch,
+            int firstSampled,
+            int secondSampled,
+            float offset,
+            bool mixedDefinitions = false)
         {
             using var world = World.Create();
             var runtime = new PresenterEntityRuntime(world);
             var definitions = new PresenterDefinitionRegistry();
             var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             var sounds = new SoundRequestBuffer();
-            world.Create(new PresentationFrameState { FrameId = 7 }, new PresentationFrameStateTag());
-            Entity owner = world.Create(
-                new VisualTransform
+            var diagnostics = new PresentationTimingDiagnostics();
+            Entity frame = world.Create(
+                new PresentationFrameState { Enabled = true, InterpolationAlpha = 1f, FrameId = 7 },
+                new PresentationFrameStateTag());
+            int count = mixedDefinitions ? 4 : batch ? 2 : 1;
+            var owners = new Entity[count];
+            var created = new Entity[count];
+            var transforms = new VisualTransform[count];
+            var culls = new CullState[count];
+            var scopes = new int[count];
+            var stableIds = new int[count];
+            for (int i = 0; i < count; i++)
+            {
+                transforms[i] = new VisualTransform
                 {
-                    Position = new Vector3(10f, 2.5f, 20f),
+                    Position = new Vector3(10f + i, 2.5f, 20f),
                     Rotation = Quaternion.Identity,
                     Scale = Vector3.One,
-                },
-                new ContinuousHeightmapSampleState { FrameId = 7, Sampled = 0 });
+                };
+                owners[i] = world.Create(
+                    WorldPositionCm.FromCmFloat((10f + i) * 100f, 2000f),
+                    transforms[i],
+                    new ContinuousHeightmapSampleState
+                    {
+                        FrameId = 6,
+                        Sampled = (byte)(i == 0 ? firstSampled : secondSampled),
+                    });
+                scopes[i] = 1;
+                stableIds[i] = 25 + i;
+            }
 
-            int defId = definitions.Register("entity.grounded.owner.unresolved", new PresenterDefinition
+            int defId = definitions.Register("entity.grounded.owner.pending", new PresenterDefinition
             {
                 Behaviors =
                 [
@@ -1271,43 +1321,132 @@ namespace Ludots.Tests.Presentation
                         Grounding = new GroundingConfig
                         {
                             Mode = GroundingMode.SnapToGround,
-                            Offset = 0f,
+                            Offset = offset,
                             UpdatePolicy = GroundingUpdatePolicy.EveryFrame,
                         },
                     },
                 ],
             });
+            int alternateDefId = mixedDefinitions
+                ? definitions.Register("entity.grounded.owner.pending.alternate", new PresenterDefinition
+                {
+                    Behaviors = definitions.Get(defId).Behaviors,
+                })
+                : defId;
 
-            Entity presenter = runtime.Create(
-                defId,
-                owner,
-                scopeId: 1,
-                PresentationAnchorKind.Entity,
-                worldPosition: world.Get<VisualTransform>(owner).Position,
-                stableId: 25,
-                parent: Entity.Null,
-                definitions.Get(defId));
-            if (world.Has<PresenterBootstrapPending>(presenter))
+            runtime.BindDefinitions(definitions);
+            if (batch)
             {
-                world.Remove<PresenterBootstrapPending>(presenter);
+                Assert.That(runtime.CreateEntityAnchoredRootBatch(
+                    definitions, defId, owners, scopes, stableIds, transforms, culls,
+                    definitions.Get(defId), created), Is.EqualTo(count));
+            }
+            else
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    int createDefId = i % 2 == 0 ? defId : alternateDefId;
+                    created[i] = runtime.Create(
+                        createDefId, owners[i], scopeId: 1, PresentationAnchorKind.Entity,
+                        worldPosition: transforms[i].Position, stableId: stableIds[i],
+                        parent: Entity.Null, definitions.Get(createDefId));
+                }
             }
 
-            Assert.That(
-                world.Has<PerfHasGrounding>(presenter),
-                Is.True,
-                "Owner ContinuousHeightmapSampleState with Sampled=0 is not resolved provenance; presenter must still ground.");
+            bool requiresPresenterGrounding = offset != 0f;
+            for (int i = 0; i < count; i++)
+            {
+                Assert.That(world.Has<PerfHasGrounding>(created[i]), Is.EqualTo(requiresPresenterGrounding),
+                    "Pending owner height sampling must not retain a zero-offset root in the grounding tick query.");
+            }
 
-            using var system = new PresenterBehaviorSystem(
-                world,
-                runtime,
-                definitions,
-                events,
-                new PresentationOwnerChangeBuffer(8),
-                sounds,
-                new StubHeightmap(heightCm: 400f));
+            var heightmap = new StubHeightmap(heightCm: 400f, slopeXCm: 0.1f);
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.ContinuousHeightmap.Name] = heightmap,
+            };
+            using var terrain = new TerrainHeightSyncSystem(world, globals, diagnostics);
+            using var sync = new PresenterEntityTransformSyncSystem(world, runtime, definitions, diagnostics);
+            using var behavior = new PresenterBehaviorSystem(
+                world, runtime, definitions, events, new PresentationOwnerChangeBuffer(8), sounds,
+                heightmap, timingDiagnostics: diagnostics);
 
-            Assert.DoesNotThrow(() => system.Update(0.016f));
-            Assert.That(world.Get<PresenterWorldPosition>(presenter).Value.Y, Is.EqualTo(4f).Within(0.001f));
+            for (int update = 0; update < 2; update++)
+            {
+                if (update != 0)
+                {
+                    world.Get<PresentationFrameState>(frame).FrameId++;
+                    for (int i = 0; i < count; i++)
+                    {
+                        world.Get<WorldPositionCm>(owners[i]) = WorldPositionCm.FromCmFloat((30f + i) * 100f, 4000f);
+                        world.Get<VisualTransform>(owners[i]).Position.X = 30f + i;
+                        world.Get<VisualTransform>(owners[i]).Position.Z = 40f;
+                    }
+                }
+
+                int samplesBefore = heightmap.HeightSampleCount;
+                terrain.Update(0.016f);
+                sync.Update(0.016f);
+                behavior.Update(0.016f);
+                Assert.That(heightmap.HeightSampleCount - samplesBefore,
+                    Is.EqualTo(count * (requiresPresenterGrounding ? 2 : 1)));
+                Assert.That(diagnostics.TerrainHeightSamplesLastFrame, Is.EqualTo(count));
+                for (int i = 0; i < count; i++)
+                {
+                    float expectedHeight = update == 0 ? 5f + i * 0.1f : 7f + i * 0.1f;
+                    Assert.That(world.Get<ContinuousHeightmapSampleState>(owners[i]).Sampled, Is.EqualTo(1));
+                    Assert.That(world.Get<VisualTransform>(owners[i]).Position.Y, Is.EqualTo(expectedHeight).Within(0.001f));
+                    Assert.That(world.Get<PresenterWorldPosition>(created[i]).Value.Y,
+                        Is.EqualTo(expectedHeight + offset).Within(0.001f));
+                    Assert.That(world.Has<PerfHasGrounding>(created[i]), Is.EqualTo(requiresPresenterGrounding));
+                }
+
+                if (update != 0)
+                {
+                    Assert.That(diagnostics.PresenterTickDrivenCountLastFrame,
+                        Is.EqualTo(requiresPresenterGrounding ? count : 0));
+                }
+            }
+
+            for (int update = 0; update < 16; update++)
+            {
+                terrain.Update(0.016f);
+                sync.Update(0.016f);
+                behavior.Update(0.016f);
+            }
+
+            var ownerArchetypes = new Archetype[count];
+            var presenterArchetypes = new Archetype[count];
+            for (int i = 0; i < count; i++)
+            {
+                ownerArchetypes[i] = world.GetArchetype(owners[i]);
+                presenterArchetypes[i] = world.GetArchetype(created[i]);
+            }
+
+            long allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+            for (int update = 0; update < 32; update++)
+            {
+                world.Get<PresentationFrameState>(frame).FrameId++;
+                for (int i = 0; i < count; i++)
+                {
+                    float x = 30f + i + update;
+                    world.Get<WorldPositionCm>(owners[i]) = WorldPositionCm.FromCmFloat(x * 100f, 4000f);
+                    world.Get<VisualTransform>(owners[i]).Position.X = x;
+                }
+                terrain.Update(0.016f);
+                sync.Update(0.016f);
+                behavior.Update(0.016f);
+            }
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
+            if (!requiresPresenterGrounding)
+            {
+                Assert.That(allocated, Is.Zero);
+            }
+            for (int i = 0; i < count; i++)
+            {
+                Assert.That(world.GetArchetype(owners[i]), Is.SameAs(ownerArchetypes[i]));
+                Assert.That(world.GetArchetype(created[i]), Is.SameAs(presenterArchetypes[i]));
+            }
         }
 
         [Test]
@@ -1486,16 +1625,21 @@ namespace Ludots.Tests.Presentation
         {
             private readonly float _heightCm;
             private readonly Vector3 _normal;
+            private readonly float _slopeXCm;
 
-            public StubHeightmap(float heightCm, Vector3? normal = null)
+            public int HeightSampleCount { get; private set; }
+
+            public StubHeightmap(float heightCm, Vector3? normal = null, float slopeXCm = 0f)
             {
                 _heightCm = heightCm;
                 _normal = normal ?? Vector3.UnitY;
+                _slopeXCm = slopeXCm;
             }
 
             public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = 0)
             {
-                heightCm = _heightCm;
+                HeightSampleCount++;
+                heightCm = _heightCm + worldXCm * _slopeXCm;
                 return true;
             }
 
@@ -1503,9 +1647,10 @@ namespace Ludots.Tests.Presentation
             {
                 for (int i = 0; i < outHeightCm.Length; i++)
                 {
-                    outHeightCm[i] = _heightCm;
+                    outHeightCm[i] = _heightCm + worldXCm[i] * _slopeXCm;
                 }
 
+                HeightSampleCount += outHeightCm.Length;
                 return true;
             }
 
