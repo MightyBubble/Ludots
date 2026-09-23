@@ -160,6 +160,7 @@
         "Name": {
           "Value": "Blue Vanguard"
         },
+        "initialInteractionContext": "interaction.context.road.battle",
         "PlayerOwner": {
           "PlayerId": 1
         },

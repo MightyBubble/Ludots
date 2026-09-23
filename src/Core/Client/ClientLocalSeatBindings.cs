@@ -97,7 +97,7 @@ namespace Ludots.Core.Client
             UpsertSolePlayerLookup(engine, playerId, possessedRep, replacement);
         }
 
-        private static CameraManager? ResolveAdoptablePresentCamera(LogicViewRegistry views)
+        internal static CameraManager? ResolveAdoptablePresentCamera(LogicViewRegistry views)
         {
             if (views.TryGetClientPresentCamera(out CameraManager clientPresent))
             {

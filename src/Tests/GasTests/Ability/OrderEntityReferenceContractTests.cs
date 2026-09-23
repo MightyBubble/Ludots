@@ -133,6 +133,10 @@ namespace Ludots.Tests.GAS
             {
                 OrderTypeId = 1,
                 EntityBlackboardKey = OrderBlackboardKeys.Generic_TargetEntity,
+                // 仅收实体黑板分支：激活准备对已声明键的缓冲硬性 fail-fast，
+                // 空间键留默认值会要求夹具补挂 BlackboardSpatialBuffer。
+                SpatialBlackboardKey = -1,
+                IntArg0BlackboardKey = -1,
             });
             var order = new Order
             {

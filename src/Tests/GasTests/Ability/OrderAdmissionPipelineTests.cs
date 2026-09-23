@@ -148,15 +148,18 @@ public sealed class OrderAdmissionPipelineTests
 
         // Atomic shared-batch failure rewrites every accepted row to the concrete failure result.
         Assert.That(FindEntityOutcome(results, batch[0].OrderId, OrderSubmitResult.RejectedInvalidActor, out OrderAdmissionOutcome first), Is.True);
-        Assert.That(FindEntityOutcome(results, batch[0].OrderId, OrderSubmitResult.RejectedInvalidActor, out OrderAdmissionOutcome second), Is.True);
+        Assert.That(FindEntityOutcome(results, batch[1].OrderId, OrderSubmitResult.RejectedInvalidActor, out OrderAdmissionOutcome second), Is.True);
         Assert.Multiple(() =>
         {
             Assert.That(world.Get<OrderBuffer>(validActor).HasActive, Is.False);
             Assert.That(first.Result, Is.EqualTo(OrderSubmitResult.RejectedInvalidActor));
             Assert.That(second.Result, Is.EqualTo(OrderSubmitResult.RejectedInvalidActor));
-            Assert.That(first.OrderId, Is.EqualTo(second.OrderId));
+            Assert.That(first.OrderId, Is.Not.EqualTo(second.OrderId),
+                "shared batch members keep distinct terminal receipts; group identity is the admission batch");
             Assert.That(first.AdmissionBatchId, Is.Positive);
-            Assert.That(CountEntityOutcomes(results, batch[0].OrderId, OrderSubmitResult.RejectedInvalidActor), Is.EqualTo(2));
+            Assert.That(first.AdmissionBatchId, Is.EqualTo(second.AdmissionBatchId));
+            Assert.That(CountEntityOutcomes(results, batch[0].OrderId, OrderSubmitResult.RejectedInvalidActor), Is.EqualTo(1));
+            Assert.That(CountEntityOutcomes(results, batch[1].OrderId, OrderSubmitResult.RejectedInvalidActor), Is.EqualTo(1));
         });
     }
 
