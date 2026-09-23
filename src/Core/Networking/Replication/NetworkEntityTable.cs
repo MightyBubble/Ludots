@@ -225,6 +225,15 @@ namespace Ludots.Core.Networking.Replication
             _snapshotPublicationDepth--;
         }
 
+        internal bool IsInSnapshotPublication
+        {
+            get
+            {
+                EnsureOwnerThread();
+                return _snapshotPublicationDepth > 0;
+            }
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal bool TryResolvePublished(NetworkEntityHandle handle, out Entity entity)
         {

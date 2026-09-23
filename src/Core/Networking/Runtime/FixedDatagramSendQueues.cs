@@ -12,6 +12,7 @@ namespace Ludots.Core.Networking.Runtime
         private readonly byte[] _payloads;
         private int _head;
         private int _count;
+        private int _reservedCount;
 
         public FixedServerDatagramSendQueue(int capacity, int maxPayloadBytes)
         {
@@ -23,22 +24,112 @@ namespace Ludots.Core.Networking.Runtime
         }
 
         public int Count => _count;
+        public int ReservedCount => _reservedCount;
         public int Capacity => _connections.Length;
+        public int AvailableCapacity => Capacity - _count - _reservedCount;
 
         public bool TryEnqueue(ConnectionId connection, ChannelId channel, ReadOnlySpan<byte> payload)
         {
-            if (_count == Capacity || payload.Length > _maxPayloadBytes)
+            if (_reservedCount != 0 || _count == Capacity || payload.Length > _maxPayloadBytes)
             {
                 return false;
             }
 
             int slot = (_head + _count) % Capacity;
-            _connections[slot] = connection.Value;
-            _channels[slot] = channel.Value;
-            _lengths[slot] = payload.Length;
-            payload.CopyTo(_payloads.AsSpan(slot * _maxPayloadBytes, payload.Length));
+            WriteSlot(slot, connection, channel, payload);
             _count++;
             return true;
+        }
+
+        public bool TryExpandReserved(int additionalDatagrams)
+        {
+            if (additionalDatagrams <= 0 || additionalDatagrams > AvailableCapacity)
+            {
+                return false;
+            }
+
+            _reservedCount += additionalDatagrams;
+            return true;
+        }
+
+        public bool TryGetReservedWriteSlot(
+            int reservedIndex,
+            out Span<byte> payloadDestination)
+        {
+            if ((uint)reservedIndex >= (uint)_reservedCount)
+            {
+                payloadDestination = default;
+                return false;
+            }
+
+            int slot = (_head + _count + reservedIndex) % Capacity;
+            payloadDestination = _payloads.AsSpan(slot * _maxPayloadBytes, _maxPayloadBytes);
+            return true;
+        }
+
+        public bool TryCommitReservedWrite(
+            int reservedIndex,
+            ConnectionId connection,
+            ChannelId channel,
+            int payloadLength)
+        {
+            if ((uint)reservedIndex >= (uint)_reservedCount ||
+                payloadLength < 0 ||
+                payloadLength > _maxPayloadBytes)
+            {
+                return false;
+            }
+
+            int slot = (_head + _count + reservedIndex) % Capacity;
+            _connections[slot] = connection.Value;
+            _channels[slot] = channel.Value;
+            _lengths[slot] = payloadLength;
+            return true;
+        }
+
+        public bool TryWriteReserved(
+            int reservedIndex,
+            ConnectionId connection,
+            ChannelId channel,
+            ReadOnlySpan<byte> payload)
+        {
+            if (!TryGetReservedWriteSlot(reservedIndex, out Span<byte> destination) ||
+                payload.Length > destination.Length)
+            {
+                return false;
+            }
+
+            payload.CopyTo(destination);
+            return TryCommitReservedWrite(reservedIndex, connection, channel, payload.Length);
+        }
+
+        public void PublishReserved()
+        {
+            if (_reservedCount == 0)
+            {
+                throw new InvalidOperationException("The server send queue has no reserved batch to publish.");
+            }
+
+            _count += _reservedCount;
+            _reservedCount = 0;
+        }
+
+        public void CancelReserved()
+        {
+            if (_reservedCount == 0)
+            {
+                return;
+            }
+
+            for (int index = 0; index < _reservedCount; index++)
+            {
+                int slot = (_head + _count + index) % Capacity;
+                _lengths[slot] = 0;
+                _connections[slot] = 0;
+                _channels[slot] = 0;
+            }
+
+            _reservedCount = 0;
         }
 
         public bool TryPeek(out ConnectionId connection, out ChannelId channel, out ReadOnlySpan<byte> payload)
@@ -67,6 +158,18 @@ namespace Ludots.Core.Networking.Runtime
             _lengths[_head] = 0;
             _head = (_head + 1) % Capacity;
             _count--;
+        }
+
+        private void WriteSlot(
+            int slot,
+            ConnectionId connection,
+            ChannelId channel,
+            ReadOnlySpan<byte> payload)
+        {
+            _connections[slot] = connection.Value;
+            _channels[slot] = channel.Value;
+            _lengths[slot] = payload.Length;
+            payload.CopyTo(_payloads.AsSpan(slot * _maxPayloadBytes, payload.Length));
         }
     }
 

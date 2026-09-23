@@ -203,6 +203,299 @@ public sealed class Physics3DNetworkRuntimeBatchAoiTests
 
     [Test]
     [NonParallelizable]
+    public void FullPublish_SecondSeatProjectionFailure_LeavesKnowledgeTransportAndSnapshotIdsUnchanged()
+    {
+        using FullPublishHarness harness = FullPublishHarness.Create(
+            seatCount: GateConfig.AtomicSeatCount,
+            ordinaryBodyCount: 0,
+            queryWorkerCount: GateConfig.DeterminismSingleWorkerCount,
+            replicationEntityCapacityPerSeat: GateConfig.AtomicReplicationCapacityPerSeat,
+            knowledgeCapacity: GateConfig.AtomicSeatCount * GateConfig.AtomicSeatCount,
+            interestRadiusCm: GateConfig.AtomicInterestRadiusCm,
+            spawnSpacingCm: GateConfig.AtomicSpawnSpacingCm,
+            clusterColumns: GateConfig.AtomicSeatCount);
+
+        harness.EstablishAllSeatsThroughProductionHandshake();
+        uint tick = checked((uint)(harness.TickState.CommittedTick + 1));
+        harness.RunAuthoritativeFrame(tick);
+        harness.AcknowledgePublishedSeats(tick);
+        harness.Server.PumpTransport();
+
+        CaptureKnowledgeSnapshot(
+            harness.Knowledge,
+            harness.ViewerEntities,
+            harness.KnowledgeSnapshotScratch,
+            out int snapshotCountBefore);
+        int recordCountBefore = harness.Knowledge.RecordCount;
+        Assert.That(harness.Transport.TryGetLastReplicationSnapshotId(0, out ulong seat0Snapshot), Is.True);
+        Assert.That(harness.Transport.TryGetLastReplicationSnapshotId(1, out ulong seat1Snapshot), Is.True);
+        harness.Transport.ClearCounters();
+
+        Assert.That(harness.Ecs.Has<ReplicationSchemaRef>(harness.ViewerEntities[1]), Is.True);
+        harness.Ecs.Remove<ReplicationSchemaRef>(harness.ViewerEntities[1]);
+        tick = checked((uint)(harness.TickState.CommittedTick + 1));
+
+        NetworkRuntimeException? fault = Assert.Throws<NetworkRuntimeException>(
+            () => harness.RunAuthoritativeFrame(tick));
+        Assert.Multiple(() =>
+        {
+            Assert.That(fault, Is.Not.Null);
+            Assert.That(fault!.Fault.Code, Is.EqualTo(NetworkRuntimeFaultCode.ReplicationBuildRejected));
+            Assert.That(harness.Knowledge.RecordCount, Is.EqualTo(recordCountBefore));
+            AssertKnowledgeSnapshotUnchanged(
+                harness.Knowledge,
+                harness.ViewerEntities,
+                harness.KnowledgeSnapshotScratch,
+                snapshotCountBefore);
+            AssertZeroTransportSendsOfEveryWireKind(harness.Transport);
+            Assert.That(harness.Transport.TryGetLastReplicationSnapshotId(0, out ulong seat0After), Is.True);
+            Assert.That(seat0After, Is.EqualTo(seat0Snapshot));
+            Assert.That(harness.Transport.TryGetLastReplicationSnapshotId(1, out ulong seat1After), Is.True);
+            Assert.That(seat1After, Is.EqualTo(seat1Snapshot));
+        });
+    }
+
+    [Test]
+    [NonParallelizable]
+    public void FullPublish_OutboundQueueShortage_WithTransportNotReady_SendsNothingAndAdvancesNothing()
+    {
+        using FullPublishHarness harness = FullPublishHarness.Create(
+            seatCount: GateConfig.AtomicSeatCount,
+            ordinaryBodyCount: 0,
+            queryWorkerCount: GateConfig.DeterminismSingleWorkerCount,
+            replicationEntityCapacityPerSeat: GateConfig.AtomicReplicationCapacityPerSeat,
+            knowledgeCapacity: GateConfig.AtomicSeatCount * GateConfig.AtomicSeatCount,
+            interestRadiusCm: GateConfig.AtomicInterestRadiusCm,
+            spawnSpacingCm: GateConfig.AtomicSpawnSpacingCm,
+            clusterColumns: GateConfig.AtomicSeatCount,
+            outboundQueueCapacityOverride: 1);
+
+        harness.EstablishAllSeatsThroughProductionHandshake();
+        harness.Transport.ForceNotReady = true;
+        harness.Transport.ClearCounters();
+
+        CaptureKnowledgeSnapshot(
+            harness.Knowledge,
+            harness.ViewerEntities,
+            harness.KnowledgeSnapshotScratch,
+            out int snapshotCountBefore);
+        int recordCountBefore = harness.Knowledge.RecordCount;
+        uint tick = checked((uint)(harness.TickState.CommittedTick + 1));
+
+        NetworkRuntimeException? fault = Assert.Throws<NetworkRuntimeException>(
+            () => harness.RunAuthoritativeFrame(tick));
+        Assert.Multiple(() =>
+        {
+            Assert.That(fault, Is.Not.Null);
+            Assert.That(fault!.Fault.Code, Is.EqualTo(NetworkRuntimeFaultCode.OutboundQueueCapacityExceeded));
+            Assert.That(harness.Knowledge.RecordCount, Is.EqualTo(recordCountBefore));
+            AssertKnowledgeSnapshotUnchanged(
+                harness.Knowledge,
+                harness.ViewerEntities,
+                harness.KnowledgeSnapshotScratch,
+                snapshotCountBefore);
+            AssertZeroTransportSendsOfEveryWireKind(harness.Transport);
+            Assert.That(harness.Transport.TryGetLastReplicationSnapshotId(0, out _), Is.False);
+            Assert.That(harness.Transport.TryGetLastReplicationSnapshotId(1, out _), Is.False);
+        });
+    }
+
+    [Test]
+    [NonParallelizable]
+    public void FullPublish_MissingDeltaBaseline_SendsOnlyResyncRequired_NeverSameFrameFull()
+    {
+        using FullPublishHarness harness = FullPublishHarness.Create(
+            seatCount: 1,
+            ordinaryBodyCount: 0,
+            queryWorkerCount: GateConfig.DeterminismSingleWorkerCount,
+            replicationEntityCapacityPerSeat: GateConfig.AtomicReplicationCapacityPerSeat,
+            knowledgeCapacity: GateConfig.AtomicReplicationCapacityPerSeat,
+            interestRadiusCm: GateConfig.AtomicInterestRadiusCm,
+            spawnSpacingCm: GateConfig.AtomicSpawnSpacingCm,
+            clusterColumns: 1);
+
+        harness.EstablishAllSeatsThroughProductionHandshake();
+        uint tick = checked((uint)(harness.TickState.CommittedTick + 1));
+        harness.RunAuthoritativeFrame(tick);
+        harness.AcknowledgePublishedSeats(tick);
+        harness.Server.PumpTransport();
+        Assert.That(harness.Transport.TryGetLastReplicationSnapshotId(0, out ulong firstSnapshot), Is.True);
+
+        for (int i = 0; i < GateConfig.BaselineCapacity; i++)
+        {
+            tick = checked((uint)(harness.TickState.CommittedTick + 1));
+            harness.Transport.ClearCounters();
+            harness.RunAuthoritativeFrame(tick);
+            // Keep the acknowledged baseline pinned to the first snapshot until it ages out.
+            harness.Server.PumpTransport();
+        }
+
+        harness.Transport.ClearCounters();
+        tick = checked((uint)(harness.TickState.CommittedTick + 1));
+        harness.RunAuthoritativeFrame(tick);
+        Assert.That(harness.Transport.GetSendCount(NetworkWireKind.ResyncRequired), Is.EqualTo(1));
+        Assert.That(harness.Transport.GetSendCount(NetworkWireKind.ReplicationPacket), Is.EqualTo(0));
+        Assert.That(harness.Transport.GetSendCount(NetworkWireKind.SnapshotFragment), Is.EqualTo(0));
+        Assert.That(harness.Transport.TryGetLastReplicationSnapshotId(0, out ulong lastBeforeFull), Is.True);
+        Assert.That(lastBeforeFull, Is.GreaterThanOrEqualTo(firstSnapshot));
+
+        harness.Transport.ClearCounters();
+        tick = checked((uint)(harness.TickState.CommittedTick + 1));
+        harness.RunAuthoritativeFrame(tick);
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                harness.Transport.GetSendCount(NetworkWireKind.SnapshotFragment) +
+                harness.Transport.GetSendCount(NetworkWireKind.ReplicationPacket),
+                Is.GreaterThan(0));
+            Assert.That(harness.Transport.GetSendCount(NetworkWireKind.ResyncRequired), Is.EqualTo(0));
+            Assert.That(harness.Transport.TryGetLastReplicationSnapshotId(0, out ulong fullSnapshot), Is.True);
+            Assert.That(fullSnapshot, Is.GreaterThan(lastBeforeFull));
+        });
+    }
+
+    [Test]
+    [NonParallelizable]
+    public void FullPublish_SuccessfulCommit_PublishesSeatsAndSnapshotIdsInAscendingSeatOrder()
+    {
+        using FullPublishHarness harness = FullPublishHarness.Create(
+            seatCount: GateConfig.AtomicSeatCount,
+            ordinaryBodyCount: 0,
+            queryWorkerCount: GateConfig.DeterminismSingleWorkerCount,
+            replicationEntityCapacityPerSeat: GateConfig.AtomicReplicationCapacityPerSeat,
+            knowledgeCapacity: GateConfig.AtomicSeatCount * GateConfig.AtomicSeatCount,
+            interestRadiusCm: GateConfig.AtomicInterestRadiusCm,
+            spawnSpacingCm: GateConfig.AtomicSpawnSpacingCm,
+            clusterColumns: GateConfig.AtomicSeatCount);
+
+        harness.EstablishAllSeatsThroughProductionHandshake();
+        harness.Transport.EnableDigestCapture();
+        harness.Transport.ClearCounters();
+        uint tick = checked((uint)(harness.TickState.CommittedTick + 1));
+        harness.RunAuthoritativeFrame(tick);
+
+        Assert.That(harness.Transport.TryGetLastReplicationSnapshotId(0, out ulong seat0), Is.True);
+        Assert.That(harness.Transport.TryGetLastReplicationSnapshotId(1, out ulong seat1), Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(seat0, Is.EqualTo(1uL));
+            Assert.That(seat1, Is.EqualTo(2uL));
+            Assert.That(harness.Transport.FirstPublishedSeatSlotThisFrame, Is.EqualTo(0));
+            Assert.That(harness.Transport.LastPublishedSeatSlotThisFrame, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    [NonParallelizable]
+    public void SeatRelease_ImmediatelyRemovesTrackedAoiKnowledge()
+    {
+        using FullPublishHarness harness = FullPublishHarness.Create(
+            seatCount: GateConfig.AtomicSeatCount,
+            ordinaryBodyCount: 0,
+            queryWorkerCount: GateConfig.DeterminismSingleWorkerCount,
+            replicationEntityCapacityPerSeat: GateConfig.AtomicReplicationCapacityPerSeat,
+            knowledgeCapacity: GateConfig.AtomicSeatCount * GateConfig.AtomicSeatCount,
+            interestRadiusCm: GateConfig.AtomicInterestRadiusCm,
+            spawnSpacingCm: GateConfig.AtomicSpawnSpacingCm,
+            clusterColumns: GateConfig.AtomicSeatCount);
+
+        harness.EstablishAllSeatsThroughProductionHandshake();
+        uint tick = checked((uint)(harness.TickState.CommittedTick + 1));
+        harness.RunAuthoritativeFrame(tick);
+        harness.AcknowledgePublishedSeats(tick);
+        harness.Server.PumpTransport();
+        Assert.That(harness.Knowledge.RecordCount, Is.EqualTo(GateConfig.AtomicSeatCount));
+
+        Entity releasedViewer = harness.ViewerEntities[0];
+        harness.Transport.EnqueueDisconnected(
+            new ConnectionId(GateConfig.FirstConnectionValue),
+            TransportDisconnectReason.RemoteClosed);
+        harness.Server.PumpTransport();
+
+        for (int i = 0; i < 9; i++)
+        {
+            tick = checked((uint)(harness.TickState.CommittedTick + 1));
+            harness.RunAuthoritativeFrame(tick);
+            harness.AcknowledgePublishedSeats(tick);
+            harness.Server.PumpTransport();
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(harness.Knowledge.TryGet(releasedViewer, releasedViewer, currentTick: 0, out _), Is.False);
+            Assert.That(harness.Knowledge.RecordCount, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    [NonParallelizable]
+    public void FullPublish_PhysicalKnowledgeCapacityShortage_FailsPrecommitWithoutCompaction()
+    {
+        int replicationCapacity = GateConfig.AtomicKnowledgeReplicationCapacityPerSeat;
+        int knowledgeCapacity = GateConfig.AtomicSeatCount * replicationCapacity;
+        using FullPublishHarness harness = FullPublishHarness.Create(
+            seatCount: GateConfig.AtomicSeatCount,
+            ordinaryBodyCount: 0,
+            queryWorkerCount: GateConfig.DeterminismSingleWorkerCount,
+            replicationEntityCapacityPerSeat: replicationCapacity,
+            knowledgeCapacity: knowledgeCapacity,
+            interestRadiusCm: GateConfig.AtomicInterestRadiusCm,
+            spawnSpacingCm: GateConfig.AtomicSpawnSpacingCm,
+            clusterColumns: GateConfig.AtomicSeatCount);
+
+        harness.EstablishAllSeatsThroughProductionHandshake();
+        while (harness.Knowledge.RecordCount < knowledgeCapacity)
+        {
+            Entity viewer = harness.ViewerEntities[harness.Knowledge.RecordCount % harness.ViewerEntities.Length];
+            Entity target = harness.Ecs.Create();
+            var disclosure = new KnowledgeDisclosureRecord(
+                KnowledgePresence.LiveVisible,
+                KnowledgePositionAccess.Live,
+                default,
+                default,
+                default,
+                viewer,
+                observedTick: 0,
+                expiryTick: 0,
+                confidencePermille: 1_000,
+                revision: 1);
+            harness.Knowledge.Upsert(viewer, target, in disclosure);
+        }
+
+        Assert.That(harness.Knowledge.RecordCount, Is.EqualTo(knowledgeCapacity));
+        Assert.That(harness.Knowledge.PhysicalRecordCount, Is.EqualTo(knowledgeCapacity));
+
+        Span<Entity> targets = stackalloc Entity[GateConfig.KnowledgeSnapshotCapacity];
+        for (int viewerIndex = 0; viewerIndex < harness.ViewerEntities.Length; viewerIndex++)
+        {
+            Entity viewer = harness.ViewerEntities[viewerIndex];
+            int copied = harness.Knowledge.CopyTargets(viewer, currentTick: 0, targets);
+            for (int index = 0; index < copied; index++)
+            {
+                Assert.That(harness.Knowledge.Remove(viewer, targets[index]), Is.True);
+            }
+        }
+
+        Assert.That(harness.Knowledge.RecordCount, Is.EqualTo(0));
+        Assert.That(harness.Knowledge.PhysicalRecordCount, Is.EqualTo(knowledgeCapacity));
+        harness.Transport.ClearCounters();
+        uint tick = checked((uint)(harness.TickState.CommittedTick + 1));
+
+        NetworkRuntimeException? fault = Assert.Throws<NetworkRuntimeException>(
+            () => harness.RunAuthoritativeFrame(tick));
+        Assert.Multiple(() =>
+        {
+            Assert.That(fault, Is.Not.Null);
+            Assert.That(fault!.Fault.Code, Is.EqualTo(NetworkRuntimeFaultCode.ReplicationInputRejected));
+            Assert.That(harness.Interest.LastFailure, Is.EqualTo(Physics3DNetworkAoiFailure.KnowledgeCapacityExceeded));
+            Assert.That(harness.Knowledge.RecordCount, Is.EqualTo(0));
+            Assert.That(harness.Knowledge.PhysicalRecordCount, Is.EqualTo(knowledgeCapacity));
+            AssertZeroTransportSendsOfEveryWireKind(harness.Transport);
+        });
+    }
+
+    [Test]
+    [NonParallelizable]
     public void FullPublish_1Vs3QueryWorkers_YieldsIdenticalPerSeatWireDigestsAndOrder()
     {
         const int ordinaryBodyCount = 300;
@@ -753,7 +1046,8 @@ public sealed class Physics3DNetworkRuntimeBatchAoiTests
             int knowledgeCapacity,
             float interestRadiusCm,
             float spawnSpacingCm,
-            int clusterColumns)
+            int clusterColumns,
+            int? outboundQueueCapacityOverride = null)
         {
             World ecs = World.Create();
             var physics = new Physics3DWorld(CreateWorldConfig(
@@ -867,7 +1161,10 @@ public sealed class Physics3DNetworkRuntimeBatchAoiTests
                     GlobalEntityCapacity = GateConfig.GlobalEntityCapacity,
                 });
 
-            NetworkRuntimeCapacity capacity = CreateCapacity(seatCount, replicationEntityCapacityPerSeat);
+            NetworkRuntimeCapacity capacity = CreateCapacity(
+                seatCount,
+                replicationEntityCapacityPerSeat,
+                outboundQueueCapacityOverride);
             ContentFingerprint fingerprint = ContentFingerprintBuilder.FromCanonicalBytes("physics3d-full-publish-gate"u8);
             var protocol = new ProtocolVersion(1, 0);
             var transport = new FixedCapacityMultiConnectionTransport(
@@ -1053,7 +1350,10 @@ public sealed class Physics3DNetworkRuntimeBatchAoiTests
             _ = _observer;
         }
 
-        private static NetworkRuntimeCapacity CreateCapacity(int seatCount, int replicationEntityCapacityPerSeat)
+        private static NetworkRuntimeCapacity CreateCapacity(
+            int seatCount,
+            int replicationEntityCapacityPerSeat,
+            int? outboundQueueCapacityOverride = null)
         {
             int maxSnapshotBytes = ReplicationPacketWireCodec.GetPayloadSize(
                 replicationEntityCapacityPerSeat,
@@ -1065,7 +1365,8 @@ public sealed class Physics3DNetworkRuntimeBatchAoiTests
             int maxCommandPayloadBytes = CommandBatchWireCodec.GetPayloadSize(maxCommandEntries);
             int commandFragmentDataBytes = CommandFragmentWireCodec.GetMaxFragmentDataBytes(GateConfig.MaxDatagramPayloadBytes);
             int maxCommandFragments = checked((maxCommandPayloadBytes + commandFragmentDataBytes - 1) / commandFragmentDataBytes);
-            int outboundQueueCapacity = checked((seatCount * maxSnapshotFragments) + seatCount);
+            int outboundQueueCapacity = outboundQueueCapacityOverride ??
+                checked((seatCount * maxSnapshotFragments) + seatCount);
             return new NetworkRuntimeCapacity(
                 simulationTickRateHz: GateConfig.FixedStepHz,
                 statePublishRateHz: GateConfig.FixedStepHz,
@@ -1256,11 +1557,16 @@ public sealed class Physics3DNetworkRuntimeBatchAoiTests
         public int ConnectionCapacity { get; }
         public int MaxDatagramPayloadBytes { get; }
         public int PublishedSeatCountForCurrentFrame { get; private set; }
+        public int FirstPublishedSeatSlotThisFrame { get; private set; } = -1;
+        public int LastPublishedSeatSlotThisFrame { get; private set; } = -1;
+        public bool ForceNotReady { get; set; }
 
         public void BeginFrame()
         {
             Array.Clear(_publishedSeatsThisFrame);
             PublishedSeatCountForCurrentFrame = 0;
+            FirstPublishedSeatSlotThisFrame = -1;
+            LastPublishedSeatSlotThisFrame = -1;
         }
 
         public void ClearCounters()
@@ -1314,6 +1620,21 @@ public sealed class Physics3DNetworkRuntimeBatchAoiTests
             _connectionEvents[_connectionEventTail] = new ServerConnectionEvent(
                 connectionId,
                 TransportConnectionEventKind.Connected);
+            _connectionEventTail = (_connectionEventTail + 1) % _connectionEvents.Length;
+            _connectionEventCount++;
+        }
+
+        public void EnqueueDisconnected(ConnectionId connectionId, TransportDisconnectReason reason)
+        {
+            if (_connectionEventCount >= _connectionEvents.Length)
+            {
+                throw new InvalidOperationException("Connection event capacity exceeded.");
+            }
+
+            _connectionEvents[_connectionEventTail] = new ServerConnectionEvent(
+                connectionId,
+                TransportConnectionEventKind.Disconnected,
+                reason);
             _connectionEventTail = (_connectionEventTail + 1) % _connectionEvents.Length;
             _connectionEventCount++;
         }
@@ -1401,6 +1722,11 @@ public sealed class Physics3DNetworkRuntimeBatchAoiTests
 
         public DatagramSendStatus TrySend(ConnectionId connectionId, ChannelId channelId, ReadOnlySpan<byte> payload)
         {
+            if (ForceNotReady)
+            {
+                return DatagramSendStatus.NotReady;
+            }
+
             _ = channelId;
             int seatSlot = connectionId.Value - GateConfig.FirstConnectionValue;
             if ((uint)seatSlot >= (uint)ConnectionCapacity)
@@ -1447,6 +1773,12 @@ public sealed class Physics3DNetworkRuntimeBatchAoiTests
                 {
                     _publishedSeatsThisFrame[seatSlot] = true;
                     PublishedSeatCountForCurrentFrame++;
+                    if (FirstPublishedSeatSlotThisFrame < 0)
+                    {
+                        FirstPublishedSeatSlotThisFrame = seatSlot;
+                    }
+
+                    LastPublishedSeatSlotThisFrame = seatSlot;
                 }
             }
 

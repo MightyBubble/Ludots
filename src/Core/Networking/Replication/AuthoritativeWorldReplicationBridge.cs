@@ -107,7 +107,8 @@ namespace Ludots.Core.Networking.Replication
         public ReplicationBridgeResult Project(
             ReadOnlySpan<NetworkEntityHandle> interestHandles,
             int currentTick,
-            ReplicationProjectionBuffer output)
+            ReplicationProjectionBuffer output,
+            bool missingKnowledgeAsLiveCandidate = false)
         {
             if (output == null)
             {
@@ -144,7 +145,24 @@ namespace Ludots.Core.Networking.Replication
                     return Fail(output, ReplicationBridgeResult.EntityUnavailable);
                 }
 
-                if (!_knowledge.TryGet(_viewer, entity, currentTick, out KnowledgeDisclosureRecord disclosure))
+                KnowledgeDisclosureRecord disclosure;
+                if (missingKnowledgeAsLiveCandidate)
+                {
+                    // Publication prepare treats the interest set as live candidates. Knowledge commit
+                    // remains deferred to the publication transaction; AOI prepare already validated capacity.
+                    disclosure = new KnowledgeDisclosureRecord(
+                        KnowledgePresence.LiveVisible,
+                        KnowledgePositionAccess.Live,
+                        default,
+                        default,
+                        default,
+                        _viewer,
+                        observedTick: currentTick,
+                        expiryTick: 0,
+                        confidencePermille: 1000,
+                        revision: 0);
+                }
+                else if (!_knowledge.TryGet(_viewer, entity, currentTick, out disclosure))
                 {
                     var unknown = new ReplicationDisclosureInput(handle, KnowledgePresence.Unknown);
                     if (!output.TryAddDisclosure(in unknown))
@@ -207,7 +225,7 @@ namespace Ludots.Core.Networking.Replication
             return ReplicationBridgeResult.Success;
         }
 
-        public ReplicationBridgeResult BuildFull(
+        public ReplicationBridgeResult PrepareFull(
             AuthoritativeReplicationChannel channel,
             ulong sessionEpoch,
             uint tick,
@@ -220,7 +238,7 @@ namespace Ludots.Core.Networking.Replication
             _entities.EnterSnapshotPublication();
             try
             {
-                return BuildFullCore(
+                return PrepareFullCore(
                     channel,
                     sessionEpoch,
                     tick,
@@ -235,7 +253,33 @@ namespace Ludots.Core.Networking.Replication
             }
         }
 
-        private ReplicationBridgeResult BuildFullCore(
+        public ReplicationBridgeResult BuildFull(
+            AuthoritativeReplicationChannel channel,
+            ulong sessionEpoch,
+            uint tick,
+            ulong snapshotId,
+            ReadOnlySpan<NetworkEntityHandle> interestHandles,
+            ReplicationProjectionBuffer projection,
+            ReplicationPacketBuffer packet)
+        {
+            ReplicationBridgeResult prepared = PrepareFull(
+                channel,
+                sessionEpoch,
+                tick,
+                snapshotId,
+                interestHandles,
+                projection,
+                packet);
+            if (prepared != ReplicationBridgeResult.Success)
+            {
+                return prepared;
+            }
+
+            channel.CommitPrepared();
+            return ReplicationBridgeResult.Success;
+        }
+
+        private ReplicationBridgeResult PrepareFullCore(
             AuthoritativeReplicationChannel channel,
             ulong sessionEpoch,
             uint tick,
@@ -253,7 +297,11 @@ namespace Ludots.Core.Networking.Replication
             }
 
             long projectionStarted = Stopwatch.GetTimestamp();
-            ReplicationBridgeResult projected = Project(interestHandles, (int)tick, projection);
+            ReplicationBridgeResult projected = Project(
+                interestHandles,
+                (int)tick,
+                projection,
+                missingKnowledgeAsLiveCandidate: true);
             long projectionElapsed = Stopwatch.GetTimestamp() - projectionStarted;
             if (projected != ReplicationBridgeResult.Success)
             {
@@ -264,7 +312,7 @@ namespace Ludots.Core.Networking.Replication
 
             long channelBuildStarted = Stopwatch.GetTimestamp();
             ReplicationBridgeResult result = ReplicationBridgeResultMapper.FromBuild(
-                channel.BuildFull(sessionEpoch, tick, snapshotId, projection.States, projection.Disclosures, packet));
+                channel.PrepareFull(sessionEpoch, tick, snapshotId, projection.States, projection.Disclosures, packet));
             LastBuildMetrics = new AuthoritativeReplicationBuildMetrics(
                 projectionElapsed,
                 Stopwatch.GetTimestamp() - channelBuildStarted);
@@ -276,7 +324,7 @@ namespace Ludots.Core.Networking.Replication
             return result;
         }
 
-        public ReplicationBridgeResult BuildDelta(
+        public ReplicationBridgeResult PrepareDelta(
             AuthoritativeReplicationChannel channel,
             ulong sessionEpoch,
             uint tick,
@@ -290,7 +338,7 @@ namespace Ludots.Core.Networking.Replication
             _entities.EnterSnapshotPublication();
             try
             {
-                return BuildDeltaCore(
+                return PrepareDeltaCore(
                     channel,
                     sessionEpoch,
                     tick,
@@ -306,7 +354,35 @@ namespace Ludots.Core.Networking.Replication
             }
         }
 
-        private ReplicationBridgeResult BuildDeltaCore(
+        public ReplicationBridgeResult BuildDelta(
+            AuthoritativeReplicationChannel channel,
+            ulong sessionEpoch,
+            uint tick,
+            ulong snapshotId,
+            ulong acknowledgedBaselineId,
+            ReadOnlySpan<NetworkEntityHandle> interestHandles,
+            ReplicationProjectionBuffer projection,
+            ReplicationPacketBuffer packet)
+        {
+            ReplicationBridgeResult prepared = PrepareDelta(
+                channel,
+                sessionEpoch,
+                tick,
+                snapshotId,
+                acknowledgedBaselineId,
+                interestHandles,
+                projection,
+                packet);
+            if (prepared != ReplicationBridgeResult.Success)
+            {
+                return prepared;
+            }
+
+            channel.CommitPrepared();
+            return ReplicationBridgeResult.Success;
+        }
+
+        private ReplicationBridgeResult PrepareDeltaCore(
             AuthoritativeReplicationChannel channel,
             ulong sessionEpoch,
             uint tick,
@@ -325,7 +401,11 @@ namespace Ludots.Core.Networking.Replication
             }
 
             long projectionStarted = Stopwatch.GetTimestamp();
-            ReplicationBridgeResult projected = Project(interestHandles, (int)tick, projection);
+            ReplicationBridgeResult projected = Project(
+                interestHandles,
+                (int)tick,
+                projection,
+                missingKnowledgeAsLiveCandidate: true);
             long projectionElapsed = Stopwatch.GetTimestamp() - projectionStarted;
             if (projected != ReplicationBridgeResult.Success)
             {
@@ -336,7 +416,7 @@ namespace Ludots.Core.Networking.Replication
 
             long channelBuildStarted = Stopwatch.GetTimestamp();
             ReplicationBridgeResult result = ReplicationBridgeResultMapper.FromBuild(
-                channel.BuildDelta(
+                channel.PrepareDelta(
                     sessionEpoch,
                     tick,
                     snapshotId,

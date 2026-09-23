@@ -123,6 +123,11 @@ namespace Ludots.Core.Networking.Runtime
         /// calling after the commit completes it. Calling without a prepared batch is invalid.
         /// </summary>
         void CompletePreparedBatch();
+
+        /// <summary>
+        /// Immediately removes any tracked AOI knowledge for a released seat generation.
+        /// </summary>
+        void ReleaseSeatKnowledge(in SessionSeatBinding seat);
     }
 
     /// <summary>

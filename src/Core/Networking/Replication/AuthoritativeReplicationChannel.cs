@@ -27,6 +27,12 @@ namespace Ludots.Core.Networking.Replication
         private ulong _sessionEpoch;
         private ulong _lastSnapshotId;
 
+        private ulong _pendingSessionEpoch;
+        private ulong _pendingSnapshotId;
+        private int _pendingDisclosureCount;
+        private ReplicationPacketBuffer? _preparedPacket;
+        private bool _prepared;
+
         public AuthoritativeReplicationChannel(
             NetworkEntityTable entities,
             int replicationEntityCapacityPerSeat,
@@ -75,12 +81,14 @@ namespace Ludots.Core.Networking.Replication
         public int DisclosureChangeLogCapacity => _disclosureLog.Capacity;
         public int ReservedCurrentStateCapacity => _currentEntities.Length;
         public int ReservedBaselineStateCapacity => _baselineEntities.Length;
+        public bool IsPrepared => _prepared;
         internal NetworkEntityTable EntityTable => _entities;
         internal bool IsPristine
         {
             get
             {
-                if (_currentCount != 0 ||
+                if (_prepared ||
+                    _currentCount != 0 ||
                     _nextBaselineSlot != 0 ||
                     _sessionEpoch != 0 ||
                     _lastSnapshotId != 0 ||
@@ -101,8 +109,16 @@ namespace Ludots.Core.Networking.Replication
             }
         }
 
-        public bool TryAcknowledgeDisclosureChangesThrough(ulong sequence) =>
-            _disclosureLog.TryAcknowledgeThrough(sequence);
+        public bool TryAcknowledgeDisclosureChangesThrough(ulong sequence)
+        {
+            if (_prepared)
+            {
+                throw new InvalidOperationException(
+                    "Disclosure acknowledgement is rejected while a replication publication is prepared.");
+            }
+
+            return _disclosureLog.TryAcknowledgeThrough(sequence);
+        }
 
         public ReplicationBuildResult BuildFull(
             ulong sessionEpoch,
@@ -112,18 +128,23 @@ namespace Ludots.Core.Networking.Replication
             ReadOnlySpan<ReplicationDisclosureInput> disclosures,
             ReplicationPacketBuffer packet)
         {
-            _entities.EnterSnapshotPublication();
-            try
+            ReplicationBuildResult prepared = PrepareFull(
+                sessionEpoch,
+                tick,
+                snapshotId,
+                states,
+                disclosures,
+                packet);
+            if (prepared != ReplicationBuildResult.Success)
             {
-                return BuildFullCore(sessionEpoch, tick, snapshotId, states, disclosures, packet);
+                return prepared;
             }
-            finally
-            {
-                _entities.ExitSnapshotPublication();
-            }
+
+            CommitPrepared();
+            return ReplicationBuildResult.Success;
         }
 
-        private ReplicationBuildResult BuildFullCore(
+        public ReplicationBuildResult PrepareFull(
             ulong sessionEpoch,
             uint tick,
             ulong snapshotId,
@@ -131,12 +152,41 @@ namespace Ludots.Core.Networking.Replication
             ReadOnlySpan<ReplicationDisclosureInput> disclosures,
             ReplicationPacketBuffer packet)
         {
-            if (packet == null)
+            bool entered = false;
+            if (!_entities.IsInSnapshotPublication)
+            {
+                _entities.EnterSnapshotPublication();
+                entered = true;
+            }
+
+            try
+            {
+                return PrepareFullCore(sessionEpoch, tick, snapshotId, states, disclosures, packet);
+            }
+            finally
+            {
+                if (entered)
+                {
+                    _entities.ExitSnapshotPublication();
+                }
+            }
+        }
+
+        private ReplicationBuildResult PrepareFullCore(
+            ulong sessionEpoch,
+            uint tick,
+            ulong snapshotId,
+            ReadOnlySpan<ReplicatedEntityState> states,
+            ReadOnlySpan<ReplicationDisclosureInput> disclosures,
+            ReplicationPacketBuffer packet)
+        {
+            if (packet == null || _prepared)
             {
                 return ReplicationBuildResult.InvalidInput;
             }
 
             packet.Reset(default);
+            _pendingDisclosureCount = 0;
             ReplicationBuildResult headerResult = ValidateHeader(sessionEpoch, snapshotId);
             if (headerResult != ReplicationBuildResult.Success)
             {
@@ -172,11 +222,10 @@ namespace Ludots.Core.Networking.Replication
             {
                 ReplicatedEntityState state = GetCurrentState(i);
                 packet.AddUpsert(in state);
-                AppendDisclosureChange(packet, snapshotId, state.Entity, ReplicationDisclosureChangeKind.Reveal);
+                AppendPreparedDisclosureChange(packet, snapshotId, state.Entity, ReplicationDisclosureChangeKind.Reveal);
             }
 
-            StoreBaseline(snapshotId);
-            CommitHeader(sessionEpoch, snapshotId);
+            StagePrepared(sessionEpoch, snapshotId, packet);
             return ReplicationBuildResult.Success;
         }
 
@@ -189,10 +238,42 @@ namespace Ludots.Core.Networking.Replication
             ReadOnlySpan<ReplicationDisclosureInput> disclosures,
             ReplicationPacketBuffer packet)
         {
-            _entities.EnterSnapshotPublication();
+            ReplicationBuildResult prepared = PrepareDelta(
+                sessionEpoch,
+                tick,
+                snapshotId,
+                acknowledgedBaselineId,
+                states,
+                disclosures,
+                packet);
+            if (prepared != ReplicationBuildResult.Success)
+            {
+                return prepared;
+            }
+
+            CommitPrepared();
+            return ReplicationBuildResult.Success;
+        }
+
+        public ReplicationBuildResult PrepareDelta(
+            ulong sessionEpoch,
+            uint tick,
+            ulong snapshotId,
+            ulong acknowledgedBaselineId,
+            ReadOnlySpan<ReplicatedEntityState> states,
+            ReadOnlySpan<ReplicationDisclosureInput> disclosures,
+            ReplicationPacketBuffer packet)
+        {
+            bool entered = false;
+            if (!_entities.IsInSnapshotPublication)
+            {
+                _entities.EnterSnapshotPublication();
+                entered = true;
+            }
+
             try
             {
-                return BuildDeltaCore(
+                return PrepareDeltaCore(
                     sessionEpoch,
                     tick,
                     snapshotId,
@@ -203,11 +284,14 @@ namespace Ludots.Core.Networking.Replication
             }
             finally
             {
-                _entities.ExitSnapshotPublication();
+                if (entered)
+                {
+                    _entities.ExitSnapshotPublication();
+                }
             }
         }
 
-        private ReplicationBuildResult BuildDeltaCore(
+        private ReplicationBuildResult PrepareDeltaCore(
             ulong sessionEpoch,
             uint tick,
             ulong snapshotId,
@@ -216,12 +300,13 @@ namespace Ludots.Core.Networking.Replication
             ReadOnlySpan<ReplicationDisclosureInput> disclosures,
             ReplicationPacketBuffer packet)
         {
-            if (packet == null)
+            if (packet == null || _prepared)
             {
                 return ReplicationBuildResult.InvalidInput;
             }
 
             packet.Reset(default);
+            _pendingDisclosureCount = 0;
             if (acknowledgedBaselineId == 0)
             {
                 return ReplicationBuildResult.InvalidInput;
@@ -271,9 +356,74 @@ namespace Ludots.Core.Networking.Replication
             packet.Reset(in header);
             WriteDelta(baselineSlot, snapshotId, packet);
 
-            StoreBaseline(snapshotId);
-            CommitHeader(sessionEpoch, snapshotId);
+            StagePrepared(sessionEpoch, snapshotId, packet);
             return ReplicationBuildResult.Success;
+        }
+
+        public void CommitPrepared()
+        {
+            if (!_prepared || _preparedPacket == null)
+            {
+                throw new InvalidOperationException("Authoritative replication channel has no prepared publication to commit.");
+            }
+
+            ReadOnlySpan<ReplicationDisclosureChange> disclosures = _preparedPacket.DisclosureChanges;
+            if (disclosures.Length != _pendingDisclosureCount)
+            {
+                throw new InvalidOperationException("Prepared disclosure count diverged from the packet buffer.");
+            }
+
+            for (int i = 0; i < disclosures.Length; i++)
+            {
+                if (!_disclosureLog.TryCommitPrepared(in disclosures[i]))
+                {
+                    throw new InvalidOperationException("Prepared disclosure sequences diverged from the disclosure log.");
+                }
+            }
+
+            int baselineSlot = _nextBaselineSlot;
+            int offset = baselineSlot * _replicationEntityCapacityPerSeat;
+            _currentEntities.AsSpan(0, _currentCount).CopyTo(_baselineEntities.AsSpan(offset));
+            _currentSchemaIds.AsSpan(0, _currentCount).CopyTo(_baselineSchemaIds.AsSpan(offset));
+            _currentRevisions.AsSpan(0, _currentCount).CopyTo(_baselineRevisions.AsSpan(offset));
+            _currentValues.AsSpan(0, _currentCount).CopyTo(_baselineValues.AsSpan(offset));
+            _currentOwnership.AsSpan(0, _currentCount).CopyTo(_baselineOwnership.AsSpan(offset));
+            _baselineCounts[baselineSlot] = _currentCount;
+            _baselineIds[baselineSlot] = _pendingSnapshotId;
+            _nextBaselineSlot = (baselineSlot + 1) % _baselineCapacity;
+            _sessionEpoch = _pendingSessionEpoch;
+            _lastSnapshotId = _pendingSnapshotId;
+            ClearPreparedState();
+        }
+
+        public void CancelPrepared()
+        {
+            if (!_prepared)
+            {
+                return;
+            }
+
+            _preparedPacket?.Reset(default);
+            ClearPreparedState();
+        }
+
+        private void StagePrepared(ulong sessionEpoch, ulong snapshotId, ReplicationPacketBuffer packet)
+        {
+            _pendingSessionEpoch = sessionEpoch;
+            _pendingSnapshotId = snapshotId;
+            _pendingDisclosureCount = packet.DisclosureChanges.Length;
+            _preparedPacket = packet;
+            _prepared = true;
+        }
+
+        private void ClearPreparedState()
+        {
+            _pendingSessionEpoch = 0;
+            _pendingSnapshotId = 0;
+            _pendingDisclosureCount = 0;
+            _preparedPacket = null;
+            _prepared = false;
+            _currentCount = 0;
         }
 
         private ReplicationBuildResult BuildCurrentView(
@@ -483,7 +633,7 @@ namespace Ludots.Core.Networking.Replication
         {
             if (_entities.TryResolve(baselineEntity, out _))
             {
-                AppendDisclosureChange(
+                AppendPreparedDisclosureChange(
                     packet,
                     snapshotId,
                     baselineEntity,
@@ -498,7 +648,7 @@ namespace Ludots.Core.Networking.Replication
         private void AppendCurrentReveal(int currentIndex, ulong snapshotId, ReplicationPacketBuffer packet)
         {
             ReplicatedEntityState state = GetCurrentState(currentIndex);
-            AppendDisclosureChange(
+            AppendPreparedDisclosureChange(
                 packet,
                 snapshotId,
                 state.Entity,
@@ -544,20 +694,6 @@ namespace Ludots.Core.Networking.Replication
             return ReplicationBuildResult.Success;
         }
 
-        private void StoreBaseline(ulong snapshotId)
-        {
-            int baselineSlot = _nextBaselineSlot;
-            int offset = baselineSlot * _replicationEntityCapacityPerSeat;
-            _currentEntities.AsSpan(0, _currentCount).CopyTo(_baselineEntities.AsSpan(offset));
-            _currentSchemaIds.AsSpan(0, _currentCount).CopyTo(_baselineSchemaIds.AsSpan(offset));
-            _currentRevisions.AsSpan(0, _currentCount).CopyTo(_baselineRevisions.AsSpan(offset));
-            _currentValues.AsSpan(0, _currentCount).CopyTo(_baselineValues.AsSpan(offset));
-            _currentOwnership.AsSpan(0, _currentCount).CopyTo(_baselineOwnership.AsSpan(offset));
-            _baselineCounts[baselineSlot] = _currentCount;
-            _baselineIds[baselineSlot] = snapshotId;
-            _nextBaselineSlot = (baselineSlot + 1) % _baselineCapacity;
-        }
-
         private int FindBaseline(ulong snapshotId)
         {
             for (int i = 0; i < _baselineCapacity; i++)
@@ -571,24 +707,16 @@ namespace Ludots.Core.Networking.Replication
             return -1;
         }
 
-        private void AppendDisclosureChange(
+        private void AppendPreparedDisclosureChange(
             ReplicationPacketBuffer packet,
             ulong snapshotId,
             NetworkEntityHandle entity,
             ReplicationDisclosureChangeKind kind)
         {
-            if (!_disclosureLog.TryAppend(snapshotId, entity, kind, out ReplicationDisclosureChange change))
-            {
-                throw new InvalidOperationException("Disclosure log capacity changed during replication construction.");
-            }
-
+            ulong sequence = checked(_disclosureLog.NextSequence + (ulong)_pendingDisclosureCount);
+            var change = new ReplicationDisclosureChange(sequence, snapshotId, entity, kind);
             packet.AddDisclosureChange(in change);
-        }
-
-        private void CommitHeader(ulong sessionEpoch, ulong snapshotId)
-        {
-            _sessionEpoch = sessionEpoch;
-            _lastSnapshotId = snapshotId;
+            _pendingDisclosureCount++;
         }
     }
 }

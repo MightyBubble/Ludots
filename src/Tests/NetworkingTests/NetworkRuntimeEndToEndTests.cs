@@ -1519,6 +1519,10 @@ public sealed class NetworkRuntimeEndToEndTests
             _preparedSeatCount = 0;
             _prepared = false;
         }
+
+        public void ReleaseSeatKnowledge(in SessionSeatBinding seat)
+        {
+        }
     }
 
     private sealed class MemoryCredentials : IClientSessionCredentialPort

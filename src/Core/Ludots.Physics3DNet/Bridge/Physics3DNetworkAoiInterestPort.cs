@@ -240,6 +240,13 @@ public sealed class Physics3DNetworkAoiInterestPort :
             return FailPrepare(Physics3DNetworkAoiFailure.KnowledgeCapacityExceeded, -1);
         }
 
+        // Physical slots are not reclaimed without compaction. Publication prepare must fail when
+        // enters cannot fit the current physical occupancy; fixed-frame compaction is forbidden.
+        if (checked(_knowledge.PhysicalRecordCount + enterCount) > _knowledge.RecordCapacity)
+        {
+            return FailPrepare(Physics3DNetworkAoiFailure.KnowledgeCapacityExceeded, -1);
+        }
+
         _preparedEnterCount = enterCount;
         _batchState = BatchPrepared;
         return true;
@@ -276,6 +283,12 @@ public sealed class Physics3DNetworkAoiInterestPort :
             throw new InvalidOperationException("Physics3D AOI has no prepared batch to commit.");
         }
 
+        if (_knowledge.PhysicalRecordCount + _preparedEnterCount > _knowledge.RecordCapacity)
+        {
+            throw new InvalidOperationException(
+                "Physics3D AOI knowledge physical capacity changed after successful batch preparation.");
+        }
+
         for (int batchIndex = 0; batchIndex < _batchSeatCount; batchIndex++)
         {
             SessionSeatBinding seat = _batchSeats[batchIndex];
@@ -283,17 +296,6 @@ public sealed class Physics3DNetworkAoiInterestPort :
             {
                 RemoveKnowledgeExits(in seat);
             }
-        }
-
-        if (_knowledge.PhysicalRecordCount + _preparedEnterCount > _knowledge.RecordCapacity)
-        {
-            _knowledge.CompactPreservingCapacity();
-        }
-
-        if (_knowledge.PhysicalRecordCount + _preparedEnterCount > _knowledge.RecordCapacity)
-        {
-            throw new InvalidOperationException(
-                "Physics3D AOI knowledge capacity changed after successful batch preparation.");
         }
 
         for (int batchIndex = 0; batchIndex < _batchSeatCount; batchIndex++)
@@ -327,6 +329,34 @@ public sealed class Physics3DNetworkAoiInterestPort :
 
         ClearPrepared();
         _batchState = BatchIdle;
+    }
+
+    public void ReleaseSeatKnowledge(in SessionSeatBinding seat)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (_batchState != BatchIdle)
+        {
+            throw new InvalidOperationException("Physics3D AOI cannot release seat knowledge while a batch is prepared.");
+        }
+
+        if (!seat.IsValid || (uint)seat.Slot >= (uint)SeatCapacity)
+        {
+            throw new ArgumentOutOfRangeException(nameof(seat));
+        }
+
+        if (_trackedSeatGenerations[seat.Slot] == 0)
+        {
+            return;
+        }
+
+        if (_trackedSeatGenerations[seat.Slot] != seat.Generation ||
+            _trackedPlayerIds[seat.Slot] != seat.PlayerId.Value)
+        {
+            throw new InvalidOperationException(
+                $"Physics3D AOI tracked knowledge does not match seat {seat.Slot}:{seat.Generation}.");
+        }
+
+        ClearTrackedLane(seat.Slot);
     }
 
     public void Execute(int itemIndex, Physics3DReadQueryContext context)
