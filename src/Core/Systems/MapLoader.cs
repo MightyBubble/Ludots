@@ -710,7 +710,6 @@ namespace Ludots.Core.Systems
                 for (int i = 0; i < created.Length; i++)
                 {
                     entityIndex.Register(mapConfig.Id, pendingBatchEntityData[i].InstanceId, created[i]);
-                    AttachBatchEntityInfoName(mapConfig.Id, pendingBatchEntityData[i], created[i]);
                     PublishTemplateOnSpawnEffect(created[i], activeBatchTemplateId);
                     MountInitialInteractionContext(
                         created[i], activeBatchTemplateId, activeBatchTemplate, pendingBatchEntityData[i].Overrides);
@@ -744,6 +743,13 @@ namespace Ludots.Core.Systems
                             _ownerBatchParamOverrides[i] = null!;
                         }
                     }
+                }
+
+                // EntityInfoName 不在批量行的原型里。表现引导还握着这行的组件跨度，
+                // 结构变更必须等引导结束。
+                for (int i = 0; i < created.Length; i++)
+                {
+                    AttachBatchEntityInfoName(mapConfig.Id, pendingBatchEntityData[i], created[i]);
                 }
 
                 pendingBatchRequests.Clear();
