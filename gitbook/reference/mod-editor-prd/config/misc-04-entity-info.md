@@ -77,7 +77,7 @@ GenreInfo showcase 真实档案（`mods/showcases/info_panels/GenreInfoShowcaseM
 
 ## 4. 运行时加载效果
 
-EntityInfoPanelsMod 的 Insight 加载器在能力 mod 装载窗口读取：解析模板键（互斥校验）、标题 token、摆放编号、属性 id、能力引用，产出档案目录。**生效级别：重启**。
+EntityInfoPanelsMod 的 Insight 加载器在能力 mod 装载窗口读取：解析模板键（互斥校验）、标题 token、属性 id、能力引用，产出档案目录。**生效级别：重启**。
 
 ## 5. 异常处理
 
