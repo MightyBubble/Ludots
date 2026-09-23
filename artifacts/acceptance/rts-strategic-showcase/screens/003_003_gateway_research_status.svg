@@ -16,10 +16,10 @@
 <text x="88" y="468" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">[ ] Reset Cam (camera_reset) #F2C36B</text>
   <rect x="64" y="514" width="690" height="196" rx="14" fill="#16283d" stroke="#35597d" stroke-width="1.5" />
 <text x="88" y="554" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">Command Slots</text>
-<text x="88" y="588" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">[0] 待命 | 保留槽位，不执行任何命令。 | Base | action=SkillQ</text>
-<text x="88" y="616" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">[1] 待命 | 保留槽位，不执行任何命令。 | Base | action=SkillW</text>
-<text x="88" y="644" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">[2] 训练狂热者 | 折跃门科技完成前，Gateway 仍采用常规训练。 | Base | action=SkillE</text>
-<text x="88" y="672" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">[3] 研究折跃门 | 完成后将 Gateway 解锁为 Warpgate 形态。 | Base|Blocked | action=SkillR</text>
+<text x="88" y="588" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">[0] 待命 | 保留槽位，不执行任何命令。 | Base | action=</text>
+<text x="88" y="616" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">[1] 待命 | 保留槽位，不执行任何命令。 | Base | action=</text>
+<text x="88" y="644" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">[2] 训练狂热者 | 折跃门科技完成前，Gateway 仍采用常规训练。 | Base | action=</text>
+<text x="88" y="672" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">[3] 研究折跃门 | 完成后将 Gateway 解锁为 Warpgate 形态。 | Base|Blocked | action=</text>
   <rect x="790" y="170" width="746" height="112" rx="14" fill="#16283d" stroke="#35597d" stroke-width="1.5" />
 <text x="814" y="210" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">Statuses</text>
 <text x="814" y="244" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">ActiveAbility 0.0% | 研究折跃门 | Executing · 135 steps left</text>

@@ -1,0 +1,8 @@
+﻿flowchart TD
+    Start[Load rts_sc2_training]
+    Start --> Select[Auto-select Gateway]
+    Select --> Queue[Queue 1 orders]
+    Queue --> Run[Show active progress and queue rows]
+    Run --> Mid[Check mid-progress resource movement]
+    Mid --> Finish[Spawn 1 Zealot]
+    Finish --> Done[Acceptance complete]

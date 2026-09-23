@@ -5,7 +5,7 @@
 - seed: map-authored deterministic scenario
 - map: control_plane_projection
 - clock: engine fixed step sampled through 1/60s test ticks
-- execution timestamp UTC: 2026-09-15T17:28:36.0623371+00:00
+- execution timestamp UTC: 2026-09-22T14:17:42.3105683+00:00
 - launcher binding: control_plane_projection_showcase
 - WebApp asset root: mods/showcases/control_plane_projection/ControlPlaneProjectionShowcaseMod/assets/control-plane-app/index.html
 - DataPlane: topic ludots.showcase.control_plane.state, command toggleProxy

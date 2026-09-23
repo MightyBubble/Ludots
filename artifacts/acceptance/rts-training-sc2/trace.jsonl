@@ -1,0 +1,4 @@
+﻿{"Step":"idle","Producer":"Gateway","Resource":{"Name":"Minerals","Value":800},"Orders":{"HasActive":false,"QueuedCount":0,"HasPending":false},"ProducedUnitCount":0}
+{"Step":"queued","Producer":"Gateway","Resource":{"Name":"Minerals","Value":700},"Orders":{"HasActive":true,"QueuedCount":0,"HasPending":false},"ProducedUnitCount":0}
+{"Step":"mid_progress","Producer":"Gateway","Resource":{"Name":"Minerals","Value":700},"Orders":{"HasActive":true,"QueuedCount":0,"HasPending":false},"ProducedUnitCount":0}
+{"Step":"complete","Producer":"Gateway","Resource":{"Name":"Minerals","Value":700},"Orders":{"HasActive":false,"QueuedCount":0,"HasPending":false},"ProducedUnitCount":1}

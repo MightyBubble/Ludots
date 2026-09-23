@@ -22,8 +22,8 @@
 - Failure branch condition: builders fail to attach/detach, garrisoned units never release, research never grants `Progression.Rts.WarpGate`, or morphing drones survive completion.
 - Key metrics:
   total timeline steps: 11
-  average frame time ms: 0.119
-  peak frame time ms: 5.175
+  average frame time ms: 0.206
+  peak frame time ms: 12.848
 
 ## Timeline
 - [T+001] rts_entry loaded with Warcraft worker build, C&C placement, Protoss gateway tech, and Zerg morph actors ready.

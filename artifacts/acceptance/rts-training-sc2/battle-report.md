@@ -1,12 +1,12 @@
-﻿# Scenario Card: rts-training-war3
+﻿# Scenario Card: rts-training-sc2
 
 ## Intent
-- Player goal: inspect Barracks training with readable queue/progress.
-- Gameplay domain: rts_war3_training.
+- Player goal: inspect Gateway training with readable queue/progress.
+- Gameplay domain: rts_sc2_training.
 
 ## Determinism Inputs
 - Seed: fixed-step deterministic simulation at 60 FPS.
-- Map: `rts_war3_training`.
+- Map: `rts_sc2_training`.
 - Clock profile: `FixedFrame`.
 
 ## Action Script
@@ -18,18 +18,18 @@
 ## Expected Outcomes
 - Primary success condition: progress/status and queue rows stay readable throughout training.
 - Failure branch condition: queue labels collapse to `Cast Ability`, progress never starts, or resource movement mismatches the style.
-- Key metrics: start Minerals=700, end Minerals=565, avg frame ms=0.242.
+- Key metrics: start Minerals=800, end Minerals=700, avg frame ms=0.233.
 
 ## Timeline
-- [T+001] Barracks is selected by default and ready to train.
+- [T+001] Gateway is selected by default and ready to train.
 - [T+002] 1 orders are visible as readable queue rows, not generic cast placeholders.
 - [T+003] Mid-progress resource movement matches the intended Minerals pacing.
-- [T+004] Queue completes with 1 Footman spawns and the expected final Minerals total.
+- [T+004] Queue completes with 1 Zealot spawns and the expected final Minerals total.
 
 ## Evidence Artifacts
-- `artifacts/acceptance/rts-training-war3/trace.jsonl`
-- `artifacts/acceptance/rts-training-war3/panel-trace.jsonl`
-- `artifacts/acceptance/rts-training-war3/battle-report.md`
-- `artifacts/acceptance/rts-training-war3/path.mmd`
-- `artifacts/acceptance/rts-training-war3/screens/*_ui.png`
-- `artifacts/acceptance/rts-training-war3/screens/*.svg`
+- `artifacts/acceptance/rts-training-sc2/trace.jsonl`
+- `artifacts/acceptance/rts-training-sc2/panel-trace.jsonl`
+- `artifacts/acceptance/rts-training-sc2/battle-report.md`
+- `artifacts/acceptance/rts-training-sc2/path.mmd`
+- `artifacts/acceptance/rts-training-sc2/screens/*_ui.png`
+- `artifacts/acceptance/rts-training-sc2/screens/*.svg`
