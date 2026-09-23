@@ -77,6 +77,12 @@ namespace Ludots.Core.Map.Board
 
         public int? TerrainBlockedAtOrBelowHeightCm { get; set; }
 
+        /// <summary>
+        /// Catalog asset this NodeGraph board installs on map load.
+        /// Absent means the board has no transport network.
+        /// </summary>
+        public Ludots.Core.TransportNetwork.TransportNetworkBoardDeclaration TransportNetwork { get; set; }
+
         [JsonIgnore]
         public int ChunkSizeCells { get; set; } = SpatialScaleDefaults.PartitionChunkCells;
 
@@ -128,6 +134,7 @@ namespace Ludots.Core.Map.Board
                 StructureAwareNavigation = StructureAwareNavigation,
                 TerrainHeightStepCm = TerrainHeightStepCm,
                 TerrainBlockedAtOrBelowHeightCm = TerrainBlockedAtOrBelowHeightCm,
+                TransportNetwork = TransportNetwork?.Clone(),
             };
         }
     }

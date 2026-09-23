@@ -4161,9 +4161,9 @@
     {
       "id": "capability_standard_transport_network",
       "path": "mods/showcases/capability_standard/CapabilityStandardTransportNetworkMod",
-      "projectPath": "CapabilityStandardTransportNetworkMod.csproj",
+      "projectPath": null,
       "title": "标准能力·运输网络",
-      "summary": "TransportNetwork authoring、确定性 NodeGraph 烘焙、水路 tag/容量与 SurfaceSpline 带状派生验收。",
+      "summary": "节点棋盘点名路网资产，引擎在加载地图时装配图块和丝带。",
       "tier": "T2",
       "category": "capability",
       "tags": [
