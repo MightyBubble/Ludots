@@ -81,6 +81,17 @@ namespace Ludots.Core.Networking.Replication
             in ReplicationApplyContext context);
     }
 
+    /// <summary>
+    /// Optional batch boundary for schema appliers that must validate snapshot-wide invariants
+    /// without mutating committed state (for example single local ownership).
+    /// </summary>
+    public interface IClientReplicationBatchValidationParticipant
+    {
+        void OnBatchValidationBeginning(in ReplicationApplyContext context);
+
+        void OnBatchValidationEnded(bool accepted);
+    }
+
     public sealed class ClientReplicationSchemaApplierRegistry
     {
         private readonly FrozenReplicationSchemaRegistry<IClientReplicationSchemaApplier> _registry;
@@ -108,6 +119,30 @@ namespace Ludots.Core.Networking.Replication
         public bool TryGet(int schemaId, out IClientReplicationSchemaApplier applier)
         {
             return _registry.TryGet(schemaId, out applier);
+        }
+
+        public void NotifyBatchValidationBeginning(in ReplicationApplyContext context)
+        {
+            for (int schemaId = 1; schemaId <= SchemaCapacity; schemaId++)
+            {
+                if (TryGet(schemaId, out IClientReplicationSchemaApplier applier) &&
+                    applier is IClientReplicationBatchValidationParticipant participant)
+                {
+                    participant.OnBatchValidationBeginning(in context);
+                }
+            }
+        }
+
+        public void NotifyBatchValidationEnded(bool accepted)
+        {
+            for (int schemaId = 1; schemaId <= SchemaCapacity; schemaId++)
+            {
+                if (TryGet(schemaId, out IClientReplicationSchemaApplier applier) &&
+                    applier is IClientReplicationBatchValidationParticipant participant)
+                {
+                    participant.OnBatchValidationEnded(accepted);
+                }
+            }
         }
     }
 }

@@ -21,6 +21,7 @@ public sealed class Physics3DNetworkRuntimeConfig
     public Physics3DNetworkPlayerSpawnConfig PlayerSpawn { get; init; } = null!;
     public Physics3DNetworkAoiConfig Aoi { get; init; } = null!;
     public Physics3DNetworkMovementConfig Movement { get; init; } = null!;
+    public Physics3DNetConfig ClientConvergence { get; init; } = null!;
 
     public void Validate(NetworkRuntimeConfig network)
     {
@@ -58,11 +59,13 @@ public sealed class Physics3DNetworkRuntimeConfig
         ArgumentNullException.ThrowIfNull(PlayerSpawn);
         ArgumentNullException.ThrowIfNull(Aoi);
         ArgumentNullException.ThrowIfNull(Movement);
+        ArgumentNullException.ThrowIfNull(ClientConvergence);
         Quantization.Validate();
         PlayerBody.Validate();
         PlayerSpawn.Validate();
         Aoi.Validate();
         Movement.Validate();
+        ClientConvergence.Validate();
         if (Aoi.GlobalEntityCapacity != network.GlobalNetworkEntityCapacity)
         {
             throw new InvalidOperationException(
@@ -79,6 +82,19 @@ public sealed class Physics3DNetworkRuntimeConfig
         {
             throw new InvalidOperationException(
                 $"Physics3D fixed input requires {Physics3DFixedInputFrameCodec.PayloadBytes} payload bytes, got {network.FixedInputFramePayloadBytes}.");
+        }
+
+        if (ClientConvergence.AuthoritativeHz != network.SimulationTickRateHz ||
+            ClientConvergence.SnapshotHz != network.StatePublishRateHz)
+        {
+            throw new InvalidOperationException(
+                "Physics3D client convergence rates must match networking simulation and state-publish rates.");
+        }
+
+        if (ClientConvergence.LocalPredictionHistoryTicks < network.FixedInputPendingFrameCapacity)
+        {
+            throw new InvalidOperationException(
+                $"Physics3D local prediction history {ClientConvergence.LocalPredictionHistoryTicks} is below fixed-input pending capacity {network.FixedInputPendingFrameCapacity}.");
         }
     }
 }
@@ -117,7 +133,8 @@ public sealed class Physics3DNetworkRuntimeConfigLoader
             nameof(Physics3DNetworkRuntimeConfig.PlayerBody),
             nameof(Physics3DNetworkRuntimeConfig.PlayerSpawn),
             nameof(Physics3DNetworkRuntimeConfig.Aoi),
-            nameof(Physics3DNetworkRuntimeConfig.Movement));
+            nameof(Physics3DNetworkRuntimeConfig.Movement),
+            nameof(Physics3DNetworkRuntimeConfig.ClientConvergence));
         RequireProperties(
             RequireObject(merged, nameof(Physics3DNetworkRuntimeConfig.Quantization), relativePath),
             relativePath,

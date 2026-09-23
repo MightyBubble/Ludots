@@ -247,6 +247,7 @@ namespace Ludots.Core.Networking.Replication
                 return schemaValidation;
             }
 
+            _appliers.NotifyBatchValidationEnded(accepted: true);
             _mirror.CommitValidated(packet);
             CommitBatch();
             _lastAppliedContext = _pendingContext;
@@ -632,6 +633,7 @@ namespace Ludots.Core.Networking.Replication
 
         private ReplicationBridgeResult ValidateBatchApplications()
         {
+            _appliers.NotifyBatchValidationBeginning(in _pendingContext);
             for (int i = 0; i < _batchCount; i++)
             {
                 switch (_batchKinds[i])
@@ -644,6 +646,7 @@ namespace Ludots.Core.Networking.Replication
                             in _pendingContext);
                         if (validation != ReplicationBridgeResult.Success)
                         {
+                            _appliers.NotifyBatchValidationEnded(accepted: false);
                             return validation;
                         }
 
@@ -655,11 +658,13 @@ namespace Ludots.Core.Networking.Replication
                         ReplicatedEntityState state = _batchStates[i];
                         if (!_appliers.TryGet(state.SchemaId, out IClientReplicationSchemaApplier applier))
                         {
+                            _appliers.NotifyBatchValidationEnded(accepted: false);
                             return ReplicationBridgeResult.SchemaNotRegistered;
                         }
 
                         if (!applier.CanApply(_world, _entities[lane], in state, in _pendingContext))
                         {
+                            _appliers.NotifyBatchValidationEnded(accepted: false);
                             return ReplicationBridgeResult.SchemaApplyRejected;
                         }
 
@@ -670,17 +675,20 @@ namespace Ludots.Core.Networking.Replication
                         ReplicatedEntityState state = _batchStates[i];
                         if (!_appliers.TryGet(state.SchemaId, out IClientReplicationSchemaApplier applier))
                         {
+                            _appliers.NotifyBatchValidationEnded(accepted: false);
                             return ReplicationBridgeResult.SchemaNotRegistered;
                         }
 
                         if (!applier.CanCreate(_world, in state, in _pendingContext))
                         {
+                            _appliers.NotifyBatchValidationEnded(accepted: false);
                             return ReplicationBridgeResult.SchemaApplyRejected;
                         }
 
                         break;
                     }
                     default:
+                        _appliers.NotifyBatchValidationEnded(accepted: false);
                         return ReplicationBridgeResult.InvalidPacket;
                 }
             }

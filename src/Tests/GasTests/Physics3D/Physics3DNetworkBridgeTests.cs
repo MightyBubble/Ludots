@@ -10,7 +10,9 @@ using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Networking.Session;
 using Ludots.Core.Networking.Simulation;
 using Ludots.Core.Physics3D;
+using Ludots.Core.Physics3DNet;
 using Ludots.Core.Physics3DNet.Bridge;
+using Ludots.Core.Physics3DNet.Client;
 using Ludots.Core.Physics3DNet.Input;
 using NUnit.Framework;
 
@@ -347,11 +349,7 @@ public sealed class Physics3DNetworkBridgeTests
         using World clientEcs = World.Create();
         using var clientPhysics = new Physics3DWorld(CreateWorldConfig(mobileCapacity: 1));
         var appliers = new ClientReplicationSchemaApplierRegistry(schemaCapacity: SchemaId);
-        var applier = new Physics3DClientBodyReplicationApplier(
-            clientPhysics,
-            SchemaId,
-            new Physics3DReplicationQuantizationConfig(),
-            CreateBodyConfig());
+        var applier = CreateClientApplier(clientEcs, clientPhysics, globalCapacity: entities.Capacity, activeCapacity: entities.Capacity);
         Assert.That(appliers.Register(SchemaId, applier), Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
         appliers.Freeze();
         var clientFactory = new ClientReplicationBridgeFactory(
@@ -384,11 +382,7 @@ public sealed class Physics3DNetworkBridgeTests
         Assert.That(
             remoteAppliers.Register(
                 SchemaId,
-                new Physics3DClientBodyReplicationApplier(
-                    remotePhysics,
-                    SchemaId,
-                    new Physics3DReplicationQuantizationConfig(),
-                    CreateBodyConfig())),
+                CreateClientApplier(remoteEcs, remotePhysics, globalCapacity: entities.Capacity, activeCapacity: entities.Capacity)),
             Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
         remoteAppliers.Freeze();
         SessionSeatBinding remoteSeat = Seat(slot: 1, generation: 1);
@@ -487,11 +481,7 @@ public sealed class Physics3DNetworkBridgeTests
         Assert.That(
             appliers.Register(
                 SchemaId,
-                new Physics3DClientBodyReplicationApplier(
-                    clientPhysics,
-                    SchemaId,
-                    quantization,
-                    CreateBodyConfig())),
+                CreateClientApplier(clientEcs, clientPhysics, globalCapacity: 1, activeCapacity: 1)),
             Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
         appliers.Freeze();
         ClientWorldReplicationBridge client = new ClientReplicationBridgeFactory(
@@ -1472,6 +1462,71 @@ public sealed class Physics3DNetworkBridgeTests
         ticks.Begin(checked((int)tick));
         Assert.That(consumer.TryConsume(tick), Is.EqualTo(expected));
         ticks.Commit(checked((int)tick));
+    }
+
+    private static Physics3DClientBodyReplicationApplier CreateClientApplier(
+        World world,
+        IPhysics3DWorld physics,
+        int globalCapacity,
+        int activeCapacity)
+    {
+        var convergence = new Physics3DReplicatedClientConvergence(
+            world,
+            physics,
+            new Physics3DNetConfig(),
+            globalCapacity,
+            activeCapacity,
+            new BridgeStubClientInputSource(),
+            new BridgeStubPredictionDriver(physics));
+        return new Physics3DClientBodyReplicationApplier(
+            physics,
+            SchemaId,
+            new Physics3DReplicationQuantizationConfig(),
+            CreateBodyConfig(),
+            convergence);
+    }
+
+    private sealed class BridgeStubClientInputSource : IPhysics3DClientInputSource
+    {
+        public bool TrySampleMovement(uint targetTick, out Vector2 movement)
+        {
+            movement = Vector2.Zero;
+            return targetTick > 0;
+        }
+    }
+
+    private sealed class BridgeStubPredictionDriver : IPhysics3DLocalPredictionDriver
+    {
+        private readonly IPhysics3DWorld _physics;
+
+        public BridgeStubPredictionDriver(IPhysics3DWorld physics)
+        {
+            _physics = physics;
+        }
+
+        public bool Supports(Physics3DNetLocalDrivenKind kind) =>
+            kind is Physics3DNetLocalDrivenKind.Character or Physics3DNetLocalDrivenKind.Vehicle;
+
+        public bool TryStep(
+            Entity entity,
+            Physics3DBodyId body,
+            Physics3DNetLocalDrivenKind kind,
+            uint targetTick,
+            in Physics3DFixedInputFrame input,
+            out Physics3DBodyState predictedState)
+        {
+            if (!_physics.ContainsBody(body))
+            {
+                predictedState = default;
+                return false;
+            }
+
+            predictedState = _physics.GetBodyState(body);
+            predictedState.LinearVelocityCmPerSecond = new Vector3(input.Movement.X * 100f, 0f, input.Movement.Y * 100f);
+            predictedState.PositionCm += predictedState.LinearVelocityCmPerSecond / 30f;
+            _physics.SetBodyState(body, in predictedState);
+            return true;
+        }
     }
 
     private static Physics3DNetworkPlayerBodyConfig CreateBodyConfig() => new()

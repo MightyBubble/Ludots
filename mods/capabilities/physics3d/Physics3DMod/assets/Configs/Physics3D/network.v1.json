@@ -44,5 +44,12 @@
     "MaximumSpeedCmPerSecond": 600.0,
     "MaximumAccelerationCmPerSecondSquared": 1800.0,
     "VelocityResponsePerSecond": 20.0
+  },
+  "ClientConvergence": {
+    "AuthoritativeHz": 30,
+    "SnapshotHz": 10,
+    "LocalPredictionHistoryTicks": 32,
+    "RemoteInterpolationHistoryTicks": 16,
+    "ReplayEventCapacity": 8192
   }
 }

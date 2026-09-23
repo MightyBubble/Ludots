@@ -886,6 +886,15 @@ public sealed class Physics3DNetVerticalSliceTests
                 timeline.RecordHashComparison(tick, leftHash: (ulong)tick, rightHash: (ulong)tick);
             }
 
+            if (tick > local.LocalPredictionHistoryTicks)
+            {
+                long confirmTo = tick - local.LocalPredictionHistoryTicks;
+                if (confirmTo > prediction.ConfirmedTick)
+                {
+                    prediction.Confirm(0, 1, confirmTo);
+                }
+            }
+
             if (!Physics3DFixedInputFrameCodec.TryEncode(new Vector2((tick % 10) / 10f, 0f), payload))
             {
                 throw new InvalidOperationException($"Failed to encode prediction payload for tick {tick}.");

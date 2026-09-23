@@ -318,6 +318,15 @@ public sealed class Physics3DNetRemoteInterpolationBuffer
         return _sampleCount[slot];
     }
 
+    public void Reset()
+    {
+        Array.Clear(_generation);
+        Array.Clear(_entityActive);
+        Array.Clear(_sampleTick);
+        Array.Clear(_sampleOccupied);
+        Array.Clear(_sampleCount);
+    }
+
     public bool TryGetSampleTick(in NetworkEntityHandle handle, long tick, out Physics3DNetRemoteSample sample)
     {
         sample = default;
