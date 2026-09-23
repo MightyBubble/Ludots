@@ -257,6 +257,104 @@ public sealed class CalendarRuntimeTests
             "mod event handler counts as a subscriber; unsubscribed keys fire nothing");
     }
 
+    [Test]
+    public void Advance_WithoutObservers_LeavesOpeningReplaceable()
+    {
+        CalendarRuntime runtime = CreateRuntime();
+        runtime.Advance(5);
+
+        runtime.ApplyInitialState(4, 2);
+
+        Assert.That(runtime.DayIndex, Is.EqualTo(4));
+        Assert.That(runtime.TicksIntoDay, Is.EqualTo(2));
+    }
+
+    [Test]
+    public void Advance_CrossingADay_CommitsOpening()
+    {
+        CalendarRuntime runtime = CreateRuntime();
+        runtime.Advance(20);
+
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+            () => runtime.ApplyInitialState(0, 0))!;
+        Assert.That(error.Message, Does.Contain("dayIndex=1"));
+        Assert.That(error.Message, Does.Contain("ticksIntoDay=0"));
+        Assert.That(error.Message, Does.Contain("Requested dayIndex=0"));
+        Assert.That(error.Message, Does.Contain("ticksIntoDay=0"));
+
+        runtime.ApplyInitialState(1, 0);
+        Assert.That(runtime.DayIndex, Is.EqualTo(1));
+        Assert.That(runtime.TicksIntoDay, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void SetDayIndex_Forward_FiresTheSameCycleEventsAsTheClock()
+    {
+        CalendarRuntime runtime = CreateRuntime(startDayIndex: 89);
+        var events = new List<string>();
+        runtime.SetDayIndex(90, () => new ScriptContext(), (key, ctx) =>
+        {
+            string phaseId = ConfigKeyRegistry.GetName(ctx.Get<int>(MapTriggerEventPayloadKeys.CalendarPhaseId));
+            int dayIndex = ctx.Get<int>(MapTriggerEventPayloadKeys.CalendarDayIndex);
+            events.Add(string.IsNullOrEmpty(phaseId) ? $"{key.Value}:{dayIndex}" : $"{key.Value}:{phaseId}");
+        });
+
+        Assert.That(events, Does.Contain("Calendar.CyclePhaseExited:spring"));
+        Assert.That(events, Does.Contain("Calendar.CyclePhaseEntered:summer"));
+        Assert.That(events, Does.Contain("Calendar.CyclePhaseExited:guyu"));
+        Assert.That(events, Does.Contain("Calendar.CyclePhaseEntered:lixia"));
+        Assert.That(events, Does.Contain("Calendar.DayAdvanced:90"));
+        Assert.That(runtime.DayIndex, Is.EqualTo(90));
+    }
+
+    [Test]
+    public void SetDayIndex_Backward_FailsClosed()
+    {
+        CalendarRuntime runtime = CreateRuntime();
+        runtime.Advance(20);
+
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+            () => runtime.SetDayIndex(0))!;
+
+        Assert.That(error.Message, Does.Contain("cannot move backward"));
+        Assert.That(error.Message, Does.Contain("from 1 to 0"));
+        Assert.That(runtime.DayIndex, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void SetTicksIntoDay_PhaseChange_FiresDayPhaseChanged()
+    {
+        CalendarRuntime runtime = CreateRuntime();
+        var phases = new List<string>();
+        runtime.SetTicksIntoDay(5, () => new ScriptContext(), (key, ctx) =>
+        {
+            if (key.Value == GameEvents.CalendarDayPhaseChanged.Value)
+            {
+                phases.Add(ConfigKeyRegistry.GetName(ctx.Get<int>(MapTriggerEventPayloadKeys.CalendarPhaseId)));
+            }
+        });
+
+        Assert.That(runtime.DayIndex, Is.EqualTo(0));
+        Assert.That(runtime.TicksIntoDay, Is.EqualTo(5));
+        Assert.That(phases, Is.EqualTo(new[] { "day" }));
+    }
+
+    [Test]
+    public void Restore_CommitsOpeningSoADifferentPlacementFails()
+    {
+        CalendarRuntime runtime = CreateRuntime();
+        runtime.RestoreSnapshot(runtime.CaptureSnapshot());
+
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+            () => runtime.ApplyInitialState(3, 1))!;
+        Assert.That(error.Message, Does.Contain("already committed"));
+        Assert.That(error.Message, Does.Contain("Requested dayIndex=3"));
+
+        runtime.ApplyInitialState(0, 0);
+        Assert.That(runtime.DayIndex, Is.EqualTo(0));
+        Assert.That(runtime.TicksIntoDay, Is.EqualTo(0));
+    }
+
     private sealed class ProbeTrigger : Trigger
     {
         private readonly List<string> _seen;
