@@ -55,6 +55,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
             var valueMap = new Dictionary<string, (GraphValueType Type, byte Reg)>(StringComparer.OrdinalIgnoreCase);
             var instructions = new List<GraphInstruction>(ordered.Count);
+            var instructionSources = new List<GraphInstructionSource>(ordered.Count);
 
             for (int idx = 0; idx < ordered.Count; idx++)
             {
@@ -185,20 +186,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         break;
                     case GraphNodeOp.QueryCone:
                         ConfigureSpatialQueryCapacity(node, ref ins, valueMap, ref intNext, cfg.Id, diagnostics);
-                        ins.A = RequireInputOrConstInt(node, 0, node.DirectionDeg, valueMap, instructions, ref intNext, cfg.Id, diagnostics);
-                        ins.B = RequireInputOrConstInt(node, 1, node.HalfAngleDeg, valueMap, instructions, ref intNext, cfg.Id, diagnostics);
+                        ins.A = RequireInputOrConstInt(node, 0, node.DirectionDeg, valueMap, instructions, instructionSources, ref intNext, cfg.Id, diagnostics);
+                        ins.B = RequireInputOrConstInt(node, 1, node.HalfAngleDeg, valueMap, instructions, instructionSources, ref intNext, cfg.Id, diagnostics);
                         ins.ImmF = node.RangeCm;
                         break;
                     case GraphNodeOp.QueryRectangle:
                         ConfigureSpatialQueryCapacity(node, ref ins, valueMap, ref intNext, cfg.Id, diagnostics);
-                        ins.A = RequireInputOrConstInt(node, 0, node.HalfWidthCm, valueMap, instructions, ref intNext, cfg.Id, diagnostics);
-                        ins.B = RequireInputOrConstInt(node, 1, node.HalfHeightCm, valueMap, instructions, ref intNext, cfg.Id, diagnostics);
+                        ins.A = RequireInputOrConstInt(node, 0, node.HalfWidthCm, valueMap, instructions, instructionSources, ref intNext, cfg.Id, diagnostics);
+                        ins.B = RequireInputOrConstInt(node, 1, node.HalfHeightCm, valueMap, instructions, instructionSources, ref intNext, cfg.Id, diagnostics);
                         ins.Imm = node.RotationDeg;
                         break;
                     case GraphNodeOp.QueryLine:
                         ConfigureSpatialQueryCapacity(node, ref ins, valueMap, ref intNext, cfg.Id, diagnostics);
-                        ins.A = RequireInputOrConstInt(node, 0, node.DirectionDeg, valueMap, instructions, ref intNext, cfg.Id, diagnostics);
-                        ins.B = RequireInputOrConstInt(node, 1, node.LengthCm, valueMap, instructions, ref intNext, cfg.Id, diagnostics);
+                        ins.A = RequireInputOrConstInt(node, 0, node.DirectionDeg, valueMap, instructions, instructionSources, ref intNext, cfg.Id, diagnostics);
+                        ins.B = RequireInputOrConstInt(node, 1, node.LengthCm, valueMap, instructions, instructionSources, ref intNext, cfg.Id, diagnostics);
                         ins.Imm = node.HalfWidthCm;
                         break;
                     case GraphNodeOp.QuerySortStable:
@@ -524,6 +525,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 }
 
                 instructions.Add(ins);
+                instructionSources.Add(CreateInstructionSource(cfg.Id, node));
             }
 
             if (HasErrors(diagnostics))
@@ -537,7 +539,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return (null, GraphOutputSchema.Empty, diagnostics);
             }
 
-            return (new GraphProgramPackage(cfg.Id, symbols.ToArray(), instructions.ToArray()), outputSchema, diagnostics);
+            return (new GraphProgramPackage(
+                cfg.Id,
+                symbols.ToArray(),
+                instructions.ToArray(),
+                new GraphInstructionSourceMap(cfg.Id, instructionSources.ToArray())),
+                outputSchema,
+                diagnostics);
         }
 
         private static (GraphValueType Type, byte? FixedReg) GetOutputTypeAndFixedReg(GraphNodeOp op)
