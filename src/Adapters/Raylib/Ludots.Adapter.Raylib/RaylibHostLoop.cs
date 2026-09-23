@@ -874,6 +874,13 @@ namespace Ludots.Adapter.Raylib
                             presentationTiming?.ObserveSplineRibbonRender(0d, 0);
                         }
 
+                        if (!cleanPerformanceMode &&
+                            engine.TryGetService(CoreServiceKeys.TrailMeshBuffer, out TrailMeshBuffer trailMeshes) &&
+                            trailMeshes.Count > 0)
+                        {
+                            RaylibTrailMeshRenderer.DrawTrailMeshes(trailMeshes);
+                        }
+
                         if (drawDebugDraw &&
                             engine.TryGetService(CoreServiceKeys.DebugDrawCommandBuffer, out DebugDrawCommandBuffer dd))
                         {

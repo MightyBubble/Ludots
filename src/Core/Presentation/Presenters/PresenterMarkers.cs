@@ -8,6 +8,7 @@ namespace Ludots.Core.Presentation.Presenters
     public struct PerfHasEmitWork {}
     public struct PerfHasSound {}
     public struct PerfHasSpline {}
+    public struct PerfHasTrailMesh {}
     public struct PerfHasAttachment {}
     public struct PerfHasAttachmentTick {}
     public struct PerfHasGrounding {}

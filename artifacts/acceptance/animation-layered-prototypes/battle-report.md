@@ -4,7 +4,7 @@
 - scenario name: raylib layered tank + humanoid prototype acceptance
 - build/version: local PresentationTests
 - seed/map/clock: deterministic fixture / animation_acceptance_entry / 12 ticks @ 60 Hz
-- execution timestamp: 2026-08-25T04:53:40.8849713Z
+- execution timestamp: 2026-08-25T13:15:55.2670533Z
 
 ## Timeline
 - [T+012] Tank prototype resolves profile -> state clip -> raylib/ue5 locators for the vehicle surrogate.

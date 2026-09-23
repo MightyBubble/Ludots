@@ -1,5 +1,5 @@
 A,I,T_ms,halted,notes
-10000,32,4.403,10000,L1 ExecuteSlice chain
-10000,128,25.241,10000,L1 ExecuteSlice chain
-10000,256,25.575,10000,L1 ExecuteSlice chain
-10000,1024,113.006,10000,L1 ExecuteSlice chain
+10000,32,2.753,10000,L1 ExecuteSlice chain
+10000,128,6.794,10000,L1 ExecuteSlice chain
+10000,256,13.378,10000,L1 ExecuteSlice chain
+10000,1024,54.856,10000,L1 ExecuteSlice chain

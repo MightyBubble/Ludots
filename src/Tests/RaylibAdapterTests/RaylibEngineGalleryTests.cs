@@ -24,6 +24,7 @@ namespace Ludots.Tests.RaylibAdapter
             "vegetation_cutout",
             "material_binding",
             "ribbon_overlay",
+            "slash_trail",
             "skia_overlay",
             "debug_draw",
             "primitives",

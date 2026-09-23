@@ -1238,6 +1238,7 @@ namespace Ludots.Core.Engine
             var navMeshPresentationBuffer = new Ludots.Core.Presentation.Navigation.NavMeshPresentationBuffer(
                 presentationConfig.NavMeshTileCapacity);
             var splineRibbonBuffer = new SplineRibbonBuffer(presentationConfig.SplineRibbonCapacity);
+            var trailMeshBuffer = new TrailMeshBuffer();
             var soundRequestBuffer = new SoundRequestBuffer();
             var worldHudBuffer = new WorldHudBatchBuffer(presentationConfig.WorldHudCapacity);
             var presentationTimingDiagnostics = new PresentationTimingDiagnostics();
@@ -1342,7 +1343,8 @@ namespace Ludots.Core.Engine
                 timingDiagnostics: presentationTimingDiagnostics,
                 extensionBehaviors: presenterBehaviorKinds,
                 graphPrograms: graphProgramRegistry,
-                graphApi: gasGraphApi);
+                graphApi: gasGraphApi,
+                trailMeshBuffer: trailMeshBuffer);
             var animatorRuntimeSystem = new AnimatorRuntimeSystem(
                 World,
                 animatorControllers,
@@ -1838,6 +1840,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.GlobalPresentationEventBuffer, globalPresentationEvents);
             SetService(CoreServiceKeys.GroundOverlayBuffer, groundOverlayBuffer);
             SetService(CoreServiceKeys.SplineRibbonBuffer, splineRibbonBuffer);
+            SetService(CoreServiceKeys.TrailMeshBuffer, trailMeshBuffer);
             SetService(CoreServiceKeys.SoundRequestBuffer, soundRequestBuffer);
             SetService(CoreServiceKeys.PresenterDefinitionRegistry, presenterDefinitions);
             SetService(CoreServiceKeys.PresenterEntityRuntime, presenterRuntime);

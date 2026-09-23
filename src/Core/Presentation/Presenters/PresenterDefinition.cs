@@ -622,6 +622,12 @@ namespace Ludots.Core.Presentation.Presenters
                         blocksEventDrivenStaticEmit = true;
                         hasStaticOnlyVisuals = false;
                         break;
+                    case BehaviorKind.TrailMesh:
+                        tickBehaviorIndices ??= new System.Collections.Generic.List<int>(4);
+                        tickBehaviorIndices.Add(i);
+                        blocksEventDrivenStaticEmit = true;
+                        hasStaticOnlyVisuals = false;
+                        break;
                     case BehaviorKind.Material:
                         RequiresBootstrapProcessing = true;
                         materialBehaviorIndices ??= new System.Collections.Generic.List<int>(2);

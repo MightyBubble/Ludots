@@ -1,0 +1,8 @@
+{
+  "scene": "slash_trail",
+  "frames": 120,
+  "avgFrameMs": 0.849,
+  "p95FrameMs": 0.195,
+  "maxFrameMs": 83.156,
+  "wallMs": 2172.3
+}

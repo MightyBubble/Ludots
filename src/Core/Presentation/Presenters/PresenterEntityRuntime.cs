@@ -1423,6 +1423,7 @@ namespace Ludots.Core.Presentation.Presenters
             ref readonly PresenterState state = ref _world.Get<PresenterState>(entity);
             bool hasSound = false;
             bool hasSpline = false;
+            bool hasTrailMesh = false;
             bool hasAttachment = false;
             bool hasAttachmentTick = false;
             bool hasGrounding = false;
@@ -1445,6 +1446,7 @@ namespace Ludots.Core.Presentation.Presenters
                 {
                     case BehaviorKind.Sound: hasSound = true; break;
                     case BehaviorKind.Spline: hasSpline = true; break;
+                    case BehaviorKind.TrailMesh: hasTrailMesh = true; break;
                     case BehaviorKind.Grounding:
                         hasGrounding |= GroundingRequiresPresenterTick(entity, in state, in slot.Grounding);
                         break;
@@ -1483,6 +1485,7 @@ namespace Ludots.Core.Presentation.Presenters
                     {
                         case BehaviorKind.Sound: hasSound = true; break;
                         case BehaviorKind.Spline: hasSpline = true; break;
+                        case BehaviorKind.TrailMesh: hasTrailMesh = true; break;
                         case BehaviorKind.Grounding:
                             hasGrounding |= GroundingRequiresPresenterTick(entity, in state, in slot.Grounding);
                             break;
@@ -1507,6 +1510,7 @@ namespace Ludots.Core.Presentation.Presenters
 
             SyncTickBehaviorMarker<PerfHasSound>(entity, hasSound);
             SyncTickBehaviorMarker<PerfHasSpline>(entity, hasSpline);
+            SyncTickBehaviorMarker<PerfHasTrailMesh>(entity, hasTrailMesh);
             SyncTickBehaviorMarker<PerfHasAttachment>(entity, hasAttachment);
             SyncTickBehaviorMarker<PerfHasAttachmentTick>(entity, hasAttachmentTick);
             SyncTickBehaviorMarker<PerfHasGrounding>(entity, hasGrounding);
@@ -1660,6 +1664,11 @@ namespace Ludots.Core.Presentation.Presenters
             if (_world.Has<PerfHasSpline>(entity))
             {
                 RemoveMarker<PerfHasSpline>(entity);
+            }
+
+            if (_world.Has<PerfHasTrailMesh>(entity))
+            {
+                RemoveMarker<PerfHasTrailMesh>(entity);
             }
 
             if (_world.Has<PerfHasAttachment>(entity))
@@ -2710,6 +2719,7 @@ namespace Ludots.Core.Presentation.Presenters
             {
                 bool hasSound = false;
                 bool hasSpline = false;
+                bool hasTrailMesh = false;
                 bool hasAttachment = false;
                 bool hasAttachmentTick = false;
                 bool hasGrounding = false;
@@ -2731,6 +2741,7 @@ namespace Ludots.Core.Presentation.Presenters
                     {
                         case BehaviorKind.Sound: hasSound = true; break;
                         case BehaviorKind.Spline: hasSpline = true; break;
+                        case BehaviorKind.TrailMesh: hasTrailMesh = true; break;
                         case BehaviorKind.Grounding:
                             hasGrounding |= includeGroundingTick &&
                                             slot.Grounding.Mode != GroundingMode.None &&
@@ -2753,6 +2764,7 @@ namespace Ludots.Core.Presentation.Presenters
 
                 if (hasSound) signature += Component<PerfHasSound>.Signature;
                 if (hasSpline) signature += Component<PerfHasSpline>.Signature;
+                if (hasTrailMesh) signature += Component<PerfHasTrailMesh>.Signature;
                 if (hasAnimator)
                 {
                     signature += Component<PerfHasAnimator>.Signature;

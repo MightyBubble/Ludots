@@ -62,6 +62,8 @@ namespace Ludots.Core.Presentation.Systems
         private readonly SoundRequestBuffer _soundRequests;
         private readonly Func<IVisualHeightmap?> _heightmapProvider;
         private readonly Func<IBoneTransformProvider?> _boneTransformProvider;
+        private readonly TrailMeshRuntime? _trailMeshRuntime;
+        private float _trailMeshNow;
         private readonly PresenterBehaviorKindRegistry? _extensionBehaviors;
         private readonly PresenterBehaviorOps _extensionBehaviorOps;
         private readonly GraphProgramRegistry? _graphPrograms;
@@ -83,7 +85,7 @@ namespace Ludots.Core.Presentation.Systems
             .WithAll<PresenterState, PresenterBootstrapPending>();
         private readonly QueryDescription _tickDrivenQuery = new QueryDescription()
             .WithAll<PresenterState, PresenterWorldPosition, PresenterWorldPlanePosition>()
-            .WithAny<PerfHasSpline, PerfHasAttachmentTick, PerfHasGrounding, PerfHasSound, PerfHasOwnerFacingBinding, PerfHasGraphParamBinding, PerfHasExtensionBehavior>()
+            .WithAny<PerfHasSpline, PerfHasTrailMesh, PerfHasAttachmentTick, PerfHasGrounding, PerfHasSound, PerfHasOwnerFacingBinding, PerfHasGraphParamBinding, PerfHasExtensionBehavior>()
             .WithNone<PresenterBootstrapPending>();
         private readonly QueryDescription _materialDirtyQuery = new QueryDescription()
             .WithAll<PresenterState, PerfMaterialDirty>()
@@ -127,9 +129,11 @@ namespace Ludots.Core.Presentation.Systems
             PresentationTimingDiagnostics? timingDiagnostics = null,
             PresenterBehaviorKindRegistry? extensionBehaviors = null,
             GraphProgramRegistry? graphPrograms = null,
-            IGraphRuntimeApi? graphApi = null)
+            IGraphRuntimeApi? graphApi = null,
+            TrailMeshBuffer? trailMeshBuffer = null)
             : this(world, runtime, definitions, events, ownerChanges, soundRequests,
-                () => heightmap, () => boneTransformProvider, timingDiagnostics, extensionBehaviors, graphPrograms, graphApi)
+                () => heightmap, () => boneTransformProvider, timingDiagnostics, extensionBehaviors, graphPrograms, graphApi,
+                trailMeshBuffer)
         {
         }
 
@@ -145,7 +149,8 @@ namespace Ludots.Core.Presentation.Systems
             PresentationTimingDiagnostics? timingDiagnostics = null,
             PresenterBehaviorKindRegistry? extensionBehaviors = null,
             GraphProgramRegistry? graphPrograms = null,
-            IGraphRuntimeApi? graphApi = null)
+            IGraphRuntimeApi? graphApi = null,
+            TrailMeshBuffer? trailMeshBuffer = null)
             : base(world)
         {
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
@@ -155,6 +160,7 @@ namespace Ludots.Core.Presentation.Systems
             _soundRequests = soundRequests ?? throw new ArgumentNullException(nameof(soundRequests));
             _heightmapProvider = heightmapProvider ?? throw new ArgumentNullException(nameof(heightmapProvider));
             _boneTransformProvider = boneTransformProvider ?? (static () => null);
+            _trailMeshRuntime = trailMeshBuffer != null ? new TrailMeshRuntime(trailMeshBuffer) : null;
             _extensionBehaviors = extensionBehaviors;
             _graphPrograms = graphPrograms;
             _graphApi = graphApi;
@@ -167,6 +173,7 @@ namespace Ludots.Core.Presentation.Systems
         public override void Update(in float dt)
         {
             EnsureDefinitionIndexesCurrent();
+            _trailMeshNow += dt;
             long start = _timingDiagnostics != null ? Stopwatch.GetTimestamp() : 0L;
             int ownerChanges;
             int tickDrivenCount;
@@ -187,6 +194,7 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             PlaybackStructuralChanges();
+            _trailMeshRuntime?.Advance(World, _trailMeshNow);
             int destroyEventScanCount = StopDestroyedSounds();
             _ownerChanges.Clear();
 
@@ -831,6 +839,9 @@ namespace Ludots.Core.Presentation.Systems
                         case BehaviorKind.Spline:
                             ApplySpline(entity, ref state, slot.Spline, tickDt);
                             break;
+                        case BehaviorKind.TrailMesh:
+                            ApplyTrailMesh(entity, state.StableId, in slot.TrailMesh);
+                            break;
                     }
                 }
             }
@@ -861,6 +872,9 @@ namespace Ludots.Core.Presentation.Systems
                             break;
                         case BehaviorKind.Spline:
                             ApplySpline(entity, ref state, slot.Spline, tickDt);
+                            break;
+                        case BehaviorKind.TrailMesh:
+                            ApplyTrailMesh(entity, state.StableId, in slot.TrailMesh);
                             break;
                     }
                 }
@@ -894,6 +908,9 @@ namespace Ludots.Core.Presentation.Systems
                             case BehaviorKind.Spline:
                                 ApplySpline(entity, ref state, slot.Spline, tickDt);
                                 break;
+                            case BehaviorKind.TrailMesh:
+                                ApplyTrailMesh(entity, state.StableId, in slot.TrailMesh);
+                                break;
                         }
                     }
                     else
@@ -918,6 +935,9 @@ namespace Ludots.Core.Presentation.Systems
                                 break;
                             case BehaviorKind.Spline:
                                 ApplySpline(entity, ref state, slot.Spline, tickDt);
+                                break;
+                            case BehaviorKind.TrailMesh:
+                                ApplyTrailMesh(entity, state.StableId, in slot.TrailMesh);
                                 break;
                         }
                     }
@@ -1722,6 +1742,29 @@ namespace Ludots.Core.Presentation.Systems
                 facing.AngleRad = 0f;
                 facing.HasValue = 1;
             }
+        }
+
+        private void ApplyTrailMesh(Entity entity, int stableId, in TrailMeshConfig config)
+        {
+            if (_trailMeshRuntime == null)
+            {
+                throw new InvalidOperationException(
+                    "TrailMesh behavior requires a TrailMeshBuffer wired into PresenterBehaviorSystem (GameEngine registers it as a core service).");
+            }
+
+            Vector3 position = World.Has<PresenterWorldPosition>(entity)
+                ? World.Get<PresenterWorldPosition>(entity).Value
+                : Vector3.Zero;
+            Quaternion rotation = World.Has<PresenterWorldRotation>(entity)
+                ? VisualMath.NormalizeOrIdentity(World.Get<PresenterWorldRotation>(entity).Value)
+                : Quaternion.Identity;
+            Vector3 scale = World.Has<PresenterWorldScale>(entity)
+                ? VisualMath.NormalizeScale(World.Get<PresenterWorldScale>(entity).Value)
+                : Vector3.One;
+
+            Vector3 baseWorld = position + Vector3.Transform(scale * config.BaseOffset, rotation);
+            Vector3 tipWorld = position + Vector3.Transform(scale * config.TipOffset, rotation);
+            _trailMeshRuntime.Sample(entity, stableId, in config, in baseWorld, in tipWorld, _trailMeshNow);
         }
 
         private void ApplyAttachment(Entity entity, in AttachmentConfig config)

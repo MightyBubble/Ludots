@@ -37,6 +37,7 @@ namespace Ludots.App.RaylibEngineGallery
             new("vegetation_cutout", "植被透贴", "vegetation_cutout shader 程序化草丛 billboard", static () => new Scenes.VegetationCutoutScene()),
             new("material_binding", "材质绑定", "材质库多材质/混合模式 + 实例链覆盖 + shaderKey 自定义着色", static () => new Scenes.MaterialBindingScene()),
             new("ribbon_overlay", "样条带覆盖层", "GroundOverlayBuffer + 样条带世界覆盖层", static () => new Scenes.RibbonOverlayScene()),
+            new("slash_trail", "刀光轨迹", "TrailMeshBuffer 武器弧形 mesh 拖尾 + 顶点色渐隐", static () => new Scenes.SlashTrailScene()),
             new("skia_overlay", "Skia 2D 覆盖层", "RaylibSkiaRenderer + SkiaRasterLayer HUD 合成", static () => new Scenes.SkiaOverlayScene()),
             new("debug_draw", "调试绘制", "RaylibDebugDrawRenderer + DebugDrawCommandBuffer", static () => new Scenes.DebugDrawScene()),
             new("primitives", "图元群体渲染", "RaylibPrimitiveRenderer 纯数据图元阵 + 原型动效", static () => new Scenes.PrimitivesScene()),

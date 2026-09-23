@@ -509,7 +509,8 @@ namespace Ludots.Core.Presentation.Config
                 "minimapMarker" or
                 "worldText" or
                 "surfaceSource" or
-                "instancedBatch";
+                "instancedBatch" or
+                "trailMesh";
         }
 
         private static JsonArray AppendArrays(JsonNode? existingNode, JsonNode? incomingNode)
@@ -939,6 +940,7 @@ namespace Ludots.Core.Presentation.Config
             "assetBinding", "attributeBinding", "tagBinding", "animator",
             "attachment", "sound", "material", "spline", "grounding",
             "minimapMarker", "worldText", "surfaceSource", "instancedBatch",
+            "trailMesh",
         };
 
         private static readonly string[] ChildFields =
@@ -1067,6 +1069,12 @@ namespace Ludots.Core.Presentation.Config
         {
             "splineAssetId", "usage", "widthParamKey", "colorParamKey",
             "speedParamKey", "progressParamKey", "loop", "pingPong", "waypointEventId",
+        };
+
+        private static readonly string[] TrailMeshFields =
+        {
+            "baseOffset", "tipOffset", "maxSamples", "sampleIntervalSeconds",
+            "sampleLifetimeSeconds", "headColor", "tailColor",
         };
 
         private static readonly string[] GroundingFields =
@@ -2769,6 +2777,10 @@ namespace Ludots.Core.Presentation.Config
                         RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
                         slot.Spline = ParseSpline(obj["spline"], $"{behaviorPath}.spline");
                         break;
+                    case BehaviorKind.TrailMesh:
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
+                        slot.TrailMesh = ParseTrailMesh(obj["trailMesh"], $"{behaviorPath}.trailMesh");
+                        break;
                     case BehaviorKind.Grounding:
                         RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
                         slot.Grounding = ParseGrounding(obj["grounding"], $"{behaviorPath}.grounding");
@@ -3599,6 +3611,49 @@ namespace Ludots.Core.Presentation.Config
             };
         }
 
+        private TrailMeshConfig ParseTrailMesh(JsonNode? node, string path)
+        {
+            if (node is not JsonObject obj)
+            {
+                throw new InvalidOperationException("TrailMesh behavior requires object field 'trailMesh'.");
+            }
+
+            RejectUnknownFields(obj, path, TrailMeshFields);
+
+            var config = new TrailMeshConfig
+            {
+                BaseOffset = ParseRequiredVector3(obj["baseOffset"], $"{path}.baseOffset", Vector3.Zero, required: false),
+                TipOffset = ParseRequiredVector3(obj["tipOffset"], $"{path}.tipOffset", Vector3.UnitZ, required: false),
+                MaxSamples = obj["maxSamples"] != null ? ParseRequiredInt(obj["maxSamples"], $"{path}.maxSamples") : 24,
+                SampleIntervalSeconds = obj["sampleIntervalSeconds"] != null ? ParseRequiredFloat(obj["sampleIntervalSeconds"], $"{path}.sampleIntervalSeconds") : 0f,
+                SampleLifetimeSeconds = obj["sampleLifetimeSeconds"] != null ? ParseRequiredFloat(obj["sampleLifetimeSeconds"], $"{path}.sampleLifetimeSeconds") : 0.3f,
+                HeadColor = obj["headColor"] != null ? ParseRequiredVector4(obj["headColor"], $"{path}.headColor") : Vector4.One,
+                TailColor = obj["tailColor"] != null ? ParseRequiredVector4(obj["tailColor"], $"{path}.tailColor") : new Vector4(1f, 1f, 1f, 0f),
+            };
+
+            if (config.MaxSamples < 2 || config.MaxSamples > TrailMeshBuffer.MaxSamplesPerTrail)
+            {
+                throw new InvalidOperationException($"{path}.maxSamples must be within 2..{TrailMeshBuffer.MaxSamplesPerTrail}, got {config.MaxSamples}.");
+            }
+
+            if (config.SampleIntervalSeconds < 0f)
+            {
+                throw new InvalidOperationException($"{path}.sampleIntervalSeconds must be >= 0, got {config.SampleIntervalSeconds}.");
+            }
+
+            if (config.SampleLifetimeSeconds <= 0f)
+            {
+                throw new InvalidOperationException($"{path}.sampleLifetimeSeconds must be > 0, got {config.SampleLifetimeSeconds}.");
+            }
+
+            if ((config.TipOffset - config.BaseOffset).LengthSquared() <= 1e-8f)
+            {
+                throw new InvalidOperationException($"{path} requires tipOffset distinct from baseOffset; a zero-length trail segment cannot weave a band.");
+            }
+
+            return config;
+        }
+
         private static int ParseOptionalParamKey(JsonNode? node, string context)
         {
             return ParseParamKey(node, -1, context, allowMissing: true, allowNone: true);
@@ -3774,6 +3829,7 @@ namespace Ludots.Core.Presentation.Config
                 ["attributeRatio"] = 13,
                 ["attributeCurrent"] = 14,
                 ["attributeBase"] = 15,
+                ["trail"] = 16,
             };
 
             public static int Register(string key)

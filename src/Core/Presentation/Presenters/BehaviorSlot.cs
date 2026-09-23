@@ -30,6 +30,7 @@ namespace Ludots.Core.Presentation.Presenters
         public BehaviorMotionConfig Motion;
         public SurfaceAuthoringBlock? SurfaceSource;
         public InstancedBatchConfig InstancedBatch;
+        public TrailMeshConfig TrailMesh;
 
         public static AssetBindingConfig BuildWorldTextAssetBinding(in WorldTextConfig worldText)
         {
@@ -70,6 +71,7 @@ namespace Ludots.Core.Presentation.Presenters
         WorldText = 11,
         SurfaceSource = 12,
         InstancedBatch = 13,
+        TrailMesh = 14,
         Extension = 255,
     }
 
@@ -413,6 +415,34 @@ namespace Ludots.Core.Presentation.Presenters
     {
         Render = 1,
         Patrol = 2,
+    }
+
+    /// <summary>
+    /// 刀光/武器拖尾：行为激活期间按采样间隔记录 presenter 世界变换下的局部线段
+    /// （base→tip，典型为刀刃两端）历史位置，渲染端沿轨迹织三角带并按样本年龄渐隐。
+    /// 锚点求值复用兄弟 Attachment 行为——trail 只读 presenter 自身世界变换，
+    /// 声明顺序须让 Attachment 槽位于 TrailMesh 槽之前，保证同帧先写后读。
+    /// </summary>
+    public struct TrailMeshConfig
+    {
+        public TrailMeshConfig()
+        {
+            BaseOffset = Vector3.Zero;
+            TipOffset = Vector3.UnitZ;
+            MaxSamples = 24;
+            SampleIntervalSeconds = 0f;
+            SampleLifetimeSeconds = 0.3f;
+            HeadColor = Vector4.One;
+            TailColor = new Vector4(1f, 1f, 1f, 0f);
+        }
+
+        public Vector3 BaseOffset;
+        public Vector3 TipOffset;
+        public int MaxSamples;
+        public float SampleIntervalSeconds;
+        public float SampleLifetimeSeconds;
+        public Vector4 HeadColor;
+        public Vector4 TailColor;
     }
 
     public enum GroundingMode : byte
