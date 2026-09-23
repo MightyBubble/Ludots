@@ -1,5 +1,5 @@
-import * as THREE from 'three';
-import type { PrimitiveItem } from '../core/FrameProtocol';
+﻿import * as THREE from 'three';
+import type { PrimitiveItem } from '../core/FrameDecoder';
 
 const DEFAULT_GEOMETRY = new THREE.BoxGeometry(1, 1, 1);
 const SPHERE_GEOMETRY = new THREE.SphereGeometry(0.5, 12, 8);
@@ -57,7 +57,7 @@ export class EntityInstanceManager {
         this._tempMatrix.setPosition(item.posX, item.posY, item.posZ);
         mesh.setMatrixAt(i, this._tempMatrix);
 
-        this._tempColor.setRGB(item.colorR, item.colorG, item.colorB);
+        this._tempColor.setRGB(item.r, item.g, item.b);
         mesh.setColorAt(i, this._tempColor);
       }
 
@@ -88,3 +88,4 @@ export class EntityInstanceManager {
     return mesh;
   }
 }
+

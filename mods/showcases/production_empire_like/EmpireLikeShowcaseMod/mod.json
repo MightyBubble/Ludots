@@ -1,0 +1,16 @@
+﻿{
+  "name": "EmpireLikeShowcaseMod",
+  "version": "1.0.0",
+  "description": "Age of Empires-like villager, training, age-up, diplomacy, and trade showcase with Web UI.",
+  "main": "bin/net8.0/EmpireLikeShowcaseMod.dll",
+  "priority": 150,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "ParticipantViewCapabilityMod": "^1.0.0",
+    "RtsProductionCapabilityMod": "^1.0.0",
+    "RtsHudWebMod": "^1.0.0"
+  },
+  "author": "OpenAI Codex",
+  "tags": ["showcase", "rts", "web-ui", "capability-standard"]
+}

@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/components/buildlog.tsx","./src/components/createmoddialog.tsx","./src/components/dependencygraphpanel.tsx","./src/components/detailpanel.tsx","./src/components/modlist.tsx","./src/components/topbar.tsx","./src/components/workspacepanel.tsx","./src/lib/api.ts","./src/lib/utils.ts","./src/stores/launcherstore.ts"],"version":"5.8.3"}

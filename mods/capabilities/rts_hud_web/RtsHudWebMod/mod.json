@@ -1,0 +1,14 @@
+{
+  "name": "RtsHudWebMod",
+  "version": "1.0.0",
+  "description": "Shared C# UI Runtime HUD for multi-faction production showcase roots, rendered by Raylib and Web adapters.",
+  "main": "bin/net8.0/RtsHudWebMod.dll",
+  "priority": 136,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "RtsProductionCapabilityMod": "^1.0.0",
+    "ParticipantViewCapabilityMod": "^1.0.0"
+  },
+  "author": "OpenAI Codex",
+  "tags": ["capability", "web-ui", "rts-hud", "reactive-page"]
+}

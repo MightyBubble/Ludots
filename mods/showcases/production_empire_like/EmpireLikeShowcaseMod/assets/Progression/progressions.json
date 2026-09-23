@@ -1,0 +1,6 @@
+[
+  { "id": "empire.romans.age2", "scope": "showcase.faction" },
+  { "id": "empire.romans.age3", "scope": "showcase.faction" },
+  { "id": "empire.han.age2", "scope": "showcase.faction" },
+  { "id": "empire.han.age3", "scope": "showcase.faction" }
+]

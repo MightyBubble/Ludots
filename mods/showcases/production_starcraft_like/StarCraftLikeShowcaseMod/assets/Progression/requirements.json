@@ -1,0 +1,6 @@
+[
+  {
+    "id": "starcraft.protoss.warpgate.use",
+    "root": { "kind": "ProgressionCompleted", "progression": "starcraft.protoss.warpgate", "scope": "showcase.faction", "entitySource": "ScopeHost" }
+  }
+]

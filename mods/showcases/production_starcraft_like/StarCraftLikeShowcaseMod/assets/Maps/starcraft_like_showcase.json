@@ -1,0 +1,69 @@
+{
+  "Id": "starcraft_like_showcase",
+  "Name": "StarCraft Like Production Showcase",
+  "Tags": ["capability.rts_production", "capability.participant_view", "showcase.starcraft_like", "Raylib.Background:Deep", "Raylib.DebugGuides:Off"],
+  "BoardId": "default",
+  "Width": 36,
+  "Height": 20,
+  "Entities": [
+    {
+      "InstanceId": "team-terran",
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "Terran Dominion" },
+        "WorldPositionCm": { "Value": { "X": -1600, "Y": -500 } }
+      }
+    },
+    {
+      "InstanceId": "team-protoss",
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "Protoss Conclave" },
+        "WorldPositionCm": { "Value": { "X": 0, "Y": -500 } }
+      }
+    },
+    {
+      "InstanceId": "team-zerg",
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "Zerg Brood" },
+        "WorldPositionCm": { "Value": { "X": 1600, "Y": -500 } }
+      }
+    },
+    {
+      "InstanceId": "player-terran",
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "Terran" },
+        "WorldPositionCm": { "Value": { "X": -1600, "Y": 500 } }
+      }
+    },
+    {
+      "InstanceId": "player-protoss",
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "Protoss" },
+        "WorldPositionCm": { "Value": { "X": 0, "Y": 500 } }
+      }
+    },
+    {
+      "InstanceId": "player-zerg",
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "Zerg" },
+        "WorldPositionCm": { "Value": { "X": 1600, "Y": 500 } }
+      }
+    }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "player-terran", "IsLocal": true },
+    { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "player-protoss" },
+    { "PlayerId": 3, "TeamId": 3, "RepresentativeInstanceId": "player-zerg" }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "team-terran" },
+    { "TeamId": 2, "RepresentativeInstanceId": "team-protoss" },
+    { "TeamId": 3, "RepresentativeInstanceId": "team-zerg" }
+  ],
+  "Metadata": {}
+}

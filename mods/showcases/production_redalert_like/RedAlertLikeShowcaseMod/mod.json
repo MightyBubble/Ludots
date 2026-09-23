@@ -1,0 +1,16 @@
+{
+  "name": "RedAlertLikeShowcaseMod",
+  "version": "1.0.0",
+  "description": "C&C / Red Alert-like multi-faction direct-build and MCV deploy production showcase with Web UI.",
+  "main": "bin/net8.0/RedAlertLikeShowcaseMod.dll",
+  "priority": 150,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "ParticipantViewCapabilityMod": "^1.0.0",
+    "RtsProductionCapabilityMod": "^1.0.0",
+    "RtsHudWebMod": "^1.0.0"
+  },
+  "author": "OpenAI Codex",
+  "tags": ["showcase", "rts", "red-alert-like", "web-ui", "capability-standard"]
+}

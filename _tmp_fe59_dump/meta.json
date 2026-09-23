@@ -1,0 +1,64 @@
+{
+  "session": {
+    "id": "sess_fe59d60d-684c-4b47-8faa-d5f8d74e317d",
+    "directory": "C:\\001_AI\\LudotsProd",
+    "path": "C:\\001_AI\\LudotsProd",
+    "title": "分析命令路由与输入偏好全链路设计",
+    "summary_diffs": null,
+    "time_created": 1787238508738,
+    "time_updated": 1787282221961
+  },
+  "like": [
+    {
+      "id": "sess_fe59d60d-684c-4b47-8faa-d5f8d74e317d",
+      "title": "分析命令路由与输入偏好全链路设计",
+      "directory": "C:\\001_AI\\LudotsProd",
+      "time_created": 1787238508738,
+      "time_updated": 1787282221961
+    }
+  ],
+  "todos": [
+    {
+      "position": 0,
+      "status": "completed",
+      "priority": "high",
+      "content": "读 Interaction 核心类型（intent/scheme/context/cast/preference）",
+      "time_updated": 1787238627443
+    },
+    {
+      "position": 1,
+      "status": "in_progress",
+      "priority": "high",
+      "content": "读 RFC-0065 架构文档，理解设计意图与决策记录",
+      "time_updated": 1787238627443
+    },
+    {
+      "position": 2,
+      "status": "pending",
+      "priority": "high",
+      "content": "等待四个探索代理：UX wiki / graph 基础设施 / 右键路由链 / 配置体系",
+      "time_updated": 1787238627443
+    },
+    {
+      "position": 3,
+      "status": "pending",
+      "priority": "high",
+      "content": "综合分析：现状图景 + 不合理之处清单",
+      "time_updated": 1787238627443
+    },
+    {
+      "position": 4,
+      "status": "pending",
+      "priority": "high",
+      "content": "设计：数据驱动配置结构 + graph 基础设施活用方案",
+      "time_updated": 1787238627443
+    },
+    {
+      "position": 5,
+      "status": "pending",
+      "priority": "high",
+      "content": "输出完整中文分析报告",
+      "time_updated": 1787238627443
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+[
+  {
+    "id": "showcase.production.trade.attribute",
+    "relationshipRequirements": [
+      { "source": "Source", "target": "Target", "type": "Showcase.Diplomacy", "metric": "Showcase.Trust", "min": 0, "flag": "Showcase.TradePact", "flagValue": true }
+    ],
+    "inputs": [],
+    "outputs": []
+  }
+]

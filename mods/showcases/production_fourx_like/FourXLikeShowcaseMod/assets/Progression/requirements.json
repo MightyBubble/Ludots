@@ -1,0 +1,6 @@
+[
+  {
+    "id": "fourx.aurora.federation.use",
+    "root": { "kind": "ProgressionCompleted", "progression": "fourx.aurora.trade_routes", "scope": "showcase.faction", "entitySource": "ScopeHost" }
+  }
+]

@@ -1,0 +1,251 @@
+{
+  "scenarioId": "fourx_like",
+  "title": "FourXLike",
+  "flavor": "Civ / Stellaris",
+  "hudStyle": "empire console + city queue + diplomacy matrix + trade offers",
+  "mapId": "fourx_like_showcase",
+  "summary": "Three empires run city production, faction-scope tech, treaty offer/accept, embargo, trade pacts, and strategic resource swaps.",
+  "acceptance": [
+    "city queue production creates ownership-backed assets",
+    "deep faction tech tree gates production",
+    "offer/accept trade state machine calls ExchangeRuntime",
+    "relationship flags expose trade pact, war, and embargo state"
+  ],
+  "resources": ["Credits", "Alloys", "Influence", "Crystal"],
+  "factions": [
+    {
+      "id": "aurora",
+      "label": "Aurora League",
+      "playerId": 1,
+      "teamId": 1,
+      "accent": "#7DD3FC",
+      "startingResources": [
+        { "resource": "Credits", "amount": 1800 },
+        { "resource": "Alloys", "amount": 700 },
+        { "resource": "Influence", "amount": 260 },
+        { "resource": "Crystal", "amount": 120 }
+      ],
+      "startingUnits": ["Scout Wing"],
+      "startingBuildings": ["Capital City", "Trade Hub"],
+      "aiControlled": false
+    },
+    {
+      "id": "vanta",
+      "label": "Vanta Directorate",
+      "playerId": 2,
+      "teamId": 2,
+      "accent": "#C94F46",
+      "startingResources": [
+        { "resource": "Credits", "amount": 1700 },
+        { "resource": "Alloys", "amount": 850 },
+        { "resource": "Influence", "amount": 220 },
+        { "resource": "Crystal", "amount": 80 }
+      ],
+      "startingUnits": ["Patrol Fleet"],
+      "startingBuildings": ["Forge City", "Embassy"],
+      "aiControlled": true
+    },
+    {
+      "id": "helio",
+      "label": "Helio Compact",
+      "playerId": 3,
+      "teamId": 3,
+      "accent": "#F6D77C",
+      "startingResources": [
+        { "resource": "Credits", "amount": 1600 },
+        { "resource": "Alloys", "amount": 620 },
+        { "resource": "Influence", "amount": 300 },
+        { "resource": "Crystal", "amount": 180 }
+      ],
+      "startingUnits": ["Envoy Fleet"],
+      "startingBuildings": ["Solar City", "Research Forum"],
+      "aiControlled": true
+    }
+  ],
+  "productionLines": [
+    {
+      "id": "aurora.city_district",
+      "factionId": "aurora",
+      "label": "Queue District",
+      "paradigm": "CityQueue",
+      "producer": "Capital City",
+      "output": "Aurora Industrial District",
+      "outputKind": "Building",
+      "durationTicks": 120,
+      "cost": [
+        { "resource": "Credits", "amount": 250 },
+        { "resource": "Alloys", "amount": 90 }
+      ],
+      "summary": "City queue builds an empire district."
+    },
+    {
+      "id": "aurora.trade_fleet",
+      "factionId": "aurora",
+      "label": "Trade Fleet",
+      "paradigm": "CityQueue",
+      "producer": "Trade Hub",
+      "output": "Trade Fleet",
+      "outputKind": "Unit",
+      "durationTicks": 105,
+      "cost": [
+        { "resource": "Credits", "amount": 180 },
+        { "resource": "Alloys", "amount": 70 }
+      ],
+      "requiredTech": "fourx.aurora.trade_routes",
+      "summary": "Tech-gated strategic trade route unit."
+    },
+    {
+      "id": "vanta.forge_world",
+      "factionId": "vanta",
+      "label": "Forge Annex",
+      "paradigm": "CityQueue",
+      "producer": "Forge City",
+      "output": "Vanta Forge Annex",
+      "outputKind": "Building",
+      "durationTicks": 125,
+      "cost": [{ "resource": "Alloys", "amount": 140 }],
+      "summary": "City queue industrial expansion."
+    },
+    {
+      "id": "vanta.defense_fleet",
+      "factionId": "vanta",
+      "label": "Defense Fleet",
+      "paradigm": "CityQueue",
+      "producer": "Forge City",
+      "output": "Defense Fleet",
+      "outputKind": "Unit",
+      "durationTicks": 140,
+      "cost": [
+        { "resource": "Credits", "amount": 220 },
+        { "resource": "Alloys", "amount": 120 }
+      ],
+      "requiredTech": "fourx.vanta.fleet_logistics",
+      "summary": "Fleet logistics unlock."
+    },
+    {
+      "id": "helio.research_forum",
+      "factionId": "helio",
+      "label": "Research Forum",
+      "paradigm": "CityQueue",
+      "producer": "Solar City",
+      "output": "Helio Research Forum",
+      "outputKind": "Building",
+      "durationTicks": 110,
+      "cost": [
+        { "resource": "Credits", "amount": 180 },
+        { "resource": "Crystal", "amount": 45 }
+      ],
+      "summary": "Science city production."
+    }
+  ],
+  "techs": [
+    {
+      "id": "fourx.aurora.trade_routes",
+      "factionId": "aurora",
+      "label": "Trade Routes",
+      "durationTicks": 135,
+      "cost": [{ "resource": "Influence", "amount": 80 }],
+      "summary": "Unlocks strategic trade fleet production."
+    },
+    {
+      "id": "fourx.aurora.federation",
+      "factionId": "aurora",
+      "label": "Federation Charter",
+      "durationTicks": 175,
+      "requires": ["fourx.aurora.trade_routes"],
+      "cost": [{ "resource": "Influence", "amount": 110 }],
+      "summary": "Deep diplomacy technology."
+    },
+    {
+      "id": "fourx.vanta.fleet_logistics",
+      "factionId": "vanta",
+      "label": "Fleet Logistics",
+      "durationTicks": 145,
+      "cost": [{ "resource": "Influence", "amount": 70 }],
+      "summary": "Unlocks defense fleets."
+    },
+    {
+      "id": "fourx.helio.crystal_lattice",
+      "factionId": "helio",
+      "label": "Crystal Lattice",
+      "durationTicks": 140,
+      "cost": [{ "resource": "Crystal", "amount": 70 }],
+      "summary": "Strategic resource technology."
+    }
+  ],
+  "treaties": [
+    {
+      "id": "aurora_vanta_trade_pact",
+      "label": "Aurora-Vanta Trade Pact",
+      "sourceFactionId": "aurora",
+      "targetFactionId": "vanta",
+      "trustDelta": 40,
+      "tradePact": true,
+      "peace": true
+    },
+    {
+      "id": "aurora_helio_research_pact",
+      "label": "Aurora-Helio Research Pact",
+      "sourceFactionId": "aurora",
+      "targetFactionId": "helio",
+      "trustDelta": 55,
+      "tradePact": true,
+      "peace": true
+    },
+    {
+      "id": "vanta_helio_ceasefire",
+      "label": "Vanta-Helio Ceasefire",
+      "sourceFactionId": "vanta",
+      "targetFactionId": "helio",
+      "trustDelta": 25,
+      "tradePact": true,
+      "peace": true
+    }
+  ],
+  "tradeOffers": [
+    {
+      "id": "alloys_for_crystal",
+      "label": "Alloys for Crystal",
+      "sourceFactionId": "aurora",
+      "targetFactionId": "vanta",
+      "giveResource": "Alloys",
+      "giveAmount": 140,
+      "receiveResource": "Crystal",
+      "receiveAmount": 45
+    },
+    {
+      "id": "credits_for_influence",
+      "label": "Credits for Influence",
+      "sourceFactionId": "aurora",
+      "targetFactionId": "helio",
+      "giveResource": "Credits",
+      "giveAmount": 260,
+      "receiveResource": "Influence",
+      "receiveAmount": 60
+    },
+    {
+      "id": "crystal_for_alloys",
+      "label": "Crystal for Alloys",
+      "sourceFactionId": "helio",
+      "targetFactionId": "vanta",
+      "giveResource": "Crystal",
+      "giveAmount": 35,
+      "receiveResource": "Alloys",
+      "receiveAmount": 100
+    }
+  ],
+  "ai": [
+    {
+      "factionId": "vanta",
+      "buildOrder": ["vanta.forge_world", "vanta.defense_fleet"],
+      "researchOrder": ["fourx.vanta.fleet_logistics"],
+      "thinkEveryTicks": 135
+    },
+    {
+      "factionId": "helio",
+      "buildOrder": ["helio.research_forum"],
+      "researchOrder": ["fourx.helio.crystal_lattice"],
+      "thinkEveryTicks": 145
+    }
+  ]
+}

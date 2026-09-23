@@ -1,0 +1,10 @@
+[
+  {
+    "id": "redalert.allied.radar.use",
+    "root": { "kind": "ProgressionCompleted", "progression": "redalert.allied.radar", "scope": "showcase.faction", "entitySource": "ScopeHost" }
+  },
+  {
+    "id": "redalert.soviet.radar.use",
+    "root": { "kind": "ProgressionCompleted", "progression": "redalert.soviet.radar", "scope": "showcase.faction", "entitySource": "ScopeHost" }
+  }
+]

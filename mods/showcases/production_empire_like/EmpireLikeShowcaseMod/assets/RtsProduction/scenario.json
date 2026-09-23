@@ -1,0 +1,196 @@
+{
+  "scenarioId": "empire_like",
+  "title": "EmpireLike",
+  "flavor": "Age of Empires",
+  "hudStyle": "top multi-resource bar + villager/building panel + age tech tree",
+  "mapId": "empire_like_showcase",
+  "summary": "Villager construction, building training, age-up progression chain, tribute diplomacy, and multi-resource trade.",
+  "acceptance": [
+    "villagers construct buildings through worker-build",
+    "buildings train units with visible queue progress",
+    "Age II and Age III are progression nodes with prerequisites",
+    "tribute trade and alliance use Relationship plus Exchange gate"
+  ],
+  "resources": ["Food", "Wood", "Gold", "Stone"],
+  "factions": [
+    {
+      "id": "romans",
+      "label": "Romans",
+      "playerId": 1,
+      "teamId": 1,
+      "accent": "#F6D77C",
+      "startingResources": [
+        { "resource": "Food", "amount": 900 },
+        { "resource": "Wood", "amount": 700 },
+        { "resource": "Gold", "amount": 550 },
+        { "resource": "Stone", "amount": 300 }
+      ],
+      "startingUnits": ["Villager Pair", "Militia"],
+      "startingBuildings": ["Town Center", "Barracks"],
+      "aiControlled": false
+    },
+    {
+      "id": "han",
+      "label": "Han",
+      "playerId": 2,
+      "teamId": 2,
+      "accent": "#8DE3AE",
+      "startingResources": [
+        { "resource": "Food", "amount": 980 },
+        { "resource": "Wood", "amount": 760 },
+        { "resource": "Gold", "amount": 480 },
+        { "resource": "Stone", "amount": 340 }
+      ],
+      "startingUnits": ["Villager Team", "Spearmen"],
+      "startingBuildings": ["Town Center", "Archery Range"],
+      "aiControlled": true
+    }
+  ],
+  "productionLines": [
+    {
+      "id": "romans.farm",
+      "factionId": "romans",
+      "label": "Build Farm",
+      "paradigm": "WorkerBuild",
+      "producer": "Villager",
+      "output": "Roman Farm",
+      "outputKind": "Building",
+      "durationTicks": 75,
+      "cost": [{ "resource": "Wood", "amount": 80 }],
+      "summary": "Villager-built economy structure."
+    },
+    {
+      "id": "romans.legionary",
+      "factionId": "romans",
+      "label": "Train Legionary",
+      "paradigm": "Train",
+      "producer": "Barracks",
+      "output": "Legionary Squad",
+      "outputKind": "Unit",
+      "durationTicks": 95,
+      "cost": [
+        { "resource": "Food", "amount": 90 },
+        { "resource": "Gold", "amount": 60 }
+      ],
+      "requiredTech": "empire.romans.age2",
+      "summary": "Age II unlock from the barracks."
+    },
+    {
+      "id": "romans.castle",
+      "factionId": "romans",
+      "label": "Build Castle",
+      "paradigm": "WorkerBuild",
+      "producer": "Villager",
+      "output": "Roman Castle",
+      "outputKind": "Building",
+      "durationTicks": 150,
+      "cost": [
+        { "resource": "Stone", "amount": 220 },
+        { "resource": "Wood", "amount": 120 }
+      ],
+      "requiredTech": "empire.romans.age3",
+      "summary": "Age III defensive production."
+    },
+    {
+      "id": "han.mill",
+      "factionId": "han",
+      "label": "Build Mill",
+      "paradigm": "WorkerBuild",
+      "producer": "Villager",
+      "output": "Han Mill",
+      "outputKind": "Building",
+      "durationTicks": 70,
+      "cost": [{ "resource": "Wood", "amount": 75 }],
+      "summary": "Han village economy build."
+    },
+    {
+      "id": "han.crossbow",
+      "factionId": "han",
+      "label": "Train Crossbow",
+      "paradigm": "Train",
+      "producer": "Archery Range",
+      "output": "Crossbow Team",
+      "outputKind": "Unit",
+      "durationTicks": 92,
+      "cost": [
+        { "resource": "Wood", "amount": 80 },
+        { "resource": "Gold", "amount": 50 }
+      ],
+      "requiredTech": "empire.han.age2",
+      "summary": "Age II ranged unit training."
+    }
+  ],
+  "techs": [
+    {
+      "id": "empire.romans.age2",
+      "factionId": "romans",
+      "label": "Romans Age II",
+      "durationTicks": 130,
+      "cost": [{ "resource": "Food", "amount": 260 }],
+      "summary": "Feudal age unlocks legionaries."
+    },
+    {
+      "id": "empire.romans.age3",
+      "factionId": "romans",
+      "label": "Romans Age III",
+      "durationTicks": 170,
+      "requires": ["empire.romans.age2"],
+      "cost": [
+        { "resource": "Food", "amount": 360 },
+        { "resource": "Gold", "amount": 180 }
+      ],
+      "summary": "Castle age unlocks castles."
+    },
+    {
+      "id": "empire.han.age2",
+      "factionId": "han",
+      "label": "Han Age II",
+      "durationTicks": 125,
+      "cost": [{ "resource": "Food", "amount": 240 }],
+      "summary": "Age-up unlocks crossbows."
+    },
+    {
+      "id": "empire.han.age3",
+      "factionId": "han",
+      "label": "Han Age III",
+      "durationTicks": 165,
+      "requires": ["empire.han.age2"],
+      "cost": [
+        { "resource": "Food", "amount": 330 },
+        { "resource": "Gold", "amount": 170 }
+      ],
+      "summary": "Late age technology branch."
+    }
+  ],
+  "treaties": [
+    {
+      "id": "roman_han_alliance",
+      "label": "Alliance Charter",
+      "sourceFactionId": "romans",
+      "targetFactionId": "han",
+      "trustDelta": 45,
+      "tradePact": true,
+      "peace": true
+    }
+  ],
+  "tradeOffers": [
+    {
+      "id": "tribute_gold_for_food",
+      "label": "Gold Tribute for Food",
+      "sourceFactionId": "romans",
+      "targetFactionId": "han",
+      "giveResource": "Gold",
+      "giveAmount": 120,
+      "receiveResource": "Food",
+      "receiveAmount": 180
+    }
+  ],
+  "ai": [
+    {
+      "factionId": "han",
+      "buildOrder": ["han.mill", "han.crossbow"],
+      "researchOrder": ["empire.han.age2", "empire.han.age3"],
+      "thinkEveryTicks": 125
+    }
+  ]
+}

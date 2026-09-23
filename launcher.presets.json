@@ -1,158 +1,230 @@
-{
-  "schemaVersion": 1,
-  "presets": [
-    {
-      "id": "camera_acceptance_raylib",
-      "name": "Camera Acceptance Raylib",
-      "selectors": [
-        "$camera_acceptance"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "camera_acceptance_web",
-      "name": "Camera Acceptance Web",
-      "selectors": [
-        "$camera_acceptance"
-      ],
-      "adapterId": "web",
-      "buildMode": "auto"
-    },
-    {
-      "id": "camera_acceptance_hotpath_raylib",
-      "name": "Camera Acceptance Hotpath Raylib",
-      "selectors": [
-        "$camera_acceptance_hotpath"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "nav_playground_raylib",
-      "name": "Navigation Playground Raylib",
-      "selectors": [
-        "$nav_playground"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "nav_playground_web",
-      "name": "Navigation Playground Web",
-      "selectors": [
-        "$nav_playground"
-      ],
-      "adapterId": "web",
-      "buildMode": "auto"
-    },
-    {
-      "id": "champion_skill_stress_raylib",
-      "name": "Champion Skill Stress Raylib",
-      "selectors": [
-        "$champion_skill_stress"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "progression_scope_raylib",
-      "name": "Progression Scope Raylib",
-      "selectors": [
-        "$progression_scope"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "spatial_bounds_showcase_raylib",
-      "name": "Spatial Bounds Showcase Raylib",
-      "selectors": [
-        "$spatial_bounds_showcase"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "performer_blacksmith_showcase_raylib",
-      "name": "Performer Blacksmith Showcase Raylib",
-      "selectors": [
-        "$performer_blacksmith_showcase"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "performer_blacksmith_large_world_raylib",
-      "name": "Performer Blacksmith Large World Raylib",
-      "selectors": [
-        "$performer_blacksmith_large_world"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "performer_blacksmith_large_world_nohud_raylib",
-      "name": "Performer Blacksmith Large World No HUD/GAS Raylib",
-      "selectors": [
-        "$performer_blacksmith_large_world_nohud"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "mass_navigation_raylib",
-      "name": "Mass Navigation Raylib",
-      "selectors": [
-        "$mass_navigation"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_static_performer_30k_raylib",
-      "name": "Capability Standard Static Performer 30K Raylib",
-      "selectors": [
-        "$capability_standard_static_performer_30k"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_mass_nav_large_world_10k_raylib",
-      "name": "Capability Standard Mass Navigation Large World 10K Raylib",
-      "selectors": [
-        "$capability_standard_mass_nav_large_world_10k"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_total_war_like_raylib",
-      "name": "Capability Standard Total War Like Raylib",
-      "selectors": [
-        "$capability_standard_total_war_like"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_participant_views_raylib",
-      "name": "Capability Standard Participant Views Raylib",
-      "selectors": [
-        "$capability_standard_participant_views"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "entity_query_tactics_raylib",
-      "name": "Entity Query Tactics Raylib",
-      "selectors": [
-        "$entity_query_tactics"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    }
-  ]
+﻿{
+    "schemaVersion":  1,
+    "presets":  [
+                    {
+                        "id":  "camera_acceptance_raylib",
+                        "name":  "Camera Acceptance Raylib",
+                        "selectors":  [
+                                          "$camera_acceptance"
+                                      ],
+                        "adapterId":  "raylib",
+                        "buildMode":  "auto"
+                    },
+                    {
+                        "id":  "camera_acceptance_web",
+                        "name":  "Camera Acceptance Web",
+                        "selectors":  [
+                                          "$camera_acceptance"
+                                      ],
+                        "adapterId":  "web",
+                        "buildMode":  "auto"
+                    },
+                    {
+                        "id":  "camera_acceptance_hotpath_raylib",
+                        "name":  "Camera Acceptance Hotpath Raylib",
+                        "selectors":  [
+                                          "$camera_acceptance_hotpath"
+                                      ],
+                        "adapterId":  "raylib",
+                        "buildMode":  "auto"
+                    },
+                    {
+                        "id":  "nav_playground_raylib",
+                        "name":  "Navigation Playground Raylib",
+                        "selectors":  [
+                                          "$nav_playground"
+                                      ],
+                        "adapterId":  "raylib",
+                        "buildMode":  "auto"
+                    },
+                    {
+                        "id":  "nav_playground_web",
+                        "name":  "Navigation Playground Web",
+                        "selectors":  [
+                                          "$nav_playground"
+                                      ],
+                        "adapterId":  "web",
+                        "buildMode":  "auto"
+                    },
+                    {
+                        "id":  "champion_skill_stress_raylib",
+                        "name":  "Champion Skill Stress Raylib",
+                        "selectors":  [
+                                          "$champion_skill_stress"
+                                      ],
+                        "adapterId":  "raylib",
+                        "buildMode":  "auto"
+                    },
+                    {
+                        "id":  "progression_scope_raylib",
+                        "name":  "Progression Scope Raylib",
+                        "selectors":  [
+                                          "$progression_scope"
+                                      ],
+                        "adapterId":  "raylib",
+                        "buildMode":  "auto"
+                    },
+                    {
+                        "id":  "spatial_bounds_showcase_raylib",
+                        "name":  "Spatial Bounds Showcase Raylib",
+                        "selectors":  [
+                                          "$spatial_bounds_showcase"
+                                      ],
+                        "adapterId":  "raylib",
+                        "buildMode":  "auto"
+                    },
+                    {
+                        "id":  "performer_blacksmith_showcase_raylib",
+                        "name":  "Performer Blacksmith Showcase Raylib",
+                        "selectors":  [
+                                          "$performer_blacksmith_showcase"
+                                      ],
+                        "adapterId":  "raylib",
+                        "buildMode":  "auto"
+                    },
+                    {
+                        "id":  "performer_blacksmith_large_world_raylib",
+                        "name":  "Performer Blacksmith Large World Raylib",
+                        "selectors":  [
+                                          "$performer_blacksmith_large_world"
+                                      ],
+                        "adapterId":  "raylib",
+                        "buildMode":  "auto"
+                    },
+                    {
+                        "id":  "performer_blacksmith_large_world_nohud_raylib",
+                        "name":  "Performer Blacksmith Large World No HUD/GAS Raylib",
+                        "selectors":  [
+                                          "$performer_blacksmith_large_world_nohud"
+                                      ],
+                        "adapterId":  "raylib",
+                        "buildMode":  "auto"
+                    },
+                    {
+                        "id":  "mass_navigation_raylib",
+                        "name":  "Mass Navigation Raylib",
+                        "selectors":  [
+                                          "$mass_navigation"
+                                      ],
+                        "adapterId":  "raylib",
+                        "buildMode":  "auto"
+                    },
+                    {
+                        "id":  "capability_standard_static_performer_30k_raylib",
+                        "name":  "Capability Standard Static Performer 30K Raylib",
+                        "selectors":  [
+                                          "$capability_standard_static_performer_30k"
+                                      ],
+                        "adapterId":  "raylib",
+                        "buildMode":  "auto"
+                    },
+                    {
+                        "id":  "capability_standard_mass_nav_large_world_10k_raylib",
+                        "name":  "Capability Standard Mass Navigation Large World 10K Raylib",
+                        "selectors":  [
+                                          "$capability_standard_mass_nav_large_world_10k"
+                                      ],
+                        "adapterId":  "raylib",
+                        "buildMode":  "auto"
+                    },
+                    {
+                        "id":  "capability_standard_total_war_like_raylib",
+                        "name":  "Capability Standard Total War Like Raylib",
+                        "selectors":  [
+                                          "$capability_standard_total_war_like"
+                                      ],
+                        "adapterId":  "raylib",
+                        "buildMode":  "auto"
+                    },
+                    {
+                        "id":  "capability_standard_participant_views_raylib",
+                        "name":  "Capability Standard Participant Views Raylib",
+                        "selectors":  [
+                                          "$capability_standard_participant_views"
+                                      ],
+                        "adapterId":  "raylib",
+                        "buildMode":  "auto"
+                    },
+                    {
+                        "id":  "entity_query_tactics_raylib",
+                        "name":  "Entity Query Tactics Raylib",
+                        "selectors":  [
+                                          "$entity_query_tactics"
+                                      ],
+                        "adapterId":  "raylib",
+                        "buildMode":  "auto"
+                    },
+                    {
+                        "id":  "rts_redalert_like_raylib",
+                        "name":  "rts redalert like raylib",
+                        "selectors":  [
+                                          "$rts_redalert_like"
+                                      ],
+                        "adapterId":  "raylib",
+                        "buildMode":  "auto"
+                    },
+                    {
+                        "id":  "rts_redalert_like_web",
+                        "name":  "rts redalert like web",
+                        "selectors":  [
+                                          "$rts_redalert_like"
+                                      ],
+                        "adapterId":  "web",
+                        "buildMode":  "auto"
+                    },
+                    {
+                        "id":  "rts_starcraft_like_raylib",
+                        "name":  "rts starcraft like raylib",
+                        "selectors":  [
+                                          "$rts_starcraft_like"
+                                      ],
+                        "adapterId":  "raylib",
+                        "buildMode":  "auto"
+                    },
+                    {
+                        "id":  "rts_starcraft_like_web",
+                        "name":  "rts starcraft like web",
+                        "selectors":  [
+                                          "$rts_starcraft_like"
+                                      ],
+                        "adapterId":  "web",
+                        "buildMode":  "auto"
+                    },
+                    {
+                        "id":  "rts_empire_like_raylib",
+                        "name":  "rts empire like raylib",
+                        "selectors":  [
+                                          "$rts_empire_like"
+                                      ],
+                        "adapterId":  "raylib",
+                        "buildMode":  "auto"
+                    },
+                    {
+                        "id":  "rts_empire_like_web",
+                        "name":  "rts empire like web",
+                        "selectors":  [
+                                          "$rts_empire_like"
+                                      ],
+                        "adapterId":  "web",
+                        "buildMode":  "auto"
+                    },
+                    {
+                        "id":  "rts_fourx_like_raylib",
+                        "name":  "rts fourx like raylib",
+                        "selectors":  [
+                                          "$rts_fourx_like"
+                                      ],
+                        "adapterId":  "raylib",
+                        "buildMode":  "auto"
+                    },
+                    {
+                        "id":  "rts_fourx_like_web",
+                        "name":  "rts fourx like web",
+                        "selectors":  [
+                                          "$rts_fourx_like"
+                                      ],
+                        "adapterId":  "web",
+                        "buildMode":  "auto"
+                    }
+                ]
 }

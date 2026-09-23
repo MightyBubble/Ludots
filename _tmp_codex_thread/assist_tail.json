@@ -1,0 +1,122 @@
+[
+  {
+    "ts": "2026-08-23T18:07:54.734Z",
+    "text": "我现在先完成一个可交付的基建切片：保留现有通用 `GraphExecutor`，补显式 subject/caller-owned 输出和 Query 副作用拒绝；同时把 Hub 的八个 profile 从 UI 文案硬编码抽成一份 Mod 资产，UI 只展示配置与真实运行时状态。这样先把“设置就是设置、查询就是查询、showcase 不靠假文案”落到代码里，再补 UAT 和证据。"
+  },
+  {
+    "ts": "2026-08-23T18:08:49.777Z",
+    "text": "<thinking>**Applying focused GraphExecutor and descriptor fixes**"
+  },
+  {
+    "ts": "2026-08-23T18:12:56.260Z",
+    "text": "我准备改四类文件：一是补 Mod 内严格校验的 exhibit manifest，八种玩法只作为展示装配配置，不参与执行、不引入第二套玩法 DSL；二是让 Hub 按这份配置生成 profile 按钮和说明，实际模式切换仍走现有 ViewMode/Input/Ability/Camera；三是补 Query 入口与 policy 测试；四是补注册表和 Cucumber 证据骨架。配置只描述“展示什么和切到哪个现有 mode”，不会在里面偷偷编码查询或执行逻辑。"
+  },
+  {
+    "ts": "2026-08-23T18:15:27.957Z",
+    "text": "配置清单已经落地：八个 profile 每个都明确目标、第一步、成功结果、边界和至少四个运行时旋钮；这份 manifest 会在 Mod 启动时严格校验，缺字段、重复 id、重复 mode 或旋钮不足直接失败。现在把它接到真实 ViewMode 切换和 Hub 首屏按钮上，所有按钮仍只调用已有输入/相机/交互管线。"
+  },
+  {
+    "ts": "2026-08-23T18:18:59.125Z",
+    "text": "Core build 已通过（已有大量仓库警告），新的 Hub 配置和 UI 还没有完成 Mod 级编译验证，因为该项目缺少现成 `project.assets.json`，`--no-restore` 被 SDK 直接拦住；我会先跑一次普通 restore/build，若复现仓库既有 NuGet 问题就明确记录。与此同时我在补唯一入口的注册表绑定和玩家视角验收材料，避免只停在“代码能编译”。"
+  },
+  {
+    "ts": "2026-08-23T18:20:59.213Z",
+    "text": "Hub Mod 已经恢复并构建成功，说明新的 manifest loader、八个 ViewMode 和 UI 绑定都能编译。接下来我会加一条产品级回归测试：真实启动 Hub 后必须看到八个 profile，并逐个切换成功；这不是把名字写进断言，而是验证 manifest、ViewMode 注册和 UI 三者确实同源连通。"
+  },
+  {
+    "ts": "2026-08-23T18:24:03.920Z",
+    "text": "<thinking>**Polling test build**"
+  },
+  {
+    "ts": "2026-08-23T18:25:24.151Z",
+    "text": "我会把这次交付按“八类玩法都有玩家可读入口、真实操作链、明确反馈”重新验收，不把只有配置按钮或 ViewMode 切换算作覆盖。接下来先按仓库规定完整读取 showcase、运行验收、功能交付与图组合约束，同时收回现有审计席的结论；指定 PI 模型此前虽能启动但没有仓库工具，我会明确区分有效复审与无效输出。"
+  },
+  {
+    "ts": "2026-08-23T18:25:51.598Z",
+    "text": "这次新增了 profile 配置，且碰到 Graph op，所以组合约束要求我先确认它没有演化成另一套玩法 DSL 或平行加载管线；showcase 方法也要求八类玩法逐个有主循环、消融、解释层和至少四个运行时旋钮。现在我先做这一轮硬闸门检查，再决定哪些现有改动保留、哪些必须重做。"
+  },
+  {
+    "ts": "2026-08-23T18:27:40.114Z",
+    "text": "复核已经发现一个关键问题：当前这批“八种 profile”大多只是换相机和交互模式，双摇杆、英雄射击、黑魂、蝙蝠侠、GTA 并没有各自真实玩法闭环，不能保留为“已覆盖”的表述；Batman 配置还重新写死了 `collection.command.source`，正好违反前面定下的边界。另一个问题是远端 `main` 又前进了 2 个提交，我先保全当前草稿并把工作树重新对齐最新远端，再继续收敛实现。"
+  },
+  {
+    "ts": "2026-08-23T18:31:42.612Z",
+    "text": "当前能成立的交付策略已经清楚：不造八套 Core，也不把游戏名贴在同一张旧场景上。唯一入口应复用现有各类真实场景，把它们收束成玩家可导航的展厅；缺少真实玩法闭环的五类必须补最小可玩子场景，并且共用既有 3C、技能、输入、订单与图基建。为了满足你要求的 double check，我也会按本机 agent 大讨论的正式流程再做一次独立架构、产品和回归审计。"
+  },
+  {
+    "ts": "2026-08-23T18:36:36.129Z",
+    "text": "第二轮结论一致且可复核：目前并没有八个完整 showcase，不能拿“3C 和技能基础已存在”偷换成“八种游戏已被覆盖”。我会立即撤掉会误导玩家和后续设计的伪闭环部分，保留并补强真正独立的 Query 基建切片；八类体验则按已有真实入口和缺失子场景拆成可验收的展示计划，直到每类都有实际输入、结果、失败反馈与实机证据才算覆盖。"
+  },
+  {
+    "ts": "2026-08-23T18:39:08.240Z",
+    "text": "我开始收敛代码和文档：第一步把 Hub 从“会替玩家制造 CommandSource/悬停目标”的伪装入口改成只消费真实运行时事实；第二步把八类 profile 的状态改成事实状态，明确哪些是独立已有 showcase、哪些只是基建、哪些仍缺玩法入口。这样后续补纵切时不会继续把按钮测试当成玩法证据。"
+  },
+  {
+    "ts": "2026-08-23T18:40:32.293Z",
+    "text": "这轮决定不继续扩写伪 Hub。我要把本分支里只负责“八个标签/ViewMode”的新增文件和测试全部撤回，恢复原有 showcase，不顺手重构旧 CommandSource；原因是本切片明确只做 Control Query Graph，CommandSource 迁移要等 TriggerGraph 调用门，不能在展示层先造替代路径。之后我只保留 Query 执行合同、纯度门和对应测试，并把 showcase 覆盖作为 Epic 的硬验收矩阵。"
+  },
+  {
+    "ts": "2026-08-23T18:46:02.953Z",
+    "text": "Query 切片的目标测试已通过，且现在实际验证了调用方缓冲区收到查询实体，不再只测一个空结果。组合闸门还要求留下正式自审记录；我会补上这一份，并把“标量返回尚未形成统一 ABI、Control Query 首版必须拒绝从 Store 取集合、showcase 仍被 #1099 阻塞”写进唯一 Epic 的验收边界，避免后续 agent 又顺手扩成新 DSL。"
+  },
+  {
+    "ts": "2026-08-23T18:48:12.982Z",
+    "text": "Issue 结构本身也有一个断链：#1102 指向一份仓库里并不存在、而且刚才那份草稿也不合格的“设计 SSOT”。我会按 issue 拆分规范修正 #1084/#1102：#1084 保持纯 Query 基建唯一入口，#1099 是调用门，#1102 只负责玩家可读覆盖矩阵并明确被前两者阻塞，不再引用伪完成文档。"
+  },
+  {
+    "ts": "2026-08-23T18:51:13.068Z",
+    "text": "我再做最后一次一致性检查：Query 代码、测试和 Epic 边界已经对齐；现在唯一明显的文档问题是 #1102 旧正文里还残留不存在的 `command-system-showcase-hub.md` 路径。这个引用会误导后续 agent，我马上清掉，并确认工作树没有回混其它改动。"
+  },
+  {
+    "ts": "2026-08-23T18:52:48.243Z",
+    "text": "Double check 结论：目前不能说八类游戏都有可读 showcase。\n\n我已经收敛了本次代码切片：\n\n- 保留现有 `GraphKind.Query`，没有新增 GraphKind、专用 Query executor 或平行 registry。\n- `GraphExecutor.ExecuteQuery` 现在要求显式且存活的 `subject`，结果写入调用方 buffer。\n- Query 图禁止 UI、Spawn、Destroy、改位置等副作用节点。\n- 增加了真实目标写入和 Query authoring purity 测试。\n- 补充 GAS 组合自审：[artifacts/gas-composition-gate-command-query.md](C:/001_AI/LudotsProd-command-system/artifacts/gas-composition-gate-command-query.md)\n\n验证通过：\n\n- `dotnet test ... --filter FullyQualifiedName~GraphExecutorQueryTests`\n- `dotnet build src/Core/Ludots.Core.csproj --no-restore`\n- `git diff --check`\n\n远端 issue 已修正：\n\n- [#1084 Control Query Graph](https://github.com/MightyBubble/Ludots/issues/1084)：增加 showcase double-check 闸门。\n- [#1102 Command System Showcase](https://github.com/MightyBubble/Ludots/issues/1102)：明确“尚未实现，不可玩”，删除不存在的文档 SSOT 引用，并明确不能用 ViewMode、按钮、技能栏文案冒充覆盖。\n\n当前实际覆盖：\n\n- RTS、LoL：已有独立可复用 showcase 基础。\n- DOTA2、双摇杆、守望先锋、黑魂、蝙蝠侠、GTA：目前只有部分 3C/技能/查询积木，没有完整玩家操作、结果反馈、失败路径和 Agent Bridge 实机证据。\n\n本机 agent debate 已发现全部配置席位，但 Codex 参数不兼容，Kimi/Z Code/PI/DeepSeek 均超时，因此没有把它们的输出冒充有效审计。仓库内三个独立审计席结论一致：当前八个 profile 不能算八个真实 showcase。"
+  },
+  {
+    "ts": "2026-08-24T02:58:41.044Z",
+    "text": "我会按代码审查方式做，不把“测试通过”当作性能合规证明。重点检查热路径分配、ECS/SoA 约束、caller-owned buffer、Query 纯度与容量合同、Graph VM 执行成本，以及本次变更是否误伤现有 Script/TriggerGraph 语义；结论会先列阻断项，再给验证依据。"
+  },
+  {
+    "ts": "2026-08-24T03:00:07.438Z",
+    "text": "初步审计已经看到一个不能忽略的架构风险：本次补丁把副作用节点从 Query 描述里移除了，但底层 `EffectOperationMetadata` 仍把 UI、Spawn、改位置、Map 写入标成 `Pure`。这不仅是命名问题，运行时策略对 Score/Validation/Derived 等 kind 可能仍只看 metadata，存在“非 Query 图绕过 authoring 白名单”的风险。我继续用现有注册/策略路径验证，不凭猜测下结论。"
+  },
+  {
+    "ts": "2026-08-24T03:05:04.755Z",
+    "text": "验证层面目前没有编译错误，Query 专项测试和图合同过滤测试都返回成功；但这只能证明当前旧基线上的行为，不足以给出“完全符合性能规范”的签字。我正在把“实现本身无明显热路径分配”和“缺少零分配/最新主线回归证据”分开汇报，避免把两者混为一谈。"
+  },
+  {
+    "ts": "2026-08-24T03:07:24.520Z",
+    "text": "我先按仓库规范做一次基线和性能合同审计：先读任务执行规范与架构审查技能，再核对当前分支、差异、Query 热路径和测试证据。结论会区分“代码形态合规”和“证据是否足以签字”，不把未完成项包装成完成。"
+  },
+  {
+    "ts": "2026-08-24T03:07:49.673Z",
+    "text": "当前工作树不是前一轮摘要里的 `command-system-foundation`，而是 `codex/seat-p25-closure`，且有大量既有未提交改动；我会把这些视为用户现有工作，严格只读审计，不回滚、不顺手修改。接下来先锁定本轮 Query/Graph 相关差异，再沿热路径检查分配、ECS 访问、失败合同和测试证据。"
+  },
+  {
+    "ts": "2026-08-24T03:11:02.470Z",
+    "text": "初步审计已发现一个关键事实：当前工作树的 Query 入口是新增未跟踪文件，而分支相对 `origin/main` 已落后 109 个提交；因此任何“完全合规”结论都必须暂缓。现在我在核查运行时 API 是否真的保持 SoA/Span/0Alloc，以及入口层是否引入了新的职责硬编码或不完整结果合同。"
+  },
+  {
+    "ts": "2026-08-24T03:18:04.895Z",
+    "text": "验证结果出来了：Core build 通过，Query 专项 6 个测试通过，但这只能证明当前切片能编译、基本合同能跑通。审计中还确认了两个架构层面的风险：过滤图的可用节点白名单被手写在入口类里，且 Query 的结果 ABI 仍只有隐式 `TargetList.Count`，这与仓库要求的 SSOT、纯查询职责和可扩展图基建不完全一致。"
+  },
+  {
+    "ts": "2026-08-24T03:20:44.316Z",
+    "text": "审计结论：**当前实现的热路径形态基本符合 Ludots 的性能方向，但不能签字为“完整符合性能与架构规范”。** 主要问题不是 Span/SoA 写法，而是查询合同、容量失败语义、SSOT 和验证证据仍不完整。\n\n**阻塞项**\n\n1. **审计基线不合格。** 当前分支是 `codex/seat-p25-closure`，相对本地 `origin/main` 为 `ahead 11 / behind 109`，工作树还有大量既有改动；Query 入口、传感器和测试文件仍是未跟踪文件。当前结果不能作为最新 main 上的可交付结论。\n\n2. **查询结果可能静默截断，违反 NO FALLBACK。**\n\n   - [`EntitySetQueryRuntime.cs:38`](C:/001_AI/LudotsProd/src/Core/EntityQueries/EntitySetQueryRuntime.cs:38) 的 `CollectMapEntities` 到达目标 Span 容量后直接返回已写入数量。\n   - [`EntityCollectionStore.cs:410`](C:/001_AI/LudotsProd/src/Core/EntityCollections/EntityCollectionStore.cs:410) 的 `CopyEntities` 使用 `Math.Min(destination.Length, count - startIndex)`，同样静默截断。\n   - [`GasGraphOpHandlerTable.cs:1452`](C:/001_AI/LudotsProd/src/Core/NodeLibraries/GASGraph/GasGraphOpHandlerTable.cs:1452) 和 `:1457` 只把返回数量写入 `TargetList`，没有 dropped/overflow 合同。\n\n   空间查询已经有 `SpatialQueryIncomplete` 的 fail-fast 处理，但 map/collection 查询没有。一个集合超过 `MaxTargets` 时，调用方会得到不完整结果却不知道。\n\n3. **Control Query 仍然可以依赖 EntityCollectionStore。**\n\n   [`GraphControlFlowCompiler.Query.cs:43`](C:/001_AI/LudotsProd/src/Core/NodeLibraries/GASGraph/GraphControlFlowCompiler.Query.cs:43) 继续允许 `QueryFromCollection`；[`GraphOpDescriptorTable.Data.cs:172`](C:/001_AI/LudotsProd/src/Core/NodeLibraries/GASGraph/GraphOpDescriptorTable.Data.cs:172) 也把它作为 Query 正式节点；[`GasGraphRuntimeApi.cs:786`](C:/001_AI/LudotsProd/src/Core/NodeLibraries/GASGraph/Host/GasGraphRuntimeApi.cs:786) 直接读取 `EntityCollectionStore`。\n\n   如果这部分声称是 Control Query 基建，那么“查询不依赖集合 Store”的合同尚未落地。现在只是新增了输入列表过滤入口，不是完整的 Control Query 限制。\n\n4. **过滤图节点白名单被硬编码在入口类里。**\n\n   [`GraphQueryExecutor.cs:134`](C:/001_AI/LudotsProd/src/Core/NodeLibraries/GASGraph/GraphQueryExecutor.cs:134) 到 `:196` 手写允许的节点集合，并且另有 `IsFilterListTransform`。这和 [`GraphOpDescriptorTable`](C:/001_AI/LudotsProd/src/Core/NodeLibraries/GASGraph/GraphOpDescriptorTable.cs) 的正式描述表形成两套规则。以后新增纯查询节点，可能编译器接受但运行时入口拒绝，违反 SSOT 和可扩展基建要求。\n\n5. **Query 结果 ABI 未完成。**\n\n   [`GraphQueryExecutor.Execute`](C:/001_AI/LudotsProd/src/Core/NodeLibraries/GASGraph/GraphQueryExecutor.cs:14) 最终只返回 `TargetList.Count`。虽然传入了 `floats`、`ints`、`bools`、`entities`，但没有统一的 QueryResult 合同来返回标量结果、实体结果和集合结果。当前只能称为“实体集合输出切片”，不能称为完整 Query ABI。\n\n6. **既有 operation metadata 仍把副作用标为 Pure。**\n\n   [`GasGraphOpHandlerTable.cs:291`](C:/001_AI/LudotsProd/src/Core/NodeLibraries/GASGraph/GasGraphOpHandlerTable.cs:291) 到 `:299` 中，`ShowPanel`、`CreatePanel`、`WriteMapVarInt`、`SpawnTemplate`、`SetWorldPosition` 等仍归类为 `EffectOperationMetadata.Pure`。而 [`GraphOpDescript"
+  },
+  {
+    "ts": "2026-08-24T03:24:10.507Z",
+    "text": "说人话就是：现在这部分**不一定马上崩，但会出现“游戏看起来能玩，实际结果偷偷错了”**。\n\n- **集合太大时会少人，而且没人告诉你。**  \n  比如玩家控制了 300 个单位，但查询上限是 256 个，系统可能只返回前 256 个。玩家框选、编队、技能范围、攻击目标都会少一部分，表现出来就是“明明选中了，为什么有几个不动”。\n\n- **不同查询来源的行为不一致。**  \n  空间查询超容量会明确报错，但地图实体查询、集合查询会悄悄截断。玩家会遇到同样是“找单位”，有时明确失败，有时只是少几个，问题很难复现，也很难判断是操作错了还是游戏错了。\n\n- **控制关系可能查到旧集合或错误集合。**  \n  如果 Control Query 继续直接读 `EntityCollectionStore`，当单位死亡、转移控制权、集合更新延迟时，查询结果可能和玩家当前实际控制对象不一致。结果就是：\n  - 控制面板显示一批单位；\n  - 技能实际作用另一批单位；\n  - NPC 或 Boss 查询自己的控制对象时拿到旧数据。\n\n- **以后加一个查询节点，可能出现“编辑器能配，运行时不能用”。**  \n  设计人员看到节点可用，配置也能保存，但游戏运行时被入口白名单拒绝。对用户来说就是某个技能、AI 行为或地图逻辑突然失效，而不是明确的配置错误。\n\n- **查询结果只有集合数量，没有完整结果约定。**  \n  需要返回“最强目标”“总血量”“是否存在目标”这类结果时，各个调用方可能各自猜寄存器怎么读。最后会出现技能选错目标、AI 选错敌人、UI 数值和实际逻辑不一致。\n\n- **性能问题目前更像“还没被证明”，不是已经证明没问题。**  \n  现在代码看起来没有明显临时分配，但没有持续运行的零分配测试。未来一个小改动就可能让每帧查询产生垃圾，表现为单位多时掉帧、GC 卡顿、操作延迟。\n\n- **当前分支和最新主线没对齐。**  \n  这不会直接让玩家今天遇到 bug，但可能导致我们在旧代码上修好了一个问题，合并到主线后又冲突或失效，最后用户拿到的是“测试环境正常，正式版本出问题”。\n\n最严重的用户体验风险其实是第一类：**结果不完整但系统不报错**。这会让玩家觉得自己的操作不可靠，尤其在 RTS、MOBA、射击和 Boss 战里，漏掉一个单位就可能直接改变战局。"
+  },
+  {
+    "ts": "2026-08-24T03:26:44.087Z",
+    "text": "彻底改对，不是再补几个 `if`，而是把查询链路的合同一次收干净。\n\n### 1. 只保留一条执行管线\n\n现在不应该继续扩张独立的 `GraphQueryExecutor`。最终形态应该是：\n\n```text\n调用方准备输入\n    -> 现有 GraphFrame\n    -> 现有 GraphExecutor\n    -> Query 图\n    -> 调用方拿结果\n```\n\n不新增 `GraphKind`，不新增第二套 Query VM。\n\n`GraphFrame` 只增加一个调用方提供的候选输入：\n\n```text\nQueryInput: ReadOnlySpan<Entity>\nTargets:    Span<Entity>\n```\n\n`QueryFromInput` 节点负责把输入复制到输出缓冲区，之后的过滤、排序、聚合都在输出缓冲区上原地完成。\n\n这样：\n\n- 代表人物可以查；\n- NPC 可以查；\n- Boss 可以查；\n- 图不知道结果要写进哪个集合；\n- 图也不需要知道调用者是谁。\n\n### 2. 图描述表成为唯一规则来源\n\n现在过滤节点白名单写在 [`GraphQueryExecutor.cs`](C:/001_AI/LudotsProd/src/Core/NodeLibraries/GASGraph/GraphQueryExecutor.cs) 里，这必须删掉。\n\n在现有 [`GraphOpDescriptorTable`](C:/001_AI/LudotsProd/src/Core/NodeLibraries/GASGraph/GraphOpDescriptorTable.cs) 里给每个 Query 节点标明：\n\n```text\nSource       查询来源：空间、关系、调用方输入等\nTransform    过滤、排序、限制\nAggregate    求和、最大值、实体选择\nScalar       标量输出\nTerminal     结束\n```\n\n编译器、注册校验、运行时都只读这张表。\n\n这样以后增加一个纯查询节点，只改一处，不会再出现：\n\n```text\n编辑器允许配置\n编译器允许通过\n运行时入口却拒绝\n```\n\n### 3. 查询来源和集合写入彻底分开\n\nControl Query 不允许读取 `EntityCollectionStore` 作为“当前控制对象”。\n\n它应该这样工作：\n\n```text\nsubject\n  -> 关系查询节点\n  -> 多级展开\n  -> 过滤\n  -> 排序\n  -> 聚合\n  -> 返回有效实体集合\n```\n\n而不是：\n\n```text\nsubject\n  -> 读取某个已经写好的 collection\n```\n\n`EntityCollectionStore` 只允许出现在另一条明确的副作用链上：\n\n```text\nQuery 结果\n    -> 独立 writer\n    -> EntityCollectionStore.Replace(...)\n```\n\nQuery 本身不能写 Store，也不能决定写哪个集合。\n\n`QueryFromCollection` 对 Control Query 必须在编译期拒绝，而不是运行到一半才出错。这里不需要新 GraphKind，可以通过现有 Query 图的输入合同和节点描述完成。\n\n### 4. 所有查询都必须拒绝不完整结果\n\n目前空间查询会报错，但 `CollectMapEntities` 和 `CopyEntities` 会悄悄截断。这是最危险的用户体验问题。\n\n统一成：\n\n```text\nQuerySourceResult\n    Count\n    Dropped\n```\n\n所有来源都必须返回这个结果：\n\n- 空间查询；\n- 关系查询；\n- 地图实体查询；\n- EntityCollection 查询；\n- 未来的其他查询来源。\n\n规则只有一个：\n\n```text\nDropped > 0 => 直接失败\n```\n\n不能返回“前 256 个”然后假装成功。\n\n集合如果需要分页，必须由调用方显式指定窗口；不能把分页行为伪装成完整查询。\n\n### 5. 结果 ABI 一次定义清楚\n\n当前 `Execute` 只返回 `TargetList.Count`，这不够。\n\nQuery 结果至少要明确：\n\n```text\nEntity 集合：Targets + EntityCount\nEntity 标量：Entity registers\nInt 标量：Int registers\nFloat 标量：Float registers\nBool 标量：Bool registers\n```\n\n图的输出绑定决定哪些寄存器是公开结果，调用方不再靠猜寄存器位置。\n\n例如：\n\n```text\ntargets       -> 有效控制实体集合\nselected      -> 最优目标\ntotalHealth   -> 总生命值\nhasTarget     -> 是否存在目标\n```\n\n不需要新执行器，只需要把现有图输出绑定真正接到 Query 调用合同上。\n\n### 6. 验证必须放到正确的时机\n\n现在每次执行过滤图都扫描指令、重新做白名单判断。正确做法是：\n\n```text\n加载/编译时：\n    完整验证图结构、节点角色、输入来源、输出类型、容量合同\n\n运行时：\n    只检查调用方缓冲区和输入是否满足合同\n    不重复扫描整张图\n```\n\n这样既减少热路径工作，也避免“编译器一套规则、运行时另一套规则”。\n\n### 7. 性能验收必须有硬证据\n\n最终不能只看代码里有没有 `List`。\n\n必须加稳定运行测试：\n\n```text\n预热若干次\n开始测量\n连续执行 Query N 次\nGC.GetAllocatedBytesForCurrentThread() == 0\n```\n\n还要验证：\n\n```tex"
+  },
+  {
+    "ts": "2026-08-24T03:28:51.360Z",
+    "text": "我会直接把这条链路收口到可交付状态：统一现有 `GraphExecutor`、把 Query 合同收进描述表、消除静默截断、补齐 0Alloc/Store 不变性/死亡实体/容量测试。当前工作树有大量既有改动，我只触碰本次 Query 相关文件；不会回滚或重排其他人的工作。先加载 GAS 图组合自审规范，再按现有代码落地。"
+  },
+  {
+    "ts": "2026-08-24T03:35:54.087Z",
+    "text": "我现在开始改核心合同：先加一个“查询源是否完整”的统一结果类型，并让 Graph 查询路径使用严格版本；现有面板/控制面等非 Graph 调用暂时保留原接口，避免把无关工作树改动一起拖进来。随后把 `QueryFromInput` 变成真正的 GraphFrame 输入，而不是入口类先偷偷预拷贝。"
+  }
+]

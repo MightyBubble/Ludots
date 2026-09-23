@@ -1,0 +1,17 @@
+{
+  "lines": 5682,
+  "first_ts": "2026-08-23T10:06:23.583Z",
+  "last_ts": "2026-08-24T03:45:20.019Z",
+  "types": {
+    "session_meta": 1,
+    "event_msg": 3075,
+    "response_item": 2510,
+    "world_state": 17,
+    "turn_context": 39,
+    "compacted": 10,
+    "inter_agent_communication_metadata": 30
+  },
+  "user_count": 32,
+  "assist_count": 203,
+  "issues": []
+}

@@ -1,0 +1,21 @@
+[
+  "input_history",
+  "local_setting",
+  "message",
+  "model_usage",
+  "part",
+  "permission",
+  "schema_migration",
+  "session",
+  "session_entry",
+  "session_input",
+  "session_target",
+  "session_task_link",
+  "todo",
+  "tool_usage",
+  "turn_usage",
+  "workflow_activity",
+  "workflow_definition",
+  "workflow_event",
+  "workflow_run"
+]

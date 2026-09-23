@@ -1,0 +1,172 @@
+{
+  "scenarioId": "redalert_like",
+  "title": "RedAlertLike",
+  "flavor": "C&C / Red Alert",
+  "hudStyle": "bottom command bar + right build list",
+  "mapId": "redalert_like_showcase",
+  "summary": "Direct construction, MCV deployment, barracks/factory training, radar tech, ceasefire diplomacy, and ore-credit trade.",
+  "acceptance": [
+    "direct build and deploy build both create Owns-backed entities",
+    "training queue shows progress and costs",
+    "radar progression unlocks advanced production",
+    "diplomacy-gated Exchange trade is button driven"
+  ],
+  "resources": ["Credits", "Ore", "Power"],
+  "factions": [
+    {
+      "id": "allied",
+      "label": "Allied",
+      "playerId": 1,
+      "teamId": 1,
+      "accent": "#7DD3FC",
+      "startingResources": [
+        { "resource": "Credits", "amount": 2400 },
+        { "resource": "Ore", "amount": 800 },
+        { "resource": "Power", "amount": 50 }
+      ],
+      "startingUnits": ["Ranger Squad", "MCV"],
+      "startingBuildings": ["Construction Yard", "Barracks"],
+      "aiControlled": false
+    },
+    {
+      "id": "soviet",
+      "label": "Soviet",
+      "playerId": 2,
+      "teamId": 2,
+      "accent": "#C94F46",
+      "startingResources": [
+        { "resource": "Credits", "amount": 2200 },
+        { "resource": "Ore", "amount": 900 },
+        { "resource": "Power", "amount": 45 }
+      ],
+      "startingUnits": ["Conscript Squad", "MCV"],
+      "startingBuildings": ["Construction Yard", "War Factory"],
+      "aiControlled": true
+    }
+  ],
+  "productionLines": [
+    {
+      "id": "allied.powerplant",
+      "factionId": "allied",
+      "label": "Power Plant",
+      "paradigm": "DirectBuild",
+      "producer": "Construction Yard",
+      "output": "Allied Power Plant",
+      "outputKind": "Building",
+      "durationTicks": 75,
+      "cost": [{ "resource": "Credits", "amount": 300 }],
+      "summary": "C&C-style direct placement from the sidebar."
+    },
+    {
+      "id": "allied.deploy_mcv",
+      "factionId": "allied",
+      "label": "Deploy MCV",
+      "paradigm": "DeployBuild",
+      "producer": "MCV",
+      "output": "Forward Construction Yard",
+      "outputKind": "Building",
+      "durationTicks": 100,
+      "cost": [{ "resource": "Credits", "amount": 500 }],
+      "summary": "Vehicle deploys into a new build anchor."
+    },
+    {
+      "id": "allied.ranger",
+      "factionId": "allied",
+      "label": "Train Ranger",
+      "paradigm": "Train",
+      "producer": "Barracks",
+      "output": "Ranger Squad",
+      "outputKind": "Unit",
+      "durationTicks": 60,
+      "cost": [{ "resource": "Credits", "amount": 120 }],
+      "summary": "Infantry training queue with visible progress."
+    },
+    {
+      "id": "allied.medium_tank",
+      "factionId": "allied",
+      "label": "Medium Tank",
+      "paradigm": "Train",
+      "producer": "War Factory",
+      "output": "Medium Tank",
+      "outputKind": "Unit",
+      "durationTicks": 120,
+      "cost": [{ "resource": "Credits", "amount": 700 }],
+      "requiredTech": "redalert.allied.radar",
+      "summary": "Radar-gated advanced armor."
+    },
+    {
+      "id": "soviet.tesla_reactor",
+      "factionId": "soviet",
+      "label": "Tesla Reactor",
+      "paradigm": "DirectBuild",
+      "producer": "Construction Yard",
+      "output": "Tesla Reactor",
+      "outputKind": "Building",
+      "durationTicks": 80,
+      "cost": [{ "resource": "Credits", "amount": 330 }],
+      "summary": "Direct Soviet infrastructure construction."
+    },
+    {
+      "id": "soviet.rhino",
+      "factionId": "soviet",
+      "label": "Rhino Tank",
+      "paradigm": "Train",
+      "producer": "War Factory",
+      "output": "Rhino Tank",
+      "outputKind": "Unit",
+      "durationTicks": 130,
+      "cost": [{ "resource": "Credits", "amount": 760 }],
+      "requiredTech": "redalert.soviet.radar",
+      "summary": "Step-cost tank training represented in the queue."
+    }
+  ],
+  "techs": [
+    {
+      "id": "redalert.allied.radar",
+      "factionId": "allied",
+      "label": "Allied Radar",
+      "durationTicks": 100,
+      "cost": [{ "resource": "Credits", "amount": 600 }],
+      "summary": "Unlocks Allied armor production."
+    },
+    {
+      "id": "redalert.soviet.radar",
+      "factionId": "soviet",
+      "label": "Soviet Radar",
+      "durationTicks": 100,
+      "cost": [{ "resource": "Credits", "amount": 600 }],
+      "summary": "Unlocks Rhino production."
+    }
+  ],
+  "treaties": [
+    {
+      "id": "allied_soviet_ceasefire",
+      "label": "Ceasefire Pact",
+      "sourceFactionId": "allied",
+      "targetFactionId": "soviet",
+      "trustDelta": 35,
+      "tradePact": true,
+      "peace": true
+    }
+  ],
+  "tradeOffers": [
+    {
+      "id": "ore_for_credits",
+      "label": "Ore for Credits",
+      "sourceFactionId": "allied",
+      "targetFactionId": "soviet",
+      "giveResource": "Ore",
+      "giveAmount": 120,
+      "receiveResource": "Credits",
+      "receiveAmount": 200
+    }
+  ],
+  "ai": [
+    {
+      "factionId": "soviet",
+      "buildOrder": ["soviet.tesla_reactor", "soviet.rhino"],
+      "researchOrder": ["redalert.soviet.radar"],
+      "thinkEveryTicks": 120
+    }
+  ]
+}

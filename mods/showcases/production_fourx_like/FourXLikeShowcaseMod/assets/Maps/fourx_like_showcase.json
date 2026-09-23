@@ -1,0 +1,69 @@
+{
+  "Id": "fourx_like_showcase",
+  "Name": "4X Like Production Showcase",
+  "Tags": ["capability.rts_production", "capability.participant_view", "showcase.fourx_like", "Raylib.Background:Deep", "Raylib.DebugGuides:Off"],
+  "BoardId": "default",
+  "Width": 40,
+  "Height": 24,
+  "Entities": [
+    {
+      "InstanceId": "team-aurora",
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "Aurora League" },
+        "WorldPositionCm": { "Value": { "X": -1600, "Y": -500 } }
+      }
+    },
+    {
+      "InstanceId": "team-vanta",
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "Vanta Directorate" },
+        "WorldPositionCm": { "Value": { "X": 0, "Y": -500 } }
+      }
+    },
+    {
+      "InstanceId": "team-helio",
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "Helio Compact" },
+        "WorldPositionCm": { "Value": { "X": 1600, "Y": -500 } }
+      }
+    },
+    {
+      "InstanceId": "player-aurora",
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "Aurora League" },
+        "WorldPositionCm": { "Value": { "X": -1600, "Y": 500 } }
+      }
+    },
+    {
+      "InstanceId": "player-vanta",
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "Vanta Directorate" },
+        "WorldPositionCm": { "Value": { "X": 0, "Y": 500 } }
+      }
+    },
+    {
+      "InstanceId": "player-helio",
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "Helio Compact" },
+        "WorldPositionCm": { "Value": { "X": 1600, "Y": 500 } }
+      }
+    }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "player-aurora", "IsLocal": true },
+    { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "player-vanta" },
+    { "PlayerId": 3, "TeamId": 3, "RepresentativeInstanceId": "player-helio" }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "team-aurora" },
+    { "TeamId": 2, "RepresentativeInstanceId": "team-vanta" },
+    { "TeamId": 3, "RepresentativeInstanceId": "team-helio" }
+  ],
+  "Metadata": {}
+}

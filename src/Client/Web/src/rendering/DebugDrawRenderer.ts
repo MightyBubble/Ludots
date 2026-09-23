@@ -1,5 +1,5 @@
-import * as THREE from 'three';
-import type { DebugLine, DebugCircle, DebugBox } from '../core/FrameProtocol';
+﻿import * as THREE from 'three';
+import type { DebugLine, DebugCircle, DebugBox } from '../core/FrameDecoder';
 
 /**
  * Renders debug draw commands (lines, circles, boxes) using Three.js LineSegments.
@@ -56,8 +56,8 @@ export class DebugDrawRenderer {
 
     for (const box of boxes) {
       const r = box.r / 255, g = box.g / 255, b2 = box.b / 255;
-      const cos = Math.cos(box.rotationRadians), sin = Math.sin(box.rotationRadians);
-      const hw = box.halfWidth, hh = box.halfHeight;
+      const cos = Math.cos(box.rotation), sin = Math.sin(box.rotation);
+      const hw = box.halfW, hh = box.halfH;
       const corners = [
         [-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]
       ].map(([lx, ly]) => [
@@ -99,3 +99,4 @@ export class DebugDrawRenderer {
     }
   }
 }
+

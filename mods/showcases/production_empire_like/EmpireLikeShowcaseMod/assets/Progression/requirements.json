@@ -1,0 +1,10 @@
+[
+  {
+    "id": "empire.romans.age3.use",
+    "root": { "kind": "ProgressionCompleted", "progression": "empire.romans.age2", "scope": "showcase.faction", "entitySource": "ScopeHost" }
+  },
+  {
+    "id": "empire.han.age3.use",
+    "root": { "kind": "ProgressionCompleted", "progression": "empire.han.age2", "scope": "showcase.faction", "entitySource": "ScopeHost" }
+  }
+]

@@ -1,0 +1,6 @@
+[
+  { "id": "fourx.aurora.trade_routes", "scope": "showcase.faction" },
+  { "id": "fourx.aurora.federation", "scope": "showcase.faction" },
+  { "id": "fourx.vanta.fleet_logistics", "scope": "showcase.faction" },
+  { "id": "fourx.helio.crystal_lattice", "scope": "showcase.faction" }
+]

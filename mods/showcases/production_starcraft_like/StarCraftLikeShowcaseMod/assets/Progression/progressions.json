@@ -1,0 +1,5 @@
+[
+  { "id": "starcraft.protoss.warpgate", "scope": "showcase.faction" },
+  { "id": "starcraft.terran.stim", "scope": "showcase.faction" },
+  { "id": "starcraft.zerg.metabolic", "scope": "showcase.faction" }
+]

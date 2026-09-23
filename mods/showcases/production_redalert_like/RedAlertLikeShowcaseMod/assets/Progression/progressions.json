@@ -1,0 +1,4 @@
+[
+  { "id": "redalert.allied.radar", "scope": "showcase.faction" },
+  { "id": "redalert.soviet.radar", "scope": "showcase.faction" }
+]

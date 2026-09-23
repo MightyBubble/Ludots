@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -86,7 +86,12 @@
     <ProjectReference Include="..\..\..\mods\showcases\diplomacy_trade_gate\DiplomacyTradeGateShowcaseMod\DiplomacyTradeGateShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\gold_market\GoldMarketShowcaseMod\GoldMarketShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\fourx_association\FourXAssociationShowcaseMod\FourXAssociationShowcaseMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\Navigation2DPlaygroundMod\Navigation2DPlaygroundMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\capabilities\rts_production\RtsProductionCapabilityMod\RtsProductionCapabilityMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\capabilities\rts_hud_web\RtsHudWebMod\RtsHudWebMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\production_redalert_like\RedAlertLikeShowcaseMod\RedAlertLikeShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\production_starcraft_like\StarCraftLikeShowcaseMod\StarCraftLikeShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\production_empire_like\EmpireLikeShowcaseMod\EmpireLikeShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\production_fourx_like\FourXLikeShowcaseMod\FourXLikeShowcaseMod.csproj" />    <ProjectReference Include="..\..\..\mods\Navigation2DPlaygroundMod\Navigation2DPlaygroundMod.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj" />
   </ItemGroup>
 
@@ -97,3 +102,4 @@
   </ItemGroup>
 
 </Project>
+

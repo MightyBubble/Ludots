@@ -18,6 +18,7 @@ public sealed class ParticipantViewCapabilityModEntry : IMod
             RelationshipTypeRegistry registry = ctx.GetEngine()?.GetService(CoreServiceKeys.RelationshipTypeRegistry)
                 ?? throw new InvalidOperationException("ParticipantViewCapabilityMod requires RelationshipTypeRegistry.");
             registry.Register(ParticipantViewCapabilityIds.RelationshipType, isSymmetric: false);
+            runtime.RegisterCommandService(ctx.GetEngine()!);
             return Task.CompletedTask;
         });
         context.OnEvent(GameEvents.MapLoaded, runtime.HandleMapFocusedAsync);

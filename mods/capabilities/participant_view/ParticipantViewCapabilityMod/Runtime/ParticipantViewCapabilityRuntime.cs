@@ -11,7 +11,7 @@ using ParticipantViewCapabilityMod.UI;
 
 namespace ParticipantViewCapabilityMod.Runtime;
 
-internal sealed class ParticipantViewCapabilityRuntime
+internal sealed class ParticipantViewCapabilityRuntime : IParticipantViewCommandService
 {
     private readonly ParticipantViewPanelController _panelController;
     private bool _presentationSystemInstalled;
@@ -32,6 +32,7 @@ internal sealed class ParticipantViewCapabilityRuntime
             return Task.CompletedTask;
         }
 
+        RegisterCommandService(engine);
         if (!ParticipantViewCapabilityIds.IsParticipantViewMap(engine.CurrentMapSession?.MapConfig))
         {
             ClearPanelIfOwned(engine);
@@ -41,7 +42,14 @@ internal sealed class ParticipantViewCapabilityRuntime
         EnsurePresentationSystemInstalled(engine);
         EnsureSelectedParticipant(engine);
         ApplySelectionView(engine);
-        RefreshPanel(engine);
+        if (IsPanelDisabled(engine))
+        {
+            ClearPanelIfOwned(engine);
+        }
+        else
+        {
+            RefreshPanel(engine);
+        }
         return Task.CompletedTask;
     }
 
@@ -67,6 +75,11 @@ internal sealed class ParticipantViewCapabilityRuntime
 
         EnsureSelectedParticipant(engine);
         ApplySelectionView(engine);
+        if (IsPanelDisabled(engine))
+        {
+            ClearPanelIfOwned(engine);
+            return;
+        }
 
         if (engine.GetService(CoreServiceKeys.UIRoot) is not UIRoot root)
         {
@@ -79,6 +92,11 @@ internal sealed class ParticipantViewCapabilityRuntime
     public ParticipantViewMode Mode => _mode;
     public int SelectedPlayerId => _selectedPlayerId;
     public int SelectedTeamId => _selectedTeamId;
+
+    public void RegisterCommandService(GameEngine engine)
+    {
+        engine.GlobalContext[ParticipantViewCapabilityIds.CommandService.Name] = this;
+    }
 
     public void SelectMode(GameEngine engine, ParticipantViewMode mode)
     {
@@ -271,6 +289,13 @@ internal sealed class ParticipantViewCapabilityRuntime
         return teamId > 0 &&
                engine.CurrentMapSession?.TeamEntityLookup.TryGet(teamId, out entity) == true &&
                engine.World.IsAlive(entity);
+    }
+
+    private static bool IsPanelDisabled(GameEngine engine)
+    {
+        return engine.GlobalContext.TryGetValue(ParticipantViewCapabilityIds.PanelDisabledServiceKey, out object? value) &&
+               value is bool disabled &&
+               disabled;
     }
 
     private Entity ResolveCurrentViewerEntity(GameEngine engine, MapSession session)

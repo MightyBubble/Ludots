@@ -1,0 +1,7 @@
+﻿{
+  "startupMapId": "fourx_like_showcase",
+  "selection": {
+    "clickPickRadiusPixels": 72,
+    "dragThresholdPixels": 6
+  }
+}

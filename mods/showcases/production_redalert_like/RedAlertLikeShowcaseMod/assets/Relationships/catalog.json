@@ -1,0 +1,17 @@
+{
+  "types": [
+    { "id": "Showcase.Diplomacy", "isSymmetric": false }
+  ],
+  "metrics": [
+    { "id": "Showcase.Trust", "minValue": -100, "maxValue": 100, "defaultValue": 0 }
+  ],
+  "flags": [
+    { "id": "Showcase.TradePact" },
+    { "id": "Showcase.AtWar" },
+    { "id": "Showcase.Embargo" }
+  ],
+  "bands": [],
+  "reasons": [],
+  "callbacks": [],
+  "synergies": []
+}

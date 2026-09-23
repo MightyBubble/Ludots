@@ -20,6 +20,7 @@
 | `UAT-2` | `Navigation2DPlaygroundMod` | `nav2d_playground` | 大规模 crowd / SoA / steering / blocker / drag-select / move command | 复用 scenario catalog、playground runtime、playable acceptance 与性能观察面板 |
 | `UAT-3` | `RelationshipShowcaseMod` | `relationship_showcase` | 预算、状态、前端场景卡、artifact 产出链路 | 复用 production battle-report / trace / path artifact 输出模式 |
 | `UAT-4` | `InteractionShowcaseMod` | `interaction_showcase_hub` | 统一入口、控制组、formation 视图、entity info、HUD 面板、跨系统联动 | 复用 hub/stress 双地图、selection dock、entity collection inspector、playable acceptance |
+| `UAT-5` | RTS production showcase suite | `redalert_like_showcase` / `starcraft_like_showcase` / `empire_like_showcase` / `fourx_like_showcase` | 多势力生产、训练、科技、外交、贸易与 Web HUD | 复用 `RtsProductionCapabilityMod`、`RtsHudWebMod`、`ParticipantViewCapabilityMod`、Progression、Exchange、Relationship、`Owns` |
 
 ## 3 UAT-1：FormationPhysicsPlaygroundMod
 
@@ -120,12 +121,37 @@
 2. `Navigation2DPlaygroundMod`
 3. `InteractionShowcaseMod`
 4. `RelationshipShowcaseMod`
+5. RTS production showcase suite：`$rts_redalert_like`、`$rts_starcraft_like`、`$rts_empire_like`、`$rts_fourx_like`
 
 这个顺序的目的：
 
 - 先把 `UAT-1` 和 `UAT-2` 的实体仿真主线入口定下来
 - 再用 `InteractionShowcaseMod` 做 `UAT-4` 统一入口
 - 最后用 `RelationshipShowcaseMod` 补强 artifact-first 的证据产出模板
+- 用 RTS production suite 覆盖多势力生产/训练/科技/外交/贸易的 Web HUD 端到端验收
+
+## 7.1 UAT-5：RTS Production Showcase Suite
+
+### 7.1.1 为什么是它
+
+- 四个 root mod 都是正式 `mod.json + assets/game.json + startupMapId` 入口，并通过 launcher binding 暴露为 `$rts_redalert_like`、`$rts_starcraft_like`、`$rts_empire_like`、`$rts_fourx_like`
+- 共享逻辑沉淀在 `RtsProductionCapabilityMod` 与 `RtsHudWebMod`；root mod 只提供产品化场景配置、地图和薄入口
+- 验收覆盖 `Owns`、participant view、Progression、Relationship、Exchange、C# UI runtime 和 launcher resolve，不新增 showcase 私有 contract
+
+### 7.1.2 建议操作脚本
+
+1. 启动 `preset:rts_redalert_like_web`，验证 Allied / Soviet view 切换、直接建造、MCV 部署、训练、雷达解锁、停火后贸易
+2. 启动 `preset:rts_starcraft_like_web`，验证 Terran worker build、Protoss Warp Gate progression、Zerg morph production、三族资源贸易
+3. 启动 `preset:rts_empire_like_web`，验证村民建造、建筑训练、Age II / Age III 科技链、贡品贸易
+4. 启动 `preset:rts_fourx_like_web`，验证三帝国 city queue、外交 pact/embargo/war 状态、offer/accept 贸易互换
+
+### 7.1.3 通过标准
+
+- 切换势力后 `LocalPlayerId`、formal selection view 和 HUD 当前 faction 一致
+- 生产完成后新单位/建筑有 `Owns` root owner，并发布到 faction collection
+- 科技研究通过 Progression 完成，不使用旧 WarpGate tag 路径
+- 贸易先受 Relationship flag 门控，接受后经 ExchangeRuntime 原子扣双方资源，再完成互换
+- Web HUD 由 `RtsHudWebMod` 的 `ReactivePage` 挂载，浏览器端只渲染 `UiScene`
 
 ## 8 禁止事项
 

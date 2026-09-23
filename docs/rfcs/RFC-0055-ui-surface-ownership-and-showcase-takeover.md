@@ -2,7 +2,7 @@
 文档类型: RFC 提案
 创建日期: 2026-03-15
 RFC编号: RFC-0055
-状态: Draft
+状态: Implemented-Minimal
 ---
 
 # RFC-0055 UI surface ownership 与 showcase takeover 契约
@@ -144,3 +144,21 @@ public interface IUiSurfaceLeaseService
 *   Entity Command Panel 基础设施：见 [../architecture/entity_command_panel_infrastructure.md](../architecture/entity_command_panel_infrastructure.md)
 *   RFC-0053 正式游戏可复用实体信息面板：见 [RFC-0053-entity-info-panels-for-ui-and-overlay.md](RFC-0053-entity-info-panels-for-ui-and-overlay.md)
 *   RFC-0054 通用实体指令面板基础设施：见 [RFC-0054-entity-command-panel-infra.md](RFC-0054-entity-command-panel-infra.md)
+
+## 10 最小实现记录
+
+本 RFC 的第一版最小实现已落地为 `src/Libraries/Ludots.UI/Surfaces/UiSurfaceLeaseService.cs`。当前实现包含：
+
+*   `UiSurfaceKind`
+*   `UiSurfaceLeaseHandle`
+*   `UiSurfaceLeaseRequest`
+*   `IUiSurfaceLeaseService`
+*   `UiSurfaceLeaseService`
+
+语义边界如下：
+
+*   已实现 owner / acquire / revalidate / release / owner lookup，handle 使用 slot + generation 防止旧租约误释放新 owner。
+*   已在 `RtsHudWebMod` 中用于独占接管 `RetainedUi:rts_hud_web.main`，由单一 HUD shell 挂载完整 `ReactivePage`，避免多个 mod 直接竞争 `UIRoot.MountScene(...)`。
+*   尚未实现多子树 composer、共享 segment、输入 capture 策略或 scene restore 栈。这些仍属于后续 RFC 扩展项。
+
+本轮 RTS production showcase 选择“最小 lease + 单 HUD shell owner”的取舍，而不是一次性交付完整 surface composer。原因是四个 production root mod 的 Web UI 可以由 `RtsHudWebMod` 作为唯一 retained UI owner 统一渲染，生产、科技、外交、贸易和存档状态均通过 `RtsProductionCapabilityMod` 的 snapshot 输入到同一 `ReactivePage`。

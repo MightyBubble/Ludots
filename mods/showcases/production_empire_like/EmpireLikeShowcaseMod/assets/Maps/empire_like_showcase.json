@@ -1,0 +1,51 @@
+{
+  "Id": "empire_like_showcase",
+  "Name": "Empire Like Production Showcase",
+  "Tags": ["capability.rts_production", "capability.participant_view", "showcase.empire_like", "Raylib.Background:Deep", "Raylib.DebugGuides:Off"],
+  "BoardId": "default",
+  "Width": 34,
+  "Height": 20,
+  "Entities": [
+    {
+      "InstanceId": "team-romans",
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "Roman Civ" },
+        "WorldPositionCm": { "Value": { "X": -1200, "Y": -400 } }
+      }
+    },
+    {
+      "InstanceId": "team-han",
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "Han Civ" },
+        "WorldPositionCm": { "Value": { "X": 1200, "Y": -400 } }
+      }
+    },
+    {
+      "InstanceId": "player-romans",
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "Romans" },
+        "WorldPositionCm": { "Value": { "X": -1200, "Y": 400 } }
+      }
+    },
+    {
+      "InstanceId": "player-han",
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "Han" },
+        "WorldPositionCm": { "Value": { "X": 1200, "Y": 400 } }
+      }
+    }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "player-romans", "IsLocal": true },
+    { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "player-han" }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "team-romans" },
+    { "TeamId": 2, "RepresentativeInstanceId": "team-han" }
+  ],
+  "Metadata": {}
+}

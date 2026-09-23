@@ -1,0 +1,12 @@
+{
+  "types": [{ "id": "Showcase.Diplomacy", "isSymmetric": false }],
+  "metrics": [{ "id": "Showcase.Trust", "minValue": -100, "maxValue": 100, "defaultValue": 0 }],
+  "flags": [{ "id": "Showcase.TradePact" }, { "id": "Showcase.AtWar" }, { "id": "Showcase.Embargo" }],
+  "bands": [
+    { "type": "Showcase.Diplomacy", "metric": "Showcase.Trust", "min": 50, "flag": "Showcase.TradePact" },
+    { "type": "Showcase.Diplomacy", "metric": "Showcase.Trust", "max": -40, "flag": "Showcase.AtWar" }
+  ],
+  "reasons": [],
+  "callbacks": [],
+  "synergies": []
+}

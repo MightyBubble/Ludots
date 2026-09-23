@@ -1,0 +1,222 @@
+{
+  "scenarioId": "starcraft_like",
+  "title": "StarCraftLike",
+  "flavor": "StarCraft II",
+  "hudStyle": "3x5 command card + production and hatchery queues",
+  "mapId": "starcraft_like_showcase",
+  "summary": "Terran worker construction, Protoss warp deployment, Zerg drone morphing, Warp Gate progression, three-faction diplomacy, and minerals/gas trade.",
+  "acceptance": [
+    "Terran SCV worker-build, Protoss warp, and Zerg morph are all playable",
+    "Warp Gate is modeled as progression, not a legacy tag unlock",
+    "each faction view shows its own command card and queue",
+    "resource trade is gated by diplomacy"
+  ],
+  "resources": ["Minerals", "Gas", "Supply"],
+  "factions": [
+    {
+      "id": "terran",
+      "label": "Terran",
+      "playerId": 1,
+      "teamId": 1,
+      "accent": "#7DD3FC",
+      "startingResources": [
+        { "resource": "Minerals", "amount": 1600 },
+        { "resource": "Gas", "amount": 500 },
+        { "resource": "Supply", "amount": 18 }
+      ],
+      "startingUnits": ["SCV Team", "Marine Squad"],
+      "startingBuildings": ["Command Center", "Barracks"],
+      "aiControlled": false
+    },
+    {
+      "id": "protoss",
+      "label": "Protoss",
+      "playerId": 2,
+      "teamId": 2,
+      "accent": "#F6D77C",
+      "startingResources": [
+        { "resource": "Minerals", "amount": 1500 },
+        { "resource": "Gas", "amount": 650 },
+        { "resource": "Supply", "amount": 20 }
+      ],
+      "startingUnits": ["Probe Team", "Zealot Pair"],
+      "startingBuildings": ["Nexus", "Gateway"],
+      "aiControlled": true
+    },
+    {
+      "id": "zerg",
+      "label": "Zerg",
+      "playerId": 3,
+      "teamId": 3,
+      "accent": "#C084FC",
+      "startingResources": [
+        { "resource": "Minerals", "amount": 1700 },
+        { "resource": "Gas", "amount": 400 },
+        { "resource": "Supply", "amount": 22 }
+      ],
+      "startingUnits": ["Drone Cluster", "Zergling Pack"],
+      "startingBuildings": ["Hatchery", "Spawning Pool"],
+      "aiControlled": true
+    }
+  ],
+  "productionLines": [
+    {
+      "id": "terran.supply_depot",
+      "factionId": "terran",
+      "label": "SCV: Supply Depot",
+      "paradigm": "WorkerBuild",
+      "producer": "SCV",
+      "output": "Supply Depot",
+      "outputKind": "Building",
+      "durationTicks": 85,
+      "cost": [{ "resource": "Minerals", "amount": 100 }],
+      "summary": "Terran worker attaches to a structure build."
+    },
+    {
+      "id": "terran.marine",
+      "factionId": "terran",
+      "label": "Train Marine",
+      "paradigm": "Train",
+      "producer": "Barracks",
+      "output": "Marine Squad",
+      "outputKind": "Unit",
+      "durationTicks": 55,
+      "cost": [{ "resource": "Minerals", "amount": 70 }],
+      "summary": "Barracks training through the shared queue."
+    },
+    {
+      "id": "protoss.warp_zealot",
+      "factionId": "protoss",
+      "label": "Warp Zealot",
+      "paradigm": "WarpBuild",
+      "producer": "Gateway",
+      "output": "Warped Zealot Pair",
+      "outputKind": "Unit",
+      "durationTicks": 75,
+      "cost": [{ "resource": "Minerals", "amount": 120 }],
+      "requiredTech": "starcraft.protoss.warpgate",
+      "summary": "Warp Gate progression unlocks deployed unit production."
+    },
+    {
+      "id": "protoss.gateway_unit",
+      "factionId": "protoss",
+      "label": "Train Zealot",
+      "paradigm": "Train",
+      "producer": "Gateway",
+      "output": "Gateway Zealot Pair",
+      "outputKind": "Unit",
+      "durationTicks": 90,
+      "cost": [{ "resource": "Minerals", "amount": 110 }],
+      "summary": "Pre-Warp Gate baseline gateway training."
+    },
+    {
+      "id": "zerg.spawning_pool",
+      "factionId": "zerg",
+      "label": "Drone Morph Pool",
+      "paradigm": "MorphBuild",
+      "producer": "Drone",
+      "output": "Spawning Pool",
+      "outputKind": "Building",
+      "durationTicks": 100,
+      "cost": [{ "resource": "Minerals", "amount": 180 }],
+      "summary": "Zerg morph consumes the builder into a structure."
+    },
+    {
+      "id": "zerg.zergling",
+      "factionId": "zerg",
+      "label": "Larva Zerglings",
+      "paradigm": "MorphBuild",
+      "producer": "Larva",
+      "output": "Zergling Pack",
+      "outputKind": "Unit",
+      "durationTicks": 50,
+      "cost": [{ "resource": "Minerals", "amount": 60 }],
+      "summary": "Hatchery-style larva production."
+    }
+  ],
+  "techs": [
+    {
+      "id": "starcraft.protoss.warpgate",
+      "factionId": "protoss",
+      "label": "Warp Gate",
+      "durationTicks": 130,
+      "cost": [
+        { "resource": "Minerals", "amount": 150 },
+        { "resource": "Gas", "amount": 100 }
+      ],
+      "summary": "Progression SSOT replacement for the old WarpGate tag."
+    },
+    {
+      "id": "starcraft.terran.stim",
+      "factionId": "terran",
+      "label": "Stim Pack",
+      "durationTicks": 120,
+      "cost": [{ "resource": "Gas", "amount": 80 }],
+      "summary": "Terran infantry tech node."
+    },
+    {
+      "id": "starcraft.zerg.metabolic",
+      "factionId": "zerg",
+      "label": "Metabolic Boost",
+      "durationTicks": 115,
+      "cost": [{ "resource": "Gas", "amount": 90 }],
+      "summary": "Zerg speed tech node."
+    }
+  ],
+  "treaties": [
+    {
+      "id": "terran_protoss_truce",
+      "label": "Terran-Protoss Truce",
+      "sourceFactionId": "terran",
+      "targetFactionId": "protoss",
+      "trustDelta": 30,
+      "tradePact": true,
+      "peace": true
+    },
+    {
+      "id": "protoss_zerg_ceasefire",
+      "label": "Protoss-Zerg Ceasefire",
+      "sourceFactionId": "protoss",
+      "targetFactionId": "zerg",
+      "trustDelta": 20,
+      "tradePact": true,
+      "peace": true
+    }
+  ],
+  "tradeOffers": [
+    {
+      "id": "minerals_for_gas",
+      "label": "Minerals for Gas",
+      "sourceFactionId": "terran",
+      "targetFactionId": "protoss",
+      "giveResource": "Minerals",
+      "giveAmount": 150,
+      "receiveResource": "Gas",
+      "receiveAmount": 80
+    },
+    {
+      "id": "gas_for_supply",
+      "label": "Gas for Supply",
+      "sourceFactionId": "protoss",
+      "targetFactionId": "zerg",
+      "giveResource": "Gas",
+      "giveAmount": 70,
+      "receiveResource": "Supply",
+      "receiveAmount": 3
+    }
+  ],
+  "ai": [
+    {
+      "factionId": "protoss",
+      "buildOrder": ["protoss.gateway_unit", "protoss.warp_zealot"],
+      "researchOrder": ["starcraft.protoss.warpgate"],
+      "thinkEveryTicks": 110
+    },
+    {
+      "factionId": "zerg",
+      "buildOrder": ["zerg.zergling", "zerg.spawning_pool"],
+      "researchOrder": ["starcraft.zerg.metabolic"],
+      "thinkEveryTicks": 130
+    }
+  ]
+}

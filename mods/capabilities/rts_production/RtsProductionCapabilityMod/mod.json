@@ -1,0 +1,13 @@
+{
+  "name": "RtsProductionCapabilityMod",
+  "version": "1.0.0",
+  "description": "Shared production, training, progression, diplomacy, trade, ownership, and participant-view runtime for production showcase roots.",
+  "main": "bin/net8.0/RtsProductionCapabilityMod.dll",
+  "priority": 135,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "ParticipantViewCapabilityMod": "^1.0.0"
+  },
+  "author": "OpenAI Codex",
+  "tags": ["capability", "rts-production", "progression", "exchange", "ownership", "participant-view"]
+}

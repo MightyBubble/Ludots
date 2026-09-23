@@ -1,0 +1,51 @@
+{
+  "Id": "redalert_like_showcase",
+  "Name": "Red Alert Like Production Showcase",
+  "Tags": ["capability.rts_production", "capability.participant_view", "showcase.redalert_like", "Raylib.Background:Deep", "Raylib.DebugGuides:Off"],
+  "BoardId": "default",
+  "Width": 32,
+  "Height": 18,
+  "Entities": [
+    {
+      "InstanceId": "team-allied",
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "Allied Command" },
+        "WorldPositionCm": { "Value": { "X": -1200, "Y": -400 } }
+      }
+    },
+    {
+      "InstanceId": "team-soviet",
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "Soviet Front" },
+        "WorldPositionCm": { "Value": { "X": 1200, "Y": -400 } }
+      }
+    },
+    {
+      "InstanceId": "player-allied",
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "Allied" },
+        "WorldPositionCm": { "Value": { "X": -1200, "Y": 400 } }
+      }
+    },
+    {
+      "InstanceId": "player-soviet",
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "Soviet" },
+        "WorldPositionCm": { "Value": { "X": 1200, "Y": 400 } }
+      }
+    }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "player-allied", "IsLocal": true },
+    { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "player-soviet" }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "team-allied" },
+    { "TeamId": 2, "RepresentativeInstanceId": "team-soviet" }
+  ],
+  "Metadata": {}
+}
