@@ -58,11 +58,10 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(mount.LastSliceResult.BudgetSuspended, Is.True);
             Assert.That(mount.DroppedCount, Is.EqualTo(0));
 
-            var heartbeatContext = engine.CreateContext();
-            heartbeatContext.Set(MapTriggerEventPayloadKeys.HeartbeatIndex, 1);
-            engine.TriggerManager.FireMapEvent(new MapId(MapId), GameEvents.MapHeartbeat, heartbeatContext);
+            var resumeContext = engine.CreateContext();
+            engine.TriggerManager.FireMapTriggerResume(new MapId(MapId), resumeContext);
 
-            Assert.That(mount.IsSuspended, Is.False, "The think wave must resume the suspended run.");
+            Assert.That(mount.IsSuspended, Is.False, "The resume pulse must continue the suspended run.");
             Assert.That(mount.LastSliceResult.Halted, Is.True);
             Assert.That(mount.LastSliceResult.ReturnInt, Is.EqualTo(4242),
                 "Registers seeded at entry dispatch must survive the suspension and feed the halt value.");
@@ -273,12 +272,11 @@ namespace Ludots.Tests.Gas.Graph
 
             engine.TriggerManager.FireMapEvent(new MapId(MapId), new EventKey(EntryEventName), engine.CreateContext());
 
-            var waveKey = GameEvents.MapHeartbeat;
+            var waveKey = GameEvents.MapTriggerResume;
             for (int wave = 0; wave < 200 && engine.TriggerManager.Errors.Count == 0; wave++)
             {
                 var waveContext = engine.CreateContext();
-                waveContext.Set(MapTriggerEventPayloadKeys.HeartbeatIndex, wave + 1);
-                engine.TriggerManager.FireMapEvent(new MapId(MapId), waveKey, waveContext);
+                engine.TriggerManager.FireMapTriggerResume(new MapId(MapId), waveContext);
             }
 
             Assert.That(engine.TriggerManager.Errors.Count, Is.GreaterThan(0),
@@ -332,10 +330,10 @@ namespace Ludots.Tests.Gas.Graph
             using GameEngine engine = fixture.CreateEngine();
             int graphId = fixture.RegisterTriggerGraph(engine, BudgetSuspensionProgram(haltRegister: 1), new[]
             {
-                new TriggerGraphEntry("wave", GameEvents.MapHeartbeat.Value, startPc: 0, once: false),
+                new TriggerGraphEntry("wave", GameEvents.MapTriggerResume.Value, startPc: 0, once: false),
             });
             var mount = new TriggerGraphMountTrigger(graphId, GraphName,
-                new TriggerGraphEntry("wave", GameEvents.MapHeartbeat.Value, startPc: 0, once: false),
+                new TriggerGraphEntry("wave", GameEvents.MapTriggerResume.Value, startPc: 0, once: false),
                 Entity.Null);
 
             Assert.That(mount.EntryIsResumeEvent, Is.True);

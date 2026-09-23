@@ -4,10 +4,10 @@
     "kind": "TriggerGraph",
     "entries": [
       {
-        "label": "tick",
+        "label": "on_pointer_moved",
         "start": "invoke_hit",
         "refire": "restart",
-        "event": "MapLoaded"
+        "action": "PointerMoved"
       }
     ],
     "nodes": [

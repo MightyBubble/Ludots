@@ -220,7 +220,7 @@ namespace Ludots.Core.Input.Interaction
                 }
 
                 // Foreign lifecycles own their mounts: cast commit ops pop their own frames
-                // and template-spawn mounts (#1398 S2b) live until the entity dies — this
+                // and template-spawn mounts live until the entity dies — this
                 // reconciliation reclaims only its own exec-carried contexts.
                 if (World.Get<InteractionContextInstance>(holder).Source != InteractionContextInstanceSource.ExecLifecycle)
                 {

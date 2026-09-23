@@ -54,7 +54,7 @@ namespace Ludots.Platform.Abstractions
         WorldSplineUpdated = 76,
         WorldSplineEnded = 77,
 
-        // Interaction context lifecycle events (#1398 S2b, constitution §8.2): key is the
+        // Interaction context lifecycle events (constitution §8.2): key is the
         // interaction context profile id; PayloadA is the instance scope tag, PayloadB the
         // parent context profile id (0 = no parent).
         ContextActivated = 78,

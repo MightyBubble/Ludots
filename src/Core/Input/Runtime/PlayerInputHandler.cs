@@ -475,10 +475,15 @@ namespace Ludots.Core.Input.Runtime
 
         private CompiledBinding CompileBinding(InputBindingDef binding)
         {
+            // A binding whose action id is not declared in the actions directory compiles to
+            // -1 (skip) — never default(0): Dictionary.TryGetValue writes default(int)=0 into
+            // the out param on miss, which would silently alias the first declared action's
+            // slot (engine-reserved ids like PointerMoved are intentionally undeclared).
             int actionIndex = -1;
-            if (!string.IsNullOrWhiteSpace(binding.ActionId))
+            if (!string.IsNullOrWhiteSpace(binding.ActionId) &&
+                _actionIndices.TryGetValue(binding.ActionId, out int resolved))
             {
-                _actionIndices.TryGetValue(binding.ActionId, out actionIndex);
+                actionIndex = resolved;
             }
 
             var compiled = new CompiledBinding

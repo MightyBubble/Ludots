@@ -43,7 +43,6 @@ namespace Ludots.Tests.Gas.Graph
             var registry = new EventSchemaRegistry();
             string[] payloadBearing =
             {
-                GameEvents.MapHeartbeat.Value,
                 GameEvents.EntitySpawned.Value,
                 GameEvents.EntityDied.Value,
                 GameEvents.EntityAliveCountChanged.Value,

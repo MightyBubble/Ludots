@@ -75,12 +75,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
             if (kind is GraphKind.Script or GraphKind.TriggerGraph)
             {
-                // TriggerGraph already carves ModifyAttributeSet; WriteBlackboardFloat must also
-                // stay GasTransactional for Effect-phase rollback while still authorable on
-                // Script/TriggerGraph (Case E box_begin stores press corners on the operator rep).
+                // TriggerGraph already carves ModifyAttributeSet; the blackboard float write
+                // must also stay GasTransactional for Effect-phase rollback while still
+                // authorable on Script/TriggerGraph (Case E box_begin stores press corners on
+                // the operator rep). WriteBlackboardInt joins the same carve-out for the D15
+                // modifier handoff (box_commit stores case_e.select.modifiers on the rep).
                 if (metadata.Kind == EffectOperationKind.GasTransactional &&
                     ((kind == GraphKind.TriggerGraph && op == GraphNodeOp.ModifyAttributeSet) ||
-                     op == GraphNodeOp.WriteBlackboardFloat))
+                     op == GraphNodeOp.WriteBlackboardFloat ||
+                     op == GraphNodeOp.WriteBlackboardInt))
                 {
                     return true;
                 }

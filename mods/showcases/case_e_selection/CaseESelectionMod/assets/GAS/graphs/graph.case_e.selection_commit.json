@@ -1,0 +1,223 @@
+[
+  {
+    "id": "graph.case_e.selection_commit",
+    "kind": "Script",
+    "entry": "caster",
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "read_modifiers",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "case_e.select.modifiers"
+      },
+      {
+        "id": "pending",
+        "op": "QueryFromCollection",
+        "collectionKey": "selection.pending"
+      },
+      {
+        "id": "modifier_switch",
+        "op": "SwitchInt"
+      },
+      {
+        "id": "op_replace",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "commit_replace",
+        "op": "WriteCollection",
+        "collectionKey": "selected"
+      },
+      {
+        "id": "op_add",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "commit_add",
+        "op": "WriteCollection",
+        "collectionKey": "selected"
+      },
+      {
+        "id": "op_subtract",
+        "op": "ConstInt",
+        "intValue": 2
+      },
+      {
+        "id": "commit_subtract",
+        "op": "WriteCollection",
+        "collectionKey": "selected"
+      },
+      {
+        "id": "op_consume",
+        "op": "ConstInt",
+        "intValue": 2
+      },
+      {
+        "id": "clear_pending",
+        "op": "WriteCollection",
+        "collectionKey": "selection.pending"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "read_modifiers"
+      },
+      {
+        "from": "read_modifiers",
+        "fromPort": "next",
+        "to": "pending"
+      },
+      {
+        "from": "pending",
+        "fromPort": "next",
+        "to": "modifier_switch"
+      },
+      {
+        "from": "modifier_switch",
+        "fromPort": "case:1",
+        "to": "op_add"
+      },
+      {
+        "from": "modifier_switch",
+        "fromPort": "case:3",
+        "to": "op_add"
+      },
+      {
+        "from": "modifier_switch",
+        "fromPort": "case:4",
+        "to": "op_subtract"
+      },
+      {
+        "from": "modifier_switch",
+        "fromPort": "case:5",
+        "to": "op_subtract"
+      },
+      {
+        "from": "modifier_switch",
+        "fromPort": "case:6",
+        "to": "op_subtract"
+      },
+      {
+        "from": "modifier_switch",
+        "fromPort": "case:7",
+        "to": "op_subtract"
+      },
+      {
+        "from": "modifier_switch",
+        "fromPort": "default",
+        "to": "op_replace"
+      },
+      {
+        "from": "op_replace",
+        "fromPort": "next",
+        "to": "commit_replace"
+      },
+      {
+        "from": "op_add",
+        "fromPort": "next",
+        "to": "commit_add"
+      },
+      {
+        "from": "op_subtract",
+        "fromPort": "next",
+        "to": "commit_subtract"
+      },
+      {
+        "from": "commit_replace",
+        "fromPort": "next",
+        "to": "op_consume"
+      },
+      {
+        "from": "commit_add",
+        "fromPort": "next",
+        "to": "op_consume"
+      },
+      {
+        "from": "commit_subtract",
+        "fromPort": "next",
+        "to": "op_consume"
+      },
+      {
+        "from": "op_consume",
+        "fromPort": "next",
+        "to": "clear_pending"
+      },
+      {
+        "from": "clear_pending",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "read_modifiers",
+        "toPort": "source"
+      },
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "pending",
+        "toPort": "source"
+      },
+      {
+        "from": "read_modifiers",
+        "fromPort": "value",
+        "to": "modifier_switch",
+        "toPort": "selector"
+      },
+      {
+        "from": "op_replace",
+        "fromPort": "value",
+        "to": "commit_replace",
+        "toPort": "value"
+      },
+      {
+        "from": "op_add",
+        "fromPort": "value",
+        "to": "commit_add",
+        "toPort": "value"
+      },
+      {
+        "from": "op_subtract",
+        "fromPort": "value",
+        "to": "commit_subtract",
+        "toPort": "value"
+      },
+      {
+        "from": "op_consume",
+        "fromPort": "value",
+        "to": "clear_pending",
+        "toPort": "value"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

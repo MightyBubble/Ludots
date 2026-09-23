@@ -910,7 +910,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         }
 
         /// <summary>
-        /// Activates a derived interaction context on the subject (#1398 S2b). The kernel owns
+        /// Activates a derived interaction context on the subject. The kernel owns
         /// parent validation, scope creation, and the ContextActivated presentation event;
         /// fail-closed on every mis-declared input by name.
         /// </summary>
@@ -936,7 +936,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         }
 
         /// <summary>
-        /// Fires the collection pass-through event (#1398 S2b gap 9): schema-less map dispatch
+        /// Fires the collection pass-through event: schema-less map dispatch
         /// so the Entity[] payload rides the reserved MapTrigger.Collection* keys; the event
         /// key must be a declared custom event (fail closed) and a map scope is required.
         /// </summary>

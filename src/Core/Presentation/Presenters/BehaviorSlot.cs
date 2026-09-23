@@ -18,6 +18,7 @@ namespace Ludots.Core.Presentation.Presenters
         public AssetBindingConfig AssetBinding;
         public AttributeBindingConfig AttributeBinding;
         public TagBindingConfig TagBinding;
+        public InteractionContextBindingConfig InteractionContextBinding;
         public AnimatorConfig Animator;
         public AttachmentConfig Attachment;
         public SoundConfig Sound;
@@ -74,6 +75,7 @@ namespace Ludots.Core.Presentation.Presenters
         InstancedBatch = 13,
         TrailMesh = 14,
         ScreenRect = 15,
+        InteractionContextBinding = 16,
         Extension = 255,
     }
 
@@ -234,6 +236,7 @@ namespace Ludots.Core.Presentation.Presenters
         public readonly int SlotIndex;
         public readonly int SourceAttributeId;
         public readonly int SourceTagId;
+        public readonly int SourceInteractionContextProfileId;
         public readonly int TargetParamKey;
         public readonly ValueSourceKind Mode;
         public readonly bool InvertLogic;
@@ -243,6 +246,7 @@ namespace Ludots.Core.Presentation.Presenters
             int slotIndex,
             int sourceAttributeId,
             int sourceTagId,
+            int sourceInteractionContextProfileId,
             int targetParamKey,
             ValueSourceKind mode,
             bool invertLogic,
@@ -251,6 +255,7 @@ namespace Ludots.Core.Presentation.Presenters
             SlotIndex = slotIndex;
             SourceAttributeId = sourceAttributeId;
             SourceTagId = sourceTagId;
+            SourceInteractionContextProfileId = sourceInteractionContextProfileId;
             TargetParamKey = targetParamKey;
             Mode = mode;
             InvertLogic = invertLogic;
@@ -259,12 +264,14 @@ namespace Ludots.Core.Presentation.Presenters
 
         public bool IsAttributeBound => SourceAttributeId >= 0;
         public bool IsTagBound => SourceTagId >= 0;
+        public bool IsInteractionContextBound => SourceInteractionContextProfileId >= 0;
 
         public static CompiledBinding FromAttribute(int slotIndex, in AttributeBindingConfig config)
         {
             return new CompiledBinding(
                 slotIndex,
                 config.AttributeId,
+                UnboundSourceId,
                 UnboundSourceId,
                 config.TargetParamKey,
                 config.Mode,
@@ -278,6 +285,20 @@ namespace Ludots.Core.Presentation.Presenters
                 slotIndex,
                 UnboundSourceId,
                 config.TagId,
+                UnboundSourceId,
+                config.TargetParamKey,
+                ValueSourceKind.Constant,
+                config.InvertLogic,
+                System.Array.Empty<ThresholdMapping>());
+        }
+
+        public static CompiledBinding FromInteractionContext(int slotIndex, in InteractionContextBindingConfig config)
+        {
+            return new CompiledBinding(
+                slotIndex,
+                UnboundSourceId,
+                UnboundSourceId,
+                config.InteractionContextProfileId,
                 config.TargetParamKey,
                 ValueSourceKind.Constant,
                 config.InvertLogic,
@@ -310,6 +331,16 @@ namespace Ludots.Core.Presentation.Presenters
             return tagActive ? 1 : 0;
         }
 
+        public int ResolveInteractionContextInt(bool contextActive)
+        {
+            if (InvertLogic)
+            {
+                contextActive = !contextActive;
+            }
+
+            return contextActive ? 1 : 0;
+        }
+
         internal static ThresholdMapping[] CompileThresholds(ThresholdMapping[]? source)
         {
             if (source == null || source.Length == 0)
@@ -327,6 +358,13 @@ namespace Ludots.Core.Presentation.Presenters
     public struct TagBindingConfig
     {
         public int TagId;
+        public int TargetParamKey;
+        public bool InvertLogic;
+    }
+
+    public struct InteractionContextBindingConfig
+    {
+        public int InteractionContextProfileId;
         public int TargetParamKey;
         public bool InvertLogic;
     }

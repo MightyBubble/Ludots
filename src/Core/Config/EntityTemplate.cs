@@ -26,7 +26,7 @@ namespace Ludots.Core.Config
 
         /// <summary>
         /// Interaction context profile id mounted as the entity's base
-        /// <c>InteractionContextInstance</c> at spawn (#1398 S2b, Case E 01/02). Trimmed
+        /// <c>InteractionContextInstance</c> at spawn. Trimmed
         /// non-empty when present; the profile id resolves against the installed context
         /// profiles (engine init fails fast on unknown ids, spawn fails closed on drift).
         /// </summary>

@@ -40,13 +40,11 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(MapTriggerEventPayloadKeys.VarValueInt, Is.EqualTo("MapTrigger.VarValueInt"));
             Assert.That(MapTriggerEventPayloadKeys.OldValueInt, Is.EqualTo("MapTrigger.OldValueInt"));
             Assert.That(MapTriggerEventPayloadKeys.OldValueFloat, Is.EqualTo("MapTrigger.OldValueFloat"));
-            Assert.That(MapTriggerEventPayloadKeys.HeartbeatIndex, Is.EqualTo("MapTrigger.HeartbeatIndex"));
         }
 
         [Test]
         public void GameEvents_TriggerGraphEventKeys_UseExactStrings()
         {
-            Assert.That(GameEvents.MapHeartbeat.Value, Is.EqualTo("MapHeartbeat"));
             Assert.That(GameEvents.EntitySpawned.Value, Is.EqualTo("EntitySpawned"));
             Assert.That(GameEvents.EntityDied.Value, Is.EqualTo("EntityDied"));
             Assert.That(GameEvents.EntityAliveCountChanged.Value, Is.EqualTo("EntityAliveCountChanged"));
@@ -470,143 +468,90 @@ namespace Ludots.Tests.Gas.Graph
 
     [TestFixture]
     [NonParallelizable]
-    public sealed class MapHeartbeatClockSystemTests
+    public sealed class MapEntityLifecycleObserverSystemTests
     {
-        private const string MapId = "think_wave_probe_map";
+        private const string MapId = "lifecycle_observer_probe_map";
 
         [Test]
-        public void MapHeartbeat_FiresAtConfiguredCadence()
+        public void SpawnFires_OnTheChangeTick_WithPayload()
         {
-            using var harness = new WaveHarness(intervalTicks: 3);
-
-            harness.System.Update(0f);
-            harness.System.Update(0f);
-            Assert.That(harness.Events.Count, Is.EqualTo(0), "No wave before the interval elapses.");
-
-            harness.System.Update(0f);
-            Assert.That(harness.Events.Count, Is.EqualTo(1));
-            Assert.That(harness.Events[0].HeartbeatIndex, Is.EqualTo(1));
-
-            harness.System.Update(0f);
-            harness.System.Update(0f);
-            Assert.That(harness.Events.Count, Is.EqualTo(1), "No second wave before another interval elapses.");
-
-            harness.System.Update(0f);
-            Assert.That(harness.Events.Count, Is.EqualTo(2));
-            Assert.That(harness.Events[1].HeartbeatIndex, Is.EqualTo(2));
-        }
-
-        [Test]
-        public void MapHeartbeat_DefaultsToThirtyTicksWhenUndeclared()
-        {
-            using var harness = new WaveHarness(intervalTicks: null);
-
-            for (int i = 0; i < 29; i++)
-            {
-                harness.System.Update(0f);
-            }
-
-            Assert.That(harness.Events.Count, Is.EqualTo(0));
-
-            harness.System.Update(0f);
-            Assert.That(harness.Events.Count, Is.EqualTo(1));
-            Assert.That(harness.Events[0].HeartbeatIndex, Is.EqualTo(1));
-        }
-
-        [Test]
-        public void SuspendedMap_DoesNotAdvance()
-        {
-            using var harness = new WaveHarness(intervalTicks: 2);
-
-            harness.System.Update(0f);
-            harness.Session.State = MapSessionState.Suspended;
-            for (int i = 0; i < 5; i++)
-            {
-                harness.System.Update(0f);
-            }
-
-            Assert.That(harness.Events.Count, Is.EqualTo(0), "Suspended maps must not accumulate ticks.");
-
-            harness.Session.State = MapSessionState.Active;
-            harness.System.Update(0f);
-
-            Assert.That(harness.Events.Count, Is.EqualTo(1), "Resume continues from the pre-suspend accumulation.");
-            Assert.That(harness.Events[0].HeartbeatIndex, Is.EqualTo(1));
-        }
-
-        [Test]
-        public void EntitySpawned_FiresAtWaveGranularityWithPayload()
-        {
-            using var harness = new WaveHarness(intervalTicks: 2);
+            using var harness = new ObserverHarness();
 
             Entity spawned = harness.CreateMapEntity(teamId: 7);
             harness.System.Update(0f);
-            Assert.That(harness.Events.Count, Is.EqualTo(0), "Spawn events wait for the wave flush.");
 
-            harness.System.Update(0f);
             CapturedEvent spawn = harness.Events.Single(e => e.Key == GameEvents.EntitySpawned.Value);
             Assert.That(spawn.SourceEntity, Is.EqualTo(spawned));
             Assert.That(spawn.SourceTeamId, Is.EqualTo(7));
         }
 
         [Test]
-        public void EntitySpawned_EntityDiedWithinSameWave_FiresOnlyDeath()
+        public void SpawnAndDieWithinSameDiff_NetsToDeathOnly()
         {
-            using var harness = new WaveHarness(intervalTicks: 2);
+            using var harness = new ObserverHarness();
 
             Entity transient = harness.CreateMapEntity(teamId: 5);
             harness.World.Destroy(transient);
 
             harness.System.Update(0f);
-            harness.System.Update(0f);
 
             Assert.That(
                 harness.Events.Count(e => e.Key == GameEvents.EntitySpawned.Value),
                 Is.EqualTo(0),
-                "Membership-diff spawns are net: an entity that never survived a wave boundary never spawns.");
+                "Membership diff is net: an entity that never survived a diff boundary never spawns.");
             CapturedEvent death = harness.Events.Single(e => e.Key == GameEvents.EntityDied.Value);
             Assert.That(death.SourceEntity, Is.EqualTo(transient));
             Assert.That(death.SourceTeamId, Is.EqualTo(5));
         }
 
         [Test]
-        public void EntityDied_FiresWithTeamCapturedAtDestroyTime()
+        public void DeathFires_WithTeamCapturedAtDestroyTime()
         {
-            using var harness = new WaveHarness(intervalTicks: 2);
+            using var harness = new ObserverHarness();
 
             Entity victim = harness.CreateMapEntity(teamId: 9);
-            harness.System.Update(0f);
-            harness.System.Update(0f);
+            harness.System.Update(0f); // become a baseline member
+            harness.Events.Clear();
 
             harness.World.Destroy(victim);
             harness.System.Update(0f);
-            Assert.That(harness.Events.Count(e => e.Key == GameEvents.EntityDied.Value), Is.EqualTo(0), "Death events wait for the wave flush.");
 
-            harness.System.Update(0f);
             CapturedEvent death = harness.Events.Single(e => e.Key == GameEvents.EntityDied.Value);
             Assert.That(death.SourceEntity, Is.EqualTo(victim));
             Assert.That(death.SourceTeamId, Is.EqualTo(9), "Team is captured at destroy time so consumers never dereference the dead entity.");
         }
 
         [Test]
-        public void EntityAliveCountChanged_FiresOncePerChangeEdge()
+        public void StableMember_DoesNotRefireSpawn()
         {
-            using var harness = new WaveHarness(intervalTicks: 2);
+            using var harness = new ObserverHarness();
+
+            harness.CreateMapEntity(teamId: 1);
+            harness.System.Update(0f);
+            harness.Events.Clear();
+
+            harness.System.Update(0f);
+            Assert.That(harness.Events.Count(e => e.Key == GameEvents.EntitySpawned.Value), Is.EqualTo(0),
+                "A stable member never refires spawn.");
+        }
+
+        [Test]
+        public void AliveCountFires_OncePerChangeEdge()
+        {
+            using var harness = new ObserverHarness();
 
             Entity[] squad = harness.CreateSquad(teamId: 1, count: 5);
-            harness.System.Update(0f);
             harness.System.Update(0f);
             Assert.That(
                 harness.Events.Count(e => e.Key == GameEvents.EntityAliveCountChanged.Value),
                 Is.EqualTo(0),
-                "The first wave records the baseline without firing.");
+                "The first diff records the baseline without firing.");
 
             for (int i = 0; i < squad.Length; i++)
             {
                 harness.World.Destroy(squad[i]);
             }
 
-            harness.System.Update(0f);
             harness.System.Update(0f);
             CapturedEvent[] changeEvents = harness.Events
                 .Where(e => e.Key == GameEvents.EntityAliveCountChanged.Value)
@@ -617,7 +562,6 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(changeEvents[0].Delta, Is.EqualTo(-5));
 
             harness.System.Update(0f);
-            harness.System.Update(0f);
             Assert.That(
                 harness.Events.Count(e => e.Key == GameEvents.EntityAliveCountChanged.Value),
                 Is.EqualTo(1),
@@ -625,35 +569,34 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void EntityAliveCountChanged_OnlyCountsEntitiesWithAttributeBuffer()
+        public void AliveCountOnlyCountsEntitiesWithAttributeBuffer()
         {
-            using var harness = new WaveHarness(intervalTicks: 2);
+            using var harness = new ObserverHarness();
 
             Entity counted = harness.CreateSquad(teamId: 2, count: 1)[0];
             Entity uncounted = harness.CreateMapEntity(teamId: 2);
 
             harness.System.Update(0f);
-            harness.System.Update(0f);
+            harness.Events.Clear();
             harness.World.Destroy(counted);
             harness.World.Destroy(uncounted);
 
-            harness.System.Update(0f);
             harness.System.Update(0f);
 
             CapturedEvent change = harness.Events.Single(e => e.Key == GameEvents.EntityAliveCountChanged.Value);
             Assert.That(change.SourceTeamId, Is.EqualTo(2));
             Assert.That(change.Count, Is.EqualTo(0));
-            Assert.That(change.Delta, Is.EqualTo(-1), "The teamless buffer-less entity never counted as alive.");
+            Assert.That(change.Delta, Is.EqualTo(-1), "The buffer-less entity never counted as alive.");
         }
 
         [Test]
         public void DeathQueueOverflow_IncrementsLiveDropCounter()
         {
-            using var harness = new WaveHarness(intervalTicks: 30);
+            using var harness = new ObserverHarness();
 
             const int overflow = 100;
             var victims = new List<Entity>();
-            for (int i = 0; i < MapHeartbeatClockSystem.LifecycleQueueCapacity + overflow; i++)
+            for (int i = 0; i < MapEntityLifecycleObserverSystem.LifecycleQueueCapacity + overflow; i++)
             {
                 victims.Add(harness.CreateMapEntity(teamId: 3));
             }
@@ -674,41 +617,35 @@ namespace Ludots.Tests.Gas.Graph
         [Test]
         public void SpawnDiffOverflow_IncrementsLiveDropCounter()
         {
-            using var harness = new WaveHarness(intervalTicks: 1);
+            using var harness = new ObserverHarness();
 
-            for (int i = 0; i < MapHeartbeatClockSystem.LifecycleQueueCapacity + 10; i++)
+            for (int i = 0; i < MapEntityLifecycleObserverSystem.LifecycleQueueCapacity + 10; i++)
             {
                 harness.CreateMapEntity(teamId: 1);
             }
 
             harness.System.Update(0f);
 
-            Assert.That(harness.Events.Count(e => e.Key == GameEvents.EntitySpawned.Value), Is.EqualTo(MapHeartbeatClockSystem.LifecycleQueueCapacity));
+            Assert.That(harness.Events.Count(e => e.Key == GameEvents.EntitySpawned.Value), Is.EqualTo(MapEntityLifecycleObserverSystem.LifecycleQueueCapacity));
             Assert.That(harness.System.GetDroppedLifecycleEvents(new MapId(MapId)), Is.EqualTo(10));
             Assert.That(harness.System.TotalDroppedLifecycleEvents, Is.EqualTo(10));
         }
 
-        private sealed class WaveHarness : IDisposable
+        private sealed class ObserverHarness : IDisposable
         {
             public readonly World World = World.Create();
             public readonly MapSessionManager Sessions = new();
             public readonly TriggerManager Triggers = new();
-            public readonly MapHeartbeatClockSystem System;
+            public readonly MapEntityLifecycleObserverSystem System;
             public readonly MapSession Session;
             public readonly List<CapturedEvent> Events = new();
 
-            public WaveHarness(int? intervalTicks)
+            public ObserverHarness()
             {
                 var config = new MapConfig { Id = MapId };
-                if (intervalTicks.HasValue)
-                {
-                    config.HeartbeatIntervalTicks = intervalTicks;
-                }
-
                 Session = Sessions.CreateSession(new MapId(MapId), config);
                 Sessions.PushFocused(new MapId(MapId));
-                System = new MapHeartbeatClockSystem(() => Sessions, World, Triggers, () => new ScriptContext());
-                Register(GameEvents.MapHeartbeat);
+                System = new MapEntityLifecycleObserverSystem(() => Sessions, World, Triggers, () => new ScriptContext());
                 Register(GameEvents.EntitySpawned);
                 Register(GameEvents.EntityDied);
                 Register(GameEvents.EntityAliveCountChanged);
@@ -748,8 +685,7 @@ namespace Ludots.Tests.Gas.Graph
                         TryGet(context, MapTriggerEventPayloadKeys.SourceEntity, out Entity source) ? source : null,
                         TryGet(context, MapTriggerEventPayloadKeys.SourceTeamId, out int teamId) ? teamId : null,
                         TryGet(context, MapTriggerEventPayloadKeys.Count, out int count) ? count : null,
-                        TryGet(context, MapTriggerEventPayloadKeys.Delta, out int delta) ? delta : null,
-                        TryGet(context, MapTriggerEventPayloadKeys.HeartbeatIndex, out int waveIndex) ? waveIndex : null));
+                        TryGet(context, MapTriggerEventPayloadKeys.Delta, out int delta) ? delta : null));
                     return Task.CompletedTask;
                 });
             }
@@ -777,7 +713,6 @@ namespace Ludots.Tests.Gas.Graph
             Entity? SourceEntity,
             int? SourceTeamId,
             int? Count,
-            int? Delta,
-            int? HeartbeatIndex);
+            int? Delta);
     }
 }

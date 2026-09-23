@@ -196,11 +196,13 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void Compile_ScriptKindRejectsQueryAllMapEntities()
+        public void Compile_ScriptKindAcceptsQueryAllMapEntities()
         {
+            // D15 治根：集合查询读面对齐 Script（修 Script 能写不能读集合的不对称），
+            // QueryAllMapEntities 在 Script 图可作者。
             var doc = new GraphControlFlowDocument
             {
-                Id = "tests.script.reject-query-op",
+                Id = "tests.script.accept-query-op",
                 Kind = "Script",
                 Entry = "allMap",
                 Nodes = new List<GraphControlFlowNode>
@@ -210,12 +212,31 @@ namespace Ludots.Tests.Gas.Graph
             };
 
             GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(doc);
+            Assert.That(compiled.Succeeded, Is.True, string.Join(" | ", compiled.Diagnostics.Select(d => d.ToString())));
+        }
 
+        [Test]
+        public void Compile_ScriptKindStillRejectsUnauthorizedQueryOps()
+        {
+            // 镜像不变量钉住 D2 格局的另一半：未放行的 Query 类 op（QueryCollect* 族，
+            // 掩码 QueryOnly）在 Script 里仍拒——集合查询读面只对齐到放行族，不整类放宽。
+            var doc = new GraphControlFlowDocument
+            {
+                Id = "tests.script.reject-query-collect",
+                Kind = "Script",
+                Entry = "collect",
+                Nodes = new List<GraphControlFlowNode>
+                {
+                    new() { Id = "collect", Op = nameof(GraphNodeOp.QueryCollectActiveEffects) }
+                }
+            };
+
+            GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(doc);
             Assert.That(compiled.Succeeded, Is.False);
             Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
                 d.Severity == GraphDiagnosticSeverity.Error &&
                 d.Code == GraphDiagnosticCodes.UnknownNodeOp &&
-                d.NodeId == "allMap"));
+                d.NodeId == "collect"));
         }
 
         [Test]

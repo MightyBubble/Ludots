@@ -4,7 +4,7 @@ using Arch.Core;
 namespace Ludots.Core.Input.Interaction
 {
     /// <summary>
-    /// Entity-mounted set of interaction context instances (#1398 S2b, constitution §8.2):
+    /// Entity-mounted set of interaction context instances (constitution §8.2):
     /// the coexisting set — a base instance (mounted by the exec/cast/spawn chains as the
     /// single-slot <see cref="InteractionContextInstance"/> component) plus the instances
     /// activated on top of it by the <c>ActivateContext</c> graph op. Present on the

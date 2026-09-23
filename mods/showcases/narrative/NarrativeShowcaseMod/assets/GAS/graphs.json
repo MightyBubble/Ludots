@@ -666,7 +666,7 @@
     "entries": [
       {
         "label": "boot_await",
-        "event": "MapHeartbeat",
+        "event": "EntitySpawned",
         "start": "inline_ask",
         "once": true
       }

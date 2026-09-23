@@ -12,26 +12,29 @@
       ],
       "triggers": [
         {
-          "trigger": "graph.case_e.roster_sync"
-        },
-        {
           "trigger": "graph.case_e.box_begin"
         }
       ]
     },
     {
       "id": "interaction.context.case_e.boxing",
+      "foreground": true,
       "bindings": [
         "CaseE.BoxSelectEnd"
       ],
       "triggers": [
         {
+          "trigger": "graph.case_e.box_hover_tick"
+        },
+        {
           "trigger": "graph.case_e.box_commit"
         }
       ],
-      "whileActive": {
-        "graph": "graph.case_e.box_hover_tick"
-      }
+      "onActivated": [],
+      "onDeactivated": [
+        "graph.case_e.box_hover_clear",
+        "graph.case_e.selection_commit"
+      ]
     }
   ]
 }

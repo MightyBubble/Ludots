@@ -8244,8 +8244,8 @@
       "id": "capability_standard_graph_op_DispatchMapEvent",
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpDispatchMapEventEntryMod",
       "projectPath": "CapabilityStandardGraphOpDispatchMapEventEntryMod.csproj",
-      "title": "按事件账本派发心跳",
-      "summary": "载荷按 schema 组装成事件，地图上的监听者按账本收货。",
+      "title": "按事件账本派发地图事件",
+      "summary": "载荷组装成地图事件，监听者按账本收货。",
       "tier": "T2",
       "category": "capability",
       "tags": [

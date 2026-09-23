@@ -21,7 +21,8 @@ namespace CapabilityStandardGraphOpsNodeGalleryMod.Runtime.Drivers;
 /// Hosts the TriggerGraph-only #1116/#1115 vignettes: StoreArg* staging → InvokeGraph
 /// subgraph round-trips (int return, float echo through a map variable, entity moved by
 /// the callee), the InvokeGraph entry-label call, and DispatchMapEvent firing a schema
-/// MapHeartbeat through a locally bound TriggerManager. The shared callee is a real
+/// MapHeartbeat-like dispatch through a declared custom map event (the retired
+/// think-wave cadence is demonstrated via a custom event; #1398 刀2). The shared callee is a real
 /// TriggerGraph with one entry per demo; the caller is registered into a local
 /// GraphProgramRegistry so load-time validation (kind, entry label) runs for real.
 /// </summary>
@@ -45,7 +46,7 @@ public sealed class InvokeGraphNodeDriver : IGraphOpsNodeDriver
     private readonly GraphProgramRegistry _programs = new();
     private readonly EventSchemaRegistry _schemas = new();
     private readonly TriggerManager _triggerManager = new();
-    private readonly HeartbeatProbeTrigger _heartbeatProbe = new() { EventKey = new EventKey("MapHeartbeat") };
+    private readonly DispatchProbeTrigger _dispatchProbe = new() { EventKey = GameEvents.EntityAliveCountChanged };
     private GraphExecutionCursor _cursor;
     private bool _halted;
     private string _assetsRoot = "";
@@ -60,7 +61,7 @@ public sealed class InvokeGraphNodeDriver : IGraphOpsNodeDriver
         _assetsRoot = ctx.AssetsRoot;
 
         _triggerManager.EventSchemas = _schemas;
-        _triggerManager.RegisterMapTriggers(CasterMapId(ctx), new Trigger[] { _heartbeatProbe });
+        _triggerManager.RegisterMapTriggers(CasterMapId(ctx), new Trigger[] { _dispatchProbe });
         ctx.Api.BindTriggerManager(_triggerManager);
 
         RegisterCallee();
@@ -277,8 +278,8 @@ public sealed class InvokeGraphNodeDriver : IGraphOpsNodeDriver
                 values["y"] = ((int)moved.Y).ToString(CultureInfo.InvariantCulture);
                 break;
             case nameof(GraphNodeOp.DispatchMapEvent):
-                values["fires"] = _heartbeatProbe.FireCount.ToString(CultureInfo.InvariantCulture);
-                values["beat"] = _heartbeatProbe.LastHeartbeatIndex.ToString(CultureInfo.InvariantCulture);
+                values["fires"] = _dispatchProbe.FireCount.ToString(CultureInfo.InvariantCulture);
+                values["beat"] = _dispatchProbe.LastCount.ToString(CultureInfo.InvariantCulture);
                 break;
             default:
                 throw new InvalidOperationException($"Invoke driver does not host op '{ctx.Vignette.Op}'.");
@@ -287,15 +288,15 @@ public sealed class InvokeGraphNodeDriver : IGraphOpsNodeDriver
         ctx.Metrics.Detail = GraphOpsNodeActorBinding.FormatDetail(ctx.Vignette.DetailTemplate, values);
     }
 
-    private sealed class HeartbeatProbeTrigger : Trigger
+    private sealed class DispatchProbeTrigger : Trigger
     {
         public int FireCount { get; private set; }
-        public int LastHeartbeatIndex { get; private set; }
+        public int LastCount { get; private set; }
 
         public override Task ExecuteAsync(ScriptContext context)
         {
             FireCount++;
-            LastHeartbeatIndex = context.Get<int>(MapTriggerEventPayloadKeys.HeartbeatIndex);
+            LastCount = context.Get<int>(MapTriggerEventPayloadKeys.Count);
             return Task.CompletedTask;
         }
     }

@@ -58,10 +58,6 @@ namespace Ludots.Core.Scripting
 
         private static readonly EventSchema[] BuiltinSchemas =
         {
-            new(GameEvents.MapHeartbeat.Value, EventScope.Map, new EventParamSchema[]
-            {
-                new("heartbeatIndex", EventParamType.Int, MapTriggerEventPayloadKeys.HeartbeatIndex),
-            }),
             new(GameEvents.EntitySpawned.Value, EventScope.Map, new EventParamSchema[]
             {
                 new("sourceEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.SourceEntity),

@@ -4,8 +4,17 @@
     "kind": "TriggerGraph",
     "entries": [
       {
-        "label": "on_battle_think",
-        "event": "MapHeartbeat",
+        "label": "on_marine_spawned",
+        "event": "EntitySpawned",
+        "start": "map_units",
+        "refire": "restart",
+        "filters": {
+          "team": 1
+        }
+      },
+      {
+        "label": "on_marine_died",
+        "event": "EntityDied",
         "start": "map_units",
         "refire": "restart"
       }
@@ -24,6 +33,10 @@
         "id": "selectable_units",
         "op": "QueryFilterTemplate",
         "template": "case_e_marine"
+      },
+      {
+        "id": "owner",
+        "op": "LoadExplicitTarget"
       },
       {
         "id": "roster_replace",
@@ -59,6 +72,11 @@
       {
         "from": "selectable_units",
         "fromPort": "next",
+        "to": "owner"
+      },
+      {
+        "from": "owner",
+        "fromPort": "next",
         "to": "roster_replace"
       },
       {
@@ -78,6 +96,12 @@
       }
     ],
     "valueEdges": [
+      {
+        "from": "owner",
+        "fromPort": "value",
+        "to": "refresh_roster",
+        "toPort": "source"
+      },
       {
         "from": "roster_replace",
         "fromPort": "value",

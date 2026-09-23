@@ -29,6 +29,15 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly Func<ClientLocalSeatRegistry?> _seats;
         private readonly Func<ClientLocalSeatInputRuntime?> _seatInput;
 
+        /// <summary>"No pointer sample dispatched yet" sentinel (NaN X marks it).</summary>
+        private static readonly System.Numerics.Vector2 InvalidPointer =
+            new System.Numerics.Vector2(float.NaN, float.NaN);
+
+        // Last dispatched live-pointer position, per reader domain: one for the global
+        // (single-seat) reader, one per seat id when routing per-seat.
+        private System.Numerics.Vector2 _lastDispatchedPointer = InvalidPointer;
+        private readonly Dictionary<string, System.Numerics.Vector2> _lastDispatchedPointerBySeat = new();
+
         public TriggerGraphActionBindingSystem(
             Func<MapSession?> currentSession,
             TriggerManager triggerManager,
@@ -85,6 +94,19 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
             foreach (string actionId in _bindings.MountedActionIds)
             {
+                // Pointer-motion is an input-domain edge, not a button contract: the
+                // reserved action bypasses firesOn/IsRelease and dispatches on position
+                // change against the live pointer (see ReservedInputActionIds.PointerMoved).
+                if (actionId == ReservedInputActionIds.PointerMoved)
+                {
+                    if (_bindings.TryGetMounts(actionId, out IReadOnlyList<TriggerGraphMountTrigger> pointerMounts))
+                    {
+                        DispatchPointerMoved(session, input, actionId, pointerMounts, ref _lastDispatchedPointer);
+                    }
+
+                    continue;
+                }
+
                 if (!FiredThisTick(input, actionId))
                 {
                     continue;
@@ -134,6 +156,12 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 Entity rep = seat.PossessedRep;
                 foreach (string actionId in _bindings.MountedActionIds)
                 {
+                    if (actionId == ReservedInputActionIds.PointerMoved)
+                    {
+                        DispatchPointerMovedPerSeat(session, input, actionId, rep, seat.SeatId);
+                        continue;
+                    }
+
                     if (!FiredThisTick(input, actionId))
                     {
                         continue;
@@ -162,6 +190,93 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Pointer-motion edge over the global (single-seat) reader: dispatch the action's
+        /// mounts once when the live pointer position differs from the last dispatched
+        /// sample, stamping the shared InputAction payload with the current pointer.
+        /// The first sample after mounting always dispatches (NaN sentinel).
+        /// </summary>
+        private void DispatchPointerMoved(
+            MapSession session,
+            IInputActionReader input,
+            string actionId,
+            IReadOnlyList<TriggerGraphMountTrigger> mounts,
+            ref System.Numerics.Vector2 lastDispatched)
+        {
+            if (!TryReadLivePointer(input, out System.Numerics.Vector2 pointer) ||
+                !PointerMovedSince(lastDispatched, pointer))
+            {
+                return;
+            }
+
+            lastDispatched = pointer;
+            int modifiers = ReadHeldModifiers(input);
+            for (int i = 0; i < mounts.Count; i++)
+            {
+                TriggerGraphMountTrigger mount = mounts[i];
+                Entity rep = mount.Scope;
+                if (rep == Entity.Null || rep == default)
+                {
+                    continue;
+                }
+
+                Dispatch(session, mount, actionId, rep, pointer, modifiers);
+            }
+        }
+
+        /// <summary>Pointer-motion edge over one seat's reader (multi-seat path).</summary>
+        private void DispatchPointerMovedPerSeat(
+            MapSession session,
+            IInputActionReader input,
+            string actionId,
+            Entity rep,
+            string seatId)
+        {
+            if (!_bindings.TryGetMounts(actionId, out IReadOnlyList<TriggerGraphMountTrigger> mounts) ||
+                !TryReadLivePointer(input, out System.Numerics.Vector2 pointer))
+            {
+                return;
+            }
+
+            if (!_lastDispatchedPointerBySeat.TryGetValue(seatId, out System.Numerics.Vector2 last))
+            {
+                last = InvalidPointer;
+            }
+
+            if (!PointerMovedSince(last, pointer))
+            {
+                return;
+            }
+
+            _lastDispatchedPointerBySeat[seatId] = pointer;
+            int modifiers = ReadHeldModifiers(input);
+            for (int i = 0; i < mounts.Count; i++)
+            {
+                TriggerGraphMountTrigger mount = mounts[i];
+                if (mount.Scope != rep)
+                {
+                    continue;
+                }
+
+                Dispatch(session, mount, actionId, rep, pointer, modifiers);
+            }
+        }
+
+        /// <summary>Reads the authoritative live pointer position (PointerPos reserved action).</summary>
+        private static bool TryReadLivePointer(IInputActionReader input, out System.Numerics.Vector2 pointer)
+        {
+            pointer = input.ReadAction<System.Numerics.Vector2>(ReservedInputActionIds.PointerPos);
+            return true;
+        }
+
+        /// <summary>True when the pointer position changed since the last dispatched sample.</summary>
+        private static bool PointerMovedSince(System.Numerics.Vector2 last, System.Numerics.Vector2 current)
+        {
+            // NaN sentinel = "no sample dispatched yet" → the first read always dispatches
+            // (one initial hover write on mount, which is idempotent and correct).
+            return float.IsNaN(last.X) || last.X != current.X || last.Y != current.Y;
         }
 
         private void Dispatch(

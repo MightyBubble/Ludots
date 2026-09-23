@@ -111,7 +111,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
-        /// Activates an interaction context instance (#1398 S2b) on the subject: context and
+        /// Activates an interaction context instance on the subject: context and
         /// parent are ConfigKeyRegistry ids (parent 0 = no parent constraint). Idempotent-failure
         /// on an already-active context; fail-closed on dead subjects, unknown key ids, and
         /// declared parents that are not active. Default rejects — the engine binds a context
