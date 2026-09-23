@@ -337,6 +337,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.LoadOrderTypeId, ScriptAndTriggerGraph, GraphValueType.Int, scriptPorts: noPorts, scriptOut: GraphValueType.Int, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.SubmitAssignedOrder, ScriptAndTriggerGraph, GraphValueType.Void, portApplyTemplate, scriptPorts: portApplyTemplate, imm: GraphOperandRole.SymbolImm, scriptSliceOnly: true, worldSideEffect: true);
             Add(rows, GraphNodeOp.CompleteActiveOrder, ScriptAndTriggerGraph, GraphValueType.Void, scriptPorts: noPorts, scriptSliceOnly: true, worldSideEffect: true);
+            Add(rows, GraphNodeOp.ReadCalendarEnabled, ScriptTriggerQuery, GraphValueType.Bool, queryOut: GraphValueType.Bool, scriptOut: GraphValueType.Bool);
+            Add(rows, GraphNodeOp.ReadCalendarDayIndex, ScriptTriggerQuery, GraphValueType.Int, queryOut: GraphValueType.Int, scriptOut: GraphValueType.Int);
+            Add(rows, GraphNodeOp.ReadCalendarTicksIntoDay, ScriptTriggerQuery, GraphValueType.Int, queryOut: GraphValueType.Int, scriptOut: GraphValueType.Int);
+            Add(rows, GraphNodeOp.ReadCalendarDayPermille, ScriptTriggerQuery, GraphValueType.Int, queryOut: GraphValueType.Int, scriptOut: GraphValueType.Int);
+            Add(rows, GraphNodeOp.ReadCalendarDayPhase, ScriptTriggerQuery, GraphValueType.Int, queryOut: GraphValueType.Int, scriptOut: GraphValueType.Int);
+            Add(rows, GraphNodeOp.ReadCalendarYear, ScriptTriggerQuery, GraphValueType.Int, queryOut: GraphValueType.Int, scriptOut: GraphValueType.Int, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.ReadCalendarCyclePhase, ScriptTriggerQuery, GraphValueType.Int, queryOut: GraphValueType.Int, scriptOut: GraphValueType.Int, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.ReadCalendarCycleDay, ScriptTriggerQuery, GraphValueType.Int, queryOut: GraphValueType.Int, scriptOut: GraphValueType.Int, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.ApplyCalendarStart, ScriptAndTriggerGraph, GraphValueType.Void, portAB, scriptPorts: portAB, worldSideEffect: true);
+            Add(rows, GraphNodeOp.SetCalendarDayIndex, ScriptAndTriggerGraph, GraphValueType.Void, portValue, scriptPorts: portValue, worldSideEffect: true);
+            Add(rows, GraphNodeOp.SetCalendarTicksIntoDay, ScriptAndTriggerGraph, GraphValueType.Void, portValue, scriptPorts: portValue, worldSideEffect: true);
 
             var table = new GraphOpDescriptor[GraphVmLimits.HandlerTableSize];
             for (int i = 0; i < rows.Count; i++)

@@ -11,6 +11,9 @@ namespace Ludots.Core.Gameplay.Calendar
         private readonly CalendarDefinition[] _sortedCalendars;
         private CalendarDateSnapshot[] _projections;
         private bool _projectionsStale;
+        // 开局日序只在「还没人看见日子被改过」时能整段换掉。跨日、昼夜相位被订阅者看见、
+        // 或作者写过日序/当天步数之后，开局窗口关闭；再改日子只能往前走。
+        private bool _openingCommitted;
 
         public CalendarRuntime(CalendarWorldConfig? world, CalendarDefinitionRegistry registry)
         {
@@ -60,12 +63,155 @@ namespace Ludots.Core.Gameplay.Calendar
             string? previousDayPhaseId = wantsDayPhase ? CurrentDayPhaseId() : null;
 
             TicksIntoDay = checked(TicksIntoDay + consumedSteps);
+            bool crossedDay = false;
             while (TicksIntoDay >= world.TicksPerDay)
             {
                 TicksIntoDay -= world.TicksPerDay;
                 AdvanceOneDay(contextFactory, fireEvent, hasSubscribers, wantsAnyEvent);
+                crossedDay = true;
             }
 
+            if (crossedDay)
+            {
+                _openingCommitted = true;
+            }
+
+            if (previousDayPhaseId != null)
+            {
+                string currentDayPhaseId = CurrentDayPhaseId();
+                if (!string.Equals(previousDayPhaseId, currentDayPhaseId, StringComparison.Ordinal))
+                {
+                    FireDayPhaseChanged(currentDayPhaseId, contextFactory!, fireEvent!);
+                    _openingCommitted = true;
+                }
+            }
+        }
+
+        public int ReadDayIndex()
+        {
+            EnsureEnabled();
+            return DayIndex;
+        }
+
+        public int ReadTicksIntoDay()
+        {
+            EnsureEnabled();
+            return TicksIntoDay;
+        }
+
+        public int ReadYear(string calendarId)
+        {
+            EnsureEnabled();
+            return Project(calendarId).Year;
+        }
+
+        public int ReadDayPermille()
+        {
+            EnsureEnabled();
+            return CalendarProjection.ComputeDayPermille(TicksIntoDay, _world!.TicksPerDay);
+        }
+
+        public int ReadDayPhaseKeyId()
+        {
+            EnsureEnabled();
+            return RequireKeyId(CurrentDayPhaseId());
+        }
+
+        public int ReadCyclePhaseKeyId(string calendarId, string cycleId)
+        {
+            return RequireKeyId(RequireCycle(calendarId, cycleId).PhaseId);
+        }
+
+        public int ReadCycleDay(string calendarId, string cycleId)
+        {
+            return RequireCycle(calendarId, cycleId).DayInPhase;
+        }
+
+        /// <summary>
+        /// 开局落定：在日子还没被提交前，把日序和当天步数换成作者给的开局值，不发事件。
+        /// 请求与当前值相同（包括已经提交过）是空操作。提交之后再写成别的值会失败。
+        /// </summary>
+        public void ApplyInitialState(int dayIndex, int ticksIntoDay)
+        {
+            EnsureEnabled();
+            if (dayIndex < 0)
+            {
+                throw new InvalidOperationException("Calendar dayIndex must be >= 0.");
+            }
+
+            if ((uint)ticksIntoDay >= (uint)_world!.TicksPerDay)
+            {
+                throw new InvalidOperationException(
+                    $"Calendar ticksIntoDay must be in [0, {_world.TicksPerDay}).");
+            }
+
+            if (_openingCommitted)
+            {
+                if (dayIndex == DayIndex && ticksIntoDay == TicksIntoDay)
+                {
+                    return;
+                }
+
+                throw new InvalidOperationException(
+                    $"Calendar opening is already committed at dayIndex={DayIndex}, ticksIntoDay={TicksIntoDay}. " +
+                    $"Requested dayIndex={dayIndex}, ticksIntoDay={ticksIntoDay}.");
+            }
+
+            DayIndex = dayIndex;
+            TicksIntoDay = ticksIntoDay;
+            _projections = BuildProjections(DayIndex);
+            _projectionsStale = false;
+            _openingCommitted = true;
+        }
+
+        /// <summary>
+        /// 把日序拨到绝对值。小于当前日序失败。相等是空操作。更大时按天往前走，
+        /// 每天的相位进出和日序事件与 <see cref="Advance"/> 同一条路径。
+        /// </summary>
+        public void SetDayIndex(
+            int dayIndex,
+            Func<ScriptContext>? contextFactory = null,
+            Action<EventKey, ScriptContext>? fireEvent = null,
+            Func<EventKey, bool>? hasSubscribers = null)
+        {
+            EnsureEnabled();
+            if (dayIndex < 0)
+            {
+                throw new InvalidOperationException("Calendar dayIndex must be >= 0.");
+            }
+
+            if (dayIndex < DayIndex)
+            {
+                throw new InvalidOperationException(
+                    $"Calendar dayIndex cannot move backward from {DayIndex} to {dayIndex}.");
+            }
+
+            _openingCommitted = true;
+            bool wantsAnyEvent = fireEvent != null && contextFactory != null;
+            while (DayIndex < dayIndex)
+            {
+                AdvanceOneDay(contextFactory, fireEvent, hasSubscribers, wantsAnyEvent);
+            }
+        }
+
+        public void SetTicksIntoDay(
+            int ticksIntoDay,
+            Func<ScriptContext>? contextFactory = null,
+            Action<EventKey, ScriptContext>? fireEvent = null,
+            Func<EventKey, bool>? hasSubscribers = null)
+        {
+            EnsureEnabled();
+            if ((uint)ticksIntoDay >= (uint)_world!.TicksPerDay)
+            {
+                throw new InvalidOperationException(
+                    $"Calendar ticksIntoDay must be in [0, {_world.TicksPerDay}).");
+            }
+
+            _openingCommitted = true;
+            bool wantsDayPhase = fireEvent != null && contextFactory != null &&
+                (hasSubscribers?.Invoke(GameEvents.CalendarDayPhaseChanged) ?? true);
+            string? previousDayPhaseId = wantsDayPhase ? CurrentDayPhaseId() : null;
+            TicksIntoDay = ticksIntoDay;
             if (previousDayPhaseId != null)
             {
                 string currentDayPhaseId = CurrentDayPhaseId();
@@ -163,6 +309,7 @@ namespace Ludots.Core.Gameplay.Calendar
             TicksIntoDay = snapshot.TicksIntoDay;
             _projections = BuildProjections(DayIndex);
             _projectionsStale = false;
+            _openingCommitted = true;
         }
 
         private void AdvanceOneDay(
@@ -312,6 +459,25 @@ namespace Ludots.Core.Gameplay.Calendar
             }
 
             return projections;
+        }
+
+        private CalendarCycleSnapshot RequireCycle(string calendarId, string cycleId)
+        {
+            if (string.IsNullOrWhiteSpace(cycleId))
+            {
+                throw new InvalidOperationException("Calendar cycle id is required.");
+            }
+
+            CalendarDateSnapshot date = Project(calendarId);
+            for (int i = 0; i < date.Cycles.Count; i++)
+            {
+                if (string.Equals(date.Cycles[i].CycleId, cycleId, StringComparison.Ordinal))
+                {
+                    return date.Cycles[i];
+                }
+            }
+
+            throw new InvalidOperationException($"Calendar '{calendarId}' has no cycle '{cycleId}'.");
         }
 
         private string CurrentDayPhaseId()

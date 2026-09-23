@@ -370,7 +370,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.SubmitCommandIntent or
                 GraphNodeOp.SubmitCast or
                 GraphNodeOp.SubmitEngageBatch or
-                GraphNodeOp.BindQueryCollection
+                GraphNodeOp.BindQueryCollection or
+                GraphNodeOp.ReadCalendarEnabled or
+                GraphNodeOp.ReadCalendarDayIndex or
+                GraphNodeOp.ReadCalendarTicksIntoDay or
+                GraphNodeOp.ReadCalendarDayPermille or
+                GraphNodeOp.ReadCalendarDayPhase or
+                GraphNodeOp.ReadCalendarYear or
+                GraphNodeOp.ReadCalendarCyclePhase or
+                GraphNodeOp.ReadCalendarCycleDay or
+                GraphNodeOp.ApplyCalendarStart or
+                GraphNodeOp.SetCalendarDayIndex or
+                GraphNodeOp.SetCalendarTicksIntoDay
                     => EffectOperationMetadata.Pure(description),
 
                 GraphNodeOp.SubmitAssignedOrder or
@@ -982,6 +993,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.OfferActivity, HandleOfferActivity, "OfferActivity graph opcode.");
             Register(GraphNodeOp.OfferTask, HandleOfferTask, "OfferTask graph opcode.");
             Register(GraphNodeOp.StartDialogue, HandleStartDialogue, "StartDialogue graph opcode.");
+            Register(GraphNodeOp.ReadCalendarEnabled, HandleReadCalendarEnabled, "ReadCalendarEnabled graph opcode.");
+            Register(GraphNodeOp.ReadCalendarDayIndex, HandleReadCalendarDayIndex, "ReadCalendarDayIndex graph opcode.");
+            Register(GraphNodeOp.ReadCalendarTicksIntoDay, HandleReadCalendarTicksIntoDay, "ReadCalendarTicksIntoDay graph opcode.");
+            Register(GraphNodeOp.ReadCalendarDayPermille, HandleReadCalendarDayPermille, "ReadCalendarDayPermille graph opcode.");
+            Register(GraphNodeOp.ReadCalendarDayPhase, HandleReadCalendarDayPhase, "ReadCalendarDayPhase graph opcode.");
+            Register(GraphNodeOp.ReadCalendarYear, HandleReadCalendarYear, "ReadCalendarYear graph opcode.");
+            Register(GraphNodeOp.ReadCalendarCyclePhase, HandleReadCalendarCyclePhase, "ReadCalendarCyclePhase graph opcode.");
+            Register(GraphNodeOp.ReadCalendarCycleDay, HandleReadCalendarCycleDay, "ReadCalendarCycleDay graph opcode.");
+            Register(GraphNodeOp.ApplyCalendarStart, HandleApplyCalendarStart, "ApplyCalendarStart graph opcode.");
+            Register(GraphNodeOp.SetCalendarDayIndex, HandleSetCalendarDayIndex, "SetCalendarDayIndex graph opcode.");
+            Register(GraphNodeOp.SetCalendarTicksIntoDay, HandleSetCalendarTicksIntoDay, "SetCalendarTicksIntoDay graph opcode.");
         }
 
         // ── Value Ops ──
@@ -1070,6 +1092,61 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void HandleStartDialogue(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.Api.StartDialogue(ins.Imm);
+        }
+
+        private static void HandleReadCalendarEnabled(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.B[ins.Dst] = (byte)(s.Api.ReadCalendarEnabled() ? 1 : 0);
+        }
+
+        private static void HandleReadCalendarDayIndex(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = s.Api.ReadCalendarDayIndex();
+        }
+
+        private static void HandleReadCalendarTicksIntoDay(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = s.Api.ReadCalendarTicksIntoDay();
+        }
+
+        private static void HandleReadCalendarDayPermille(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = s.Api.ReadCalendarDayPermille();
+        }
+
+        private static void HandleReadCalendarDayPhase(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = s.Api.ReadCalendarDayPhase();
+        }
+
+        private static void HandleReadCalendarYear(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = s.Api.ReadCalendarYear(ins.Imm);
+        }
+
+        private static void HandleReadCalendarCyclePhase(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = s.Api.ReadCalendarCyclePhase(ins.Imm);
+        }
+
+        private static void HandleReadCalendarCycleDay(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = s.Api.ReadCalendarCycleDay(ins.Imm);
+        }
+
+        private static void HandleApplyCalendarStart(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.ApplyCalendarStart(s.I[ins.A], s.I[ins.B]);
+        }
+
+        private static void HandleSetCalendarDayIndex(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.SetCalendarDayIndex(s.I[ins.A]);
+        }
+
+        private static void HandleSetCalendarTicksIntoDay(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.SetCalendarTicksIntoDay(s.I[ins.A]);
         }
 
         private static GraphTextHeap RequireTextHeap(ref GraphExecutionState s)

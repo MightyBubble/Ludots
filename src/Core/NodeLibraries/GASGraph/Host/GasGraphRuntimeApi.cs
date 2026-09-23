@@ -6,6 +6,7 @@ using Ludots.Core.Components;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.EntityQueries;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Calendar;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -145,6 +146,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private Ludots.Core.Input.Interaction.InteractionContextInstanceRuntime? _contextInstances;
         private Gameplay.MapTriggers.CustomEventNameRegistry? _customEvents;
         private Func<GameEngine?>? _engineResolver;
+        private CalendarRuntime? _calendar;
         private Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmissionBuffer? _commandIntentSubmissions;
         private Ludots.Core.EntityCollections.CollectionApplier? _collectionApplier;
 
@@ -368,6 +370,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _engineResolver = engineResolver ?? throw new ArgumentNullException(nameof(engineResolver));
         }
 
+        public void BindCalendarRuntime(CalendarRuntime calendarRuntime)
+        {
+            _calendar = calendarRuntime ?? throw new ArgumentNullException(nameof(calendarRuntime));
+        }
+
         /// <summary>共享到期时间轮；直接取消路径写标记后强制快道效果下一 slice 出桶。</summary>
         internal Ludots.Core.Gameplay.GAS.Systems.EffectDueWheel? DueWheel { get; set; }
         internal Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry? AggregateDirty { get; set; }
@@ -452,6 +459,95 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             var tasks = _taskRuntime
                 ?? throw new InvalidOperationException("GAS.GRAPH.ERR.TaskRuntimeUnavailable");
             tasks.OfferOrStart(taskId, scopeHost);
+        }
+
+        public bool ReadCalendarEnabled() => RequireCalendar().IsEnabled;
+
+        public int ReadCalendarDayIndex() => RequireCalendar().ReadDayIndex();
+
+        public int ReadCalendarTicksIntoDay() => RequireCalendar().ReadTicksIntoDay();
+
+        public int ReadCalendarDayPermille() => RequireCalendar().ReadDayPermille();
+
+        public int ReadCalendarDayPhase() => RequireCalendar().ReadDayPhaseKeyId();
+
+        public int ReadCalendarYear(int calendarKeyId)
+        {
+            CalendarRuntime calendar = RequireCalendar();
+            return calendar.ReadYear(ResolveCalendarId(calendar, calendarKeyId));
+        }
+
+        public int ReadCalendarCyclePhase(int packedImm)
+        {
+            CalendarRuntime calendar = RequireCalendar();
+            return calendar.ReadCyclePhaseKeyId(
+                ResolveCalendarId(calendar, CalendarOpEncoding.UnpackCalendar(packedImm)),
+                ResolveRequiredKeyName(CalendarOpEncoding.UnpackCycle(packedImm)));
+        }
+
+        public int ReadCalendarCycleDay(int packedImm)
+        {
+            CalendarRuntime calendar = RequireCalendar();
+            return calendar.ReadCycleDay(
+                ResolveCalendarId(calendar, CalendarOpEncoding.UnpackCalendar(packedImm)),
+                ResolveRequiredKeyName(CalendarOpEncoding.UnpackCycle(packedImm)));
+        }
+
+        public void ApplyCalendarStart(int dayIndex, int ticksIntoDay)
+        {
+            RequireCalendar().ApplyInitialState(dayIndex, ticksIntoDay);
+        }
+
+        public void SetCalendarDayIndex(int dayIndex)
+        {
+            WithCalendarDispatch((calendar, contextFactory, fireEvent, hasSubscribers) =>
+                calendar.SetDayIndex(dayIndex, contextFactory, fireEvent, hasSubscribers));
+        }
+
+        public void SetCalendarTicksIntoDay(int ticksIntoDay)
+        {
+            WithCalendarDispatch((calendar, contextFactory, fireEvent, hasSubscribers) =>
+                calendar.SetTicksIntoDay(ticksIntoDay, contextFactory, fireEvent, hasSubscribers));
+        }
+
+        private CalendarRuntime RequireCalendar()
+            => _calendar ?? throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+
+        private static string ResolveCalendarId(CalendarRuntime calendar, int calendarKeyId)
+        {
+            if (calendarKeyId == 0)
+            {
+                return calendar.ActiveCalendarId;
+            }
+
+            return ResolveRequiredKeyName(calendarKeyId);
+        }
+
+        private static string ResolveRequiredKeyName(int keyId)
+        {
+            string name = ConfigKeyRegistry.GetName(keyId);
+            if (string.IsNullOrEmpty(name))
+            {
+                throw new InvalidOperationException(
+                    $"Calendar key id {keyId} is not registered in ConfigKeyRegistry.");
+            }
+
+            return name;
+        }
+
+        private void WithCalendarDispatch(
+            Action<CalendarRuntime, Func<ScriptContext>?, Action<EventKey, ScriptContext>?, Func<EventKey, bool>?> write)
+        {
+            CalendarRuntime calendar = RequireCalendar();
+            GameEngine? engine = _engineResolver?.Invoke();
+            if (engine == null)
+            {
+                write(calendar, null, null, null);
+                return;
+            }
+
+            TriggerManager triggers = engine.TriggerManager;
+            write(calendar, engine.CreateContext, triggers.FireGlobalEvent, triggers.HasGlobalEventSubscribers);
         }
 
         public int WeightedPick(int distributionKeyId, int modulationPermille)

@@ -308,6 +308,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireRelationshipFields(node, requireMetric: true, requireFlag: false, graphId, diagnostics);
                     break;
+                case GraphNodeOp.ReadCalendarEnabled:
+                case GraphNodeOp.ReadCalendarDayIndex:
+                case GraphNodeOp.ReadCalendarTicksIntoDay:
+                case GraphNodeOp.ReadCalendarDayPermille:
+                case GraphNodeOp.ReadCalendarDayPhase:
+                case GraphNodeOp.ReadCalendarYear:
+                case GraphNodeOp.ReadCalendarCyclePhase:
+                case GraphNodeOp.ReadCalendarCycleDay:
+                    ValidateCalendarNode(node, op.NodeOp, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
                 default:
                     diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
                         $"Op '{op.NodeOp}' is not supported by Query ControlFlow compiler.", node.Id));
@@ -728,6 +738,31 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.Imm = InternOptional(symbolToIndex, symbols, node.Metric);
                     instruction.Flags = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    break;
+                case GraphNodeOp.ReadCalendarEnabled:
+                case GraphNodeOp.ReadCalendarDayIndex:
+                case GraphNodeOp.ReadCalendarTicksIntoDay:
+                case GraphNodeOp.ReadCalendarDayPermille:
+                case GraphNodeOp.ReadCalendarDayPhase:
+                case GraphNodeOp.ReadCalendarYear:
+                case GraphNodeOp.ReadCalendarCyclePhase:
+                case GraphNodeOp.ReadCalendarCycleDay:
+                    EmitCalendarNode(
+                        node,
+                        op.NodeOp,
+                        ref instruction,
+                        valueEdges,
+                        nodeIndices,
+                        outputTypes,
+                        outputRegisters,
+                        boolScratches,
+                        droppedRegisters,
+                        definedInts,
+                        definedBools,
+                        symbolToIndex,
+                        symbols,
+                        graphId,
+                        diagnostics);
                     break;
                 default:
                     diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,

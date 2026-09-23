@@ -666,6 +666,64 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("GAS.GRAPH.ERR.TaskRuntimeUnavailable");
         }
 
+        /// <summary>True when Calendar/world.json enabled the live calendar.</summary>
+        bool ReadCalendarEnabled()
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        int ReadCalendarDayIndex()
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        int ReadCalendarTicksIntoDay()
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        int ReadCalendarDayPermille()
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        int ReadCalendarDayPhase()
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        /// <summary>calendarKeyId 0 reads the active calendar.</summary>
+        int ReadCalendarYear(int calendarKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        /// <summary>packedImm is CalendarOpEncoding.Pack(cycleKeyId, calendarKeyId).</summary>
+        int ReadCalendarCyclePhase(int packedImm)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        int ReadCalendarCycleDay(int packedImm)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        void ApplyCalendarStart(int dayIndex, int ticksIntoDay)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        void SetCalendarDayIndex(int dayIndex)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
+        void SetCalendarTicksIntoDay(int ticksIntoDay)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.CalendarRuntimeUnavailable");
+        }
+
         /// <summary>
         /// Registers an AwaitCallback waiter (Imm callback type) and parks the slice.
         /// Completions resume through GraphCallbackContinuationSystem in registration order.

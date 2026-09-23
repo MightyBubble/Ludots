@@ -469,6 +469,33 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         SubmitEngageBatch = 486,
 
+        // ── World calendar reads and writes (509-519). Enabling the calendar stays
+        // in Calendar/world.json. These ops read the live projection and write the
+        // opening date or move the day forward through CalendarRuntime. ──
+
+        /// <summary>B[Dst] = 1 when the world calendar is enabled, else 0. Does not throw when disabled.</summary>
+        ReadCalendarEnabled = 509,
+        /// <summary>I[Dst] = world day index. Fails closed when the calendar is disabled.</summary>
+        ReadCalendarDayIndex = 510,
+        /// <summary>I[Dst] = steps already consumed inside the current day.</summary>
+        ReadCalendarTicksIntoDay = 511,
+        /// <summary>I[Dst] = progress through the current day, in thousandths.</summary>
+        ReadCalendarDayPermille = 512,
+        /// <summary>I[Dst] = ConfigKey id of the current day-phase.</summary>
+        ReadCalendarDayPhase = 513,
+        /// <summary>I[Dst] = projected year. Imm = calendar key id after patch; 0 = active calendar.</summary>
+        ReadCalendarYear = 514,
+        /// <summary>I[Dst] = ConfigKey id of a cycle's current phase. Imm packs cycle key (low) and calendar key (high, 0 = active).</summary>
+        ReadCalendarCyclePhase = 515,
+        /// <summary>I[Dst] = 1-based day inside a cycle's current phase. Imm packing matches ReadCalendarCyclePhase.</summary>
+        ReadCalendarCycleDay = 516,
+        /// <summary>Place the opening day index (I[A]) and ticks into the day (I[B]) once, without replaying events. Same values after the opening is committed are a no-op.</summary>
+        ApplyCalendarStart = 517,
+        /// <summary>Move the world day index forward to I[A]. Backward fails closed. Each crossed day fires the same events as the clock.</summary>
+        SetCalendarDayIndex = 518,
+        /// <summary>Set ticks into the current day to I[A], in [0, ticksPerDay). A day-phase change fires Calendar.DayPhaseChanged.</summary>
+        SetCalendarTicksIntoDay = 519,
+
     }
 
     public static class GraphNodeOpParser
