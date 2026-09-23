@@ -38,8 +38,8 @@ Scope: Cross-layer
 ## Presenter Boundary Finding
 
 - Presenter, Animator and param blackboard infrastructure already exist in Core Presentation. MassNavigation must not create a parallel presenter lifecycle or own Animator behavior.
-- The current `MassNavigationPresentationAdapter` is a narrow bridge: it copies MassNavigation solver-derived locomotion speed into the existing `PresenterFloatParams` key consumed by `AnimatorRuntimeSystem`, and it registers local observer disclosure for MassNavigation agents.
-- Removing that bridge without a replacement would leave authored animator defaults in place while agents move, stop or arrive. The existing generic bindings can read owner attributes, owner blackboard floats, facing, constants, graph results and pointer state; they cannot read MassNavigation solver SoA velocity directly.
+- Locomotion speed is now published as a MassNavigation-owned owner entity fact: `MassNavigationLocomotionBlackboardSyncSystem` writes `mass_navigation.agent.locomotion.speed` into the agent `BlackboardFloatBuffer`, and presenter definitions consume it through the existing `source=ownerBlackboardFloat` binding path.
+- The former `MassNavigationLocomotionAnimatorParamSystem` and adapter-owned speed key were removed, so MassNavigation no longer scans Presenter chunks or writes `PresenterFloatParams` for locomotion animation.
 - The remaining debt is moving MassNavigation-owned presentation config, presenter/mesh validation, observer disclosure inputs, presentation lifecycle checks and presenter telemetry out of Core-owned solver/runtime code.
 
 ## Fuse Decision
@@ -55,6 +55,6 @@ Scope: Cross-layer
 ## Containment and Follow-up
 
 - Immediate containment: keep current debt inventory fixed; new entries fail the architecture ratchet.
-- Completed containment slice: #1646 moved MassNavigation presenter speed writing and local observer disclosure out of `src/Core/MassNavigation` into a MassNavigation presentation adapter used by the MassNavigation showcase mods. Core still keeps the remaining presentation debt tracked by the ratchet.
+- Completed containment slice: #1646 removed the locomotion-speed Presenter adapter and moved animation input onto the owner blackboard binding path. Local observer disclosure remains in the MassNavigation presentation adapter and is tracked as follow-up boundary debt.
 - Permanent fix direction: follow #1644 and remove tracked entries as each seam is split.
 - Target milestone: close P0 split issues #1645, #1646 and #1647 before starting broad SimulationRuntime surgery.

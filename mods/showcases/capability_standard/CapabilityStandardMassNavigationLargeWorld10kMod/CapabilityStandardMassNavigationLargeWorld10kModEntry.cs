@@ -30,7 +30,7 @@ public sealed class CapabilityStandardMassNavigationLargeWorld10kModEntry : IMod
             return Task.CompletedTask;
         }
 
-        EnsureMassNavigationPresentationAdapter(engine);
+        EnsureMassNavigationObserverDisclosure(engine);
         bool mapFocused = CapabilityStandardMassNavigationLargeWorld10kMapFocus.IsStartupMapFocused(engine);
         engine.SetService(CoreServiceKeys.PresentationAudienceRevealHidden, mapFocused);
         if (!mapFocused)
@@ -49,9 +49,8 @@ public sealed class CapabilityStandardMassNavigationLargeWorld10kModEntry : IMod
         return Task.CompletedTask;
     }
 
-    private static void EnsureMassNavigationPresentationAdapter(GameEngine engine)
+    private static void EnsureMassNavigationObserverDisclosure(GameEngine engine)
     {
         MassNavigationPresentationAdapterInstaller.EnsureLocalObserverDisclosure(engine);
-        MassNavigationPresentationAdapterInstaller.EnsureLocomotionAnimatorParams(engine);
     }
 }

@@ -70,7 +70,7 @@ JSON 规则里的 SetParam 命令（真实样例 `mods/fixtures/blacksmith/Black
 
 ### 2.5 其他写入方
 
-持有 chunk span 的系统可以直写组件：如 `MassNavigationLocomotionAnimatorParamSystem` 把寻路速度写进 `PresenterFloatParams` 并手推 `Version++`（`mods/capabilities/navigation/MassNavigationPresentationAdapter/MassNavigationLocomotionAnimatorParamSystem.cs:45-52`）。直写绕过标脏与传播，只适合不影响静态视觉的参数。
+高频玩法状态先写在 owner 实体上，再由 Presenter binding 进入参数黑板。MassNavigation 的移动速度由 `MassNavigationLocomotionBlackboardSyncSystem` 写入 owner `BlackboardFloatBuffer`（`src/Core/MassNavigation/Systems/MassNavigationLocomotionBlackboardSyncSystem.cs`），Presenter 配置用 `source=ownerBlackboardFloat` 把它投到 `PresenterFloatParams`。外部系统不应绕过绑定链路直写 Presenter 参数。
 
 ## 3 父→子继承链
 

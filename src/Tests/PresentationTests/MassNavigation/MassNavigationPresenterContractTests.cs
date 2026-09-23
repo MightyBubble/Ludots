@@ -10,7 +10,6 @@ using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.NodeLibraries.GASGraph;
-using MassNavigationPresentationAdapter;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Presentation
@@ -21,7 +20,7 @@ namespace Ludots.Tests.Presentation
         private const string AgentHealthDriftEffectId = "Effect.MassNavigation.Agent.HealthDrift";
         private const string AgentHealthDriftGraphId = "Graph.MassNavigation.Agent.HealthDrift";
         private const string AgentHealthAttributeName = "Health";
-        private const string LocomotionSpeedParamKey = MassNavigationPresentationAdapterIds.AgentLocomotionSpeedParamKey;
+        private const string LocomotionSpeedParamKey = MassNavigationBlackboardKeys.AgentLocomotionSpeedKey;
         private const string HealthRatioParamKey = "massNavigation.agent.health.ratio";
         private const string HealthCurrentParamKey = "massNavigation.agent.health.current";
         private const string HealthBaseParamKey = "massNavigation.agent.health.base";
@@ -719,6 +718,15 @@ namespace Ludots.Tests.Presentation
             Assert.That(animator["animationProfileId"]?.GetValue<string>(), Is.EqualTo("mass_navigation.agent.profile"));
             Assert.That(animator["speedParamKey"]?.GetValue<string>(), Is.EqualTo(LocomotionSpeedParamKey));
             Assert.That(animator["stateParamKey"]?.GetValue<string>(), Is.EqualTo("none"));
+
+            JsonArray bindings = definition["bindings"]?.AsArray()
+                ?? throw new InvalidOperationException($"Presenter '{definitionId}' must bind locomotion speed from its owner blackboard.");
+            JsonObject speedBinding = bindings
+                .Select(node => node?.AsObject())
+                .FirstOrDefault(obj => obj?["paramKey"]?.GetValue<string>() == LocomotionSpeedParamKey)
+                ?? throw new InvalidOperationException($"Presenter '{definitionId}' must bind locomotion speed param.");
+            Assert.That(speedBinding["source"]?.GetValue<string>(), Is.EqualTo("ownerBlackboardFloat"));
+            Assert.That(speedBinding["sourceId"]?.GetValue<string>(), Is.EqualTo(LocomotionSpeedParamKey));
         }
 
         private static void AssertObstacleAuthoring(JsonObject components, string owner)

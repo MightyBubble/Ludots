@@ -377,6 +377,13 @@
         "lane": "Float",
         "floatValue": 1
       }
+    ],
+    "bindings": [
+      {
+        "paramKey": "mass_navigation.agent.locomotion.speed",
+        "source": "ownerBlackboardFloat",
+        "sourceId": "mass_navigation.agent.locomotion.speed"
+      }
     ]
   },
   {
@@ -466,6 +473,13 @@
         "paramKey": "mass_navigation.agent.locomotion.speed",
         "lane": "Float",
         "floatValue": 1
+      }
+    ],
+    "bindings": [
+      {
+        "paramKey": "mass_navigation.agent.locomotion.speed",
+        "source": "ownerBlackboardFloat",
+        "sourceId": "mass_navigation.agent.locomotion.speed"
       }
     ]
   },

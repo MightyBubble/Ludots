@@ -1061,6 +1061,7 @@ public sealed class MassNavigationSimulationRuntime
             allowExistingRuntimeBinding: false);
         int profileId = agent.ProfileId;
         world.Add(entity, new MassNavigationAgentIndex { Value = agentIndex });
+        MassNavigationBlackboardWriter.SetAgentLocomotionSpeed(world, entity, 0f);
         world.Add(entity, new MassNavigationAgentProfile
         {
             ProfileId = profileId,

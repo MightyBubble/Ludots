@@ -134,6 +134,7 @@ public sealed class MassNavigationRuntime
         engine.InsertSystemBeforeRequired<SpatialPartitionUpdateSystem>(
             new MassNavigationSimulationStepSystem(engine),
             SystemGroup.PostMovement);
+        engine.RegisterSystem(new MassNavigationLocomotionBlackboardSyncSystem(engine), SystemGroup.PostMovement);
         engine.RegisterSystem(
             new MassNavigationAuthoredAgentBindingSystem(engine, config),
             SystemGroup.RuntimeEntityBinding);
