@@ -1,0 +1,32 @@
+[
+  {
+    "id": "showcase.graph_op.ReadCalendarDayPermille",
+    "kind": "Script",
+    "entry": "featured",
+    "nodes": [
+      {
+        "id": "featured",
+        "op": "ReadCalendarDayPermille"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "featured",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "featured",
+        "fromPort": "value",
+        "to": "done",
+        "toPort": "value"
+      }
+    ]
+  }
+]

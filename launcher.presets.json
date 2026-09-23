@@ -3489,6 +3489,105 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ApplyCalendarStart_raylib",
+      "name": "Graph Op ApplyCalendarStart Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ApplyCalendarStart"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ReadCalendarCycleDay_raylib",
+      "name": "Graph Op ReadCalendarCycleDay Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ReadCalendarCycleDay"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ReadCalendarCyclePhase_raylib",
+      "name": "Graph Op ReadCalendarCyclePhase Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ReadCalendarCyclePhase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ReadCalendarDayIndex_raylib",
+      "name": "Graph Op ReadCalendarDayIndex Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ReadCalendarDayIndex"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ReadCalendarDayPermille_raylib",
+      "name": "Graph Op ReadCalendarDayPermille Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ReadCalendarDayPermille"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ReadCalendarDayPhase_raylib",
+      "name": "Graph Op ReadCalendarDayPhase Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ReadCalendarDayPhase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ReadCalendarEnabled_raylib",
+      "name": "Graph Op ReadCalendarEnabled Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ReadCalendarEnabled"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ReadCalendarTicksIntoDay_raylib",
+      "name": "Graph Op ReadCalendarTicksIntoDay Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ReadCalendarTicksIntoDay"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ReadCalendarYear_raylib",
+      "name": "Graph Op ReadCalendarYear Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ReadCalendarYear"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SetCalendarDayIndex_raylib",
+      "name": "Graph Op SetCalendarDayIndex Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SetCalendarDayIndex"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SetCalendarTicksIntoDay_raylib",
+      "name": "Graph Op SetCalendarTicksIntoDay Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SetCalendarTicksIntoDay"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

@@ -3992,6 +3992,201 @@
         "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFilterSelectable_KeepsOnlySelectableCandidatesInOrder"
       ],
       "codegenStatus": "covered"
+    },
+    {
+      "op": "ReadCalendarEnabled",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Query",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_ReadCalendarEnabled",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryCalendarAcceptanceTests.ReadCalendarEnabled_ShowsTheCalendarIsOn"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "ReadCalendarDayIndex",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Query",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_ReadCalendarDayIndex",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryCalendarAcceptanceTests.ReadCalendarDayIndex_ShowsTheLiveDay"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "ReadCalendarTicksIntoDay",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Query",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_ReadCalendarTicksIntoDay",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryCalendarAcceptanceTests.ReadCalendarTicksIntoDay_ShowsTheLiveTicks"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "ReadCalendarDayPermille",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Query",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_ReadCalendarDayPermille",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryCalendarAcceptanceTests.ReadCalendarDayPermille_ShowsTheLivePermille"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "ReadCalendarDayPhase",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Query",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_ReadCalendarDayPhase",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryCalendarAcceptanceTests.ReadCalendarDayPhase_ShowsTheLivePhase"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "ReadCalendarYear",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Query",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_ReadCalendarYear",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryCalendarAcceptanceTests.ReadCalendarYear_ShowsTheActiveYear"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "ReadCalendarCyclePhase",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Query",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_ReadCalendarCyclePhase",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryCalendarAcceptanceTests.ReadCalendarCyclePhase_ShowsTheSeasonPhase"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "ReadCalendarCycleDay",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Query",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_ReadCalendarCycleDay",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryCalendarAcceptanceTests.ReadCalendarCycleDay_ShowsTheDayInsideTheSeason"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "ApplyCalendarStart",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_ApplyCalendarStart",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryCalendarAcceptanceTests.ApplyCalendarStart_RewritesTheOpeningItJustRead"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "SetCalendarDayIndex",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_SetCalendarDayIndex",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryCalendarAcceptanceTests.SetCalendarDayIndex_MovesTheDayForwardByOne"
+      ],
+      "codegenStatus": "covered"
+    },
+    {
+      "op": "SetCalendarTicksIntoDay",
+      "authorableKinds": [
+        "TriggerGraph",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_SetCalendarTicksIntoDay",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryCalendarAcceptanceTests.SetCalendarTicksIntoDay_WritesTheTicksItJustRead"
+      ],
+      "codegenStatus": "covered"
     }
   ]
 }

@@ -2528,6 +2528,94 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryFilterSelectableEntryMod",
         "projectPath": "CapabilityStandardGraphOpQueryFilterSelectableEntryMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_ApplyCalendarStart",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpApplyCalendarStartEntryMod",
+        "projectPath": "CapabilityStandardGraphOpApplyCalendarStartEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ReadCalendarCycleDay",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadCalendarCycleDayEntryMod",
+        "projectPath": "CapabilityStandardGraphOpReadCalendarCycleDayEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ReadCalendarCyclePhase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadCalendarCyclePhaseEntryMod",
+        "projectPath": "CapabilityStandardGraphOpReadCalendarCyclePhaseEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ReadCalendarDayIndex",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadCalendarDayIndexEntryMod",
+        "projectPath": "CapabilityStandardGraphOpReadCalendarDayIndexEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ReadCalendarDayPermille",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadCalendarDayPermilleEntryMod",
+        "projectPath": "CapabilityStandardGraphOpReadCalendarDayPermilleEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ReadCalendarDayPhase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadCalendarDayPhaseEntryMod",
+        "projectPath": "CapabilityStandardGraphOpReadCalendarDayPhaseEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ReadCalendarEnabled",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadCalendarEnabledEntryMod",
+        "projectPath": "CapabilityStandardGraphOpReadCalendarEnabledEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ReadCalendarTicksIntoDay",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadCalendarTicksIntoDayEntryMod",
+        "projectPath": "CapabilityStandardGraphOpReadCalendarTicksIntoDayEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ReadCalendarYear",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadCalendarYearEntryMod",
+        "projectPath": "CapabilityStandardGraphOpReadCalendarYearEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_SetCalendarDayIndex",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSetCalendarDayIndexEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSetCalendarDayIndexEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_SetCalendarTicksIntoDay",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSetCalendarTicksIntoDayEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSetCalendarTicksIntoDayEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

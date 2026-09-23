@@ -1,0 +1,33 @@
+[
+  {
+    "id": "showcase.graph_op.ReadCalendarYear",
+    "kind": "Script",
+    "entry": "featured",
+    "nodes": [
+      {
+        "id": "featured",
+        "op": "ReadCalendarYear",
+        "calendar": "calendar.solar360"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "featured",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "featured",
+        "fromPort": "value",
+        "to": "done",
+        "toPort": "value"
+      }
+    ]
+  }
+]

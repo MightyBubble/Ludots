@@ -122,6 +122,8 @@ TextKey 发现糖（Tag 式选键 → 真 i18n catalog）与 FormalText 字面�
 
 2026-09-20 历法订阅线（PR #1283 增量）：TriggerGraph entry 新增 `filters.payload` 通用载荷订阅——键按事件 schema 闭集校验（声明外/带空白/float/entity 拒绝），int 参数的字符串期望值编译成 ConfigKey id（幂等，装载/编译顺序无关），string 参数保留字符串相等；无 schema 的裸编译不支持 payload 过滤（诊断拒绝）。历法五个 `Calendar.*` 事件载荷全部为 int key id，图内 `LoadEntryPayloadInt` 直读相位/日历/日序。还开着的活：payload 期望符号正规化为「编译产符号、patch 期解析 id」（当前编译期 Register 幂等可接受）；Mod 域 entry 订阅全局订阅表派发的事件（如 `Calendar.*`）安装期 fail-closed 点名，等 Mod 域路由统一进全局表后放开；`varName` 专用过滤槽与 payload 机制语义重复，评估退役。
 
+历法当前值可以在图里直接读、直接写：日序、当天步数、千分比、昼夜相位、年份、周期相位和周期内第几天；开局落定、往前拨日、改当天步数。启用仍然只认 `Calendar/world.json`。`Calendar.*` 不是实体属性。
+
 又开了一条线：行为树「真图化」（BT-1）与 HFSM「真图化」（FSM-1）。设计冻结本在 `artifacts/showcases/graph-fsm-bt-refactor-design.md`（L2 身份已纠偏，见下）。
 
 **BT / FSM 作者合同（#1542 起组件式驱动）：** 外层是 L2 拓扑，不是 Script 糖文档。BT SSOT = `AI/behavior_trees.json`，FSM SSOT = `AI/hfsm.json`；驱动 = `GraphActionBrain{BtId|HfsmId}` + `BtState`/`HfsmState` 组件 + `BtBrainHostSystem`/`HfsmBrainHostSystem`（照 Animator 范式，每实体自持状态，无池无索引无释放）。动作叶 = `action_lib.json`（资产中性，无 host 字段）+ `GAS/graphs.json` Script；转移条件与 BT Condition 叶 = `func_lib.json` 纯函数。`BehaviorTreeWorld` 已退出演武场驱动（遗留消费者：`GraphBehaviorIntegrationMod`，迁移债）；`HfsmWorld` 遗留消费者：HFSM 哨兵 arena（待迁）。编辑器正门：[作者工作室](authoring-studio.md)（`/blueprint` / `/bt-editor` / `/fsm-editor`），保存走生产校验器（action_lib + func_lib 双目录）。双击叶子进 `/blueprint`（旧址 `/gas-graphs` 仍认）。
