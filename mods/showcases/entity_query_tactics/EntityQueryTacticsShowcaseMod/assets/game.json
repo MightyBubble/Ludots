@@ -5,6 +5,9 @@
   "targetFps": 0,
   "startupMapId": "entity_query_tactics_showcase",
   "startupInputContexts": ["Default_Gameplay", "EntityQueryTactics.Controls"],
+  "presentation": {
+    "performerInstanceCapacity": 8192
+  },
   "selection": {
     "targetFilter": {
       "relationFilter": "Friendly"

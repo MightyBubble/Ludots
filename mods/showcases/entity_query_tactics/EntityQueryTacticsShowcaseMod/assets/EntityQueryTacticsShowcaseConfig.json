@@ -7,6 +7,7 @@
     "enemyTeamName": "Crimson Pact",
     "playerCommanderName": "Blue Commander",
     "enemyCommanderName": "Crimson Commander",
+    "runtimeSpawnReceiptChannelKey": "entityquery.tactics.runtimeSpawn",
     "allies": [
       { "name": "Aegis Captain", "template": "entityquery_tactics_ally_squad", "teamId": 1, "tags": ["Unit.Commandable"] },
       { "name": "Spear One", "template": "entityquery_tactics_ally_squad", "teamId": 1, "tags": ["Unit.Commandable"] },
@@ -22,6 +23,54 @@
     ],
     "objectives": [
       { "name": "Supply Beacon", "template": "entityquery_tactics_supply_beacon", "teamId": 0 }
+    ],
+    "generatedCohorts": [
+      {
+        "role": "Ally",
+        "namePrefix": "Blue Line",
+        "firstIndex": 1,
+        "count": 1536,
+        "template": "entityquery_tactics_ally_squad",
+        "teamId": 1,
+        "facingRad": 0.0,
+        "grid": { "originXCm": -1180, "originYCm": -380, "columns": 64, "spacingXCm": 58, "spacingYCm": 58 },
+        "tags": ["Unit.Commandable"],
+        "attributes": [
+          { "attribute": "Health", "baseValue": 130, "step": 2, "modulo": 17 },
+          { "attribute": "CommandPower", "baseValue": 42, "step": 3, "modulo": 24 },
+          { "attribute": "Supply", "baseValue": 18, "step": 2, "modulo": 19 },
+          { "attribute": "ThreatValue", "baseValue": 0, "step": 0, "modulo": 1 }
+        ],
+        "relations": []
+      },
+      {
+        "role": "Enemy",
+        "namePrefix": "Crimson Siege",
+        "firstIndex": 1,
+        "count": 480,
+        "template": "entityquery_tactics_enemy_siege",
+        "teamId": 2,
+        "facingRad": 3.14159,
+        "grid": { "originXCm": 2800, "originYCm": -260, "columns": 48, "spacingXCm": 58, "spacingYCm": 58 },
+        "tags": [],
+        "attributes": [
+          { "attribute": "Health", "baseValue": 160, "step": 3, "modulo": 23 },
+          { "attribute": "CommandPower", "baseValue": 70, "step": 4, "modulo": 31 },
+          { "attribute": "Supply", "baseValue": 20, "step": 1, "modulo": 29 },
+          { "attribute": "ThreatValue", "baseValue": 56, "step": 1, "modulo": 39 }
+        ],
+        "relations": [
+          {
+            "sourceName": "Blue Commander",
+            "metric": "Threat",
+            "baseValue": 56,
+            "step": 1,
+            "modulo": 39,
+            "flags": ["PriorityTarget"],
+            "flagEvery": 2
+          }
+        ]
+      }
     ],
     "relationSeeds": [
       { "sourceName": "Blue Commander", "targetName": "Crimson Captain", "metric": "Threat", "value": 82, "flags": ["PriorityTarget"] },
@@ -113,7 +162,7 @@
       {
         "frame": 1,
         "op": "WriteUiBox",
-        "entities": ["Aegis Captain", "Spear One", "Spear Two", "Field Medic", "Routed Scout"]
+        "role": "Ally"
       },
       { "frame": 2, "op": "CommitSelection" },
       { "frame": 3, "op": "ExecuteGraphs" },

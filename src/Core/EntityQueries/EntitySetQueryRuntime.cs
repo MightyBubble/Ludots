@@ -26,6 +26,7 @@ namespace Ludots.Core.EntityQueries
         private readonly World _world;
         private readonly TagOps _tagOps;
         private readonly RelationshipRuntime _relationships;
+        private int[] _relationshipSortMetricScratch = Array.Empty<int>();
 
         public EntitySetQueryRuntime(World world, TagOps tagOps, RelationshipRuntime relationships)
         {
@@ -439,7 +440,33 @@ namespace Ludots.Core.EntityQueries
         public void SortByRelationshipMetric(Span<Entity> entities, int count, Entity source, int typeId, int metricId, bool descending)
         {
             count = ClampCount(entities, count);
-            SortByRelationshipMetricInPlace(entities.Slice(0, count), source, typeId, metricId, descending);
+            EnsureRelationshipSortMetricScratch(count);
+            SortByRelationshipMetric(entities, count, source, typeId, metricId, descending, _relationshipSortMetricScratch.AsSpan(0, count));
+        }
+
+        public void SortByRelationshipMetric(
+            Span<Entity> entities,
+            int count,
+            Entity source,
+            int typeId,
+            int metricId,
+            bool descending,
+            Span<int> metricScratch)
+        {
+            count = ClampCount(entities, count);
+            if (metricScratch.Length < count)
+            {
+                throw new ArgumentException("Relationship metric sort scratch must be at least count elements.", nameof(metricScratch));
+            }
+
+            Span<Entity> targetSpan = entities.Slice(0, count);
+            Span<int> valueSpan = metricScratch.Slice(0, count);
+            for (int i = 0; i < targetSpan.Length; i++)
+            {
+                valueSpan[i] = GetSortRelationshipMetricValue(source, targetSpan[i], typeId, metricId);
+            }
+
+            SortByRelationshipMetricInPlace(targetSpan, valueSpan, descending);
         }
 
         public int SumRelationshipMetric(ReadOnlySpan<Entity> entities, Entity source, int typeId, int metricId)
@@ -710,7 +737,7 @@ namespace Ludots.Core.EntityQueries
             }
         }
 
-        private void SortByRelationshipMetricInPlace(Span<Entity> entities, Entity source, int typeId, int metricId, bool descending)
+        private void SortByRelationshipMetricInPlace(Span<Entity> entities, Span<int> metricValues, bool descending)
         {
             int length = entities.Length;
             if (length <= 1)
@@ -720,13 +747,14 @@ namespace Ludots.Core.EntityQueries
 
             for (int start = (length / 2) - 1; start >= 0; start--)
             {
-                SiftDownByRelationshipMetric(entities, start, length, source, typeId, metricId, descending);
+                SiftDownByRelationshipMetric(entities, metricValues, start, length, descending);
             }
 
             for (int end = length - 1; end > 0; end--)
             {
                 (entities[0], entities[end]) = (entities[end], entities[0]);
-                SiftDownByRelationshipMetric(entities, 0, end, source, typeId, metricId, descending);
+                (metricValues[0], metricValues[end]) = (metricValues[end], metricValues[0]);
+                SiftDownByRelationshipMetric(entities, metricValues, 0, end, descending);
             }
         }
 
@@ -764,11 +792,9 @@ namespace Ludots.Core.EntityQueries
 
         private void SiftDownByRelationshipMetric(
             Span<Entity> entities,
+            Span<int> metricValues,
             int root,
             int length,
-            Entity source,
-            int typeId,
-            int metricId,
             bool descending)
         {
             while (true)
@@ -780,13 +806,14 @@ namespace Ludots.Core.EntityQueries
                 }
 
                 int swap = root;
-                if (CompareRelationshipMetricEntities(entities[swap], entities[child], source, typeId, metricId, descending) < 0)
+                if (CompareIntThenEntity(metricValues[swap], entities[swap], metricValues[child], entities[child], descending) < 0)
                 {
                     swap = child;
                 }
 
                 int right = child + 1;
-                if (right < length && CompareRelationshipMetricEntities(entities[swap], entities[right], source, typeId, metricId, descending) < 0)
+                if (right < length &&
+                    CompareIntThenEntity(metricValues[swap], entities[swap], metricValues[right], entities[right], descending) < 0)
                 {
                     swap = right;
                 }
@@ -797,6 +824,7 @@ namespace Ludots.Core.EntityQueries
                 }
 
                 (entities[root], entities[swap]) = (entities[swap], entities[root]);
+                (metricValues[root], metricValues[swap]) = (metricValues[swap], metricValues[root]);
                 root = swap;
             }
         }
@@ -811,14 +839,20 @@ namespace Ludots.Core.EntityQueries
                 descending);
         }
 
-        private int CompareRelationshipMetricEntities(Entity left, Entity right, Entity source, int typeId, int metricId, bool descending)
+        private void EnsureRelationshipSortMetricScratch(int requiredCount)
         {
-            return CompareIntThenEntity(
-                GetSortRelationshipMetricValue(source, left, typeId, metricId),
-                left,
-                GetSortRelationshipMetricValue(source, right, typeId, metricId),
-                right,
-                descending);
+            if (requiredCount <= _relationshipSortMetricScratch.Length)
+            {
+                return;
+            }
+
+            int next = Math.Max(16, _relationshipSortMetricScratch.Length);
+            while (next < requiredCount)
+            {
+                next *= 2;
+            }
+
+            Array.Resize(ref _relationshipSortMetricScratch, next);
         }
     }
 }

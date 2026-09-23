@@ -43,6 +43,7 @@ namespace EntityQueryTacticsShowcaseMod.Runtime
             Require(Scenario.PlayerTeamName, nameof(Scenario.PlayerTeamName));
             Require(Scenario.EnemyCommanderName, nameof(Scenario.EnemyCommanderName));
             Require(Scenario.EnemyTeamName, nameof(Scenario.EnemyTeamName));
+            Require(Scenario.RuntimeSpawnReceiptChannelKey, nameof(Scenario.RuntimeSpawnReceiptChannelKey));
             Require(Scenario.PressurePulse.TargetName, nameof(Scenario.PressurePulse.TargetName));
             Require(Scenario.PressurePulse.Metric, nameof(Scenario.PressurePulse.Metric));
             if (Scenario.Allies.Length == 0 || Scenario.Enemies.Length == 0)
@@ -50,6 +51,7 @@ namespace EntityQueryTacticsShowcaseMod.Runtime
                 throw new InvalidOperationException("Entity query tactics showcase requires allies and enemies.");
             }
 
+            Scenario.ValidateGeneratedCohorts();
             Require(Actions.CommitSelection, nameof(Actions.CommitSelection));
             Require(Actions.ExecuteGraphs, nameof(Actions.ExecuteGraphs));
             Require(Actions.RotateFormation, nameof(Actions.RotateFormation));
@@ -137,11 +139,49 @@ namespace EntityQueryTacticsShowcaseMod.Runtime
         public string EnemyTeamName { get; set; } = string.Empty;
         public string PlayerCommanderName { get; set; } = string.Empty;
         public string EnemyCommanderName { get; set; } = string.Empty;
+        public string RuntimeSpawnReceiptChannelKey { get; set; } = "entityquery.tactics.runtimeSpawn";
         public EntityQueryTacticsActorConfig[] Allies { get; set; } = Array.Empty<EntityQueryTacticsActorConfig>();
         public EntityQueryTacticsActorConfig[] Enemies { get; set; } = Array.Empty<EntityQueryTacticsActorConfig>();
         public EntityQueryTacticsActorConfig[] Objectives { get; set; } = Array.Empty<EntityQueryTacticsActorConfig>();
+        public EntityQueryTacticsGeneratedCohortConfig[] GeneratedCohorts { get; set; } = Array.Empty<EntityQueryTacticsGeneratedCohortConfig>();
         public EntityQueryTacticsRelationSeed[] RelationSeeds { get; set; } = Array.Empty<EntityQueryTacticsRelationSeed>();
         public EntityQueryTacticsPressurePulseConfig PressurePulse { get; set; } = new();
+
+        public int CountGeneratedActors(string role)
+        {
+            if (GeneratedCohorts.Length == 0)
+            {
+                return 0;
+            }
+
+            int count = 0;
+            for (int i = 0; i < GeneratedCohorts.Length; i++)
+            {
+                EntityQueryTacticsGeneratedCohortConfig cohort = GeneratedCohorts[i];
+                if (string.Equals(cohort.Role, role, StringComparison.OrdinalIgnoreCase))
+                {
+                    count += Math.Max(0, cohort.Count);
+                }
+            }
+
+            return count;
+        }
+
+        public int TotalActorCount =>
+            Allies.Length +
+            Enemies.Length +
+            Objectives.Length +
+            CountGeneratedActors(EntityQueryTacticsGeneratedActorRoles.Ally) +
+            CountGeneratedActors(EntityQueryTacticsGeneratedActorRoles.Enemy) +
+            CountGeneratedActors(EntityQueryTacticsGeneratedActorRoles.Objective);
+
+        public void ValidateGeneratedCohorts()
+        {
+            for (int i = 0; i < GeneratedCohorts.Length; i++)
+            {
+                GeneratedCohorts[i].Validate(i);
+            }
+        }
     }
 
     public sealed class EntityQueryTacticsActorConfig
@@ -150,6 +190,155 @@ namespace EntityQueryTacticsShowcaseMod.Runtime
         public string Template { get; set; } = string.Empty;
         public int TeamId { get; set; }
         public string[] Tags { get; set; } = Array.Empty<string>();
+    }
+
+    public static class EntityQueryTacticsGeneratedActorRoles
+    {
+        public const string Ally = "Ally";
+        public const string Enemy = "Enemy";
+        public const string Objective = "Objective";
+    }
+
+    public sealed class EntityQueryTacticsGeneratedCohortConfig
+    {
+        public string Role { get; set; } = string.Empty;
+        public string NamePrefix { get; set; } = string.Empty;
+        public int FirstIndex { get; set; } = 1;
+        public int Count { get; set; }
+        public string Template { get; set; } = string.Empty;
+        public int TeamId { get; set; }
+        public float FacingRad { get; set; }
+        public EntityQueryTacticsGeneratedGridConfig Grid { get; set; } = new();
+        public string[] Tags { get; set; } = Array.Empty<string>();
+        public EntityQueryTacticsAttributePatternConfig[] Attributes { get; set; } = Array.Empty<EntityQueryTacticsAttributePatternConfig>();
+        public EntityQueryTacticsGeneratedRelationConfig[] Relations { get; set; } = Array.Empty<EntityQueryTacticsGeneratedRelationConfig>();
+
+        public void Validate(int index)
+        {
+            if (Count < 0)
+            {
+                throw new InvalidOperationException($"Entity query tactics generated cohort {index} requires count >= 0.");
+            }
+
+            if (Count == 0)
+            {
+                return;
+            }
+
+            if (!string.Equals(Role, EntityQueryTacticsGeneratedActorRoles.Ally, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(Role, EntityQueryTacticsGeneratedActorRoles.Enemy, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(Role, EntityQueryTacticsGeneratedActorRoles.Objective, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException($"Entity query tactics generated cohort {index} has unsupported role '{Role}'.");
+            }
+
+            RequireNonEmpty(NamePrefix, $"GeneratedCohorts[{index}].{nameof(NamePrefix)}");
+            RequireNonEmpty(Template, $"GeneratedCohorts[{index}].{nameof(Template)}");
+            Grid.Validate(index);
+            for (int i = 0; i < Attributes.Length; i++)
+            {
+                Attributes[i].Validate(index, i);
+            }
+
+            for (int i = 0; i < Relations.Length; i++)
+            {
+                Relations[i].Validate(index, i);
+            }
+        }
+
+        private static void RequireNonEmpty(string value, string name)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidOperationException($"Entity query tactics showcase config requires non-empty '{name}'.");
+            }
+        }
+    }
+
+    public sealed class EntityQueryTacticsGeneratedGridConfig
+    {
+        public int OriginXCm { get; set; }
+        public int OriginYCm { get; set; }
+        public int Columns { get; set; } = 1;
+        public int SpacingXCm { get; set; } = 100;
+        public int SpacingYCm { get; set; } = 100;
+
+        public void Validate(int cohortIndex)
+        {
+            if (Columns <= 0)
+            {
+                throw new InvalidOperationException($"Entity query tactics generated cohort {cohortIndex} requires grid.columns > 0.");
+            }
+        }
+    }
+
+    public sealed class EntityQueryTacticsAttributePatternConfig
+    {
+        public string Attribute { get; set; } = string.Empty;
+        public float BaseValue { get; set; }
+        public float Step { get; set; }
+        public int Modulo { get; set; } = 1;
+
+        public void Validate(int cohortIndex, int index)
+        {
+            if (string.IsNullOrWhiteSpace(Attribute))
+            {
+                throw new InvalidOperationException(
+                    $"Entity query tactics showcase config requires non-empty 'GeneratedCohorts[{cohortIndex}].Attributes[{index}].{nameof(Attribute)}'.");
+            }
+
+            if (Modulo <= 0)
+            {
+                throw new InvalidOperationException($"Entity query tactics generated cohort {cohortIndex} attribute pattern {index} requires modulo > 0.");
+            }
+        }
+
+        public float Evaluate(int actorIndex)
+        {
+            return BaseValue + Step * (actorIndex % Modulo);
+        }
+    }
+
+    public sealed class EntityQueryTacticsGeneratedRelationConfig
+    {
+        public string SourceName { get; set; } = string.Empty;
+        public string Metric { get; set; } = string.Empty;
+        public int BaseValue { get; set; }
+        public int Step { get; set; }
+        public int Modulo { get; set; } = 1;
+        public string[] Flags { get; set; } = Array.Empty<string>();
+        public int FlagEvery { get; set; } = 1;
+        public int FlagOffset { get; set; }
+
+        public void Validate(int cohortIndex, int index)
+        {
+            if (string.IsNullOrWhiteSpace(SourceName))
+            {
+                throw new InvalidOperationException(
+                    $"Entity query tactics showcase config requires non-empty 'GeneratedCohorts[{cohortIndex}].Relations[{index}].{nameof(SourceName)}'.");
+            }
+
+            if (string.IsNullOrWhiteSpace(Metric))
+            {
+                throw new InvalidOperationException(
+                    $"Entity query tactics showcase config requires non-empty 'GeneratedCohorts[{cohortIndex}].Relations[{index}].{nameof(Metric)}'.");
+            }
+
+            if (Modulo <= 0)
+            {
+                throw new InvalidOperationException($"Entity query tactics generated cohort {cohortIndex} relation pattern {index} requires modulo > 0.");
+            }
+        }
+
+        public int Evaluate(int actorIndex)
+        {
+            return BaseValue + Step * (actorIndex % Modulo);
+        }
+
+        public bool ShouldApplyFlags(int actorIndex)
+        {
+            return FlagEvery <= 1 || ((actorIndex + FlagOffset) % FlagEvery) == 0;
+        }
     }
 
     public sealed class EntityQueryTacticsRelationSeed
@@ -294,5 +483,6 @@ namespace EntityQueryTacticsShowcaseMod.Runtime
         public uint Frame { get; set; }
         public string Op { get; set; } = string.Empty;
         public string[] Entities { get; set; } = Array.Empty<string>();
+        public string Role { get; set; } = string.Empty;
     }
 }

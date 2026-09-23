@@ -400,7 +400,8 @@ namespace Ludots.Core.Gameplay.Relationships
             }
 
             int validatedTypeId = ValidateTypeId(typeId);
-            if (!source.TryGetRelationship(target, out RelationshipEdgeSet set))
+            ref Relationship<RelationshipEdgeSet> relationships = ref _world.TryGetRef<Relationship<RelationshipEdgeSet>>(source, out bool exists);
+            if (!exists || !relationships.TryGetValue(target, out RelationshipEdgeSet set))
             {
                 return false;
             }

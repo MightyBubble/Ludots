@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Arch.System;
@@ -17,6 +18,7 @@ using Ludots.Core.Input.Selection;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.Components;
@@ -29,17 +31,27 @@ namespace EntityQueryTacticsShowcaseMod.Systems
     internal sealed class EntityQueryTacticsSimulationSystem : ISystem<float>
     {
         private static readonly QueryDescription NamedMapEntityQuery = new QueryDescription().WithAll<Name, MapEntity>();
+        private const int CollectionNamePreviewCount = 8;
 
         private readonly GameEngine _engine;
         private readonly World _world;
         private readonly EntityQueryTacticsScenarioState _state;
-        private readonly Entity[] _selectionScratch = new Entity[64];
-        private readonly Entity[] _collectionScratch = new Entity[64];
-        private readonly Entity[] _formationScratch = new Entity[64];
-        private readonly EntityCollectionRowFlags[] _rowFlags = new EntityCollectionRowFlags[64];
+        private readonly Entity[] _selectionScratch;
+        private readonly Entity[] _collectionScratch;
+        private readonly Entity[] _formationScratch;
+        private readonly EntityCollectionRowFlags[] _rowFlags;
         private IGraphRuntimeApi? _graphApi;
 
         private bool _scenarioReady;
+        private bool _generatedPlansBuilt;
+        private bool _generatedSpawnEnqueued;
+        private int _runtimeSpawnReceiptChannelId;
+        private int _generatedReceiptsBound;
+        private int _generatedReceiptCount;
+        private EntityQueryTacticsGeneratedActorPlan[] _generatedPlans = Array.Empty<EntityQueryTacticsGeneratedActorPlan>();
+        private EntityQueryTacticsActorConfig[] _resolvedAlliesConfig = Array.Empty<EntityQueryTacticsActorConfig>();
+        private EntityQueryTacticsActorConfig[] _resolvedEnemiesConfig = Array.Empty<EntityQueryTacticsActorConfig>();
+        private EntityQueryTacticsActorConfig[] _resolvedObjectivesConfig = Array.Empty<EntityQueryTacticsActorConfig>();
         private int _tacticalIntelTypeId;
         private int _threatMetricId;
         private int _focusMetricId;
@@ -77,6 +89,11 @@ namespace EntityQueryTacticsShowcaseMod.Systems
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
             _world = engine.World;
             _state = state ?? throw new ArgumentNullException(nameof(state));
+            int scratchCapacity = Math.Max(64, _state.Config.Scenario.TotalActorCount + 8);
+            _selectionScratch = new Entity[scratchCapacity];
+            _collectionScratch = new Entity[scratchCapacity];
+            _formationScratch = new Entity[scratchCapacity];
+            _rowFlags = new EntityCollectionRowFlags[scratchCapacity];
         }
 
         public void Initialize()
@@ -139,12 +156,18 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 return true;
             }
 
+            InitializeIdentifiers();
+            EnsureGeneratedPlansBuilt();
+            if (!EnsureGeneratedActorsReady())
+            {
+                return false;
+            }
+
             if (!TryResolveScenarioContext(out EntityQueryTacticsScenarioContext? context))
             {
                 return false;
             }
 
-            InitializeIdentifiers();
             PrepareEntities(context);
             SeedRelationshipRuntime(context);
             BindSelectionRuntime(context.Owner);
@@ -164,9 +187,9 @@ namespace EntityQueryTacticsShowcaseMod.Systems
 
         private bool TryResolveScenarioContext(out EntityQueryTacticsScenarioContext context)
         {
-            EntityQueryTacticsActorConfig[] alliesConfig = Config.Scenario.Allies;
-            EntityQueryTacticsActorConfig[] enemiesConfig = Config.Scenario.Enemies;
-            EntityQueryTacticsActorConfig[] objectivesConfig = Config.Scenario.Objectives;
+            EntityQueryTacticsActorConfig[] alliesConfig = _resolvedAlliesConfig.Length == 0 ? Config.Scenario.Allies : _resolvedAlliesConfig;
+            EntityQueryTacticsActorConfig[] enemiesConfig = _resolvedEnemiesConfig.Length == 0 ? Config.Scenario.Enemies : _resolvedEnemiesConfig;
+            EntityQueryTacticsActorConfig[] objectivesConfig = _resolvedObjectivesConfig.Length == 0 ? Config.Scenario.Objectives : _resolvedObjectivesConfig;
             var allNames = new Dictionary<string, Entity>(StringComparer.OrdinalIgnoreCase);
             var allies = new Entity[alliesConfig.Length];
             var enemies = new Entity[enemiesConfig.Length];
@@ -239,6 +262,283 @@ namespace EntityQueryTacticsShowcaseMod.Systems
         private bool IsMapMatch(MapId mapId)
         {
             return string.Equals(mapId.Value, Config.MapId, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private void EnsureGeneratedPlansBuilt()
+        {
+            if (_generatedPlansBuilt)
+            {
+                return;
+            }
+
+            int generatedCount = Config.Scenario.CountGeneratedActors(EntityQueryTacticsGeneratedActorRoles.Ally) +
+                                 Config.Scenario.CountGeneratedActors(EntityQueryTacticsGeneratedActorRoles.Enemy) +
+                                 Config.Scenario.CountGeneratedActors(EntityQueryTacticsGeneratedActorRoles.Objective);
+            _generatedPlans = generatedCount == 0
+                ? Array.Empty<EntityQueryTacticsGeneratedActorPlan>()
+                : new EntityQueryTacticsGeneratedActorPlan[generatedCount];
+
+            var allies = new EntityQueryTacticsActorConfig[Config.Scenario.Allies.Length + Config.Scenario.CountGeneratedActors(EntityQueryTacticsGeneratedActorRoles.Ally)];
+            var enemies = new EntityQueryTacticsActorConfig[Config.Scenario.Enemies.Length + Config.Scenario.CountGeneratedActors(EntityQueryTacticsGeneratedActorRoles.Enemy)];
+            var objectives = new EntityQueryTacticsActorConfig[Config.Scenario.Objectives.Length + Config.Scenario.CountGeneratedActors(EntityQueryTacticsGeneratedActorRoles.Objective)];
+            Array.Copy(Config.Scenario.Allies, allies, Config.Scenario.Allies.Length);
+            Array.Copy(Config.Scenario.Enemies, enemies, Config.Scenario.Enemies.Length);
+            Array.Copy(Config.Scenario.Objectives, objectives, Config.Scenario.Objectives.Length);
+            int allyIndex = Config.Scenario.Allies.Length;
+            int enemyIndex = Config.Scenario.Enemies.Length;
+            int objectiveIndex = Config.Scenario.Objectives.Length;
+            int planIndex = 0;
+
+            for (int cohortIndex = 0; cohortIndex < Config.Scenario.GeneratedCohorts.Length; cohortIndex++)
+            {
+                EntityQueryTacticsGeneratedCohortConfig cohort = Config.Scenario.GeneratedCohorts[cohortIndex];
+                if (cohort.Count <= 0)
+                {
+                    continue;
+                }
+
+                RequireTemplate(cohort.Template);
+                for (int i = 0; i < cohort.Count; i++)
+                {
+                    string name = $"{cohort.NamePrefix} {cohort.FirstIndex + i:0000}";
+                    int column = i % cohort.Grid.Columns;
+                    int row = i / cohort.Grid.Columns;
+                    int x = cohort.Grid.OriginXCm + column * cohort.Grid.SpacingXCm;
+                    int y = cohort.Grid.OriginYCm + row * cohort.Grid.SpacingYCm;
+                    var actor = new EntityQueryTacticsActorConfig
+                    {
+                        Name = name,
+                        Template = cohort.Template,
+                        TeamId = cohort.TeamId,
+                        Tags = cohort.Tags,
+                    };
+                    _generatedPlans[planIndex] = new EntityQueryTacticsGeneratedActorPlan(
+                        planIndex,
+                        cohortIndex,
+                        i,
+                        name,
+                        cohort.Role,
+                        cohort.Template,
+                        cohort.TeamId,
+                        x,
+                        y,
+                        cohort.FacingRad);
+                    planIndex++;
+
+                    if (string.Equals(cohort.Role, EntityQueryTacticsGeneratedActorRoles.Ally, StringComparison.OrdinalIgnoreCase))
+                    {
+                        allies[allyIndex++] = actor;
+                    }
+                    else if (string.Equals(cohort.Role, EntityQueryTacticsGeneratedActorRoles.Enemy, StringComparison.OrdinalIgnoreCase))
+                    {
+                        enemies[enemyIndex++] = actor;
+                    }
+                    else
+                    {
+                        objectives[objectiveIndex++] = actor;
+                    }
+                }
+            }
+
+            _resolvedAlliesConfig = allies;
+            _resolvedEnemiesConfig = enemies;
+            _resolvedObjectivesConfig = objectives;
+            _generatedReceiptCount = planIndex;
+            _state.GeneratedActorCount = _generatedReceiptCount;
+            _generatedPlansBuilt = true;
+        }
+
+        private bool EnsureGeneratedActorsReady()
+        {
+            if (_generatedReceiptCount == 0)
+            {
+                return true;
+            }
+
+            if (!_generatedSpawnEnqueued)
+            {
+                EnqueueGeneratedActors();
+                _generatedSpawnEnqueued = true;
+                return false;
+            }
+
+            BindGeneratedReceipts();
+            return _generatedReceiptsBound == _generatedReceiptCount;
+        }
+
+        private void EnqueueGeneratedActors()
+        {
+            RuntimeEntitySpawnQueue spawnQueue = _engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
+                ?? throw new InvalidOperationException("Entity query tactics showcase requires RuntimeEntitySpawnQueue.");
+            RuntimeEntitySpawnReceiptQueue receiptQueue = _engine.GetService(CoreServiceKeys.RuntimeEntitySpawnReceiptQueue)
+                ?? throw new InvalidOperationException("Entity query tactics showcase requires RuntimeEntitySpawnReceiptQueue.");
+            int channelId = ResolveRuntimeSpawnReceiptChannelId();
+            while (receiptQueue.TryDequeueForChannel(channelId, out _))
+            {
+            }
+
+            spawnQueue.RemoveForReceiptChannel(channelId);
+            if (spawnQueue.FreeCapacity < _generatedReceiptCount)
+            {
+                throw new InvalidOperationException(
+                    $"Entity query tactics showcase requires RuntimeEntitySpawnQueue free capacity {_generatedReceiptCount}, actual {spawnQueue.FreeCapacity}.");
+            }
+
+            MapSession session = _engine.CurrentMapSession
+                ?? throw new InvalidOperationException("Entity query tactics showcase requires an active map before runtime cohort spawn.");
+            for (int i = 0; i < _generatedReceiptCount; i++)
+            {
+                EntityQueryTacticsGeneratedActorPlan plan = _generatedPlans[i];
+                var request = new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = plan.Template,
+                    MapId = session.MapId,
+                    WorldPositionCm = Fix64Vec2.FromInt(plan.WorldXCm, plan.WorldYCm),
+                    HasWorldPosition = 1,
+                    FacingAngleRad = plan.FacingRad,
+                    HasFacing = 1,
+                    EmitReceipt = 1,
+                    ReceiptChannelId = channelId,
+                    ReceiptId = plan.ReceiptId,
+                };
+                if (!spawnQueue.TryEnqueue(in request))
+                {
+                    throw new InvalidOperationException("Entity query tactics showcase failed to enqueue generated runtime actor spawn.");
+                }
+            }
+        }
+
+        private void BindGeneratedReceipts()
+        {
+            RuntimeEntitySpawnReceiptQueue receipts = _engine.GetService(CoreServiceKeys.RuntimeEntitySpawnReceiptQueue)
+                ?? throw new InvalidOperationException("Entity query tactics showcase requires RuntimeEntitySpawnReceiptQueue.");
+            int channelId = ResolveRuntimeSpawnReceiptChannelId();
+            bool boundAny = false;
+            while (receipts.TryDequeueForChannel(channelId, out RuntimeEntitySpawnReceipt receipt))
+            {
+                if ((uint)receipt.ReceiptId >= (uint)_generatedPlans.Length)
+                {
+                    throw new InvalidOperationException($"Entity query tactics showcase received unknown generated spawn receipt id {receipt.ReceiptId}.");
+                }
+
+                EntityQueryTacticsGeneratedActorPlan plan = _generatedPlans[receipt.ReceiptId];
+                BindGeneratedActor(in receipt, in plan);
+                _generatedPlans[receipt.ReceiptId] = plan.WithEntity(receipt.Entity);
+                _generatedReceiptsBound++;
+                boundAny = true;
+            }
+
+            if (boundAny)
+            {
+                _state.GeneratedActorReadyCount = _generatedReceiptsBound;
+            }
+        }
+
+        private void BindGeneratedActor(in RuntimeEntitySpawnReceipt receipt, in EntityQueryTacticsGeneratedActorPlan plan)
+        {
+            if (receipt.Kind != RuntimeEntitySpawnKind.Template ||
+                !string.Equals(receipt.TemplateId, plan.Template, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Entity query tactics showcase generated receipt mismatch for '{plan.Name}'.");
+            }
+
+            Entity entity = receipt.Entity;
+            if (!_world.IsAlive(entity))
+            {
+                throw new InvalidOperationException($"Entity query tactics showcase generated entity '{plan.Name}' is not alive.");
+            }
+
+            UpsertComponent(entity, new Name { Value = plan.Name });
+            UpsertComponent(entity, new Team { Id = plan.TeamId });
+            if (plan.TeamId == Config.Scenario.PlayerTeamId)
+            {
+                UpsertComponent(entity, new PlayerOwner { PlayerId = 1 });
+            }
+
+            ApplyGeneratedAttributes(entity, Config.Scenario.GeneratedCohorts[plan.CohortIndex], plan.ActorIndex);
+            EnsureInitialSelectableVisibility(entity);
+        }
+
+        private void ApplyGeneratedAttributes(Entity entity, EntityQueryTacticsGeneratedCohortConfig cohort, int actorIndex)
+        {
+            if (!_world.Has<AttributeBuffer>(entity))
+            {
+                _world.Add(entity, new AttributeBuffer());
+            }
+
+            ref AttributeBuffer attributes = ref _world.Get<AttributeBuffer>(entity);
+            for (int i = 0; i < cohort.Attributes.Length; i++)
+            {
+                EntityQueryTacticsAttributePatternConfig pattern = cohort.Attributes[i];
+                int attributeId = ResolveAttribute(pattern.Attribute);
+                attributes.SetBase(attributeId, pattern.Evaluate(actorIndex));
+            }
+        }
+
+        private void SeedGeneratedRelationships(EntityQueryTacticsScenarioContext context)
+        {
+            if (_generatedReceiptCount == 0)
+            {
+                return;
+            }
+
+            RelationshipRuntime runtime = _engine.GetService(CoreServiceKeys.RelationshipRuntime)
+                ?? throw new InvalidOperationException("RelationshipRuntime is missing.");
+            for (int i = 0; i < _generatedReceiptCount; i++)
+            {
+                EntityQueryTacticsGeneratedActorPlan plan = _generatedPlans[i];
+                Entity target = plan.Entity;
+                if (!_world.IsAlive(target))
+                {
+                    throw new InvalidOperationException($"Entity query tactics generated plan '{plan.Name}' was not bound before relationship seeding.");
+                }
+
+                EntityQueryTacticsGeneratedCohortConfig cohort = Config.Scenario.GeneratedCohorts[plan.CohortIndex];
+                for (int r = 0; r < cohort.Relations.Length; r++)
+                {
+                    EntityQueryTacticsGeneratedRelationConfig relation = cohort.Relations[r];
+                    Entity source = context.GetEntityByName(relation.SourceName);
+                    if (source == Entity.Null)
+                    {
+                        throw new InvalidOperationException(
+                            $"Entity query tactics generated relation source '{relation.SourceName}' is unknown.");
+                    }
+
+                    int metricId = ResolveMetric(relation.Metric);
+                    runtime.SetMetric(source, target, _tacticalIntelTypeId, metricId, relation.Evaluate(plan.ActorIndex), _setupReasonId);
+                    if (relation.ShouldApplyFlags(plan.ActorIndex))
+                    {
+                        for (int f = 0; f < relation.Flags.Length; f++)
+                        {
+                            int flagId = ResolveFlag(relation.Flags[f]);
+                            runtime.SetFlag(source, target, _tacticalIntelTypeId, flagId, true, _setupReasonId);
+                        }
+                    }
+                }
+            }
+        }
+
+        private int ResolveRuntimeSpawnReceiptChannelId()
+        {
+            if (_runtimeSpawnReceiptChannelId > 0)
+            {
+                return _runtimeSpawnReceiptChannelId;
+            }
+
+            RuntimeEntitySpawnReceiptChannelRegistry channels = _engine.GetService(CoreServiceKeys.RuntimeEntitySpawnReceiptChannelRegistry)
+                ?? throw new InvalidOperationException("Entity query tactics showcase requires RuntimeEntitySpawnReceiptChannelRegistry.");
+            _runtimeSpawnReceiptChannelId = channels.Register(Config.Scenario.RuntimeSpawnReceiptChannelKey);
+            return _runtimeSpawnReceiptChannelId;
+        }
+
+        private void RequireTemplate(string templateId)
+        {
+            if (string.IsNullOrWhiteSpace(templateId) || !_engine.MapLoader.TemplateRegistry.Contains(templateId))
+            {
+                throw new InvalidOperationException($"Entity query tactics showcase requires configured entity template '{templateId}'.");
+            }
         }
 
         private static bool ContainsNull(Entity[] entities)
@@ -314,23 +614,26 @@ namespace EntityQueryTacticsShowcaseMod.Systems
 
         private void PrepareEntities(EntityQueryTacticsScenarioContext context)
         {
+            EntityQueryTacticsActorConfig[] alliesConfig = _resolvedAlliesConfig.Length == 0 ? Config.Scenario.Allies : _resolvedAlliesConfig;
+            EntityQueryTacticsActorConfig[] enemiesConfig = _resolvedEnemiesConfig.Length == 0 ? Config.Scenario.Enemies : _resolvedEnemiesConfig;
+            EntityQueryTacticsActorConfig[] objectivesConfig = _resolvedObjectivesConfig.Length == 0 ? Config.Scenario.Objectives : _resolvedObjectivesConfig;
             for (int i = 0; i < context.Allies.Length; i++)
             {
                 Entity ally = context.Allies[i];
                 EnsureInitialSelectableVisibility(ally);
-                ApplyConfiguredTags(ally, Config.Scenario.Allies[i].Tags);
+                ApplyConfiguredTags(ally, alliesConfig[i].Tags);
             }
 
             for (int i = 0; i < context.Enemies.Length; i++)
             {
                 EnsureInitialSelectableVisibility(context.Enemies[i]);
-                ApplyConfiguredTags(context.Enemies[i], Config.Scenario.Enemies[i].Tags);
+                ApplyConfiguredTags(context.Enemies[i], enemiesConfig[i].Tags);
             }
 
             for (int i = 0; i < context.Objectives.Length; i++)
             {
-                ApplyConfiguredTags(context.Objectives[i], Config.Scenario.Objectives[i].Tags);
-                if (Config.Scenario.Objectives[i].Tags.Length == 0)
+                ApplyConfiguredTags(context.Objectives[i], objectivesConfig[i].Tags);
+                if (objectivesConfig[i].Tags.Length == 0)
                 {
                     AddTag(context.Objectives[i], _objectiveTagId);
                 }
@@ -434,7 +737,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
             switch (step.Op)
             {
                 case "WriteUiBox":
-                    WriteUiAcquisitionCollection(step.Entities);
+                    WriteUiAcquisitionCollection(step);
                     ExecuteGraphs();
                     _state.AddLog("Demo playback wrote UI acquisition through EntityCollectionStore.");
                     return;
@@ -472,7 +775,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
             }
         }
 
-        private void WriteUiAcquisitionCollection(string[] names)
+        private void WriteUiAcquisitionCollection(EntityQueryTacticsDemoStepConfig step)
         {
             if (ScenarioContext == null)
             {
@@ -481,7 +784,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
 
             EntityCollectionStore collections = _engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore is missing.");
-            int count = ResolveNamedEntities(names, _selectionScratch);
+            int count = ResolveDemoStepEntities(step, _selectionScratch);
             var descriptor = EntityCollectionDescriptor.Create(
                 Config.Collections.UiBox,
                 EntityCollectionSourceKind.UiAcquisition,
@@ -491,6 +794,40 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 "UI acquisition",
                 $"Demo playback | {count} entities");
             collections.Replace(ScenarioContext.Owner, descriptor, _selectionScratch.AsSpan(0, count), default, BuildPrimaryFlags(count));
+        }
+
+        private int ResolveDemoStepEntities(EntityQueryTacticsDemoStepConfig step, Entity[] destination)
+        {
+            if (!string.IsNullOrWhiteSpace(step.Role))
+            {
+                return ResolveRoleEntities(step.Role, destination);
+            }
+
+            return ResolveNamedEntities(step.Entities, destination);
+        }
+
+        private int ResolveRoleEntities(string role, Entity[] destination)
+        {
+            if (ScenarioContext == null)
+            {
+                return 0;
+            }
+
+            Entity[] source = role switch
+            {
+                EntityQueryTacticsGeneratedActorRoles.Ally => ScenarioContext.Allies,
+                EntityQueryTacticsGeneratedActorRoles.Enemy => ScenarioContext.Enemies,
+                EntityQueryTacticsGeneratedActorRoles.Objective => ScenarioContext.Objectives,
+                _ => throw new InvalidOperationException($"Entity query tactics demo playback role '{role}' is not supported."),
+            };
+            if (source.Length > destination.Length)
+            {
+                throw new InvalidOperationException(
+                    $"Entity query tactics demo playback role '{role}' references {source.Length} entities, capacity is {destination.Length}.");
+            }
+
+            source.AsSpan().CopyTo(destination);
+            return source.Length;
         }
 
         private int ResolveNamedEntities(string[] names, Entity[] destination)
@@ -570,6 +907,8 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                     runtime.SetFlag(source, target, _tacticalIntelTypeId, flagId, true, _setupReasonId);
                 }
             }
+
+            SeedGeneratedRelationships(context);
         }
 
         private int ResolveMetric(string metricName)
@@ -593,6 +932,32 @@ namespace EntityQueryTacticsShowcaseMod.Systems
             }
 
             return metricId;
+        }
+
+        private int ResolveAttribute(string attributeName)
+        {
+            if (string.Equals(attributeName, Config.Attributes.CommandPower, StringComparison.Ordinal))
+            {
+                return _commandPowerAttributeId;
+            }
+
+            if (string.Equals(attributeName, Config.Attributes.Supply, StringComparison.Ordinal))
+            {
+                return _supplyAttributeId;
+            }
+
+            if (string.Equals(attributeName, Config.Attributes.ThreatValue, StringComparison.Ordinal))
+            {
+                return _threatValueAttributeId;
+            }
+
+            int attributeId = AttributeRegistry.GetId(attributeName);
+            if (attributeId < 0)
+            {
+                throw new InvalidOperationException($"Entity query tactics showcase could not resolve configured attribute '{attributeName}'.");
+            }
+
+            return attributeId;
         }
 
         private int ResolveFlag(string flagName)
@@ -1083,14 +1448,28 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 return "(none)";
             }
 
-            string result = string.Empty;
-            for (int i = 0; i < entities.Length; i++)
+            int previewCount = Math.Min(CollectionNamePreviewCount, entities.Length);
+            var result = new StringBuilder(previewCount * 24);
+            for (int i = 0; i < previewCount; i++)
             {
-                string name = ReadName(entities[i]);
-                result = i == 0 ? name : $"{result}, {name}";
+                if (i > 0)
+                {
+                    result.Append(", ");
+                }
+
+                result.Append(ReadName(entities[i]));
             }
 
-            return result;
+            if (entities.Length > previewCount)
+            {
+                result.Append(", +");
+                result.Append(entities.Length - previewCount);
+                result.Append(" more (");
+                result.Append(entities.Length);
+                result.Append(" rows)");
+            }
+
+            return result.ToString();
         }
 
         private string ReadName(Entity entity)
@@ -1101,6 +1480,75 @@ namespace EntityQueryTacticsShowcaseMod.Systems
             }
 
             return _world.Get<Name>(entity).Value;
+        }
+
+        private void UpsertComponent<T>(Entity entity, T component)
+        {
+            if (_world.Has<T>(entity))
+            {
+                _world.Set(entity, component);
+            }
+            else
+            {
+                _world.Add(entity, component);
+            }
+        }
+
+        private readonly struct EntityQueryTacticsGeneratedActorPlan
+        {
+            public EntityQueryTacticsGeneratedActorPlan(
+                int receiptId,
+                int cohortIndex,
+                int actorIndex,
+                string name,
+                string role,
+                string template,
+                int teamId,
+                int worldXCm,
+                int worldYCm,
+                float facingRad,
+                Entity entity = default)
+            {
+                ReceiptId = receiptId;
+                CohortIndex = cohortIndex;
+                ActorIndex = actorIndex;
+                Name = name;
+                Role = role;
+                Template = template;
+                TeamId = teamId;
+                WorldXCm = worldXCm;
+                WorldYCm = worldYCm;
+                FacingRad = facingRad;
+                Entity = entity;
+            }
+
+            public int ReceiptId { get; }
+            public int CohortIndex { get; }
+            public int ActorIndex { get; }
+            public string Name { get; }
+            public string Role { get; }
+            public string Template { get; }
+            public int TeamId { get; }
+            public int WorldXCm { get; }
+            public int WorldYCm { get; }
+            public float FacingRad { get; }
+            public Entity Entity { get; }
+
+            public EntityQueryTacticsGeneratedActorPlan WithEntity(Entity entity)
+            {
+                return new EntityQueryTacticsGeneratedActorPlan(
+                    ReceiptId,
+                    CohortIndex,
+                    ActorIndex,
+                    Name,
+                    Role,
+                    Template,
+                    TeamId,
+                    WorldXCm,
+                    WorldYCm,
+                    FacingRad,
+                    entity);
+            }
         }
     }
 }

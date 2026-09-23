@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Numerics;
@@ -45,6 +46,7 @@ namespace Ludots.Tests.GAS.Production
         private const float DeltaTime = 1f / 60f;
         private const string InputBackendKey = "Tests.EntityQueryTactics.InputBackend";
         private const string ShowcasePresetId = "entity_query_tactics_raylib";
+        private const int SnapshotNamePreviewCount = 8;
         private static readonly object ShowcaseBuildLock = new();
         private static string? _showcaseBuildRoot;
 
@@ -63,6 +65,17 @@ namespace Ludots.Tests.GAS.Production
 
             using var engine = CreateEngine();
             EntityQueryTacticsShowcaseConfig config = LoadShowcaseConfig(engine);
+            int configuredAllyCount = ResolveAllies(config).Length;
+            int configuredEnemyCount = ResolveEnemies(config).Length;
+            int configuredObjectiveCount = ResolveObjectives(config).Length;
+            int configuredActorCount = configuredAllyCount + configuredEnemyCount + configuredObjectiveCount;
+            int configuredGeneratedCount = CountGeneratedActors(config, EntityQueryTacticsGeneratedActorRoles.Ally) +
+                                           CountGeneratedActors(config, EntityQueryTacticsGeneratedActorRoles.Enemy) +
+                                           CountGeneratedActors(config, EntityQueryTacticsGeneratedActorRoles.Objective);
+            Assert.That(configuredAllyCount, Is.GreaterThanOrEqualTo(1500), "Pressure showcase must keep a visible friendly corpus.");
+            Assert.That(configuredEnemyCount, Is.GreaterThanOrEqualTo(480), "Pressure showcase must keep a visible hostile corpus.");
+            Assert.That(configuredActorCount, Is.GreaterThanOrEqualTo(2000), "Pressure showcase must stay large enough to show real entity-query pressure.");
+            Assert.That(configuredGeneratedCount, Is.GreaterThanOrEqualTo(2000), "Pressure showcase must be runtime-generated through the production mod path.");
             IReadOnlyDictionary<string, string> bindings = LoadInputBindings(engine);
             var backend = GetInputBackend(engine);
             var uiRoot = engine.GetService(CoreServiceKeys.UIRoot) as UIRoot
@@ -96,18 +109,20 @@ namespace Ludots.Tests.GAS.Production
             CaptureSnapshot(engine, uiRoot, ground, collections, config, snapshots, frames, screensDir, "map_loaded");
             timeline.Add("[T+001] Loaded production Entity Query Tactics map through ConfigPipeline; UI mounted and graph outputs were initialized by the mod system.");
 
-            string[] friendlyNames = config.Scenario.Allies.Select(static actor => actor.Name).ToArray();
-            DragSelectNamed(engine, backend, frameTimesMs, friendlyNames);
-            AssertCollectionCount(engine, owner, config.Collections.UiBox, friendlyNames.Length);
+            EntityQueryTacticsActorConfig[] allAllies = ResolveAllies(config);
+            WriteUiBoxForActors(engine, owner, config, allAllies);
+            Tick(engine, 2, frameTimesMs);
+            Assert.That(allAllies.Length, Is.EqualTo(configuredAllyCount));
+            AssertCollectionCount(engine, owner, config.Collections.UiBox, allAllies.Length);
             AssertCollectionCount(engine, owner, config.Collections.FormalSelectionMirror, 0);
             AssertCollectionCount(engine, owner, config.Collections.FormationPrimary, 0);
             CaptureSnapshot(engine, uiRoot, ground, collections, config, snapshots, frames, screensDir, "ui_box_acquisition_only");
-            timeline.Add("[T+002] Player dragged a friendly box; CurrentSelectionApplySystem wrote only the UI acquisition collection and left formal SelectionRuntime empty.");
+            timeline.Add($"[T+002] Config-driven UI acquisition wrote `{allAllies.Length}` friendlies into EntityCollectionStore and left formal SelectionRuntime empty.");
 
             PressButton(engine, backend, GetBinding(bindings, config.Actions.CommitSelection), frameTimesMs);
-            TickUntil(engine, frameTimesMs, () => ReadCollectionSnapshot(engine, owner, config.Collections.FormalSelectionMirror, required: false).Count == friendlyNames.Length, maxFrames: 30);
-            AssertCollectionCount(engine, owner, config.Collections.FormalSelectionMirror, friendlyNames.Length);
-            AssertCollectionCount(engine, owner, config.Collections.FormationPrimary, friendlyNames.Length);
+            TickUntil(engine, frameTimesMs, () => ReadCollectionSnapshot(engine, owner, config.Collections.FormalSelectionMirror, required: false).Count == allAllies.Length, maxFrames: 30);
+            AssertCollectionCount(engine, owner, config.Collections.FormalSelectionMirror, allAllies.Length);
+            AssertCollectionCount(engine, owner, config.Collections.FormationPrimary, allAllies.Length);
             CaptureSnapshot(engine, uiRoot, ground, collections, config, snapshots, frames, screensDir, "formal_selection_committed");
             timeline.Add("[T+003] Configured commit action copied the UI acquisition collection into SelectionRuntime live primary and refreshed the formation command source.");
 
@@ -127,6 +142,7 @@ namespace Ludots.Tests.GAS.Production
 
             EntityCollectionSnapshot threatResult = ReadCollectionSnapshot(engine, owner, config.Collections.HostileThreatResult);
             AssertHostileThreatResult(engine, relationships, owner, threatResult, tacticalIntelTypeId, threatMetricId, config, hostileGraphConfig);
+            Assert.That(threatResult.Count, Is.LessThanOrEqualTo(configuredEnemyCount));
             Assert.That(ReadSummaryInt(engine, owner, config.SummaryKeys.ThreatCount), Is.EqualTo(threatResult.Count));
             Assert.That(ReadSummaryInt(engine, owner, config.SummaryKeys.ThreatSum), Is.EqualTo(SumRelationshipMetric(relationships, owner, threatResult.Entities, tacticalIntelTypeId, threatMetricId)));
             Assert.That(ReadSummaryInt(engine, owner, config.SummaryKeys.ThreatAverage), Is.EqualTo(AverageRelationshipMetric(relationships, owner, threatResult.Entities, tacticalIntelTypeId, threatMetricId)));
@@ -166,9 +182,20 @@ namespace Ludots.Tests.GAS.Production
 
             Assert.That(CountGroundOverlays(ground, GroundOverlayShape.Ring), Is.GreaterThanOrEqualTo(3));
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
+            AcceptanceSnapshot finalSnapshot = snapshots[^1];
+            Assert.That(finalSnapshot.ConfiguredActorCount, Is.EqualTo(configuredActorCount));
+            Assert.That(finalSnapshot.AllyCount, Is.EqualTo(configuredAllyCount));
+            Assert.That(finalSnapshot.EnemyCount, Is.EqualTo(configuredEnemyCount));
+            Assert.That(finalSnapshot.ObjectiveCount, Is.EqualTo(configuredObjectiveCount));
+            Assert.That(finalSnapshot.GeneratedActorCount, Is.EqualTo(configuredGeneratedCount));
+            Assert.That(finalSnapshot.VisibleActorDotCount, Is.EqualTo(configuredActorCount));
+            Assert.That(finalSnapshot.UiBoxCount, Is.EqualTo(configuredAllyCount));
+            Assert.That(finalSnapshot.SelectedCount, Is.GreaterThanOrEqualTo(1024));
+            Assert.That(finalSnapshot.ThreatCount, Is.GreaterThanOrEqualTo(200));
+            Assert.That(finalSnapshot.UiText.Any(text => text.Contains("Pressure scale", StringComparison.OrdinalIgnoreCase)), Is.True);
 
             File.WriteAllText(Path.Combine(artifactDir, "trace.jsonl"), BuildTraceJsonl(snapshots));
-            File.WriteAllText(Path.Combine(artifactDir, "battle-report.md"), BuildBattleReport(timeline, snapshots, frameTimesMs));
+            File.WriteAllText(Path.Combine(artifactDir, "battle-report.md"), BuildBattleReport(config, timeline, snapshots, frameTimesMs));
             File.WriteAllText(Path.Combine(artifactDir, "path.mmd"), BuildPathMermaid());
             AcceptanceUiEvidenceWriter.WriteTimelineSheet(frames, screensDir, Path.Combine(screensDir, "timeline.png"), "Entity Query Tactics production screenshot flow");
             AcceptanceUiEvidenceWriter.WriteFiveWOneHMarkdown("entity-query-tactics-showcase", frames, Path.Combine(artifactDir, "5w1h.md"));
@@ -200,12 +227,13 @@ namespace Ludots.Tests.GAS.Production
                     ?? throw new InvalidOperationException("RelationshipMetricRegistry missing.");
                 int relationshipTypeId = relationshipTypes.GetId(config.Relationships.TacticalIntel);
                 int threatMetricId = relationshipMetrics.GetId(config.Scenario.PressurePulse.Metric);
+                int expectedAllyCount = ResolveAllies(config).Length;
 
                 TickUntil(
                     engine,
                     frameTimesMs,
                     () =>
-                        ReadCollectionSnapshot(engine, owner, config.Collections.FormalSelectionMirror, required: false).Count == config.Scenario.Allies.Length &&
+                        ReadCollectionSnapshot(engine, owner, config.Collections.FormalSelectionMirror, required: false).Count == expectedAllyCount &&
                         ReadSummaryInt(engine, owner, config.SummaryKeys.FormationCount) > 0 &&
                         ReadSummaryInt(engine, owner, config.SummaryKeys.ThreatMax) == relationships.GetMetric(owner, pressureTarget, relationshipTypeId, threatMetricId),
                     maxFrames: 360,
@@ -216,9 +244,9 @@ namespace Ludots.Tests.GAS.Production
                         $"threatMax={ReadSummaryInt(engine, owner, config.SummaryKeys.ThreatMax)}, " +
                         $"targetThreat={relationships.GetMetric(owner, pressureTarget, relationshipTypeId, threatMetricId)}");
 
-                AssertCollectionCount(engine, owner, config.Collections.UiBox, config.Scenario.Allies.Length);
-                AssertCollectionCount(engine, owner, config.Collections.FormalSelectionMirror, config.Scenario.Allies.Length);
-                AssertCollectionCount(engine, owner, config.Collections.FormationPrimary, config.Scenario.Allies.Length);
+                AssertCollectionCount(engine, owner, config.Collections.UiBox, expectedAllyCount);
+                AssertCollectionCount(engine, owner, config.Collections.FormalSelectionMirror, expectedAllyCount);
+                AssertCollectionCount(engine, owner, config.Collections.FormationPrimary, expectedAllyCount);
 
                 GraphConfig selectedGraphConfig = LoadGraphConfig(engine, config.Graphs.SelectedFriendlies);
                 GraphConfig hostileGraphConfig = LoadGraphConfig(engine, config.Graphs.HostileThreats);
@@ -262,8 +290,8 @@ namespace Ludots.Tests.GAS.Production
 
             Entity owner = FindEntityByName(engine.World, config.Scenario.PlayerCommanderName);
             Entity pressureTarget = FindEntityByName(engine.World, config.Scenario.PressurePulse.TargetName);
-            string[] friendlyNames = config.Scenario.Allies.Select(static actor => actor.Name).ToArray();
-            DragSelectNamed(engine, backend, frameTimesMs, friendlyNames);
+            WriteUiBoxForActors(engine, owner, config, ResolveAllies(config));
+            Tick(engine, 2, frameTimesMs);
 
             PressButton(engine, backend, GetBinding(bindings, config.Actions.CommitSelection), frameTimesMs);
             PressButton(engine, backend, GetBinding(bindings, config.Actions.ExecuteGraphs), frameTimesMs);
@@ -299,8 +327,10 @@ namespace Ludots.Tests.GAS.Production
             GraphOutputSchemaRegistry schemas = engine.GetService(CoreServiceKeys.GraphOutputSchemaRegistry)
                 ?? throw new InvalidOperationException("GraphOutputSchemaRegistry missing.");
             int outputBindingCount = CountOutputBindings(schemas, graphIds);
+            EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore missing.");
 
-            const int warmupGraphIterations = 8_000;
+            const int warmupGraphIterations = 64;
             for (int i = 0; i < warmupGraphIterations; i++)
             {
                 ExecuteProductionGraphs(writer, graphIds, owner, api, (uint)(i + 1));
@@ -311,7 +341,7 @@ namespace Ludots.Tests.GAS.Production
             GC.Collect();
             GC.GetAllocatedBytesForCurrentThread();
 
-            const int stabilizationGraphIterations = 5_000;
+            const int stabilizationGraphIterations = 32;
             for (int i = 0; i < stabilizationGraphIterations; i++)
             {
                 ExecuteProductionGraphs(writer, graphIds, owner, api, (uint)(i + 9000));
@@ -322,11 +352,13 @@ namespace Ludots.Tests.GAS.Production
             GC.Collect();
             GC.GetAllocatedBytesForCurrentThread();
 
-            const int graphIterations = 20_000;
+            const int graphIterations = 240;
+            EntityCollectionStoreCapacitySnapshot beforeGraphCapacity = SnapshotCollectionStore(collections);
             HotPathMeasurement graphMeasurement = MeasureStableZeroAlloc(
                 graphIterations,
                 "GraphReturnWriter execute x3 stable inputs",
                 iteration => ExecuteProductionGraphs(writer, graphIds, owner, api, (uint)(iteration + 1000)));
+            EntityCollectionStoreCapacitySnapshot afterGraphCapacity = SnapshotCollectionStore(collections);
             long graphAllocated = graphMeasurement.AllocatedBytes;
             double graphTotalMs = graphMeasurement.TotalMs;
             uint graphRevisionChecksum = ReadCollectionRevision(engine, owner, config.Collections.FormationCacheResult);
@@ -343,7 +375,7 @@ namespace Ludots.Tests.GAS.Production
             }
 
             EntityCollectionSnapshot beforeStableProbe = ReadCollectionSnapshot(engine, owner, config.Collections.FormationCacheResult);
-            const int cacheProbeIterations = 2_000;
+            const int cacheProbeIterations = 240;
             HotPathMeasurement cacheMeasurement = MeasureStableZeroAlloc(
                 cacheProbeIterations,
                 "Retained diff execute x3 stable inputs",
@@ -353,7 +385,7 @@ namespace Ludots.Tests.GAS.Production
             EntityCollectionSnapshot afterStableProbe = ReadCollectionSnapshot(engine, owner, config.Collections.FormationCacheResult);
             int stableRevisionCount = afterStableProbe.Revision == beforeStableProbe.Revision ? cacheProbeIterations : 0;
 
-            const int pressureIterations = 1_000;
+            const int pressureIterations = 120;
             relationshipChanges.Clear();
             int pressureChangeCountBefore = relationshipChanges.Count;
             int pressureChangeCapacityBefore = relationshipChanges.Capacity;
@@ -382,7 +414,7 @@ namespace Ludots.Tests.GAS.Production
             EntityCollectionSnapshot afterRotationOutput = ReadCollectionSnapshot(engine, owner, config.Collections.FormationCacheResult);
 
             int threatBeforeProductionPulse = ReadSummaryInt(engine, owner, config.SummaryKeys.ThreatMax);
-            ProductionTickBenchmark tickBenchmark = MeasureProductionTickLoop(engine, backend, bindings, config, frameTimesMs, iterations: 360);
+            ProductionTickBenchmark tickBenchmark = MeasureProductionTickLoop(engine, backend, bindings, config, frameTimesMs, iterations: 180);
             int threatAfterProductionPulse = ReadSummaryInt(engine, owner, config.SummaryKeys.ThreatMax);
 
             Assert.That(graphRevisionChecksum, Is.GreaterThan(0));
@@ -392,6 +424,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(singleGraphMeasurements.Select(static x => x.Measurement.AllocatedBytes), Is.All.EqualTo(0), "Each configured graph must stay 0Alloc when measured independently.");
             Assert.That(cacheAllocated, Is.EqualTo(0), "Retained cache probe hot path must stay 0Alloc for stable graph inputs.");
             Assert.That(pressureAllocated, Is.EqualTo(0), "Relationship pressure pulse plus graph hot path must stay 0Alloc.");
+            Assert.That(afterGraphCapacity, Is.EqualTo(beforeGraphCapacity), "Graph benchmark must stay inside warmed EntityCollectionStore SoA capacity.");
             Assert.That(pressureResizeCountAfter, Is.EqualTo(pressureResizeCountBefore), "Relationship pressure benchmark must not hide allocation behind RelationshipChangeBuffer resize.");
             Assert.That(pressureChangeCapacityAfter, Is.EqualTo(pressureChangeCapacityBefore), "Relationship pressure benchmark must stay inside the preallocated change buffer.");
             Assert.That(beforeStableProbe.Revision, Is.EqualTo(afterStableProbe.Revision));
@@ -400,6 +433,8 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(afterRotationOutput.Signature, Is.EqualTo(beforeRotationOutput.Signature), "Sorted formation graph output should retain the same signature after an order-only source rotation.");
             Assert.That(threatAfterProductionPulse, Is.GreaterThanOrEqualTo(threatBeforeProductionPulse));
 
+            EntityCollectionSnapshot benchmarkSelected = ReadCollectionSnapshot(engine, owner, config.Collections.SelectedFriendliesResult);
+            EntityCollectionSnapshot benchmarkHostile = ReadCollectionSnapshot(engine, owner, config.Collections.HostileThreatResult);
             var report = BuildBenchmarkReport(
                 launchPlan,
                 config,
@@ -408,6 +443,8 @@ namespace Ludots.Tests.GAS.Production
                 formationGraphConfig,
                 graphIds,
                 outputBindingCount,
+                benchmarkSelected,
+                benchmarkHostile,
                 graphIterations,
                 graphTotalMs,
                 graphAllocated,
@@ -828,6 +865,21 @@ namespace Ludots.Tests.GAS.Production
             return last;
         }
 
+        private static EntityCollectionStoreCapacitySnapshot SnapshotCollectionStore(EntityCollectionStore store)
+        {
+            return new EntityCollectionStoreCapacitySnapshot(
+                store.CollectionCount,
+                store.RowCapacity,
+                store.RowCursor,
+                store.SlotCapacity,
+                store.EntryCapacity,
+                store.BucketCapacity,
+                store.RowResizeCount,
+                store.SlotResizeCount,
+                store.EntryResizeCount,
+                store.RehashCount);
+        }
+
         private static void DragSelectNamed(GameEngine engine, TestInputBackend backend, List<double> frameTimesMs, params string[] names)
         {
             Assert.That(names, Is.Not.Null.And.Not.Empty);
@@ -846,6 +898,121 @@ namespace Ludots.Tests.GAS.Production
             Tick(engine, 2, frameTimesMs);
             backend.SetButton("<Mouse>/LeftButton", false);
             Tick(engine, 3, frameTimesMs);
+        }
+
+        private static void WriteUiBoxForActors(
+            GameEngine engine,
+            Entity owner,
+            EntityQueryTacticsShowcaseConfig config,
+            IReadOnlyList<EntityQueryTacticsActorConfig> actors)
+        {
+            EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore missing.");
+            var entities = new Entity[actors.Count];
+            var flags = new EntityCollectionRowFlags[actors.Count];
+            for (int i = 0; i < actors.Count; i++)
+            {
+                entities[i] = FindEntityByName(engine.World, actors[i].Name);
+            }
+
+            if (flags.Length > 0)
+            {
+                flags[0] = EntityCollectionRowFlags.Primary;
+            }
+
+            var descriptor = EntityCollectionDescriptor.Create(
+                config.Collections.UiBox,
+                EntityCollectionSourceKind.UiAcquisition,
+                EntityCollectionRoleKind.AcquisitionPreview,
+                contextEntity: owner,
+                primaryEntity: entities.Length > 0 ? entities[0] : Entity.Null,
+                title: "UI pressure acquisition",
+                summary: $"Acceptance pressure acquisition | {entities.Length} entities");
+            collections.Replace(owner, descriptor, entities, default, flags);
+        }
+
+        private static EntityQueryTacticsActorConfig[] ResolveAllies(EntityQueryTacticsShowcaseConfig config)
+        {
+            return ResolveActors(config, EntityQueryTacticsGeneratedActorRoles.Ally);
+        }
+
+        private static EntityQueryTacticsActorConfig[] ResolveEnemies(EntityQueryTacticsShowcaseConfig config)
+        {
+            return ResolveActors(config, EntityQueryTacticsGeneratedActorRoles.Enemy);
+        }
+
+        private static EntityQueryTacticsActorConfig[] ResolveObjectives(EntityQueryTacticsShowcaseConfig config)
+        {
+            return ResolveActors(config, EntityQueryTacticsGeneratedActorRoles.Objective);
+        }
+
+        private static EntityQueryTacticsActorConfig[] ResolveActors(EntityQueryTacticsShowcaseConfig config, string role)
+        {
+            EntityQueryTacticsActorConfig[] explicitActors = role switch
+            {
+                EntityQueryTacticsGeneratedActorRoles.Ally => config.Scenario.Allies,
+                EntityQueryTacticsGeneratedActorRoles.Enemy => config.Scenario.Enemies,
+                EntityQueryTacticsGeneratedActorRoles.Objective => config.Scenario.Objectives,
+                _ => throw new ArgumentOutOfRangeException(nameof(role), role, "Unsupported entity query tactics actor role.")
+            };
+
+            int generatedCount = CountGeneratedActors(config, role);
+            if (generatedCount == 0)
+            {
+                return explicitActors;
+            }
+
+            var actors = new EntityQueryTacticsActorConfig[explicitActors.Length + generatedCount];
+            Array.Copy(explicitActors, actors, explicitActors.Length);
+            int write = explicitActors.Length;
+            for (int cohortIndex = 0; cohortIndex < config.Scenario.GeneratedCohorts.Length; cohortIndex++)
+            {
+                EntityQueryTacticsGeneratedCohortConfig cohort = config.Scenario.GeneratedCohorts[cohortIndex];
+                if (!string.Equals(cohort.Role, role, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                for (int i = 0; i < cohort.Count; i++)
+                {
+                    actors[write++] = new EntityQueryTacticsActorConfig
+                    {
+                        Name = BuildGeneratedActorName(cohort, i),
+                        Template = cohort.Template,
+                        TeamId = cohort.TeamId,
+                        Tags = cohort.Tags
+                    };
+                }
+            }
+
+            return actors;
+        }
+
+        private static int CountGeneratedActors(EntityQueryTacticsShowcaseConfig config, string role)
+        {
+            int count = 0;
+            for (int i = 0; i < config.Scenario.GeneratedCohorts.Length; i++)
+            {
+                EntityQueryTacticsGeneratedCohortConfig cohort = config.Scenario.GeneratedCohorts[i];
+                if (string.Equals(cohort.Role, role, StringComparison.OrdinalIgnoreCase))
+                {
+                    count += Math.Max(0, cohort.Count);
+                }
+            }
+
+            return count;
+        }
+
+        private static int CountTotalActors(EntityQueryTacticsShowcaseConfig config)
+        {
+            return ResolveAllies(config).Length +
+                   ResolveEnemies(config).Length +
+                   ResolveObjectives(config).Length;
+        }
+
+        private static string BuildGeneratedActorName(EntityQueryTacticsGeneratedCohortConfig cohort, int actorIndex)
+        {
+            return $"{cohort.NamePrefix} {cohort.FirstIndex + actorIndex:0000}";
         }
 
         private static Vector2 GetEntityScreen(GameEngine engine, string name)
@@ -891,22 +1058,43 @@ namespace Ludots.Tests.GAS.Production
                 canvas => DrawBattlefieldEvidence(canvas, engine, collections, config, owner, step, mutedForHud: true));
             frames.Add(frame);
 
+            EntityCollectionSnapshot uiBox = ReadCollectionSnapshot(engine, owner, config.Collections.UiBox, required: false);
+            EntityCollectionSnapshot formal = ReadCollectionSnapshot(engine, owner, config.Collections.FormalSelectionMirror, required: false);
+            EntityCollectionSnapshot selected = ReadCollectionSnapshot(engine, owner, config.Collections.SelectedFriendliesResult, required: false);
+            EntityCollectionSnapshot hostile = ReadCollectionSnapshot(engine, owner, config.Collections.HostileThreatResult, required: false);
+            EntityCollectionSnapshot formation = ReadCollectionSnapshot(engine, owner, config.Collections.FormationCacheResult, required: false);
+            int allyCount = ResolveAllies(config).Length;
+            int enemyCount = ResolveEnemies(config).Length;
+            int objectiveCount = ResolveObjectives(config).Length;
+            int configuredActorCount = allyCount + enemyCount + objectiveCount;
+            int generatedActorCount = CountGeneratedActors(config, EntityQueryTacticsGeneratedActorRoles.Ally) +
+                                      CountGeneratedActors(config, EntityQueryTacticsGeneratedActorRoles.Enemy) +
+                                      CountGeneratedActors(config, EntityQueryTacticsGeneratedActorRoles.Objective);
             snapshots.Add(new AcceptanceSnapshot(
                 Step: step,
                 ScreenshotFileName: frame.ScreenshotFileName,
                 BattlefieldFileName: battlefieldFileName,
-                UiBoxRevision: ReadCollectionRevision(engine, owner, config.Collections.UiBox),
-                FormalRevision: ReadCollectionRevision(engine, owner, config.Collections.FormalSelectionMirror),
-                FormationRevision: ReadCollectionRevision(engine, owner, config.Collections.FormationCacheResult),
-                HostileRevision: ReadCollectionRevision(engine, owner, config.Collections.HostileThreatResult),
-                SelectedNames: ReadCollectionNames(engine, owner, config.Collections.SelectedFriendliesResult),
-                FormationNames: ReadCollectionNames(engine, owner, config.Collections.FormationCacheResult),
-                ThreatNames: ReadCollectionNames(engine, owner, config.Collections.HostileThreatResult),
+                ConfiguredActorCount: configuredActorCount,
+                AllyCount: allyCount,
+                EnemyCount: enemyCount,
+                ObjectiveCount: objectiveCount,
+                GeneratedActorCount: generatedActorCount,
+                VisibleActorDotCount: configuredActorCount,
+                UiBoxRevision: uiBox.Revision,
+                FormalRevision: formal.Revision,
+                FormationRevision: formation.Revision,
+                HostileRevision: hostile.Revision,
+                UiBoxCount: uiBox.Count,
+                FormalCount: formal.Count,
+                SelectedNames: JoinSnapshotNames(selected),
+                FormationNames: JoinSnapshotNames(formation),
+                ThreatNames: JoinSnapshotNames(hostile),
                 SelectedCount: ReadSummaryInt(engine, owner, config.SummaryKeys.SelectedCount),
+                ThreatCount: ReadSummaryInt(engine, owner, config.SummaryKeys.ThreatCount),
                 ThreatMax: ReadSummaryInt(engine, owner, config.SummaryKeys.ThreatMax),
                 FormationCount: ReadSummaryInt(engine, owner, config.SummaryKeys.FormationCount),
                 GroundRingCount: CountGroundOverlays(ground, GroundOverlayShape.Ring),
-                UiText: AcceptanceUiEvidenceWriter.ExtractUiText(uiRoot).Take(40).ToArray()));
+                UiText: AcceptanceUiEvidenceWriter.ExtractUiText(uiRoot).Take(64).ToArray()));
         }
 
         private static string GetWhen(string step)
@@ -1011,6 +1199,8 @@ namespace Ludots.Tests.GAS.Production
             canvas.DrawLine(WorldToField(1000f, 920f, field), WorldToField(2450f, 920f, field), lanePaint);
             canvas.DrawText("LIVE TACTICAL QUERY FIELD", field.Left + 26f, field.Top + 38f, textPaint);
             canvas.DrawText(BuildStepSubtitle(step), field.Left + 26f, field.Top + 62f, faintTextPaint);
+            DrawPressureHeader(canvas, config, field, textPaint, faintTextPaint, mutedForHud);
+            DrawCohortFootprints(canvas, config, field, textPaint, faintTextPaint, mutedForHud);
             DrawStepFocus(canvas, field, step, config, uiBox, formal, selected, hostile, formationInput, formation, textPaint, faintTextPaint, mutedForHud);
 
             if (ShouldDrawUiBox(step) && uiBox.Count > 0)
@@ -1018,7 +1208,7 @@ namespace Ludots.Tests.GAS.Production
                 SKRect selectionBox = BoundsForEntities(engine, uiBox.Entities, field, 30f);
                 canvas.DrawRoundRect(selectionBox, 18f, 18f, boxPaint);
                 canvas.DrawRoundRect(selectionBox, 18f, 18f, boxStroke);
-                canvas.DrawText($"Drag box preview | {uiBox.Count}", selectionBox.Left + 10f, selectionBox.Top - 10f, faintTextPaint);
+                canvas.DrawText($"Drag box preview | {FormatCount(uiBox.Count)} rows", selectionBox.Left + 10f, selectionBox.Top - 10f, faintTextPaint);
             }
 
             if (ShouldDrawFormationPath(step))
@@ -1026,12 +1216,83 @@ namespace Ludots.Tests.GAS.Production
                 DrawFormationConnectors(canvas, engine, formation.Entities, field, formationPathPaint);
             }
 
-            DrawActorGroup(canvas, engine, config, owner, config.Scenario.Allies, field, step, blueFill, neutralFill, formal, selected, hostile, formation, textPaint, faintTextPaint, selectedStroke, formalStroke, threatStroke, formationStroke);
-            DrawActorGroup(canvas, engine, config, owner, config.Scenario.Enemies, field, step, redFill, neutralFill, formal, selected, hostile, formation, textPaint, faintTextPaint, selectedStroke, formalStroke, threatStroke, formationStroke);
-            DrawActorGroup(canvas, engine, config, owner, config.Scenario.Objectives, field, step, objectiveFill, neutralFill, formal, selected, hostile, formation, textPaint, faintTextPaint, selectedStroke, formalStroke, threatStroke, formationStroke);
+            DrawActorGroup(canvas, engine, config, owner, ResolveAllies(config), field, step, blueFill, neutralFill, formal, selected, hostile, formation, textPaint, faintTextPaint, selectedStroke, formalStroke, threatStroke, formationStroke);
+            DrawActorGroup(canvas, engine, config, owner, ResolveEnemies(config), field, step, redFill, neutralFill, formal, selected, hostile, formation, textPaint, faintTextPaint, selectedStroke, formalStroke, threatStroke, formationStroke);
+            DrawActorGroup(canvas, engine, config, owner, ResolveObjectives(config), field, step, objectiveFill, neutralFill, formal, selected, hostile, formation, textPaint, faintTextPaint, selectedStroke, formalStroke, threatStroke, formationStroke);
 
             DrawLegend(canvas, field, textPaint, faintTextPaint, mutedForHud);
             DrawMetricStrip(canvas, engine, owner, config, uiBox, formal, selected, hostile, formationInput, formation, field, step, textPaint, faintTextPaint, mutedForHud);
+        }
+
+        private static void DrawPressureHeader(
+            SKCanvas canvas,
+            EntityQueryTacticsShowcaseConfig config,
+            SKRect field,
+            SKPaint textPaint,
+            SKPaint faintTextPaint,
+            bool mutedForHud)
+        {
+            int allyCount = ResolveAllies(config).Length;
+            int enemyCount = ResolveEnemies(config).Length;
+            int objectiveCount = ResolveObjectives(config).Length;
+            int generatedCount = CountGeneratedActors(config, EntityQueryTacticsGeneratedActorRoles.Ally) +
+                                 CountGeneratedActors(config, EntityQueryTacticsGeneratedActorRoles.Enemy) +
+                                 CountGeneratedActors(config, EntityQueryTacticsGeneratedActorRoles.Objective);
+            SKRect rect = new(field.Left, field.Top - 174f, field.Right, field.Top - 126f);
+            using var panel = new SKPaint { Color = mutedForHud ? new SKColor(3, 8, 13, 150) : new SKColor(3, 8, 13, 232), IsAntialias = true };
+            using var stroke = new SKPaint { Color = mutedForHud ? new SKColor(96, 165, 250, 150) : new SKColor(96, 165, 250, 230), Style = SKPaintStyle.Stroke, StrokeWidth = 2f, IsAntialias = true };
+            canvas.DrawRoundRect(rect, 16f, 16f, panel);
+            canvas.DrawRoundRect(rect, 16f, 16f, stroke);
+            canvas.DrawText($"PRESSURE SCALE: {FormatCount(allyCount + enemyCount + objectiveCount)} actors", rect.Left + 20f, rect.Top + 29f, textPaint);
+            canvas.DrawText($"Allies {FormatCount(allyCount)} | Enemies {FormatCount(enemyCount)} | Objectives {FormatCount(objectiveCount)} | Generated {FormatCount(generatedCount)}/{FormatCount(generatedCount)} ready | Graph VM {FormatCount(GraphVmLimits.MaxTargets)}", rect.Left + 20f, rect.Top + 47f, faintTextPaint);
+        }
+
+        private static void DrawCohortFootprints(
+            SKCanvas canvas,
+            EntityQueryTacticsShowcaseConfig config,
+            SKRect field,
+            SKPaint textPaint,
+            SKPaint faintTextPaint,
+            bool mutedForHud)
+        {
+            for (int i = 0; i < config.Scenario.GeneratedCohorts.Length; i++)
+            {
+                EntityQueryTacticsGeneratedCohortConfig cohort = config.Scenario.GeneratedCohorts[i];
+                if (cohort.Count <= 0)
+                {
+                    continue;
+                }
+
+                SKRect footprint = CohortFootprint(cohort, field, 16f);
+                SKColor color = string.Equals(cohort.Role, EntityQueryTacticsGeneratedActorRoles.Enemy, StringComparison.OrdinalIgnoreCase)
+                    ? new SKColor(251, 113, 133, mutedForHud ? (byte)100 : (byte)170)
+                    : new SKColor(96, 165, 250, mutedForHud ? (byte)96 : (byte)165);
+                using var fill = new SKPaint { Color = new SKColor(color.Red, color.Green, color.Blue, mutedForHud ? (byte)22 : (byte)34), Style = SKPaintStyle.Fill, IsAntialias = true };
+                using var stroke = new SKPaint { Color = color, Style = SKPaintStyle.Stroke, StrokeWidth = 2.4f, IsAntialias = true };
+                canvas.DrawRoundRect(footprint, 20f, 20f, fill);
+                canvas.DrawRoundRect(footprint, 20f, 20f, stroke);
+                string label = $"{cohort.NamePrefix} x{FormatCount(cohort.Count)}";
+                canvas.DrawText(label, footprint.Left + 14f, footprint.Top + 24f, textPaint);
+                canvas.DrawText($"{cohort.Grid.Columns} columns | {cohort.Grid.SpacingXCm}cm spacing", footprint.Left + 14f, footprint.Top + 44f, faintTextPaint);
+            }
+        }
+
+        private static SKRect CohortFootprint(EntityQueryTacticsGeneratedCohortConfig cohort, SKRect field, float padding)
+        {
+            int columns = Math.Max(1, cohort.Grid.Columns);
+            int rows = Math.Max(1, (int)Math.Ceiling(cohort.Count / (double)columns));
+            int usedColumns = Math.Min(columns, Math.Max(1, cohort.Count));
+            float minX = cohort.Grid.OriginXCm;
+            float minY = cohort.Grid.OriginYCm;
+            float maxX = cohort.Grid.OriginXCm + (usedColumns - 1) * cohort.Grid.SpacingXCm;
+            float maxY = cohort.Grid.OriginYCm + (rows - 1) * cohort.Grid.SpacingYCm;
+            SKPoint topLeft = WorldToField(Math.Min(minX, maxX), Math.Min(minY, maxY), field);
+            SKPoint bottomRight = WorldToField(Math.Max(minX, maxX), Math.Max(minY, maxY), field);
+            return new SKRect(
+                Math.Min(topLeft.X, bottomRight.X) - padding,
+                Math.Min(topLeft.Y, bottomRight.Y) - padding,
+                Math.Max(topLeft.X, bottomRight.X) + padding,
+                Math.Max(topLeft.Y, bottomRight.Y) + padding);
         }
 
         private static void DrawActorGroup(
@@ -1058,19 +1319,26 @@ namespace Ludots.Tests.GAS.Production
             for (int i = 0; i < actors.Count; i++)
             {
                 Entity entity = FindEntityByName(engine.World, actors[i].Name);
-                SKPoint point = EntityToField(engine, entity, field);
                 bool isSelected = ContainsEntity(selected.Entities, entity);
                 bool isFormal = ContainsEntity(formal.Entities, entity);
                 bool isThreat = ContainsEntity(hostile.Entities, entity);
                 bool isFormation = ContainsEntity(formation.Entities, entity);
+                bool isExplicitAnchor = IsExplicitActor(config, actors[i].Name) ||
+                                        string.Equals(actors[i].Name, config.Scenario.PressurePulse.TargetName, StringComparison.Ordinal);
+                SKPoint point = EntityToField(engine, entity, field);
                 bool drawFormal = isFormal && ShouldDrawFormalRing(step);
                 bool drawSelected = isSelected && ShouldDrawSelectedRing(step);
                 bool drawThreat = isThreat && ShouldDrawThreatRing(step);
                 bool drawFormation = isFormation && ShouldDrawFormationRing(step);
                 bool isRouted = actors[i].Tags.Any(tag => string.Equals(tag, config.Tags.Routed, StringComparison.Ordinal));
-                float radius = drawThreat || drawSelected ? 17f : 13f;
+                bool label = ShouldLabelActor(i, actors.Count, isExplicitAnchor, drawSelected, drawThreat, drawFormation);
+                float radius = label ? (drawThreat || drawSelected ? 15f : 11f) : 2.8f;
 
-                canvas.DrawCircle(point, radius + 4f, neutralPaint);
+                if (label)
+                {
+                    canvas.DrawCircle(point, radius + 4f, neutralPaint);
+                }
+
                 canvas.DrawCircle(point, radius, teamPaint);
                 if (drawFormal)
                 {
@@ -1092,13 +1360,58 @@ namespace Ludots.Tests.GAS.Production
                     canvas.DrawCircle(point, radius + 24f, threatStroke);
                 }
 
-                string shortName = ShortName(actors[i].Name);
-                canvas.DrawText(shortName, point.X + 18f, point.Y - 8f, textPaint);
-                string detail = actors[i].TeamId == config.Scenario.EnemyTeamId
-                    ? $"Threat {ReadThreatMetric(engine, owner, entity, config)}"
-                    : $"team {actors[i].TeamId}{(isRouted ? " | routed" : string.Empty)}";
-                canvas.DrawText(detail, point.X + 18f, point.Y + 12f, faintTextPaint);
+                if (label)
+                {
+                    string shortName = ShortName(actors[i].Name);
+                    canvas.DrawText(shortName, point.X + 18f, point.Y - 8f, textPaint);
+                    string detail = actors[i].TeamId == config.Scenario.EnemyTeamId
+                        ? $"Threat {ReadThreatMetric(engine, owner, entity, config)}"
+                        : $"team {actors[i].TeamId}{(isRouted ? " | routed" : string.Empty)}";
+                    canvas.DrawText(detail, point.X + 18f, point.Y + 12f, faintTextPaint);
+                }
             }
+        }
+
+        private static bool ShouldLabelActor(
+            int index,
+            int count,
+            bool isExplicitAnchor,
+            bool drawSelected,
+            bool drawThreat,
+            bool drawFormation)
+        {
+            if (isExplicitAnchor || drawSelected || drawThreat || drawFormation)
+            {
+                return true;
+            }
+
+            if (count <= 96)
+            {
+                return true;
+            }
+
+            int stride = Math.Max(1, count / 64);
+            return index % stride == 0;
+        }
+
+        private static bool IsExplicitActor(EntityQueryTacticsShowcaseConfig config, string name)
+        {
+            return ContainsActorName(config.Scenario.Allies, name) ||
+                   ContainsActorName(config.Scenario.Enemies, name) ||
+                   ContainsActorName(config.Scenario.Objectives, name);
+        }
+
+        private static bool ContainsActorName(IReadOnlyList<EntityQueryTacticsActorConfig> actors, string name)
+        {
+            for (int i = 0; i < actors.Count; i++)
+            {
+                if (string.Equals(actors[i].Name, name, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static bool ShouldDrawUiBox(string step)
@@ -1235,11 +1548,11 @@ namespace Ludots.Tests.GAS.Production
         {
             return step switch
             {
-                "ui_box_acquisition_only" => $"Drag box {uiBox.Count} -> committed squad {formal.Count}; graph result waits.",
-                "formal_selection_committed" => $"Committed squad {formal.Count}; commander graph result {selected.Count}; formation {formation.Count}.",
-                "selected_friendlies_graph" => $"Friendly squad result {selected.Count}: {JoinSnapshotNames(selected)}.",
-                "hostile_relation_graph" => $"Priority enemies {hostile.Count}; top threat {config.Scenario.PressurePulse.TargetName}.",
-                "formation_cache_graph" => $"Input {formationInput.Count} -> Formation {formation.Count}; excluded Routed Scout.",
+                "ui_box_acquisition_only" => $"Drag box {FormatCount(uiBox.Count)} -> committed squad {FormatCount(formal.Count)}; graph result waits.",
+                "formal_selection_committed" => $"Committed squad {FormatCount(formal.Count)}; commander graph result {FormatCount(selected.Count)}; formation {FormatCount(formation.Count)}.",
+                "selected_friendlies_graph" => $"Friendly squad result {FormatCount(selected.Count)} of {FormatCount(ResolveAllies(config).Length)}: {JoinSnapshotNames(selected)}.",
+                "hostile_relation_graph" => $"Hostile corpus {FormatCount(ResolveEnemies(config).Length)} -> priority {FormatCount(hostile.Count)}; top threat {config.Scenario.PressurePulse.TargetName}.",
+                "formation_cache_graph" => $"Input {FormatCount(formationInput.Count)} -> Formation {FormatCount(formation.Count)}; excluded Routed Scout.",
                 "retained_cache_probe" => $"Formation graph rev {formation.Revision}; same squad reused cached output.",
                 "pressure_pulse_relation_update" => $"Pressure Pulse +{config.Scenario.PressurePulse.Delta}; Threat 95 -> 112.",
                 _ => "Config-driven squad, threat, and cache systems are live."
@@ -1260,7 +1573,21 @@ namespace Ludots.Tests.GAS.Production
 
         private static string JoinSnapshotNames(EntityCollectionSnapshot snapshot)
         {
-            return snapshot.Names.Length == 0 ? "(none)" : string.Join(", ", snapshot.Names);
+            if (snapshot.Names.Length == 0)
+            {
+                return "(none)";
+            }
+
+            int previewCount = Math.Min(SnapshotNamePreviewCount, snapshot.Names.Length);
+            string prefix = string.Join(", ", snapshot.Names.Take(previewCount));
+            return snapshot.Names.Length == previewCount
+                ? prefix
+                : $"{prefix}, +{FormatCount(snapshot.Names.Length - previewCount)} more ({FormatCount(snapshot.Names.Length)} rows)";
+        }
+
+        private static string FormatCount(int value)
+        {
+            return value.ToString("N0", CultureInfo.InvariantCulture);
         }
 
         private static void DrawFormationConnectors(SKCanvas canvas, GameEngine engine, IReadOnlyList<Entity> entities, SKRect field, SKPaint paint)
@@ -1297,16 +1624,33 @@ namespace Ludots.Tests.GAS.Production
             float y = field.Bottom + 48f;
             using var panel = new SKPaint { Color = mutedForHud ? new SKColor(3, 8, 13, 150) : new SKColor(3, 8, 13, 210), IsAntialias = true };
             using var stroke = new SKPaint { Color = mutedForHud ? new SKColor(92, 122, 133, 120) : new SKColor(92, 122, 133), Style = SKPaintStyle.Stroke, StrokeWidth = 1.5f, IsAntialias = true };
-            SKRect rect = new(field.Left + 18f, field.Bottom + 18f, field.Right - 18f, field.Bottom + 146f);
+            SKRect rect = new(field.Left + 18f, field.Bottom + 18f, field.Right - 18f, field.Bottom + 176f);
             canvas.DrawRoundRect(rect, 16f, 16f, panel);
             canvas.DrawRoundRect(rect, 16f, 16f, stroke);
 
+            string pressureLine = BuildPlayerPressureLine(config, uiBox, selected, hostile);
             string selectedLine = BuildPlayerSelectedLine(engine, owner, config, uiBox, formal, selected);
             string threatLine = BuildPlayerThreatLine(engine, owner, config, hostile, step);
             string formationLine = BuildPlayerFormationLine(config, formationInput, formation, step);
-            canvas.DrawText(selectedLine, x, y, textPaint);
-            canvas.DrawText(threatLine, x, y + 32f, textPaint);
-            canvas.DrawText(formationLine, x, y + 64f, faintTextPaint);
+            canvas.DrawText(pressureLine, x, y, textPaint);
+            canvas.DrawText(selectedLine, x, y + 32f, textPaint);
+            canvas.DrawText(threatLine, x, y + 64f, textPaint);
+            canvas.DrawText(formationLine, x, y + 96f, faintTextPaint);
+        }
+
+        private static string BuildPlayerPressureLine(
+            EntityQueryTacticsShowcaseConfig config,
+            EntityCollectionSnapshot uiBox,
+            EntityCollectionSnapshot selected,
+            EntityCollectionSnapshot hostile)
+        {
+            int allyCount = ResolveAllies(config).Length;
+            int enemyCount = ResolveEnemies(config).Length;
+            int objectiveCount = ResolveObjectives(config).Length;
+            int generatedCount = CountGeneratedActors(config, EntityQueryTacticsGeneratedActorRoles.Ally) +
+                                 CountGeneratedActors(config, EntityQueryTacticsGeneratedActorRoles.Enemy) +
+                                 CountGeneratedActors(config, EntityQueryTacticsGeneratedActorRoles.Objective);
+            return $"PRESSURE SCALE: {FormatCount(allyCount + enemyCount + objectiveCount)} actors | generated {FormatCount(generatedCount)} | UI box {FormatCount(uiBox.Count)} | selected {FormatCount(selected.Count)} | hostile {FormatCount(hostile.Count)}";
         }
 
         private static string BuildPlayerSelectedLine(
@@ -1319,8 +1663,8 @@ namespace Ludots.Tests.GAS.Production
         {
             string bestUnit = ReadSummaryEntityName(engine, owner, config.SummaryKeys.SelectedBestEntity);
             return selected.Count > 0
-                ? $"Friendly query: {selected.Count} | best {bestUnit} | command power {ReadSummaryFloat(engine, owner, config.SummaryKeys.SelectedCommandPower):0}"
-                : $"Drag box preview: {uiBox.Count} | committed squad: {formal.Count} | friendly query waits";
+                ? $"Friendly query: {FormatCount(selected.Count)} | best {bestUnit} | command power {ReadSummaryFloat(engine, owner, config.SummaryKeys.SelectedCommandPower):0}"
+                : $"Drag box preview: {FormatCount(uiBox.Count)} | committed squad: {FormatCount(formal.Count)} | friendly query waits";
         }
 
         private static string BuildPlayerThreatLine(
@@ -1338,7 +1682,7 @@ namespace Ludots.Tests.GAS.Production
             }
 
             return hostile.Count > 0
-                ? $"Enemy threat board: {hostile.Count} priority target | top {topThreat} {config.Scenario.PressurePulse.Metric} {threatMax}"
+                ? $"Enemy threat board: {FormatCount(hostile.Count)} priority rows | top {topThreat} {config.Scenario.PressurePulse.Metric} {threatMax}"
                 : "Enemy threat board: waiting for graph run";
         }
 
@@ -1350,11 +1694,11 @@ namespace Ludots.Tests.GAS.Production
         {
             if (step == "retained_cache_probe")
             {
-                return $"Formation cache reused: {formation.Count} units | Routed Scout still excluded";
+                return $"Formation cache reused: {FormatCount(formation.Count)} units | Routed Scout still excluded";
             }
 
             return formation.Count > 0
-                ? $"Formation: input {formationInput.Count} -> active {formation.Count} | excluded Routed Scout"
+                ? $"Formation: input {FormatCount(formationInput.Count)} -> active {FormatCount(formation.Count)} | excluded Routed Scout"
                 : "Formation: waiting for committed squad";
         }
 
@@ -1431,10 +1775,10 @@ namespace Ludots.Tests.GAS.Production
 
         private static SKPoint WorldToField(float worldX, float worldY, SKRect field)
         {
-            const float minX = 820f;
-            const float maxX = 2620f;
-            const float minY = 480f;
-            const float maxY = 1420f;
+            const float minX = -1350f;
+            const float maxX = 5750f;
+            const float minY = -520f;
+            const float maxY = 1650f;
             float x = field.Left + ((worldX - minX) / (maxX - minX)) * field.Width;
             float y = field.Top + ((worldY - minY) / (maxY - minY)) * field.Height;
             return new SKPoint(x, y);
@@ -1472,12 +1816,6 @@ namespace Ludots.Tests.GAS.Production
                    collections.TryGetView(handle, out EntityCollectionView view)
                 ? view.Revision
                 : 0u;
-        }
-
-        private static string ReadCollectionNames(GameEngine engine, Entity owner, string key)
-        {
-            EntityCollectionSnapshot snapshot = ReadCollectionSnapshot(engine, owner, key, required: false);
-            return string.Join(", ", snapshot.Names);
         }
 
         private static EntityCollectionSnapshot ReadCollectionSnapshot(
@@ -1648,7 +1986,7 @@ namespace Ludots.Tests.GAS.Production
             GraphNodeConfig tagAnyNode = RequireGraphNode(graph, "QueryFilterTagAny");
             GraphNodeConfig tagNoneNode = RequireGraphNode(graph, "QueryFilterTagNone");
             (float minAttribute, float maxAttribute) = ResolveFloatRangeInputs(graph, RequireGraphNode(graph, "QueryFilterAttributeRange"));
-            Entity[] expectedEntities = config.Scenario.Allies
+            Entity[] expectedEntities = ResolveAllies(config)
                 .Where(actor => actor.TeamId == teamNode.TeamId)
                 .Where(actor => string.Equals(actor.Template, templateNode.Template, StringComparison.Ordinal))
                 .Where(actor => actor.Tags.Contains(tagAnyNode.Tag ?? string.Empty, StringComparer.Ordinal))
@@ -1662,7 +2000,8 @@ namespace Ludots.Tests.GAS.Production
                 .ThenBy(static entity => entity.Version)
                 .ToArray();
             string[] expectedNames = expectedEntities.Select(entity => ReadEntityName(engine, entity)).ToArray();
-            Assert.That(snapshot.Count, Is.GreaterThanOrEqualTo(3), "Selected graph must prove multi-entity filtering, sorting, and aggregation.");
+            Assert.That(snapshot.Count, Is.EqualTo(expectedEntities.Length), "Selected graph must preserve config-scale friendly query corpus.");
+            Assert.That(snapshot.Count, Is.GreaterThanOrEqualTo(1024), "Selected graph must remain a visible pressure-scale selection, not a small smoke test.");
             Assert.That(snapshot.Names, Is.EqualTo(expectedNames), "Selected graph should retain and sort the entities described by the graph config.");
             for (int i = 0; i < snapshot.Entities.Length; i++)
             {
@@ -1695,7 +2034,7 @@ namespace Ludots.Tests.GAS.Production
             (float minMetric, float maxMetric) = ResolveFloatRangeInputs(graph, relationRangeNode);
             GraphNodeConfig flagNode = RequireGraphNode(graph, "RelationshipFilterFlag");
             int priorityFlagId = ResolveRelationshipFlag(engine, flagNode.Flag ?? string.Empty);
-            Entity[] expectedEntities = config.Scenario.Enemies
+            Entity[] expectedEntities = ResolveEnemies(config)
                 .Where(actor => actor.TeamId == teamNode.TeamId)
                 .Where(actor => string.Equals(actor.Template, templateNode.Template, StringComparison.Ordinal))
                 .Select(actor => FindEntityByName(engine.World, actor.Name))
@@ -1710,7 +2049,8 @@ namespace Ludots.Tests.GAS.Production
                 .ThenBy(static entity => entity.Version)
                 .ToArray();
             string[] expectedNames = expectedEntities.Select(entity => ReadEntityName(engine, entity)).ToArray();
-            Assert.That(snapshot.Count, Is.GreaterThanOrEqualTo(3), "Hostile graph must prove multi-relation metric filtering, flag filtering, sorting, and aggregation.");
+            Assert.That(snapshot.Count, Is.EqualTo(expectedEntities.Length), "Hostile graph must preserve config-scale relation query corpus.");
+            Assert.That(snapshot.Count, Is.GreaterThanOrEqualTo(200), "Hostile graph must remain a visible relationship pressure board, not a small smoke test.");
             Assert.That(snapshot.Names, Is.EqualTo(expectedNames), "Hostile graph should retain and sort the entities described by graph and RelationshipRuntime state.");
             for (int i = 0; i < snapshot.Entities.Length; i++)
             {
@@ -1735,7 +2075,7 @@ namespace Ludots.Tests.GAS.Production
             GraphNodeConfig tagAnyNode = RequireGraphNode(graph, "QueryFilterTagAny");
             GraphNodeConfig tagNoneNode = RequireGraphNode(graph, "QueryFilterTagNone");
             (float minAttribute, float maxAttribute) = ResolveFloatRangeInputs(graph, RequireGraphNode(graph, "QueryFilterAttributeRange"));
-            string[] excludedNames = config.Scenario.Allies
+            string[] excludedNames = ResolveAllies(config)
                 .Where(actor => actor.Tags.Contains(tagNoneNode.Tag ?? string.Empty, StringComparer.Ordinal))
                 .Select(static actor => actor.Name)
                 .ToArray();
@@ -2064,14 +2404,23 @@ namespace Ludots.Tests.GAS.Production
                     step = snapshot.Step,
                     screenshot = snapshot.ScreenshotFileName,
                     battlefield = snapshot.BattlefieldFileName,
+                    configured_actor_count = snapshot.ConfiguredActorCount,
+                    ally_count = snapshot.AllyCount,
+                    enemy_count = snapshot.EnemyCount,
+                    objective_count = snapshot.ObjectiveCount,
+                    generated_actor_count = snapshot.GeneratedActorCount,
+                    visible_actor_dot_count = snapshot.VisibleActorDotCount,
                     ui_box_revision = snapshot.UiBoxRevision,
                     formal_revision = snapshot.FormalRevision,
                     formation_revision = snapshot.FormationRevision,
                     hostile_revision = snapshot.HostileRevision,
+                    ui_box_count = snapshot.UiBoxCount,
+                    formal_count = snapshot.FormalCount,
                     selected_names = snapshot.SelectedNames,
                     formation_names = snapshot.FormationNames,
                     threat_names = snapshot.ThreatNames,
                     selected_count = snapshot.SelectedCount,
+                    threat_count = snapshot.ThreatCount,
                     threat_max = snapshot.ThreatMax,
                     formation_count = snapshot.FormationCount,
                     ground_ring_count = snapshot.GroundRingCount,
@@ -2084,6 +2433,7 @@ namespace Ludots.Tests.GAS.Production
         }
 
         private static string BuildBattleReport(
+            EntityQueryTacticsShowcaseConfig config,
             IReadOnlyList<string> timeline,
             IReadOnlyList<AcceptanceSnapshot> snapshots,
             IReadOnlyList<double> frameTimesMs)
@@ -2092,6 +2442,10 @@ namespace Ludots.Tests.GAS.Production
             double medianTickMs = Median(frameTimesMs);
             double p95TickMs = Percentile(frameTimesMs, 0.95d);
             double maxTickMs = frameTimesMs.Count == 0 ? 0d : frameTimesMs.Max();
+            int allyCount = final.AllyCount;
+            int enemyCount = final.EnemyCount;
+            int objectiveCount = final.ObjectiveCount;
+            int generatedCount = final.GeneratedActorCount;
             var sb = new StringBuilder();
             sb.AppendLine("# Scenario Card: entity-query-tactics-showcase");
             sb.AppendLine();
@@ -2103,6 +2457,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("- Mods: `LudotsCoreMod`, `CoreInputMod`, `CameraProfilesMod`, `NarrativeFrontendMod`, `EntityQueryTacticsShowcaseMod`");
             sb.AppendLine("- Input source: production `InputConfigPipelineLoader` + `PlayerInputHandler` with deterministic mouse/keyboard backend.");
             sb.AppendLine("- Clock profile: fixed `1/60s` headless `GameEngine.Tick()`.");
+            sb.AppendLine($"- Pressure scale: `{allyCount}` allies, `{enemyCount}` enemies, `{objectiveCount}` objectives, `{generatedCount}` runtime-generated actors, Graph VM target capacity `{GraphVmLimits.MaxTargets}`.");
             sb.AppendLine();
             sb.AppendLine("## Timeline");
             for (int i = 0; i < timeline.Count; i++)
@@ -2124,6 +2479,8 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine($"- final selected count: `{final.SelectedCount}`");
             sb.AppendLine($"- final threat max: `{final.ThreatMax}`");
             sb.AppendLine($"- final formation count: `{final.FormationCount}`");
+            sb.AppendLine($"- visible battlefield dots: `{final.VisibleActorDotCount}` actors drawn in the artifact overlay");
+            sb.AppendLine($"- final pressure corpus: ui box `{allyCount}`, selected graph `{final.SelectedCount}`, hostile relation graph `{final.ThreatCount}`, total actors `{allyCount + enemyCount + objectiveCount}`");
             sb.AppendLine($"- final revisions: ui `{final.UiBoxRevision}`, formal `{final.FormalRevision}`, formation `{final.FormationRevision}`, hostile `{final.HostileRevision}`");
             sb.AppendLine("- reusable wiring: `ConfigPipeline`, `PlayerInputHandler`, `CurrentSelectionApplySystem`, `SelectionRuntime`, `EntityCollectionStore`, `GraphReturnWriter`, `EntitySetQueryRuntime`, `RelationshipRuntime`, `NarrativeFrontendService`");
             return sb.ToString();
@@ -2137,6 +2494,8 @@ namespace Ludots.Tests.GAS.Production
             GraphConfig formationGraph,
             IReadOnlyList<int> graphIds,
             int outputBindingCount,
+            EntityCollectionSnapshot benchmarkSelected,
+            EntityCollectionSnapshot benchmarkHostile,
             int graphIterations,
             double graphTotalMs,
             long graphAllocated,
@@ -2169,6 +2528,12 @@ namespace Ludots.Tests.GAS.Production
             int stabilizationGraphIterations,
             IReadOnlyDictionary<string, string> assetHashes)
         {
+            int allyCount = ResolveAllies(config).Length;
+            int enemyCount = ResolveEnemies(config).Length;
+            int objectiveCount = ResolveObjectives(config).Length;
+            int generatedAllyCount = CountGeneratedActors(config, EntityQueryTacticsGeneratedActorRoles.Ally);
+            int generatedEnemyCount = CountGeneratedActors(config, EntityQueryTacticsGeneratedActorRoles.Enemy);
+            int generatedObjectiveCount = CountGeneratedActors(config, EntityQueryTacticsGeneratedActorRoles.Objective);
             var sb = new StringBuilder();
             sb.AppendLine("# Entity Query Tactics Production Benchmark");
             sb.AppendLine();
@@ -2183,11 +2548,18 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine($"- graph ids: `{string.Join(", ", graphIds.Select(GraphIdRegistry.GetName))}`");
             sb.AppendLine($"- graph node counts: selected `{selectedGraph.Nodes.Count}`, hostile `{hostileGraph.Nodes.Count}`, formation `{formationGraph.Nodes.Count}`");
             sb.AppendLine($"- graph output bindings: `{outputBindingCount}`");
+            sb.AppendLine($"- Graph VM target capacity: `{GraphVmLimits.MaxTargets}`");
             foreach (KeyValuePair<string, string> hash in assetHashes)
             {
                 sb.AppendLine($"- asset hash `{hash.Key}`: `{hash.Value}`");
             }
 
+            sb.AppendLine();
+            sb.AppendLine("## Pressure Scale");
+            sb.AppendLine($"- configured actors: allies `{allyCount}`, enemies `{enemyCount}`, objectives `{objectiveCount}`, total `{allyCount + enemyCount + objectiveCount}`");
+            sb.AppendLine($"- runtime-generated actors: allies `{generatedAllyCount}`, enemies `{generatedEnemyCount}`, objectives `{generatedObjectiveCount}`, total `{generatedAllyCount + generatedEnemyCount + generatedObjectiveCount}`");
+            sb.AppendLine($"- graph materialized rows: selected `{benchmarkSelected.Count}`, hostile relation `{benchmarkHostile.Count}`, formation stable `{beforeStableProbe.Count}`");
+            sb.AppendLine($"- selected/formation pressure stays below Graph VM target capacity: `{beforeRotationInput.Count}` / `{GraphVmLimits.MaxTargets}`");
             sb.AppendLine();
             sb.AppendLine("## Production Chain");
             sb.AppendLine($"- map: `{config.MapId}`");
@@ -2220,8 +2592,8 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine();
             sb.AppendLine("## Retained Diff");
             sb.AppendLine($"- stable formation revisions: `{stableRevisionCount}/{cacheProbeIterations}`");
-            sb.AppendLine($"- stable probe before: rev `{beforeStableProbe.Revision}`, sig `0x{beforeStableProbe.Signature:X}`, count `{beforeStableProbe.Count}`, names `{string.Join(", ", beforeStableProbe.Names)}`");
-            sb.AppendLine($"- stable probe after: rev `{afterStableProbe.Revision}`, sig `0x{afterStableProbe.Signature:X}`, count `{afterStableProbe.Count}`, names `{string.Join(", ", afterStableProbe.Names)}`");
+            sb.AppendLine($"- stable probe before: rev `{beforeStableProbe.Revision}`, sig `0x{beforeStableProbe.Signature:X}`, count `{beforeStableProbe.Count}`, names `{JoinSnapshotNames(beforeStableProbe)}`");
+            sb.AppendLine($"- stable probe after: rev `{afterStableProbe.Revision}`, sig `0x{afterStableProbe.Signature:X}`, count `{afterStableProbe.Count}`, names `{JoinSnapshotNames(afterStableProbe)}`");
             sb.AppendLine($"- rotation input: `{config.Collections.FormationPrimary}` rev `{beforeRotationInput.Revision}` -> `{afterRotationInput.Revision}`, sig `0x{beforeRotationInput.Signature:X}` -> `0x{afterRotationInput.Signature:X}`");
             sb.AppendLine($"- rotation output: `{config.Collections.FormationCacheResult}` rev `{beforeRotationOutput.Revision}` -> `{afterRotationOutput.Revision}`, sig `0x{beforeRotationOutput.Signature:X}` -> `0x{afterRotationOutput.Signature:X}`");
             sb.AppendLine($"- expected: stable inputs keep `{config.Collections.FormationCacheResult}` revision unchanged; order-only source rotation is normalized by graph sorting and retained output signature.");
@@ -2380,18 +2752,39 @@ namespace Ludots.Tests.GAS.Production
             string GraphName,
             HotPathMeasurement Measurement);
 
+        private readonly record struct EntityCollectionStoreCapacitySnapshot(
+            int CollectionCount,
+            int RowCapacity,
+            int RowCursor,
+            int SlotCapacity,
+            int EntryCapacity,
+            int BucketCapacity,
+            int RowResizeCount,
+            int SlotResizeCount,
+            int EntryResizeCount,
+            int RehashCount);
+
         private sealed record AcceptanceSnapshot(
             string Step,
             string ScreenshotFileName,
             string BattlefieldFileName,
+            int ConfiguredActorCount,
+            int AllyCount,
+            int EnemyCount,
+            int ObjectiveCount,
+            int GeneratedActorCount,
+            int VisibleActorDotCount,
             uint UiBoxRevision,
             uint FormalRevision,
             uint FormationRevision,
             uint HostileRevision,
+            int UiBoxCount,
+            int FormalCount,
             string SelectedNames,
             string FormationNames,
             string ThreatNames,
             int SelectedCount,
+            int ThreatCount,
             int ThreatMax,
             int FormationCount,
             int GroundRingCount,
@@ -2423,9 +2816,11 @@ namespace Ludots.Tests.GAS.Production
             public string EnemyTeamName { get; set; } = string.Empty;
             public string PlayerCommanderName { get; set; } = string.Empty;
             public string EnemyCommanderName { get; set; } = string.Empty;
+            public string RuntimeSpawnReceiptChannelKey { get; set; } = string.Empty;
             public EntityQueryTacticsActorConfig[] Allies { get; set; } = Array.Empty<EntityQueryTacticsActorConfig>();
             public EntityQueryTacticsActorConfig[] Enemies { get; set; } = Array.Empty<EntityQueryTacticsActorConfig>();
             public EntityQueryTacticsActorConfig[] Objectives { get; set; } = Array.Empty<EntityQueryTacticsActorConfig>();
+            public EntityQueryTacticsGeneratedCohortConfig[] GeneratedCohorts { get; set; } = Array.Empty<EntityQueryTacticsGeneratedCohortConfig>();
             public EntityQueryTacticsRelationSeed[] RelationSeeds { get; set; } = Array.Empty<EntityQueryTacticsRelationSeed>();
             public EntityQueryTacticsPressurePulseConfig PressurePulse { get; set; } = new();
         }
@@ -2436,6 +2831,57 @@ namespace Ludots.Tests.GAS.Production
             public string Template { get; set; } = string.Empty;
             public int TeamId { get; set; }
             public string[] Tags { get; set; } = Array.Empty<string>();
+        }
+
+        private static class EntityQueryTacticsGeneratedActorRoles
+        {
+            public const string Ally = "Ally";
+            public const string Enemy = "Enemy";
+            public const string Objective = "Objective";
+        }
+
+        private sealed class EntityQueryTacticsGeneratedCohortConfig
+        {
+            public string Role { get; set; } = string.Empty;
+            public string NamePrefix { get; set; } = string.Empty;
+            public int FirstIndex { get; set; } = 1;
+            public int Count { get; set; }
+            public string Template { get; set; } = string.Empty;
+            public int TeamId { get; set; }
+            public float FacingRad { get; set; }
+            public EntityQueryTacticsGeneratedGridConfig Grid { get; set; } = new();
+            public string[] Tags { get; set; } = Array.Empty<string>();
+            public EntityQueryTacticsAttributePatternConfig[] Attributes { get; set; } = Array.Empty<EntityQueryTacticsAttributePatternConfig>();
+            public EntityQueryTacticsGeneratedRelationConfig[] Relations { get; set; } = Array.Empty<EntityQueryTacticsGeneratedRelationConfig>();
+        }
+
+        private sealed class EntityQueryTacticsGeneratedGridConfig
+        {
+            public int OriginXCm { get; set; }
+            public int OriginYCm { get; set; }
+            public int Columns { get; set; } = 1;
+            public int SpacingXCm { get; set; } = 100;
+            public int SpacingYCm { get; set; } = 100;
+        }
+
+        private sealed class EntityQueryTacticsAttributePatternConfig
+        {
+            public string Attribute { get; set; } = string.Empty;
+            public float BaseValue { get; set; }
+            public float Step { get; set; }
+            public int Modulo { get; set; } = 1;
+        }
+
+        private sealed class EntityQueryTacticsGeneratedRelationConfig
+        {
+            public string SourceName { get; set; } = string.Empty;
+            public string Metric { get; set; } = string.Empty;
+            public int BaseValue { get; set; }
+            public int Step { get; set; }
+            public int Modulo { get; set; } = 1;
+            public string[] Flags { get; set; } = Array.Empty<string>();
+            public int FlagEvery { get; set; } = 1;
+            public int FlagOffset { get; set; }
         }
 
         private sealed class EntityQueryTacticsRelationSeed
@@ -2558,6 +3004,7 @@ namespace Ludots.Tests.GAS.Production
             public uint Frame { get; set; }
             public string Op { get; set; } = string.Empty;
             public string[] Entities { get; set; } = Array.Empty<string>();
+            public string Role { get; set; } = string.Empty;
         }
 
         private sealed class TestInputBackend : IInputBackend

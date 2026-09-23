@@ -14,7 +14,9 @@ namespace Arch.Relationships;
 /// <typeparam name="TValue"></typeparam>
 public struct SortedListEnumerator<TValue> 
 {
-    private SortedList<Entity, TValue> sortedList;
+    private readonly Entity[] targets;
+    private readonly TValue[] values;
+    private readonly int count;
     private int currentIndex;
 
     /// <summary>
@@ -23,7 +25,25 @@ public struct SortedListEnumerator<TValue>
     /// <param name="list">List.</param>
     public SortedListEnumerator(SortedList<Entity, TValue> list)
     {
-        sortedList = list;
+        targets = new Entity[list.Count];
+        values = new TValue[list.Count];
+        count = list.Count;
+        int index = 0;
+        foreach (KeyValuePair<Entity, TValue> pair in list)
+        {
+            targets[index] = pair.Key;
+            values[index] = pair.Value;
+            index++;
+        }
+
+        currentIndex = -1;
+    }
+
+    internal SortedListEnumerator(Entity[] targets, TValue[] values, int count)
+    {
+        this.targets = targets;
+        this.values = values;
+        this.count = count;
         currentIndex = -1;
     }
 
@@ -34,12 +54,10 @@ public struct SortedListEnumerator<TValue>
     {
         get
         {
-            if (currentIndex == -1 || currentIndex >= sortedList.Count)
+            if (currentIndex == -1 || currentIndex >= count)
                 throw new InvalidOperationException();
                 
-            var key = sortedList.Keys[currentIndex];
-            var value = sortedList.Values[currentIndex];
-            return new KeyValuePair<Entity, TValue>(key, value);
+            return new KeyValuePair<Entity, TValue>(targets[currentIndex], values[currentIndex]);
         }
     }
     
@@ -49,7 +67,7 @@ public struct SortedListEnumerator<TValue>
     public bool MoveNext()
     {
         currentIndex++;
-        return currentIndex < sortedList.Count;
+        return currentIndex < count;
     }
 
     /// <summary>

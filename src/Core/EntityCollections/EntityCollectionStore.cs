@@ -44,6 +44,10 @@ namespace Ludots.Core.EntityCollections
         private int _slotCount;
         private int _entryCount;
         private int _rowCursor;
+        private int _slotResizeCount;
+        private int _entryResizeCount;
+        private int _rowResizeCount;
+        private int _rehashCount;
 
         public EntityCollectionStore(
             StringIntRegistry keyRegistry,
@@ -98,6 +102,14 @@ namespace Ludots.Core.EntityCollections
         public StringIntRegistry KeyRegistry => _keyRegistry;
         public int CollectionCount => _slotCount;
         public int RowCapacity => _rowEntities.Length;
+        public int RowCursor => _rowCursor;
+        public int SlotCapacity => _active.Length;
+        public int EntryCapacity => _entryNext.Length;
+        public int BucketCapacity => _bucketHeads.Length;
+        public int SlotResizeCount => _slotResizeCount;
+        public int EntryResizeCount => _entryResizeCount;
+        public int RowResizeCount => _rowResizeCount;
+        public int RehashCount => _rehashCount;
 
         public EntityCollectionHandle Replace(
             Entity owner,
@@ -511,6 +523,7 @@ namespace Ludots.Core.EntityCollections
             Array.Resize(ref _rowCapacities, next);
             Array.Resize(ref _titles, next);
             Array.Resize(ref _summaries, next);
+            _slotResizeCount++;
         }
 
         private void EnsureEntryCapacity(int required)
@@ -532,6 +545,7 @@ namespace Ludots.Core.EntityCollections
             Array.Resize(ref _entryOwnerVersions, next);
             Array.Resize(ref _entryKeyIds, next);
             Array.Resize(ref _entrySlots, next);
+            _entryResizeCount++;
         }
 
         private void EnsureSlotRowCapacity(int slot, int required)
@@ -580,6 +594,7 @@ namespace Ludots.Core.EntityCollections
             Array.Resize(ref _rowOrdinals, next);
             Array.Resize(ref _rowRoleIds, next);
             Array.Resize(ref _rowFlags, next);
+            _rowResizeCount++;
         }
 
         private void Rehash(int bucketCount)
@@ -587,6 +602,7 @@ namespace Ludots.Core.EntityCollections
             int nextBucketCount = NextPowerOfTwo(Math.Max(16, bucketCount));
             Array.Resize(ref _bucketHeads, nextBucketCount);
             Array.Fill(_bucketHeads, -1);
+            _rehashCount++;
             for (int entry = 0; entry < _entryCount; entry++)
             {
                 int bucket = BucketIndex(

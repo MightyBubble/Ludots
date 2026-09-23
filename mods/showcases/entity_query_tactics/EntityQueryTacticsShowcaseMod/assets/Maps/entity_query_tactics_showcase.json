@@ -3,11 +3,11 @@
   "Tags": ["entityquery.showcase", "selection.collection.graph"],
   "DefaultCamera": {
     "VirtualCameraId": "EntityQueryTactics.Camera.Showcase",
-    "TargetXCm": 1650,
-    "TargetYCm": 930,
-    "DistanceCm": 3600,
-    "Pitch": 54,
-    "FovYDeg": 42
+    "TargetXCm": 2200,
+    "TargetYCm": 560,
+    "DistanceCm": 8200,
+    "Pitch": 62,
+    "FovYDeg": 48
   },
   "Entities": [
     {

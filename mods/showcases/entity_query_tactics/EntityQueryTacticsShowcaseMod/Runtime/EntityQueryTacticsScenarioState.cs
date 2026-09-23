@@ -21,6 +21,8 @@ namespace EntityQueryTacticsShowcaseMod.Runtime
         public uint GraphExecutionCount { get; set; }
         public uint CacheProbeCount { get; set; }
         public uint PressurePulseCount { get; set; }
+        public int GeneratedActorCount { get; set; }
+        public int GeneratedActorReadyCount { get; set; }
         public uint FormationRevision { get; set; }
         public uint UiBoxRevision { get; set; }
         public uint FormalSelectionRevision { get; set; }

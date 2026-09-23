@@ -447,6 +447,56 @@ namespace Ludots.Tests.GAS
             Assert.That(allocated, Is.LessThanOrEqualTo(64));
         }
 
+        [Test]
+        public void Benchmark_CodeApiRelationshipFilterSortAggregateZeroAllocAfterWarmup()
+        {
+            using var world = World.Create();
+            QueryRuntimeSetup setup = CreateQueryRuntime(world);
+            int typeId = setup.RelationshipTypes.Register("Tests.EntityQuery.RelationBenchmark");
+            int threatId = setup.RelationshipMetrics.Register("Threat", minValue: 0, maxValue: 100, defaultValue: 0);
+            int priorityFlagId = setup.RelationshipFlags.Register("Priority");
+
+            Entity source = world.Create();
+            Entity[] candidates = new Entity[GraphVmLimits.MaxTargets];
+            for (int i = 0; i < candidates.Length; i++)
+            {
+                Entity target = world.Create();
+                candidates[i] = target;
+                setup.Relationships.SetMetric(source, target, typeId, threatId, 20 + (i % 81));
+                if ((i & 1) == 0)
+                {
+                    setup.Relationships.SetFlag(source, target, typeId, priorityFlagId, enabled: true);
+                }
+            }
+
+            Span<Entity> entities = stackalloc Entity[GraphVmLimits.MaxTargets];
+            Span<int> metricScratch = stackalloc int[GraphVmLimits.MaxTargets];
+            for (int i = 0; i < 256; i++)
+            {
+                RunRelationshipBenchmarkQuery(setup.EntityQueries, candidates, entities, metricScratch, source, typeId, threatId, priorityFlagId);
+            }
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            GC.GetAllocatedBytesForCurrentThread();
+
+            const int iterations = 4_000;
+            (long allocated, long checksum) = MeasureRelationshipBenchmarkStableZeroAlloc(
+                iterations,
+                setup.EntityQueries,
+                candidates,
+                entities,
+                metricScratch,
+                source,
+                typeId,
+                threatId,
+                priorityFlagId);
+
+            Assert.That(checksum, Is.GreaterThan(0));
+            Assert.That(allocated, Is.EqualTo(0));
+        }
+
         private static float RunBenchmarkQuery(
             EntitySetQueryRuntime queries,
             Span<Entity> entities,
@@ -462,6 +512,64 @@ namespace Ludots.Tests.GAS
             queries.SortByAttribute(entities, count, productionId, descending: true);
             return queries.SumAttribute(entities.Slice(0, count), productionId) +
                    queries.MaxAttribute(entities.Slice(0, count), productionId);
+        }
+
+        private static int RunRelationshipBenchmarkQuery(
+            EntitySetQueryRuntime queries,
+            ReadOnlySpan<Entity> candidates,
+            Span<Entity> entities,
+            Span<int> metricScratch,
+            Entity source,
+            int typeId,
+            int threatId,
+            int priorityFlagId)
+        {
+            candidates.CopyTo(entities);
+            int count = candidates.Length;
+            count = queries.FilterRelationshipMetricRange(entities, count, source, typeId, threatId, minInclusive: 40, maxInclusive: 100);
+            count = queries.FilterRelationshipFlag(entities, count, source, typeId, priorityFlagId, expected: true);
+            queries.SortByRelationshipMetric(entities, count, source, typeId, threatId, descending: true, metricScratch);
+            ReadOnlySpan<Entity> result = entities.Slice(0, count);
+            return queries.SumRelationshipMetric(result, source, typeId, threatId) +
+                   queries.MaxRelationshipMetric(result, source, typeId, threatId);
+        }
+
+        private static (long AllocatedBytes, long Checksum) MeasureRelationshipBenchmarkStableZeroAlloc(
+            int iterations,
+            EntitySetQueryRuntime queries,
+            ReadOnlySpan<Entity> candidates,
+            Span<Entity> entities,
+            Span<int> metricScratch,
+            Entity source,
+            int typeId,
+            int threatId,
+            int priorityFlagId)
+        {
+            const int maxAttempts = 6;
+            long lastAllocated = -1;
+            long lastChecksum = 0;
+            for (int attempt = 0; attempt < maxAttempts; attempt++)
+            {
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
+                GC.GetAllocatedBytesForCurrentThread();
+                long before = GC.GetAllocatedBytesForCurrentThread();
+                long checksum = 0;
+                for (int i = 0; i < iterations; i++)
+                {
+                    checksum += RunRelationshipBenchmarkQuery(queries, candidates, entities, metricScratch, source, typeId, threatId, priorityFlagId);
+                }
+
+                lastAllocated = GC.GetAllocatedBytesForCurrentThread() - before;
+                lastChecksum = checksum;
+                if (lastAllocated == 0)
+                {
+                    return (lastAllocated, lastChecksum);
+                }
+            }
+
+            return (lastAllocated, lastChecksum);
         }
 
         private GraphRuntimeSetup CreateGraphRuntime(QueryRuntimeSetup setup, string graphJson)

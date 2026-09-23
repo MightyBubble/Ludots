@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Numerics;
 using Arch.Core;
 using Arch.System;
@@ -20,7 +21,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
         private readonly World _world;
         private readonly EntityQueryTacticsScenarioState _state;
         private readonly NarrativeFrontendSurfaceModel[] _surfaces = new NarrativeFrontendSurfaceModel[5];
-        private readonly NarrativeFrontendSurfaceItem[] _selectionItems = new NarrativeFrontendSurfaceItem[3];
+        private readonly NarrativeFrontendSurfaceItem[] _selectionItems = new NarrativeFrontendSurfaceItem[4];
         private readonly NarrativeFrontendSurfaceItem[] _queryItems = new NarrativeFrontendSurfaceItem[4];
         private readonly NarrativeFrontendSurfaceItem[] _relationItems = new NarrativeFrontendSurfaceItem[5];
         private readonly NarrativeFrontendSurfaceItem[] _cacheItems = new NarrativeFrontendSurfaceItem[4];
@@ -82,30 +83,34 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 return;
             }
 
+            EntityQueryTacticsScenarioContext context = ScenarioContext
+                ?? throw new InvalidOperationException("Entity query tactics presentation requires a scenario context.");
             PresentationSignature signature = BuildPresentationSignature();
             if (_frontendVisible && _hasLastSignature && signature.Equals(_lastSignature))
             {
                 return;
             }
 
-            _selectionItems[0] = new NarrativeFrontendSurfaceItem("Drag box", $"{_state.UiBoxCount} preview", string.IsNullOrWhiteSpace(_state.UiBoxNames) ? "empty" : _state.UiBoxNames, AccentHex: "#60A5FA", Active: _state.UiBoxCount > 0);
-            _selectionItems[1] = new NarrativeFrontendSurfaceItem("Committed squad", $"{_state.FormalSelectionCount} units", string.IsNullOrWhiteSpace(_state.SelectedNames) ? "press Enter to commit" : _state.SelectedNames, AccentHex: "#93C5FD", Active: _state.FormalSelectionCount > 0);
-            _selectionItems[2] = new NarrativeFrontendSurfaceItem("Friendly query", _state.SelectedCount.ToString(), ReadName(_state.SelectedBest), AccentHex: "#6EE7B7", Active: _state.SelectedCount > 0);
+            int totalActorCount = context.Allies.Length + context.Enemies.Length + context.Objectives.Length;
+            _selectionItems[0] = new NarrativeFrontendSurfaceItem("Pressure scale", $"{FormatCount(totalActorCount)} actors", $"generated {FormatCount(_state.GeneratedActorReadyCount)}/{FormatCount(_state.GeneratedActorCount)} | allies {FormatCount(context.Allies.Length)} | enemies {FormatCount(context.Enemies.Length)} | objectives {FormatCount(context.Objectives.Length)}", AccentHex: "#60A5FA", Active: _state.GeneratedActorReadyCount == _state.GeneratedActorCount);
+            _selectionItems[1] = new NarrativeFrontendSurfaceItem("UI box collection", $"{FormatCount(_state.UiBoxCount)} rows", "acquisition preview, config-driven", AccentHex: "#93C5FD", Active: _state.UiBoxCount > 0);
+            _selectionItems[2] = new NarrativeFrontendSurfaceItem("Committed squad", $"{FormatCount(_state.FormalSelectionCount)} rows", string.IsNullOrWhiteSpace(_state.SelectedNames) ? "press Enter to commit" : _state.SelectedNames, AccentHex: "#93C5FD", Active: _state.FormalSelectionCount > 0);
+            _selectionItems[3] = new NarrativeFrontendSurfaceItem("Friendly query", $"{FormatCount(_state.SelectedCount)} rows", ReadName(_state.SelectedBest), AccentHex: "#6EE7B7", Active: _state.SelectedCount > 0);
 
-            _queryItems[0] = new NarrativeFrontendSurfaceItem("Squad count", _state.SelectedCount.ToString(), BuildSelectedFilterSummary(), AccentHex: "#FDE68A", Active: _state.SelectedCount > 0);
-            _queryItems[1] = new NarrativeFrontendSurfaceItem("Command power", _state.SelectedCommandPowerSum.ToString("0"), "sum", AccentHex: "#FACC15");
-            _queryItems[2] = new NarrativeFrontendSurfaceItem("Supply held", _state.SelectedSupplySum.ToString("0"), "sum", AccentHex: "#FDE68A");
+            _queryItems[0] = new NarrativeFrontendSurfaceItem("Friendly corpus", $"{FormatCount(context.Allies.Length)} rows", BuildSelectedFilterSummary(), AccentHex: "#FDE68A", Active: _state.SelectedCount > 0);
+            _queryItems[1] = new NarrativeFrontendSurfaceItem("Command power", _state.SelectedCommandPowerSum.ToString("0", CultureInfo.InvariantCulture), "sum", AccentHex: "#FACC15");
+            _queryItems[2] = new NarrativeFrontendSurfaceItem("Supply held", _state.SelectedSupplySum.ToString("0", CultureInfo.InvariantCulture), "sum", AccentHex: "#FDE68A");
             _queryItems[3] = new NarrativeFrontendSurfaceItem("Best unit", ReadName(_state.SelectedBest), "highest power", AccentHex: "#A7F3D0", Active: _state.SelectedBest != Entity.Null);
 
-            _relationItems[0] = new NarrativeFrontendSurfaceItem("Priority enemies", _state.ThreatCount.ToString(), "threat + priority", AccentHex: "#FB7185", Active: _state.ThreatCount > 0);
-            _relationItems[1] = new NarrativeFrontendSurfaceItem("Threat sum", _state.ThreatSum.ToString(), "total danger", AccentHex: "#FDA4AF");
-            _relationItems[2] = new NarrativeFrontendSurfaceItem("Threat avg", _state.ThreatAverage.ToString(), "average danger", AccentHex: "#FBCFE8");
-            _relationItems[3] = new NarrativeFrontendSurfaceItem("Top threat", _state.ThreatMax.ToString(), ReadName(_state.ThreatBest), AccentHex: "#F43F5E", Active: _state.ThreatBest != Entity.Null);
+            _relationItems[0] = new NarrativeFrontendSurfaceItem("Hostile corpus", $"{FormatCount(context.Enemies.Length)} enemies", $"priority graph {FormatCount(_state.ThreatCount)} rows", AccentHex: "#FB7185", Active: _state.ThreatCount > 0);
+            _relationItems[1] = new NarrativeFrontendSurfaceItem("Threat sum", FormatCount(_state.ThreatSum), "total danger", AccentHex: "#FDA4AF");
+            _relationItems[2] = new NarrativeFrontendSurfaceItem("Threat avg", FormatCount(_state.ThreatAverage), "average danger", AccentHex: "#FBCFE8");
+            _relationItems[3] = new NarrativeFrontendSurfaceItem("Top threat", FormatCount(_state.ThreatMax), ReadName(_state.ThreatBest), AccentHex: "#F43F5E", Active: _state.ThreatBest != Entity.Null);
             _relationItems[4] = new NarrativeFrontendSurfaceItem("Pressure path", $"{_state.PressurePulseCount} pulse", $"graph x{_state.GraphExecutionCount} | frame {_state.LastFrameMs:0.0}ms", AccentHex: "#FDBA74", Active: _state.PressurePulseCount > 0);
 
-            _cacheItems[0] = new NarrativeFrontendSurfaceItem("Formation", $"{_state.FormalSelectionCount} -> {_state.FormationCount}", "Routed Scout excluded", AccentHex: "#A78BFA", Active: _state.FormationCount > 0);
-            _cacheItems[1] = new NarrativeFrontendSurfaceItem("Max command", _state.FormationMaxCommandPower.ToString("0"), ReadName(_state.FormationBest), AccentHex: "#C4B5FD");
-            _cacheItems[2] = new NarrativeFrontendSurfaceItem("Lowest supply", _state.FormationMinSupply.ToString("0"), "after exclusion", AccentHex: "#DDD6FE");
+            _cacheItems[0] = new NarrativeFrontendSurfaceItem("Formation", $"{FormatCount(_state.FormalSelectionCount)} -> {FormatCount(_state.FormationCount)}", "Routed Scout excluded", AccentHex: "#A78BFA", Active: _state.FormationCount > 0);
+            _cacheItems[1] = new NarrativeFrontendSurfaceItem("Max command", _state.FormationMaxCommandPower.ToString("0", CultureInfo.InvariantCulture), ReadName(_state.FormationBest), AccentHex: "#C4B5FD");
+            _cacheItems[2] = new NarrativeFrontendSurfaceItem("Lowest supply", _state.FormationMinSupply.ToString("0", CultureInfo.InvariantCulture), "after exclusion", AccentHex: "#DDD6FE");
             _cacheItems[3] = new NarrativeFrontendSurfaceItem("Cache probe", _state.LastCacheProbeUnchanged ? "reused" : "pending", $"input rev {_state.FormationRevision} | graph rev {_state.FormationResultRevision}", AccentHex: _state.LastCacheProbeUnchanged ? "#86EFAC" : "#FDBA74", Active: _state.LastCacheProbeUnchanged);
 
             _surfaces[0] = CreateSurface(
@@ -184,7 +189,12 @@ namespace EntityQueryTacticsShowcaseMod.Systems
 
         private string BuildSelectedFilterSummary()
         {
-            return $"{Config.Scenario.PlayerTeamName} | squad template | {Config.Tags.Commandable}";
+            return $"{Config.Scenario.PlayerTeamName} | UI box {FormatCount(_state.UiBoxCount)} | graph {_state.SelectedCount}";
+        }
+
+        private static string FormatCount(int count)
+        {
+            return count.ToString("N0", CultureInfo.InvariantCulture);
         }
 
         private PresentationSignature BuildPresentationSignature()
@@ -195,6 +205,8 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 _state.FormationRevision,
                 _state.FormationResultRevision,
                 _state.HostileResultRevision,
+                _state.GeneratedActorReadyCount,
+                _state.GeneratedActorCount,
                 _state.SelectedCount,
                 _state.SelectedCommandPowerSum,
                 _state.SelectedSupplySum,
@@ -223,6 +235,8 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 signature.FormationRevision,
                 signature.FormationResultRevision,
                 signature.HostileResultRevision,
+                signature.GeneratedActorReadyCount,
+                signature.GeneratedActorCount,
                 signature.SelectedCount,
                 signature.SelectedCommandPowerSum,
                 signature.SelectedSupplySum,
@@ -255,17 +269,38 @@ namespace EntityQueryTacticsShowcaseMod.Systems
 
             for (int i = 0; i < ScenarioContext.Allies.Length; i++)
             {
+                if (!ShouldDrawCohortRing(i, ScenarioContext.Allies.Length))
+                {
+                    continue;
+                }
+
                 AddRing(ground, ScenarioContext.Allies[i], new Vector4(0.1f, 0.55f, 1f, 0.12f), new Vector4(0.38f, 0.68f, 1f, 0.92f), 2.1f, 1.68f);
             }
 
             for (int i = 0; i < ScenarioContext.Enemies.Length; i++)
             {
+                if (!ShouldDrawCohortRing(i, ScenarioContext.Enemies.Length))
+                {
+                    continue;
+                }
+
                 AddRing(ground, ScenarioContext.Enemies[i], new Vector4(1f, 0.2f, 0.26f, 0.08f), new Vector4(1f, 0.43f, 0.5f, 0.78f), 2.0f, 1.62f);
             }
 
             AddRing(ground, _state.SelectedBest, new Vector4(0.17f, 0.95f, 0.65f, 0.16f), new Vector4(0.43f, 0.91f, 0.72f, 0.96f), 2.55f, 2.06f);
             AddRing(ground, _state.ThreatBest, new Vector4(1f, 0.18f, 0.2f, 0.18f), new Vector4(1f, 0.3f, 0.42f, 1f), 2.7f, 2.2f);
             AddRing(ground, _state.FormationBest, new Vector4(0.52f, 0.38f, 1f, 0.13f), new Vector4(0.66f, 0.55f, 0.98f, 0.9f), 2.4f, 1.96f);
+        }
+
+        private static bool ShouldDrawCohortRing(int index, int count)
+        {
+            if (count <= 96)
+            {
+                return true;
+            }
+
+            int stride = Math.Max(1, count / 96);
+            return index % stride == 0;
         }
 
         private void AddRing(GroundOverlayBuffer ground, Entity entity, Vector4 fill, Vector4 border, float radius, float innerRadius)
@@ -315,6 +350,8 @@ namespace EntityQueryTacticsShowcaseMod.Systems
             uint FormationRevision,
             uint FormationResultRevision,
             uint HostileResultRevision,
+            int GeneratedActorReadyCount,
+            int GeneratedActorCount,
             int SelectedCount,
             float SelectedCommandPowerSum,
             float SelectedSupplySum,

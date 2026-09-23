@@ -40,11 +40,27 @@ internal interface IRelationship
 /// <typeparam name="T">The type of the second relationship element.</typeparam>
 public class Relationship<T> : IRelationship
 {
+    private Entity[] _targets;
+    private T[] _values;
+    private int _count;
 
     /// <summary>
-    ///     Its relations. 
+    ///     Snapshot view kept for tests and debug-only relationship cleanup paths.
+    ///     Hot runtime code uses the SoA arrays directly through Relationship methods.
     /// </summary>
-    internal readonly SortedList<Entity, T> Elements;
+    internal SortedList<Entity, T> Elements
+    {
+        get
+        {
+            var elements = new SortedList<Entity, T>(_count, EntityRelationshipComparer.Instance);
+            for (int i = 0; i < _count; i++)
+            {
+                elements.Add(_targets[i], _values[i]);
+            }
+
+            return elements;
+        }
+    }
 
     /// <summary>
     ///     Initializes a new instance of an <see cref="Relationship{T}"/>.
@@ -52,7 +68,9 @@ public class Relationship<T> : IRelationship
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal Relationship()
     {
-        Elements = new SortedList<Entity, T>();
+        _targets = Array.Empty<Entity>();
+        _values = Array.Empty<T>();
+        _count = 0;
     }
     
     /// <summary>
@@ -62,14 +80,30 @@ public class Relationship<T> : IRelationship
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal Relationship(SortedList<Entity, T> elements)
     {
-        Elements = elements;
+        _count = elements?.Count ?? 0;
+        if (_count == 0)
+        {
+            _targets = Array.Empty<Entity>();
+            _values = Array.Empty<T>();
+            return;
+        }
+
+        _targets = new Entity[_count];
+        _values = new T[_count];
+        int index = 0;
+        foreach (KeyValuePair<Entity, T> pair in elements!)
+        {
+            _targets[index] = pair.Key;
+            _values[index] = pair.Value;
+            index++;
+        }
     }
     
     /// <inheritdoc/>
     int IRelationship.Count
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => Elements.Count;
+        get => _count;
     }
 
     /// <inheritdoc cref="IRelationship.Count"/>
@@ -87,7 +121,13 @@ public class Relationship<T> : IRelationship
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void Add(in T relationship, Entity target)
     {
-        Elements.Add(target, relationship);
+        int index = FindIndex(target);
+        if (index >= 0)
+        {
+            throw new ArgumentException("An item with the same entity target has already been added.", nameof(target));
+        }
+
+        Insert(~index, target, relationship);
     }
     
     /// <summary>
@@ -98,7 +138,14 @@ public class Relationship<T> : IRelationship
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Set(Entity entity, T data = default!)
     {
-        Elements[entity] = data;
+        int index = FindIndex(entity);
+        if (index >= 0)
+        {
+            _values[index] = data;
+            return;
+        }
+
+        Insert(~index, entity, data);
     }
     
     /// <summary>
@@ -109,7 +156,7 @@ public class Relationship<T> : IRelationship
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Contains(Entity entity)
     {
-        return Elements.ContainsKey(entity);
+        return FindIndex(entity) >= 0;
     }
     
     /// <summary>
@@ -120,7 +167,13 @@ public class Relationship<T> : IRelationship
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public T Get(Entity entity)
     {
-        return Elements[entity];
+        int index = FindIndex(entity);
+        if (index < 0)
+        {
+            throw new KeyNotFoundException("The relationship target was not present in the relationship buffer.");
+        }
+
+        return _values[index];
     }
 
     /// <summary>
@@ -132,14 +185,37 @@ public class Relationship<T> : IRelationship
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryGetValue(Entity entity, out T value)
     {
-        return Elements.TryGetValue(entity, out value!);
+        int index = FindIndex(entity);
+        if (index < 0)
+        {
+            value = default!;
+            return false;
+        }
+
+        value = _values[index];
+        return true;
     }
     
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     void IRelationship.Remove(Entity target)
     {
-        Elements.Remove(target);
+        int index = FindIndex(target);
+        if (index < 0)
+        {
+            return;
+        }
+
+        int moveCount = _count - index - 1;
+        if (moveCount > 0)
+        {
+            Array.Copy(_targets, index + 1, _targets, index, moveCount);
+            Array.Copy(_values, index + 1, _values, index, moveCount);
+        }
+
+        _count--;
+        _targets[_count] = default;
+        _values[_count] = default!;
     }
 
     /// <inheritdoc cref="IRelationship.Remove(Entity)"/>
@@ -170,6 +246,98 @@ public class Relationship<T> : IRelationship
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public SortedListEnumerator<T> GetEnumerator()
     {
-        return new SortedListEnumerator<T>(Elements);
+        return new SortedListEnumerator<T>(_targets, _values, _count);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private int FindIndex(Entity target)
+    {
+        int low = 0;
+        int high = _count - 1;
+        while (low <= high)
+        {
+            int middle = low + ((high - low) >> 1);
+            int compare = EntityRelationshipComparer.CompareEntities(_targets[middle], target);
+            if (compare == 0)
+            {
+                return middle;
+            }
+
+            if (compare < 0)
+            {
+                low = middle + 1;
+            }
+            else
+            {
+                high = middle - 1;
+            }
+        }
+
+        return ~low;
+    }
+
+    private void Insert(int index, Entity target, in T value)
+    {
+        EnsureCapacity(_count + 1);
+        int moveCount = _count - index;
+        if (moveCount > 0)
+        {
+            Array.Copy(_targets, index, _targets, index + 1, moveCount);
+            Array.Copy(_values, index, _values, index + 1, moveCount);
+        }
+
+        _targets[index] = target;
+        _values[index] = value;
+        _count++;
+    }
+
+    private void EnsureCapacity(int requiredCount)
+    {
+        if (_targets.Length >= requiredCount)
+        {
+            return;
+        }
+
+        int next = Math.Max(4, _targets.Length * 2);
+        if (next < requiredCount)
+        {
+            next = requiredCount;
+        }
+
+        Array.Resize(ref _targets, next);
+        Array.Resize(ref _values, next);
     }
 };
+
+internal sealed class EntityRelationshipComparer : IComparer<Entity>
+{
+    public static readonly EntityRelationshipComparer Instance = new();
+
+    private EntityRelationshipComparer()
+    {
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public int Compare(Entity left, Entity right)
+    {
+        return CompareEntities(left, right);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static int CompareEntities(Entity left, Entity right)
+    {
+        int c = left.WorldId.CompareTo(right.WorldId);
+        if (c != 0)
+        {
+            return c;
+        }
+
+        c = left.Id.CompareTo(right.Id);
+        if (c != 0)
+        {
+            return c;
+        }
+
+        return left.Version.CompareTo(right.Version);
+    }
+}
