@@ -90,6 +90,7 @@
     <ProjectReference Include="..\..\..\mods\showcases\diplomacy_trade_gate\DiplomacyTradeGateShowcaseMod\DiplomacyTradeGateShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\gold_market\GoldMarketShowcaseMod\GoldMarketShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\fourx_association\FourXAssociationShowcaseMod\FourXAssociationShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\sanguo_grand_strategy\SanguoGrandStrategyMod\SanguoGrandStrategyMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\fog_of_war\MultiLayerFogFieldShowcaseMod\MultiLayerFogFieldShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\fog_of_war\VisionConeHighGroundShowcaseMod\VisionConeHighGroundShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\fog_of_war\LineOfSightBrushShowcaseMod\LineOfSightBrushShowcaseMod.csproj" />

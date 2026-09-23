@@ -1,0 +1,76 @@
+﻿[
+    {
+        "id":  "sanguo_city",
+        "components":  {
+                           "Name":  {
+                                        "Value":  "Sanguo City"
+                                    },
+                           "Team":  {
+                                        "Id":  1
+                                    },
+                           "PlayerOwner":  {
+                                               "PlayerId":  1
+                                           },
+                           "SelectionSelectableTag":  {
+
+                                                      },
+                           "SelectionSelectableState":  {
+                                                            "IsEnabled":  true
+                                                        },
+                           "WorldPositionCm":  {
+                                                   "Value":  {
+                                                                 "X":  0,
+                                                                 "Y":  0
+                                                             }
+                                               },
+                           "AttributeBuffer":  {
+                                                   "base":  {
+                                                                "Health":  1000,
+                                                                "Population":  25000,
+                                                                "Troops":  5000,
+                                                                "Food":  10000,
+                                                                "Gold":  3000,
+                                                                "Production":  25,
+                                                                "Defense":  40,
+                                                                "Morale":  70,
+                                                                "Supply":  80,
+                                                                "Training":  25,
+                                                                "Loyalty":  70,
+                                                                "Command":  15,
+                                                                "TechProgress":  0
+                                                            }
+                                               },
+                           "AbilityStateBuffer":  {
+                                                      "abilityIds":  [
+                                                                         "Ability.Sanguo.Conscript",
+                                                                         "Ability.Sanguo.TrainElite",
+                                                                         "Ability.Sanguo.Develop",
+                                                                         "Ability.Sanguo.Tax",
+                                                                         "Ability.Sanguo.Harvest",
+                                                                         "Ability.Sanguo.March",
+                                                                         "Ability.Sanguo.Research",
+                                                                         "Ability.Sanguo.Diplomacy"
+                                                                     ]
+                                                  },
+                           "GameplayTagContainer":  {
+
+                                                    },
+                           "TagCountContainer":  {
+
+                                                 },
+                           "TimedTagBuffer":  {
+
+                                              },
+                           "OrderBuffer":  {
+
+                                           },
+                           "BlackboardEntityBuffer":  {
+
+                                                      },
+                           "BlackboardIntBuffer":  {
+
+                                                   }
+                       }
+    }
+]
+

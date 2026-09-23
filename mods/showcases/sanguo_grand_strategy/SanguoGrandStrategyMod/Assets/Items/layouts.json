@@ -1,0 +1,51 @@
+﻿[
+    {
+        "id":  "sanguo_layout_commander",
+        "purpose":  "Equipment",
+        "grantsEquipmentBonuses":  true,
+        "namedSlots":  [
+                           {
+                               "id":  "weapon",
+                               "label":  "Weapon",
+                               "requiredAll":  [
+                                                   "Sanguo.Slot.Weapon"
+                                               ]
+                           },
+                           {
+                               "id":  "armor",
+                               "label":  "Armor",
+                               "requiredAll":  [
+                                                   "Sanguo.Slot.Armor"
+                                               ]
+                           },
+                           {
+                               "id":  "mount",
+                               "label":  "Mount",
+                               "requiredAll":  [
+                                                   "Sanguo.Slot.Mount"
+                                               ]
+                           },
+                           {
+                               "id":  "seal",
+                               "label":  "Seal",
+                               "requiredAll":  [
+                                                   "Sanguo.Slot.Seal"
+                                               ]
+                           },
+                           {
+                               "id":  "manual",
+                               "label":  "Manual",
+                               "requiredAll":  [
+                                                   "Sanguo.Slot.Manual"
+                                               ]
+                           }
+                       ]
+    },
+    {
+        "id":  "sanguo_layout_treasury",
+        "purpose":  "Stash",
+        "width":  8,
+        "height":  6
+    }
+]
+

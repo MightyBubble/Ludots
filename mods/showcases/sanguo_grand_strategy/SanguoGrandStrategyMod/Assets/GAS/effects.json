@@ -1,0 +1,371 @@
+﻿[
+    {
+        "id":  "Effect.Sanguo.Conscript",
+        "tags":  [
+                     "Effect.Sanguo.Recruit",
+                     "Effect.Sanguo.Conscript"
+                 ],
+        "presetType":  "InstantDamage",
+        "lifetime":  "Instant",
+        "participatesInResponse":  false,
+        "modifiers":  [
+                          {
+                              "attribute":  "Troops",
+                              "op":  "Add",
+                              "value":  800
+                          },
+                          {
+                              "attribute":  "Population",
+                              "op":  "Add",
+                              "value":  -400
+                          },
+                          {
+                              "attribute":  "Food",
+                              "op":  "Add",
+                              "value":  -600
+                          },
+                          {
+                              "attribute":  "Gold",
+                              "op":  "Add",
+                              "value":  -160
+                          },
+                          {
+                              "attribute":  "Morale",
+                              "op":  "Add",
+                              "value":  -2
+                          }
+                      ]
+    },
+    {
+        "id":  "Effect.Sanguo.TrainElite",
+        "tags":  [
+                     "Effect.Sanguo.Recruit",
+                     "Effect.Sanguo.TrainElite"
+                 ],
+        "presetType":  "InstantDamage",
+        "lifetime":  "Instant",
+        "participatesInResponse":  false,
+        "modifiers":  [
+                          {
+                              "attribute":  "Troops",
+                              "op":  "Add",
+                              "value":  500
+                          },
+                          {
+                              "attribute":  "Training",
+                              "op":  "Add",
+                              "value":  5
+                          },
+                          {
+                              "attribute":  "Gold",
+                              "op":  "Add",
+                              "value":  -320
+                          },
+                          {
+                              "attribute":  "Food",
+                              "op":  "Add",
+                              "value":  -260
+                          }
+                      ]
+    },
+    {
+        "id":  "Effect.Sanguo.Develop",
+        "tags":  [
+                     "Effect.Sanguo.Economy",
+                     "Effect.Sanguo.Develop"
+                 ],
+        "presetType":  "InstantDamage",
+        "lifetime":  "Instant",
+        "participatesInResponse":  false,
+        "modifiers":  [
+                          {
+                              "attribute":  "Production",
+                              "op":  "Add",
+                              "value":  5
+                          },
+                          {
+                              "attribute":  "Population",
+                              "op":  "Add",
+                              "value":  900
+                          },
+                          {
+                              "attribute":  "Loyalty",
+                              "op":  "Add",
+                              "value":  2
+                          },
+                          {
+                              "attribute":  "Gold",
+                              "op":  "Add",
+                              "value":  -220
+                          }
+                      ]
+    },
+    {
+        "id":  "Effect.Sanguo.Tax",
+        "tags":  [
+                     "Effect.Sanguo.Economy",
+                     "Effect.Sanguo.Tax"
+                 ],
+        "presetType":  "InstantDamage",
+        "lifetime":  "Instant",
+        "participatesInResponse":  false,
+        "modifiers":  [
+                          {
+                              "attribute":  "Gold",
+                              "op":  "Add",
+                              "value":  900
+                          },
+                          {
+                              "attribute":  "Loyalty",
+                              "op":  "Add",
+                              "value":  -3
+                          },
+                          {
+                              "attribute":  "Morale",
+                              "op":  "Add",
+                              "value":  -1
+                          }
+                      ]
+    },
+    {
+        "id":  "Effect.Sanguo.Harvest",
+        "tags":  [
+                     "Effect.Sanguo.Economy",
+                     "Effect.Sanguo.Harvest"
+                 ],
+        "presetType":  "InstantDamage",
+        "lifetime":  "Instant",
+        "participatesInResponse":  false,
+        "modifiers":  [
+                          {
+                              "attribute":  "Food",
+                              "op":  "Add",
+                              "value":  1400
+                          },
+                          {
+                              "attribute":  "Morale",
+                              "op":  "Add",
+                              "value":  1
+                          },
+                          {
+                              "attribute":  "Supply",
+                              "op":  "Add",
+                              "value":  3
+                          }
+                      ]
+    },
+    {
+        "id":  "Effect.Sanguo.March",
+        "tags":  [
+                     "Effect.Sanguo.Military",
+                     "Effect.Sanguo.March"
+                 ],
+        "presetType":  "InstantDamage",
+        "lifetime":  "Instant",
+        "participatesInResponse":  false,
+        "modifiers":  [
+                          {
+                              "attribute":  "Supply",
+                              "op":  "Add",
+                              "value":  -5
+                          },
+                          {
+                              "attribute":  "Morale",
+                              "op":  "Add",
+                              "value":  -1
+                          },
+                          {
+                              "attribute":  "Training",
+                              "op":  "Add",
+                              "value":  1
+                          }
+                      ]
+    },
+    {
+        "id":  "Effect.Sanguo.Research",
+        "tags":  [
+                     "Effect.Sanguo.Tech",
+                     "Effect.Sanguo.Research"
+                 ],
+        "presetType":  "InstantDamage",
+        "lifetime":  "Instant",
+        "participatesInResponse":  false,
+        "modifiers":  [
+                          {
+                              "attribute":  "TechProgress",
+                              "op":  "Add",
+                              "value":  6
+                          },
+                          {
+                              "attribute":  "Gold",
+                              "op":  "Add",
+                              "value":  -240
+                          },
+                          {
+                              "attribute":  "Training",
+                              "op":  "Add",
+                              "value":  2
+                          }
+                      ]
+    },
+    {
+        "id":  "Effect.Sanguo.Diplomacy",
+        "tags":  [
+                     "Effect.Sanguo.Diplomacy",
+                     "Effect.Sanguo.Diplomacy"
+                 ],
+        "presetType":  "InstantDamage",
+        "lifetime":  "Instant",
+        "participatesInResponse":  false,
+        "modifiers":  [
+                          {
+                              "attribute":  "Loyalty",
+                              "op":  "Add",
+                              "value":  2
+                          },
+                          {
+                              "attribute":  "Morale",
+                              "op":  "Add",
+                              "value":  2
+                          },
+                          {
+                              "attribute":  "Gold",
+                              "op":  "Add",
+                              "value":  -120
+                          }
+                      ]
+    },
+    {
+        "id":  "Effect.Sanguo.Item.CommandSeal",
+        "tags":  [
+                     "Effect.Sanguo.Item",
+                     "Effect.Sanguo.Item.CommandSeal"
+                 ],
+        "presetType":  "Buff",
+        "lifetime":  "Infinite",
+        "participatesInResponse":  false,
+        "modifiers":  [
+                          {
+                              "attribute":  "Command",
+                              "op":  "Add",
+                              "value":  8
+                          },
+                          {
+                              "attribute":  "Loyalty",
+                              "op":  "Add",
+                              "value":  2
+                          }
+                      ]
+    },
+    {
+        "id":  "Effect.Sanguo.Item.Warhorse",
+        "tags":  [
+                     "Effect.Sanguo.Item",
+                     "Effect.Sanguo.Item.Warhorse"
+                 ],
+        "presetType":  "Buff",
+        "lifetime":  "Infinite",
+        "participatesInResponse":  false,
+        "modifiers":  [
+                          {
+                              "attribute":  "Supply",
+                              "op":  "Add",
+                              "value":  8
+                          },
+                          {
+                              "attribute":  "Morale",
+                              "op":  "Add",
+                              "value":  3
+                          }
+                      ]
+    },
+    {
+        "id":  "Effect.Sanguo.Item.StrategyManual",
+        "tags":  [
+                     "Effect.Sanguo.Item",
+                     "Effect.Sanguo.Item.StrategyManual"
+                 ],
+        "presetType":  "Buff",
+        "lifetime":  "Infinite",
+        "participatesInResponse":  false,
+        "modifiers":  [
+                          {
+                              "attribute":  "TechProgress",
+                              "op":  "Add",
+                              "value":  2
+                          },
+                          {
+                              "attribute":  "Training",
+                              "op":  "Add",
+                              "value":  4
+                          }
+                      ]
+    },
+    {
+        "id":  "Effect.Sanguo.Item.HeavyArmor",
+        "tags":  [
+                     "Effect.Sanguo.Item",
+                     "Effect.Sanguo.Item.HeavyArmor"
+                 ],
+        "presetType":  "Buff",
+        "lifetime":  "Infinite",
+        "participatesInResponse":  false,
+        "modifiers":  [
+                          {
+                              "attribute":  "Defense",
+                              "op":  "Add",
+                              "value":  10
+                          },
+                          {
+                              "attribute":  "Morale",
+                              "op":  "Add",
+                              "value":  1
+                          }
+                      ]
+    },
+    {
+        "id":  "Effect.Sanguo.Item.EliteWeapon",
+        "tags":  [
+                     "Effect.Sanguo.Item",
+                     "Effect.Sanguo.Item.EliteWeapon"
+                 ],
+        "presetType":  "Buff",
+        "lifetime":  "Infinite",
+        "participatesInResponse":  false,
+        "modifiers":  [
+                          {
+                              "attribute":  "Command",
+                              "op":  "Add",
+                              "value":  5
+                          },
+                          {
+                              "attribute":  "Training",
+                              "op":  "Add",
+                              "value":  6
+                          }
+                      ]
+    },
+    {
+        "id":  "Effect.Sanguo.Item.GrainLedger",
+        "tags":  [
+                     "Effect.Sanguo.Item",
+                     "Effect.Sanguo.Item.GrainLedger"
+                 ],
+        "presetType":  "Buff",
+        "lifetime":  "Infinite",
+        "participatesInResponse":  false,
+        "modifiers":  [
+                          {
+                              "attribute":  "Food",
+                              "op":  "Add",
+                              "value":  500
+                          },
+                          {
+                              "attribute":  "Production",
+                              "op":  "Add",
+                              "value":  3
+                          }
+                      ]
+    }
+]
+

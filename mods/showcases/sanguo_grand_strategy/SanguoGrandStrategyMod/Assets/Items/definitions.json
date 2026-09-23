@@ -1,0 +1,183 @@
+﻿[
+    {
+        "id":  "itm_sanguo_green_dragon_blade",
+        "displayName":  "Green Dragon Blade",
+        "shape":  "sanguo_shape_1x2",
+        "tags":  [
+                     "Sanguo.Slot.Weapon",
+                     "Sanguo.Item"
+                 ],
+        "allowedNamedSlots":  [
+                                  "weapon"
+                              ],
+        "equipEffects":  [
+                             "Effect.Sanguo.Item.EliteWeapon"
+                         ]
+    },
+    {
+        "id":  "itm_sanguo_serpent_spear",
+        "displayName":  "Serpent Spear",
+        "shape":  "sanguo_shape_1x2",
+        "tags":  [
+                     "Sanguo.Slot.Weapon",
+                     "Sanguo.Item"
+                 ],
+        "allowedNamedSlots":  [
+                                  "weapon"
+                              ],
+        "equipEffects":  [
+                             "Effect.Sanguo.Item.EliteWeapon"
+                         ]
+    },
+    {
+        "id":  "itm_sanguo_twin_swords",
+        "displayName":  "Twin Swords",
+        "shape":  "sanguo_shape_1x2",
+        "tags":  [
+                     "Sanguo.Slot.Weapon",
+                     "Sanguo.Item"
+                 ],
+        "allowedNamedSlots":  [
+                                  "weapon"
+                              ],
+        "equipEffects":  [
+                             "Effect.Sanguo.Item.EliteWeapon"
+                         ]
+    },
+    {
+        "id":  "itm_sanguo_mingguang_armor",
+        "displayName":  "Mingguang Armor",
+        "shape":  "sanguo_shape_2x2",
+        "tags":  [
+                     "Sanguo.Slot.Armor",
+                     "Sanguo.Item"
+                 ],
+        "allowedNamedSlots":  [
+                                  "armor"
+                              ],
+        "equipEffects":  [
+                             "Effect.Sanguo.Item.HeavyArmor"
+                         ]
+    },
+    {
+        "id":  "itm_sanguo_liangdang_armor",
+        "displayName":  "Liangdang Armor",
+        "shape":  "sanguo_shape_2x2",
+        "tags":  [
+                     "Sanguo.Slot.Armor",
+                     "Sanguo.Item"
+                 ],
+        "allowedNamedSlots":  [
+                                  "armor"
+                              ],
+        "equipEffects":  [
+                             "Effect.Sanguo.Item.HeavyArmor"
+                         ]
+    },
+    {
+        "id":  "itm_sanguo_red_hare",
+        "displayName":  "Red Hare",
+        "shape":  "sanguo_shape_2x2",
+        "tags":  [
+                     "Sanguo.Slot.Mount",
+                     "Sanguo.Item"
+                 ],
+        "allowedNamedSlots":  [
+                                  "mount"
+                              ],
+        "equipEffects":  [
+                             "Effect.Sanguo.Item.Warhorse"
+                         ]
+    },
+    {
+        "id":  "itm_sanguo_white_shadow",
+        "displayName":  "White Shadow",
+        "shape":  "sanguo_shape_2x2",
+        "tags":  [
+                     "Sanguo.Slot.Mount",
+                     "Sanguo.Item"
+                 ],
+        "allowedNamedSlots":  [
+                                  "mount"
+                              ],
+        "equipEffects":  [
+                             "Effect.Sanguo.Item.Warhorse"
+                         ]
+    },
+    {
+        "id":  "itm_sanguo_prime_minister_seal",
+        "displayName":  "Prime Minister Seal",
+        "shape":  "sanguo_shape_1x1",
+        "tags":  [
+                     "Sanguo.Slot.Seal",
+                     "Sanguo.Item"
+                 ],
+        "allowedNamedSlots":  [
+                                  "seal"
+                              ],
+        "equipEffects":  [
+                             "Effect.Sanguo.Item.CommandSeal"
+                         ]
+    },
+    {
+        "id":  "itm_sanguo_imperial_edict",
+        "displayName":  "Imperial Edict",
+        "shape":  "sanguo_shape_1x1",
+        "tags":  [
+                     "Sanguo.Slot.Seal",
+                     "Sanguo.Item"
+                 ],
+        "allowedNamedSlots":  [
+                                  "seal"
+                              ],
+        "equipEffects":  [
+                             "Effect.Sanguo.Item.CommandSeal"
+                         ]
+    },
+    {
+        "id":  "itm_sanguo_six_secret_teachings",
+        "displayName":  "Six Secret Teachings",
+        "shape":  "sanguo_shape_1x1",
+        "tags":  [
+                     "Sanguo.Slot.Manual",
+                     "Sanguo.Item"
+                 ],
+        "allowedNamedSlots":  [
+                                  "manual"
+                              ],
+        "equipEffects":  [
+                             "Effect.Sanguo.Item.StrategyManual"
+                         ]
+    },
+    {
+        "id":  "itm_sanguo_art_of_war",
+        "displayName":  "Art of War",
+        "shape":  "sanguo_shape_1x1",
+        "tags":  [
+                     "Sanguo.Slot.Manual",
+                     "Sanguo.Item"
+                 ],
+        "allowedNamedSlots":  [
+                                  "manual"
+                              ],
+        "equipEffects":  [
+                             "Effect.Sanguo.Item.StrategyManual"
+                         ]
+    },
+    {
+        "id":  "itm_sanguo_grain_ledger",
+        "displayName":  "Grain Ledger",
+        "shape":  "sanguo_shape_1x1",
+        "tags":  [
+                     "Sanguo.Slot.Manual",
+                     "Sanguo.Item"
+                 ],
+        "allowedNamedSlots":  [
+                                  "manual"
+                              ],
+        "equipEffects":  [
+                             "Effect.Sanguo.Item.GrainLedger"
+                         ]
+    }
+]
+

@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sanguo DataPlane</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, Segoe UI, Arial, sans-serif;
+      background: #070a10;
+      color: #eef4fb;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #070a10;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(280px, 360px) 1fr;
+      gap: 12px;
+      padding: 14px;
+      box-sizing: border-box;
+      min-height: 100vh;
+    }
+
+    section {
+      border: 1px solid #2b4054;
+      border-radius: 8px;
+      background: #111925;
+      padding: 12px;
+      min-width: 0;
+    }
+
+    h1, h2 {
+      margin: 0 0 8px;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      font-size: 22px;
+    }
+
+    h2 {
+      color: #f4c95d;
+      font-size: 13px;
+    }
+
+    .status, .muted {
+      color: #a9b8c8;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 8px;
+    }
+
+    .tile {
+      border: 1px solid #31495f;
+      border-radius: 8px;
+      background: #172232;
+      padding: 10px;
+      min-height: 76px;
+    }
+
+    button {
+      border: 1px solid #ffffff44;
+      border-radius: 8px;
+      background: #25405f;
+      color: #f8fafc;
+      padding: 8px 9px;
+      margin: 0 6px 6px 0;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #315477;
+    }
+
+    .map {
+      position: relative;
+      height: 520px;
+      overflow: hidden;
+      border: 1px solid #2b4054;
+      border-radius: 8px;
+      background: #0b111b;
+    }
+
+    .city {
+      position: absolute;
+      width: 7px;
+      height: 7px;
+      margin: -3px 0 0 -3px;
+      border-radius: 50%;
+      background: var(--color, #8de3ae);
+      box-shadow: 0 0 0 1px #0009;
+    }
+
+    .city.selected {
+      width: 13px;
+      height: 13px;
+      margin: -6px 0 0 -6px;
+      border: 2px solid #f8fafc;
+    }
+
+    .rows {
+      display: grid;
+      gap: 6px;
+      max-height: 260px;
+      overflow: auto;
+    }
+
+    .row {
+      border: 1px solid #26394b;
+      border-radius: 8px;
+      background: #0e1621;
+      padding: 8px;
+      font-size: 12px;
+    }
+
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section>
+      <h1>Sanguo Grand Strategy</h1>
+      <p id="status" class="status">Connecting to Ludots WebUI DataPlane...</p>
+      <div id="summary" class="grid"></div>
+      <h2>Commands</h2>
+      <div id="commands"></div>
+      <h2>Factions</h2>
+      <div id="factions" class="rows"></div>
+    </section>
+    <section>
+      <h2>China Map DataPlane View</h2>
+      <div id="map" class="map"></div>
+      <h2>Campaign Log</h2>
+      <div id="log" class="rows"></div>
+    </section>
+  </main>
+  <script>
+    const topic = 'ludots.showcase.sanguo.world';
+    const statusEl = document.getElementById('status');
+    const summaryEl = document.getElementById('summary');
+    const factionsEl = document.getElementById('factions');
+    const mapEl = document.getElementById('map');
+    const logEl = document.getElementById('log');
+    const commandsEl = document.getElementById('commands');
+    let requestId = 0;
+    let clientSeq = 0;
+    let snapshot = null;
+
+    const commands = [
+      ['nextCity', 'Next City'],
+      ['nextUnit', 'Next Unit'],
+      ['conscript', 'Conscript'],
+      ['trainElite', 'Train Elite'],
+      ['develop', 'Develop'],
+      ['tax', 'Tax'],
+      ['harvest', 'Harvest'],
+      ['march', 'March'],
+      ['resolveBattle', 'Resolve Battle'],
+      ['research', 'Research'],
+      ['diplomacy', 'Diplomacy']
+    ];
+
+    for (const [name, label] of commands) {
+      const button = document.createElement('button');
+      button.textContent = label;
+      button.addEventListener('click', () => sendCommand(name, {}));
+      commandsEl.appendChild(button);
+    }
+
+    window.addEventListener('message', event => {
+      const message = normalize(event.data);
+      if (!message) return;
+      if (message.kind === 'handshakeAck') {
+        statusEl.textContent = `Connected via ${message.payload.transportMode ?? 'message'} transport.`;
+        send('subscribe', topic, { subscriptionId: 'sanguo-main', snapshot: true });
+        return;
+      }
+      if (message.kind === 'snapshot' || message.kind === 'delta') {
+        snapshot = message.payload;
+        render();
+      }
+    });
+
+    if (window.ludotsDataplane && typeof window.ludotsDataplane.postMessage === 'function') {
+      send('handshake', 'system', { requiredCapabilities: ['control', 'latest-wins'] });
+    } else {
+      statusEl.textContent = 'Ludots DataPlane transport is not available in this browser surface.';
+    }
+
+    function send(kind, targetTopic, payload) {
+      const envelope = {
+        schemaVersion: 1,
+        sessionId: 'sanguo-web',
+        requestId: ++requestId,
+        kind,
+        topic: targetTopic,
+        payload
+      };
+      window.ludotsDataplane.postMessage(envelope);
+    }
+
+    function sendCommand(name, payload) {
+      send('command', topic, {
+        name,
+        clientSeq: ++clientSeq,
+        entityRefs: [],
+        payload
+      });
+    }
+
+    function normalize(data) {
+      if (!data || data.schemaVersion !== 1) return null;
+      const kind = String(data.kind ?? '').charAt(0).toLowerCase() + String(data.kind ?? '').slice(1);
+      if (data.payload && data.payload.schemaVersion === 1) {
+        return {
+          kind: data.payload.kind,
+          topic: data.payload.topic,
+          payload: data.payload.payload ?? {}
+        };
+      }
+      return { kind, topic: data.topic, payload: data.payload ?? {} };
+    }
+
+    function render() {
+      if (!snapshot) return;
+      statusEl.textContent = `${snapshot.webUiStatus} Turn ${snapshot.turn}.`;
+      summaryEl.innerHTML = [
+        tile('Cities', snapshot.cityCount),
+        tile('Unit Types', snapshot.unitTypeCount),
+        tile('Factions', snapshot.factionCount),
+        tile('Selected', snapshot.selectedCity),
+        tile('Graph Sample', snapshot.graph?.cityCount ?? 0),
+        tile('Wei Frontier', snapshot.graph?.weiFrontierCount ?? 0),
+        tile('Equipment', snapshot.equipmentLine ?? 'initializing')
+      ].join('');
+      factionsEl.innerHTML = snapshot.factions
+        .map(f => `<div class="row"><strong style="color:${f.color}">${f.name}</strong><br>${f.cities} cities | ${format(f.troops)} troops | ${f.stance} trust ${f.trustWithPlayer}</div>`)
+        .join('');
+      logEl.innerHTML = snapshot.logLines.map(line => `<div class="row">${escapeHtml(line)}</div>`).join('');
+      renderMap(snapshot.cities ?? []);
+    }
+
+    function renderMap(cities) {
+      if (!cities.length) {
+        mapEl.innerHTML = '';
+        return;
+      }
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      for (const city of cities) {
+        minX = Math.min(minX, city.x); maxX = Math.max(maxX, city.x);
+        minY = Math.min(minY, city.y); maxY = Math.max(maxY, city.y);
+      }
+      const width = Math.max(1, maxX - minX);
+      const height = Math.max(1, maxY - minY);
+      mapEl.innerHTML = cities.map(city => {
+        const left = ((city.x - minX) / width) * 94 + 3;
+        const top = 97 - (((city.y - minY) / height) * 94 + 3);
+        const color = colorForTeam(city.teamId);
+        const selected = city.selected ? ' selected' : '';
+        return `<button class="city${selected}" style="left:${left}%;top:${top}%;--color:${color}" title="${escapeHtml(city.name)}" onclick="selectCity('${city.id}')"></button>`;
+      }).join('');
+    }
+
+    window.selectCity = id => sendCommand('selectCity', { cityId: id });
+
+    function tile(label, value) {
+      return `<div class="tile"><span class="muted">${label}</span><br><strong>${escapeHtml(String(value))}</strong></div>`;
+    }
+
+    function colorForTeam(teamId) {
+      return ['#8de3ae', '#4d8dff', '#5cc86d', '#f1b84b', '#b989ff', '#f06a6a', '#9ec3d9', '#72d1b8', '#d7a06b'][teamId] ?? '#8de3ae';
+    }
+
+    function format(value) {
+      return Number(value ?? 0).toLocaleString('en-US');
+    }
+
+    function escapeHtml(value) {
+      return value.replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    }
+  </script>
+</body>
+</html>

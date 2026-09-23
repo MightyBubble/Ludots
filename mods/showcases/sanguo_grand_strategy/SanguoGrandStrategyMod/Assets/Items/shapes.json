@@ -1,0 +1,26 @@
+﻿[
+    {
+        "id":  "sanguo_shape_1x1",
+        "rows":  [
+                     "X"
+                 ],
+        "rotatable":  false
+    },
+    {
+        "id":  "sanguo_shape_1x2",
+        "rows":  [
+                     "X",
+                     "X"
+                 ],
+        "rotatable":  true
+    },
+    {
+        "id":  "sanguo_shape_2x2",
+        "rows":  [
+                     "XX",
+                     "XX"
+                 ],
+        "rotatable":  true
+    }
+]
+

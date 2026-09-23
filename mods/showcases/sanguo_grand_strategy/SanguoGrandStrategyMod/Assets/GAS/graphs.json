@@ -1,0 +1,219 @@
+﻿[
+    {
+        "id":  "sanguo.graph.cityEconomyQuery",
+        "kind":  "Query",
+        "entry":  "minPopulation",
+        "nodes":  [
+                      {
+                          "id":  "minPopulation",
+                          "op":  "ConstFloat",
+                          "floatValue":  0,
+                          "next":  "maxPopulation"
+                      },
+                      {
+                          "id":  "maxPopulation",
+                          "op":  "ConstFloat",
+                          "floatValue":  999999,
+                          "next":  "allMapEntities"
+                      },
+                      {
+                          "id":  "allMapEntities",
+                          "op":  "QueryAllMapEntities",
+                          "next":  "cities"
+                      },
+                      {
+                          "id":  "cities",
+                          "op":  "QueryFilterTemplate",
+                          "template":  "sanguo_city",
+                          "next":  "populationRange"
+                      },
+                      {
+                          "id":  "populationRange",
+                          "op":  "QueryFilterAttributeRange",
+                          "attribute":  "Population",
+                          "inputs":  [
+                                         "minPopulation",
+                                         "maxPopulation"
+                                     ],
+                          "next":  "sortProduction"
+                      },
+                      {
+                          "id":  "sortProduction",
+                          "op":  "QuerySortByAttribute",
+                          "attribute":  "Production",
+                          "descending":  true,
+                          "next":  "cityCount"
+                      },
+                      {
+                          "id":  "cityCount",
+                          "op":  "AggCount",
+                          "next":  "totalPopulation"
+                      },
+                      {
+                          "id":  "totalPopulation",
+                          "op":  "AggSumAttribute",
+                          "attribute":  "Population",
+                          "next":  "totalFood"
+                      },
+                      {
+                          "id":  "totalFood",
+                          "op":  "AggSumAttribute",
+                          "attribute":  "Food",
+                          "next":  "totalGold"
+                      },
+                      {
+                          "id":  "totalGold",
+                          "op":  "AggSumAttribute",
+                          "attribute":  "Gold",
+                          "next":  "bestProductionCity"
+                      },
+                      {
+                          "id":  "bestProductionCity",
+                          "op":  "AggMaxEntityByAttribute",
+                          "attribute":  "Production"
+                      }
+                  ],
+        "outputs":  [
+                        {
+                            "id":  "cities",
+                            "destination":  "EntityCollection",
+                            "type":  "TargetList",
+                            "collectionKey":  "sanguo.collection.cities.economy",
+                            "role":  "Display",
+                            "title":  "Sanguo Cities",
+                            "summary":  "All generated China-map cities sorted by production."
+                        },
+                        {
+                            "id":  "cityCount",
+                            "destination":  "Summary",
+                            "type":  "Int",
+                            "source":  "cityCount",
+                            "key":  "sanguo.summary.cityCount"
+                        },
+                        {
+                            "id":  "totalPopulation",
+                            "destination":  "Summary",
+                            "type":  "Float",
+                            "source":  "totalPopulation",
+                            "key":  "sanguo.summary.population"
+                        },
+                        {
+                            "id":  "totalFood",
+                            "destination":  "Summary",
+                            "type":  "Float",
+                            "source":  "totalFood",
+                            "key":  "sanguo.summary.food"
+                        },
+                        {
+                            "id":  "totalGold",
+                            "destination":  "Summary",
+                            "type":  "Float",
+                            "source":  "totalGold",
+                            "key":  "sanguo.summary.gold"
+                        },
+                        {
+                            "id":  "bestProductionCity",
+                            "destination":  "Summary",
+                            "type":  "Entity",
+                            "source":  "bestProductionCity",
+                            "key":  "sanguo.summary.bestProductionCity"
+                        }
+                    ]
+    },
+    {
+        "id":  "sanguo.graph.weiFrontierQuery",
+        "kind":  "Query",
+        "entry":  "minTroops",
+        "nodes":  [
+                      {
+                          "id":  "minTroops",
+                          "op":  "ConstFloat",
+                          "floatValue":  5000,
+                          "next":  "maxTroops"
+                      },
+                      {
+                          "id":  "maxTroops",
+                          "op":  "ConstFloat",
+                          "floatValue":  100000,
+                          "next":  "allMapEntities"
+                      },
+                      {
+                          "id":  "allMapEntities",
+                          "op":  "QueryAllMapEntities",
+                          "next":  "teamCities"
+                      },
+                      {
+                          "id":  "teamCities",
+                          "op":  "QueryFilterTeam",
+                          "teamId":  1,
+                          "next":  "troopRange"
+                      },
+                      {
+                          "id":  "troopRange",
+                          "op":  "QueryFilterAttributeRange",
+                          "attribute":  "Troops",
+                          "inputs":  [
+                                         "minTroops",
+                                         "maxTroops"
+                                     ],
+                          "next":  "sortTroops"
+                      },
+                      {
+                          "id":  "sortTroops",
+                          "op":  "QuerySortByAttribute",
+                          "attribute":  "Troops",
+                          "descending":  true,
+                          "next":  "cityCount"
+                      },
+                      {
+                          "id":  "cityCount",
+                          "op":  "AggCount",
+                          "next":  "totalTroops"
+                      },
+                      {
+                          "id":  "totalTroops",
+                          "op":  "AggSumAttribute",
+                          "attribute":  "Troops",
+                          "next":  "strongestCity"
+                      },
+                      {
+                          "id":  "strongestCity",
+                          "op":  "AggMaxEntityByAttribute",
+                          "attribute":  "Troops"
+                      }
+                  ],
+        "outputs":  [
+                        {
+                            "id":  "weiCities",
+                            "destination":  "EntityCollection",
+                            "type":  "TargetList",
+                            "collectionKey":  "sanguo.collection.wei.frontier",
+                            "role":  "Display",
+                            "title":  "Wei Frontier Cities",
+                            "summary":  "Wei-held cities with at least 5000 troops."
+                        },
+                        {
+                            "id":  "cityCount",
+                            "destination":  "Summary",
+                            "type":  "Int",
+                            "source":  "cityCount",
+                            "key":  "sanguo.summary.weiFrontierCount"
+                        },
+                        {
+                            "id":  "totalTroops",
+                            "destination":  "Summary",
+                            "type":  "Float",
+                            "source":  "totalTroops",
+                            "key":  "sanguo.summary.weiTroops"
+                        },
+                        {
+                            "id":  "strongestCity",
+                            "destination":  "Summary",
+                            "type":  "Entity",
+                            "source":  "strongestCity",
+                            "key":  "sanguo.summary.weiStrongestCity"
+                        }
+                    ]
+    }
+]
+

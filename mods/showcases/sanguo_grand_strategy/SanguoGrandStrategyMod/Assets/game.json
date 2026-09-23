@@ -1,0 +1,8 @@
+{
+  "windowTitle": "Ludots Sanguo Grand Strategy",
+  "startupMapId": "sanguo_grand_strategy_china",
+  "windowWidth": 1920,
+  "windowHeight": 1080,
+  "targetFps": 60,
+  "startupInputContexts": ["Default_Gameplay"]
+}

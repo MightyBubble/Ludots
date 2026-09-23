@@ -1,0 +1,15 @@
+{
+  "name": "SanguoGrandStrategyMod",
+  "version": "1.0.0",
+  "description": "Playable Sanguo grand-strategy showcase with 300 China-map cities, 100 unit types, GAS/graph/item content, native HUD, and optional WebUI DataPlane browser panel.",
+  "main": "bin/net8.0/SanguoGrandStrategyMod.dll",
+  "priority": 230,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0",
+    "EntityCommandPanelMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "sanguo", "grand-strategy", "gas", "items", "graph", "webui-dataplane"]
+}

@@ -1,0 +1,187 @@
+﻿[
+    {
+        "id":  "Ability.Sanguo.Conscript",
+        "exec":  {
+                     "clockId":  "FixedFrame",
+                     "items":  [
+                                   {
+                                       "kind":  "TagClip",
+                                       "tick":  0,
+                                       "duration":  18,
+                                       "tag":  "Cooldown.Sanguo.Recruit"
+                                   },
+                                   {
+                                       "kind":  "EffectSignal",
+                                       "tick":  0,
+                                       "template":  "Effect.Sanguo.Conscript"
+                                   },
+                                   {
+                                       "kind":  "End",
+                                       "tick":  0
+                                   }
+                               ]
+                 }
+    },
+    {
+        "id":  "Ability.Sanguo.TrainElite",
+        "exec":  {
+                     "clockId":  "FixedFrame",
+                     "items":  [
+                                   {
+                                       "kind":  "TagClip",
+                                       "tick":  0,
+                                       "duration":  18,
+                                       "tag":  "Cooldown.Sanguo.Recruit"
+                                   },
+                                   {
+                                       "kind":  "EffectSignal",
+                                       "tick":  0,
+                                       "template":  "Effect.Sanguo.TrainElite"
+                                   },
+                                   {
+                                       "kind":  "End",
+                                       "tick":  0
+                                   }
+                               ]
+                 }
+    },
+    {
+        "id":  "Ability.Sanguo.Develop",
+        "exec":  {
+                     "clockId":  "FixedFrame",
+                     "items":  [
+                                   {
+                                       "kind":  "TagClip",
+                                       "tick":  0,
+                                       "duration":  18,
+                                       "tag":  "Cooldown.Sanguo.Economy"
+                                   },
+                                   {
+                                       "kind":  "EffectSignal",
+                                       "tick":  0,
+                                       "template":  "Effect.Sanguo.Develop"
+                                   },
+                                   {
+                                       "kind":  "End",
+                                       "tick":  0
+                                   }
+                               ]
+                 }
+    },
+    {
+        "id":  "Ability.Sanguo.Tax",
+        "exec":  {
+                     "clockId":  "FixedFrame",
+                     "items":  [
+                                   {
+                                       "kind":  "TagClip",
+                                       "tick":  0,
+                                       "duration":  18,
+                                       "tag":  "Cooldown.Sanguo.Economy"
+                                   },
+                                   {
+                                       "kind":  "EffectSignal",
+                                       "tick":  0,
+                                       "template":  "Effect.Sanguo.Tax"
+                                   },
+                                   {
+                                       "kind":  "End",
+                                       "tick":  0
+                                   }
+                               ]
+                 }
+    },
+    {
+        "id":  "Ability.Sanguo.Harvest",
+        "exec":  {
+                     "clockId":  "FixedFrame",
+                     "items":  [
+                                   {
+                                       "kind":  "TagClip",
+                                       "tick":  0,
+                                       "duration":  18,
+                                       "tag":  "Cooldown.Sanguo.Economy"
+                                   },
+                                   {
+                                       "kind":  "EffectSignal",
+                                       "tick":  0,
+                                       "template":  "Effect.Sanguo.Harvest"
+                                   },
+                                   {
+                                       "kind":  "End",
+                                       "tick":  0
+                                   }
+                               ]
+                 }
+    },
+    {
+        "id":  "Ability.Sanguo.March",
+        "exec":  {
+                     "clockId":  "FixedFrame",
+                     "items":  [
+                                   {
+                                       "kind":  "TagClip",
+                                       "tick":  0,
+                                       "duration":  18,
+                                       "tag":  "Cooldown.Sanguo.Military"
+                                   },
+                                   {
+                                       "kind":  "EffectSignal",
+                                       "tick":  0,
+                                       "template":  "Effect.Sanguo.March"
+                                   },
+                                   {
+                                       "kind":  "End",
+                                       "tick":  0
+                                   }
+                               ]
+                 }
+    },
+    {
+        "id":  "Ability.Sanguo.Research",
+        "exec":  {
+                     "clockId":  "FixedFrame",
+                     "items":  [
+                                   {
+                                       "kind":  "TagClip",
+                                       "tick":  0,
+                                       "duration":  18,
+                                       "tag":  "Cooldown.Sanguo.Tech"
+                                   },
+                                   {
+                                       "kind":  "EffectSignal",
+                                       "tick":  0,
+                                       "template":  "Effect.Sanguo.Research"
+                                   },
+                                   {
+                                       "kind":  "End",
+                                       "tick":  0
+                                   }
+                               ]
+                 }
+    },
+    {
+        "id":  "Ability.Sanguo.Diplomacy",
+        "exec":  {
+                     "clockId":  "FixedFrame",
+                     "items":  [
+                                   {
+                                       "kind":  "TagClip",
+                                       "tick":  0,
+                                       "duration":  18,
+                                       "tag":  "Cooldown.Sanguo.Diplomacy"
+                                   },
+                                   {
+                                       "kind":  "EffectSignal",
+                                       "tick":  0,
+                                       "template":  "Effect.Sanguo.Diplomacy"
+                                   },
+                                   {
+                                       "kind":  "End",
+                                       "tick":  0
+                                   }
+                               ]
+                 }
+    }
+]
+
