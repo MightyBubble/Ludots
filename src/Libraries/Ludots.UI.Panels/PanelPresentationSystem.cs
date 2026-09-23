@@ -307,6 +307,8 @@ public sealed class PanelPresentationSystem : ISystem<float>
 
         PanelTemplate template = _templates.Require(values.TemplateId);
         _panelHost.TryGetListProjections(handle, out IReadOnlyList<PanelListProjection> lists);
+        var accent = new UiColor(skin.AccentR, skin.AccentG, skin.AccentB);
+        var dim = new UiColor(136, 136, 136);
 
         UiElementBuilder body = template.Layout != null
             ? ComposeDeclaredControls(
@@ -324,14 +326,17 @@ public sealed class PanelPresentationSystem : ISystem<float>
             return new UiElementBuilder(UiNodeKind.Container).Column()
                 .Class("panel")
                 .Class(TemplateClassToken(template.Id))
+                .Background(new UiColor(20, 20, 35, 220))
+                .Border(2, accent)
+                .Radius(8)
+                .Padding(12)
                 .Width(rect.Width)
+                .Gap(4)
                 .Overflow(UiOverflow.Clip)
                 .Absolute(rect.X, rect.Y)
                 .Children(body);
         }
 
-        var accent = new UiColor(skin.AccentR, skin.AccentG, skin.AccentB);
-        var dim = new UiColor(136, 136, 136);
         var builder = new UiElementBuilder(UiNodeKind.Container).Column()
             .Class("panel")
             .Class(TemplateClassToken(template.Id))
