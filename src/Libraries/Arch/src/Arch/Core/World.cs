@@ -1585,10 +1585,17 @@ public partial class World
     /// </remarks>
     /// <param name="entity">The <see cref="Entity"/>.</param>
     /// <param name="types">A <see cref="Span{T}"/> of <see cref="ComponentType"/>s, that are removed from the <see cref="Entity"/>.</param>
+    public static int AuditRemoveRangeCalls;
+    public static int AuditRemoveRangeHashMisses;
+    public static long AuditRemoveRangeSignatureBytes;
+    public static long AuditRemoveRangeEventBytes;
+    public static long AuditRemoveRangeMoveBytes;
+
     [SkipLocalsInit]
     [StructuralChange]
     public void RemoveRange(Entity entity, Span<ComponentType> types)
     {
+        AuditRemoveRangeCalls++;
         ref var data = ref EntityInfo.EntityData[entity.Id];
         var oldArchetype = data.Archetype;
 
@@ -1607,17 +1614,23 @@ public partial class World
         // Get or Create new archetype
         if (!TryGetArchetype(spanBitSet.GetHashCode(), out var newArchetype))
         {
+            AuditRemoveRangeHashMisses++;
+            long auditSignatureStart = GC.GetAllocatedBytesForCurrentThread();
             var newSignature = Signature.Remove(oldArchetype.Signature, types);
             newArchetype = GetOrCreate(newSignature);
+            AuditRemoveRangeSignatureBytes += GC.GetAllocatedBytesForCurrentThread() - auditSignatureStart;
         }
 
+        long auditEventStart = GC.GetAllocatedBytesForCurrentThread();
         // Fire events and move
         foreach (var type in types)
         {
             OnComponentRemoved(entity, type);
         }
-
+        AuditRemoveRangeEventBytes += GC.GetAllocatedBytesForCurrentThread() - auditEventStart;
+        long auditMoveStart = GC.GetAllocatedBytesForCurrentThread();
         Move(entity, ref data, oldArchetype, newArchetype, out _);
+        AuditRemoveRangeMoveBytes += GC.GetAllocatedBytesForCurrentThread() - auditMoveStart;
     }
 }
 

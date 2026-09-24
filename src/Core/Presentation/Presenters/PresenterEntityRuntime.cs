@@ -21,6 +21,17 @@ namespace Ludots.Core.Presentation.Presenters
 {
     public sealed class PresenterEntityRuntime
     {
+        public static bool AuditGroundingEnabled;
+        public static bool AuditSkipInitialSampleTick;
+        public static string? AuditGroundingFirstStack;
+        public static int AuditSingleRootCreates;
+        public static int AuditSingleChildCreates;
+        public static int AuditRootBatchCreates;
+        public static int AuditRootBatchCalls;
+        public static int AuditSyncGroundingTrue;
+        public static readonly int[] AuditSyncCallers = new int[4];
+        public static readonly int[] AuditSingleGroundingReasons = new int[11];
+        public static readonly int[] AuditBatchGroundingReasons = new int[8];
         private static readonly QueryDescription _presenterCullQuery = new QueryDescription()
             .WithAll<PresenterState, PresenterCullState>();
         private static readonly QueryDescription _presenterStateQuery = new QueryDescription()
@@ -288,6 +299,11 @@ namespace Ludots.Core.Presentation.Presenters
         {
             definition = ResolveDefinition(defId, definition);
             EnsureParentCanAcceptChild(parent, defId);
+            if (AuditGroundingEnabled)
+            {
+                if (parent == Entity.Null) AuditSingleRootCreates++;
+                else AuditSingleChildCreates++;
+            }
 
             var state = new PresenterState
             {
@@ -426,6 +442,11 @@ namespace Ludots.Core.Presentation.Presenters
             }
 
             ResetLastRootBatchTiming();
+            if (AuditGroundingEnabled)
+            {
+                AuditRootBatchCalls++;
+                AuditRootBatchCreates += owners.Length;
+            }
             long setupStart = Stopwatch.GetTimestamp();
             ReserveBatchIndexCapacity(owners.Length, definition);
             uint defaultBehaviorMask = BuildDefaultBehaviorMask(definition);
@@ -1559,6 +1580,7 @@ namespace Ludots.Core.Presentation.Presenters
             SyncTickBehaviorMarker<PerfHasSpline>(entity, hasSpline);
             SyncTickBehaviorMarker<PerfHasAttachment>(entity, hasAttachment);
             SyncTickBehaviorMarker<PerfHasAttachmentTick>(entity, hasAttachmentTick);
+            if (AuditGroundingEnabled && hasGrounding) AuditSyncGroundingTrue++;
             SyncTickBehaviorMarker<PerfHasGrounding>(entity, hasGrounding);
             SyncTickBehaviorMarker<PerfHasOwnerFacingBinding>(entity, hasOwnerFacingBinding);
             SyncTickBehaviorMarker<PerfHasGraphParamBinding>(entity, hasGraphParamBinding);
@@ -1677,6 +1699,7 @@ namespace Ludots.Core.Presentation.Presenters
                 return true;
             }
             RefreshOwnerPayloadMarker(state.OwnerEntity);
+            if (AuditGroundingEnabled) AuditSyncCallers[1]++;
             SyncTickBehaviorMarkers(entity, definition, nextMask);
             SyncEmitWorkMarkers(entity, definition, nextMask);
             RefreshOwnerPayloadMarker(entity);
@@ -1711,6 +1734,7 @@ namespace Ludots.Core.Presentation.Presenters
 
         private void AddBehaviorMarkers(Entity entity, PresenterDefinition definition, uint activeBehaviorMask)
         {
+            if (AuditGroundingEnabled) AuditSyncCallers[0]++;
             SyncTickBehaviorMarkers(entity, definition, activeBehaviorMask);
             SyncEmitWorkMarkers(entity, definition, activeBehaviorMask);
         }
@@ -1949,13 +1973,27 @@ namespace Ludots.Core.Presentation.Presenters
             Entity presenter,
             in GroundingConfig config)
         {
+            if (AuditGroundingEnabled)
+            {
+                AuditGroundingFirstStack ??= new StackTrace().ToString();
+                int reason = !CanUseOwnerHeightmapSampleForSnapToGroundDefinition(definition: null, in config) ? 0 :
+                    state.AnchorKind != PresentationAnchorKind.Entity ? 1 :
+                    state.OwnerEntity == Entity.Null ? 2 :
+                    !_world.IsAlive(state.OwnerEntity) ? 3 :
+                    !_world.Has<VisualTransform>(state.OwnerEntity) ? 4 :
+                    !_world.Has<ContinuousHeightmapSampleState>(state.OwnerEntity) ? 5 :
+                    _world.Get<ContinuousHeightmapSampleState>(state.OwnerEntity).Sampled == 0 ? 6 :
+                    !_world.Has<PresenterTransformSource>(presenter) ? 7 :
+                    _world.Get<PresenterTransformSource>(presenter).Value != TransformSource.EntityTransform ? 8 : 9;
+                AuditSingleGroundingReasons[reason]++;
+            }
             if (!CanUseOwnerHeightmapSampleForSnapToGroundDefinition(definition: null, in config) ||
                 state.AnchorKind != PresentationAnchorKind.Entity ||
                 state.OwnerEntity == Entity.Null ||
                 !_world.IsAlive(state.OwnerEntity) ||
                 !_world.Has<VisualTransform>(state.OwnerEntity) ||
                 !_world.Has<ContinuousHeightmapSampleState>(state.OwnerEntity) ||
-                _world.Get<ContinuousHeightmapSampleState>(state.OwnerEntity).Sampled == 0 ||
+                (_world.Get<ContinuousHeightmapSampleState>(state.OwnerEntity).Sampled == 0 && !AuditSkipInitialSampleTick) ||
                 !_world.Has<PresenterTransformSource>(presenter) ||
                 _world.Get<PresenterTransformSource>(presenter).Value != TransformSource.EntityTransform)
             {
@@ -2040,6 +2078,7 @@ namespace Ludots.Core.Presentation.Presenters
                 hasGroundingWork = true;
                 if (!CanUseOwnerHeightmapSampleForSnapToGroundDefinition(definition, in slot.Grounding))
                 {
+                    if (AuditGroundingEnabled) AuditBatchGroundingReasons[0] += owners.Length;
                     return true;
                 }
             }
@@ -2052,6 +2091,15 @@ namespace Ludots.Core.Presentation.Presenters
             for (int i = 0; i < owners.Length; i++)
             {
                 Entity owner = owners[i];
+                if (AuditGroundingEnabled)
+                {
+                    int reason = owner == Entity.Null ? 1 :
+                        !_world.IsAlive(owner) ? 2 :
+                        !_world.Has<VisualTransform>(owner) ? 3 :
+                        !_world.Has<ContinuousHeightmapSampleState>(owner) ? 4 :
+                        _world.Get<ContinuousHeightmapSampleState>(owner).Sampled == 0 ? 5 : 6;
+                    AuditBatchGroundingReasons[reason] += reason == 6 ? 1 : owners.Length;
+                }
                 if (owner == Entity.Null ||
                     !_world.IsAlive(owner) ||
                     !_world.Has<VisualTransform>(owner) ||
@@ -2394,6 +2442,7 @@ namespace Ludots.Core.Presentation.Presenters
             ref PresenterState childState = ref _world.Get<PresenterState>(childEntity);
             childState.BehaviorActiveMask = BuildDefaultBehaviorMask(childDefinition);
             AttachChildInstanceOverride(childEntity, ref childState, node);
+            if (AuditGroundingEnabled) AuditSyncCallers[2]++;
             SyncTickBehaviorMarkers(childEntity, childDefinition, childState.BehaviorActiveMask);
             SyncEmitWorkMarkers(childEntity, childDefinition, childState.BehaviorActiveMask);
             SetParamDefault(childDefinition, childEntity);
@@ -3240,6 +3289,7 @@ namespace Ludots.Core.Presentation.Presenters
             for (int i = 0; i < syncTickWork.Count; i++)
             {
                 ReconcileDefinitionWork work = syncTickWork[i];
+                if (AuditGroundingEnabled) AuditSyncCallers[3]++;
                 SyncTickBehaviorMarkers(work.Entity, work.Definition, work.ActiveBehaviorMask);
             }
 

@@ -13,6 +13,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 {
     public class AttributeAggregatorSystem : BaseSystem<World, float>
     {
+        public static int AuditRemovedThisUpdate;
+        public static long AuditPlaybackBytesThisUpdate;
         private static readonly QueryDescription _withDirtyFlagsQuery = new QueryDescription()
             .WithAll<AttributeBuffer, ActiveEffectContainer, AttributeAggregateDirty, DirtyFlags>();
 
@@ -34,6 +36,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         public override unsafe void Update(in float dt)
         {
+            AuditRemovedThisUpdate = 0;
+            AuditPlaybackBytesThisUpdate = 0;
             var withDirtyJob = new AttributeAggregatorWithDirtyJob
             {
                 World = World,
@@ -49,7 +53,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             if (_commandBuffer.Size > 0)
             {
+                AuditRemovedThisUpdate = _commandBuffer.Size;
+                long auditStart = GC.GetAllocatedBytesForCurrentThread();
                 _commandBuffer.Playback(World);
+                AuditPlaybackBytesThisUpdate = GC.GetAllocatedBytesForCurrentThread() - auditStart;
             }
         }
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Numerics;
 using System.Reflection;
 using Arch.Core;
@@ -27,6 +28,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.MassNavigation;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.MassNavigation.Systems;
+using Ludots.Core.MovePlanning;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Assets;
@@ -183,6 +185,749 @@ namespace Ludots.Tests.Presentation
             Array.Sort(samples);
             TestContext.Out.WriteLine($"MassNav terrain: world_items={hud.Count}, screen_items={screen.Count}, median_ms={samples[15]:F4}, p95_ms={samples[29]:F4}, bytes={allocated}");
             Assert.That(allocated, Is.Zero);
+        }
+
+        // [DEBUG-a4f2] counting decorator: proves per-owner terrain raycast count per HUD projection frame.
+        private sealed class CountingHeightmap : IContinuousHeightmap
+        {
+            private readonly IContinuousHeightmap _inner;
+            public long RaycastCalls;
+            public long SampleCalls;
+
+            public CountingHeightmap(IContinuousHeightmap inner) => _inner = inner;
+
+            public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = -1)
+            {
+                SampleCalls++;
+                return _inner.TrySampleHeightCm(worldXCm, worldYCm, out heightCm, layerIndex);
+            }
+
+            public bool SampleHeightsCm(ReadOnlySpan<float> worldXCm, ReadOnlySpan<float> worldYCm, Span<float> outHeightCm, int layerIndex = -1)
+            {
+                SampleCalls += worldXCm.Length;
+                return _inner.SampleHeightsCm(worldXCm, worldYCm, outHeightCm, layerIndex);
+            }
+
+            public bool TryRaycastGround(in ScreenRay ray, out VisualGroundHit hit, int layerIndex = -1)
+            {
+                RaycastCalls++;
+                return _inner.TryRaycastGround(in ray, out hit, layerIndex);
+            }
+
+            public bool RaycastGroundBatch(
+                ReadOnlySpan<float> originXMeters,
+                ReadOnlySpan<float> originYMeters,
+                ReadOnlySpan<float> originZMeters,
+                ReadOnlySpan<float> directionX,
+                ReadOnlySpan<float> directionY,
+                ReadOnlySpan<float> directionZ,
+                Span<float> outWorldXCm,
+                Span<float> outWorldYCm,
+                Span<float> outHeightCm,
+                Span<float> outDistanceMeters,
+                Span<float> outNormalX,
+                Span<float> outNormalY,
+                Span<float> outNormalZ,
+                Span<int> outLayerIndex,
+                Span<byte> outHitMask,
+                int layerIndex = -1)
+            {
+                RaycastCalls += originXMeters.Length;
+                return _inner.RaycastGroundBatch(
+                    originXMeters, originYMeters, originZMeters,
+                    directionX, directionY, directionZ,
+                    outWorldXCm, outWorldYCm, outHeightCm, outDistanceMeters,
+                    outNormalX, outNormalY, outNormalZ, outLayerIndex, outHitMask, layerIndex);
+            }
+        }
+
+        // [DEBUG-a4f2] read-only audit probe for PR #1485 HUD projection cost.
+        [TestCase(true)]
+        [TestCase(false)]
+        public void Probe_A4F2_TerrainOcclusionAb(bool terrainOcclusion)
+        {
+            WorldHudToScreenSystem.TerrainOcclusionOwnerShared = false;
+            using var engine = CreateEngine();
+            StartStartupMap(engine);
+            var simulation = RequireMassNavigationSimulation(engine);
+            var warm = CreateHudProjection(engine);
+            _ = WaitForProductionProjection(engine, warm, simulation, ExpectedAgentCount);
+
+            var projection = new WorldHudToScreenSystem(
+                engine.World,
+                RequireService(engine, CoreServiceKeys.PresentationWorldHudBuffer),
+                engine.GetService(CoreServiceKeys.PresentationWorldHudStrings),
+                RequireService(engine, CoreServiceKeys.ScreenProjector),
+                RequireService(engine, CoreServiceKeys.ViewController),
+                RequireService(engine, CoreServiceKeys.PresentationScreenHudBuffer),
+                engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics),
+                engine.GetService(CoreServiceKeys.CameraCullingDebugState),
+                terrainOcclusion ? () => engine.GetService(CoreServiceKeys.ContinuousHeightmap) : () => null);
+
+            var hud = RequireService(engine, CoreServiceKeys.PresentationWorldHudBuffer);
+            var screen = RequireService(engine, CoreServiceKeys.PresentationScreenHudBuffer);
+            WorldHudItem item = hud.GetSpan()[0];
+            for (int i = 0; i < 100; i++)
+            {
+                item.WorldPosition.X += i % 2 == 0 ? .001f : -.001f;
+                hud.TryAdd(item);
+                projection.Update(0);
+            }
+
+            var samples = new double[31];
+            int gen0 = GC.CollectionCount(0);
+            int gen1 = GC.CollectionCount(1);
+            long allocated = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < samples.Length; i++)
+            {
+                item.WorldPosition.X += i % 2 == 0 ? .001f : -.001f;
+                hud.TryAdd(item);
+                long start = System.Diagnostics.Stopwatch.GetTimestamp();
+                projection.Update(0);
+                samples[i] = System.Diagnostics.Stopwatch.GetElapsedTime(start).TotalMilliseconds;
+            }
+            allocated = GC.GetAllocatedBytesForCurrentThread() - allocated;
+            gen0 = GC.CollectionCount(0) - gen0;
+            gen1 = GC.CollectionCount(1) - gen1;
+            Array.Sort(samples);
+            TestContext.Out.WriteLine(
+                $"[DEBUG-a4f2] terrain={terrainOcclusion} world_items={hud.Count} screen_items={screen.Count} " +
+                $"min_ms={samples[0]:F4} median_ms={samples[15]:F4} p95_ms={samples[29]:F4} bytes={allocated} gen0={gen0} gen1={gen1}");
+            projection.Dispose();
+        }
+
+        // [DEBUG-a4f2] counts terrain raycasts per HUD projection frame at 10K.
+        [Test]
+        public void Probe_A4F2_TerrainRaycastCountPerFrame()
+        {
+            WorldHudToScreenSystem.TerrainOcclusionOwnerShared = false;
+            using var engine = CreateEngine();
+            StartStartupMap(engine);
+            var simulation = RequireMassNavigationSimulation(engine);
+            var warm = CreateHudProjection(engine);
+            _ = WaitForProductionProjection(engine, warm, simulation, ExpectedAgentCount);
+
+            var counting = new CountingHeightmap(
+                RequireService(engine, CoreServiceKeys.ContinuousHeightmap));
+            var projection = new WorldHudToScreenSystem(
+                engine.World,
+                RequireService(engine, CoreServiceKeys.PresentationWorldHudBuffer),
+                engine.GetService(CoreServiceKeys.PresentationWorldHudStrings),
+                RequireService(engine, CoreServiceKeys.ScreenProjector),
+                RequireService(engine, CoreServiceKeys.ViewController),
+                RequireService(engine, CoreServiceKeys.PresentationScreenHudBuffer),
+                engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics),
+                engine.GetService(CoreServiceKeys.CameraCullingDebugState),
+                () => counting);
+
+            var hud = RequireService(engine, CoreServiceKeys.PresentationWorldHudBuffer);
+            WorldHudItem item = hud.GetSpan()[0];
+            for (int i = 0; i < 20; i++)
+            {
+                item.WorldPosition.X += i % 2 == 0 ? .001f : -.001f;
+                hud.TryAdd(item);
+                projection.Update(0);
+            }
+
+            counting.RaycastCalls = 0;
+            counting.SampleCalls = 0;
+            const int frames = 5;
+            for (int i = 0; i < frames; i++)
+            {
+                item.WorldPosition.X += i % 2 == 0 ? .001f : -.001f;
+                hud.TryAdd(item);
+                projection.Update(0);
+            }
+
+            TestContext.Out.WriteLine(
+                $"[DEBUG-a4f2] world_items={hud.Count} frames={frames} " +
+                $"raycasts_total={counting.RaycastCalls} raycasts_per_frame={counting.RaycastCalls / (double)frames:F1} " +
+                $"height_samples_total={counting.SampleCalls} samples_per_frame={counting.SampleCalls / (double)frames:F1}");
+            projection.Dispose();
+        }
+
+        // [DEBUG-a4f2] full-frame breakdown with the terrain-occlusion A/B at 10K.
+        [TestCase(true, true)]
+        [TestCase(false, true)]
+        [TestCase(true, false)]
+        [TestCase(false, false)]
+        public void Probe_A4F2_FullFrameBreakdown(bool terrainOcclusion, bool moving)
+        {
+            WorldHudToScreenSystem.TerrainOcclusionOwnerShared = false;
+            using var engine = CreateEngine();
+            StartStartupMap(engine);
+            var simulation = RequireMassNavigationSimulation(engine);
+            var warm = CreateHudProjection(engine);
+            _ = WaitForProductionProjection(engine, warm, simulation, ExpectedAgentCount);
+
+            var counting = new CountingHeightmap(
+                RequireService(engine, CoreServiceKeys.ContinuousHeightmap));
+            var projection = new WorldHudToScreenSystem(
+                engine.World,
+                RequireService(engine, CoreServiceKeys.PresentationWorldHudBuffer),
+                engine.GetService(CoreServiceKeys.PresentationWorldHudStrings),
+                RequireService(engine, CoreServiceKeys.ScreenProjector),
+                RequireService(engine, CoreServiceKeys.ViewController),
+                RequireService(engine, CoreServiceKeys.PresentationScreenHudBuffer),
+                engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics),
+                engine.GetService(CoreServiceKeys.CameraCullingDebugState),
+                terrainOcclusion ? () => counting : (Func<IContinuousHeightmap?>)(() => null));
+
+            if (moving)
+            {
+                var sink = new MassNavigationMovePlanExecutionSink(simulation);
+                Entity[] agents = CollectMassNavigationAgents(engine, ExpectedAgentCount);
+                int applied = 0;
+                for (int i = 0; i < agents.Length; i++)
+                {
+                    Vector2 here = simulation.GetAgentWorldPositionCm(
+                        engine.World.Get<MassNavigationAgentIndex>(agents[i]).Value);
+                    var intent = new MovePlanExecutionIntent
+                    {
+                        CommandGroupToken = 1,
+                        TargetWorldCm = new Vector2(10_000f - here.X, 10_000f - here.Y),
+                        ProjectionHintWorldCm = new Vector2(10_000f - here.X, 10_000f - here.Y),
+                        SpeedCmPerSec = 300f,
+                        StopRadiusCm = 40f,
+                        MinimumClearanceCm = 0f,
+                        HasTarget = 1,
+                        ResolveNavigableTarget = 1,
+                        Mode = MovePlanExecutionMode.Individual,
+                    };
+                    if (sink.TryApply(engine.World, agents[i], in intent))
+                    {
+                        applied++;
+                    }
+                }
+
+                TestContext.Out.WriteLine($"[DEBUG-a4f2] move_intents_applied={applied}");
+            }
+
+            for (int i = 0; i < 30; i++)
+            {
+                TickOnly(engine);
+                projection.Update(FixedDeltaSeconds);
+            }
+
+            var diag = RequireService(engine, CoreServiceKeys.PresentationTimingDiagnostics);
+            const int frames = 40;
+            var tickMs = new double[frames];
+            var projMs = new double[frames];
+            double behavior = 0, sync = 0, emit = 0, hud = 0, cull = 0, minimap = 0;
+            double mnPrep = 0, mnSteer = 0, mnHard = 0, mnFlow = 0, mnSync = 0, mnStep = 0;
+            counting.RaycastCalls = 0;
+            int gen0 = GC.CollectionCount(0);
+            int gen1 = GC.CollectionCount(1);
+            long alloc = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < frames; i++)
+            {
+                long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
+                TickOnly(engine);
+                long t1 = System.Diagnostics.Stopwatch.GetTimestamp();
+                projection.Update(FixedDeltaSeconds);
+                long t2 = System.Diagnostics.Stopwatch.GetTimestamp();
+                tickMs[i] = System.Diagnostics.Stopwatch.GetElapsedTime(t0, t1).TotalMilliseconds;
+                projMs[i] = System.Diagnostics.Stopwatch.GetElapsedTime(t1, t2).TotalMilliseconds;
+                behavior += diag.LastPresenterBehaviorMs;
+                sync += diag.LastPresenterEntityTransformSyncMs;
+                emit += diag.LastPresenterEmitMs;
+                hud += diag.LastWorldHudProjectionMs;
+                cull += diag.LastCameraCullingMs;
+                minimap += diag.LastMinimapProjectionMs;
+                mnPrep += diag.LastMassNavigationPrepMs;
+                mnSteer += diag.LastMassNavigationSteeringMs;
+                mnHard += diag.LastMassNavigationHardResolveMs;
+                mnFlow += diag.LastMassNavigationFlowMs;
+                mnSync += diag.LastMassNavigationEntitySyncMs;
+                mnStep += diag.LastMassNavigationStepMs;
+            }
+            alloc = GC.GetAllocatedBytesForCurrentThread() - alloc;
+            gen0 = GC.CollectionCount(0) - gen0;
+            gen1 = GC.CollectionCount(1) - gen1;
+            Array.Sort(tickMs);
+            Array.Sort(projMs);
+            double f = frames;
+            TestContext.Out.WriteLine(
+                $"[DEBUG-a4f2] terrain={terrainOcclusion} moving={moving} agents={simulation.NavigationAgentCount} " +
+                $"tick_median={tickMs[frames / 2]:F3} proj_median={projMs[frames / 2]:F3} " +
+                $"total_median={tickMs[frames / 2] + projMs[frames / 2]:F3} " +
+                $"| behavior={behavior / f:F3} sync={sync / f:F3} emit={emit / f:F3} hudproj={hud / f:F3} " +
+                $"cull={cull / f:F3} minimap={minimap / f:F3} " +
+                $"| mn_prep={mnPrep / f:F3} mn_steer={mnSteer / f:F3} mn_hard={mnHard / f:F3} mn_flow={mnFlow / f:F3} " +
+                $"mn_sync={mnSync / f:F3} mn_step={mnStep / f:F3} " +
+                $"| hard_cand={simulation.LastHardResolveCandidateAgentCount} hard_pairs={simulation.LastHardResolvePairCheckCount} " +
+                $"pen_pairs={simulation.LastHardResolvePenetratingPairCount} " +
+                $"| raycasts_per_frame={counting.RaycastCalls / f:F0} bytes_per_frame={alloc / f:F0} gen0={gen0} gen1={gen1}");
+            projection.Dispose();
+        }
+
+        private static void TickOnly(GameEngine engine)
+        {
+            engine.SetService(CoreServiceKeys.UiCaptured, false);
+            engine.Tick(FixedDeltaSeconds);
+            HeadlessPresentationTestHost.UpdateCamera(engine);
+            if (engine.GetService(CoreServiceKeys.MinimapRuntime) is MinimapRuntime mr &&
+                engine.GetService(CoreServiceKeys.MinimapMarkerBuffer) is MinimapMarkerBuffer mb &&
+                engine.GetService(CoreServiceKeys.MinimapScreenMarkerBuffer) is MinimapScreenMarkerBuffer msb)
+            {
+                mr.Refresh(engine, mb, msb);
+            }
+        }
+
+        // [DEBUG-a4f2] attributes per-frame managed allocation between engine tick, minimap refresh and HUD projection.
+        [Test]
+        public void Probe_A4F2_AllocationAttribution()
+        {
+            WorldHudToScreenSystem.TerrainOcclusionOwnerShared = false;
+            using var engine = CreateEngine();
+            StartStartupMap(engine);
+            var simulation = RequireMassNavigationSimulation(engine);
+            var projection = CreateHudProjection(engine);
+            _ = WaitForProductionProjection(engine, projection, simulation, ExpectedAgentCount);
+
+            for (int i = 0; i < 20; i++)
+            {
+                TickOnly(engine);
+                projection.Update(FixedDeltaSeconds);
+            }
+
+            const int frames = 30;
+            long tickBytes = 0, minimapBytes = 0, projBytes = 0;
+            int gen0 = GC.CollectionCount(0);
+            int gen1 = GC.CollectionCount(1);
+            for (int i = 0; i < frames; i++)
+            {
+                engine.SetService(CoreServiceKeys.UiCaptured, false);
+                long a0 = GC.GetAllocatedBytesForCurrentThread();
+                engine.Tick(FixedDeltaSeconds);
+                HeadlessPresentationTestHost.UpdateCamera(engine);
+                long a1 = GC.GetAllocatedBytesForCurrentThread();
+                if (engine.GetService(CoreServiceKeys.MinimapRuntime) is MinimapRuntime mr &&
+                    engine.GetService(CoreServiceKeys.MinimapMarkerBuffer) is MinimapMarkerBuffer mb &&
+                    engine.GetService(CoreServiceKeys.MinimapScreenMarkerBuffer) is MinimapScreenMarkerBuffer msb)
+                {
+                    mr.Refresh(engine, mb, msb);
+                }
+                long a2 = GC.GetAllocatedBytesForCurrentThread();
+                projection.Update(FixedDeltaSeconds);
+                long a3 = GC.GetAllocatedBytesForCurrentThread();
+                tickBytes += a1 - a0;
+                minimapBytes += a2 - a1;
+                projBytes += a3 - a2;
+            }
+            gen0 = GC.CollectionCount(0) - gen0;
+            gen1 = GC.CollectionCount(1) - gen1;
+            double f = frames;
+            TestContext.Out.WriteLine(
+                $"[DEBUG-a4f2] alloc_per_frame tick={tickBytes / f:F0}B minimap_refresh={minimapBytes / f:F0}B " +
+                $"hud_projection={projBytes / f:F0}B gen0={gen0} gen1={gen1}");
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void Probe_A4F2_GroundingCreationAb(bool skipInitialSampleTick)
+        {
+            PresenterEntityRuntime.AuditSkipInitialSampleTick = skipInitialSampleTick;
+            PresenterEntityRuntime.AuditGroundingEnabled = true;
+            PresenterEntityRuntime.AuditGroundingFirstStack = null;
+            try
+            {
+                WorldHudToScreenSystem.TerrainOcclusionOwnerShared = false;
+                using var engine = CreateEngine();
+                StartStartupMap(engine);
+                var simulation = RequireMassNavigationSimulation(engine);
+                var projection = CreateHudProjection(engine);
+                _ = WaitForProductionProjection(engine, projection, simulation, ExpectedAgentCount);
+                PresenterEntityRuntime.AuditGroundingEnabled = false;
+                TestContext.Out.WriteLine($"[DEBUG-a4f2] grounding_call_stack skip={skipInitialSampleTick}\n{PresenterEntityRuntime.AuditGroundingFirstStack}");
+                var diag = RequireService(engine, CoreServiceKeys.PresentationTimingDiagnostics);
+                for (int i = 0; i < 30; i++)
+                {
+                    TickOnly(engine);
+                    projection.Update(FixedDeltaSeconds);
+                }
+                const int frames = 60;
+                var behaviorMs = new float[frames];
+                var ticks = new int[frames];
+                var projected = new int[frames];
+                var heightDifferences = new float[frames];
+                var checkedRoots = new int[frames];
+                var query = new QueryDescription().WithAll<PresenterState, PresenterWorldPosition, PresenterParent>();
+                for (int f = 0; f < frames; f++)
+                {
+                    TickOnly(engine);
+                    projection.Update(FixedDeltaSeconds);
+                    behaviorMs[f] = diag.LastPresenterBehaviorMs;
+                    ticks[f] = diag.PresenterTickDrivenCountLastFrame;
+                    projected[f] = diag.WorldHudProjectedLastFrame;
+                    foreach (ref var chunk in engine.World.Query(in query))
+                    {
+                        var states = chunk.GetSpan<PresenterState>();
+                        var positions = chunk.GetSpan<PresenterWorldPosition>();
+                        var parents = chunk.GetSpan<PresenterParent>();
+                        for (int i = 0; i < chunk.Count; i++)
+                        {
+                            Entity owner = states[i].OwnerEntity;
+                            if (parents[i].Parent != Entity.Null || owner == Entity.Null ||
+                                !engine.World.IsAlive(owner) || !engine.World.Has<MassNavigationAgent>(owner)) continue;
+                            float delta = MathF.Abs(positions[i].Value.Y - engine.World.Get<VisualTransform>(owner).Position.Y);
+                            heightDifferences[f] = MathF.Max(heightDifferences[f], delta);
+                            checkedRoots[f]++;
+                        }
+                    }
+                }
+                TestContext.Out.WriteLine($"[DEBUG-a4f2] grounding_ab skip={skipInitialSampleTick} warmup=30 frames={frames} agents={simulation.NavigationAgentCount}");
+                TestContext.Out.WriteLine("[DEBUG-a4f2] frame,behavior_ms,tick_count,hud_projected,root_height_max_delta,checked_roots");
+                for (int f = 0; f < frames; f++)
+                {
+                    TestContext.Out.WriteLine($"[DEBUG-a4f2] {f},{behaviorMs[f]:F6},{ticks[f]},{projected[f]},{heightDifferences[f]:F6},{checkedRoots[f]}");
+                    Assert.That(checkedRoots[f], Is.EqualTo(ExpectedAgentCount));
+                    Assert.That(heightDifferences[f], Is.LessThanOrEqualTo(0.0001f));
+                    Assert.That(projected[f], Is.EqualTo(ExpectedAgentCount * 2));
+                }
+            }
+            finally
+            {
+                PresenterEntityRuntime.AuditGroundingEnabled = false;
+                PresenterEntityRuntime.AuditSkipInitialSampleTick = false;
+            }
+        }
+
+        [Test]
+        public void Probe_A4F2_ColdGroundingQualification()
+        {
+            PresenterEntityRuntime.AuditGroundingEnabled = true;
+            PresenterEntityRuntime.AuditSingleRootCreates = 0;
+            PresenterEntityRuntime.AuditSingleChildCreates = 0;
+            PresenterEntityRuntime.AuditRootBatchCreates = 0;
+            PresenterEntityRuntime.AuditRootBatchCalls = 0;
+            PresenterEntityRuntime.AuditSyncGroundingTrue = 0;
+            Array.Clear(PresenterEntityRuntime.AuditSyncCallers);
+            Array.Clear(PresenterEntityRuntime.AuditSingleGroundingReasons);
+            Array.Clear(PresenterEntityRuntime.AuditBatchGroundingReasons);
+            try
+            {
+                WorldHudToScreenSystem.TerrainOcclusionOwnerShared = false;
+                using var engine = CreateEngine();
+                StartStartupMap(engine);
+                var simulation = RequireMassNavigationSimulation(engine);
+                var projection = CreateHudProjection(engine);
+                _ = WaitForProductionProjection(engine, projection, simulation, ExpectedAgentCount);
+                int grounding = 0, eligible = 0, otherTick = 0, unsampled = 0, noSample = 0;
+                var query = new QueryDescription().WithAll<PresenterState>();
+                foreach (ref var chunk in engine.World.Query(in query))
+                {
+                    var states = chunk.GetSpan<PresenterState>();
+                    bool hasGrounding = chunk.Has<PerfHasGrounding>();
+                    bool hasOtherTick = chunk.Has<PerfHasSpline>() || chunk.Has<PerfHasAttachmentTick>() ||
+                        chunk.Has<PerfHasSound>() || chunk.Has<PerfHasOwnerFacingBinding>() ||
+                        chunk.Has<PerfHasGraphParamBinding>() || chunk.Has<PerfHasLiveParamBinding>() ||
+                        chunk.Has<PerfHasInteractionContextBinding>() || chunk.Has<PerfHasExtensionBehavior>() ||
+                        chunk.Has<PerfHasTrailMesh>();
+                    for (int i = 0; i < chunk.Count; i++)
+                    {
+                        if (hasOtherTick) otherTick++;
+                        if (!hasGrounding) continue;
+                        grounding++;
+                        Entity owner = states[i].OwnerEntity;
+                        if (owner == Entity.Null || !engine.World.IsAlive(owner) ||
+                            !engine.World.Has<ContinuousHeightmapSampleState>(owner)) noSample++;
+                        else if (engine.World.Get<ContinuousHeightmapSampleState>(owner).Sampled == 0) unsampled++;
+                        else eligible++;
+                    }
+                }
+                TestContext.Out.WriteLine($"[DEBUG-a4f2] grounding_create single_roots={PresenterEntityRuntime.AuditSingleRootCreates} single_children={PresenterEntityRuntime.AuditSingleChildCreates} batch_roots={PresenterEntityRuntime.AuditRootBatchCreates} batch_calls={PresenterEntityRuntime.AuditRootBatchCalls} sync_grounding_true={PresenterEntityRuntime.AuditSyncGroundingTrue}");
+                TestContext.Out.WriteLine($"[DEBUG-a4f2] grounding_sync_callers=create,active,child,rebind counts={string.Join(',', PresenterEntityRuntime.AuditSyncCallers)}");
+                TestContext.Out.WriteLine($"[DEBUG-a4f2] grounding_single_reasons=config,anchor,null,dead,no_visual,no_sample,unsampled,no_source,other_source,eligible,reserved counts={string.Join(',', PresenterEntityRuntime.AuditSingleGroundingReasons)}");
+                TestContext.Out.WriteLine($"[DEBUG-a4f2] grounding_batch_reasons=config,null,dead,no_visual,no_sample,unsampled,eligible,reserved counts={string.Join(',', PresenterEntityRuntime.AuditBatchGroundingReasons)}");
+                TestContext.Out.WriteLine($"[DEBUG-a4f2] grounding_final markers={grounding} owner_sampled={eligible} owner_unsampled={unsampled} owner_no_sample={noSample} other_tick={otherTick}");
+            }
+            finally
+            {
+                PresenterEntityRuntime.AuditGroundingEnabled = false;
+            }
+        }
+
+        [Test]
+        public void Probe_A4F2_LongAllocationAndStructuralCounts()
+        {
+            WorldHudToScreenSystem.TerrainOcclusionOwnerShared = false;
+            using var engine = CreateEngine();
+            StartStartupMap(engine);
+            var simulation = RequireMassNavigationSimulation(engine);
+            var projection = CreateHudProjection(engine);
+            _ = WaitForProductionProjection(engine, projection, simulation, ExpectedAgentCount);
+            for (int i = 0; i < 300; i++)
+            {
+                TickOnly(engine);
+                projection.Update(FixedDeltaSeconds);
+            }
+            const int frames = 120;
+            var totalBytes = new long[frames];
+            var aggregatorBytes = new long[frames];
+            var clearBytes = new long[frames];
+            var spatialBytes = new long[frames];
+            var aggregatorRemoved = new int[frames];
+            var clearRemoved = new int[frames];
+            var aggregatorPlaybackBytes = new long[frames];
+            var clearPlaybackBytes = new long[frames];
+            var createdCells = new int[frames];
+            var createdCellBytes = new long[frames];
+            int frame = -1;
+            var diag = RequireService(engine, CoreServiceKeys.PresentationTimingDiagnostics);
+            diag.AuditAllocationObserver = (lane, name, bytes) =>
+            {
+                if (frame < 0 || lane != 0) return;
+                if (name == "AttributeAggregatorSystem")
+                {
+                    aggregatorBytes[frame] += bytes;
+                    aggregatorRemoved[frame] += Ludots.Core.Gameplay.GAS.Systems.AttributeAggregatorSystem.AuditRemovedThisUpdate;
+                    aggregatorPlaybackBytes[frame] += Ludots.Core.Gameplay.GAS.Systems.AttributeAggregatorSystem.AuditPlaybackBytesThisUpdate;
+                }
+                else if (name == "ClearPresentationFlagsSystem")
+                {
+                    clearBytes[frame] += bytes;
+                    clearRemoved[frame] += Ludots.Core.Gameplay.GAS.Systems.ClearPresentationFlagsSystem.AuditRemovedThisUpdate;
+                    clearPlaybackBytes[frame] += Ludots.Core.Gameplay.GAS.Systems.ClearPresentationFlagsSystem.AuditPlaybackBytesThisUpdate;
+                }
+                else if (name == "SpatialPartitionUpdateSystem") spatialBytes[frame] += bytes;
+            };
+            int gen0 = GC.CollectionCount(0);
+            int gen1 = GC.CollectionCount(1);
+            World.AuditRemoveRangeCalls = 0;
+            World.AuditRemoveRangeHashMisses = 0;
+            World.AuditRemoveRangeSignatureBytes = 0;
+            World.AuditRemoveRangeEventBytes = 0;
+            World.AuditRemoveRangeMoveBytes = 0;
+            Ludots.Core.Gameplay.GAS.AttributeMutationOps.AuditAggregateAdded = 0;
+            Ludots.Core.Gameplay.GAS.AttributeMutationOps.AuditPresentationAdded = 0;
+            for (frame = 0; frame < frames; frame++)
+            {
+                int cellCountStart = Ludots.Core.Spatial.ChunkedGridSpatialPartitionWorld.AuditCellCreates;
+                long cellBytesStart = Ludots.Core.Spatial.ChunkedGridSpatialPartitionWorld.AuditCellCreateBytes;
+                long allocatedStart = GC.GetAllocatedBytesForCurrentThread();
+                TickOnly(engine);
+                projection.Update(FixedDeltaSeconds);
+                totalBytes[frame] = GC.GetAllocatedBytesForCurrentThread() - allocatedStart;
+                createdCells[frame] = Ludots.Core.Spatial.ChunkedGridSpatialPartitionWorld.AuditCellCreates - cellCountStart;
+                createdCellBytes[frame] = Ludots.Core.Spatial.ChunkedGridSpatialPartitionWorld.AuditCellCreateBytes - cellBytesStart;
+            }
+            diag.AuditAllocationObserver = null;
+            gen0 = GC.CollectionCount(0) - gen0;
+            gen1 = GC.CollectionCount(1) - gen1;
+            TestContext.Out.WriteLine($"[DEBUG-a4f2] longalloc warmup=300 frames={frames} agents={simulation.NavigationAgentCount} gen0={gen0} gen1={gen1}");
+            TestContext.Out.WriteLine($"[DEBUG-a4f2] remove_range calls={World.AuditRemoveRangeCalls} hash_misses={World.AuditRemoveRangeHashMisses} signature_bytes={World.AuditRemoveRangeSignatureBytes} event_bytes={World.AuditRemoveRangeEventBytes} move_bytes={World.AuditRemoveRangeMoveBytes}");
+            TestContext.Out.WriteLine($"[DEBUG-a4f2] direct_attribute_add aggregate={Ludots.Core.Gameplay.GAS.AttributeMutationOps.AuditAggregateAdded} presentation={Ludots.Core.Gameplay.GAS.AttributeMutationOps.AuditPresentationAdded}");
+            TestContext.Out.WriteLine("[DEBUG-a4f2] frame,total_bytes,aggregator_bytes,aggregator_removes,aggregator_playback_bytes,clear_bytes,clear_removes,clear_playback_bytes,spatial_bytes,new_cells,new_cell_bytes");
+            for (int i = 0; i < frames; i++)
+                TestContext.Out.WriteLine($"[DEBUG-a4f2] {i},{totalBytes[i]},{aggregatorBytes[i]},{aggregatorRemoved[i]},{aggregatorPlaybackBytes[i]},{clearBytes[i]},{clearRemoved[i]},{clearPlaybackBytes[i]},{spatialBytes[i]},{createdCells[i]},{createdCellBytes[i]}");
+        }
+
+        [Test]
+        public void Probe_A4F2_PerSystemAllocationAttribution()
+        {
+            using var engine = CreateEngine();
+            StartStartupMap(engine);
+            var simulation = RequireMassNavigationSimulation(engine);
+            var projection = CreateHudProjection(engine);
+            _ = WaitForProductionProjection(engine, projection, simulation, ExpectedAgentCount);
+            var diag = RequireService(engine, CoreServiceKeys.PresentationTimingDiagnostics);
+            var bytesBySystem = new Dictionary<(int Lane, string Name), long>();
+            diag.AuditAllocationObserver = (lane, name, bytes) =>
+            {
+                var key = (lane, name);
+                bytesBySystem.TryGetValue(key, out long total);
+                bytesBySystem[key] = total + bytes;
+            };
+
+            for (int i = 0; i < 10; i++)
+            {
+                TickOnly(engine);
+                projection.Update(FixedDeltaSeconds);
+            }
+
+            bytesBySystem.Clear();
+            const int frames = 30;
+            for (int i = 0; i < frames; i++)
+            {
+                TickOnly(engine);
+                projection.Update(FixedDeltaSeconds);
+            }
+
+            diag.AuditAllocationObserver = null;
+            foreach (var pair in bytesBySystem.OrderByDescending(static pair => pair.Value))
+            {
+                if (pair.Value == 0)
+                {
+                    continue;
+                }
+
+                TestContext.Out.WriteLine(
+                    $"[DEBUG-a4f2] system_alloc lane={(pair.Key.Lane == 0 ? "simulation" : "presentation")} " +
+                    $"system={pair.Key.Name} bytes_per_frame={pair.Value / (double)frames:F0}");
+            }
+        }
+
+        // [DEBUG-a4f2] interleaved A/B/A: owner-shared occlusion verdict vs per-item, same process, same frames.
+        [Test]
+        public void Probe_A4F2_OwnerSharedInterleaved()
+        {
+            using var engine = CreateEngine();
+            StartStartupMap(engine);
+            var simulation = RequireMassNavigationSimulation(engine);
+            var warm = CreateHudProjection(engine);
+            _ = WaitForProductionProjection(engine, warm, simulation, ExpectedAgentCount);
+
+            var counting = new CountingHeightmap(
+                RequireService(engine, CoreServiceKeys.ContinuousHeightmap));
+            var projection = new WorldHudToScreenSystem(
+                engine.World,
+                RequireService(engine, CoreServiceKeys.PresentationWorldHudBuffer),
+                engine.GetService(CoreServiceKeys.PresentationWorldHudStrings),
+                RequireService(engine, CoreServiceKeys.ScreenProjector),
+                RequireService(engine, CoreServiceKeys.ViewController),
+                RequireService(engine, CoreServiceKeys.PresentationScreenHudBuffer),
+                engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics),
+                engine.GetService(CoreServiceKeys.CameraCullingDebugState),
+                () => counting);
+
+            var hud = RequireService(engine, CoreServiceKeys.PresentationWorldHudBuffer);
+            var screen = RequireService(engine, CoreServiceKeys.PresentationScreenHudBuffer);
+            WorldHudItem item = hud.GetSpan()[0];
+
+            for (int i = 0; i < 60; i++)
+            {
+                item.WorldPosition.X += i % 2 == 0 ? .001f : -.001f;
+                hud.TryAdd(item);
+                projection.Update(0);
+            }
+
+            // Interleave shared/per-item frame by frame so thermal drift hits both arms equally.
+            const int perArm = 25;
+            var shared = new double[perArm];
+            var perItem = new double[perArm];
+            int sharedHidden = -1, perItemHidden = -1, sharedScreen = -1, perItemScreen = -1;
+            long sharedRays = 0, perItemRays = 0;
+            long alloc = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < perArm * 2; i++)
+            {
+                bool useShared = (i & 1) == 0;
+                WorldHudToScreenSystem.TerrainOcclusionOwnerShared = useShared;
+                WorldHudToScreenSystem.TerrainOcclusionVerdictCount = 0;
+                WorldHudToScreenSystem.TerrainOcclusionHiddenCount = 0;
+                counting.RaycastCalls = 0;
+
+                item.WorldPosition.X += i % 2 == 0 ? .0013f : -.0013f;
+                hud.TryAdd(item);
+                long start = System.Diagnostics.Stopwatch.GetTimestamp();
+                projection.Update(0);
+                double ms = System.Diagnostics.Stopwatch.GetElapsedTime(start).TotalMilliseconds;
+
+                if (useShared)
+                {
+                    shared[i / 2] = ms;
+                    sharedRays = counting.RaycastCalls;
+                    sharedHidden = WorldHudToScreenSystem.TerrainOcclusionHiddenCount;
+                    sharedScreen = screen.Count;
+                }
+                else
+                {
+                    perItem[i / 2] = ms;
+                    perItemRays = counting.RaycastCalls;
+                    perItemHidden = WorldHudToScreenSystem.TerrainOcclusionHiddenCount;
+                    perItemScreen = screen.Count;
+                }
+            }
+            alloc = GC.GetAllocatedBytesForCurrentThread() - alloc;
+            WorldHudToScreenSystem.TerrainOcclusionOwnerShared = true;
+            Array.Sort(shared);
+            Array.Sort(perItem);
+            TestContext.Out.WriteLine(
+                $"[DEBUG-a4f2] INTERLEAVED shared_median={shared[perArm / 2]:F4} per_item_median={perItem[perArm / 2]:F4} " +
+                $"shared_rays={sharedRays} per_item_rays={perItemRays} " +
+                $"shared_hidden={sharedHidden} per_item_hidden={perItemHidden} " +
+                $"shared_screen={sharedScreen} per_item_screen={perItemScreen} bytes={alloc}");
+            projection.Dispose();
+        }
+
+        // [DEBUG-a4f2] counts the sync-system path breakdown at 10K (fast vs slow vs owner-payload children).
+        [Test]
+        public void Probe_A4F2_SyncPathBreakdown()
+        {
+            using var engine = CreateEngine();
+            StartStartupMap(engine);
+            var simulation = RequireMassNavigationSimulation(engine);
+            var projection = CreateHudProjection(engine);
+            _ = WaitForProductionProjection(engine, projection, simulation, ExpectedAgentCount);
+
+            var sync = RequirePresentationSystem<PresenterEntityTransformSyncSystem>(engine);
+            for (int i = 0; i < 20; i++)
+            {
+                TickProjectionFrames(engine, projection, 1);
+            }
+
+            sync.ResetDebugCounters();
+            TickProjectionFrames(engine, projection, 1);
+            SyncPathBreakdownSample sample = new(sync.DebugEntityAnchoredProcessed, sync.DebugFastPathChildren, sync.DebugSlowPathChildren, sync.DebugSkippedNoMarker, sync.DebugOwnerPayloadChildren, sync.DebugOwnerPayloadFastApplied);
+            var timing = RequireService(engine, CoreServiceKeys.PresentationTimingDiagnostics);
+            TestContext.Out.WriteLine(
+                $"[DEBUG-a4f2] sync_paths entity_anchored_changed={sample.EntityAnchored} fast_children={sample.Fast} " +
+                $"slow_children={sample.Slow} skipped_no_marker={sample.Skipped} owner_payload_children={sample.OwnerPayload} " +
+                $"owner_payload_fast_applied={sample.OwnerPayloadFast} " +
+                $"sync_ms={timing.LastPresenterEntityTransformSyncMs:F3}");
+        }
+
+        private readonly record struct SyncPathBreakdownSample(long EntityAnchored, long Fast, long Slow, long Skipped, long OwnerPayload, long OwnerPayloadFast);
+
+        // [DEBUG-a4f2] counts the sync-system path breakdown at 10K under movement (fast vs slow vs owner-payload children).
+        [Test]
+        public void Probe_A4F2_SyncPathBreakdownMoving()
+        {
+            using var engine = CreateEngine();
+            StartStartupMap(engine);
+            var simulation = RequireMassNavigationSimulation(engine);
+            var projection = CreateHudProjection(engine);
+            _ = WaitForProductionProjection(engine, projection, simulation, ExpectedAgentCount);
+
+            var sync = RequirePresentationSystem<PresenterEntityTransformSyncSystem>(engine);
+
+            var sink = new MassNavigationMovePlanExecutionSink(simulation);
+            Entity[] agents = CollectMassNavigationAgents(engine, ExpectedAgentCount);
+            for (int i = 0; i < agents.Length; i++)
+            {
+                Vector2 here = simulation.GetAgentWorldPositionCm(
+                    engine.World.Get<MassNavigationAgentIndex>(agents[i]).Value);
+                var intent = new MovePlanExecutionIntent
+                {
+                    CommandGroupToken = 1,
+                    TargetWorldCm = new Vector2(10_000f - here.X, 10_000f - here.Y),
+                    ProjectionHintWorldCm = new Vector2(10_000f - here.X, 10_000f - here.Y),
+                    SpeedCmPerSec = 300f,
+                    StopRadiusCm = 40f,
+                    MinimumClearanceCm = 0f,
+                    HasTarget = 1,
+                    ResolveNavigableTarget = 1,
+                    Mode = MovePlanExecutionMode.Individual,
+                };
+                if (sink.TryApply(engine.World, agents[i], in intent))
+                {
+                }
+            }
+
+            for (int i = 0; i < 20; i++)
+            {
+                TickProjectionFrames(engine, projection, 1);
+            }
+
+            sync.ResetDebugCounters();
+            TickProjectionFrames(engine, projection, 1);
+            var sample = new SyncPathBreakdownSample(sync.DebugEntityAnchoredProcessed, sync.DebugFastPathChildren, sync.DebugSlowPathChildren, sync.DebugSkippedNoMarker, sync.DebugOwnerPayloadChildren, sync.DebugOwnerPayloadFastApplied);
+            var timing = RequireService(engine, CoreServiceKeys.PresentationTimingDiagnostics);
+            TestContext.Out.WriteLine(
+                $"[DEBUG-a4f2] sync_paths_moving entity_anchored_changed={sample.EntityAnchored} fast_children={sample.Fast} " +
+                $"slow_children={sample.Slow} skipped_no_marker={sample.Skipped} owner_payload_children={sample.OwnerPayload} " +
+                $"owner_payload_fast_applied={sample.OwnerPayloadFast} " +
+                $"sync_ms={timing.LastPresenterEntityTransformSyncMs:F3}");
         }
 
         [Test]

@@ -53,6 +53,9 @@ namespace Ludots.Core.Engine.Pacemaker
                     for (int i = _systemIndex; i < systems.Count; i++)
                     {
                         var sys = systems[i];
+                        long allocationStart = _timingDiagnostics?.AuditAllocationObserver != null
+                            ? GC.GetAllocatedBytesForCurrentThread()
+                            : 0L;
                         long systemStart = _timingDiagnostics?.SystemBreakdownEnabled == true
                             ? System.Diagnostics.Stopwatch.GetTimestamp()
                             : 0L;
@@ -72,6 +75,10 @@ namespace Ludots.Core.Engine.Pacemaker
                         {
                             sys.Update(fixedDt);
                         }
+                        _timingDiagnostics?.AuditAllocationObserver?.Invoke(
+                            0,
+                            sys.GetType().Name,
+                            GC.GetAllocatedBytesForCurrentThread() - allocationStart);
                         ObserveSystemTiming(sys, systemStart);
 
                         _systemIndex = i + 1;

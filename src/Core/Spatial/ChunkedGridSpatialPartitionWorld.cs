@@ -8,6 +8,8 @@ namespace Ludots.Core.Spatial
 {
     public sealed class ChunkedGridSpatialPartitionWorld : ISpatialPartitionWorld
     {
+        public static int AuditCellCreates;
+        public static long AuditCellCreateBytes;
         private readonly int _chunkShift;
         private readonly int _chunkSize;
         private readonly int _chunkMask;
@@ -129,7 +131,10 @@ namespace Ludots.Core.Spatial
                 CellList? list = _cells[idx];
                 if (list == null)
                 {
+                    long auditStart = GC.GetAllocatedBytesForCurrentThread();
                     list = new CellList();
+                    AuditCellCreates++;
+                    AuditCellCreateBytes += GC.GetAllocatedBytesForCurrentThread() - auditStart;
                     _cells[idx] = list;
                 }
 

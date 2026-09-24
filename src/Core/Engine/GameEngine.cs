@@ -5036,10 +5036,17 @@ namespace Ludots.Core.Engine
             {
                 for (int i = 0; i < _presentationSystems.Count; i++)
                 {
+                    long allocationStart = timingDiagnostics?.AuditAllocationObserver != null
+                        ? GC.GetAllocatedBytesForCurrentThread()
+                        : 0L;
                     long systemStart = captureSystemBreakdown
                         ? System.Diagnostics.Stopwatch.GetTimestamp()
                         : 0L;
                     _presentationSystems[i].Update(dt);
+                    timingDiagnostics?.AuditAllocationObserver?.Invoke(
+                        1,
+                        _presentationSystems[i].GetType().Name,
+                        GC.GetAllocatedBytesForCurrentThread() - allocationStart);
                     if (captureSystemBreakdown)
                     {
                         double elapsedMs = (System.Diagnostics.Stopwatch.GetTimestamp() - systemStart) * 1000d / System.Diagnostics.Stopwatch.Frequency;

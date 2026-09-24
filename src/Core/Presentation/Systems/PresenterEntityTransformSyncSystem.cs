@@ -38,6 +38,24 @@ namespace Ludots.Core.Presentation.Systems
 
         public bool DebugSyncPathAssertionsEnabled { get; set; }
 
+        // [DEBUG-a4f2] per-frame path breakdown for the sync hot path.
+        public long DebugFastPathChildren;
+        public long DebugSlowPathChildren;
+        public long DebugSkippedNoMarker;
+        public long DebugOwnerPayloadChildren;
+        public long DebugEntityAnchoredProcessed;
+        public long DebugOwnerPayloadFastApplied;
+
+        public void ResetDebugCounters()
+        {
+            DebugFastPathChildren = 0;
+            DebugSlowPathChildren = 0;
+            DebugSkippedNoMarker = 0;
+            DebugOwnerPayloadChildren = 0;
+            DebugEntityAnchoredProcessed = 0;
+            DebugOwnerPayloadFastApplied = 0;
+        }
+
         public PresenterEntityTransformSyncSystem(
             World world,
             PresenterEntityRuntime runtime,
@@ -58,6 +76,7 @@ namespace Ludots.Core.Presentation.Systems
         {
             long start = _timingDiagnostics != null ? System.Diagnostics.Stopwatch.GetTimestamp() : 0L;
 
+            DebugEntityAnchoredProcessed = 0;
             bool ownerPayloadTransformsChanged = SyncSingleRootOwnerPayloads();
 
             foreach (ref var chunk in World.Query(in EntityAnchoredQuery))
@@ -111,6 +130,7 @@ namespace Ludots.Core.Presentation.Systems
                     scales[index].Value = newScale;
                     Entity presenter = Unsafe.Add(ref entityFirst, index);
                     MarkEmitDirty(presenter, positionOnly);
+                    DebugEntityAnchoredProcessed++;
                     if (SyncFastAttachedChildren(presenter, in newPosition, in newRotation, in newFacing, in newScale))
                     {
                         PropagateInheritedChildTransforms(presenter);
@@ -289,6 +309,7 @@ namespace Ludots.Core.Presentation.Systems
                 Span<PresenterEmitCache> emitCaches = chunk.GetSpan<PresenterEmitCache>();
                 bool hasStaticStableVisual = chunk.Has<PerfStaticStableVisual>();
                 bool hasRetainedPresentationRequest = chunk.Has<PerfRetainedPresentationRequest>();
+                DebugOwnerPayloadFastApplied += chunk.Count;
 
                 foreach (int index in chunk)
                 {
@@ -370,6 +391,7 @@ namespace Ludots.Core.Presentation.Systems
 
                 if (World.Has<PerfOwnerPayloadAttachedTransformSync>(child))
                 {
+                    DebugOwnerPayloadChildren++;
                     continue;
                 }
 
@@ -382,6 +404,7 @@ namespace Ludots.Core.Presentation.Systems
 
                 if (!World.Has<PerfHasAttachmentTick>(child))
                 {
+                    DebugSkippedNoMarker++;
                     requiresInheritedPropagation = true;
                     continue;
                 }
@@ -400,6 +423,7 @@ namespace Ludots.Core.Presentation.Systems
                     continue;
                 }
 
+                DebugFastPathChildren++;
                 ApplyFastParentAttachment(
                     child,
                     in slot.Attachment,
@@ -445,6 +469,7 @@ namespace Ludots.Core.Presentation.Systems
                     continue;
                 }
 
+                DebugSlowPathChildren++;
                 _runtime.PropagateParentDrivenTransforms(parent);
                 return;
             }

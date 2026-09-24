@@ -34,6 +34,8 @@ namespace Ludots.Core.Presentation.Systems
         public const float ProjectionCoarseMarginCm = 600f;
         private OwnerVisibilityCacheEntry[] _ownerVisibilityCache = Array.Empty<OwnerVisibilityCacheEntry>();
         private OwnerProjectionCacheEntry[] _ownerProjectionCache = Array.Empty<OwnerProjectionCacheEntry>();
+        // [DEBUG-a4f2] prototype: one terrain-occlusion verdict per owner per frame.
+        private OwnerOcclusionCacheEntry[] _ownerOcclusionCache = Array.Empty<OwnerOcclusionCacheEntry>();
         private int _frameCacheStamp;
         private bool _retainedProjectedBuild;
         private int _lastHeightmapRevision = -1;
@@ -171,7 +173,7 @@ namespace Ludots.Core.Presentation.Systems
                         !float.IsInfinity(screen.X) &&
                         !float.IsInfinity(screen.Y))
                     {
-                        if (!IsTerrainVisible(first.WorldPosition, heightmap, screen, in projectionSnapshot, in inverseProjection))
+                        if (!ResolveOwnerTerrainVisible(first.Owner, first.WorldPosition, heightmap, screen, in projectionSnapshot, in inverseProjection))
                         {
                             screen = new System.Numerics.Vector2(float.NaN);
                         }
@@ -446,6 +448,59 @@ namespace Ludots.Core.Presentation.Systems
             _ownerVisibilityCache[ownerKey] = new OwnerVisibilityCacheEntry(_frameCacheStamp, ownerVersion, visible);
         }
 
+        // [DEBUG-a4f2] prototype: share one occlusion ray across every HUD item of the same owner.
+        private bool ResolveOwnerTerrainVisible(
+            Entity owner,
+            System.Numerics.Vector3 worldPosition,
+            IContinuousHeightmap? heightmap,
+            System.Numerics.Vector2 screen,
+            in ProjectionSnapshot projectionSnapshot,
+            in System.Numerics.Matrix4x4 inverseProjection)
+        {
+            if (heightmap == null)
+            {
+                return true;
+            }
+
+            if (!IsAssignedOwner(owner) || !TerrainOcclusionOwnerShared)
+            {
+                return IsTerrainVisible(worldPosition, heightmap, screen, in projectionSnapshot, in inverseProjection);
+            }
+
+            int ownerKey = ResolveOwnerCacheKey(owner);
+            if ((uint)ownerKey < (uint)_ownerOcclusionCache.Length)
+            {
+                ref OwnerOcclusionCacheEntry cached = ref _ownerOcclusionCache[ownerKey];
+                if (cached.Stamp == _frameCacheStamp && cached.Version == owner.Version)
+                {
+                    return cached.Visible != 0;
+                }
+            }
+
+            bool visible = IsTerrainVisible(worldPosition, heightmap, screen, in projectionSnapshot, in inverseProjection);
+            if (ownerKey >= _ownerOcclusionCache.Length)
+            {
+                int next = _ownerOcclusionCache.Length == 0 ? 1024 : _ownerOcclusionCache.Length;
+                while (next <= ownerKey)
+                {
+                    next *= 2;
+                }
+
+                Array.Resize(ref _ownerOcclusionCache, next);
+            }
+
+            _ownerOcclusionCache[ownerKey] = new OwnerOcclusionCacheEntry(
+                _frameCacheStamp,
+                owner.Version,
+                visible ? (byte)1 : (byte)0);
+            return visible;
+        }
+
+        // [DEBUG-a4f2] audit instrumentation: owner-shared verdict toggle + occlusion outcome counters.
+        internal static bool TerrainOcclusionOwnerShared = true;
+        internal static int TerrainOcclusionVerdictCount;
+        internal static int TerrainOcclusionHiddenCount;
+
         private static bool IsTerrainVisible(
             System.Numerics.Vector3 worldPosition,
             IContinuousHeightmap? heightmap,
@@ -475,6 +530,7 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             ScreenRay ray = new ScreenRay(origin, delta / targetDistance);
+            TerrainOcclusionVerdictCount++;
             if (!heightmap.TryRaycastGround(in ray, out VisualGroundHit hit))
             {
                 return true;
@@ -483,7 +539,12 @@ namespace Ludots.Core.Presentation.Systems
             {
                 throw new InvalidOperationException("Terrain HUD occlusion received an invalid ground hit distance.");
             }
-            return hit.DistanceMeters + TerrainOcclusionEpsilonMeters >= targetDistance;
+            bool visibleVerdict = hit.DistanceMeters + TerrainOcclusionEpsilonMeters >= targetDistance;
+            if (!visibleVerdict)
+            {
+                TerrainOcclusionHiddenCount++;
+            }
+            return visibleVerdict;
         }
 
         private const float TerrainOcclusionEpsilonMeters = 0.005f;
@@ -596,6 +657,7 @@ namespace Ludots.Core.Presentation.Systems
 
             Array.Clear(_ownerVisibilityCache, 0, _ownerVisibilityCache.Length);
             Array.Clear(_ownerProjectionCache, 0, _ownerProjectionCache.Length);
+            Array.Clear(_ownerOcclusionCache, 0, _ownerOcclusionCache.Length);
             _frameCacheStamp = 1;
         }
 
@@ -606,6 +668,11 @@ namespace Ludots.Core.Presentation.Systems
             int Version,
             System.Numerics.Vector3 WorldPosition,
             System.Numerics.Vector2 ScreenPosition);
+
+        private readonly record struct OwnerOcclusionCacheEntry(
+            int Stamp,
+            int Version,
+            byte Visible);
 
     }
 }

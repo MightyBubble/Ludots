@@ -24,6 +24,7 @@ namespace Ludots.Core.Presentation.Hud
         private float _lastSimulationTopSystem3Ms;
 
         public bool SystemBreakdownEnabled { get; set; }
+        public Action<int, string, long>? AuditAllocationObserver { get; set; }
 
         public float UiInputMs { get; private set; }
         public float UiRenderMs { get; private set; }

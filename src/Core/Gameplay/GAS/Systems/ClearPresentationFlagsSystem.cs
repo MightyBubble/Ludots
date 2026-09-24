@@ -7,6 +7,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 {
     public sealed class ClearPresentationFlagsSystem : BaseSystem<World, float>
     {
+        public static int AuditRemovedThisUpdate;
+        public static long AuditPlaybackBytesThisUpdate;
         private static readonly QueryDescription _tagQuery = new QueryDescription()
             .WithAll<GameplayTagEffectiveChangedBits>();
         private static readonly QueryDescription _attributeQuery = new QueryDescription()
@@ -17,6 +19,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         public override void Update(in float dt)
         {
+            AuditRemovedThisUpdate = 0;
+            AuditPlaybackBytesThisUpdate = 0;
             var tagJob = new ClearTagJob { CommandBuffer = _commandBuffer };
             World.InlineEntityQuery<ClearTagJob, GameplayTagEffectiveChangedBits>(in _tagQuery, ref tagJob);
 
@@ -24,7 +28,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             World.InlineEntityQuery<ClearAttributeJob, GameplayAttributeChangedBits>(in _attributeQuery, ref attributeJob);
             if (_commandBuffer.Size > 0)
             {
+                AuditRemovedThisUpdate = _commandBuffer.Size;
+                long auditStart = System.GC.GetAllocatedBytesForCurrentThread();
                 _commandBuffer.Playback(World);
+                AuditPlaybackBytesThisUpdate = System.GC.GetAllocatedBytesForCurrentThread() - auditStart;
             }
         }
 

@@ -9,6 +9,8 @@ namespace Ludots.Core.Gameplay.GAS
     /// </summary>
     public static class AttributeMutationOps
     {
+        public static int AuditAggregateAdded;
+        public static int AuditPresentationAdded;
         public static void AddCurrent(World world, Entity target, int attributeId, float delta, TagOps tagOps)
         {
             if (!world.IsAlive(target) || !world.Has<AttributeBuffer>(target))
@@ -213,6 +215,7 @@ namespace Ludots.Core.Gameplay.GAS
             }
 
             world.Add(target, new AttributeAggregateDirty());
+            AuditAggregateAdded++;
         }
 
         private static void MarkPresentationChanged(World world, Entity target, int attributeId)
@@ -220,6 +223,7 @@ namespace Ludots.Core.Gameplay.GAS
             if (!world.Has<GameplayAttributeChangedBits>(target))
             {
                 world.Add(target, new GameplayAttributeChangedBits());
+                AuditPresentationAdded++;
             }
 
             world.Get<GameplayAttributeChangedBits>(target).Mark(attributeId);
