@@ -950,7 +950,15 @@ namespace Ludots.Core.Engine
                 gasGraphApi,
                 tagOps,
                 scopeResolver);
-            var phaseExecutor = new EffectPhaseExecutor(graphProgramRegistry, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, effectTemplateRegistry, eventBus: EventBus, budget: gasBudget);
+            var phaseExecutor = new EffectPhaseExecutor(
+                graphProgramRegistry,
+                presetTypes,
+                builtinHandlers,
+                GasGraphOpHandlerTable.Instance,
+                effectTemplateRegistry,
+                eventBus: EventBus,
+                budget: gasBudget,
+                graphProgramScratchCapacity: gasRuntimeCapacity.EffectPhaseGraphProgramScratchCapacity);
             var inputRequestQueue = new InputRequestQueue();
             var abilityInputRequestQueue = new InputRequestQueue();
             var inputResponseBuffer = new InputResponseBuffer();

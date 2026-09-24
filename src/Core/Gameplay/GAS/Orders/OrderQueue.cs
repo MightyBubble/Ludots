@@ -77,6 +77,14 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             order.AdmissionBatchSize = 0;
             order.AdmissionBatchIndex = 0;
 
+            if (!_admissionResults.CanReserve(OrderAdmissionStage.GlobalIntake, 1))
+            {
+                Span<Order> rejected = stackalloc Order[1];
+                rejected[0] = order;
+                _admissionResults.RecordCapacityFailures(rejected, OrderAdmissionStage.GlobalIntake);
+                return OrderSubmitResult.RejectedAdmissionCapacity;
+            }
+
             OrderAdmissionReservation reservation = _admissionResults.Reserve(
                 OrderAdmissionStage.GlobalIntake,
                 order.OrderId,

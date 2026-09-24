@@ -111,6 +111,13 @@ namespace Ludots.Core.Gameplay.GAS.Components
             return written;
         }
 
+        public int ExtractAll(Span<Order> destination)
+        {
+            int count = CopyAll(destination);
+            Count = 0;
+            return count;
+        }
+
         public readonly int CopyByTrigger(int triggerOrderId, Span<Order> destination)
         {
             if (triggerOrderId <= 0 || Count <= 0)
@@ -140,6 +147,26 @@ namespace Ludots.Core.Gameplay.GAS.Components
             }
 
             return written;
+        }
+
+        public readonly int CopyAll(Span<Order> destination)
+        {
+            if (Count <= 0)
+            {
+                return 0;
+            }
+            if (destination.Length < Count)
+            {
+                throw new InvalidOperationException(
+                    $"{ExtractionCapacityError}: all={Count}, capacity={destination.Length}.");
+            }
+
+            for (int i = 0; i < Count; i++)
+            {
+                destination[i] = _entries[i].Order;
+            }
+
+            return Count;
         }
 
         public readonly int CountByTrigger(int triggerOrderId)

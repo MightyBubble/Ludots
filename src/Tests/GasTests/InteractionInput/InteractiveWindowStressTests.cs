@@ -68,7 +68,7 @@ namespace Ludots.Tests.GAS
                 var budget = new GasBudget();
                 var requests = new EffectRequestQueue();
                 var inputReq = new InputRequestQueue(capacity: 4096);
-                var admissionResults = new OrderAdmissionResultBuffer(3, 3);
+                var admissionResults = new OrderAdmissionResultBuffer(6, 6);
                 var chainOrders = new OrderQueue(64, admissionResults);
 
                 var processing = new EffectProcessingLoopSystem(
@@ -100,9 +100,9 @@ namespace Ludots.Tests.GAS
                     admissionResults.BeginLogicStep();
                     requests.Publish(new EffectRequest { Source = source, Target = target, TemplateId = tplOpen });
                     processing.Update(1f);
-                    chainOrders.TryEnqueue(new Order { OrderId = 1, OrderTypeId = TestResponseChainOrderTypeIds.ChainActivateEffect, Actor = source, Args = new OrderArgs { I0 = tplDamage } });
-                    chainOrders.TryEnqueue(new Order { OrderId = 2, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, Actor = source });
-                    chainOrders.TryEnqueue(new Order { OrderId = 3, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, Actor = source });
+                    chainOrders.TryEnqueue(new Order { OrderId = i * 3 + 1, OrderTypeId = TestResponseChainOrderTypeIds.ChainActivateEffect, Actor = source, Args = new OrderArgs { I0 = tplDamage } });
+                    chainOrders.TryEnqueue(new Order { OrderId = i * 3 + 2, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, Actor = source });
+                    chainOrders.TryEnqueue(new Order { OrderId = i * 3 + 3, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, Actor = source });
                     processing.Update(1f);
                     admissionResults.EndEntityIntake();
                     admissionResults.EndLogicStep();

@@ -43,6 +43,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             _stepRateHz = stepRateHz;
+            world.SubscribeEntityDestroyed(OnEntityDestroyed);
         }
 
         public override void Update(in float dt)
@@ -63,7 +64,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 Entity entity = outcome.Actor;
                 if (!World.IsAlive(entity) ||
-                    !World.Has<OrderBuffer>(entity) ||
                     !World.Has<OrderContinuationBuffer>(entity))
                 {
                     _processedCount++;
@@ -77,36 +77,59 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     continue;
                 }
 
-                int count;
                 int triggerOrderId = outcome.OrderId;
-                if (outcome.State == OrderTerminalState.Completed)
+                int matchingCount = continuation.CountByTrigger(triggerOrderId);
+                if (matchingCount == 0)
                 {
-                    int matchingCount = continuation.CountByTrigger(triggerOrderId);
-                    _orderTypeRegistry.EnsureTerminalResultCapacity(matchingCount);
-                    count = continuation.CopyByTrigger(triggerOrderId, extracted);
-                    ReserveContinuationAdmissions(extracted.Slice(0, count), reservations);
-                    int extractedCount = continuation.Extract(triggerOrderId, extracted);
-                    if (extractedCount != count)
-                    {
-                        CancelContinuationAdmissions(reservations, count);
-                        throw new InvalidOperationException(
-                            $"ORDER.CONTINUATION.ERR.BufferChangedDuringAdmission: triggerOrderId={triggerOrderId}, expected={count}, actual={extractedCount}.");
-                    }
-                }
-                else
-                {
-                    count = continuation.Extract(triggerOrderId, extracted);
+                    _processedCount++;
+                    continue;
                 }
 
                 if (outcome.State != OrderTerminalState.Completed)
                 {
-                    for (int i = 0; i < count; i++)
-                    {
-                        Order removed = extracted[i];
-                        OrderSpatialPayloadOps.Release(World, in removed);
-                    }
+                    RejectContinuationsForTrigger(
+                        ref continuation,
+                        entity,
+                        triggerOrderId,
+                        matchingCount,
+                        outcome.State == OrderTerminalState.Cancelled
+                            ? OrderTerminalState.Cancelled
+                            : OrderTerminalState.Failed,
+                        outcome.State == OrderTerminalState.Failed && outcome.FailureReason != OrderFailureReason.None
+                            ? outcome.FailureReason
+                            : OrderFailureReason.PreconditionFailed,
+                        OrderSubmitResult.RejectedValidation,
+                        extracted,
+                        reservations);
                     _processedCount++;
                     continue;
+                }
+
+                if (!World.Has<OrderBuffer>(entity))
+                {
+                    RejectContinuationsForTrigger(
+                        ref continuation,
+                        entity,
+                        triggerOrderId,
+                        matchingCount,
+                        OrderTerminalState.Failed,
+                        OrderFailureReason.SubmissionInvalidActor,
+                        OrderSubmitResult.RejectedInvalidActor,
+                        extracted,
+                        reservations);
+                    _processedCount++;
+                    continue;
+                }
+
+                _orderTypeRegistry.EnsureTerminalResultCapacity(matchingCount);
+                int count = continuation.CopyByTrigger(triggerOrderId, extracted);
+                ReserveContinuationAdmissions(extracted.Slice(0, count), reservations);
+                int extractedCount = continuation.Extract(triggerOrderId, extracted);
+                if (extractedCount != count)
+                {
+                    CancelContinuationAdmissions(reservations, count);
+                    throw new InvalidOperationException(
+                        $"ORDER.CONTINUATION.ERR.BufferChangedDuringAdmission: triggerOrderId={triggerOrderId}, expected={count}, actual={extractedCount}.");
                 }
 
                 ref OrderBuffer buffer = ref World.Get<OrderBuffer>(entity);
@@ -186,6 +209,61 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
+        private void OnEntityDestroyed(in Entity entity)
+        {
+            if (!World.IsAlive(entity) || !World.Has<OrderContinuationBuffer>(entity))
+            {
+                return;
+            }
+
+            ref OrderContinuationBuffer continuation = ref World.Get<OrderContinuationBuffer>(entity);
+            if (!continuation.HasEntries)
+            {
+                return;
+            }
+
+            Span<Order> extracted = stackalloc Order[OrderContinuationBuffer.MAX_CONTINUATIONS];
+            Span<OrderAdmissionReservation> reservations = stackalloc OrderAdmissionReservation[OrderContinuationBuffer.MAX_CONTINUATIONS];
+            int count = continuation.CopyAll(extracted);
+            _orderTypeRegistry.EnsureTerminalResultCapacity(count);
+            if (!_admissionResults.EntityIntakeOpen)
+            {
+                int outsideIntakeCount = continuation.ExtractAll(extracted);
+                for (int i = 0; i < outsideIntakeCount; i++)
+                {
+                    Order order = extracted[i];
+                    OrderSpatialPayloadOps.Release(World, in order);
+                    var terminal = new OrderTerminalOutcome(
+                        order.OrderId,
+                        order.OrderTypeId,
+                        OrderTerminalState.Failed,
+                        OrderFailureReason.SubmissionInvalidActor,
+                        entity);
+                    _orderTypeRegistry.PublishTerminalResult(in terminal);
+                }
+
+                return;
+            }
+
+            ReserveContinuationAdmissions(extracted.Slice(0, count), reservations);
+            int extractedCount = continuation.ExtractAll(extracted);
+            if (extractedCount != count)
+            {
+                CancelContinuationAdmissions(reservations, count);
+                throw new InvalidOperationException(
+                    $"ORDER.CONTINUATION.ERR.DestroyedActorBufferChangedDuringAdmission: actor={entity.Id}, expected={count}, actual={extractedCount}.");
+            }
+
+            PublishRejectedContinuations(
+                entity,
+                extracted.Slice(0, count),
+                reservations,
+                count,
+                OrderTerminalState.Failed,
+                OrderFailureReason.SubmissionInvalidActor,
+                OrderSubmitResult.RejectedInvalidActor);
+        }
+
         private void ReserveContinuationAdmissions(
             ReadOnlySpan<Order> orders,
             Span<OrderAdmissionReservation> reservations)
@@ -248,6 +326,70 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     OrderFailureReason.SubmissionQueueFull,
                     order.Actor);
                 _orderTypeRegistry.PublishTerminalResult(in failed);
+            }
+        }
+
+        private void RejectContinuationsForTrigger(
+            ref OrderContinuationBuffer continuation,
+            Entity entity,
+            int triggerOrderId,
+            int expectedCount,
+            OrderTerminalState terminalState,
+            OrderFailureReason failureReason,
+            OrderSubmitResult admissionResult,
+            Span<Order> extracted,
+            Span<OrderAdmissionReservation> reservations)
+        {
+            _orderTypeRegistry.EnsureTerminalResultCapacity(expectedCount);
+            int count = continuation.CopyByTrigger(triggerOrderId, extracted);
+            ReserveContinuationAdmissions(extracted.Slice(0, count), reservations);
+            int extractedCount = continuation.Extract(triggerOrderId, extracted);
+            if (extractedCount != count)
+            {
+                CancelContinuationAdmissions(reservations, count);
+                throw new InvalidOperationException(
+                    $"ORDER.CONTINUATION.ERR.BufferChangedDuringRejection: triggerOrderId={triggerOrderId}, expected={count}, actual={extractedCount}.");
+            }
+
+            PublishRejectedContinuations(
+                entity,
+                extracted.Slice(0, count),
+                reservations,
+                count,
+                terminalState,
+                failureReason,
+                admissionResult);
+        }
+
+        private void PublishRejectedContinuations(
+            Entity entity,
+            ReadOnlySpan<Order> orders,
+            Span<OrderAdmissionReservation> reservations,
+            int count,
+            OrderTerminalState terminalState,
+            OrderFailureReason failureReason,
+            OrderSubmitResult admissionResult)
+        {
+            try
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    Order order = orders[i];
+                    OrderSpatialPayloadOps.Release(World, in order);
+                    CommitAdmission(in reservations[i], in order, admissionResult);
+                    reservations[i] = default;
+                    var terminal = new OrderTerminalOutcome(
+                        order.OrderId,
+                        order.OrderTypeId,
+                        terminalState,
+                        terminalState == OrderTerminalState.Failed ? failureReason : OrderFailureReason.None,
+                        entity);
+                    _orderTypeRegistry.PublishTerminalResult(in terminal);
+                }
+            }
+            finally
+            {
+                CancelContinuationAdmissions(reservations, count);
             }
         }
 

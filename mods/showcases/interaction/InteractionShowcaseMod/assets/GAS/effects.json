@@ -80,6 +80,7 @@
     "targetQuery": {
       "kind": "BuiltinSpatial",
       "shape": "Circle",
+      "origin": "Source",
       "radius": 280
     },
     "targetFilter": {
@@ -284,6 +285,7 @@
     "targetQuery": {
       "kind": "BuiltinSpatial",
       "shape": "Ring",
+      "origin": "Source",
       "radius": 320,
       "innerRadius": 140
     },

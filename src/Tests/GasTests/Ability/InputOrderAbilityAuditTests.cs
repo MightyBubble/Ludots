@@ -297,11 +297,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var second = new Order { OrderTypeId = 2 };
 
             That(queue.SubmitAssigned(ref first), Is.EqualTo(OrderSubmitResult.Queued));
-
-            InvalidOperationException ex = Throws<InvalidOperationException>(() =>
-                queue.SubmitAssigned(ref second))!;
-
-            That(ex.Message, Does.StartWith(OrderAdmissionResultBuffer.CapacityExceededError));
+            That(queue.SubmitAssigned(ref second), Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
             That(queue.Count, Is.EqualTo(1));
             That(second.OrderId, Is.GreaterThan(0));
             That(results.Count, Is.EqualTo(2));
@@ -328,14 +324,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var third = new Order { OrderTypeId = 2 };
 
             That(queue.SubmitAssigned(ref first), Is.EqualTo(OrderSubmitResult.Queued));
-
-            InvalidOperationException secondError = Throws<InvalidOperationException>(() =>
-                queue.SubmitAssigned(ref second))!;
-            InvalidOperationException thirdError = Throws<InvalidOperationException>(() =>
-                queue.SubmitAssigned(ref third))!;
-
-            That(secondError.Message, Does.StartWith(OrderAdmissionResultBuffer.CapacityExceededError));
-            That(thirdError.Message, Does.StartWith(OrderAdmissionResultBuffer.CapacityExceededError));
+            That(queue.SubmitAssigned(ref second), Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
+            That(queue.SubmitAssigned(ref third), Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
             That(queue.Count, Is.EqualTo(1));
             That(second.OrderId, Is.GreaterThan(0));
             That(third.OrderId, Is.GreaterThan(second.OrderId));
@@ -366,14 +356,12 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var afterFault = new Order { OrderTypeId = 2 };
 
             That(queue.SubmitAssigned(ref first), Is.EqualTo(OrderSubmitResult.Queued));
-            InvalidOperationException capacityError = Throws<InvalidOperationException>(() =>
-                queue.SubmitAssigned(ref second))!;
+            That(queue.SubmitAssigned(ref second), Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
             InvalidOperationException terminalError = Throws<InvalidOperationException>(() =>
                 queue.SubmitAssigned(ref terminalTrigger))!;
             InvalidOperationException repeatedError = Throws<InvalidOperationException>(() =>
                 queue.SubmitAssigned(ref afterFault))!;
 
-            That(capacityError.Message, Does.StartWith(OrderAdmissionResultBuffer.CapacityExceededError));
             That(terminalError.Message, Does.StartWith(OrderAdmissionResultBuffer.TerminalFaultedError));
             That(repeatedError.Message, Is.EqualTo(terminalError.Message));
             That(results.IsTerminalFaulted, Is.True);
@@ -2030,6 +2018,154 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         }
 
         [Test]
+        public void AbilityExecSystem_DefaultEffectDispatch_WhenExplicitTargetDies_FailsWithoutSelfTargeting()
+        {
+            using var world = World.Create();
+            const int castAbilityOrderTypeId = 100;
+            const int abilityId = 9005;
+            const int effectTemplateId = 7002;
+
+            var actor = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new BlackboardIntBuffer(),
+                new BlackboardEntityBuffer(),
+                new AbilityStateBuffer(),
+                new GameplayTagContainer(),
+                new TagCountContainer());
+            var target = world.Create();
+
+            ref var abilities = ref world.Get<AbilityStateBuffer>(actor);
+            abilities.AddAbility(abilityId);
+
+            var order = new Order
+            {
+                OrderId = 14,
+                Actor = actor,
+                Target = target,
+                OrderTypeId = castAbilityOrderTypeId,
+                Args = new OrderArgs { I0 = 0 }
+            };
+            ref var orderBuffer = ref world.Get<OrderBuffer>(actor);
+            orderBuffer.SetActiveDirect(in order, priority: 100);
+            world.Get<BlackboardIntBuffer>(actor).Set(OrderBlackboardKeys.Cast_SlotIndex, 0);
+            world.Get<BlackboardEntityBuffer>(actor).Set(OrderBlackboardKeys.Cast_TargetEntity, target);
+            world.Destroy(target);
+
+            var spec = default(AbilityExecSpec);
+            spec.ClockId = GasClockId.Step;
+            spec.SetItem(0, ExecItemKind.EffectSignal, tick: 0, templateId: effectTemplateId);
+            var definitions = new AbilityDefinitionRegistry();
+            definitions.Register(abilityId, new AbilityDefinition { ExecSpec = spec });
+
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = castAbilityOrderTypeId,
+                IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex,
+                EntityBlackboardKey = OrderBlackboardKeys.Cast_TargetEntity,
+                SpatialBlackboardKey = -1,
+            });
+            var effectRequests = new EffectRequestQueue();
+            var presentationEvents = new GasPresentationEventBuffer(8);
+            var system = new AbilityExecSystem(
+                world,
+                new DiscreteClock(),
+                new InputRequestQueue(),
+                new InputResponseBuffer(),
+                effectRequests,
+                16,
+                definitions,
+                castAbilityOrderTypeId: castAbilityOrderTypeId,
+                presentationEvents: presentationEvents,
+                orderTypeRegistry: orderTypes,
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
+
+            system.Update(0f);
+
+            That(effectRequests.Count, Is.Zero);
+            That(world.Has<AbilityExecInstance>(actor), Is.False);
+            That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
+            That(orderTypes.TerminalResults.Count, Is.EqualTo(1));
+            That(orderTypes.TerminalResults[0].OrderId, Is.EqualTo(14));
+            That(orderTypes.TerminalResults[0].State, Is.EqualTo(OrderTerminalState.Failed));
+            That(orderTypes.TerminalResults[0].FailureReason, Is.EqualTo(OrderFailureReason.PreconditionFailed));
+            That(CountPresentationEvents(presentationEvents, GasPresentationEventKind.CastFailed), Is.EqualTo(1));
+            That(CountPresentationEvents(presentationEvents, GasPresentationEventKind.CastFinished), Is.Zero);
+        }
+
+        [Test]
+        public void AbilityExecSystem_TargetTagSignal_WhenExplicitTargetDies_FailsWithoutApplyingActorTag()
+        {
+            using var world = World.Create();
+            const int castAbilityOrderTypeId = 100;
+            const int abilityId = 9006;
+            int tagId = TagRegistry.Register("test.ability.target-only-tag");
+
+            var actor = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new BlackboardIntBuffer(),
+                new BlackboardEntityBuffer(),
+                new AbilityStateBuffer(),
+                new GameplayTagContainer(),
+                new TagCountContainer());
+            var target = world.Create(new GameplayTagContainer(), new TagCountContainer());
+
+            world.Get<AbilityStateBuffer>(actor).AddAbility(abilityId);
+            var order = new Order
+            {
+                OrderId = 15,
+                Actor = actor,
+                Target = target,
+                OrderTypeId = castAbilityOrderTypeId,
+                Args = new OrderArgs { I0 = 0 }
+            };
+            world.Get<OrderBuffer>(actor).SetActiveDirect(in order, priority: 100);
+            world.Get<BlackboardIntBuffer>(actor).Set(OrderBlackboardKeys.Cast_SlotIndex, 0);
+            world.Get<BlackboardEntityBuffer>(actor).Set(OrderBlackboardKeys.Cast_TargetEntity, target);
+            world.Destroy(target);
+
+            var spec = default(AbilityExecSpec);
+            spec.ClockId = GasClockId.Step;
+            spec.SetItem(0, ExecItemKind.TagSignalTarget, tick: 0, tagId: tagId);
+            var definitions = new AbilityDefinitionRegistry();
+            definitions.Register(abilityId, new AbilityDefinition { ExecSpec = spec });
+
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = castAbilityOrderTypeId,
+                IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex,
+                EntityBlackboardKey = OrderBlackboardKeys.Cast_TargetEntity,
+                SpatialBlackboardKey = -1,
+            });
+            var presentationEvents = new GasPresentationEventBuffer(8);
+            var system = new AbilityExecSystem(
+                world,
+                new DiscreteClock(),
+                new InputRequestQueue(),
+                new InputResponseBuffer(),
+                new EffectRequestQueue(),
+                16,
+                definitions,
+                castAbilityOrderTypeId: castAbilityOrderTypeId,
+                presentationEvents: presentationEvents,
+                orderTypeRegistry: orderTypes,
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
+
+            system.Update(0f);
+
+            That(world.Get<GameplayTagContainer>(actor).HasTag(tagId), Is.False);
+            That(world.Has<AbilityExecInstance>(actor), Is.False);
+            That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
+            That(orderTypes.TerminalResults.Count, Is.EqualTo(1));
+            That(orderTypes.TerminalResults[0].OrderId, Is.EqualTo(15));
+            That(orderTypes.TerminalResults[0].State, Is.EqualTo(OrderTerminalState.Failed));
+            That(orderTypes.TerminalResults[0].FailureReason, Is.EqualTo(OrderFailureReason.PreconditionFailed));
+            That(CountPresentationEvents(presentationEvents, GasPresentationEventKind.CastFailed), Is.EqualTo(1));
+            That(CountPresentationEvents(presentationEvents, GasPresentationEventKind.CastFinished), Is.Zero);
+        }
+
+        [Test]
         public void AbilityExecSystem_ValidCast_PublishesCastCommittedPresentationEvent()
         {
             using var world = World.Create();
@@ -3296,5 +3432,18 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             };
         }
 
+        private static int CountPresentationEvents(GasPresentationEventBuffer events, GasPresentationEventKind kind)
+        {
+            int count = 0;
+            foreach (ref readonly var evt in events.Events)
+            {
+                if (evt.Kind == kind)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
     }
 }

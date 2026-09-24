@@ -154,6 +154,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public int? HalfHeight { get; set; }
         public int? Rotation { get; set; }
         public int? Length { get; set; }
+        public string? Origin { get; set; }
         public int? GraphProgramId { get; set; }
     }
 
