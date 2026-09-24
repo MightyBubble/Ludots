@@ -94,9 +94,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     return true;
                 }
 
-                // Link create/remove stay Unsupported so an effect plan cannot commit them:
-                // the relationship store is not staged for rollback. Script and TriggerGraph
-                // run outside that transaction and write the store directly.
+                // Effect graphs stage these writes and commit them with the phase.
+                // Script and TriggerGraph have no effect transaction, so they write the store directly.
                 if (op is GraphNodeOp.RelationshipEnsureLink or GraphNodeOp.RelationshipRemoveLink)
                 {
                     return true;

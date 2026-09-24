@@ -36,7 +36,42 @@ public sealed class TriggerGraphRelationshipLinkTests
     }
 
     [Test]
-    public void TriggerGraph_LinkWriteInsideEffectTransaction_FailsClosed()
+    public void EffectGraph_EnsureThenAsk_CommitsTheLinkAndShowsItBeforeCommit()
+    {
+        using var world = World.Create();
+        RelationshipHarness harness = RelationshipHarness.Create(world);
+        Entity caster = world.Create();
+        Entity target = world.Create();
+        GraphInstruction[] program = CompileAndPatch(
+            harness,
+            "tests.effect_graph.relationship_ensure",
+            BondGraph("RelationshipEnsureLink", thenAsk: true));
+        using var transaction = new EffectPhaseSideEffectTransaction(
+            world,
+            tagOps: null,
+            effectRequests: null,
+            spawnRequests: null,
+            presentationEvents: null,
+            attributeEntityCapacity: 8);
+        transaction.Begin();
+        harness.Api.BeginEffectSideEffectTransaction(transaction);
+        byte[] bools = Execute(world, harness.Api, caster, target, program);
+        GraphInstruction ask = Single(program, GraphNodeOp.RelationshipHasLink);
+        Assert.That(bools[ask.Dst], Is.EqualTo(1));
+        Assert.That(harness.Runtime.HasLink(caster, target, harness.SocialBondTypeId), Is.False);
+
+        Span<Entity> outgoing = stackalloc Entity[4];
+        RelationshipQueryResult listed = harness.Api.CollectOutgoing(caster, outgoing, harness.SocialBondTypeId);
+        Assert.That(listed.Count, Is.EqualTo(1));
+        Assert.That(outgoing[0], Is.EqualTo(target));
+
+        harness.Api.EndEffectSideEffectTransaction(transaction);
+        transaction.Commit();
+        Assert.That(harness.Runtime.HasLink(caster, target, harness.SocialBondTypeId), Is.True);
+    }
+
+    [Test]
+    public void EffectGraph_EnsureLink_RollbackLeavesTheStoreUntouched()
     {
         using var world = World.Create();
         RelationshipHarness harness = RelationshipHarness.Create(world);
@@ -48,29 +83,96 @@ public sealed class TriggerGraphRelationshipLinkTests
             effectRequests: null,
             spawnRequests: null,
             presentationEvents: null,
-            attributeEntityCapacity: 2);
+            attributeEntityCapacity: 8);
         transaction.Begin();
         harness.Api.BeginEffectSideEffectTransaction(transaction);
-
-        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
-            Execute(world, harness.Api, caster, target, RawEnsure(harness.SocialBondTypeId)))!;
-
-        Assert.That(error.Message, Does.StartWith(EffectPhaseSideEffectTransaction.UnsupportedSideEffectError));
-        Assert.That(harness.Runtime.HasLink(caster, target, harness.SocialBondTypeId), Is.False);
+        Execute(world, harness.Api, caster, target, RawEnsure(harness.SocialBondTypeId));
         harness.Api.EndEffectSideEffectTransaction(transaction);
         transaction.Rollback();
+        Assert.That(harness.Runtime.HasLink(caster, target, harness.SocialBondTypeId), Is.False);
+        Assert.That(harness.Changes.Count, Is.Zero);
     }
 
     [Test]
-    public void EffectPlan_StillRejectsEnsureLink()
+    public void EffectCommit_FailureAfterLinkWrite_RestoresTheStore()
+    {
+        using var world = World.Create();
+        RelationshipHarness harness = RelationshipHarness.Create(world);
+        Entity caster = world.Create();
+        Entity target = world.Create();
+        using var transaction = new EffectPhaseSideEffectTransaction(
+            world,
+            tagOps: null,
+            effectRequests: null,
+            spawnRequests: null,
+            presentationEvents: null,
+            attributeEntityCapacity: 8);
+        transaction.Begin();
+        harness.Api.BeginEffectSideEffectTransaction(transaction);
+        harness.Api.EnsureRelationshipLink(caster, target, harness.SocialBondTypeId);
+        harness.Api.SetRelationshipMetric(caster, target, harness.LoyaltyMetricId, 40, harness.SocialBondTypeId);
+        transaction.ApplyStagedRelationshipLinks();
+        Assert.That(harness.Runtime.HasLink(caster, target, harness.SocialBondTypeId), Is.True);
+        Assert.That(harness.Runtime.GetMetric(caster, target, harness.SocialBondTypeId, harness.LoyaltyMetricId), Is.EqualTo(40));
+        harness.Api.EndEffectSideEffectTransaction(transaction);
+        transaction.Rollback();
+        Assert.That(harness.Runtime.HasLink(caster, target, harness.SocialBondTypeId), Is.False);
+        Assert.That(harness.Changes.Count, Is.Zero);
+    }
+
+    [Test]
+    public void EffectGraph_SetMetricAndFlag_CommitKeepsThem_RollbackRestoresThem()
+    {
+        using var world = World.Create();
+        RelationshipHarness harness = RelationshipHarness.Create(world);
+        Entity caster = world.Create();
+        Entity target = world.Create();
+        harness.Runtime.EnsureLink(caster, target, harness.SocialBondTypeId);
+        harness.Runtime.SetMetric(caster, target, harness.SocialBondTypeId, harness.LoyaltyMetricId, 11);
+        int changesBefore = harness.Changes.Count;
+
+        using var committed = new EffectPhaseSideEffectTransaction(
+            world, tagOps: null, effectRequests: null, spawnRequests: null, presentationEvents: null, attributeEntityCapacity: 8);
+        committed.Begin();
+        harness.Api.BeginEffectSideEffectTransaction(committed);
+        short staged = harness.Api.SetRelationshipMetric(caster, target, harness.LoyaltyMetricId, 80, harness.SocialBondTypeId);
+        harness.Api.SetRelationshipFlag(caster, target, harness.TrustedFlagId, enabled: true, harness.SocialBondTypeId);
+        Assert.That(staged, Is.EqualTo(80));
+        Assert.That(harness.Api.GetRelationshipMetric(caster, target, harness.LoyaltyMetricId, harness.SocialBondTypeId), Is.EqualTo(80));
+        Assert.That(harness.Api.HasRelationshipFlag(caster, target, harness.TrustedFlagId, harness.SocialBondTypeId), Is.True);
+        Assert.That(harness.Runtime.GetMetric(caster, target, harness.SocialBondTypeId, harness.LoyaltyMetricId), Is.EqualTo(11));
+        Assert.That(harness.Runtime.HasFlag(caster, target, harness.SocialBondTypeId, harness.TrustedFlagId), Is.False);
+        harness.Api.EndEffectSideEffectTransaction(committed);
+        committed.Commit();
+        Assert.That(harness.Runtime.GetMetric(caster, target, harness.SocialBondTypeId, harness.LoyaltyMetricId), Is.EqualTo(80));
+        Assert.That(harness.Runtime.HasFlag(caster, target, harness.SocialBondTypeId, harness.TrustedFlagId), Is.True);
+
+        using var rolled = new EffectPhaseSideEffectTransaction(
+            world, tagOps: null, effectRequests: null, spawnRequests: null, presentationEvents: null, attributeEntityCapacity: 8);
+        rolled.Begin();
+        harness.Api.BeginEffectSideEffectTransaction(rolled);
+        harness.Api.AddRelationshipMetric(caster, target, harness.LoyaltyMetricId, 5, harness.SocialBondTypeId);
+        harness.Api.SetRelationshipFlag(caster, target, harness.TrustedFlagId, enabled: false, harness.SocialBondTypeId);
+        Assert.That(harness.Api.GetRelationshipMetric(caster, target, harness.LoyaltyMetricId, harness.SocialBondTypeId), Is.EqualTo(85));
+        harness.Api.EndEffectSideEffectTransaction(rolled);
+        rolled.Rollback();
+        Assert.That(harness.Runtime.GetMetric(caster, target, harness.SocialBondTypeId, harness.LoyaltyMetricId), Is.EqualTo(80));
+        Assert.That(harness.Runtime.HasFlag(caster, target, harness.SocialBondTypeId, harness.TrustedFlagId), Is.True);
+        Assert.That(harness.Changes.Count, Is.EqualTo(changesBefore + 2));
+    }
+
+    [Test]
+    public void EffectPlan_AcceptsRelationshipWrites()
     {
         const int templateId = 361;
         const int graphId = 3611;
         var templates = new EffectTemplateRegistry();
         var programs = new GraphProgramRegistry();
         programs.Register(graphId, RawEnsure(typeId: 1), GraphKind.Effect);
+        programs.Register(graphId + 1, RawSetMetric(typeId: 1, metricId: 2), GraphKind.Effect);
         EffectPhaseGraphBindings bindings = default;
         Assert.That(bindings.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Main, graphId), Is.True);
+        Assert.That(bindings.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Post, graphId + 1), Is.True);
         templates.Register(templateId, new EffectTemplateData
         {
             LifetimeKind = EffectLifetimeKind.Instant,
@@ -79,17 +181,21 @@ public sealed class TriggerGraphRelationshipLinkTests
 
         var builtins = new BuiltinHandlerRegistry();
         BuiltinHandlers.RegisterAll(builtins);
-        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
-            EffectExecutionPlanCompiler.FinalizeAll(
-                templates,
-                new PresetTypeRegistry(),
-                builtins,
-                programs,
-                GasGraphOpHandlerTable.Instance,
-                "Test/effects.json"))!;
+        EffectExecutionPlanCompiler.FinalizeAll(
+            templates,
+            new PresetTypeRegistry(),
+            builtins,
+            programs,
+            GasGraphOpHandlerTable.Instance,
+            "Test/effects.json");
 
-        Assert.That(error.Message, Does.StartWith(EffectExecutionPlanCompiler.UnsupportedOperationError));
-        Assert.That(error.Message, Does.Contain(nameof(GraphNodeOp.RelationshipEnsureLink)));
+        Assert.That(
+            templates.RequireExecutionPlans(templateId).Activation.Kind,
+            Is.EqualTo(EffectExecutionPlanKind.GasTransactional));
+        Assert.That(
+            GasGraphOpHandlerTable.Instance.TryGetOperationMetadata(GraphNodeOp.RelationshipSetFlag, out EffectOperationMetadata metadata),
+            Is.True);
+        Assert.That(metadata.Kind, Is.EqualTo(EffectOperationKind.GasTransactional));
     }
 
     [Test]
@@ -114,6 +220,10 @@ public sealed class TriggerGraphRelationshipLinkTests
         var setMetric = new[] { new GraphInstruction { Op = (ushort)GraphNodeOp.RelationshipSetMetric } };
         Assert.Throws<InvalidOperationException>(() =>
             GraphKindOperationPolicy.RequireAllowed(GraphKind.TriggerGraph, setMetric, GasGraphOpHandlerTable.Instance));
+        Assert.DoesNotThrow(() =>
+            GraphKindOperationPolicy.RequireAllowed(GraphKind.Effect, setMetric, GasGraphOpHandlerTable.Instance));
+        Assert.DoesNotThrow(() =>
+            GraphKindOperationPolicy.RequireAllowed(GraphKind.Effect, ensure, GasGraphOpHandlerTable.Instance));
     }
 
     [Test]
@@ -308,6 +418,26 @@ public sealed class TriggerGraphRelationshipLinkTests
         ];
     }
 
+    private static GraphInstruction[] RawSetMetric(int typeId, int metricId)
+    {
+        return
+        [
+            new GraphInstruction { Op = (ushort)GraphNodeOp.LoadCaster, Dst = 0 },
+            new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 1 },
+            new GraphInstruction { Op = (ushort)GraphNodeOp.ConstInt, Imm = 80, Dst = 0 },
+            new GraphInstruction
+            {
+                Op = (ushort)GraphNodeOp.RelationshipSetMetric,
+                A = 0,
+                B = 1,
+                C = 0,
+                Imm = metricId,
+                Flags = (byte)typeId,
+            },
+            new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+        ];
+    }
+
     private static GraphInstruction Single(GraphInstruction[] program, GraphNodeOp op)
     {
         GraphInstruction found = default;
@@ -331,28 +461,37 @@ public sealed class TriggerGraphRelationshipLinkTests
     {
         public GasGraphRuntimeApi Api = null!;
         public RelationshipRuntime Runtime = null!;
+        public RelationshipChangeBuffer Changes = null!;
         public int SocialBondTypeId;
+        public int LoyaltyMetricId;
+        public int TrustedFlagId;
 
         public static RelationshipHarness Create(World world)
         {
             var types = new RelationshipTypeRegistry();
             var metrics = new RelationshipMetricRegistry();
             var flags = new RelationshipFlagRegistry();
+            var changes = new RelationshipChangeBuffer();
             var runtime = new RelationshipRuntime(
                 world,
                 types,
                 metrics,
                 flags,
                 new RelationshipBandRegistry(),
-                new RelationshipChangeBuffer(),
+                changes,
                 new RelationshipReverseIndex(world));
             int socialBondTypeId = types.Register("SocialBond");
+            int loyaltyMetricId = metrics.Register("Loyalty", -100, 100, 0);
+            int trustedFlagId = flags.Register("Trusted");
             var api = new GasGraphRuntimeApi(world, relationshipRuntime: runtime);
             return new RelationshipHarness
             {
                 Api = api,
                 Runtime = runtime,
+                Changes = changes,
                 SocialBondTypeId = socialBondTypeId,
+                LoyaltyMetricId = loyaltyMetricId,
+                TrustedFlagId = trustedFlagId,
             };
         }
     }

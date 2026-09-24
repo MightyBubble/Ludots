@@ -24,6 +24,8 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     public const string RelationTargetInvalidError = "GAS.EFFECT_TRANSACTION.ERR.RelationTargetInvalid";
     public const string MissingPresentationEventBufferError = "GAS.GRAPH.ERR.MissingGasPresentationEventBuffer";
 
+    private readonly RelationshipLinkSideEffectJournal _relationshipLinks;
+
     private readonly World _world;
     private readonly TagOps? _tagOps;
     private readonly EffectRequestQueue? _effectRequests;
@@ -325,6 +327,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _structuralCommandCapacity = checked(attributeEntityCapacity * 16);
         _structuralCommands = new CommandBuffer(_structuralCommandCapacity);
         _structuralRollbackCommands = new CommandBuffer(_structuralCommandCapacity);
+        _relationshipLinks = new RelationshipLinkSideEffectJournal(attributeEntityCapacity);
     }
 
     public bool IsActive { get; private set; }
@@ -357,6 +360,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _listenerEntityCount = 0;
         _relationParentCount = 0;
         _relationChildCount = 0;
+        _relationshipLinks.Clear();
         _gameplayEventBus = null;
         _worldCommitStarted = false;
         _externalCommitStarted = false;
@@ -366,6 +370,65 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         }
         IsActive = true;
     }
+
+    public bool HasPendingRelationshipLinks => _relationshipLinks.HasPending;
+
+    internal void ApplyStagedRelationshipLinks()
+    {
+        RequireActive();
+        _relationshipLinks.Commit();
+    }
+
+    public void StageRelationshipEnsureLink(Ludots.Core.Gameplay.Relationships.RelationshipRuntime runtime, Entity source, Entity target, int typeId)
+    {
+        RequireActive();
+        _relationshipLinks.StageEnsure(runtime, source, target, typeId);
+    }
+
+    public void StageRelationshipRemoveLink(Ludots.Core.Gameplay.Relationships.RelationshipRuntime runtime, Entity source, Entity target, int typeId)
+    {
+        RequireActive();
+        _relationshipLinks.StageRemove(runtime, source, target, typeId);
+    }
+
+    public short StageRelationshipSetMetric(Ludots.Core.Gameplay.Relationships.RelationshipRuntime runtime, Entity source, Entity target, int typeId, int metricId, int value)
+    {
+        RequireActive();
+        return _relationshipLinks.StageSetMetric(runtime, source, target, typeId, metricId, value);
+    }
+
+    public short StageRelationshipAddMetric(Ludots.Core.Gameplay.Relationships.RelationshipRuntime runtime, Entity source, Entity target, int typeId, int metricId, int delta)
+    {
+        RequireActive();
+        return _relationshipLinks.StageAddMetric(runtime, source, target, typeId, metricId, delta);
+    }
+
+    public void StageRelationshipSetFlag(Ludots.Core.Gameplay.Relationships.RelationshipRuntime runtime, Entity source, Entity target, int typeId, int flagId, bool enabled)
+    {
+        RequireActive();
+        _relationshipLinks.StageSetFlag(runtime, source, target, typeId, flagId, enabled);
+    }
+
+    public bool TryReadRelationshipHasLink(Ludots.Core.Gameplay.Relationships.RelationshipRuntime runtime, Entity source, Entity target, int typeId, out bool hasLink)
+        => _relationshipLinks.TryReadHasLink(runtime, source, target, typeId, out hasLink);
+
+    public bool TryReadRelationshipMetric(Ludots.Core.Gameplay.Relationships.RelationshipRuntime runtime, Entity source, Entity target, int metricId, int typeId, out short value)
+        => _relationshipLinks.TryReadMetric(runtime, source, target, metricId, typeId, out value);
+
+    public bool TryReadRelationshipFlag(Ludots.Core.Gameplay.Relationships.RelationshipRuntime runtime, Entity source, Entity target, int flagId, int typeId, out bool enabled)
+        => _relationshipLinks.TryReadFlag(runtime, source, target, flagId, typeId, out enabled);
+
+    public void AdjustRelationshipOutgoing(Ludots.Core.Gameplay.Relationships.RelationshipRuntime runtime, Entity source, int typeId, Span<Entity> buffer, ref int count, ref int dropped)
+        => _relationshipLinks.AdjustOutgoing(runtime, source, typeId, buffer, ref count, ref dropped);
+
+    public void AdjustRelationshipIncoming(Ludots.Core.Gameplay.Relationships.RelationshipRuntime runtime, Entity target, int typeId, Span<Entity> buffer, ref int count, ref int dropped)
+        => _relationshipLinks.AdjustIncoming(runtime, target, typeId, buffer, ref count, ref dropped);
+
+    public void RebuildRelationshipBetweenPair(Ludots.Core.Gameplay.Relationships.RelationshipRuntime runtime, Entity source, Entity target, int typeId, Span<Entity> buffer, out int count, out int dropped)
+        => _relationshipLinks.RebuildBetweenPair(runtime, source, target, typeId, buffer, out count, out dropped);
+
+    public void KeepRelationshipMutual(Ludots.Core.Gameplay.Relationships.RelationshipRuntime runtime, Entity second, int typeId, Span<Entity> buffer, ref int count)
+        => _relationshipLinks.KeepMutual(runtime, second, typeId, buffer, ref count);
 
     public void StageSetParent(Entity subject, Entity parent, bool snapSubjectToParentPosition)
     {
@@ -1405,6 +1468,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 }
             }
 
+            ApplyStagedRelationshipLinks();
             CaptureExternalWriteCheckpoints();
             _externalCommitStarted = true;
             for (int i = 0; i < _dirtyEntityCount; i++)
@@ -1457,6 +1521,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
             return;
         }
 
+        _relationshipLinks.RollbackIfApplied();
         if (_externalCommitStarted)
         {
             RollbackExternalWrites();
@@ -3077,6 +3142,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _listenerEntityCount = 0;
         _relationParentCount = 0;
         _relationChildCount = 0;
+        _relationshipLinks.Clear();
         _gameplayEventBus = null;
         _worldCommitStarted = false;
         _externalCommitStarted = false;

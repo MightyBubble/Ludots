@@ -194,7 +194,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.RelationshipSetMetric or
                 GraphNodeOp.RelationshipAddMetric or
                 GraphNodeOp.RelationshipSetFlag
-                    => EffectOperationMetadata.Unsupported(EffectAtomicDomain.Relationship, description),
+                    => EffectOperationMetadata.GasTransactional(description),
 
                 GraphNodeOp.BeginLifecycleTransaction
                     => EffectOperationMetadata.Unsupported(EffectAtomicDomain.Lifecycle, description),
