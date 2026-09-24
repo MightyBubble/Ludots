@@ -186,6 +186,13 @@ namespace Ludots.Adapter.Raylib
             var uiRoot = setup.UiRoot;
             var skiaRenderer = setup.Renderer;
             var presentationTiming = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
+            if (Environment.GetEnvironmentVariable("LUDOTS_AB_DISABLE_HUD") == "1")
+            {
+                RenderDebugState auditRenderDebug = ResolveRenderDebugState(engine);
+                auditRenderDebug.DrawWorldHudBars = false;
+                auditRenderDebug.DrawWorldHudText = false;
+                auditRenderDebug.DrawCombatText = false;
+            }
             engine.TryGetService(CoreServiceKeys.SyntheticInput, out SyntheticInputDevice? syntheticInput);
             engine.TryGetService(CoreServiceKeys.HostFrameCapture, out IHostFrameCapture? frameCapture);
             engine.TryGetService(CoreServiceKeys.SoundRequestBuffer, out SoundRequestBuffer? soundRequests);
@@ -195,6 +202,14 @@ namespace Ludots.Adapter.Raylib
             deviceWatcher.DeviceChanged += seatDeviceBinding.HandleDeviceChange;
             engine.SetService(CoreServiceKeys.InputDeviceWatcher, deviceWatcher);
 
+            bool auditCapture = Environment.GetEnvironmentVariable("LUDOTS_AB_CAPTURE") == "1";
+            if (auditCapture)
+            {
+                config.WindowWidth = 1280;
+                config.WindowHeight = 720;
+                config.WindowResizable = false;
+                config.WindowStartMaximized = false;
+            }
             int screenWidth = config.WindowWidth <= 0 ? 1280 : config.WindowWidth;
             int screenHeight = config.WindowHeight <= 0 ? 720 : config.WindowHeight;
             string title = string.IsNullOrWhiteSpace(config.WindowTitle) ? "Ludots Engine" : config.WindowTitle;
@@ -225,6 +240,7 @@ namespace Ludots.Adapter.Raylib
                     Rl.SetConfigFlags(FlagWindowResizable);
                 }
 
+                if (auditCapture) Rl.SetConfigFlags(0x80);
                 Rl.InitWindow(screenWidth, screenHeight, title);
                 windowOpened = true;
                 if (config.WindowStartMaximized)
@@ -314,6 +330,8 @@ namespace Ludots.Adapter.Raylib
                     screenOverlayBuffer = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer);
                     MinimapScreenMarkerBuffer? minimapScreenMarkers = engine.GetService(CoreServiceKeys.MinimapScreenMarkerBuffer);
                     CameraCullingDebugState? cullingDebug = engine.GetService(CoreServiceKeys.CameraCullingDebugState);
+                    bool abDisableTerrainHudOcclusion =
+                        Environment.GetEnvironmentVariable("LUDOTS_AB_DISABLE_TERRAIN_HUD_OCCLUSION") == "1";
                     hudProjection = new WorldHudToScreenSystem(
                         engine.World,
                         worldHud,
@@ -323,7 +341,9 @@ namespace Ludots.Adapter.Raylib
                         screenHud,
                         presentationTiming,
                         cullingDebug,
-                        () => engine.GetService(CoreServiceKeys.ContinuousHeightmap));
+                        abDisableTerrainHudOcclusion
+                            ? null
+                            : () => engine.GetService(CoreServiceKeys.ContinuousHeightmap));
                     overlaySceneBuilder = new PresentationOverlaySceneBuilder(screenHud, worldHudStrings, textCatalog, localeSelection, screenOverlayBuffer, minimapScreenMarkers);
                     overlayScene = new PresentationOverlayScene(screenHud.Capacity + ScreenOverlayBuffer.MaxItems + (minimapScreenMarkers?.Capacity ?? 0));
                 }
@@ -499,8 +519,16 @@ namespace Ludots.Adapter.Raylib
                 Stopwatch runtimeStopwatch = Stopwatch.StartNew();
                 long previousLoopEnd = Stopwatch.GetTimestamp();
 
+                var auditRows = new double[AuditColumnNames.Length][];
+                bool auditGpu = auditCapture && Environment.GetEnvironmentVariable("LUDOTS_AB_GPU_TIMING") == "1";
+                if (auditGpu) AuditGpuTimer.Initialize(autoExitFrame + 1);
+                for (int column = 0; column < auditRows.Length; column++) auditRows[column] = new double[autoExitFrame + 1];
                 while (true)
                 {
+                    long frameAllocatedBytesStart = GC.GetAllocatedBytesForCurrentThread();
+                    AuditGpuTimer.FrameIndex = frameIndex;
+                    int frameGen0Start = GC.CollectionCount(0);
+                    int frameGen1Start = GC.CollectionCount(1);
                     long windowPollStart = Stopwatch.GetTimestamp();
                     bool shouldClose = Rl.WindowShouldClose();
                     double windowPollMs = ElapsedMs(windowPollStart);
@@ -528,7 +556,7 @@ namespace Ludots.Adapter.Raylib
                             uiRoot.Resize(w, h);
                         }
 
-                        float dt = Rl.GetFrameTime();
+                        float dt = auditCapture ? 1f / 60f : Rl.GetFrameTime();
                         presentationTiming?.ObserveFrame(dt * 1000d);
                         var renderDebug = ResolveRenderDebugState(engine);
                         if (Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_DRAW_SHADOWS") is string drawShadows)
@@ -623,6 +651,8 @@ namespace Ludots.Adapter.Raylib
 
                         engine.SetService(CoreServiceKeys.HostFrameIndex, frameIndex);
                         primitiveRenderer.PumpAssetUploads();
+                        if (auditCapture && MassNavigationIds.TryGetCurrentNavigationRuntime(engine, out var auditBeforeNav))
+                            Array.Clear(auditBeforeNav.AuditFrameTotals);
                         engine.Tick(dt);
                         // Typed instanced batch requests live from tick end until the next tick's
                         // buffer clear; consuming them here hands resident lanes to this frame's draw.
@@ -1205,20 +1235,81 @@ namespace Ludots.Adapter.Raylib
                         }
                         presentationTiming?.ObserveEndDrawing(ElapsedMs(endDrawingStart));
                         presentationTiming?.ObserveWallFrame(ElapsedMs(wallFrameStart));
+                        long frameAllocatedBytes = GC.GetAllocatedBytesForCurrentThread() - frameAllocatedBytesStart;
+                        int frameGen0Collections = GC.CollectionCount(0) - frameGen0Start;
+                        int frameGen1Collections = GC.CollectionCount(1) - frameGen1Start;
                         previousLoopEnd = Stopwatch.GetTimestamp();
 
+                        if (auditCapture)
+                        {
+                            MassNavigationIds.TryGetCurrentNavigationRuntime(engine, out var auditNav);
+                            auditRows[0][frameIndex] = frameIndex + 1;
+                            auditRows[1][frameIndex] = presentationTiming!.LastWallFrameMs;
+                            auditRows[2][frameIndex] = presentationTiming.LastSimulationMs;
+                            auditRows[3][frameIndex] = presentationTiming.LastPresentationMs;
+                            auditRows[4][frameIndex] = presentationTiming.LastPresenterBehaviorMs;
+                            auditRows[5][frameIndex] = presentationTiming.LastPresenterEntityTransformSyncMs;
+                            auditRows[6][frameIndex] = presentationTiming.LastPresenterEmitMs;
+                            auditRows[7][frameIndex] = presentationTiming.LastWorldHudProjectionMs;
+                            auditRows[8][frameIndex] = presentationTiming.LastPresenterAnimatorMs;
+                            auditRows[9][frameIndex] = presentationTiming.PresenterAnimatorUpdatesLastFrame;
+                            auditRows[10][frameIndex] = presentationTiming.TerrainHeightSamplesLastFrame;
+                            auditRows[11][frameIndex] = hudProjection?.LastTerrainRaycastCount ?? 0;
+                            auditRows[12][frameIndex] = presentationTiming.VisibleEntitiesLastFrame;
+                            auditRows[13][frameIndex] = presentationTiming.WorldHudItemsLastProjection;
+                            auditRows[14][frameIndex] = presentationTiming.WorldHudProjectedLastFrame;
+                            auditRows[15][frameIndex] = presentationTiming.PresenterTickDrivenCountLastFrame;
+                            auditRows[16][frameIndex] = presentationTiming.LastPresenterMinimapMarkerMs;
+                            auditRows[17][frameIndex] = presentationTiming.LastMinimapProjectionMs;
+                            auditRows[18][frameIndex] = presentationTiming.LastCameraCullingMs;
+                            auditRows[19][frameIndex] = primitiveRenderer.LastGpuSkinnedInstances;
+                            auditRows[20][frameIndex] = primitiveRenderer.LastGpuSkinnedMatrixBuildMs;
+                            auditRows[21][frameIndex] = primitiveRenderer.LastGpuSkinnedMeshDrawMs;
+                            auditRows[22][frameIndex] = primitiveRenderer.LastGpuSkinnedUniquePoses;
+                            auditRows[23][frameIndex] = primitiveRenderer.LastGpuSkinnedPoseBuildCpuMs;
+                            auditRows[24][frameIndex] = primitiveRenderer.LastGpuSkinnedTextureUploadCpuMs;
+                            auditRows[25][frameIndex] = primitiveRenderer.LastGpuSkinnedTextureUploadBytes;
+                            auditRows[26][frameIndex] = primitiveRenderer.LastGpuSkinnedBatches;
+                            auditRows[27][frameIndex] = primitiveRenderer.LastGpuSkinnedShadowBatches;
+                            auditRows[28][frameIndex] = primitiveRenderer.LastGpuSkinnedShadowSubmitCpuMs;
+                            auditRows[29][frameIndex] = frameAllocatedBytes;
+                            auditRows[30][frameIndex] = frameGen0Collections;
+                            auditRows[31][frameIndex] = frameGen1Collections;
+                            auditRows[32][frameIndex] = presentationTiming.LastTotalTickMs;
+                            auditRows[33][frameIndex] = presentationTiming.LastHostPostTickMs;
+                            auditRows[34][frameIndex] = presentationTiming.LastMode3DMs;
+                            auditRows[35][frameIndex] = presentationTiming.LastScreenOverlayDrawMs;
+                            auditRows[36][frameIndex] = presentationTiming.LastScreenOverlayBuildMs;
+                            auditRows[37][frameIndex] = presentationTiming.LastEndDrawingMs;
+                            auditRows[38][frameIndex] = auditNav?.AuditFrameTotals[0] ?? 0;
+                            auditRows[39][frameIndex] = auditNav?.AuditFrameTotals[1] ?? 0;
+                            auditRows[40][frameIndex] = auditNav?.AuditFrameTotals[2] ?? 0;
+                            auditRows[41][frameIndex] = auditNav?.AuditFrameTotals[3] ?? 0;
+                            auditRows[42][frameIndex] = auditNav?.AuditFrameTotals[4] ?? 0;
+                            auditRows[43][frameIndex] = auditNav?.AuditFrameTotals[5] ?? 0;
+                            auditRows[44][frameIndex] = auditNav?.AuditFrameTotals[6] ?? 0;
+                            auditRows[45][frameIndex] = auditNav?.AuditFrameTotals[7] ?? 0;
+                            auditRows[46][frameIndex] = auditNav?.AuditFrameTotals[8] ?? 0;
+                            auditRows[47][frameIndex] = auditNav?.AuditFrameTotals[9] ?? 0;
+                            auditRows[48][frameIndex] = auditNav?.AuditFrameTotals[10] ?? 0;
+                            auditRows[49][frameIndex] = auditNav?.AuditFrameTotals[11] ?? 0;
+                            auditRows[50][frameIndex] = auditNav?.AuditFrameTotals[12] ?? 0;
+                        }
                         frameIndex++;
                         if (timingLogIntervalFrames > 0 && frameIndex % timingLogIntervalFrames == 0)
                         {
                             AppendRaylibDiagnostic(diagnosticPath, $"sample frame={frameIndex}");
                             AppendRaylibDiagnostic(diagnosticPath,
-                                $"skinning-cpu poses={primitiveRenderer.LastGpuSkinnedUniquePoses} poseBuildMs={primitiveRenderer.LastGpuSkinnedPoseBuildCpuMs:F4} textureUploadMs={primitiveRenderer.LastGpuSkinnedTextureUploadCpuMs:F4} textureUploadBytes={primitiveRenderer.LastGpuSkinnedTextureUploadBytes} shadowSubmitMs={primitiveRenderer.LastGpuSkinnedShadowSubmitCpuMs:F4}");
+                                $"skinning-cpu poses={primitiveRenderer.LastGpuSkinnedUniquePoses} poseBuildMs={primitiveRenderer.LastGpuSkinnedPoseBuildCpuMs:F4} textureUploadMs={primitiveRenderer.LastGpuSkinnedTextureUploadCpuMs:F4} textureUploadBytes={primitiveRenderer.LastGpuSkinnedTextureUploadBytes} mainDrawCalls={primitiveRenderer.LastGpuSkinnedBatches} shadowDrawCalls={primitiveRenderer.LastGpuSkinnedShadowBatches} shadowSubmitMs={primitiveRenderer.LastGpuSkinnedShadowSubmitCpuMs:F4}");
+                            AppendRaylibDiagnostic(
+                                diagnosticPath,
+                                $"managed allocBytes={frameAllocatedBytes} gen0={frameGen0Collections} gen1={frameGen1Collections} hudTerrainRaycasts={hudProjection?.LastTerrainRaycastCount ?? 0}");
                             AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
                             if (MassNavigationIds.TryGetCurrentNavigationRuntime(engine, out MassNavigationSimulationRuntime massNavigation))
                             {
                                 AppendRaylibDiagnostic(
                                     diagnosticPath,
-                                    $"massnav target={presentationTiming.LastMassNavigationTargetMs:F3} flow={presentationTiming.LastMassNavigationFlowMs:F3} prep={presentationTiming.LastMassNavigationPrepMs:F3} steering={presentationTiming.LastMassNavigationSteeringMs:F3} step={presentationTiming.LastMassNavigationStepMs:F3} hard={presentationTiming.LastMassNavigationHardResolveMs:F3} hardCandidates={massNavigation.LastHardResolveCandidateAgentCount} hardFallbackAgents={massNavigation.LastHardResolveFallbackProbeAgentCount} hardFallbackPairs={massNavigation.LastHardResolveFallbackPairCheckCount} hardPairs={massNavigation.LastHardResolvePairCheckCount} hardPenetrating={massNavigation.LastHardResolvePenetratingPairCount} entitySync={presentationTiming.LastMassNavigationEntitySyncMs:F3} pendingSync={presentationTiming.LastMassNavigationPendingEntitySync}");
+                                    $"massnav target={presentationTiming.LastMassNavigationTargetMs:F3} flow={presentationTiming.LastMassNavigationFlowMs:F3} prep={presentationTiming.LastMassNavigationPrepMs:F3} steering={presentationTiming.LastMassNavigationSteeringMs:F3} step={presentationTiming.LastMassNavigationStepMs:F3} hard={presentationTiming.LastMassNavigationHardResolveMs:F3} neighborCandidates={massNavigation.LastAvoidanceNeighborCandidateCheckCount} hardCandidates={massNavigation.LastHardResolveCandidateAgentCount} hardFallbackAgents={massNavigation.LastHardResolveFallbackProbeAgentCount} hardFallbackPairs={massNavigation.LastHardResolveFallbackPairCheckCount} hardPairs={massNavigation.LastHardResolvePairCheckCount} hardPenetrating={massNavigation.LastHardResolvePenetratingPairCount} entitySync={presentationTiming.LastMassNavigationEntitySyncMs:F3} pendingSync={presentationTiming.LastMassNavigationPendingEntitySync}");
                             }
                             AppendRaylibDiagnostic(diagnosticPath, BuildAssetResidencyDiagnostic(engine, primitiveRenderer));
                         }
@@ -1319,6 +1410,27 @@ namespace Ludots.Adapter.Raylib
                     {
                         Log.Error(in LogChannels.Engine, $"Unhandled exception in game loop: {ex}");
                         break;
+                    }
+                }
+                if (auditCapture)
+                {
+                    string capturePath = Environment.GetEnvironmentVariable("LUDOTS_AB_CAPTURE_PATH")
+                        ?? throw new InvalidOperationException("Audit capture path is required.");
+                    using var auditWriter = new StreamWriter(capturePath);
+                    AuditGpuTimer.Collect();
+                    auditWriter.WriteLine(string.Join(",", AuditColumnNames) + ",gpu_main_ms,gpu_shadow_ms");
+                    for (int row = 0; row < frameIndex; row++)
+                    {
+                        for (int column = 0; column < auditRows.Length; column++)
+                        {
+                            if (column > 0) auditWriter.Write(',');
+                            auditWriter.Write(auditRows[column][row].ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+                        }
+                        auditWriter.Write(',');
+                        auditWriter.Write(AuditGpuTimer.Get(row, false).ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+                        auditWriter.Write(',');
+                        auditWriter.Write(AuditGpuTimer.Get(row, true).ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+                        auditWriter.WriteLine();
                     }
                 }
             }
@@ -1995,6 +2107,8 @@ namespace Ludots.Adapter.Raylib
             Rl.rlEnableBackfaceCulling();
         }
 
+        private static readonly string[] AuditColumnNames = { "frame", "frame_ms", "simulation", "presentation", "behavior", "transform_sync", "emit", "hud", "animator", "animator_updates", "height_samples", "terrain_rays", "visible", "hud_raw", "hud_projected", "behavior_ticks", "minimap_collect", "minimap_project", "culling", "gpu_instances", "gpu_build", "gpu_draw_cpu", "poses", "pose_build", "upload_ms", "upload_bytes", "main_draws", "shadow_draws", "shadow_submit", "alloc", "gen0", "gen1", "tick", "post", "mode3d", "overlay", "overlay_build", "end_draw", "nav_target", "nav_flow", "nav_prep", "nav_steering", "nav_step", "nav_hard", "nav_sync", "nav_steps", "neighbor_candidates", "hard_pairs", "hard_candidates", "hard_penetrating", "moved_agents" };
+
         private static string BuildTimingDiagnostic(
             GameEngine engine,
             PresentationTimingDiagnostics? timing,
@@ -2021,7 +2135,7 @@ namespace Ludots.Adapter.Raylib
             float fps = frameMs > 0.001f ? 1000f / frameMs : 0f;
             int rawDebugDrawCount = debugDraw == null ? 0 : debugDraw.Lines.Count + debugDraw.Circles.Count + debugDraw.Boxes.Count;
             string presenterDefs = presenters?.BuildActiveDefinitionSummary(8) ?? string.Empty;
-            return $"timing frame={frameMs:F2}ms fps={fps:F1} cleanPerf={(cleanPerformanceMode ? 1 : 0)} visibleEntities={timing.VisibleEntitiesLastFrame} presenterActive={presenters?.ActiveCount ?? 0} presenterDefs={presenterDefs} primitiveRaw={primitives?.Count ?? 0} primitiveStaticRaw={primitives?.StaticMeshLaneItemCount ?? 0} skinnedRaw={timing.SkinnedRawLastFrame} gpuSkinned={timing.GpuSkinnedInstancesLastFrame}/{timing.GpuSkinnedBatchesLastFrame} gpuSkinBuild={timing.LastGpuSkinnedMatrixBuildMs:F2} gpuSkinDraw={timing.LastGpuSkinnedMeshDrawMs:F2} gap={timing.LastHostLoopGapMs:F2} poll={timing.LastWindowPollMs:F2} pre={timing.LastHostPreTickMs:F2} tick={timing.LastTotalTickMs:F2} post={timing.LastHostPostTickMs:F2} begin={timing.LastBeginDrawingMs:F2} sim={timing.LastSimulationMs:F2} simTop1={timing.LastSimulationTopSystem1Name}:{timing.LastSimulationTopSystem1Ms:F2} simTop2={timing.LastSimulationTopSystem2Name}:{timing.LastSimulationTopSystem2Ms:F2} simTop3={timing.LastSimulationTopSystem3Name}:{timing.LastSimulationTopSystem3Ms:F2} presentation={timing.LastPresentationMs:F2} presTop1={timing.LastPresentationTopSystem1Name}:{timing.LastPresentationTopSystem1Ms:F2} presTop2={timing.LastPresentationTopSystem2Name}:{timing.LastPresentationTopSystem2Ms:F2} presTop3={timing.LastPresentationTopSystem3Name}:{timing.LastPresentationTopSystem3Ms:F2} behavior={timing.LastPresenterBehaviorMs:F2} behaviorBoot={timing.PresenterBootstrapCountLastFrame} behaviorOwner={timing.PresenterOwnerChangesLastFrame} behaviorAttr={timing.PresenterOwnerAttributeChangesLastFrame} behaviorTag={timing.PresenterOwnerTagChangesLastFrame} behaviorTick={timing.PresenterTickDrivenCountLastFrame} animator={timing.LastPresenterAnimatorMs:F2} transformSync={timing.LastPresenterEntityTransformSyncMs:F2} minimapCollect={timing.LastPresenterMinimapMarkerMs:F2} minimapMarkers={timing.PresenterMinimapMarkersLastFrame}/{timing.PresenterMinimapDroppedLastFrame} minimapProject={timing.LastMinimapProjectionMs:F2} minimapScreen={timing.MinimapScreenMarkersLastFrame}/{timing.MinimapScreenMarkersDroppedLastFrame} heightSync={timing.LastTerrainHeightSyncMs:F2} heightSamples={timing.TerrainHeightSamplesLastFrame} requestFlush={timing.LastPresentationRequestFlushMs:F2} spawnBatch={timing.LastRuntimeSpawnBatchPrepareMs:F2}/{timing.LastRuntimeSpawnWorldCreateMs:F2}/{timing.LastRuntimeSpawnFillBatchMs:F2}/{timing.LastRuntimeSpawnPostSpawnMs:F2} spawnPerf={timing.LastRuntimeSpawnPresenterBatchMs:F2}/{timing.LastRuntimeSpawnPresenterCreateMs:F2}/{timing.LastRuntimeSpawnPresenterBootstrapMarkMs:F2} spawnPerfParts={timing.LastRuntimeSpawnPresenterCreateSetupMs:F2}/{timing.LastRuntimeSpawnPresenterWorldCreateMs:F2}/{timing.LastRuntimeSpawnPresenterComponentFillMs:F2}/{timing.LastRuntimeSpawnPresenterIndexWriteMs:F2}/{timing.LastRuntimeSpawnPresenterOwnerPayloadMs:F2}/{timing.LastRuntimeSpawnPresenterPostCreateMs:F2} spawnPerfChildParts={timing.LastRuntimeSpawnPresenterChildSetupMs:F2}/{timing.LastRuntimeSpawnPresenterChildWorldCreateMs:F2}/{timing.LastRuntimeSpawnPresenterChildComponentFillMs:F2}/{timing.LastRuntimeSpawnPresenterChildIndexWriteMs:F2}/{timing.LastRuntimeSpawnPresenterChildStableIdMs:F2} cull={timing.LastCameraCullingMs:F2} cullSpatial={timing.LastCameraCullingSpatialQueryMs:F2} cullStatic={timing.LastCameraCullingStaticProcessMs:F2} cullDyn={timing.LastCameraCullingDynamicProcessMs:F2} cullEntity={timing.LastCameraCullingEntityProcessMs:F2} cullSync={timing.LastCameraCullingPresenterSyncMs:F2} hudProj={timing.LastWorldHudProjectionMs:F2} hudRaw={timing.WorldHudItemsLastProjection} hudProjected={timing.WorldHudProjectedLastFrame} hudDensitySkip={timing.WorldHudDensitySkippedLastFrame} mode3D={timing.LastMode3DMs:F2} terrain={timing.LastTerrainRenderMs:F2} terrainChunks={timing.TerrainChunksDrawnLastFrame}/{timing.TerrainChunksBuiltLastFrame} field={timing.LastGlobalFieldRenderMs:F2} fieldCount={timing.GlobalFieldTexturesLastFrame} fieldDirty={timing.GlobalFieldDirtyUploadsLastFrame} fieldArea={timing.GlobalFieldDirtyUploadAreaLastFrame} fieldDraws={timing.GlobalFieldDrawsLastFrame} primitive={timing.LastPrimitiveRenderMs:F2} primSync={timing.LastPrimitivePersistentSyncMs:F2} primBucket={timing.LastPrimitivePersistentBucketDrawMs:F2} primImmediate={timing.LastPrimitiveImmediateDrawMs:F2} primImmediateSkip={timing.PrimitiveImmediateSkippedLastFrame} primBuild={timing.LastPrimitiveMatrixBuildMs:F2} primDraw={timing.LastPrimitiveMeshDrawMs:F2} primInstances={timing.PrimitiveInstancesLastFrame} primBatches={timing.PrimitiveBatchesLastFrame} primCache={timing.PrimitiveMatrixCacheHitsLastFrame}/{timing.PrimitiveMatrixCacheMissesLastFrame} ground={timing.LastGroundOverlayRenderMs:F2} groundCount={timing.GroundOverlaysLastFrame} groundRaw={groundOverlay?.Count ?? 0} spline={timing.LastSplineRibbonRenderMs:F2} splineCount={timing.SplineRibbonsLastFrame} splineRaw={splineRibbon?.Count ?? 0} debugDraw={timing.LastDebugDrawRenderMs:F2} debugDrawCount={timing.DebugDrawCommandsLastFrame} debugDrawRaw={rawDebugDrawCount} overlay={timing.LastScreenOverlayDrawMs:F2} overlayBuild={timing.LastScreenOverlayBuildMs:F2} overlayDirtyLanes={timing.ScreenOverlayDirtyLanesLastFrame} overlayItems={timing.ScreenOverlayItemsLastFrame} overlayRebuilt={timing.ScreenOverlayRebuiltLanesLastFrame} overlayPaint={timing.LastScreenOverlayPaintMs:F2} overlayComposite={timing.LastScreenOverlayCompositeMs:F2} uiRender={timing.LastUiRenderMs:F2} uiUpload={timing.LastUiUploadMs:F2} overlayFinal={timing.LastScreenOverlayFinalDrawMs:F2} nativeDiag={timing.LastNativeDiagnosticHudMs:F2} emit={timing.LastPresenterEmitMs:F2} emitDirty={timing.LastPresenterEmitDirtyProcessMs:F2} emitDirtyCount={timing.PresenterEmitDirtyCountLastFrame} emitRetained={timing.LastPresenterEmitRetainedProcessMs:F2} emitRetainedCount={timing.PresenterEmitRetainedCountLastFrame} hudPositionOnly={timing.PresenterRetainedHudPositionUpdatesLastFrame} emitRetainedDirectPath={timing.PresenterEmitRetainedDirectHitsLastFrame}/{timing.PresenterEmitRetainedFullPathLastFrame}/{timing.PresenterEmitRetainedDirectMissesLastFrame} endDraw={timing.LastEndDrawingMs:F2} screenshot={timing.LastScreenshotMs:F2} worldHud={worldHud?.Count ?? 0} screenBars={screenHud?.BarCount ?? 0} screenText={screenHud?.TextCount ?? 0} worldHudDrops={worldHud?.DroppedTotal ?? 0} screenHudDrops={screenHud?.DroppedTotal ?? 0} overlaySceneDrops={overlayScene?.DroppedTotal ?? 0}";
+            return $"timing frame={frameMs:F2}ms fps={fps:F1} cleanPerf={(cleanPerformanceMode ? 1 : 0)} visibleEntities={timing.VisibleEntitiesLastFrame} presenterActive={presenters?.ActiveCount ?? 0} presenterDefs={presenterDefs} primitiveRaw={primitives?.Count ?? 0} primitiveStaticRaw={primitives?.StaticMeshLaneItemCount ?? 0} skinnedRaw={timing.SkinnedRawLastFrame} gpuSkinned={timing.GpuSkinnedInstancesLastFrame}/{timing.GpuSkinnedBatchesLastFrame} gpuSkinBuild={timing.LastGpuSkinnedMatrixBuildMs:F2} gpuSkinDraw={timing.LastGpuSkinnedMeshDrawMs:F2} gap={timing.LastHostLoopGapMs:F2} poll={timing.LastWindowPollMs:F2} pre={timing.LastHostPreTickMs:F2} tick={timing.LastTotalTickMs:F2} post={timing.LastHostPostTickMs:F2} begin={timing.LastBeginDrawingMs:F2} sim={timing.LastSimulationMs:F2} simTop1={timing.LastSimulationTopSystem1Name}:{timing.LastSimulationTopSystem1Ms:F2} simTop2={timing.LastSimulationTopSystem2Name}:{timing.LastSimulationTopSystem2Ms:F2} simTop3={timing.LastSimulationTopSystem3Name}:{timing.LastSimulationTopSystem3Ms:F2} presentation={timing.LastPresentationMs:F2} presTop1={timing.LastPresentationTopSystem1Name}:{timing.LastPresentationTopSystem1Ms:F2} presTop2={timing.LastPresentationTopSystem2Name}:{timing.LastPresentationTopSystem2Ms:F2} presTop3={timing.LastPresentationTopSystem3Name}:{timing.LastPresentationTopSystem3Ms:F2} behavior={timing.LastPresenterBehaviorMs:F2} behaviorBoot={timing.PresenterBootstrapCountLastFrame} behaviorOwner={timing.PresenterOwnerChangesLastFrame} behaviorAttr={timing.PresenterOwnerAttributeChangesLastFrame} behaviorTag={timing.PresenterOwnerTagChangesLastFrame} behaviorTick={timing.PresenterTickDrivenCountLastFrame} animator={timing.LastPresenterAnimatorMs:F2} animatorUpdates={timing.PresenterAnimatorUpdatesLastFrame} transformSync={timing.LastPresenterEntityTransformSyncMs:F2} minimapCollect={timing.LastPresenterMinimapMarkerMs:F2} minimapMarkers={timing.PresenterMinimapMarkersLastFrame}/{timing.PresenterMinimapDroppedLastFrame} minimapProject={timing.LastMinimapProjectionMs:F2} minimapScreen={timing.MinimapScreenMarkersLastFrame}/{timing.MinimapScreenMarkersDroppedLastFrame} heightSync={timing.LastTerrainHeightSyncMs:F2} heightSamples={timing.TerrainHeightSamplesLastFrame} requestFlush={timing.LastPresentationRequestFlushMs:F2} spawnBatch={timing.LastRuntimeSpawnBatchPrepareMs:F2}/{timing.LastRuntimeSpawnWorldCreateMs:F2}/{timing.LastRuntimeSpawnFillBatchMs:F2}/{timing.LastRuntimeSpawnPostSpawnMs:F2} spawnPerf={timing.LastRuntimeSpawnPresenterBatchMs:F2}/{timing.LastRuntimeSpawnPresenterCreateMs:F2}/{timing.LastRuntimeSpawnPresenterBootstrapMarkMs:F2} spawnPerfParts={timing.LastRuntimeSpawnPresenterCreateSetupMs:F2}/{timing.LastRuntimeSpawnPresenterWorldCreateMs:F2}/{timing.LastRuntimeSpawnPresenterComponentFillMs:F2}/{timing.LastRuntimeSpawnPresenterIndexWriteMs:F2}/{timing.LastRuntimeSpawnPresenterOwnerPayloadMs:F2}/{timing.LastRuntimeSpawnPresenterPostCreateMs:F2} spawnPerfChildParts={timing.LastRuntimeSpawnPresenterChildSetupMs:F2}/{timing.LastRuntimeSpawnPresenterChildWorldCreateMs:F2}/{timing.LastRuntimeSpawnPresenterChildComponentFillMs:F2}/{timing.LastRuntimeSpawnPresenterChildIndexWriteMs:F2}/{timing.LastRuntimeSpawnPresenterChildStableIdMs:F2} cull={timing.LastCameraCullingMs:F2} cullSpatial={timing.LastCameraCullingSpatialQueryMs:F2} cullStatic={timing.LastCameraCullingStaticProcessMs:F2} cullDyn={timing.LastCameraCullingDynamicProcessMs:F2} cullEntity={timing.LastCameraCullingEntityProcessMs:F2} cullSync={timing.LastCameraCullingPresenterSyncMs:F2} hudProj={timing.LastWorldHudProjectionMs:F2} hudRaw={timing.WorldHudItemsLastProjection} hudProjected={timing.WorldHudProjectedLastFrame} hudDensitySkip={timing.WorldHudDensitySkippedLastFrame} mode3D={timing.LastMode3DMs:F2} terrain={timing.LastTerrainRenderMs:F2} terrainChunks={timing.TerrainChunksDrawnLastFrame}/{timing.TerrainChunksBuiltLastFrame} field={timing.LastGlobalFieldRenderMs:F2} fieldCount={timing.GlobalFieldTexturesLastFrame} fieldDirty={timing.GlobalFieldDirtyUploadsLastFrame} fieldArea={timing.GlobalFieldDirtyUploadAreaLastFrame} fieldDraws={timing.GlobalFieldDrawsLastFrame} primitive={timing.LastPrimitiveRenderMs:F2} primSync={timing.LastPrimitivePersistentSyncMs:F2} primBucket={timing.LastPrimitivePersistentBucketDrawMs:F2} primImmediate={timing.LastPrimitiveImmediateDrawMs:F2} primImmediateSkip={timing.PrimitiveImmediateSkippedLastFrame} primBuild={timing.LastPrimitiveMatrixBuildMs:F2} primDraw={timing.LastPrimitiveMeshDrawMs:F2} primInstances={timing.PrimitiveInstancesLastFrame} primBatches={timing.PrimitiveBatchesLastFrame} primCache={timing.PrimitiveMatrixCacheHitsLastFrame}/{timing.PrimitiveMatrixCacheMissesLastFrame} ground={timing.LastGroundOverlayRenderMs:F2} groundCount={timing.GroundOverlaysLastFrame} groundRaw={groundOverlay?.Count ?? 0} spline={timing.LastSplineRibbonRenderMs:F2} splineCount={timing.SplineRibbonsLastFrame} splineRaw={splineRibbon?.Count ?? 0} debugDraw={timing.LastDebugDrawRenderMs:F2} debugDrawCount={timing.DebugDrawCommandsLastFrame} debugDrawRaw={rawDebugDrawCount} overlay={timing.LastScreenOverlayDrawMs:F2} overlayBuild={timing.LastScreenOverlayBuildMs:F2} overlayDirtyLanes={timing.ScreenOverlayDirtyLanesLastFrame} overlayItems={timing.ScreenOverlayItemsLastFrame} overlayRebuilt={timing.ScreenOverlayRebuiltLanesLastFrame} overlayPaint={timing.LastScreenOverlayPaintMs:F2} overlayComposite={timing.LastScreenOverlayCompositeMs:F2} uiRender={timing.LastUiRenderMs:F2} uiUpload={timing.LastUiUploadMs:F2} overlayFinal={timing.LastScreenOverlayFinalDrawMs:F2} nativeDiag={timing.LastNativeDiagnosticHudMs:F2} emit={timing.LastPresenterEmitMs:F2} emitDirty={timing.LastPresenterEmitDirtyProcessMs:F2} emitDirtyCount={timing.PresenterEmitDirtyCountLastFrame} emitRetained={timing.LastPresenterEmitRetainedProcessMs:F2} emitRetainedCount={timing.PresenterEmitRetainedCountLastFrame} hudPositionOnly={timing.PresenterRetainedHudPositionUpdatesLastFrame} emitRetainedDirectPath={timing.PresenterEmitRetainedDirectHitsLastFrame}/{timing.PresenterEmitRetainedFullPathLastFrame}/{timing.PresenterEmitRetainedDirectMissesLastFrame} endDraw={timing.LastEndDrawingMs:F2} screenshot={timing.LastScreenshotMs:F2} worldHud={worldHud?.Count ?? 0} screenBars={screenHud?.BarCount ?? 0} screenText={screenHud?.TextCount ?? 0} worldHudDrops={worldHud?.DroppedTotal ?? 0} screenHudDrops={screenHud?.DroppedTotal ?? 0} overlaySceneDrops={overlayScene?.DroppedTotal ?? 0}";
         }
 
         private static string BuildAssetResidencyDiagnostic(GameEngine engine, RaylibPrimitiveRenderer renderer)

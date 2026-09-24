@@ -91,6 +91,7 @@ public sealed partial class MassNavigationFlowSolverState
     private SonarSolver2D.Interval[] _sonarIntervalScratch = Array.Empty<SonarSolver2D.Interval>();
     private readonly UnitStepJob[] _stepJobs;
     private readonly JobHandle[] _stepHandles;
+    private readonly long[] _neighborCandidateChecksByWorker;
 
     private readonly List<TeamRuntimeState> _teamStates = new();
     private readonly List<FlowRuntimeState> _flowStates = new();
@@ -122,11 +123,13 @@ public sealed partial class MassNavigationFlowSolverState
     public int PendingEntitySyncCount => _entitySyncDirtyCount;
     public int PendingArrivalEventCount => _arrivalEventCount;
     public float LastFlowFieldRebuildMs { get; private set; }
+    public int AuditMovedAgents { get; private set; }
     public int LastHardResolveCandidateAgentCount { get; private set; }
     public int LastHardResolveFallbackProbeAgentCount { get; private set; }
     public long LastHardResolveFallbackPairCheckCount { get; private set; }
     public long LastHardResolvePairCheckCount { get; private set; }
     public int LastHardResolvePenetratingPairCount { get; private set; }
+    public long LastAvoidanceNeighborCandidateCheckCount { get; private set; }
     public MassNavigationFlowArrivalTuning ArrivalTuning { get; } = new();
     public MassNavigationFlowAvoidanceTuning AvoidanceTuning { get; } = new();
     public MassNavigationCrowdSemantics Semantics { get; } = new();
@@ -204,6 +207,7 @@ public sealed partial class MassNavigationFlowSolverState
         _hardResolveCellCursor = new int[hardResolveHashCellCount];
         _stepJobs = CreateStepJobs(_parallelWorkerCount);
         _stepHandles = new JobHandle[_parallelWorkerCount];
+        _neighborCandidateChecksByWorker = new long[_parallelWorkerCount];
     }
 
     internal void PreallocateAgentCapacity(int unitCapacity)
@@ -941,9 +945,11 @@ public sealed partial class MassNavigationFlowSolverState
     {
         if (UnitCount <= 0)
         {
+            LastAvoidanceNeighborCandidateCheckCount = 0;
             return;
         }
 
+        AuditMovedAgents = 0;
         long prepStart = System.Diagnostics.Stopwatch.GetTimestamp();
         RefreshTeamRelationshipMatrixIfStale();
 
@@ -983,6 +989,7 @@ public sealed partial class MassNavigationFlowSolverState
         {
             long steeringStart = System.Diagnostics.Stopwatch.GetTimestamp();
             StepRange(0, UnitCount, scratchWorkerIndex: 0, clampedDt, navGroupRuntime, sepRadiusSq, sepRadiusCm, arrivalRadiusCm, arrivalRadiusSq, unitTargetStopThresholdSq, hwm1, hhm1, invHashCell, flowObstacleNeighborRadiusCells, _useCandidateGating);
+            LastAvoidanceNeighborCandidateCheckCount = _neighborCandidateChecksByWorker[0];
             observeLocalSteering?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - steeringStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
             ClampAllPositionsToWorldBounds();
             long resolveStart = System.Diagnostics.Stopwatch.GetTimestamp();
@@ -1032,6 +1039,12 @@ public sealed partial class MassNavigationFlowSolverState
         {
             _stepHandles[workerIndex].Complete();
         }
+        long neighborCandidateChecks = 0;
+        for (int workerIndex = 0; workerIndex < workerCount; workerIndex++)
+        {
+            neighborCandidateChecks += _neighborCandidateChecksByWorker[workerIndex];
+        }
+        LastAvoidanceNeighborCandidateCheckCount = neighborCandidateChecks;
         observeLocalSteering?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - threadedSteeringStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
 
         ClampAllPositionsToWorldBounds();
@@ -1529,6 +1542,7 @@ public sealed partial class MassNavigationFlowSolverState
             float dy = _positionsCm[i2 + 1] - _readPositionsCm[i2 + 1];
             float dvx = _velocitiesCm[i2] - _readVelocitiesCm[i2];
             float dvy = _velocitiesCm[i2 + 1] - _readVelocitiesCm[i2 + 1];
+            if ((dx * dx) + (dy * dy) > positionEpsilonSq) AuditMovedAgents++;
             if ((dx * dx) + (dy * dy) > positionEpsilonSq ||
                 (dvx * dvx) + (dvy * dvy) > velocityEpsilonSq)
             {
@@ -1692,6 +1706,7 @@ public sealed partial class MassNavigationFlowSolverState
         bool useCandidateGating)
     {
         _ = sepRadiusSq;
+        long neighborCandidateChecks = 0;
         for (int i = startIndex; i < endIndex; i++)
         {
             int i2 = i << 1;
@@ -1972,6 +1987,7 @@ public sealed partial class MassNavigationFlowSolverState
                         int j = _separationAgents[hashIndex];
                         if (j != i)
                         {
+                            neighborCandidateChecks++;
                             if (!CanAgentsInteract(i, j))
                             {
                                 continue;
@@ -2084,6 +2100,8 @@ public sealed partial class MassNavigationFlowSolverState
             _positionsCm[i2] = nextX;
             _positionsCm[i2 + 1] = nextY;
         }
+
+        _neighborCandidateChecksByWorker[scratchWorkerIndex] = neighborCandidateChecks;
     }
 
     private void ClampAllPositionsToWorldBounds()

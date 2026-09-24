@@ -2056,7 +2056,8 @@ namespace Ludots.Core.Presentation.Presenters
                     !_world.IsAlive(owner) ||
                     !_world.Has<VisualTransform>(owner) ||
                     !_world.Has<ContinuousHeightmapSampleState>(owner) ||
-                    _world.Get<ContinuousHeightmapSampleState>(owner).Sampled == 0)
+                    (_world.Get<ContinuousHeightmapSampleState>(owner).Sampled == 0 &&
+                     Environment.GetEnvironmentVariable("LUDOTS_AB_SKIP_INITIAL_SAMPLE_TICK") != "1"))
                 {
                     return true;
                 }

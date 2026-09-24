@@ -66,6 +66,7 @@ namespace Ludots.Core.Gameplay.Spawning
         private readonly int _memberOfTypeId;
         private readonly EntityTriggerGraphMounts? _entityTriggerGraphMounts;
         private readonly Ludots.Core.Input.Interaction.InteractionContextProfileRegistry? _initialInteractionContexts;
+        private readonly bool _auditDisableOnSpawnEffects;
 
         private readonly struct SpawnRelationshipPlan
         {
@@ -116,6 +117,7 @@ namespace Ludots.Core.Gameplay.Spawning
             _templateRegistry = templateRegistry ?? throw new ArgumentNullException(nameof(templateRegistry));
             _templateKeys = templateKeys ?? throw new ArgumentNullException(nameof(templateKeys));
             _effectRequests = effectRequests;
+            _auditDisableOnSpawnEffects = Environment.GetEnvironmentVariable("LUDOTS_AB_DISABLE_CONTINUOUS_EFFECT") == "1";
             _authoringContext = authoringContext ?? ComponentAuthoringContext.Empty;
             _builder = new EntityBuilder(world, _cachedTemplates, _authoringContext);
             _stableIds = stableIds ?? throw new ArgumentNullException(nameof(stableIds));
@@ -1564,6 +1566,13 @@ namespace Ludots.Core.Gameplay.Spawning
             out int effectTemplateId,
             out bool useSpawnedAsSource)
         {
+            if (_auditDisableOnSpawnEffects)
+            {
+                effectTemplateId = 0;
+                useSpawnedAsSource = false;
+                return false;
+            }
+
             effectTemplateId = request.OnSpawnEffectTemplateId > 0
                 ? request.OnSpawnEffectTemplateId
                 : cachedTemplateOnSpawnEffectId;

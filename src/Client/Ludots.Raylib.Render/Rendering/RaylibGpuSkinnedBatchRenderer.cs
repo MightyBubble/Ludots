@@ -73,6 +73,7 @@ namespace Ludots.Raylib.Render
         public double LastPoseBuildCpuMs { get; private set; }
         public double LastTextureUploadCpuMs { get; private set; }
         public double LastShadowSubmitCpuMs { get; private set; }
+        public int LastShadowBatches { get; private set; }
         public int LastUniquePoses { get; private set; }
         public long LastTextureUploadBytes { get; private set; }
 
@@ -89,6 +90,7 @@ namespace Ludots.Raylib.Render
             LastPoseBuildCpuMs = 0d;
             LastTextureUploadCpuMs = 0d;
             LastShadowSubmitCpuMs = 0d;
+            LastShadowBatches = 0;
             LastUniquePoses = 0;
             LastTextureUploadBytes = 0;
         }
@@ -216,6 +218,7 @@ namespace Ludots.Raylib.Render
             {
                 EnsureShaderInitialized();
                 BuildAndUploadPoseTextures();
+                AuditGpuTimer.Start(shadow: false);
                 long drawStart = Stopwatch.GetTimestamp();
                 for (int i = 0; i < _activeGpuSkinnedInstanceBatches.Count; i++)
                 {
@@ -230,6 +233,7 @@ namespace Ludots.Raylib.Render
                 }
 
                 LastMeshDrawMs += (Stopwatch.GetTimestamp() - drawStart) * 1000d / Stopwatch.Frequency;
+                AuditGpuTimer.End();
             }
 
             _gpuSkinnedBatchesPreparedForShadow = false;
@@ -360,6 +364,7 @@ namespace Ludots.Raylib.Render
             BuildAndUploadPoseTextures();
 
             long shadowStart = Stopwatch.GetTimestamp();
+            AuditGpuTimer.Start(shadow: true);
             for (int i = 0; i < _activeGpuSkinnedInstanceBatches.Count; i++)
             {
                 GpuSkinnedInstanceBatch batch = _activeGpuSkinnedInstanceBatches[i];
@@ -368,11 +373,12 @@ namespace Ludots.Raylib.Render
                     continue;
                 }
 
-                DrawBatchShadow(batch, shadow);
+                LastShadowBatches += DrawBatchShadow(batch, shadow);
             }
 
             _gpuSkinnedBatchesPreparedForShadow = true;
             LastShadowSubmitCpuMs += (Stopwatch.GetTimestamp() - shadowStart) * 1000d / Stopwatch.Frequency;
+            AuditGpuTimer.End();
         }
 
         public void Dispose()
@@ -448,12 +454,12 @@ namespace Ludots.Raylib.Render
             return drawCalls;
         }
 
-        private void DrawBatchShadow(GpuSkinnedInstanceBatch batch, RaylibDirectionalShadowMap shadow)
+        private int DrawBatchShadow(GpuSkinnedInstanceBatch batch, RaylibDirectionalShadowMap shadow)
         {
             Model model = batch.Model;
             if (model.meshCount <= 0 || batch.Count <= 0)
             {
-                return;
+                return 0;
             }
 
             if (batch.Animations == null || batch.AnimCount <= 0)
@@ -468,6 +474,7 @@ namespace Ludots.Raylib.Render
                     $"{nameof(RaylibGpuSkinnedBatchRenderer)} GpuSkinned shadow requires the pose texture palette; silent uniform shadow is forbidden.");
             }
 
+            int drawCalls = 0;
             fixed (RaylibMatrix* transforms = batch.Transforms)
             {
                 int boneBase = 0;
@@ -490,12 +497,15 @@ namespace Ludots.Raylib.Render
                                 boneBase,
                                 RaylibPoseTexturePalette.BoneSlotsPerRow,
                                 _posePalette.SlotRowsPerPose);
+                            drawCalls++;
                         }
                     }
 
                     boneBase = nextBoneBase;
                 }
             }
+
+            return drawCalls;
         }
 
         private void EnsureFrameLightingApplied()

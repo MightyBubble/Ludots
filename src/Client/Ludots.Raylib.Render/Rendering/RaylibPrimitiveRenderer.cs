@@ -120,6 +120,7 @@ namespace Ludots.Raylib.Render
         public double LastGpuSkinnedPoseBuildCpuMs => _gpuSkinned.LastPoseBuildCpuMs;
         public double LastGpuSkinnedTextureUploadCpuMs => _gpuSkinned.LastTextureUploadCpuMs;
         public double LastGpuSkinnedShadowSubmitCpuMs => _gpuSkinned.LastShadowSubmitCpuMs;
+        public int LastGpuSkinnedShadowBatches => _gpuSkinned.LastShadowBatches;
         public int LastGpuSkinnedUniquePoses => _gpuSkinned.LastUniquePoses;
         public long LastGpuSkinnedTextureUploadBytes => _gpuSkinned.LastTextureUploadBytes;
         public int LastMeshVisualCount { get; private set; }

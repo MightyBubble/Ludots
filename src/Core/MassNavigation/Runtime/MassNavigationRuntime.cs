@@ -193,6 +193,8 @@ public sealed class MassNavigationRuntime
             return false;
         }
 
+        ApplyAuditOverrides(loaded);
+
         AgentProfileRegistry agentProfiles = engine.GetService(CoreServiceKeys.AgentProfiles)
             ?? throw new InvalidOperationException("MassNavigation runtime requires AgentProfiles.");
         loaded.AgentProfiles.BindAgentProfiles(agentProfiles);
@@ -200,6 +202,56 @@ public sealed class MassNavigationRuntime
         _configResolved = true;
         config = loaded;
         return true;
+    }
+
+    private static void ApplyAuditOverrides(MassNavigationConfig config)
+    {
+        string? totalAgentsRaw = Environment.GetEnvironmentVariable("LUDOTS_AB_TOTAL_AGENTS");
+        if (!string.IsNullOrWhiteSpace(totalAgentsRaw))
+        {
+            int teamCount = config.Scenario.Teams.Length;
+            if (!int.TryParse(totalAgentsRaw, out int totalAgents) ||
+                totalAgents <= 0 ||
+                teamCount <= 0 ||
+                totalAgents % teamCount != 0)
+            {
+                throw new InvalidOperationException(
+                    $"LUDOTS_AB_TOTAL_AGENTS must be a positive multiple of configured team count {teamCount}, got '{totalAgentsRaw}'.");
+            }
+
+            config.Scenario.AgentsPerTeam = totalAgents / teamCount;
+        }
+
+        string? speedRaw = Environment.GetEnvironmentVariable("LUDOTS_AB_AGENT_SPEED_CM_PER_SEC");
+        if (!string.IsNullOrWhiteSpace(speedRaw))
+        {
+            if (!float.TryParse(speedRaw, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float speed) ||
+                !float.IsFinite(speed) ||
+                speed < 0f)
+            {
+                throw new InvalidOperationException(
+                    $"LUDOTS_AB_AGENT_SPEED_CM_PER_SEC must be a finite non-negative float, got '{speedRaw}'.");
+            }
+
+            for (int i = 0; i < config.AgentProfiles.Profiles.Length; i++)
+            {
+                config.AgentProfiles.Profiles[i].SpeedCmPerSecond = speed;
+            }
+        }
+
+        string? density = Environment.GetEnvironmentVariable("LUDOTS_AB_DENSITY");
+        if (string.IsNullOrWhiteSpace(density) || string.Equals(density, "crowded", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (!string.Equals(density, "sparse", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"LUDOTS_AB_DENSITY must be 'crowded' or 'sparse', got '{density}'.");
+        }
+
+
     }
 
     private void EnsureScenario(GameEngine engine)

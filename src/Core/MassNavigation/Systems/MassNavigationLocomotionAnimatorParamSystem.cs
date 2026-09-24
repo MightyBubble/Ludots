@@ -12,6 +12,7 @@ internal sealed class MassNavigationLocomotionAnimatorParamSystem : BaseSystem<W
 {
     private readonly GameEngine _engine;
     private readonly int _speedParamKey;
+    private readonly bool _auditDisabled;
     private readonly QueryDescription _presenterQuery = new QueryDescription()
         .WithAll<PresenterState, PresenterFloatParams, PresenterCullState>();
 
@@ -20,10 +21,16 @@ internal sealed class MassNavigationLocomotionAnimatorParamSystem : BaseSystem<W
     {
         _engine = engine;
         _speedParamKey = MassNavigationSimulationRuntime.ResolveAgentLocomotionSpeedParamKey();
+        _auditDisabled = Environment.GetEnvironmentVariable("LUDOTS_AB_DISABLE_ANIMATOR") == "1";
     }
 
     public override void Update(in float dt)
     {
+        if (_auditDisabled)
+        {
+            return;
+        }
+
         if (!MassNavigationIds.TryGetCurrentNavigationRuntime(_engine, out MassNavigationSimulationRuntime simulation))
         {
             return;

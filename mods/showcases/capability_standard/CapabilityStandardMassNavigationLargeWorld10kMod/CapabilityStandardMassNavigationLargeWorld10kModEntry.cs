@@ -52,7 +52,7 @@ public sealed class CapabilityStandardMassNavigationLargeWorld10kModEntry : IMod
             return Task.CompletedTask;
         }
 
-        runtime.Visible = true;
+        runtime.Visible = Environment.GetEnvironmentVariable("LUDOTS_AB_DISABLE_MINIMAP") != "1";
         runtime.SetRotateWithCamera(false);
         runtime.UseRtsFullMapPreset();
         return Task.CompletedTask;

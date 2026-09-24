@@ -1,0 +1,831 @@
+diff --git a/mods/showcases/capability_standard/CapabilityStandardMassNavigationLargeWorld10kMod/CapabilityStandardMassNavigationLargeWorld10kModEntry.cs b/mods/showcases/capability_standard/CapabilityStandardMassNavigationLargeWorld10kMod/CapabilityStandardMassNavigationLargeWorld10kModEntry.cs
+index 727718e326..e22613ee29 100644
+--- a/mods/showcases/capability_standard/CapabilityStandardMassNavigationLargeWorld10kMod/CapabilityStandardMassNavigationLargeWorld10kModEntry.cs
++++ b/mods/showcases/capability_standard/CapabilityStandardMassNavigationLargeWorld10kMod/CapabilityStandardMassNavigationLargeWorld10kModEntry.cs
+@@ -52,7 +52,7 @@ public sealed class CapabilityStandardMassNavigationLargeWorld10kModEntry : IMod
+             return Task.CompletedTask;
+         }
+ 
+-        runtime.Visible = true;
++        runtime.Visible = Environment.GetEnvironmentVariable("LUDOTS_AB_DISABLE_MINIMAP") != "1";
+         runtime.SetRotateWithCamera(false);
+         runtime.UseRtsFullMapPreset();
+         return Task.CompletedTask;
+diff --git a/src/Adapters/Raylib/Ludots.Adapter.Raylib/RaylibHostLoop.cs b/src/Adapters/Raylib/Ludots.Adapter.Raylib/RaylibHostLoop.cs
+index 97fb058117..0172a47dd9 100644
+--- a/src/Adapters/Raylib/Ludots.Adapter.Raylib/RaylibHostLoop.cs
++++ b/src/Adapters/Raylib/Ludots.Adapter.Raylib/RaylibHostLoop.cs
+@@ -186,6 +186,13 @@ namespace Ludots.Adapter.Raylib
+             var uiRoot = setup.UiRoot;
+             var skiaRenderer = setup.Renderer;
+             var presentationTiming = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
++            if (Environment.GetEnvironmentVariable("LUDOTS_AB_DISABLE_HUD") == "1")
++            {
++                RenderDebugState auditRenderDebug = ResolveRenderDebugState(engine);
++                auditRenderDebug.DrawWorldHudBars = false;
++                auditRenderDebug.DrawWorldHudText = false;
++                auditRenderDebug.DrawCombatText = false;
++            }
+             engine.TryGetService(CoreServiceKeys.SyntheticInput, out SyntheticInputDevice? syntheticInput);
+             engine.TryGetService(CoreServiceKeys.HostFrameCapture, out IHostFrameCapture? frameCapture);
+             engine.TryGetService(CoreServiceKeys.SoundRequestBuffer, out SoundRequestBuffer? soundRequests);
+@@ -195,6 +202,14 @@ namespace Ludots.Adapter.Raylib
+             deviceWatcher.DeviceChanged += seatDeviceBinding.HandleDeviceChange;
+             engine.SetService(CoreServiceKeys.InputDeviceWatcher, deviceWatcher);
+ 
++            bool auditCapture = Environment.GetEnvironmentVariable("LUDOTS_AB_CAPTURE") == "1";
++            if (auditCapture)
++            {
++                config.WindowWidth = 1280;
++                config.WindowHeight = 720;
++                config.WindowResizable = false;
++                config.WindowStartMaximized = false;
++            }
+             int screenWidth = config.WindowWidth <= 0 ? 1280 : config.WindowWidth;
+             int screenHeight = config.WindowHeight <= 0 ? 720 : config.WindowHeight;
+             string title = string.IsNullOrWhiteSpace(config.WindowTitle) ? "Ludots Engine" : config.WindowTitle;
+@@ -225,6 +240,7 @@ namespace Ludots.Adapter.Raylib
+                     Rl.SetConfigFlags(FlagWindowResizable);
+                 }
+ 
++                if (auditCapture) Rl.SetConfigFlags(0x80);
+                 Rl.InitWindow(screenWidth, screenHeight, title);
+                 windowOpened = true;
+                 if (config.WindowStartMaximized)
+@@ -314,6 +330,8 @@ namespace Ludots.Adapter.Raylib
+                     screenOverlayBuffer = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer);
+                     MinimapScreenMarkerBuffer? minimapScreenMarkers = engine.GetService(CoreServiceKeys.MinimapScreenMarkerBuffer);
+                     CameraCullingDebugState? cullingDebug = engine.GetService(CoreServiceKeys.CameraCullingDebugState);
++                    bool abDisableTerrainHudOcclusion =
++                        Environment.GetEnvironmentVariable("LUDOTS_AB_DISABLE_TERRAIN_HUD_OCCLUSION") == "1";
+                     hudProjection = new WorldHudToScreenSystem(
+                         engine.World,
+                         worldHud,
+@@ -323,7 +341,9 @@ namespace Ludots.Adapter.Raylib
+                         screenHud,
+                         presentationTiming,
+                         cullingDebug,
+-                        () => engine.GetService(CoreServiceKeys.ContinuousHeightmap));
++                        abDisableTerrainHudOcclusion
++                            ? null
++                            : () => engine.GetService(CoreServiceKeys.ContinuousHeightmap));
+                     overlaySceneBuilder = new PresentationOverlaySceneBuilder(screenHud, worldHudStrings, textCatalog, localeSelection, screenOverlayBuffer, minimapScreenMarkers);
+                     overlayScene = new PresentationOverlayScene(screenHud.Capacity + ScreenOverlayBuffer.MaxItems + (minimapScreenMarkers?.Capacity ?? 0));
+                 }
+@@ -499,8 +519,16 @@ namespace Ludots.Adapter.Raylib
+                 Stopwatch runtimeStopwatch = Stopwatch.StartNew();
+                 long previousLoopEnd = Stopwatch.GetTimestamp();
+ 
++                var auditRows = new double[AuditColumnNames.Length][];
++                bool auditGpu = auditCapture && Environment.GetEnvironmentVariable("LUDOTS_AB_GPU_TIMING") == "1";
++                if (auditGpu) AuditGpuTimer.Initialize(autoExitFrame + 1);
++                for (int column = 0; column < auditRows.Length; column++) auditRows[column] = new double[autoExitFrame + 1];
+                 while (true)
+                 {
++                    long frameAllocatedBytesStart = GC.GetAllocatedBytesForCurrentThread();
++                    AuditGpuTimer.FrameIndex = frameIndex;
++                    int frameGen0Start = GC.CollectionCount(0);
++                    int frameGen1Start = GC.CollectionCount(1);
+                     long windowPollStart = Stopwatch.GetTimestamp();
+                     bool shouldClose = Rl.WindowShouldClose();
+                     double windowPollMs = ElapsedMs(windowPollStart);
+@@ -528,7 +556,7 @@ namespace Ludots.Adapter.Raylib
+                             uiRoot.Resize(w, h);
+                         }
+ 
+-                        float dt = Rl.GetFrameTime();
++                        float dt = auditCapture ? 1f / 60f : Rl.GetFrameTime();
+                         presentationTiming?.ObserveFrame(dt * 1000d);
+                         var renderDebug = ResolveRenderDebugState(engine);
+                         if (Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_DRAW_SHADOWS") is string drawShadows)
+@@ -623,6 +651,8 @@ namespace Ludots.Adapter.Raylib
+ 
+                         engine.SetService(CoreServiceKeys.HostFrameIndex, frameIndex);
+                         primitiveRenderer.PumpAssetUploads();
++                        if (auditCapture && MassNavigationIds.TryGetCurrentNavigationRuntime(engine, out var auditBeforeNav))
++                            Array.Clear(auditBeforeNav.AuditFrameTotals);
+                         engine.Tick(dt);
+                         // Typed instanced batch requests live from tick end until the next tick's
+                         // buffer clear; consuming them here hands resident lanes to this frame's draw.
+@@ -1205,20 +1235,81 @@ namespace Ludots.Adapter.Raylib
+                         }
+                         presentationTiming?.ObserveEndDrawing(ElapsedMs(endDrawingStart));
+                         presentationTiming?.ObserveWallFrame(ElapsedMs(wallFrameStart));
++                        long frameAllocatedBytes = GC.GetAllocatedBytesForCurrentThread() - frameAllocatedBytesStart;
++                        int frameGen0Collections = GC.CollectionCount(0) - frameGen0Start;
++                        int frameGen1Collections = GC.CollectionCount(1) - frameGen1Start;
+                         previousLoopEnd = Stopwatch.GetTimestamp();
+ 
++                        if (auditCapture)
++                        {
++                            MassNavigationIds.TryGetCurrentNavigationRuntime(engine, out var auditNav);
++                            auditRows[0][frameIndex] = frameIndex + 1;
++                            auditRows[1][frameIndex] = presentationTiming!.LastWallFrameMs;
++                            auditRows[2][frameIndex] = presentationTiming.LastSimulationMs;
++                            auditRows[3][frameIndex] = presentationTiming.LastPresentationMs;
++                            auditRows[4][frameIndex] = presentationTiming.LastPresenterBehaviorMs;
++                            auditRows[5][frameIndex] = presentationTiming.LastPresenterEntityTransformSyncMs;
++                            auditRows[6][frameIndex] = presentationTiming.LastPresenterEmitMs;
++                            auditRows[7][frameIndex] = presentationTiming.LastWorldHudProjectionMs;
++                            auditRows[8][frameIndex] = presentationTiming.LastPresenterAnimatorMs;
++                            auditRows[9][frameIndex] = presentationTiming.PresenterAnimatorUpdatesLastFrame;
++                            auditRows[10][frameIndex] = presentationTiming.TerrainHeightSamplesLastFrame;
++                            auditRows[11][frameIndex] = hudProjection?.LastTerrainRaycastCount ?? 0;
++                            auditRows[12][frameIndex] = presentationTiming.VisibleEntitiesLastFrame;
++                            auditRows[13][frameIndex] = presentationTiming.WorldHudItemsLastProjection;
++                            auditRows[14][frameIndex] = presentationTiming.WorldHudProjectedLastFrame;
++                            auditRows[15][frameIndex] = presentationTiming.PresenterTickDrivenCountLastFrame;
++                            auditRows[16][frameIndex] = presentationTiming.LastPresenterMinimapMarkerMs;
++                            auditRows[17][frameIndex] = presentationTiming.LastMinimapProjectionMs;
++                            auditRows[18][frameIndex] = presentationTiming.LastCameraCullingMs;
++                            auditRows[19][frameIndex] = primitiveRenderer.LastGpuSkinnedInstances;
++                            auditRows[20][frameIndex] = primitiveRenderer.LastGpuSkinnedMatrixBuildMs;
++                            auditRows[21][frameIndex] = primitiveRenderer.LastGpuSkinnedMeshDrawMs;
++                            auditRows[22][frameIndex] = primitiveRenderer.LastGpuSkinnedUniquePoses;
++                            auditRows[23][frameIndex] = primitiveRenderer.LastGpuSkinnedPoseBuildCpuMs;
++                            auditRows[24][frameIndex] = primitiveRenderer.LastGpuSkinnedTextureUploadCpuMs;
++                            auditRows[25][frameIndex] = primitiveRenderer.LastGpuSkinnedTextureUploadBytes;
++                            auditRows[26][frameIndex] = primitiveRenderer.LastGpuSkinnedBatches;
++                            auditRows[27][frameIndex] = primitiveRenderer.LastGpuSkinnedShadowBatches;
++                            auditRows[28][frameIndex] = primitiveRenderer.LastGpuSkinnedShadowSubmitCpuMs;
++                            auditRows[29][frameIndex] = frameAllocatedBytes;
++                            auditRows[30][frameIndex] = frameGen0Collections;
++                            auditRows[31][frameIndex] = frameGen1Collections;
++                            auditRows[32][frameIndex] = presentationTiming.LastTotalTickMs;
++                            auditRows[33][frameIndex] = presentationTiming.LastHostPostTickMs;
++                            auditRows[34][frameIndex] = presentationTiming.LastMode3DMs;
++                            auditRows[35][frameIndex] = presentationTiming.LastScreenOverlayDrawMs;
++                            auditRows[36][frameIndex] = presentationTiming.LastScreenOverlayBuildMs;
++                            auditRows[37][frameIndex] = presentationTiming.LastEndDrawingMs;
++                            auditRows[38][frameIndex] = auditNav?.AuditFrameTotals[0] ?? 0;
++                            auditRows[39][frameIndex] = auditNav?.AuditFrameTotals[1] ?? 0;
++                            auditRows[40][frameIndex] = auditNav?.AuditFrameTotals[2] ?? 0;
++                            auditRows[41][frameIndex] = auditNav?.AuditFrameTotals[3] ?? 0;
++                            auditRows[42][frameIndex] = auditNav?.AuditFrameTotals[4] ?? 0;
++                            auditRows[43][frameIndex] = auditNav?.AuditFrameTotals[5] ?? 0;
++                            auditRows[44][frameIndex] = auditNav?.AuditFrameTotals[6] ?? 0;
++                            auditRows[45][frameIndex] = auditNav?.AuditFrameTotals[7] ?? 0;
++                            auditRows[46][frameIndex] = auditNav?.AuditFrameTotals[8] ?? 0;
++                            auditRows[47][frameIndex] = auditNav?.AuditFrameTotals[9] ?? 0;
++                            auditRows[48][frameIndex] = auditNav?.AuditFrameTotals[10] ?? 0;
++                            auditRows[49][frameIndex] = auditNav?.AuditFrameTotals[11] ?? 0;
++                            auditRows[50][frameIndex] = auditNav?.AuditFrameTotals[12] ?? 0;
++                        }
+                         frameIndex++;
+                         if (timingLogIntervalFrames > 0 && frameIndex % timingLogIntervalFrames == 0)
+                         {
+                             AppendRaylibDiagnostic(diagnosticPath, $"sample frame={frameIndex}");
+                             AppendRaylibDiagnostic(diagnosticPath,
+-                                $"skinning-cpu poses={primitiveRenderer.LastGpuSkinnedUniquePoses} poseBuildMs={primitiveRenderer.LastGpuSkinnedPoseBuildCpuMs:F4} textureUploadMs={primitiveRenderer.LastGpuSkinnedTextureUploadCpuMs:F4} textureUploadBytes={primitiveRenderer.LastGpuSkinnedTextureUploadBytes} shadowSubmitMs={primitiveRenderer.LastGpuSkinnedShadowSubmitCpuMs:F4}");
++                                $"skinning-cpu poses={primitiveRenderer.LastGpuSkinnedUniquePoses} poseBuildMs={primitiveRenderer.LastGpuSkinnedPoseBuildCpuMs:F4} textureUploadMs={primitiveRenderer.LastGpuSkinnedTextureUploadCpuMs:F4} textureUploadBytes={primitiveRenderer.LastGpuSkinnedTextureUploadBytes} mainDrawCalls={primitiveRenderer.LastGpuSkinnedBatches} shadowDrawCalls={primitiveRenderer.LastGpuSkinnedShadowBatches} shadowSubmitMs={primitiveRenderer.LastGpuSkinnedShadowSubmitCpuMs:F4}");
++                            AppendRaylibDiagnostic(
++                                diagnosticPath,
++                                $"managed allocBytes={frameAllocatedBytes} gen0={frameGen0Collections} gen1={frameGen1Collections} hudTerrainRaycasts={hudProjection?.LastTerrainRaycastCount ?? 0}");
+                             AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
+                             if (MassNavigationIds.TryGetCurrentNavigationRuntime(engine, out MassNavigationSimulationRuntime massNavigation))
+                             {
+                                 AppendRaylibDiagnostic(
+                                     diagnosticPath,
+-                                    $"massnav target={presentationTiming.LastMassNavigationTargetMs:F3} flow={presentationTiming.LastMassNavigationFlowMs:F3} prep={presentationTiming.LastMassNavigationPrepMs:F3} steering={presentationTiming.LastMassNavigationSteeringMs:F3} step={presentationTiming.LastMassNavigationStepMs:F3} hard={presentationTiming.LastMassNavigationHardResolveMs:F3} hardCandidates={massNavigation.LastHardResolveCandidateAgentCount} hardFallbackAgents={massNavigation.LastHardResolveFallbackProbeAgentCount} hardFallbackPairs={massNavigation.LastHardResolveFallbackPairCheckCount} hardPairs={massNavigation.LastHardResolvePairCheckCount} hardPenetrating={massNavigation.LastHardResolvePenetratingPairCount} entitySync={presentationTiming.LastMassNavigationEntitySyncMs:F3} pendingSync={presentationTiming.LastMassNavigationPendingEntitySync}");
++                                    $"massnav target={presentationTiming.LastMassNavigationTargetMs:F3} flow={presentationTiming.LastMassNavigationFlowMs:F3} prep={presentationTiming.LastMassNavigationPrepMs:F3} steering={presentationTiming.LastMassNavigationSteeringMs:F3} step={presentationTiming.LastMassNavigationStepMs:F3} hard={presentationTiming.LastMassNavigationHardResolveMs:F3} neighborCandidates={massNavigation.LastAvoidanceNeighborCandidateCheckCount} hardCandidates={massNavigation.LastHardResolveCandidateAgentCount} hardFallbackAgents={massNavigation.LastHardResolveFallbackProbeAgentCount} hardFallbackPairs={massNavigation.LastHardResolveFallbackPairCheckCount} hardPairs={massNavigation.LastHardResolvePairCheckCount} hardPenetrating={massNavigation.LastHardResolvePenetratingPairCount} entitySync={presentationTiming.LastMassNavigationEntitySyncMs:F3} pendingSync={presentationTiming.LastMassNavigationPendingEntitySync}");
+                             }
+                             AppendRaylibDiagnostic(diagnosticPath, BuildAssetResidencyDiagnostic(engine, primitiveRenderer));
+                         }
+@@ -1321,6 +1412,27 @@ namespace Ludots.Adapter.Raylib
+                         break;
+                     }
+                 }
++                if (auditCapture)
++                {
++                    string capturePath = Environment.GetEnvironmentVariable("LUDOTS_AB_CAPTURE_PATH")
++                        ?? throw new InvalidOperationException("Audit capture path is required.");
++                    using var auditWriter = new StreamWriter(capturePath);
++                    AuditGpuTimer.Collect();
++                    auditWriter.WriteLine(string.Join(",", AuditColumnNames) + ",gpu_main_ms,gpu_shadow_ms");
++                    for (int row = 0; row < frameIndex; row++)
++                    {
++                        for (int column = 0; column < auditRows.Length; column++)
++                        {
++                            if (column > 0) auditWriter.Write(',');
++                            auditWriter.Write(auditRows[column][row].ToString("R", System.Globalization.CultureInfo.InvariantCulture));
++                        }
++                        auditWriter.Write(',');
++                        auditWriter.Write(AuditGpuTimer.Get(row, false).ToString("R", System.Globalization.CultureInfo.InvariantCulture));
++                        auditWriter.Write(',');
++                        auditWriter.Write(AuditGpuTimer.Get(row, true).ToString("R", System.Globalization.CultureInfo.InvariantCulture));
++                        auditWriter.WriteLine();
++                    }
++                }
+             }
+             finally
+             {
+@@ -1995,6 +2107,8 @@ namespace Ludots.Adapter.Raylib
+             Rl.rlEnableBackfaceCulling();
+         }
+ 
++        private static readonly string[] AuditColumnNames = { "frame", "frame_ms", "simulation", "presentation", "behavior", "transform_sync", "emit", "hud", "animator", "animator_updates", "height_samples", "terrain_rays", "visible", "hud_raw", "hud_projected", "behavior_ticks", "minimap_collect", "minimap_project", "culling", "gpu_instances", "gpu_build", "gpu_draw_cpu", "poses", "pose_build", "upload_ms", "upload_bytes", "main_draws", "shadow_draws", "shadow_submit", "alloc", "gen0", "gen1", "tick", "post", "mode3d", "overlay", "overlay_build", "end_draw", "nav_target", "nav_flow", "nav_prep", "nav_steering", "nav_step", "nav_hard", "nav_sync", "nav_steps", "neighbor_candidates", "hard_pairs", "hard_candidates", "hard_penetrating", "moved_agents" };
++
+         private static string BuildTimingDiagnostic(
+             GameEngine engine,
+             PresentationTimingDiagnostics? timing,
+@@ -2021,7 +2135,7 @@ namespace Ludots.Adapter.Raylib
+             float fps = frameMs > 0.001f ? 1000f / frameMs : 0f;
+             int rawDebugDrawCount = debugDraw == null ? 0 : debugDraw.Lines.Count + debugDraw.Circles.Count + debugDraw.Boxes.Count;
+             string presenterDefs = presenters?.BuildActiveDefinitionSummary(8) ?? string.Empty;
+-            return $"timing frame={frameMs:F2}ms fps={fps:F1} cleanPerf={(cleanPerformanceMode ? 1 : 0)} visibleEntities={timing.VisibleEntitiesLastFrame} presenterActive={presenters?.ActiveCount ?? 0} presenterDefs={presenterDefs} primitiveRaw={primitives?.Count ?? 0} primitiveStaticRaw={primitives?.StaticMeshLaneItemCount ?? 0} skinnedRaw={timing.SkinnedRawLastFrame} gpuSkinned={timing.GpuSkinnedInstancesLastFrame}/{timing.GpuSkinnedBatchesLastFrame} gpuSkinBuild={timing.LastGpuSkinnedMatrixBuildMs:F2} gpuSkinDraw={timing.LastGpuSkinnedMeshDrawMs:F2} gap={timing.LastHostLoopGapMs:F2} poll={timing.LastWindowPollMs:F2} pre={timing.LastHostPreTickMs:F2} tick={timing.LastTotalTickMs:F2} post={timing.LastHostPostTickMs:F2} begin={timing.LastBeginDrawingMs:F2} sim={timing.LastSimulationMs:F2} simTop1={timing.LastSimulationTopSystem1Name}:{timing.LastSimulationTopSystem1Ms:F2} simTop2={timing.LastSimulationTopSystem2Name}:{timing.LastSimulationTopSystem2Ms:F2} simTop3={timing.LastSimulationTopSystem3Name}:{timing.LastSimulationTopSystem3Ms:F2} presentation={timing.LastPresentationMs:F2} presTop1={timing.LastPresentationTopSystem1Name}:{timing.LastPresentationTopSystem1Ms:F2} presTop2={timing.LastPresentationTopSystem2Name}:{timing.LastPresentationTopSystem2Ms:F2} presTop3={timing.LastPresentationTopSystem3Name}:{timing.LastPresentationTopSystem3Ms:F2} behavior={timing.LastPresenterBehaviorMs:F2} behaviorBoot={timing.PresenterBootstrapCountLastFrame} behaviorOwner={timing.PresenterOwnerChangesLastFrame} behaviorAttr={timing.PresenterOwnerAttributeChangesLastFrame} behaviorTag={timing.PresenterOwnerTagChangesLastFrame} behaviorTick={timing.PresenterTickDrivenCountLastFrame} animator={timing.LastPresenterAnimatorMs:F2} transformSync={timing.LastPresenterEntityTransformSyncMs:F2} minimapCollect={timing.LastPresenterMinimapMarkerMs:F2} minimapMarkers={timing.PresenterMinimapMarkersLastFrame}/{timing.PresenterMinimapDroppedLastFrame} minimapProject={timing.LastMinimapProjectionMs:F2} minimapScreen={timing.MinimapScreenMarkersLastFrame}/{timing.MinimapScreenMarkersDroppedLastFrame} heightSync={timing.LastTerrainHeightSyncMs:F2} heightSamples={timing.TerrainHeightSamplesLastFrame} requestFlush={timing.LastPresentationRequestFlushMs:F2} spawnBatch={timing.LastRuntimeSpawnBatchPrepareMs:F2}/{timing.LastRuntimeSpawnWorldCreateMs:F2}/{timing.LastRuntimeSpawnFillBatchMs:F2}/{timing.LastRuntimeSpawnPostSpawnMs:F2} spawnPerf={timing.LastRuntimeSpawnPresenterBatchMs:F2}/{timing.LastRuntimeSpawnPresenterCreateMs:F2}/{timing.LastRuntimeSpawnPresenterBootstrapMarkMs:F2} spawnPerfParts={timing.LastRuntimeSpawnPresenterCreateSetupMs:F2}/{timing.LastRuntimeSpawnPresenterWorldCreateMs:F2}/{timing.LastRuntimeSpawnPresenterComponentFillMs:F2}/{timing.LastRuntimeSpawnPresenterIndexWriteMs:F2}/{timing.LastRuntimeSpawnPresenterOwnerPayloadMs:F2}/{timing.LastRuntimeSpawnPresenterPostCreateMs:F2} spawnPerfChildParts={timing.LastRuntimeSpawnPresenterChildSetupMs:F2}/{timing.LastRuntimeSpawnPresenterChildWorldCreateMs:F2}/{timing.LastRuntimeSpawnPresenterChildComponentFillMs:F2}/{timing.LastRuntimeSpawnPresenterChildIndexWriteMs:F2}/{timing.LastRuntimeSpawnPresenterChildStableIdMs:F2} cull={timing.LastCameraCullingMs:F2} cullSpatial={timing.LastCameraCullingSpatialQueryMs:F2} cullStatic={timing.LastCameraCullingStaticProcessMs:F2} cullDyn={timing.LastCameraCullingDynamicProcessMs:F2} cullEntity={timing.LastCameraCullingEntityProcessMs:F2} cullSync={timing.LastCameraCullingPresenterSyncMs:F2} hudProj={timing.LastWorldHudProjectionMs:F2} hudRaw={timing.WorldHudItemsLastProjection} hudProjected={timing.WorldHudProjectedLastFrame} hudDensitySkip={timing.WorldHudDensitySkippedLastFrame} mode3D={timing.LastMode3DMs:F2} terrain={timing.LastTerrainRenderMs:F2} terrainChunks={timing.TerrainChunksDrawnLastFrame}/{timing.TerrainChunksBuiltLastFrame} field={timing.LastGlobalFieldRenderMs:F2} fieldCount={timing.GlobalFieldTexturesLastFrame} fieldDirty={timing.GlobalFieldDirtyUploadsLastFrame} fieldArea={timing.GlobalFieldDirtyUploadAreaLastFrame} fieldDraws={timing.GlobalFieldDrawsLastFrame} primitive={timing.LastPrimitiveRenderMs:F2} primSync={timing.LastPrimitivePersistentSyncMs:F2} primBucket={timing.LastPrimitivePersistentBucketDrawMs:F2} primImmediate={timing.LastPrimitiveImmediateDrawMs:F2} primImmediateSkip={timing.PrimitiveImmediateSkippedLastFrame} primBuild={timing.LastPrimitiveMatrixBuildMs:F2} primDraw={timing.LastPrimitiveMeshDrawMs:F2} primInstances={timing.PrimitiveInstancesLastFrame} primBatches={timing.PrimitiveBatchesLastFrame} primCache={timing.PrimitiveMatrixCacheHitsLastFrame}/{timing.PrimitiveMatrixCacheMissesLastFrame} ground={timing.LastGroundOverlayRenderMs:F2} groundCount={timing.GroundOverlaysLastFrame} groundRaw={groundOverlay?.Count ?? 0} spline={timing.LastSplineRibbonRenderMs:F2} splineCount={timing.SplineRibbonsLastFrame} splineRaw={splineRibbon?.Count ?? 0} debugDraw={timing.LastDebugDrawRenderMs:F2} debugDrawCount={timing.DebugDrawCommandsLastFrame} debugDrawRaw={rawDebugDrawCount} overlay={timing.LastScreenOverlayDrawMs:F2} overlayBuild={timing.LastScreenOverlayBuildMs:F2} overlayDirtyLanes={timing.ScreenOverlayDirtyLanesLastFrame} overlayItems={timing.ScreenOverlayItemsLastFrame} overlayRebuilt={timing.ScreenOverlayRebuiltLanesLastFrame} overlayPaint={timing.LastScreenOverlayPaintMs:F2} overlayComposite={timing.LastScreenOverlayCompositeMs:F2} uiRender={timing.LastUiRenderMs:F2} uiUpload={timing.LastUiUploadMs:F2} overlayFinal={timing.LastScreenOverlayFinalDrawMs:F2} nativeDiag={timing.LastNativeDiagnosticHudMs:F2} emit={timing.LastPresenterEmitMs:F2} emitDirty={timing.LastPresenterEmitDirtyProcessMs:F2} emitDirtyCount={timing.PresenterEmitDirtyCountLastFrame} emitRetained={timing.LastPresenterEmitRetainedProcessMs:F2} emitRetainedCount={timing.PresenterEmitRetainedCountLastFrame} hudPositionOnly={timing.PresenterRetainedHudPositionUpdatesLastFrame} emitRetainedDirectPath={timing.PresenterEmitRetainedDirectHitsLastFrame}/{timing.PresenterEmitRetainedFullPathLastFrame}/{timing.PresenterEmitRetainedDirectMissesLastFrame} endDraw={timing.LastEndDrawingMs:F2} screenshot={timing.LastScreenshotMs:F2} worldHud={worldHud?.Count ?? 0} screenBars={screenHud?.BarCount ?? 0} screenText={screenHud?.TextCount ?? 0} worldHudDrops={worldHud?.DroppedTotal ?? 0} screenHudDrops={screenHud?.DroppedTotal ?? 0} overlaySceneDrops={overlayScene?.DroppedTotal ?? 0}";
++            return $"timing frame={frameMs:F2}ms fps={fps:F1} cleanPerf={(cleanPerformanceMode ? 1 : 0)} visibleEntities={timing.VisibleEntitiesLastFrame} presenterActive={presenters?.ActiveCount ?? 0} presenterDefs={presenterDefs} primitiveRaw={primitives?.Count ?? 0} primitiveStaticRaw={primitives?.StaticMeshLaneItemCount ?? 0} skinnedRaw={timing.SkinnedRawLastFrame} gpuSkinned={timing.GpuSkinnedInstancesLastFrame}/{timing.GpuSkinnedBatchesLastFrame} gpuSkinBuild={timing.LastGpuSkinnedMatrixBuildMs:F2} gpuSkinDraw={timing.LastGpuSkinnedMeshDrawMs:F2} gap={timing.LastHostLoopGapMs:F2} poll={timing.LastWindowPollMs:F2} pre={timing.LastHostPreTickMs:F2} tick={timing.LastTotalTickMs:F2} post={timing.LastHostPostTickMs:F2} begin={timing.LastBeginDrawingMs:F2} sim={timing.LastSimulationMs:F2} simTop1={timing.LastSimulationTopSystem1Name}:{timing.LastSimulationTopSystem1Ms:F2} simTop2={timing.LastSimulationTopSystem2Name}:{timing.LastSimulationTopSystem2Ms:F2} simTop3={timing.LastSimulationTopSystem3Name}:{timing.LastSimulationTopSystem3Ms:F2} presentation={timing.LastPresentationMs:F2} presTop1={timing.LastPresentationTopSystem1Name}:{timing.LastPresentationTopSystem1Ms:F2} presTop2={timing.LastPresentationTopSystem2Name}:{timing.LastPresentationTopSystem2Ms:F2} presTop3={timing.LastPresentationTopSystem3Name}:{timing.LastPresentationTopSystem3Ms:F2} behavior={timing.LastPresenterBehaviorMs:F2} behaviorBoot={timing.PresenterBootstrapCountLastFrame} behaviorOwner={timing.PresenterOwnerChangesLastFrame} behaviorAttr={timing.PresenterOwnerAttributeChangesLastFrame} behaviorTag={timing.PresenterOwnerTagChangesLastFrame} behaviorTick={timing.PresenterTickDrivenCountLastFrame} animator={timing.LastPresenterAnimatorMs:F2} animatorUpdates={timing.PresenterAnimatorUpdatesLastFrame} transformSync={timing.LastPresenterEntityTransformSyncMs:F2} minimapCollect={timing.LastPresenterMinimapMarkerMs:F2} minimapMarkers={timing.PresenterMinimapMarkersLastFrame}/{timing.PresenterMinimapDroppedLastFrame} minimapProject={timing.LastMinimapProjectionMs:F2} minimapScreen={timing.MinimapScreenMarkersLastFrame}/{timing.MinimapScreenMarkersDroppedLastFrame} heightSync={timing.LastTerrainHeightSyncMs:F2} heightSamples={timing.TerrainHeightSamplesLastFrame} requestFlush={timing.LastPresentationRequestFlushMs:F2} spawnBatch={timing.LastRuntimeSpawnBatchPrepareMs:F2}/{timing.LastRuntimeSpawnWorldCreateMs:F2}/{timing.LastRuntimeSpawnFillBatchMs:F2}/{timing.LastRuntimeSpawnPostSpawnMs:F2} spawnPerf={timing.LastRuntimeSpawnPresenterBatchMs:F2}/{timing.LastRuntimeSpawnPresenterCreateMs:F2}/{timing.LastRuntimeSpawnPresenterBootstrapMarkMs:F2} spawnPerfParts={timing.LastRuntimeSpawnPresenterCreateSetupMs:F2}/{timing.LastRuntimeSpawnPresenterWorldCreateMs:F2}/{timing.LastRuntimeSpawnPresenterComponentFillMs:F2}/{timing.LastRuntimeSpawnPresenterIndexWriteMs:F2}/{timing.LastRuntimeSpawnPresenterOwnerPayloadMs:F2}/{timing.LastRuntimeSpawnPresenterPostCreateMs:F2} spawnPerfChildParts={timing.LastRuntimeSpawnPresenterChildSetupMs:F2}/{timing.LastRuntimeSpawnPresenterChildWorldCreateMs:F2}/{timing.LastRuntimeSpawnPresenterChildComponentFillMs:F2}/{timing.LastRuntimeSpawnPresenterChildIndexWriteMs:F2}/{timing.LastRuntimeSpawnPresenterChildStableIdMs:F2} cull={timing.LastCameraCullingMs:F2} cullSpatial={timing.LastCameraCullingSpatialQueryMs:F2} cullStatic={timing.LastCameraCullingStaticProcessMs:F2} cullDyn={timing.LastCameraCullingDynamicProcessMs:F2} cullEntity={timing.LastCameraCullingEntityProcessMs:F2} cullSync={timing.LastCameraCullingPresenterSyncMs:F2} hudProj={timing.LastWorldHudProjectionMs:F2} hudRaw={timing.WorldHudItemsLastProjection} hudProjected={timing.WorldHudProjectedLastFrame} hudDensitySkip={timing.WorldHudDensitySkippedLastFrame} mode3D={timing.LastMode3DMs:F2} terrain={timing.LastTerrainRenderMs:F2} terrainChunks={timing.TerrainChunksDrawnLastFrame}/{timing.TerrainChunksBuiltLastFrame} field={timing.LastGlobalFieldRenderMs:F2} fieldCount={timing.GlobalFieldTexturesLastFrame} fieldDirty={timing.GlobalFieldDirtyUploadsLastFrame} fieldArea={timing.GlobalFieldDirtyUploadAreaLastFrame} fieldDraws={timing.GlobalFieldDrawsLastFrame} primitive={timing.LastPrimitiveRenderMs:F2} primSync={timing.LastPrimitivePersistentSyncMs:F2} primBucket={timing.LastPrimitivePersistentBucketDrawMs:F2} primImmediate={timing.LastPrimitiveImmediateDrawMs:F2} primImmediateSkip={timing.PrimitiveImmediateSkippedLastFrame} primBuild={timing.LastPrimitiveMatrixBuildMs:F2} primDraw={timing.LastPrimitiveMeshDrawMs:F2} primInstances={timing.PrimitiveInstancesLastFrame} primBatches={timing.PrimitiveBatchesLastFrame} primCache={timing.PrimitiveMatrixCacheHitsLastFrame}/{timing.PrimitiveMatrixCacheMissesLastFrame} ground={timing.LastGroundOverlayRenderMs:F2} groundCount={timing.GroundOverlaysLastFrame} groundRaw={groundOverlay?.Count ?? 0} spline={timing.LastSplineRibbonRenderMs:F2} splineCount={timing.SplineRibbonsLastFrame} splineRaw={splineRibbon?.Count ?? 0} debugDraw={timing.LastDebugDrawRenderMs:F2} debugDrawCount={timing.DebugDrawCommandsLastFrame} debugDrawRaw={rawDebugDrawCount} overlay={timing.LastScreenOverlayDrawMs:F2} overlayBuild={timing.LastScreenOverlayBuildMs:F2} overlayDirtyLanes={timing.ScreenOverlayDirtyLanesLastFrame} overlayItems={timing.ScreenOverlayItemsLastFrame} overlayRebuilt={timing.ScreenOverlayRebuiltLanesLastFrame} overlayPaint={timing.LastScreenOverlayPaintMs:F2} overlayComposite={timing.LastScreenOverlayCompositeMs:F2} uiRender={timing.LastUiRenderMs:F2} uiUpload={timing.LastUiUploadMs:F2} overlayFinal={timing.LastScreenOverlayFinalDrawMs:F2} nativeDiag={timing.LastNativeDiagnosticHudMs:F2} emit={timing.LastPresenterEmitMs:F2} emitDirty={timing.LastPresenterEmitDirtyProcessMs:F2} emitDirtyCount={timing.PresenterEmitDirtyCountLastFrame} emitRetained={timing.LastPresenterEmitRetainedProcessMs:F2} emitRetainedCount={timing.PresenterEmitRetainedCountLastFrame} hudPositionOnly={timing.PresenterRetainedHudPositionUpdatesLastFrame} emitRetainedDirectPath={timing.PresenterEmitRetainedDirectHitsLastFrame}/{timing.PresenterEmitRetainedFullPathLastFrame}/{timing.PresenterEmitRetainedDirectMissesLastFrame} endDraw={timing.LastEndDrawingMs:F2} screenshot={timing.LastScreenshotMs:F2} worldHud={worldHud?.Count ?? 0} screenBars={screenHud?.BarCount ?? 0} screenText={screenHud?.TextCount ?? 0} worldHudDrops={worldHud?.DroppedTotal ?? 0} screenHudDrops={screenHud?.DroppedTotal ?? 0} overlaySceneDrops={overlayScene?.DroppedTotal ?? 0}";
+         }
+ 
+         private static string BuildAssetResidencyDiagnostic(GameEngine engine, RaylibPrimitiveRenderer renderer)
+diff --git a/src/Client/Ludots.Raylib.Render/Rendering/RaylibGpuSkinnedBatchRenderer.cs b/src/Client/Ludots.Raylib.Render/Rendering/RaylibGpuSkinnedBatchRenderer.cs
+index 8b31043ab3..1db28ac5c6 100644
+--- a/src/Client/Ludots.Raylib.Render/Rendering/RaylibGpuSkinnedBatchRenderer.cs
++++ b/src/Client/Ludots.Raylib.Render/Rendering/RaylibGpuSkinnedBatchRenderer.cs
+@@ -73,6 +73,7 @@ namespace Ludots.Raylib.Render
+         public double LastPoseBuildCpuMs { get; private set; }
+         public double LastTextureUploadCpuMs { get; private set; }
+         public double LastShadowSubmitCpuMs { get; private set; }
++        public int LastShadowBatches { get; private set; }
+         public int LastUniquePoses { get; private set; }
+         public long LastTextureUploadBytes { get; private set; }
+ 
+@@ -89,6 +90,7 @@ namespace Ludots.Raylib.Render
+             LastPoseBuildCpuMs = 0d;
+             LastTextureUploadCpuMs = 0d;
+             LastShadowSubmitCpuMs = 0d;
++            LastShadowBatches = 0;
+             LastUniquePoses = 0;
+             LastTextureUploadBytes = 0;
+         }
+@@ -216,6 +218,7 @@ namespace Ludots.Raylib.Render
+             {
+                 EnsureShaderInitialized();
+                 BuildAndUploadPoseTextures();
++                AuditGpuTimer.Start(shadow: false);
+                 long drawStart = Stopwatch.GetTimestamp();
+                 for (int i = 0; i < _activeGpuSkinnedInstanceBatches.Count; i++)
+                 {
+@@ -230,6 +233,7 @@ namespace Ludots.Raylib.Render
+                 }
+ 
+                 LastMeshDrawMs += (Stopwatch.GetTimestamp() - drawStart) * 1000d / Stopwatch.Frequency;
++                AuditGpuTimer.End();
+             }
+ 
+             _gpuSkinnedBatchesPreparedForShadow = false;
+@@ -360,6 +364,7 @@ namespace Ludots.Raylib.Render
+             BuildAndUploadPoseTextures();
+ 
+             long shadowStart = Stopwatch.GetTimestamp();
++            AuditGpuTimer.Start(shadow: true);
+             for (int i = 0; i < _activeGpuSkinnedInstanceBatches.Count; i++)
+             {
+                 GpuSkinnedInstanceBatch batch = _activeGpuSkinnedInstanceBatches[i];
+@@ -368,11 +373,12 @@ namespace Ludots.Raylib.Render
+                     continue;
+                 }
+ 
+-                DrawBatchShadow(batch, shadow);
++                LastShadowBatches += DrawBatchShadow(batch, shadow);
+             }
+ 
+             _gpuSkinnedBatchesPreparedForShadow = true;
+             LastShadowSubmitCpuMs += (Stopwatch.GetTimestamp() - shadowStart) * 1000d / Stopwatch.Frequency;
++            AuditGpuTimer.End();
+         }
+ 
+         public void Dispose()
+@@ -448,12 +454,12 @@ namespace Ludots.Raylib.Render
+             return drawCalls;
+         }
+ 
+-        private void DrawBatchShadow(GpuSkinnedInstanceBatch batch, RaylibDirectionalShadowMap shadow)
++        private int DrawBatchShadow(GpuSkinnedInstanceBatch batch, RaylibDirectionalShadowMap shadow)
+         {
+             Model model = batch.Model;
+             if (model.meshCount <= 0 || batch.Count <= 0)
+             {
+-                return;
++                return 0;
+             }
+ 
+             if (batch.Animations == null || batch.AnimCount <= 0)
+@@ -468,6 +474,7 @@ namespace Ludots.Raylib.Render
+                     $"{nameof(RaylibGpuSkinnedBatchRenderer)} GpuSkinned shadow requires the pose texture palette; silent uniform shadow is forbidden.");
+             }
+ 
++            int drawCalls = 0;
+             fixed (RaylibMatrix* transforms = batch.Transforms)
+             {
+                 int boneBase = 0;
+@@ -490,12 +497,15 @@ namespace Ludots.Raylib.Render
+                                 boneBase,
+                                 RaylibPoseTexturePalette.BoneSlotsPerRow,
+                                 _posePalette.SlotRowsPerPose);
++                            drawCalls++;
+                         }
+                     }
+ 
+                     boneBase = nextBoneBase;
+                 }
+             }
++
++            return drawCalls;
+         }
+ 
+         private void EnsureFrameLightingApplied()
+diff --git a/src/Client/Ludots.Raylib.Render/Rendering/RaylibPrimitiveRenderer.cs b/src/Client/Ludots.Raylib.Render/Rendering/RaylibPrimitiveRenderer.cs
+index ba4d2a9eec..32db159c97 100644
+--- a/src/Client/Ludots.Raylib.Render/Rendering/RaylibPrimitiveRenderer.cs
++++ b/src/Client/Ludots.Raylib.Render/Rendering/RaylibPrimitiveRenderer.cs
+@@ -120,6 +120,7 @@ namespace Ludots.Raylib.Render
+         public double LastGpuSkinnedPoseBuildCpuMs => _gpuSkinned.LastPoseBuildCpuMs;
+         public double LastGpuSkinnedTextureUploadCpuMs => _gpuSkinned.LastTextureUploadCpuMs;
+         public double LastGpuSkinnedShadowSubmitCpuMs => _gpuSkinned.LastShadowSubmitCpuMs;
++        public int LastGpuSkinnedShadowBatches => _gpuSkinned.LastShadowBatches;
+         public int LastGpuSkinnedUniquePoses => _gpuSkinned.LastUniquePoses;
+         public long LastGpuSkinnedTextureUploadBytes => _gpuSkinned.LastTextureUploadBytes;
+         public int LastMeshVisualCount { get; private set; }
+diff --git a/src/Core/Gameplay/Spawning/RuntimeEntitySpawnSystem.cs b/src/Core/Gameplay/Spawning/RuntimeEntitySpawnSystem.cs
+index 05077b13f8..40a17b28ea 100644
+--- a/src/Core/Gameplay/Spawning/RuntimeEntitySpawnSystem.cs
++++ b/src/Core/Gameplay/Spawning/RuntimeEntitySpawnSystem.cs
+@@ -66,6 +66,7 @@ namespace Ludots.Core.Gameplay.Spawning
+         private readonly int _memberOfTypeId;
+         private readonly EntityTriggerGraphMounts? _entityTriggerGraphMounts;
+         private readonly Ludots.Core.Input.Interaction.InteractionContextProfileRegistry? _initialInteractionContexts;
++        private readonly bool _auditDisableOnSpawnEffects;
+ 
+         private readonly struct SpawnRelationshipPlan
+         {
+@@ -116,6 +117,7 @@ namespace Ludots.Core.Gameplay.Spawning
+             _templateRegistry = templateRegistry ?? throw new ArgumentNullException(nameof(templateRegistry));
+             _templateKeys = templateKeys ?? throw new ArgumentNullException(nameof(templateKeys));
+             _effectRequests = effectRequests;
++            _auditDisableOnSpawnEffects = Environment.GetEnvironmentVariable("LUDOTS_AB_DISABLE_CONTINUOUS_EFFECT") == "1";
+             _authoringContext = authoringContext ?? ComponentAuthoringContext.Empty;
+             _builder = new EntityBuilder(world, _cachedTemplates, _authoringContext);
+             _stableIds = stableIds ?? throw new ArgumentNullException(nameof(stableIds));
+@@ -1564,6 +1566,13 @@ namespace Ludots.Core.Gameplay.Spawning
+             out int effectTemplateId,
+             out bool useSpawnedAsSource)
+         {
++            if (_auditDisableOnSpawnEffects)
++            {
++                effectTemplateId = 0;
++                useSpawnedAsSource = false;
++                return false;
++            }
++
+             effectTemplateId = request.OnSpawnEffectTemplateId > 0
+                 ? request.OnSpawnEffectTemplateId
+                 : cachedTemplateOnSpawnEffectId;
+diff --git a/src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs b/src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs
+index 609ffba8c3..f3e83c4e04 100644
+--- a/src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs
++++ b/src/Core/MassNavigation/Runtime/MassNavigationFlowSolverState.cs
+@@ -91,6 +91,7 @@ public sealed partial class MassNavigationFlowSolverState
+     private SonarSolver2D.Interval[] _sonarIntervalScratch = Array.Empty<SonarSolver2D.Interval>();
+     private readonly UnitStepJob[] _stepJobs;
+     private readonly JobHandle[] _stepHandles;
++    private readonly long[] _neighborCandidateChecksByWorker;
+ 
+     private readonly List<TeamRuntimeState> _teamStates = new();
+     private readonly List<FlowRuntimeState> _flowStates = new();
+@@ -122,11 +123,13 @@ public sealed partial class MassNavigationFlowSolverState
+     public int PendingEntitySyncCount => _entitySyncDirtyCount;
+     public int PendingArrivalEventCount => _arrivalEventCount;
+     public float LastFlowFieldRebuildMs { get; private set; }
++    public int AuditMovedAgents { get; private set; }
+     public int LastHardResolveCandidateAgentCount { get; private set; }
+     public int LastHardResolveFallbackProbeAgentCount { get; private set; }
+     public long LastHardResolveFallbackPairCheckCount { get; private set; }
+     public long LastHardResolvePairCheckCount { get; private set; }
+     public int LastHardResolvePenetratingPairCount { get; private set; }
++    public long LastAvoidanceNeighborCandidateCheckCount { get; private set; }
+     public MassNavigationFlowArrivalTuning ArrivalTuning { get; } = new();
+     public MassNavigationFlowAvoidanceTuning AvoidanceTuning { get; } = new();
+     public MassNavigationCrowdSemantics Semantics { get; } = new();
+@@ -204,6 +207,7 @@ public sealed partial class MassNavigationFlowSolverState
+         _hardResolveCellCursor = new int[hardResolveHashCellCount];
+         _stepJobs = CreateStepJobs(_parallelWorkerCount);
+         _stepHandles = new JobHandle[_parallelWorkerCount];
++        _neighborCandidateChecksByWorker = new long[_parallelWorkerCount];
+     }
+ 
+     internal void PreallocateAgentCapacity(int unitCapacity)
+@@ -941,9 +945,11 @@ public sealed partial class MassNavigationFlowSolverState
+     {
+         if (UnitCount <= 0)
+         {
++            LastAvoidanceNeighborCandidateCheckCount = 0;
+             return;
+         }
+ 
++        AuditMovedAgents = 0;
+         long prepStart = System.Diagnostics.Stopwatch.GetTimestamp();
+         RefreshTeamRelationshipMatrixIfStale();
+ 
+@@ -983,6 +989,7 @@ public sealed partial class MassNavigationFlowSolverState
+         {
+             long steeringStart = System.Diagnostics.Stopwatch.GetTimestamp();
+             StepRange(0, UnitCount, scratchWorkerIndex: 0, clampedDt, navGroupRuntime, sepRadiusSq, sepRadiusCm, arrivalRadiusCm, arrivalRadiusSq, unitTargetStopThresholdSq, hwm1, hhm1, invHashCell, flowObstacleNeighborRadiusCells, _useCandidateGating);
++            LastAvoidanceNeighborCandidateCheckCount = _neighborCandidateChecksByWorker[0];
+             observeLocalSteering?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - steeringStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
+             ClampAllPositionsToWorldBounds();
+             long resolveStart = System.Diagnostics.Stopwatch.GetTimestamp();
+@@ -1032,6 +1039,12 @@ public sealed partial class MassNavigationFlowSolverState
+         {
+             _stepHandles[workerIndex].Complete();
+         }
++        long neighborCandidateChecks = 0;
++        for (int workerIndex = 0; workerIndex < workerCount; workerIndex++)
++        {
++            neighborCandidateChecks += _neighborCandidateChecksByWorker[workerIndex];
++        }
++        LastAvoidanceNeighborCandidateCheckCount = neighborCandidateChecks;
+         observeLocalSteering?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - threadedSteeringStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
+ 
+         ClampAllPositionsToWorldBounds();
+@@ -1529,6 +1542,7 @@ public sealed partial class MassNavigationFlowSolverState
+             float dy = _positionsCm[i2 + 1] - _readPositionsCm[i2 + 1];
+             float dvx = _velocitiesCm[i2] - _readVelocitiesCm[i2];
+             float dvy = _velocitiesCm[i2 + 1] - _readVelocitiesCm[i2 + 1];
++            if ((dx * dx) + (dy * dy) > positionEpsilonSq) AuditMovedAgents++;
+             if ((dx * dx) + (dy * dy) > positionEpsilonSq ||
+                 (dvx * dvx) + (dvy * dvy) > velocityEpsilonSq)
+             {
+@@ -1692,6 +1706,7 @@ public sealed partial class MassNavigationFlowSolverState
+         bool useCandidateGating)
+     {
+         _ = sepRadiusSq;
++        long neighborCandidateChecks = 0;
+         for (int i = startIndex; i < endIndex; i++)
+         {
+             int i2 = i << 1;
+@@ -1972,6 +1987,7 @@ public sealed partial class MassNavigationFlowSolverState
+                         int j = _separationAgents[hashIndex];
+                         if (j != i)
+                         {
++                            neighborCandidateChecks++;
+                             if (!CanAgentsInteract(i, j))
+                             {
+                                 continue;
+@@ -2084,6 +2100,8 @@ public sealed partial class MassNavigationFlowSolverState
+             _positionsCm[i2] = nextX;
+             _positionsCm[i2 + 1] = nextY;
+         }
++
++        _neighborCandidateChecksByWorker[scratchWorkerIndex] = neighborCandidateChecks;
+     }
+ 
+     private void ClampAllPositionsToWorldBounds()
+diff --git a/src/Core/MassNavigation/Runtime/MassNavigationRuntime.cs b/src/Core/MassNavigation/Runtime/MassNavigationRuntime.cs
+index bb4b88ed19..de9fe475ac 100644
+--- a/src/Core/MassNavigation/Runtime/MassNavigationRuntime.cs
++++ b/src/Core/MassNavigation/Runtime/MassNavigationRuntime.cs
+@@ -193,6 +193,8 @@ public sealed class MassNavigationRuntime
+             return false;
+         }
+ 
++        ApplyAuditOverrides(loaded);
++
+         AgentProfileRegistry agentProfiles = engine.GetService(CoreServiceKeys.AgentProfiles)
+             ?? throw new InvalidOperationException("MassNavigation runtime requires AgentProfiles.");
+         loaded.AgentProfiles.BindAgentProfiles(agentProfiles);
+@@ -202,6 +204,56 @@ public sealed class MassNavigationRuntime
+         return true;
+     }
+ 
++    private static void ApplyAuditOverrides(MassNavigationConfig config)
++    {
++        string? totalAgentsRaw = Environment.GetEnvironmentVariable("LUDOTS_AB_TOTAL_AGENTS");
++        if (!string.IsNullOrWhiteSpace(totalAgentsRaw))
++        {
++            int teamCount = config.Scenario.Teams.Length;
++            if (!int.TryParse(totalAgentsRaw, out int totalAgents) ||
++                totalAgents <= 0 ||
++                teamCount <= 0 ||
++                totalAgents % teamCount != 0)
++            {
++                throw new InvalidOperationException(
++                    $"LUDOTS_AB_TOTAL_AGENTS must be a positive multiple of configured team count {teamCount}, got '{totalAgentsRaw}'.");
++            }
++
++            config.Scenario.AgentsPerTeam = totalAgents / teamCount;
++        }
++
++        string? speedRaw = Environment.GetEnvironmentVariable("LUDOTS_AB_AGENT_SPEED_CM_PER_SEC");
++        if (!string.IsNullOrWhiteSpace(speedRaw))
++        {
++            if (!float.TryParse(speedRaw, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float speed) ||
++                !float.IsFinite(speed) ||
++                speed < 0f)
++            {
++                throw new InvalidOperationException(
++                    $"LUDOTS_AB_AGENT_SPEED_CM_PER_SEC must be a finite non-negative float, got '{speedRaw}'.");
++            }
++
++            for (int i = 0; i < config.AgentProfiles.Profiles.Length; i++)
++            {
++                config.AgentProfiles.Profiles[i].SpeedCmPerSecond = speed;
++            }
++        }
++
++        string? density = Environment.GetEnvironmentVariable("LUDOTS_AB_DENSITY");
++        if (string.IsNullOrWhiteSpace(density) || string.Equals(density, "crowded", StringComparison.OrdinalIgnoreCase))
++        {
++            return;
++        }
++
++        if (!string.Equals(density, "sparse", StringComparison.OrdinalIgnoreCase))
++        {
++            throw new InvalidOperationException(
++                $"LUDOTS_AB_DENSITY must be 'crowded' or 'sparse', got '{density}'.");
++        }
++
++
++    }
++
+     private void EnsureScenario(GameEngine engine)
+     {
+         if (_scenarioSpawned &&
+diff --git a/src/Core/MassNavigation/Runtime/MassNavigationSimulationRuntime.cs b/src/Core/MassNavigation/Runtime/MassNavigationSimulationRuntime.cs
+index 6c67643b97..5cebb25fe8 100644
+--- a/src/Core/MassNavigation/Runtime/MassNavigationSimulationRuntime.cs
++++ b/src/Core/MassNavigation/Runtime/MassNavigationSimulationRuntime.cs
+@@ -157,6 +157,7 @@ public sealed class MassNavigationSimulationRuntime
+         public string SolverDriver;
+     }
+ 
++    public double[] AuditFrameTotals { get; } = new double[13];
+     public MassNavigationTelemetry Telemetry { get; } = new();
+     public int CommandCountFrame => Telemetry.CommandCountFrame;
+     public int StructuralChangesFrame => Telemetry.StructuralChangesFrame;
+@@ -184,6 +185,7 @@ public sealed class MassNavigationSimulationRuntime
+     public long LastHardResolveFallbackPairCheckCount => MassNavigationFlow.LastHardResolveFallbackPairCheckCount;
+     public long LastHardResolvePairCheckCount => MassNavigationFlow.LastHardResolvePairCheckCount;
+     public int LastHardResolvePenetratingPairCount => MassNavigationFlow.LastHardResolvePenetratingPairCount;
++    public long LastAvoidanceNeighborCandidateCheckCount => MassNavigationFlow.LastAvoidanceNeighborCandidateCheckCount;
+     public float LastEntitySyncMs => Telemetry.LastEntitySyncMs;
+     public float PresenterCommandMs => Telemetry.PresenterCommandMs;
+     public float ControlHzObserved => Telemetry.ControlHzObserved;
+@@ -404,13 +406,13 @@ public sealed class MassNavigationSimulationRuntime
+         }
+     }
+ 
+-    public void ObserveGroupTargetUpdate(double sampleMs) => Telemetry.ObserveGroupTargetUpdate(sampleMs);
+-    public void ObserveFlowFieldRebuild(double sampleMs) => Telemetry.ObserveFlowFieldRebuild(sampleMs);
+-    public void ObserveStepPrep(double sampleMs) => Telemetry.ObserveStepPrep(sampleMs);
+-    public void ObserveLocalSteering(double sampleMs) => Telemetry.ObserveLocalSteering(sampleMs);
+-    public void ObserveSimStep(double sampleMs) => Telemetry.ObserveSimStep(sampleMs);
+-    public void ObserveHardResolve(double sampleMs) => Telemetry.ObserveHardResolve(sampleMs);
+-    public void ObserveEntitySync(double sampleMs) => Telemetry.ObserveEntitySync(sampleMs);
++    public void ObserveGroupTargetUpdate(double sampleMs) { AuditFrameTotals[0] += sampleMs; Telemetry.ObserveGroupTargetUpdate(sampleMs); }
++    public void ObserveFlowFieldRebuild(double sampleMs) { AuditFrameTotals[1] += sampleMs; Telemetry.ObserveFlowFieldRebuild(sampleMs); }
++    public void ObserveStepPrep(double sampleMs) { AuditFrameTotals[2] += sampleMs; Telemetry.ObserveStepPrep(sampleMs); }
++    public void ObserveLocalSteering(double sampleMs) { AuditFrameTotals[3] += sampleMs; Telemetry.ObserveLocalSteering(sampleMs); }
++    public void ObserveSimStep(double sampleMs) { AuditFrameTotals[4] += sampleMs; Telemetry.ObserveSimStep(sampleMs); }
++    public void ObserveHardResolve(double sampleMs) { AuditFrameTotals[5] += sampleMs; Telemetry.ObserveHardResolve(sampleMs); }
++    public void ObserveEntitySync(double sampleMs) { AuditFrameTotals[6] += sampleMs; Telemetry.ObserveEntitySync(sampleMs); }
+     public void ObservePresenterCommand(double sampleMs) => Telemetry.ObservePresenterCommand(sampleMs);
+ 
+     public MassNavigationSolverDiagnostics CaptureSolverDiagnostics()
+diff --git a/src/Core/MassNavigation/Systems/MassNavigationLocomotionAnimatorParamSystem.cs b/src/Core/MassNavigation/Systems/MassNavigationLocomotionAnimatorParamSystem.cs
+index 792f33f6e2..93ee2675a6 100644
+--- a/src/Core/MassNavigation/Systems/MassNavigationLocomotionAnimatorParamSystem.cs
++++ b/src/Core/MassNavigation/Systems/MassNavigationLocomotionAnimatorParamSystem.cs
+@@ -12,6 +12,7 @@ internal sealed class MassNavigationLocomotionAnimatorParamSystem : BaseSystem<W
+ {
+     private readonly GameEngine _engine;
+     private readonly int _speedParamKey;
++    private readonly bool _auditDisabled;
+     private readonly QueryDescription _presenterQuery = new QueryDescription()
+         .WithAll<PresenterState, PresenterFloatParams, PresenterCullState>();
+ 
+@@ -20,10 +21,16 @@ internal sealed class MassNavigationLocomotionAnimatorParamSystem : BaseSystem<W
+     {
+         _engine = engine;
+         _speedParamKey = MassNavigationSimulationRuntime.ResolveAgentLocomotionSpeedParamKey();
++        _auditDisabled = Environment.GetEnvironmentVariable("LUDOTS_AB_DISABLE_ANIMATOR") == "1";
+     }
+ 
+     public override void Update(in float dt)
+     {
++        if (_auditDisabled)
++        {
++            return;
++        }
++
+         if (!MassNavigationIds.TryGetCurrentNavigationRuntime(_engine, out MassNavigationSimulationRuntime simulation))
+         {
+             return;
+diff --git a/src/Core/MassNavigation/Systems/MassNavigationSimulationStepSystem.cs b/src/Core/MassNavigation/Systems/MassNavigationSimulationStepSystem.cs
+index ccddfaece7..06a9fedea8 100644
+--- a/src/Core/MassNavigation/Systems/MassNavigationSimulationStepSystem.cs
++++ b/src/Core/MassNavigation/Systems/MassNavigationSimulationStepSystem.cs
+@@ -17,11 +17,16 @@ internal sealed class MassNavigationSimulationStepSystem : ISystem<float>
+     private Action<double>? _observeHardResolve;
+     private Action<double>? _observeFlowFieldRebuild;
+     private readonly PresentationTimingDiagnostics? _timingDiagnostics;
++    private readonly bool _auditDisabled;
++    private readonly bool _auditStatic = Environment.GetEnvironmentVariable("LUDOTS_AB_STATIC") == "1";
++    private readonly bool _auditSparse = Environment.GetEnvironmentVariable("LUDOTS_AB_DENSITY") == "sparse";
++    private bool _auditLayoutApplied;
+ 
+     public MassNavigationSimulationStepSystem(GameEngine engine)
+     {
+         _engine = engine;
+         _timingDiagnostics = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
++        _auditDisabled = Environment.GetEnvironmentVariable("LUDOTS_AB_DISABLE_MASSNAV") == "1";
+     }
+ 
+     public void Initialize() { }
+@@ -31,6 +36,11 @@ internal sealed class MassNavigationSimulationStepSystem : ISystem<float>
+ 
+     public void Update(in float dt)
+     {
++        if (_auditDisabled)
++        {
++            return;
++        }
++
+         if (!MassNavigationIds.TryGetCurrentNavigationRuntime(_engine, out MassNavigationSimulationRuntime simulation))
+         {
+             return;
+@@ -42,11 +52,26 @@ internal sealed class MassNavigationSimulationStepSystem : ISystem<float>
+             return;
+         }
+ 
++        if (!_auditLayoutApplied)
++        {
++            var flow = simulation.MassNavigationFlow;
++            if (_auditSparse)
++            {
++                int columns = (int)Math.Ceiling(Math.Sqrt(flow.UnitCount));
++                float spacing = (flow.FieldWidthCm - 600f) / columns;
++                for (int i = 0; i < flow.UnitCount; i++)
++                    flow.SetUnitPositionForTests(i, 300f + (i % columns + 0.5f) * spacing, 300f + (i / columns + 0.5f) * spacing);
++            }
++            if (_auditStatic)
++                for (int i = 0; i < flow.UnitCount; i++) flow.HoldUnitAtCurrentPosition(i);
++            _auditLayoutApplied = true;
++        }
+         int stepsToRun = simulation.CadenceScheduler.BeginFixedTick(dt);
+         for (int stepIndex = 0; stepIndex < stepsToRun; stepIndex++)
+         {
+             MassNavigationCadenceStep step = simulation.CadenceScheduler.NextSimulationStep();
+             simulation.ObserveSimTick();
++            simulation.AuditFrameTotals[7]++;
+ 
+             if (step.UpdateTargets)
+             {
+@@ -79,6 +104,14 @@ internal sealed class MassNavigationSimulationStepSystem : ISystem<float>
+                 _observeLocalSteering!,
+                 _observeHardResolve!);
+             simulation.ObserveSimStep((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
++            simulation.AuditFrameTotals[8] += simulation.MassNavigationFlow.LastAvoidanceNeighborCandidateCheckCount;
++            if (step.RunHardResolve)
++            {
++                simulation.AuditFrameTotals[9] += simulation.LastHardResolvePairCheckCount;
++                simulation.AuditFrameTotals[10] += simulation.LastHardResolveCandidateAgentCount;
++                simulation.AuditFrameTotals[11] += simulation.LastHardResolvePenetratingPairCount;
++            }
++            simulation.AuditFrameTotals[12] += simulation.MassNavigationFlow.AuditMovedAgents;
+ 
+             if (step.SyncEntities)
+             {
+diff --git a/src/Core/Presentation/Hud/PresentationTimingDiagnostics.cs b/src/Core/Presentation/Hud/PresentationTimingDiagnostics.cs
+index 4180d1a976..153ea48f91 100644
+--- a/src/Core/Presentation/Hud/PresentationTimingDiagnostics.cs
++++ b/src/Core/Presentation/Hud/PresentationTimingDiagnostics.cs
+@@ -94,6 +94,7 @@ namespace Ludots.Core.Presentation.Hud
+         public int PresenterDestroyEventScanCountLastFrame { get; private set; }
+         public float PresenterAnimatorMs { get; private set; }
+         public float LastPresenterAnimatorMs { get; private set; }
++        public int PresenterAnimatorUpdatesLastFrame { get; private set; }
+         public float PresenterEntityTransformSyncMs { get; private set; }
+         public float LastPresenterEntityTransformSyncMs { get; private set; }
+         public float PresenterMinimapMarkerMs { get; private set; }
+@@ -448,10 +449,11 @@ namespace Ludots.Core.Presentation.Hud
+             PresenterDestroyEventScanCountLastFrame = destroyEventScanCount;
+         }
+ 
+-        public void ObservePresenterAnimator(double sampleMs)
++        public void ObservePresenterAnimator(double sampleMs, int updatedCount = 0)
+         {
+             LastPresenterAnimatorMs = (float)sampleMs;
+             PresenterAnimatorMs = Smooth(PresenterAnimatorMs, (float)sampleMs);
++            PresenterAnimatorUpdatesLastFrame = updatedCount;
+         }
+ 
+         public void ObservePresenterEntityTransformSync(double sampleMs)
+diff --git a/src/Core/Presentation/Presenters/PresenterEntityRuntime.cs b/src/Core/Presentation/Presenters/PresenterEntityRuntime.cs
+index d4366ba4d9..1e6d819b6a 100644
+--- a/src/Core/Presentation/Presenters/PresenterEntityRuntime.cs
++++ b/src/Core/Presentation/Presenters/PresenterEntityRuntime.cs
+@@ -2056,7 +2056,8 @@ namespace Ludots.Core.Presentation.Presenters
+                     !_world.IsAlive(owner) ||
+                     !_world.Has<VisualTransform>(owner) ||
+                     !_world.Has<ContinuousHeightmapSampleState>(owner) ||
+-                    _world.Get<ContinuousHeightmapSampleState>(owner).Sampled == 0)
++                    (_world.Get<ContinuousHeightmapSampleState>(owner).Sampled == 0 &&
++                     Environment.GetEnvironmentVariable("LUDOTS_AB_SKIP_INITIAL_SAMPLE_TICK") != "1"))
+                 {
+                     return true;
+                 }
+diff --git a/src/Core/Presentation/Systems/AnimatorRuntimeSystem.cs b/src/Core/Presentation/Systems/AnimatorRuntimeSystem.cs
+index 50b96012c0..501d95205c 100644
+--- a/src/Core/Presentation/Systems/AnimatorRuntimeSystem.cs
++++ b/src/Core/Presentation/Systems/AnimatorRuntimeSystem.cs
+@@ -24,6 +24,7 @@ namespace Ludots.Core.Presentation.Systems
+         private readonly PresenterDefinitionRegistry _definitions;
+         private readonly PresenterAnimatorStateBuffer _animatorStates;
+         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
++        private readonly bool _auditDisabled;
+         private readonly QueryDescription _activeAnimatorQuery = new QueryDescription()
+             .WithAll<PresenterState, PerfHasAnimator, PresenterFloatParams, PresenterFloatDefaults, PresenterParent>();
+         private PresenterAnimatorSlot _scratchAnimatorSlot;
+@@ -42,11 +43,19 @@ namespace Ludots.Core.Presentation.Systems
+             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
+             _animatorStates = animatorStates ?? throw new ArgumentNullException(nameof(animatorStates));
+             _timingDiagnostics = timingDiagnostics;
++            _auditDisabled = Environment.GetEnvironmentVariable("LUDOTS_AB_DISABLE_ANIMATOR") == "1";
+             _runtime.BindDefinitions(_definitions);
+         }
+         public override void Update(in float dt)
+         {
++            if (_auditDisabled)
++            {
++                _timingDiagnostics?.ObservePresenterAnimator(0d, 0);
++                return;
++            }
++
+             long start = _timingDiagnostics != null ? Stopwatch.GetTimestamp() : 0L;
++            int updatedCount = 0;
+             float tickDt = dt;
+             int cachedDefId = -1;
+             PresenterDefinition? cachedDefinition = null;
+@@ -107,6 +116,7 @@ namespace Ludots.Core.Presentation.Systems
+                                 tickDt,
+                                 ref cachedControllerId,
+                                 ref cachedController);
++                            updatedCount++;
+                         }
+ 
+                         continue;
+@@ -139,12 +149,15 @@ namespace Ludots.Core.Presentation.Systems
+                             tickDt,
+                             ref cachedControllerId,
+                             ref cachedController);
++                        updatedCount++;
+                     }
+                 }
+             }
+ 
+             if (_timingDiagnostics != null)
+-                _timingDiagnostics.ObservePresenterAnimator((Stopwatch.GetTimestamp() - start) * 1000d / Stopwatch.Frequency);
++                _timingDiagnostics.ObservePresenterAnimator(
++                    (Stopwatch.GetTimestamp() - start) * 1000d / Stopwatch.Frequency,
++                    updatedCount);
+         }
+ 
+         private void UpdateAnimator(
+diff --git a/src/Core/Presentation/Systems/WorldHudToScreenSystem.cs b/src/Core/Presentation/Systems/WorldHudToScreenSystem.cs
+index bebd931e26..70ec5a39b0 100644
+--- a/src/Core/Presentation/Systems/WorldHudToScreenSystem.cs
++++ b/src/Core/Presentation/Systems/WorldHudToScreenSystem.cs
+@@ -39,6 +39,8 @@ namespace Ludots.Core.Presentation.Systems
+         private int _lastHeightmapRevision = -1;
+         private IContinuousHeightmap? _lastHeightmap;
+ 
++        public int LastTerrainRaycastCount { get; private set; }
++
+         public WorldHudToScreenSystem(
+             World world,
+             WorldHudBatchBuffer worldHud,
+@@ -63,6 +65,7 @@ namespace Ludots.Core.Presentation.Systems
+ 
+         public override void Update(in float dt)
+         {
++            LastTerrainRaycastCount = 0;
+             long start = Stopwatch.GetTimestamp();
+             int worldHudRevision = _worldHud.ContentRevision;
+             int worldHudProjectionRevision = _worldHud.ProjectionRevision;
+@@ -446,7 +449,7 @@ namespace Ludots.Core.Presentation.Systems
+             _ownerVisibilityCache[ownerKey] = new OwnerVisibilityCacheEntry(_frameCacheStamp, ownerVersion, visible);
+         }
+ 
+-        private static bool IsTerrainVisible(
++        private bool IsTerrainVisible(
+             System.Numerics.Vector3 worldPosition,
+             IContinuousHeightmap? heightmap,
+             System.Numerics.Vector2 screen,
+@@ -475,6 +478,7 @@ namespace Ludots.Core.Presentation.Systems
+             }
+ 
+             ScreenRay ray = new ScreenRay(origin, delta / targetDistance);
++            LastTerrainRaycastCount++;
+             if (!heightmap.TryRaycastGround(in ray, out VisualGroundHit hit))
+             {
+                 return true;

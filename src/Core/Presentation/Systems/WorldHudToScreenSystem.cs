@@ -39,6 +39,8 @@ namespace Ludots.Core.Presentation.Systems
         private int _lastHeightmapRevision = -1;
         private IContinuousHeightmap? _lastHeightmap;
 
+        public int LastTerrainRaycastCount { get; private set; }
+
         public WorldHudToScreenSystem(
             World world,
             WorldHudBatchBuffer worldHud,
@@ -63,6 +65,7 @@ namespace Ludots.Core.Presentation.Systems
 
         public override void Update(in float dt)
         {
+            LastTerrainRaycastCount = 0;
             long start = Stopwatch.GetTimestamp();
             int worldHudRevision = _worldHud.ContentRevision;
             int worldHudProjectionRevision = _worldHud.ProjectionRevision;
@@ -446,7 +449,7 @@ namespace Ludots.Core.Presentation.Systems
             _ownerVisibilityCache[ownerKey] = new OwnerVisibilityCacheEntry(_frameCacheStamp, ownerVersion, visible);
         }
 
-        private static bool IsTerrainVisible(
+        private bool IsTerrainVisible(
             System.Numerics.Vector3 worldPosition,
             IContinuousHeightmap? heightmap,
             System.Numerics.Vector2 screen,
@@ -475,6 +478,7 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             ScreenRay ray = new ScreenRay(origin, delta / targetDistance);
+            LastTerrainRaycastCount++;
             if (!heightmap.TryRaycastGround(in ray, out VisualGroundHit hit))
             {
                 return true;

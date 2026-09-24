@@ -94,6 +94,7 @@ namespace Ludots.Core.Presentation.Hud
         public int PresenterDestroyEventScanCountLastFrame { get; private set; }
         public float PresenterAnimatorMs { get; private set; }
         public float LastPresenterAnimatorMs { get; private set; }
+        public int PresenterAnimatorUpdatesLastFrame { get; private set; }
         public float PresenterEntityTransformSyncMs { get; private set; }
         public float LastPresenterEntityTransformSyncMs { get; private set; }
         public float PresenterMinimapMarkerMs { get; private set; }
@@ -448,10 +449,11 @@ namespace Ludots.Core.Presentation.Hud
             PresenterDestroyEventScanCountLastFrame = destroyEventScanCount;
         }
 
-        public void ObservePresenterAnimator(double sampleMs)
+        public void ObservePresenterAnimator(double sampleMs, int updatedCount = 0)
         {
             LastPresenterAnimatorMs = (float)sampleMs;
             PresenterAnimatorMs = Smooth(PresenterAnimatorMs, (float)sampleMs);
+            PresenterAnimatorUpdatesLastFrame = updatedCount;
         }
 
         public void ObservePresenterEntityTransformSync(double sampleMs)

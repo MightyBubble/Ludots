@@ -157,6 +157,7 @@ public sealed class MassNavigationSimulationRuntime
         public string SolverDriver;
     }
 
+    public double[] AuditFrameTotals { get; } = new double[13];
     public MassNavigationTelemetry Telemetry { get; } = new();
     public int CommandCountFrame => Telemetry.CommandCountFrame;
     public int StructuralChangesFrame => Telemetry.StructuralChangesFrame;
@@ -184,6 +185,7 @@ public sealed class MassNavigationSimulationRuntime
     public long LastHardResolveFallbackPairCheckCount => MassNavigationFlow.LastHardResolveFallbackPairCheckCount;
     public long LastHardResolvePairCheckCount => MassNavigationFlow.LastHardResolvePairCheckCount;
     public int LastHardResolvePenetratingPairCount => MassNavigationFlow.LastHardResolvePenetratingPairCount;
+    public long LastAvoidanceNeighborCandidateCheckCount => MassNavigationFlow.LastAvoidanceNeighborCandidateCheckCount;
     public float LastEntitySyncMs => Telemetry.LastEntitySyncMs;
     public float PresenterCommandMs => Telemetry.PresenterCommandMs;
     public float ControlHzObserved => Telemetry.ControlHzObserved;
@@ -404,13 +406,13 @@ public sealed class MassNavigationSimulationRuntime
         }
     }
 
-    public void ObserveGroupTargetUpdate(double sampleMs) => Telemetry.ObserveGroupTargetUpdate(sampleMs);
-    public void ObserveFlowFieldRebuild(double sampleMs) => Telemetry.ObserveFlowFieldRebuild(sampleMs);
-    public void ObserveStepPrep(double sampleMs) => Telemetry.ObserveStepPrep(sampleMs);
-    public void ObserveLocalSteering(double sampleMs) => Telemetry.ObserveLocalSteering(sampleMs);
-    public void ObserveSimStep(double sampleMs) => Telemetry.ObserveSimStep(sampleMs);
-    public void ObserveHardResolve(double sampleMs) => Telemetry.ObserveHardResolve(sampleMs);
-    public void ObserveEntitySync(double sampleMs) => Telemetry.ObserveEntitySync(sampleMs);
+    public void ObserveGroupTargetUpdate(double sampleMs) { AuditFrameTotals[0] += sampleMs; Telemetry.ObserveGroupTargetUpdate(sampleMs); }
+    public void ObserveFlowFieldRebuild(double sampleMs) { AuditFrameTotals[1] += sampleMs; Telemetry.ObserveFlowFieldRebuild(sampleMs); }
+    public void ObserveStepPrep(double sampleMs) { AuditFrameTotals[2] += sampleMs; Telemetry.ObserveStepPrep(sampleMs); }
+    public void ObserveLocalSteering(double sampleMs) { AuditFrameTotals[3] += sampleMs; Telemetry.ObserveLocalSteering(sampleMs); }
+    public void ObserveSimStep(double sampleMs) { AuditFrameTotals[4] += sampleMs; Telemetry.ObserveSimStep(sampleMs); }
+    public void ObserveHardResolve(double sampleMs) { AuditFrameTotals[5] += sampleMs; Telemetry.ObserveHardResolve(sampleMs); }
+    public void ObserveEntitySync(double sampleMs) { AuditFrameTotals[6] += sampleMs; Telemetry.ObserveEntitySync(sampleMs); }
     public void ObservePresenterCommand(double sampleMs) => Telemetry.ObservePresenterCommand(sampleMs);
 
     public MassNavigationSolverDiagnostics CaptureSolverDiagnostics()

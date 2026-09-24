@@ -17,11 +17,16 @@ internal sealed class MassNavigationSimulationStepSystem : ISystem<float>
     private Action<double>? _observeHardResolve;
     private Action<double>? _observeFlowFieldRebuild;
     private readonly PresentationTimingDiagnostics? _timingDiagnostics;
+    private readonly bool _auditDisabled;
+    private readonly bool _auditStatic = Environment.GetEnvironmentVariable("LUDOTS_AB_STATIC") == "1";
+    private readonly bool _auditSparse = Environment.GetEnvironmentVariable("LUDOTS_AB_DENSITY") == "sparse";
+    private bool _auditLayoutApplied;
 
     public MassNavigationSimulationStepSystem(GameEngine engine)
     {
         _engine = engine;
         _timingDiagnostics = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
+        _auditDisabled = Environment.GetEnvironmentVariable("LUDOTS_AB_DISABLE_MASSNAV") == "1";
     }
 
     public void Initialize() { }
@@ -31,6 +36,11 @@ internal sealed class MassNavigationSimulationStepSystem : ISystem<float>
 
     public void Update(in float dt)
     {
+        if (_auditDisabled)
+        {
+            return;
+        }
+
         if (!MassNavigationIds.TryGetCurrentNavigationRuntime(_engine, out MassNavigationSimulationRuntime simulation))
         {
             return;
@@ -42,11 +52,26 @@ internal sealed class MassNavigationSimulationStepSystem : ISystem<float>
             return;
         }
 
+        if (!_auditLayoutApplied)
+        {
+            var flow = simulation.MassNavigationFlow;
+            if (_auditSparse)
+            {
+                int columns = (int)Math.Ceiling(Math.Sqrt(flow.UnitCount));
+                float spacing = (flow.FieldWidthCm - 600f) / columns;
+                for (int i = 0; i < flow.UnitCount; i++)
+                    flow.SetUnitPositionForTests(i, 300f + (i % columns + 0.5f) * spacing, 300f + (i / columns + 0.5f) * spacing);
+            }
+            if (_auditStatic)
+                for (int i = 0; i < flow.UnitCount; i++) flow.HoldUnitAtCurrentPosition(i);
+            _auditLayoutApplied = true;
+        }
         int stepsToRun = simulation.CadenceScheduler.BeginFixedTick(dt);
         for (int stepIndex = 0; stepIndex < stepsToRun; stepIndex++)
         {
             MassNavigationCadenceStep step = simulation.CadenceScheduler.NextSimulationStep();
             simulation.ObserveSimTick();
+            simulation.AuditFrameTotals[7]++;
 
             if (step.UpdateTargets)
             {
@@ -79,6 +104,14 @@ internal sealed class MassNavigationSimulationStepSystem : ISystem<float>
                 _observeLocalSteering!,
                 _observeHardResolve!);
             simulation.ObserveSimStep((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
+            simulation.AuditFrameTotals[8] += simulation.MassNavigationFlow.LastAvoidanceNeighborCandidateCheckCount;
+            if (step.RunHardResolve)
+            {
+                simulation.AuditFrameTotals[9] += simulation.LastHardResolvePairCheckCount;
+                simulation.AuditFrameTotals[10] += simulation.LastHardResolveCandidateAgentCount;
+                simulation.AuditFrameTotals[11] += simulation.LastHardResolvePenetratingPairCount;
+            }
+            simulation.AuditFrameTotals[12] += simulation.MassNavigationFlow.AuditMovedAgents;
 
             if (step.SyncEntities)
             {

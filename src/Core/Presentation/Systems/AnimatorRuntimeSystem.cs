@@ -24,6 +24,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PresenterDefinitionRegistry _definitions;
         private readonly PresenterAnimatorStateBuffer _animatorStates;
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
+        private readonly bool _auditDisabled;
         private readonly QueryDescription _activeAnimatorQuery = new QueryDescription()
             .WithAll<PresenterState, PerfHasAnimator, PresenterFloatParams, PresenterFloatDefaults, PresenterParent>();
         private PresenterAnimatorSlot _scratchAnimatorSlot;
@@ -42,11 +43,19 @@ namespace Ludots.Core.Presentation.Systems
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
             _animatorStates = animatorStates ?? throw new ArgumentNullException(nameof(animatorStates));
             _timingDiagnostics = timingDiagnostics;
+            _auditDisabled = Environment.GetEnvironmentVariable("LUDOTS_AB_DISABLE_ANIMATOR") == "1";
             _runtime.BindDefinitions(_definitions);
         }
         public override void Update(in float dt)
         {
+            if (_auditDisabled)
+            {
+                _timingDiagnostics?.ObservePresenterAnimator(0d, 0);
+                return;
+            }
+
             long start = _timingDiagnostics != null ? Stopwatch.GetTimestamp() : 0L;
+            int updatedCount = 0;
             float tickDt = dt;
             int cachedDefId = -1;
             PresenterDefinition? cachedDefinition = null;
@@ -107,6 +116,7 @@ namespace Ludots.Core.Presentation.Systems
                                 tickDt,
                                 ref cachedControllerId,
                                 ref cachedController);
+                            updatedCount++;
                         }
 
                         continue;
@@ -139,12 +149,15 @@ namespace Ludots.Core.Presentation.Systems
                             tickDt,
                             ref cachedControllerId,
                             ref cachedController);
+                        updatedCount++;
                     }
                 }
             }
 
             if (_timingDiagnostics != null)
-                _timingDiagnostics.ObservePresenterAnimator((Stopwatch.GetTimestamp() - start) * 1000d / Stopwatch.Frequency);
+                _timingDiagnostics.ObservePresenterAnimator(
+                    (Stopwatch.GetTimestamp() - start) * 1000d / Stopwatch.Frequency,
+                    updatedCount);
         }
 
         private void UpdateAnimator(
