@@ -42,11 +42,6 @@ public sealed class EntityInsightProfileLoader
         {
             JsonObject node = nodes[profileIndex].Node;
             string profileId = ReadRequiredString(node, "id");
-            if (node.ContainsKey("instances"))
-            {
-                throw new InvalidOperationException(
-                    $"Entity insight profile '{profileId}' is a template table and cannot list instances. Bind entityInfo.titleToken on the map placement.");
-            }
             int[] templateKeyIds = ReadTemplateKeyIds(node, templateKeys, profileId);
             for (int i = 0; i < templateKeyIds.Length; i++)
             {

@@ -1338,8 +1338,7 @@ namespace Ludots.Core.Systems
                 string token = ReadEntityInfoTitleToken(row.EntityInfo, $"{context} overridePaths '{path}'");
                 if (token == null)
                 {
-                    throw new InvalidOperationException(
-                        $"{context} overridePaths '{path}' is not loaded. A child title uses entityInfo.titleToken on that path.");
+                    throw new InvalidOperationException($"{context} overridePaths '{path}' is not loaded.");
                 }
 
                 if (!bindings.TryAdd(path, token))

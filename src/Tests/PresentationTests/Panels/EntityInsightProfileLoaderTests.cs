@@ -82,7 +82,7 @@ public sealed class EntityInsightProfileLoaderTests
     }
 
     [Test]
-    public void Load_StoresProfileTitle_AndRejectsInstanceList()
+    public void Load_StoresOptionalProfileTitle()
     {
         LoadedInsight loaded = Load(HappyProfiles());
 
@@ -90,18 +90,6 @@ public sealed class EntityInsightProfileLoaderTests
         Assert.That(hero.TitleTokenId, Is.EqualTo(loaded.Text.GetTokenId("hero.shared.title")));
         Assert.That(loaded.Insight.TryGetProfileByTemplateKey(loaded.ScoutKeyId, out EntityInsightProfile scout), Is.True);
         Assert.That(scout.TitleTokenId, Is.EqualTo(0));
-    }
-
-    [Test]
-    public void Load_InstancesKey_Fails()
-    {
-        string profiles = HappyProfiles().Replace(
-            "\"titleToken\": \"hero.shared.title\",",
-            "\"titleToken\": \"hero.shared.title\", \"instances\": [],",
-            StringComparison.Ordinal);
-        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => Load(profiles))!;
-        Assert.That(ex.Message, Does.Contain("cannot list instances"));
-        Assert.That(ex.Message, Does.Contain("entityInfo.titleToken"));
     }
 
     [Test]
