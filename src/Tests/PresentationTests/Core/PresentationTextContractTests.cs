@@ -4,6 +4,7 @@ using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Config;
@@ -1088,6 +1089,190 @@ namespace Ludots.Tests.Presentation
             Assert.That(selection.ActiveLocaleKey, Is.EqualTo("zh-CN"));
         }
 
+        [Test]
+        public void HudOwnerFrameSnapshot_AlignsAttributeColumnsWithRowCapacity()
+        {
+            var world = World.Create();
+            try
+            {
+                const int health = 3;
+                const int stamina = 4;
+                var snapshot = new HudOwnerFrameSnapshot();
+
+                snapshot.RegisterTrackedAttribute(health);
+                Entity first = CreateAttributedOwner(world, health, current: 40f, baseValue: 150f);
+                snapshot.Rebuild(world);
+                AssertAttributeRow(snapshot, world, first, health);
+                Assert.That(snapshot.TryGetAttributeValues(1, health, out _, out _), Is.False);
+
+                snapshot.RegisterTrackedAttribute(stamina);
+                AssertAttributeRow(snapshot, first, stamina, current: 0f, baseValue: 0f);
+
+                SetAttribute(world, first, health, current: 12f, baseValue: 80f);
+                SetAttribute(world, first, stamina, current: 9f, baseValue: 30f);
+                snapshot.Rebuild(world);
+                AssertAttributeRow(snapshot, world, first, health);
+                AssertAttributeRow(snapshot, world, first, stamina);
+
+                Entity cullOnly = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
+                snapshot.Rebuild(world);
+                AssertAttributeRow(snapshot, world, first, health);
+                AssertAttributeRow(snapshot, world, first, stamina);
+                AssertAttributeRow(snapshot, cullOnly, health, current: 0f, baseValue: 0f);
+                AssertAttributeRow(snapshot, cullOnly, stamina, current: 0f, baseValue: 0f);
+
+                world.Destroy(first);
+                world.Destroy(cullOnly);
+                Entity replacement = world.Create(new CullState { IsVisible = false, LOD = LODLevel.Low });
+                snapshot.Rebuild(world);
+                Assert.That(snapshot.TryGetRow(first, out _), Is.False);
+                AssertAttributeRow(snapshot, replacement, health, current: 0f, baseValue: 0f);
+                AssertAttributeRow(snapshot, replacement, stamina, current: 0f, baseValue: 0f);
+            }
+            finally
+            {
+                World.Destroy(world);
+            }
+        }
+
+        [Test]
+        public void HudOwnerFrameSnapshot_AlignsAttributeColumn_WhenRegisteredWithNoLiveOwners()
+        {
+            var world = World.Create();
+            try
+            {
+                const int health = 3;
+                var snapshot = new HudOwnerFrameSnapshot();
+                Entity first = CreateAttributedOwner(world, health, current: 40f, baseValue: 150f);
+                snapshot.Rebuild(world);
+                world.Destroy(first);
+                snapshot.Rebuild(world);
+
+                snapshot.RegisterTrackedAttribute(health);
+                Entity returned = CreateAttributedOwner(world, health, current: 7f, baseValue: 20f);
+                snapshot.Rebuild(world);
+                AssertAttributeRow(snapshot, world, returned, health);
+            }
+            finally
+            {
+                World.Destroy(world);
+            }
+        }
+
+        [Test]
+        public void HudOwnerFrameSnapshot_GrowsAttributeColumnsPastFirstCapacityBlock()
+        {
+            var world = World.Create();
+            try
+            {
+                const int health = 3;
+                const int firstBlock = 64;
+                var snapshot = new HudOwnerFrameSnapshot();
+                var owners = new Entity[firstBlock];
+                for (int i = 0; i < owners.Length; i++)
+                {
+                    owners[i] = CreateAttributedOwner(world, health, current: i, baseValue: 100f);
+                }
+
+                snapshot.Rebuild(world);
+                snapshot.RegisterTrackedAttribute(health);
+                Entity extra = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
+                snapshot.Rebuild(world);
+
+                AssertAttributeRow(snapshot, world, owners[0], health);
+                AssertAttributeRow(snapshot, world, owners[firstBlock - 1], health);
+                AssertAttributeRow(snapshot, extra, health, current: 0f, baseValue: 0f);
+            }
+            finally
+            {
+                World.Destroy(world);
+            }
+        }
+
+        [Test]
+        public void WorldHudToScreenSystem_RefreshesBoundText_WhenCullOnlyOwnerAppearsInsideCapacity()
+        {
+            var world = World.Create();
+            try
+            {
+                const int health = 3;
+                var worldHud = new WorldHudBatchBuffer(4);
+                var screenHud = new ScreenHudBatchBuffer(4);
+                Entity owner = CreateAttributedOwner(world, health, current: 40f, baseValue: 150f);
+                worldHud.TryAdd(new WorldHudItem
+                {
+                    StableId = 42,
+                    DirtySerial = 1,
+                    Owner = owner,
+                    Kind = WorldHudItemKind.Text,
+                    WorldPosition = new Vector3(10f, 2f, 0f),
+                    FontSize = 16,
+                    Value0 = 0f,
+                    Value1 = 0f,
+                    Id1 = (int)WorldHudValueMode.AttributeCurrentOverBase,
+                    ValueBound = 1,
+                    BoundAttributeId = health,
+                });
+
+                var system = new WorldHudToScreenSystem(
+                    world,
+                    worldHud,
+                    strings: null,
+                    projector: new FixedProjector(new Vector2(320f, 240f)),
+                    view: new FixedViewController(new Vector2(1920f, 1080f)),
+                    screenHud: screenHud);
+
+                system.Update(0f);
+                Assert.That(screenHud.TextCount, Is.EqualTo(1));
+                Assert.That(screenHud.HasAttributeBoundTexts, Is.True);
+
+                system.Update(0f);
+                Assert.That(screenHud.GetTextSpan()[0].Value0, Is.EqualTo(40f));
+                Assert.That(screenHud.GetTextSpan()[0].Value1, Is.EqualTo(150f));
+
+                world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
+                SetAttribute(world, owner, health, current: 55f, baseValue: 150f);
+                system.Update(0f);
+
+                Assert.That(screenHud.TextCount, Is.EqualTo(1));
+                Assert.That(screenHud.GetTextSpan()[0].Value0, Is.EqualTo(55f));
+                Assert.That(screenHud.GetTextSpan()[0].Value1, Is.EqualTo(150f));
+            }
+            finally
+            {
+                World.Destroy(world);
+            }
+        }
+
+        [Test]
+        public void WorldHudToScreenSystem_DoesNotTrackAttributes_ForUnboundBar()
+        {
+            var world = World.Create();
+            try
+            {
+                var worldHud = new WorldHudBatchBuffer(4);
+                var screenHud = new ScreenHudBatchBuffer(4);
+                EmitWorldHudBar(worldHud);
+                var system = new WorldHudToScreenSystem(
+                    world,
+                    worldHud,
+                    strings: null,
+                    projector: new FixedProjector(new Vector2(320f, 240f)),
+                    view: new FixedViewController(new Vector2(1920f, 1080f)),
+                    screenHud: screenHud);
+
+                system.Update(0f);
+                system.Update(0f);
+
+                Assert.That(screenHud.BarCount, Is.EqualTo(1));
+                Assert.That(screenHud.HasAttributeBoundTexts, Is.False);
+            }
+            finally
+            {
+                World.Destroy(world);
+            }
+        }
+
         private static (VirtualFileSystem vfs, ModLoader modLoader, ConfigPipeline pipeline, ConfigCatalog catalog)
             BuildPipeline(string root, string[]? modIds = null)
         {
@@ -1143,6 +1328,53 @@ namespace Ludots.Tests.Presentation
             }
 
             throw new DirectoryNotFoundException("Repository root not found from test work directory.");
+        }
+
+        private static Entity CreateAttributedOwner(World world, int attributeId, float current, float baseValue)
+        {
+            Entity owner = world.Create(
+                new AttributeBuffer(),
+                new CullState { IsVisible = true, LOD = LODLevel.High });
+            SetAttribute(world, owner, attributeId, current, baseValue);
+            return owner;
+        }
+
+        private static void SetAttribute(World world, Entity owner, int attributeId, float current, float baseValue)
+        {
+            ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(owner);
+            attributes.SetBase(attributeId, baseValue);
+            attributes.SetCurrent(attributeId, current);
+        }
+
+        private static void AssertAttributeRow(
+            HudOwnerFrameSnapshot snapshot,
+            World world,
+            Entity owner,
+            int attributeId)
+        {
+            ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(owner);
+            AssertAttributeRow(
+                snapshot,
+                owner,
+                attributeId,
+                attributes.GetCurrent(attributeId),
+                attributes.GetBase(attributeId));
+        }
+
+        private static void AssertAttributeRow(
+            HudOwnerFrameSnapshot snapshot,
+            Entity owner,
+            int attributeId,
+            float current,
+            float baseValue)
+        {
+            Assert.That(snapshot.TryGetRow(owner, out int row), Is.True, $"owner {owner.Id} must be in the frame snapshot");
+            Assert.That(
+                snapshot.TryGetAttributeValues(row, attributeId, out float actualCurrent, out float actualBase),
+                Is.True,
+                $"attribute {attributeId} must be readable for owner {owner.Id}");
+            Assert.That(actualCurrent, Is.EqualTo(current));
+            Assert.That(actualBase, Is.EqualTo(baseValue));
         }
 
         private static void EmitWorldHudBar(WorldHudBatchBuffer worldHud)
