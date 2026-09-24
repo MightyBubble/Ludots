@@ -44,8 +44,12 @@ public sealed partial class MassNavigationFlowSolverState
 
             if (!world.IsAlive(entity))
             {
-                throw new InvalidOperationException(
-                    $"MassNavigationFlowSolverState cannot sync unit {i} because tracked entity {entity.Id} is not alive.");
+                // Agents destroyed outside the nav runtime's own removal (death rule,
+                // two-phase presentation destroy) stay dirty for one removal cycle;
+                // skipping the pose write is the guard — the metadata sync drops the
+                // slot on its next pass.
+                syncedCount--;
+                continue;
             }
 
             int i2 = i << 1;

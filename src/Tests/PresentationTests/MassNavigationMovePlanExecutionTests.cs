@@ -48,7 +48,7 @@ public sealed class MassNavigationMovePlanExecutionTests
             new EntityLayer(layer.CategoryMask, layer.InteractionMask),
             new FacingDirection { AngleRad = 0f });
         var seed = new MassNavigationAgentSeed(
-            teamId: MassNavigationOrderChainTests.LocalTeamId,
+            relationshipDomainId: MassNavigationOrderChainTests.LocalTeamId,
             localPositionXCm: 1_000f,
             localPositionYCm: 1_000f,
             heavy: false,
