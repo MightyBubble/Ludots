@@ -41,6 +41,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly IGraphRuntimeApi _graphApi;
         private readonly TagOps _tagOps;
         private readonly ProgressionRequirementEvaluator _progressionRequirements;
+        private readonly AbilityActivationEligibilityQuery _activationEligibility;
         private readonly CommandBuffer _structuralCommands = new();
 
         private readonly int _castAbilityOrderTypeId;
@@ -82,7 +83,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             TagOps tagOps = null,
             OrderTypeRegistry orderTypeRegistry = null,
             ProgressionRequirementEvaluator progressionRequirements = null,
-            int maxWorkUnitsPerSlice = int.MaxValue)
+            int maxWorkUnitsPerSlice = int.MaxValue,
+            AbilityActivationEligibilityQuery activationEligibility = null)
             : base(world)
         {
             if (snapshotCapacity <= 0)
@@ -105,6 +107,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _tagOps = tagOps ?? throw new InvalidOperationException(TagOps.MissingTagOpsError);
             _orderTypeRegistry = orderTypeRegistry;
             _progressionRequirements = progressionRequirements;
+            _activationEligibility = activationEligibility ?? new AbilityActivationEligibilityQuery(
+                world,
+                abilityDefinitions,
+                _tagOps,
+                graphPrograms,
+                graphApi,
+                progressionRequirements);
             MaxWorkUnitsPerSlice = maxWorkUnitsPerSlice;
             _runtimeStateEntity = world.Create(new AbilityExecRuntimeState
             {
@@ -168,8 +177,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     ref var orderBuffer = ref World.Get<OrderBuffer>(actor);
                     if (!orderBuffer.HasActive || !IsAbilityActivationOrderType(orderBuffer.ActiveOrder.Order.OrderTypeId)) continue;
 
-                    ref var actorTags = ref World.TryGetRef<GameplayTagContainer>(actor, out bool hasActorTags);
-                    
                     // Read slotIndex from Blackboard (Cast_SlotIndex = 110)
                     ref var bbInts = ref World.Get<BlackboardIntBuffer>(actor);
                     if (!bbInts.TryGet(OrderBlackboardKeys.Cast_SlotIndex, out int slotIndex))
@@ -182,13 +189,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         FailAbilityStart(actor, slotIndex, 0, AbilityCastFailReason.InvalidSlot, OrderFailureReason.NegativeAbilitySlot);
                         continue;
                     }
-                    
-                    if (!AbilitySlotResolver.TryResolve(World, actor, slotIndex, out AbilitySlotState slot))
-                    {
-                        FailAbilityStart(actor, slotIndex, 0, AbilityCastFailReason.InvalidSlot, OrderFailureReason.AbilitySlotOutOfRange);
-                        continue;
-                    }
-                    
+
                     // Read target from Blackboard (Cast_TargetEntity = 111)
                     Entity targetEntity = default;
                     if (World.Has<BlackboardEntityBuffer>(actor))
@@ -199,103 +200,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     Entity targetContext = World.IsAlive(orderBuffer.ActiveOrder.Order.TargetContext)
                         ? orderBuffer.ActiveOrder.Order.TargetContext
                         : default;
-
-                    AbilityDefinition abilityDef = default;
-                    bool hasAbilityDef = slot.AbilityId > 0 &&
-                        _abilityDefinitions != null &&
-                        _abilityDefinitions.TryGet(slot.AbilityId, out abilityDef);
-                    Entity templateEntity = default;
-                    bool hasTemplateEntity = false;
-                    if (slot.TemplateEntityId > 0)
-                    {
-                        templateEntity = EntityUtil.Reconstruct(slot.TemplateEntityId, slot.TemplateEntityWorldId, slot.TemplateEntityVersion);
-                        hasTemplateEntity = World.IsAlive(templateEntity);
-                    }
-
-                    // Toggle check comes before activation block tags so a toggled-on ability
-                    // can always be turned off, even while its reactivate cooldown is present.
-                    if (hasAbilityDef &&
-                        abilityDef.HasToggleSpec &&
-                        abilityDef.ToggleSpec.ToggleTagId > 0 &&
-                        hasActorTags &&
-                        actorTags.HasTag(abilityDef.ToggleSpec.ToggleTagId))
-                    {
-                        DeactivateToggle(
-                            actor,
-                            in abilityDef.ToggleSpec,
-                            orderBuffer.ActiveOrder.Order.OrderId,
-                            slotIndex,
-                            slot.AbilityId,
-                            targetEntity);
-                        continue;
-                    }
-
-                    // Block-tag check
-                    AbilityActivationBlockTags blockTags = default;
-                    bool hasBlockTags = false;
-                    if (hasAbilityDef && abilityDef.HasActivationBlockTags)
-                    {
-                        blockTags = abilityDef.ActivationBlockTags;
-                        hasBlockTags = true;
-                    }
-                    else if (hasTemplateEntity)
-                    {
-                        if (World.Has<AbilityActivationBlockTags>(templateEntity))
-                        {
-                            blockTags = World.Get<AbilityActivationBlockTags>(templateEntity);
-                            hasBlockTags = true;
-                        }
-                    }
-
-                    if (hasBlockTags)
-                    {
-                        if (!AbilityActivationBlockTagEvaluator.Passes(World, actor, _tagOps, in blockTags))
-                        {
-                            CancelAbilityStart(actor, targetEntity, slotIndex, slot.AbilityId, AbilityCastFailReason.BlockedByTag);
-                            continue;
-                        }
-                    }
-
-                    AbilityActivationPrecondition activationPrecondition = default;
-                    bool hasActivationPrecondition = false;
-                    if (hasAbilityDef && abilityDef.HasActivationPrecondition)
-                    {
-                        activationPrecondition = abilityDef.ActivationPrecondition;
-                        hasActivationPrecondition = true;
-                    }
-                    else if (hasTemplateEntity && World.Has<AbilityActivationPrecondition>(templateEntity))
-                    {
-                        activationPrecondition = World.Get<AbilityActivationPrecondition>(templateEntity);
-                        hasActivationPrecondition = true;
-                    }
-
-                    AbilityExecSpec startSpec = hasAbilityDef
-                        ? abilityDef.ExecSpec
-                        : hasTemplateEntity && World.Has<AbilityExecSpec>(templateEntity)
-                            ? World.Get<AbilityExecSpec>(templateEntity)
-                            : default;
-                    if (!hasAbilityDef && !hasTemplateEntity)
-                    {
-                        FailAbilityStart(actor, slotIndex, slot.AbilityId, AbilityCastFailReason.InvalidSlot, OrderFailureReason.AbilityDefinitionMissing);
-                        continue;
-                    }
-                    int useRequirementId = ResolveUseProgressionRequirementId(hasAbilityDef, in abilityDef, hasTemplateEntity, templateEntity);
-                    bool pendingProgressionUseRequirement = false;
-                    if (useRequirementId > 0)
-                    {
-                        bool requiresExplicitScope = RequiresExplicitScope(useRequirementId);
-                        if (requiresExplicitScope &&
-                            !World.IsAlive(targetContext) &&
-                            AbilityCanResolveTargetContextBeforeSideEffects(in startSpec))
-                        {
-                            pendingProgressionUseRequirement = true;
-                        }
-                        else if (!EvaluateProgressionRequirement(actor, targetEntity, targetContext, useRequirementId))
-                        {
-                            CancelAbilityStart(actor, targetEntity, slotIndex, slot.AbilityId, AbilityCastFailReason.PreconditionFailed);
-                            continue;
-                        }
-                    }
 
                     Fix64Vec2 targetOriginPosCm = default;
                     bool hasTargetOriginPos = false;
@@ -321,29 +225,50 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         }
                     }
 
-                    if (hasActivationPrecondition)
+                    IntVector2 validationTargetPos = default;
+                    if (hasTargetPos)
                     {
-                        IntVector2 validationTargetPos = default;
-                        if (hasTargetPos)
-                        {
-                            var roundedTargetPos = targetPosCm.RoundToInt();
-                            validationTargetPos = new IntVector2(roundedTargetPos.x, roundedTargetPos.y);
-                        }
-
-                        if (!AbilityActivationPreconditionEvaluator.Evaluate(
-                                World,
-                                actor,
-                                targetEntity,
-                                validationTargetPos,
-                                slot.AbilityId,
-                                in activationPrecondition,
-                                _graphPrograms,
-                                _graphApi))
-                        {
-                            CancelAbilityStart(actor, targetEntity, slotIndex, slot.AbilityId, AbilityCastFailReason.PreconditionFailed);
-                            continue;
-                        }
+                        var roundedTargetPos = targetPosCm.RoundToInt();
+                        validationTargetPos = new IntVector2(roundedTargetPos.x, roundedTargetPos.y);
                     }
+
+                    var eligibilityRequest = new AbilityActivationEligibilityRequest(
+                        actor,
+                        slotIndex,
+                        targetEntity,
+                        targetContext,
+                        validationTargetPos,
+                        hasTargetPos);
+                    AbilityActivationEligibilityResult eligibility =
+                        _activationEligibility.Evaluate(in eligibilityRequest);
+                    if (!eligibility.IsEligible)
+                    {
+                        HandleEligibilityRefusal(actor, targetEntity, slotIndex, in eligibility);
+                        continue;
+                    }
+
+                    // Toggle check comes before activation block tags so a toggled-on ability
+                    // can always be turned off, even while its reactivate cooldown is present.
+                    if (eligibility.IsToggleDeactivation)
+                    {
+                        DeactivateToggle(
+                            actor,
+                            in eligibility.Definition.ToggleSpec,
+                            orderBuffer.ActiveOrder.Order.OrderId,
+                            slotIndex,
+                            eligibility.EffectiveSlot.AbilityId,
+                            targetEntity);
+                        continue;
+                    }
+
+                    AbilitySlotState slot = eligibility.EffectiveSlot;
+                    AbilityExecSpec startSpec = eligibility.HasDefinition
+                        ? eligibility.Definition.ExecSpec
+                        : eligibility.HasTemplateEntity && World.Has<AbilityExecSpec>(eligibility.TemplateEntity)
+                            ? World.Get<AbilityExecSpec>(eligibility.TemplateEntity)
+                            : default;
+                    int useRequirementId = eligibility.UseProgressionRequirementId;
+                    bool pendingProgressionUseRequirement = eligibility.ProgressionRequirementDeferred;
 
                     EnsurePresentationEventCapacity(2, GasPresentationEventKind.CastStarted);
 
@@ -644,31 +569,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                    (_castAbilityStartOrderTypeId > 0 && orderTypeId == _castAbilityStartOrderTypeId);
         }
 
-        private int ResolveUseProgressionRequirementId(bool hasAbilityDef, in AbilityDefinition abilityDef, bool hasTemplateEntity, Entity templateEntity)
-        {
-            if (hasAbilityDef && abilityDef.HasUseProgressionRequirement)
-            {
-                return abilityDef.UseProgressionRequirementId;
-            }
-
-            if (hasTemplateEntity && World.Has<AbilityProgressionRequirements>(templateEntity))
-            {
-                return World.Get<AbilityProgressionRequirements>(templateEntity).UseRequirementId;
-            }
-
-            return 0;
-        }
-
-        private bool RequiresExplicitScope(int requirementId)
-        {
-            if (_progressionRequirements == null)
-            {
-                throw new InvalidOperationException("Ability progression requirement is configured, but ProgressionRequirementEvaluator is not registered.");
-            }
-
-            return _progressionRequirements.RequiresExplicitScope(requirementId);
-        }
-
         private bool EvaluateProgressionRequirement(Entity actor, Entity subject, Entity explicitScopeHost, int requirementId)
         {
             if (requirementId <= 0)
@@ -690,27 +590,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 subject: resolvedSubject,
                 explicitScopeHost: resolvedExplicitScopeHost);
             return _progressionRequirements.Evaluate(requirementId, in context);
-        }
-
-        private static bool AbilityCanResolveTargetContextBeforeSideEffects(in AbilityExecSpec spec)
-        {
-            for (int i = 0; i < spec.ItemCount; i++)
-            {
-                ExecItemKind kind = spec.GetKind(i);
-                if (kind == ExecItemKind.InputGate || kind == ExecItemKind.TargetCollectionGate)
-                {
-                    return true;
-                }
-
-                if (kind == ExecItemKind.None)
-                {
-                    continue;
-                }
-
-                return false;
-            }
-
-            return false;
         }
 
         private bool TrySatisfyPendingProgressionUseRequirement(Entity actor, ref AbilityExecInstance inst)
@@ -749,11 +628,56 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             });
         }
 
+        private void HandleEligibilityRefusal(
+            Entity actor,
+            Entity targetEntity,
+            int slotIndex,
+            in AbilityActivationEligibilityResult eligibility)
+        {
+            int abilityId = eligibility.EffectiveSlot.AbilityId;
+            switch (eligibility.RefusalReason)
+            {
+                case AbilityActivationRefusalReason.ActorNotAlive:
+                    FailAbilityStart(actor, slotIndex, abilityId, AbilityCastFailReason.NotAlive, OrderFailureReason.AbilityUnavailable);
+                    return;
+                case AbilityActivationRefusalReason.AbilityStateMissing:
+                    FailAbilityStart(actor, slotIndex, abilityId, AbilityCastFailReason.InvalidSlot, OrderFailureReason.AbilityUnavailable);
+                    return;
+                case AbilityActivationRefusalReason.AbilitySlotInvalid:
+                    FailAbilityStart(actor, slotIndex, abilityId, AbilityCastFailReason.InvalidSlot, OrderFailureReason.AbilitySlotOutOfRange);
+                    return;
+                case AbilityActivationRefusalReason.AbilityDefinitionMissing:
+                    FailAbilityStart(actor, slotIndex, abilityId, AbilityCastFailReason.InvalidSlot, OrderFailureReason.AbilityDefinitionMissing);
+                    return;
+                case AbilityActivationRefusalReason.RequiredActivationTagMissing:
+                case AbilityActivationRefusalReason.BlockedActivationTagPresent:
+                    CancelAbilityStart(actor, targetEntity, slotIndex, abilityId, AbilityCastFailReason.BlockedByTag);
+                    return;
+                case AbilityActivationRefusalReason.ActivationPreconditionFailed:
+                    CancelAbilityStart(actor, targetEntity, slotIndex, abilityId, AbilityCastFailReason.PreconditionFailed);
+                    return;
+                case AbilityActivationRefusalReason.ProgressionRequirementFailed:
+                    CancelAbilityStart(actor, targetEntity, slotIndex, abilityId, AbilityCastFailReason.ProgressionRequirementFailed);
+                    return;
+                case AbilityActivationRefusalReason.ActuatorNotReady:
+                    CancelAbilityStart(actor, targetEntity, slotIndex, abilityId, AbilityCastFailReason.ActuatorNotReady);
+                    return;
+                case AbilityActivationRefusalReason.AimGateNotReady:
+                    CancelAbilityStart(actor, targetEntity, slotIndex, abilityId, AbilityCastFailReason.AimGateNotReady);
+                    return;
+                default:
+                    throw new InvalidOperationException(
+                        $"Unsupported ability activation refusal reason {eligibility.RefusalReason}.");
+            }
+        }
+
         private void CancelAbilityStart(Entity actor, Entity targetEntity, int slotIndex, int abilityId, AbilityCastFailReason reason)
         {
-            OrderFailureReason orderReason = reason == AbilityCastFailReason.PreconditionFailed
-                ? OrderFailureReason.PreconditionFailed
-                : OrderFailureReason.ActivationBlocked;
+            OrderFailureReason orderReason =
+                reason == AbilityCastFailReason.PreconditionFailed ||
+                reason == AbilityCastFailReason.ProgressionRequirementFailed
+                    ? OrderFailureReason.PreconditionFailed
+                    : OrderFailureReason.ActivationBlocked;
             EnsureOrderTerminalResultCapacity(actor, OrderTerminalState.Failed);
             EnsurePresentationEventCapacity(1, GasPresentationEventKind.CastFailed);
             if (_orderTypeRegistry != null)

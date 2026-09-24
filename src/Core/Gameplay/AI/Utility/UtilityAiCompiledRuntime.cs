@@ -2,9 +2,27 @@ using System;
 using System.Collections.Generic;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.GraphRuntime;
 
 namespace Ludots.Core.Gameplay.AI.Utility
 {
+    public sealed class UtilityAiRuntimeSource
+    {
+        public UtilityAiRuntimeSource(UtilityAiCompiledRuntime current)
+        {
+            Current = current;
+        }
+
+        public UtilityAiCompiledRuntime Current { get; private set; }
+        public int Version { get; private set; }
+
+        public void Update(UtilityAiCompiledRuntime current)
+        {
+            Current = current;
+            Version++;
+        }
+    }
+
     public sealed class UtilityAiAuthoringCatalog
     {
         private readonly Dictionary<string, int> _profileIds;
@@ -81,6 +99,8 @@ namespace Ludots.Core.Gameplay.AI.Utility
         public readonly UtilityAiStanceDefinition[] Stances;
         public readonly UtilityAiActuatorDefinition[] Actuators;
         public readonly UtilityAiAuthoringCatalog Authoring;
+        public readonly UtilityAiGraphScoreProgramDefinition[] GraphScorePrograms;
+        public readonly bool RequiresGraphScoreServices;
 
         public UtilityAiCompiledRuntime(
             UtilityAiProfileDefinition[] profiles,
@@ -95,7 +115,8 @@ namespace Ludots.Core.Gameplay.AI.Utility
             UtilityAiTaskDefinition[] tasks,
             UtilityAiStanceDefinition[] stances,
             UtilityAiActuatorDefinition[] actuators,
-            UtilityAiAuthoringCatalog authoring = null)
+            UtilityAiAuthoringCatalog authoring = null,
+            UtilityAiGraphScoreProgramDefinition[]? graphScorePrograms = null)
         {
             Profiles = profiles;
             DecisionMakers = decisionMakers;
@@ -110,6 +131,34 @@ namespace Ludots.Core.Gameplay.AI.Utility
             Stances = stances;
             Actuators = actuators;
             Authoring = authoring ?? UtilityAiAuthoringCatalog.Empty;
+            GraphScorePrograms = graphScorePrograms ?? Array.Empty<UtilityAiGraphScoreProgramDefinition>();
+
+            bool requiresGraphScoreServices = false;
+            for (int i = 0; i < Inputs.Length; i++)
+            {
+                ref readonly UtilityAiInputDefinition input = ref Inputs[i];
+                if (input.Kind != UtilityAiInputKind.GraphScore)
+                {
+                    continue;
+                }
+
+                requiresGraphScoreServices = true;
+                if ((uint)input.Arg0 >= (uint)GraphScorePrograms.Length)
+                {
+                    throw new InvalidOperationException(
+                        $"Compiled Utility GraphScore input {i} references program index {input.Arg0}, " +
+                        $"but the frozen program table contains {GraphScorePrograms.Length} entries.");
+                }
+
+                if (input.GraphId <= 0 || GraphScorePrograms[input.Arg0].GraphId != input.GraphId)
+                {
+                    throw new InvalidOperationException(
+                        $"Compiled Utility GraphScore input {i} graph id {input.GraphId} does not match " +
+                        $"frozen program id {GraphScorePrograms[input.Arg0].GraphId}.");
+                }
+            }
+
+            RequiresGraphScoreServices = requiresGraphScoreServices;
         }
 
         public static UtilityAiCompiledRuntime Empty => new(
@@ -135,6 +184,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
         public readonly int DecisionMakerCount;
         public readonly int DecisionIntervalSteps;
         public readonly int MaxCandidates;
+        public readonly int MaxGraphScoreInstructions;
         public readonly int DefaultStanceId;
 
         public UtilityAiProfileDefinition(
@@ -142,12 +192,27 @@ namespace Ludots.Core.Gameplay.AI.Utility
             int decisionMakerCount,
             int decisionIntervalSteps,
             int maxCandidates,
+            int maxGraphScoreInstructions,
             int defaultStanceId)
         {
+            if (maxCandidates <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(maxCandidates), maxCandidates, "MaxCandidates must be positive.");
+            }
+
+            if (maxGraphScoreInstructions <= 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(maxGraphScoreInstructions),
+                    maxGraphScoreInstructions,
+                    "MaxGraphScoreInstructions must be positive.");
+            }
+
             DecisionMakerOffset = decisionMakerOffset;
             DecisionMakerCount = decisionMakerCount;
             DecisionIntervalSteps = decisionIntervalSteps;
             MaxCandidates = maxCandidates;
+            MaxGraphScoreInstructions = maxGraphScoreInstructions;
             DefaultStanceId = defaultStanceId;
         }
     }
@@ -177,51 +242,45 @@ namespace Ludots.Core.Gameplay.AI.Utility
         public readonly int TargetFilterId;
         public readonly int ConsiderationOffset;
         public readonly int ConsiderationCount;
-        public readonly int TaskOffset;
-        public readonly int TaskCount;
+        public readonly int TaskIndex;
         public readonly int Priority;
         public readonly float BaseScore;
         public readonly float Weight;
         public readonly float MomentumBonus;
         public readonly int MinDurationSteps;
-        public readonly int CooldownSteps;
-        public readonly int AutocastAbilityId;
+        public readonly int DecisionRepeatDelaySteps;
+        public readonly int AbilityId;
         public readonly int AbilitySlotIndex;
-        public readonly int SharedCooldownTagId;
-        public readonly UtilityAiDecisionFlags Flags;
+        public readonly bool KeepRunningUntilFinished;
 
         public UtilityAiDecisionDefinition(
             int targetFilterId,
             int considerationOffset,
             int considerationCount,
-            int taskOffset,
-            int taskCount,
+            int taskIndex,
             int priority,
             float baseScore,
             float weight,
             float momentumBonus,
             int minDurationSteps,
-            int cooldownSteps,
-            int autocastAbilityId,
+            int decisionRepeatDelaySteps,
+            int abilityId,
             int abilitySlotIndex,
-            int sharedCooldownTagId,
-            UtilityAiDecisionFlags flags)
+            bool keepRunningUntilFinished)
         {
             TargetFilterId = targetFilterId;
             ConsiderationOffset = considerationOffset;
             ConsiderationCount = considerationCount;
-            TaskOffset = taskOffset;
-            TaskCount = taskCount;
+            TaskIndex = taskIndex;
             Priority = priority;
             BaseScore = baseScore;
             Weight = weight;
             MomentumBonus = momentumBonus;
             MinDurationSteps = minDurationSteps;
-            CooldownSteps = cooldownSteps;
-            AutocastAbilityId = autocastAbilityId;
+            DecisionRepeatDelaySteps = decisionRepeatDelaySteps;
+            AbilityId = abilityId;
             AbilitySlotIndex = abilitySlotIndex;
-            SharedCooldownTagId = sharedCooldownTagId;
-            Flags = flags;
+            KeepRunningUntilFinished = keepRunningUntilFinished;
         }
     }
 
@@ -296,6 +355,31 @@ namespace Ludots.Core.Gameplay.AI.Utility
             Kind = kind;
             Arg0 = arg0;
             GraphId = graphId;
+        }
+    }
+
+    public readonly struct UtilityAiGraphScoreProgramDefinition
+    {
+        private readonly GraphInstruction[] _program;
+
+        public readonly int GraphId;
+
+        public ReadOnlySpan<GraphInstruction> Program => _program;
+
+        public UtilityAiGraphScoreProgramDefinition(
+            int graphId,
+            ReadOnlySpan<GraphInstruction> program,
+            string source)
+        {
+            if (graphId <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(graphId), graphId, "GraphScore graph id must be positive.");
+            }
+
+            string validationSource = string.IsNullOrWhiteSpace(source) ? "AI compiled config" : source;
+            UtilityAiGraphSafety.ValidateScoreProgram(program, validationSource, graphId);
+            GraphId = graphId;
+            _program = program.ToArray();
         }
     }
 
@@ -452,20 +536,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
 
     public enum UtilityAiTaskKind : byte
     {
-        SubmitOrder = 0,
-        Sequence = 1,
-        Parallel = 2,
-        ParallelComplete = 3
+        SubmitOrder = 0
     }
 
-    [System.Flags]
-    public enum UtilityAiDecisionFlags : ushort
-    {
-        None = 0,
-        Autocast = 1 << 0,
-        OrdinaryAttack = 1 << 1,
-        RequiresTarget = 1 << 2,
-        KeepRunningUntilFinished = 1 << 3,
-        ExplicitOrderOnly = 1 << 4
-    }
 }

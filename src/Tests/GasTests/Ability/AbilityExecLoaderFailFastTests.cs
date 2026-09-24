@@ -229,13 +229,12 @@ namespace Ludots.Tests.GAS
             That(ex.Message, Does.Contain("required"));
         }
 
-        [TestCase("cooldownValueAttribute", "valueAttribute")]
-        [TestCase("cooldownTag", "tag")]
-        public void CompileAbility_LegacyCooldownField_IsRejected(string legacyField, string canonicalField)
+        [Test]
+        public void CompileAbility_RemovedCooldownObject_IsRejectedWithMigrationGuidance()
         {
             var ex = Throws<InvalidOperationException>(() =>
                 Compile(
-                    $$"""
+                    """
                     {
                       "exec": {
                         "clockId": "FixedFrame",
@@ -244,13 +243,14 @@ namespace Ludots.Tests.GAS
                         ]
                       },
                       "cooldown": {
-                        "{{legacyField}}": "Legacy.Value"
+                        "tag": "State.Test.Unavailable"
                       }
                     }
                     """));
 
-            That(ex!.Message, Does.Contain(legacyField));
-            That(ex.Message, Does.Contain(canonicalField));
+            That(ex!.Message, Does.Contain("field 'cooldown' is removed"));
+            That(ex.Message, Does.Contain("TagClip"));
+            That(ex.Message, Does.Contain("blockTags.blockedAny"));
         }
 
         [Test]

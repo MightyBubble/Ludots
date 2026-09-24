@@ -27,7 +27,7 @@ public sealed class UtilityAutocastShowcasePlayableAcceptanceTests
     private const string MapId = "utility_autocast_showcase";
 
     [Test]
-    public void UtilityAutocastShowcase_HealsLowestFriendlyAndBlocksOtherAutocastsBySharedGcd()
+    public void UtilityAutocastShowcase_HealsLowestFriendlyAndBlocksOtherAutocastsByGasTag()
     {
         using GameEngine engine = CreateEngine();
         engine.Start();
@@ -70,11 +70,11 @@ public sealed class UtilityAutocastShowcasePlayableAcceptanceTests
             engine,
             world,
             mage,
-            UtilityAiReadinessBlockReason.SharedCooldown,
+            UtilityAiReadinessBlockReason.ActivationBlockTags,
             maxFrames: 20);
         Assert.That(
             blockedTrace.LastReadinessBlockReason,
-            Is.EqualTo((int)UtilityAiReadinessBlockReason.SharedCooldown));
+            Is.EqualTo((int)UtilityAiReadinessBlockReason.ActivationBlockTags));
 
         engine.TriggerManager.FireEventAsync(new EventKey("AIInspector.PrintAiConfig"), engine.CreateContext())
             .GetAwaiter()

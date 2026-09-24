@@ -126,8 +126,6 @@ namespace Ludots.Core.Gameplay.GAS
 
         public AbilityOnActivateEffects OnActivateEffects;
         public bool HasOnActivateEffects;
-        public AbilityCooldown Cooldown;
-        public bool HasCooldown;
         public AbilityActivationBlockTags ActivationBlockTags;
         public bool HasActivationBlockTags;
         public AbilityActivationPrecondition ActivationPrecondition;
@@ -278,7 +276,6 @@ namespace Ludots.Core.Gameplay.GAS
             var def = new AbilityDefinition
             {
                 HasOnActivateEffects = world.Has<AbilityOnActivateEffects>(templateEntity),
-                HasCooldown = world.Has<AbilityCooldown>(templateEntity),
                 HasActivationBlockTags = world.Has<AbilityActivationBlockTags>(templateEntity),
                 HasActivationPrecondition = world.Has<AbilityActivationPrecondition>(templateEntity),
                 ExecSpec = world.Get<AbilityExecSpec>(templateEntity)
@@ -293,10 +290,6 @@ namespace Ludots.Core.Gameplay.GAS
             if (def.HasOnActivateEffects)
             {
                 def.OnActivateEffects = world.Get<AbilityOnActivateEffects>(templateEntity);
-            }
-            if (def.HasCooldown)
-            {
-                def.Cooldown = world.Get<AbilityCooldown>(templateEntity);
             }
             if (def.HasActivationBlockTags)
             {

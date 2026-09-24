@@ -1,4 +1,519 @@
-﻿## GAS Composition Gate 鈥?Self Review
+﻿# GAS Composition Gate — #719 Self Review
+
+- **Task / Issue**: MightyBubble/Ludots#719 — reject unimplemented Utility tasks and remove dead decision/task contracts
+- **Date**: 2026-07-30
+- **Agent / Author**: GPT-5.6 Sol
+
+## 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A
+
+结论: PASS
+
+一句话理由: 本任务不增加玩法变体、graph op、effect step、profile enum 或 preset 开关；它把现有 Utility authoring 收紧到唯一已贯通正式 Order 生命周期的 `SubmitOrder`，删除没有生产消费者的 flags、多任务范围和死追踪状态，并让非法配置/枚举显式失败。
+
+## 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| task kind 加载期合同 | N/A | 现有 `AiConfigLoader` |
+| decision 单 task 编译 | N/A | 现有 `UtilityAiDecisionDefinition.TaskIndex` |
+| 胜出任务提交 | N/A | 现有 `UtilityAiRuntimeEvaluator` → `OrderQueue.SubmitAssigned` |
+| 实体准入与终态等待 | 1 | 现有 `OrderBufferSystem` / `UtilityAiOrderResultSystem` |
+| ability 执行与冷却 | 2 | 现有 Order runtime / GAS ability exec / TimedTag |
+
+## 3. Reuse list
+
+- Handlers: 现有 GAS ability/order handlers；不新增 handler。
+- Queues / Systems: `OrderQueue`、`OrderBufferSystem`、`UtilityAiDecisionSystem`、`UtilityAiOrderResultSystem`。
+- Resolvers / Registries: `AiConfigLoader`、`OrderTypeRegistry`、`AbilityDefinitionRegistry`、`AbilityActivationEligibilityQuery`。
+- Existing presets / graphs: 现有 Utility autocast showcase 的评分图与 GAS ability exec；不改变图或 effect 语义。
+
+## 4. New Layer 0 ops (if any)
+
+N/A。没有新增 graph op、effect op、builtin handler、实体生命周期操作或平行任务执行器。
+
+## 5. Transaction boundary
+
+必须原子 rollback 的步骤: Utility 评估保持只读。唯一写边界仍是 `OrderQueue.SubmitAssigned` 分配并提交一个 Order；随后由实体准入与终态回执推进任务状态。非法 task kind 必须在调用队列前抛错。Utility 不写 GAS 状态、不推断 ability 执行成功，也不产生需要自行回滚的 gameplay side effect。
+
+## 6. Config SSOT
+
+行为配置落在: `AI/tasks.json` 的显式 `Kind: SubmitOrder` 与 `AI/decisions.json` 的单元素 `Tasks`、显式 ability/slot、直接布尔字段 `KeepRunningUntilFinished`。
+
+是否新增 JSON schema: NO — 删除 `Sequence` / `Parallel` / `ParallelComplete`、多 task、通用 `Flags` 和无消费者字段；`KeepRunningUntilFinished` 从旧位集读取收敛为唯一直接字段，不提供默认行为别名、兼容路径或旧 spelling。
+
+## 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn、Order、GAS 或 Utility 平行的执行管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加默认提交、未知 kind fallback、兼容别名或静默忽略
+- [x] 未实现 `Sequence`、`Parallel`、`ParallelComplete`
+- [x] 未让 Utility 写 GAS 状态或把队列接收当作执行成功
+- [x] 未新增热路径集合、分配、ECS 结构变化或结构命令
+
+## 8. Next variant test
+
+「下一个 Mod 变体」将修改: graph 连线 / effect 步骤。
+
+具体方式: 新的评分和 ability 效果继续通过现有 GraphScore 纯读图、Order 与 GAS effect/exec 组合表达。需要多步骤或并行任务时必须另行设计并实现完整准入、终态、失败和取消生命周期，不能向当前 enum 加一个只会被忽略的名字。
+
+## 复用 / 新增清单
+
+| 类型 | 项 |
+|------|-----|
+| 复用 | `AiConfigLoader`、`UtilityAiCompiledRuntime`、`UtilityAiRuntimeEvaluator`、`UtilityAiDecisionSystem`、`OrderQueue.SubmitAssigned`、`OrderBufferSystem`、`UtilityAiOrderResultSystem`、`AbilityActivationEligibilityQuery` |
+| 新增 Layer 0 op | 无 |
+| 新增 Layer 1 | 无；保留 #715 已验证的 Order 准入/终态消费 |
+| 新增 Layer 2 | 无 |
+| 禁止 | 多 task 静默截断、未知 kind 当 `SubmitOrder`、decision flags 位集、旧字段别名、Utility 直写 GAS、热路径分配或结构变化 |
+
+## 9. Supported task and decision semantics
+
+- task `Kind` 必须显式为 `SubmitOrder`；三个未实现 kind 和任意未知 kind 在加载期以包含路径和值的错误拒绝。
+- 每个 decision 的 `Tasks` 必须恰好有一个引用，并编译为 `TaskIndex`；空数组和多个引用都失败。
+- runtime 对类型化 kind 保留显式 `SubmitOrder` case；default 在任何队列提交前抛 `UTILITY.TASK.ERR.UnsupportedKind`。
+- 删除 `Autocast`、`OrdinaryAttack`、`RequiresTarget`、`ExplicitOrderOnly` 与 `Flags` schema/enum/runtime；旧 top-level 字段和任意旧 `Flags` 数组都按 unsupported field 拒绝。
+- `KeepRunningUntilFinished` 是独立 bool，继续决定 Order 准入后是否等待同一 `OrderId` 终态。
+- ability/slot 由 decision 与单 task 的显式字段合并；部分或冲突意图加载期失败，不依赖 Autocast flag。
+- 保留 submitted order id/type/ability 与 task status/failure；删除无读取者的 current task offset 和常量 task-kind trace。
+
+## 10. Scope boundary
+
+#714 的 GAS TimedTag 冷却 SSOT、#715 的 Order 准入/终态生命周期、#716 的 GraphScore 纯读边界、#717 的 ability 激活资格统一和 #718 的完整思考预算全部保持；同时保留 #713 的 typed `GraphKind`、`EffectExecutionPlan`、template-owned phase graph、listener certification、transaction 与可复现工具链合同。
+
+## 11. Verification
+
+- Cursor 首次正常完整传递构建发现 6 个 stashed test graph 注册遗漏 #713 强制 `GraphKind` 参数；按用途补为 `Validation` / `Score`。Codex 随后独立执行 `dotnet build src/Tests/GasTests/GasTests.csproj --no-restore -m:1 -nodeReuse:false -p:UseSharedCompilation=false -clp:ErrorsOnly`: PASS，173 warnings，0 errors，未使用 `BuildProjectReferences=false`。
+- Codex 独立执行 `dotnet build src/Core/Ludots.Core.csproj --no-restore -m:1 -nodeReuse:false -p:UseSharedCompilation=false -clp:ErrorsOnly`: PASS，847 warnings，0 errors。
+- 必需定向过滤器（`UtilityAiRuntimeTests`、`AiConfigLoaderTests`、`UtilityAutocastShowcasePlayableAcceptanceTests`、`AbilityActivationEligibilityQueryTests`、`AbilityExec*`、`AbilityTimedTagOrderIntegrationTests`、`SpatialQueryServiceTests`、`ChunkedSpatialQueryTests`）: PASS，177/177。
+- `UtilityAiRuntime_10kEntities_UsesDeterministicBoundedCandidatesAndZeroAllocation`: Codex 独立重跑 PASS，1/1；`elapsed=3.586ms`、`allocated=0`、`candidates=32/32`。
+- Utility GraphScore 由加载期 `GraphKind.Score` + `GraphKindOperationPolicy` 认证并冻结；热路径调用 `ExecutePrevalidatedScore`，不再逐候选重复扫描图程序，实际 VM 指令仍计入同一 per-think budget。
+- 目标搜索: PASS；无冲突标记；GAS / Utility Core 无 `AbilityCooldown`、ability cooldown runtime/definition 字段、shared/per-decision cooldown、`Sequence` / `Parallel` / `ParallelComplete` task member、旧 decision flags 或多 task 运行状态；legacy ability `cooldown` 仅保留 fail-fast loader test；非正式大小写 `submitorder` 拒绝测试保留。
+- `git diff --check`: PASS。
+
+## Previous current self-review: #718
+
+# GAS Composition Gate — #718 Self Review
+
+- **Task / Issue**: MightyBubble/Ludots#718 — enforce one total Utility candidate budget and one total GraphScore instruction budget per actor think
+- **Date**: 2026-07-30
+- **Agent / Author**: GPT-5.6 Sol
+
+## 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A
+
+结论: PASS
+
+一句话理由: 本任务收紧现有 Utility 候选遍历与现有 GAS Graph VM 的运行成本边界；新增的 `MaxGraphScoreInstructions` 是每个 profile 必须明确填写的运行预算，不选择玩法、不改变评分语义，也不引入 profile enum、preset 开关、graph op、兼容别名、默认值或平行运行时。
+
+## 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| 一次完整思考的候选总预算 | N/A | 现有 `UtilityAiRuntimeEvaluator` 候选遍历 |
+| 一次完整思考的 GraphScore 总指令预算 | N/A | profile 编译结果 + 通用 bounded Graph 执行合同 |
+| 单次图执行防失控保险 | 2 | 现有 `GraphVmLimits.MaxInstructionsPerExecution` |
+| 预算耗尽后的显式结果与诊断 | N/A | 现有 Utility decision result / `UtilityAiDecisionTrace` / AI Inspector |
+| 胜出意图提交 | N/A | 现有 `OrderQueue.SubmitAssigned` |
+
+## 3. Reuse list
+
+- Handlers: 现有 `GasGraphOpHandlerTable`；不新增 opcode 或 handler。
+- Queues / Systems: `UtilityAiDecisionSystem`、`UtilityAiThinkScheduleSystem`、`OrderQueue`、`OrderBufferSystem`。
+- Resolvers / Registries: `AiConfigLoader`、`UtilityAiCompiledRuntime`、`GraphProgramRegistry`、`AbilityActivationEligibilityQuery`、`ISpatialQueryService`。
+- Existing presets / graphs: 现有 GraphScore 冻结程序与 Utility autocast showcase 图；不改变图语义。
+
+## 4. New Layer 0 ops (if any)
+
+N/A。没有新增 graph op、effect op、builtin handler 或实体生命周期原子操作。通用 bounded Graph 执行合同只计算实际执行的 VM 指令，并包裹现有 handler table。
+
+## 5. Transaction boundary
+
+必须原子 rollback 的步骤: Utility 思考只读，不产生需要回滚的 gameplay 写入。完整思考是结果发布边界：候选预算、GraphScore 总指令预算或目标 scratch 容量耗尽时，不发布部分最佳候选、不调用任务提交、不写成功 decision；追踪记录类型化耗尽结果与已消费/上限。只有完整遍历结束后，候选结果才可进入现有 Order 提交边界。
+
+## 6. Config SSOT
+
+行为配置落在: `AI/profiles.json`。`MaxCandidates` 是一次 actor 完整 Utility 思考中，target acquisition 产出并准备进入逐目标检查的 `decision × target` 总数；`MaxGraphScoreInstructions` 是该次思考所有 GraphScore 调用实际执行指令的总数上限。
+
+是否新增 JSON schema: YES — 仅新增强制、正数、无默认值的运行成本预算 `MaxGraphScoreInstructions`。它不表达玩法行为，不能由 effect/graph 组合替代；未知字段、旧别名、缺失、零和负数全部在加载期拒绝。
+
+## 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum 或玩法 mode
+- [x] 未新增 preset 开关、graph op 或与现有 Graph VM 平行的 Utility VM
+- [x] 未新建与 Utility / Order / GAS 平行的运行管线
+- [x] 未添加预算默认值、兼容别名、静默截断或分数 `0` fallback
+- [x] 未弱化现有每次图执行 `GraphVmLimits` 保险
+- [x] 未新增热路径集合、LINQ、iterator、每次思考分配或 ECS 结构变化
+- [x] 未实现 #719 的 task kind / flag 语义
+
+## 8. Next variant test
+
+「下一个 Mod 变体」将修改: graph 连线 / effect 步骤，以及在同一 profile 上明确填写适合自身规模的运行预算。
+
+具体方式: 新评分逻辑继续组合现有纯读取 GraphScore 节点并走同一个 bounded Graph 执行合同；新增玩法不修改 Core enum、不添加预算档位/预设，也不建立无预算执行旁路。
+
+## 复用 / 新增清单
+
+| 类型 | 项 |
+|------|-----|
+| 复用 | `AiConfigLoader`、`UtilityAiCompiledRuntime`、`UtilityAiRuntimeEvaluator`、`UtilityAiDecisionSystem`、`GraphExecutor`、`GasGraphOpHandlerTable`、`GraphVmLimits`、`OrderQueue`、`UtilityAiDecisionTrace` |
+| 新增 Layer 0 op | 无 |
+| 新增 Layer 1 | 无 |
+| 新增 Layer 2 | 无；只新增通用 Graph 实际执行指令预算合同 |
+| 禁止 | profile mode/enum、预算 preset、默认预算、兼容别名、程序长度代理、每图重置总预算、部分最佳候选提交、Utility 专用 VM、动态 scratch 增长 |
+
+## 9. Budget semantics
+
+- 一个候选预算单位：target acquisition 产出的一个确定性 `decision × target` 对，在首个逐目标 filter op 前消费一次；随后才能运行 target filter、ability eligibility、readiness、priority bucket、consideration 或 GraphScore。被 filter/readiness 拒绝的 pair 也已消耗。
+- 同一 actor 本次思考只创建一个候选计数器，按现有 decision maker → decision → 稳定 target 顺序共享；不按 filter、decision 或 consideration 重置。
+- 空间查询、稳定排序/去重和物理 scratch 溢出判定属于 target acquisition，发生在候选计数点之前，不受 `MaxCandidates` 限制；scratch 溢出显式返回 `TargetScratchCapacityExhausted`，不截断继续。
+- 一个 GraphScore 指令预算单位：`GasGraphOpHandlerTable` 执行循环实际取出并准备执行的一条指令；常量、读取、计算、NOP、jump 和循环中重复到达的指令都逐次计数。未执行的跳过指令不计数。
+- 同一 actor 本次思考只创建一个 GraphScore 指令计数器，所有候选、所有 consideration、所有 GraphScore 调用共享；单次执行仍同时受 `GraphVmLimits.MaxInstructionsPerExecution` 约束。
+- 达到上限本身不算耗尽：若完整思考恰好在边界结束则成功；只有还需要执行下一个候选或 Graph 指令时才返回耗尽。
+- 任一耗尽意味着思考不完整，结果固定为 fail-closed：不提交 Order；追踪清空本次“最佳候选”展示并记录耗尽类型、消费量和上限。
+
+## 10. Scope boundary
+
+#714–#717 的冷却 SSOT、Order 生命周期、GraphScore 只读边界和 ability 激活资格统一保持不变。#719 的 `Sequence`、`Parallel`、`ParallelComplete` 与 decision flags 不在本切片，除预算结果传播所需的机械调用变化外不修改其语义。已知 `Svg.Generators` 工具链问题不处理。
+
+## 11. Verification
+
+- `dotnet build "src/Core/Ludots.Core.csproj" -c Debug --no-restore -p:BuildProjectReferences=false --nologo -v:minimal -m:1`: PASS，0 errors。
+- `dotnet build "src/Tests/GasTests/GasTests.csproj" -c Debug --no-restore -p:BuildProjectReferences=false --nologo -v:minimal -m:1`: PASS，0 errors。
+- `UtilityAiRuntimeTests`: PASS，33/33；包含全 filter 拒绝仍在第 N+1 个目标前耗尽、反向 jump 重复指令计数、多个短图共享预算和精确边界。
+- `AiConfigLoaderTests`: PASS，39/39。
+- 空间查询排序/去重与 overflow 回归（`SpatialQueryServiceTests`、`ChunkedSpatialQueryTests`）: PASS，4/4。
+- #714–#717 定向回归（`AbilityActivationEligibilityQueryTests`、`AbilityExec*`、`AbilityTimedTagOrderIntegrationTests`、`UtilityAutocastShowcasePlayableAcceptanceTests`）: PASS，81/81。
+- `UtilityAiRuntime_10kEntities_UsesDeterministicBoundedCandidatesAndZeroAllocation`: PASS，1/1；`allocated=0`，`candidates=32/32`。
+- 恢复共享标准排序后，`Span.Sort(IComparer<Entity>)` 的独立探针与完整空间查询均稳定产生 64 bytes；最终保留标准 `Span.Sort`、静态 `StableEntityComparer` 与原比较规则，仅缓存 `Comparison<Entity>` 以移除该运行库委托分配，没有替换共享排序算法。
+- `git diff --check`: PASS。
+
+## Previous current self-review: #717
+
+# GAS Composition Gate — #717 Self Review
+
+- **Task / Issue**: MightyBubble/Ludots#717 — unify authoritative ability activation eligibility and Utility actuator mapping
+- **Date**: 2026-07-30
+- **Agent / Author**: GPT-5.6 Sol
+
+## 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A
+
+结论: PASS
+
+一句话理由: 本任务把 AbilityExec 与 Utility 已有的只读判断收口到 GAS 单一查询，继续复用有效槽位、Tag、验证图、成长条件和正式 Order 管线；不新增玩法 profile、preset 开关、graph op、效果写入或平行执行管线。
+
+## 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| 有效能力槽解析 | N/A | 现有 `AbilitySlotResolver` |
+| 激活资格纯查询与类型化拒绝 | 2 | GAS `AbilityActivationEligibilityQuery` |
+| 激活前置图与成长条件 | 2 | 现有验证图、`ProgressionRequirementEvaluator` |
+| Utility actuator 到能力映射 | N/A | 现有 `UtilityAiActuatorDefinition` 编译表 |
+| 权威执行与 AI 共用判断 | N/A | 现有 `AbilityExecSystem`、`UtilityAiDecisionSystem` |
+
+## 3. Reuse list
+
+- Handlers: 不新增 handler；能力副作用仍只由现有 AbilityExec / effect 执行链产生。
+- Queues / Systems: `AbilityExecSystem`、`UtilityAiDecisionSystem`、`OrderQueue`、现有回执系统。
+- Resolvers / Registries: `AbilitySlotResolver`、`AbilityDefinitionRegistry`、`GraphProgramRegistry`、`ProgressionRequirementEvaluator`、Utility actuator 编译表。
+- Existing presets / graphs: 现有 ability activation precondition graph 与 progression requirement graph，不新增玩法图节点。
+
+## 4. New Layer 0 ops (if any)
+
+N/A。没有新增 graph op、effect op、builtin handler 或生命周期原子操作。
+
+## 5. Transaction boundary
+
+必须原子 rollback 的步骤: N/A。资格查询严格只读，不提交 Order、不发布 Effect、不写 Tag、不扣资源；通过后仍由现有 Order / AbilityExec 事务边界承担权威写入。
+
+## 6. Config SSOT
+
+行为配置落在: 现有 `GAS/abilities.json`、progression requirements、`AI/decisions.json`、`AI/tasks.json` 与 `AI/actuators.json`。
+
+是否新增 JSON schema: NO — 仅收紧现有 decision/task 唯一意图和 actuator 映射校验。
+
+## 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 AbilityExec / Order 平行的执行管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加缺服务、冲突配置或未知映射的 fallback
+- [x] 查询不产生 gameplay 写入或热路径结构变更
+- [x] Utility 不保留复制版 GAS 资格规则
+
+## 8. Next variant test
+
+「下一个 Mod 变体」将修改: 现有 ability 验证图 / effect 步骤、decision/task/actuator 数据。
+
+具体方式: 新能力继续通过正式槽位、ability 定义、验证图和成长条件进入同一 GAS 查询；AI 只声明唯一意图并消费类型化结果，不新增 Core enum 或 Utility 专用规则副本。
+
+## 复用 / 新增清单
+
+| 类型 | 项 |
+|------|-----|
+| 复用 | `AbilitySlotResolver`、`AbilityDefinitionRegistry`、`AbilityActivationPreconditionEvaluator`、`ProgressionRequirementEvaluator`、`UtilityAiActuatorDefinition`、`AbilityExecSystem`、`OrderQueue` |
+| 新增 Layer 0 op | 无 |
+| 新增 Layer 1 | 无 |
+| 新增 Layer 2 | GAS 纯只读资格查询与类型化结果 |
+| 禁止 | Utility 资格 wrapper、能力/槽位 precedence、actuator index 当 ability id、查询内 Order/effect/tag/resource 写入、动态热路径集合 |
+
+## 9. Scope boundary
+
+#718 的执行预算与 #719 的死任务/组合任务清理不在本切片；除现有任务引用的能力意图一致性外，不改变其运行时语义。
+
+## 10. Verification
+
+- `dotnet build src/Core/Ludots.Core.csproj -c Debug --no-restore -m:1`: PASS，0 errors。
+- `dotnet build src/Tests/GasTests/GasTests.csproj -c Debug --no-restore -p:BuildProjectReferences=false -m:1`: PASS，0 errors。
+- `AbilityActivationEligibilityQueryTests`: PASS，6/6。
+- `UtilityAiRuntimeTests`: PASS，27/27。
+- `AiConfigLoaderTests`: PASS，34/34。
+- `AbilityExec` 定向测试: PASS，74/74。
+- #714/#715/#716 回归（`AbilityTimedTagOrderIntegrationTests`、`UtilityAutocastShowcasePlayableAcceptanceTests`）: PASS，3/3。
+- 合并定向过滤器: PASS，142/142。
+- `git diff --check`: PASS。
+
+## Previous current self-review: #715
+
+# GAS Composition Gate — #715 Self Review
+
+- **Task / Issue**: MightyBubble/Ludots#715 — drive Utility task state from formal Order admission and terminal receipts
+- **Date**: 2026-07-30
+- **Agent / Author**: GPT-5.6 Sol
+
+## 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A
+
+结论: PASS
+
+一句话理由: 本任务只收紧现有 Utility → OrderQueue → OrderBufferSystem → Order terminal 生命周期，让 Utility 消费正式 OrderId、准入和终态回执；不新增 gameplay profile、graph op、preset 开关、GAS 写入或平行结果管线。
+
+## 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| Utility 意图提交与 OrderId 回写 | N/A | 现有 `OrderQueue.SubmitAssigned` |
+| 全局/实体准入状态推进 | 1 | 现有 `OrderAdmissionResultBuffer` 与 Utility 状态消费 |
+| 等待订单终态 | 1 | 现有 `OrderTerminalResultBuffer` 与 Utility 状态消费 |
+| 能力执行与失败 | 2 | 现有 Order / GAS 执行链，Utility 只读结果 |
+
+## 3. Reuse list
+
+- Handlers: 不新增 handler；能力继续由现有 Order / GAS handler 执行。
+- Queues / Systems: `OrderQueue`、`OrderBufferSystem`、`OrderAdmissionResultBuffer`、`OrderTerminalResultBuffer`、`UtilityAiDecisionSystem`。
+- Resolvers / Registries: `OrderTypeRegistry`、`OrderSubmitResultSemantics`、现有 Utility 编译运行时。
+- Existing presets / graphs: 不变。
+
+## 4. New Layer 0 ops (if any)
+
+N/A。没有新增 graph op、effect op、builtin handler 或生命周期原子操作。
+
+## 5. Transaction boundary
+
+必须原子 rollback 的步骤: Utility 只有在正式提交入口返回接受后才保存运行中的 decision；实体准入拒绝和终态失败/取消不得提交 repeat delay 或成功状态。准入/终态容量由现有固定容量缓冲区在权威状态变化前失败，Utility 不猜测丢失结果。
+
+## 6. Config SSOT
+
+行为配置落在: 现有 `AI/tasks.json` / `AI/decisions.json` 的 `SubmitOrder` 与 `KeepRunningUntilFinished`。
+
+是否新增 JSON schema: NO — 只补齐现有运行时状态语义，不新增配置字段。
+
+## 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 Order/GAS 平行的提交、回调或结果管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加缺回执默认成功、终态猜测或兼容 fallback
+- [x] 未让 Utility 写 GAS 状态
+- [x] 未新增每帧分配、热路径结构变更或无界历史扫描
+
+## 8. Next variant test
+
+「下一个 Mod 变体」将修改: 现有 task / decision 数据以及它所提交的 Order / effect / graph 组合。
+
+具体方式: 新行为继续声明正式 `SubmitOrder`，按是否需要等待执行结果选择现有 `KeepRunningUntilFinished`；不新增 Core gameplay enum、结果队列或 GAS 旁路。
+
+## 复用 / 新增清单
+
+| 类型 | 项 |
+|------|-----|
+| 复用 | `OrderQueue.SubmitAssigned`、`OrderAdmissionResultBuffer`、`OrderBufferSystem`、`OrderTerminalResultBuffer`、`OrderSubmitResultSemantics` |
+| 新增 Layer 0 op | 无 |
+| 新增 Layer 1 | Utility 对正式准入/终态快照的有界消费与丢失检测 |
+| 新增 Layer 2 | 无 |
+| 禁止 | callback/result 平行管线、Utility 直写 GAS、全局入队即执行成功、缺回执猜测、动态热路径集合 |
+
+## 9. Scope boundary
+
+`Sequence`、`Parallel`、`ParallelComplete` 以及无运行时语义的 decision flags 已确认属于依赖本 issue 的 #719。本切片不补做这些任务合同，也不改变其配置策略。
+
+## 10. Verification
+
+- `dotnet build src/Core/Ludots.Core.csproj --no-restore`: PASS，0 errors（852 个既有 warning）。
+- `dotnet build src/Tests/GasTests/GasTests.csproj --no-restore -p:BuildProjectReferences=false`: PASS，0 errors（144 个既有 warning）。
+- `dotnet build mods/AIInspectorMod/AIInspectorMod.csproj --no-restore -p:BuildProjectReferences=false`: PASS，0 warnings，0 errors。
+- focused GasTests（`UtilityAiRuntimeTests`、`AbilityTimedTagOrderIntegrationTests`、`AiConfigLoaderTests`、`UtilityAutocastShowcasePlayableAcceptanceTests`）: PASS，59/59。
+- `git diff --check`: PASS。
+- 定向扫描：Utility AI 仅通过 `OrderQueue.SubmitAssigned` 提交；未发现 AI 侧 `TryEnqueue` / `Enqueue` 旁路、GAS 状态直写或热路径 `World.Add` / `World.Remove`。
+
+## Previous current self-review: #716
+
+# GAS Composition Gate — #716 Self Review
+
+- **Task / Issue**: MightyBubble/Ludots#716 — tighten Utility GraphScore to an explicit pure-read opcode boundary
+- **Date**: 2026-07-30
+- **Agent / Author**: GPT-5.6 Sol
+
+## 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A
+
+结论: PASS
+
+一句话理由: 本任务只收紧现有 GraphScore 配置编译、图程序冻结和运行服务装配边界；不新增 graph op、profile 字段、preset 开关、生命周期事务或平行执行管线。
+
+## 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| 评分图 opcode 纯读取分类 | 2 | 现有 Graph program 的 Utility 使用约束 |
+| 评分图加载期校验与程序冻结 | 2 | `AiConfigLoader` 与 `UtilityAiCompiledRuntime` |
+| 缺图注册表/执行服务时装配失败 | N/A | `UtilityAiDecisionSystem` 现有装配入口 |
+| 每候选执行评分图 | 2 | 现有 `GraphExecutor.ExecuteScore` |
+
+## 3. Reuse list
+
+- Handlers: 现有 `GasGraphOpHandlerTable` 与 `GraphExecutor.ExecuteScore`
+- Queues / Systems: 现有 `UtilityAiDecisionSystem` 候选评分管线
+- Resolvers / Registries: `GraphIdRegistry`、`GraphProgramRegistry`、`IGraphRuntimeApi`
+- Existing presets / graphs: 现有 `Graph.UtilityAutocast.TargetHealth` 等 GraphScore 图
+
+## 4. New Layer 0 ops (if any)
+
+N/A。没有新增 graph op、builtin handler 或生命周期原子操作。
+
+## 5. Transaction boundary
+
+必须原子 rollback 的步骤: N/A。评分图只允许读取世界与修改本次执行的栈上寄存器/临时目标列表；effect/state、relationship、blackboard 和 lifecycle 写入在配置编译期拒绝，不进入事务。
+
+## 6. Config SSOT
+
+行为配置落在: 现有 `AI/inputs.json` 的 `GraphScore` 引用与既有 `GAS/graphs.json` 图程序。
+
+是否新增 JSON schema: NO — 只新增 Core 内部编译结果和 opcode 分类，不新增玩法字段。
+
+## 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 Graph/GAS 平行的运行管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加默认分数、缺服务静默跳过或未知 opcode fallback
+- [x] 未新增热路径 ECS 结构变更或托管集合增长
+
+## 8. Next variant test
+
+「下一个 Mod 变体」将修改: graph 连线 / effect 步骤。
+
+具体方式: 新的评分只组合已明确允许的纯读取节点；需要改变世界状态时改由执行 graph/effect 步骤承担，不扩展 Utility profile 或默认放行新 opcode。
+
+## 复用 / 新增清单
+
+| 类型 | 项 |
+|------|-----|
+| 复用 | `AiConfigLoader`、`GraphProgramRegistry`、`GraphExecutor.ExecuteScore`、`IGraphRuntimeApi`、`UtilityAiDecisionSystem` |
+| 新增 Layer 0 op | 无 |
+| 新增 Layer 1 | 无 |
+| 新增 Layer 2 | GraphScore opcode 显式分类、编译后只读程序快照 |
+| 禁止 | lifecycle transaction、`InvokeBuiltin`、effect/state 写、relationship 写、blackboard 写、未知 opcode、缺服务默认 0、每候选重新扫描程序 |
+
+## 9. Verification
+
+- `dotnet test "src/Tests/GasTests/GasTests.csproj" -c Debug --no-restore --filter "FullyQualifiedName~AiConfigLoaderTests|FullyQualifiedName~UtilityAiRuntimeTests" --logger "console;verbosity=minimal" -m:1`: fresh transitive build stopped before tests at the known unrelated `Svg.Generators` CS1705 toolchain conflict; no #716 compile error was reported.
+- `dotnet build "src/Core/Ludots.Core.csproj" -c Debug --no-restore --nologo -v:minimal -m:1`: PASS.
+- `dotnet build "src/Tests/GasTests/GasTests.csproj" -c Debug --no-restore --no-dependencies --nologo -v:minimal -m:1`: PASS against the freshly built Core output.
+- `dotnet test "src/Tests/GasTests/GasTests.csproj" -c Debug --no-build --filter "FullyQualifiedName~AiConfigLoaderTests|FullyQualifiedName~UtilityAiRuntimeTests" --logger "console;verbosity=minimal" -m:1`: PASS, 46/46.
+- `dotnet test "src/Tests/GasTests/GasTests.csproj" -c Debug --no-build --filter "FullyQualifiedName~UtilityAutocastShowcasePlayableAcceptanceTests" --logger "console;verbosity=minimal" -m:1`: PASS, 1/1.
+- `git diff --check`: PASS.
+- Targeted source searches: `ValidateScoreProgram` appears only in the safety validator and frozen-program constructor; `UtilityAiRuntimeEvaluator` contains no `TryGetProgram` or validation call; forbidden opcode families and unknown classification are present in the explicit GraphScore classifier.
+
+## Previous current self-review: #714
+
+# GAS Composition Gate — Self Review
+
+- **Task / Issue**: MightyBubble/Ludots#714 — remove the legacy ability cooldown component and Utility shared cooldown
+- **Date**: 2026-07-30
+- **Agent / Author**: GPT-5.6 Sol
+
+## 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A
+
+结论: PASS
+
+一句话理由: 本任务删除平行冷却契约，复用现有 AbilityExec `TagClip`、限时 Tag 到期和 `blockTags` 组合，不新增 profile 字段、preset 开关或运行管线。
+
+## 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| 授予限时冷却 Tag | 2 | ability `exec.items` 中已有 `TagClip` |
+| 阻止冷却期再次激活 | 2 | ability `blockTags.blockedAny` |
+| 玩家与 AI 统一发起能力 | 2 | 现有 Order → AbilityExec 管线 |
+| Tag 到期移除 | 0 | 现有 `TimedTagExpirationSystem` |
+
+## 3. Reuse list
+
+- Handlers: `AbilityExecSystem` 的 `TagClip` 执行路径、`AbilitySystem` 的激活阻止 Tag 校验
+- Queues / Systems: `OrderBufferSystem`、`AbilityExecSystem`、`TimedTagExpirationSystem`
+- Resolvers / Registries: `AbilityDefinitionRegistry`、`AbilityIdRegistry`、`TagRegistry`
+- Existing presets / graphs: Utility autocast showcase 的 GAS ability exec items 与 `blockTags`
+
+## 4. New Layer 0 ops (if any)
+
+N/A
+
+## 5. Transaction boundary
+
+必须原子 rollback 的步骤: N/A；本任务不新增事务，沿用现有 Order、AbilityExec 与限时 Tag 生命周期边界。
+
+## 6. Config SSOT
+
+行为配置落在: `mods/showcases/utility_autocast/UtilityAutocastShowcaseMod/assets/GAS/abilities.json`
+
+是否新增 JSON schema: NO — 删除 ability `cooldown` 对象与 AI 共享冷却字段，冷却时长仅由现有 `TagClip.duration` 声明。
+
+## 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback
+
+## 8. Next variant test
+
+「下一个 Mod 变体」将修改: effect 步骤
+
+具体方式: 在 ability exec 中组合现有 `TagClip`，并在 `blockTags` 中声明阻止条件；不修改 Core enum。
+
+## 复用 / 新增清单
+
+| 类型 | 项 |
+|------|-----|
+| 复用 | Order 提交与校验、AbilityExec、TagClip、TimedTagBuffer、TimedTagExpirationSystem、AbilityActivationBlockTags、AbilityDefinitionRegistry、TagRegistry |
+| 新增 Layer 0 op | 无 |
+| 新增 Layer 1 | 无 |
+| 新增 Layer 2 | 无；仅迁移现有 showcase 配置到既有组合 |
+| 禁止 | 旧能力冷却组件、Utility 共享冷却状态、兼容字段/别名/fallback、额外冷却系统 |
+
+## Historical closeout records
 
 Current closeouts and prior issue reviews follow.
 

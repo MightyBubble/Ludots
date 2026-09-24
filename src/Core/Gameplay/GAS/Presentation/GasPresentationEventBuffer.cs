@@ -34,6 +34,9 @@ namespace Ludots.Core.Gameplay.GAS.Presentation
         InvalidSlot = 4,
         NotAlive = 5,
         PreconditionFailed = 6,
+        ProgressionRequirementFailed = 7,
+        ActuatorNotReady = 8,
+        AimGateNotReady = 9,
     }
 
     /// <summary>

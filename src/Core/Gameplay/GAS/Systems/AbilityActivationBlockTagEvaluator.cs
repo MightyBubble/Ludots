@@ -10,14 +10,34 @@ internal static class AbilityActivationBlockTagEvaluator
         Entity actor,
         TagOps tagOps,
         in AbilityActivationBlockTags blockTags)
+        => Evaluate(world, actor, tagOps, in blockTags) == AbilityActivationRefusalReason.None;
+
+    public static AbilityActivationRefusalReason Evaluate(
+        World world,
+        Entity actor,
+        TagOps tagOps,
+        in AbilityActivationBlockTags blockTags)
     {
         ref GameplayTagContainer actorTags = ref world.TryGetRef<GameplayTagContainer>(actor, out bool hasActorTags);
         if (!hasActorTags)
         {
-            return blockTags.RequiredAll.IsEmpty;
+            return blockTags.RequiredAll.IsEmpty
+                ? AbilityActivationRefusalReason.None
+                : AbilityActivationRefusalReason.RequiredActivationTagMissing;
         }
 
-        return !tagOps.Intersects(ref actorTags, in blockTags.BlockedAny, TagSense.Effective) &&
-               tagOps.ContainsAll(ref actorTags, in blockTags.RequiredAll, TagSense.Effective);
+        if (!blockTags.RequiredAll.IsEmpty &&
+            !tagOps.ContainsAll(ref actorTags, in blockTags.RequiredAll, TagSense.Effective))
+        {
+            return AbilityActivationRefusalReason.RequiredActivationTagMissing;
+        }
+
+        if (!blockTags.BlockedAny.IsEmpty &&
+            tagOps.Intersects(ref actorTags, in blockTags.BlockedAny, TagSense.Effective))
+        {
+            return AbilityActivationRefusalReason.BlockedActivationTagPresent;
+        }
+
+        return AbilityActivationRefusalReason.None;
     }
 }

@@ -390,6 +390,7 @@ namespace Ludots.Core.Gameplay.Progression
                 _world,
                 context.Actor,
                 graphTarget,
+                default,
                 default(IntVector2),
                 program,
                 _graphApi,

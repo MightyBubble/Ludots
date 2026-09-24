@@ -17,6 +17,7 @@ using Ludots.Core.Map;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.AI.Systems;
+using Ludots.Core.Gameplay.AI.Utility;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.Narrative;
@@ -386,6 +387,7 @@ namespace Ludots.Core.Engine
         public Ludots.Core.Config.ConfigConflictReport ConfigConflictReport { get; private set; }
         public Ludots.Core.Config.ConfigCatalog ConfigCatalog { get; private set; }
         public Ludots.Core.Gameplay.AI.Config.AiCompiledRuntime AiRuntime { get; private set; }
+        private UtilityAiRuntimeSource _utilityAiRuntimeSource;
 
         public void InitializeWithConfigPipeline(List<string> modPaths, string assetsRoot)
         {
@@ -567,6 +569,7 @@ namespace Ludots.Core.Engine
             if (ConfigPipeline == null)
             {
                 AiRuntime = default;
+                _utilityAiRuntimeSource?.Update(UtilityAiCompiledRuntime.Empty);
                 Ludots.Core.Config.ComponentRegistry.SetUtilityAiAuthoringCatalog(null);
                 return;
             }
@@ -584,6 +587,7 @@ namespace Ludots.Core.Engine
             var loader = new Ludots.Core.Gameplay.AI.Config.AiConfigLoader(ConfigPipeline, atoms, validation);
             var catalog = ConfigCatalog ?? Ludots.Core.Gameplay.AI.Config.AiConfigCatalog.CreateDefault();
             AiRuntime = loader.LoadAndCompile(catalog, ConfigConflictReport);
+            _utilityAiRuntimeSource?.Update(AiRuntime.UtilityRuntime);
             Ludots.Core.Config.ComponentRegistry.SetUtilityAiAuthoringCatalog(AiRuntime.UtilityRuntime.Authoring);
         }
 
@@ -1253,8 +1257,6 @@ namespace Ludots.Core.Engine
                 static (GameEngine engine, out Entity viewer) =>
                     KnowledgeProjectionConsumer.TryResolveViewer(engine.World, engine.GlobalContext, Entity.Null, out viewer));
 
-            var abilitySystem = new AbilitySystem(World, effectRequestQueue, abilityDefinitions, tagOps, graphProgramRegistry, gasGraphApi, progressionEvaluator);
-            var reactionSystem = new ReactionSystem(World, abilitySystem, EventBus);
             var graphEdgeCostOverlay = new GraphEdgeCostOverlay();
             var cameraBehaviorInput = new CameraBehaviorInputState();
             var cameraImpulseRuntime = new CameraImpulseRuntime();
@@ -1399,7 +1401,7 @@ namespace Ludots.Core.Engine
                 orderQueue, stepRateHz,
                 graphProgramRegistry, gasGraphApi,
                 closeEntityIntakeOnUpdate: false);
-            var abilityExecSystem = new AbilityExecSystem(World, clock, abilityInputRequestQueue, inputResponseBuffer, effectRequestQueue, gasRuntimeCapacity.AbilityExecSnapshotCapacity, abilityDefinitions, EventBus, cfgCastAbility, cfgCastAbilityStart, gasPresentationEvents, graphPrograms: graphProgramRegistry, graphApi: gasGraphApi, tagOps: tagOps, orderTypeRegistry: orderTypeRegistry, progressionRequirements: progressionEvaluator, maxWorkUnitsPerSlice: gasRuntimeCapacity.AbilityExecMaxWorkUnitsPerSlice);
+            AbilityExecSystem abilityExecSystem;
             var abilityEndOrderSystem = new AbilityEndOrderSystem(World, orderTypeRegistry, cfgCastAbilityEnd);
             var stopOrderSystem = new StopOrderSystem(World, orderTypeRegistry, cfgStop);
             var instantCompleteOrderSystem = new InstantCompleteOrderSystem(World, orderTypeRegistry);
@@ -1495,7 +1497,46 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.OrderQueue, orderQueue);
             SetService(CoreServiceKeys.OrderTypeRegistry, orderTypeRegistry);
             SetService(CoreServiceKeys.OrderRuleRegistry, orderRuleRegistry);
+            _utilityAiRuntimeSource = new UtilityAiRuntimeSource(UtilityAiCompiledRuntime.Empty);
             RebuildAiRuntime();
+            var utilityAbilityActuatorGate = new UtilityAiAbilityActuatorGate(World, _utilityAiRuntimeSource);
+            var abilityActivationEligibility = new AbilityActivationEligibilityQuery(
+                World,
+                abilityDefinitions,
+                tagOps,
+                graphProgramRegistry,
+                gasGraphApi,
+                progressionEvaluator,
+                utilityAbilityActuatorGate);
+            var abilitySystem = new AbilitySystem(
+                World,
+                effectRequestQueue,
+                abilityDefinitions,
+                tagOps,
+                graphProgramRegistry,
+                gasGraphApi,
+                progressionEvaluator,
+                abilityActivationEligibility);
+            var reactionSystem = new ReactionSystem(World, abilitySystem, EventBus);
+            abilityExecSystem = new AbilityExecSystem(
+                World,
+                clock,
+                abilityInputRequestQueue,
+                inputResponseBuffer,
+                effectRequestQueue,
+                gasRuntimeCapacity.AbilityExecSnapshotCapacity,
+                abilityDefinitions,
+                EventBus,
+                cfgCastAbility,
+                cfgCastAbilityStart,
+                gasPresentationEvents,
+                graphPrograms: graphProgramRegistry,
+                graphApi: gasGraphApi,
+                tagOps: tagOps,
+                orderTypeRegistry: orderTypeRegistry,
+                progressionRequirements: progressionEvaluator,
+                maxWorkUnitsPerSlice: gasRuntimeCapacity.AbilityExecMaxWorkUnitsPerSlice,
+                activationEligibility: abilityActivationEligibility);
             SetService(CoreServiceKeys.AiRuntime, AiRuntime);
             SetService(CoreServiceKeys.OrderBufferSystem, orderBufferSystem);
             SetService(CoreServiceKeys.OrderRequestQueue, orderRequestQueue);
@@ -1643,7 +1684,7 @@ namespace Ludots.Core.Engine
                 new InventoryEquipmentGrantSyncSystem(World, inventoryRuntime, effectRequestQueue, abilityDefinitions),
                 SystemGroup.InputCollection);
             RegisterSystem(new AbilityFormRoutingSystem(World, abilityFormSets, tagOps), SystemGroup.InputCollection);
-            RegisterSystem(new UtilityAiThinkScheduleSystem(World, clock, AiRuntime.UtilityRuntime), SystemGroup.InputCollection);
+            RegisterSystem(new UtilityAiThinkScheduleSystem(World, clock, _utilityAiRuntimeSource), SystemGroup.InputCollection);
             _worldToGridSyncSystem = new WorldToGridSyncSystem(World, SpatialCoords);
             _spatialPartitionUpdateSystem = new SpatialPartitionUpdateSystem(World, _spatialPartition, WorldSizeSpec);
             RegisterSystem(_worldToGridSyncSystem, SystemGroup.PostMovement);
@@ -1662,12 +1703,13 @@ namespace Ludots.Core.Engine
                 new UtilityAiDecisionSystem(
                     World,
                     clock,
-                    AiRuntime.UtilityRuntime,
+                    _utilityAiRuntimeSource,
                     SpatialQueries,
                     abilityDefinitions,
                     graphProgramRegistry,
                     gasGraphApi,
-                    orderQueue),
+                    orderQueue,
+                    abilityActivationEligibility),
                 SystemGroup.PostMovement);
             RegisterPhysics2DSystems(
                 clock,
@@ -1784,6 +1826,14 @@ namespace Ludots.Core.Engine
 
             // Phase 6: Cleanup
             RegisterSystem(orderContinuationSystem, SystemGroup.Cleanup);
+            RegisterSystem(
+                new UtilityAiOrderResultSystem(
+                    World,
+                    clock,
+                    _utilityAiRuntimeSource,
+                    orderAdmissionResults,
+                    orderTerminalResults),
+                SystemGroup.Cleanup);
             RegisterSystem(new UtilityAiCombatMemoryCleanupSystem(World, clock), SystemGroup.Cleanup);
             RegisterSystem(new GraphOutputValueCleanupSystem(World, graphOutputValueStore), SystemGroup.Cleanup);
             RegisterSystem(new OrderAdmissionEntityIntakeEndSystem(orderAdmissionResults), SystemGroup.Cleanup);

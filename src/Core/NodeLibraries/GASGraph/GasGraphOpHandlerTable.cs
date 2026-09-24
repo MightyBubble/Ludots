@@ -266,6 +266,30 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         public static void Execute(ref GraphExecutionState state, ReadOnlySpan<GraphInstruction> program, GasGraphOpHandlerTable handlers)
         {
+            var instructionBudget = new GraphInstructionBudget(GraphVmLimits.MaxInstructionsPerExecution);
+            GraphExecutionStatus status = Execute(
+                ref state,
+                program,
+                handlers,
+                ref instructionBudget);
+            if (status != GraphExecutionStatus.Completed)
+            {
+                throw new InvalidOperationException(
+                    $"Graph VM exceeded MaxInstructionsPerExecution ({GraphVmLimits.MaxInstructionsPerExecution}). Possible infinite loop.");
+            }
+        }
+
+        /// <summary>
+        /// Executes against a caller-owned budget that may span multiple graph executions.
+        /// Every instruction reached by the VM, including jumps and repeated loop instructions,
+        /// consumes one unit before it executes.
+        /// </summary>
+        public static GraphExecutionStatus Execute(
+            ref GraphExecutionState state,
+            ReadOnlySpan<GraphInstruction> program,
+            GasGraphOpHandlerTable handlers,
+            ref GraphInstructionBudget instructionBudget)
+        {
             var table = handlers.Handlers;
             int pc = 0;
             int steps = 0;
@@ -273,12 +297,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
             while ((uint)pc < (uint)program.Length)
             {
-                if (++steps > maxSteps)
+                if (steps >= maxSteps)
                 {
                     throw new InvalidOperationException(
                         $"Graph VM exceeded MaxInstructionsPerExecution ({maxSteps}). Possible infinite loop.");
                 }
 
+                if (!instructionBudget.TryConsumeInstruction())
+                {
+                    return GraphExecutionStatus.InstructionBudgetExhausted;
+                }
+
+                steps++;
                 ref readonly var ins = ref program[pc];
                 pc++;
 
@@ -299,6 +329,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 handler(ref state, in ins, ref pc);
             }
+
+            return GraphExecutionStatus.Completed;
         }
 
         private void RegisterBuiltins()

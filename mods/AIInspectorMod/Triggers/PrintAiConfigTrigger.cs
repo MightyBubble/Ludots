@@ -76,7 +76,7 @@ namespace AIInspectorMod.Triggers
                 {
                     ref readonly var trace = ref traces[index];
                     _modContext.Log(
-                        $"[AIInspectorMod] Utility.Trace[{count}]: candidates={trace.CandidateCount} bestDecision={trace.BestDecisionId} bestScore={trace.BestScore} bestPriorityBucket={trace.BestPriorityBucket} bestDistanceSq={trace.BestDistanceSq} filterReject={trace.LastFilterRejectReason} readinessBlock={trace.LastReadinessBlockReason} submittedOrderType={trace.LastSubmittedOrderTypeId} submittedAbility={trace.LastSubmittedAbilityId} taskKind={trace.LastTaskKind} taskStatus={trace.LastTaskStatus}");
+                        $"[AIInspectorMod] Utility.Trace[{count}]: thinkOutcome={trace.ThinkOutcome} candidates={trace.CandidateCount}/{trace.CandidateLimit} graphScoreInstructions={trace.GraphScoreInstructionCount}/{trace.GraphScoreInstructionLimit} bestDecision={trace.BestDecisionId} bestScore={trace.BestScore} bestPriorityBucket={trace.BestPriorityBucket} bestDistanceSq={trace.BestDistanceSq} filterReject={trace.LastFilterRejectReason} readinessBlock={trace.LastReadinessBlockReason} submittedOrderId={trace.LastSubmittedOrderId} submittedOrderType={trace.LastSubmittedOrderTypeId} submittedAbility={trace.LastSubmittedAbilityId} taskStatus={trace.LastTaskStatus} taskFailureReason={trace.LastTaskFailureReason}");
                     count++;
                 }
             }

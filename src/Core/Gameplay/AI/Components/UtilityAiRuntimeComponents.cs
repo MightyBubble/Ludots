@@ -1,4 +1,6 @@
 using Arch.Core;
+using Ludots.Core.Gameplay.AI.Utility;
+using Ludots.Core.Gameplay.GAS.Components;
 
 namespace Ludots.Core.Gameplay.AI.Components
 {
@@ -15,18 +17,20 @@ namespace Ludots.Core.Gameplay.AI.Components
         public int LastSwitchStep;
         public int NextThinkStep;
         public int LastSubmittedOrderId;
-        public int CurrentTaskOffset;
-        public byte CurrentTaskStatus;
+        public UtilityAiTaskRunStatus CurrentTaskStatus;
+        public OrderFailureReason CurrentTaskFailureReason;
         public int DecisionStartedStep;
-        public int CooldownDecisionId;
-        public int DecisionCooldownUntilStep;
-        public int SharedCooldownUntilStep;
-        public int SharedCooldownTagId;
+        public int RepeatDelayDecisionId;
+        public int DecisionRepeatDelayUntilStep;
     }
 
     public struct UtilityAiDecisionTrace
     {
+        public int ThinkOutcome;
         public int CandidateCount;
+        public int CandidateLimit;
+        public int GraphScoreInstructionCount;
+        public int GraphScoreInstructionLimit;
         public int BestDecisionId;
         public Entity BestTarget;
         public float BestScore;
@@ -34,10 +38,11 @@ namespace Ludots.Core.Gameplay.AI.Components
         public long BestDistanceSq;
         public int LastFilterRejectReason;
         public int LastReadinessBlockReason;
+        public int LastSubmittedOrderId;
         public int LastSubmittedOrderTypeId;
         public int LastSubmittedAbilityId;
-        public int LastTaskKind;
         public int LastTaskStatus;
+        public int LastTaskFailureReason;
     }
 
     public struct UtilityAiCombatMemory

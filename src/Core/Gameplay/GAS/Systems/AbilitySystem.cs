@@ -1,9 +1,6 @@
-using System.Runtime.CompilerServices;
 using Arch.Core;
 using Arch.Core.Extensions;
-using Ludots.Core.Association;
 using Ludots.Core.Gameplay.GAS.Components;
-using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -13,11 +10,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
     public class AbilitySystem : BaseSystem<World, float>
     {
         private readonly EffectRequestQueue _effectRequests;
-        private readonly AbilityDefinitionRegistry _abilityDefinitions;
-        private readonly TagOps _tagOps;
-        private readonly GraphProgramRegistry _graphPrograms;
-        private readonly IGraphRuntimeApi _graphApi;
-        private readonly ProgressionRequirementEvaluator _progressionRequirements;
+        private readonly AbilityActivationEligibilityQuery _activationEligibility;
 
         public AbilitySystem(
             World world,
@@ -26,15 +19,19 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             TagOps tagOps = null,
             GraphProgramRegistry graphPrograms = null,
             IGraphRuntimeApi graphApi = null,
-            ProgressionRequirementEvaluator progressionRequirements = null) : base(world)
+            ProgressionRequirementEvaluator progressionRequirements = null,
+            AbilityActivationEligibilityQuery activationEligibility = null) : base(world)
         {
             _effectRequests = effectRequests ?? throw new InvalidOperationException(
                 "LUDOTS_GAS_ABILITY_EFFECT_QUEUE_REQUIRED: AbilitySystem requires EffectRequestQueue to publish activation effects.");
-            _abilityDefinitions = abilityDefinitions;
-            _tagOps = tagOps ?? throw new InvalidOperationException(TagOps.MissingTagOpsError);
-            _graphPrograms = graphPrograms;
-            _graphApi = graphApi;
-            _progressionRequirements = progressionRequirements;
+            TagOps requiredTagOps = tagOps ?? throw new InvalidOperationException(TagOps.MissingTagOpsError);
+            _activationEligibility = activationEligibility ?? new AbilityActivationEligibilityQuery(
+                world,
+                abilityDefinitions,
+                requiredTagOps,
+                graphPrograms,
+                graphApi,
+                progressionRequirements);
         }
 
         public override void Update(in float dt) { }
@@ -101,94 +98,47 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         public bool TryActivateAbility(Entity caster, int slotIndex, in AbilityActivationArgs args)
         {
-            if (!World.IsAlive(caster)) return false;
-
-            World.TryGetRef<AbilityStateBuffer>(caster, out bool hasAbilityBuffer);
-            if (!hasAbilityBuffer) return false;
             if (!TryValidateTargets(caster, in args, out Entity validationTarget)) return false;
-            if (!AbilitySlotResolver.TryResolve(World, caster, slotIndex, out AbilitySlotState slot)) return false;
-
-            if (slot.AbilityId > 0 && _abilityDefinitions != null && _abilityDefinitions.TryGet(slot.AbilityId, out var def))
-            {
-                if (def.HasActivationBlockTags)
-                {
-                    var blockTags = def.ActivationBlockTags;
-                    if (!AbilityActivationBlockTagEvaluator.Passes(World, caster, _tagOps, in blockTags)) return false;
-                }
-
-                if (def.HasActivationPrecondition)
-                {
-                    if (!AbilityActivationPreconditionEvaluator.Evaluate(
-                            World,
-                            caster,
-                            validationTarget,
-                            default,
-                            slot.AbilityId,
-                            in def.ActivationPrecondition,
-                            _graphPrograms,
-                            _graphApi))
-                    {
-                        return false;
-                    }
-                }
-
-                if (!EvaluateProgressionUseRequirement(caster, validationTarget, args.TargetContext, in def))
-                {
-                    return false;
-                }
-
-                if (!def.HasOnActivateEffects || def.OnActivateEffects.Count <= 0) return true;
-
-                var effects = def.OnActivateEffects;
-                return TryPublishEffects(caster, in args, ref effects);
-            }
-
-            if (slot.TemplateEntityId <= 0) return false;
-
-            Entity templateEntity = ReconstructEntity(slot.TemplateEntityId, slot.TemplateEntityWorldId, slot.TemplateEntityVersion);
-            if (!World.IsAlive(templateEntity)) return false;
-            World.TryGetRef<AbilityTemplate>(templateEntity, out bool hasTemplate);
-            if (!hasTemplate) return false;
-
-            ref var blockTagsEntity = ref World.TryGetRef<AbilityActivationBlockTags>(templateEntity, out bool hasBlockTagsEntity);
-            if (hasBlockTagsEntity)
-            {
-                if (!AbilityActivationBlockTagEvaluator.Passes(World, caster, _tagOps, in blockTagsEntity)) return false;
-            }
-
-            ref var activationPreconditionEntity = ref World.TryGetRef<AbilityActivationPrecondition>(templateEntity, out bool hasActivationPreconditionEntity);
-            if (hasActivationPreconditionEntity)
-            {
-                int activationId = slot.AbilityId > 0 ? slot.AbilityId : slot.TemplateEntityId;
-                if (!AbilityActivationPreconditionEvaluator.Evaluate(
-                        World,
-                        caster,
-                        validationTarget,
-                        default,
-                        activationId,
-                        in activationPreconditionEntity,
-                        _graphPrograms,
-                        _graphApi))
-                {
-                    return false;
-                }
-            }
-
-            ref var progressionRequirementsEntity = ref World.TryGetRef<AbilityProgressionRequirements>(templateEntity, out bool hasProgressionRequirementsEntity);
-            if (hasProgressionRequirementsEntity &&
-                !EvaluateProgressionUseRequirement(caster, validationTarget, args.TargetContext, in progressionRequirementsEntity))
+            var request = new AbilityActivationEligibilityRequest(
+                caster,
+                slotIndex,
+                validationTarget,
+                args.TargetContext,
+                allowProgressionDeferral: false);
+            AbilityActivationEligibilityResult eligibility = _activationEligibility.Evaluate(in request);
+            if (!eligibility.IsEligible)
             {
                 return false;
             }
 
-            ref var effectsEntity = ref World.TryGetRef<AbilityOnActivateEffects>(templateEntity, out bool hasOnActivateEntity);
-            if (hasOnActivateEntity)
+            AbilityOnActivateEffects effects = default;
+            bool hasEffects;
+            if (eligibility.HasDefinition)
             {
-                if (effectsEntity.Count <= 0) return true;
-                return TryPublishEffects(caster, in args, ref effectsEntity);
+                hasEffects = eligibility.Definition.HasOnActivateEffects;
+                effects = eligibility.Definition.OnActivateEffects;
+            }
+            else
+            {
+                Entity templateEntity = eligibility.TemplateEntity;
+                if (!World.Has<AbilityTemplate>(templateEntity))
+                {
+                    return false;
+                }
+
+                hasEffects = World.Has<AbilityOnActivateEffects>(templateEntity);
+                if (hasEffects)
+                {
+                    effects = World.Get<AbilityOnActivateEffects>(templateEntity);
+                }
             }
 
-            return true;
+            if (!hasEffects || effects.Count <= 0)
+            {
+                return true;
+            }
+
+            return TryPublishEffects(caster, in args, ref effects);
         }
 
         private unsafe bool TryPublishEffects(
@@ -296,46 +246,5 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return true;
         }
 
-        private bool EvaluateProgressionUseRequirement(Entity caster, Entity subject, Entity explicitScopeHost, in AbilityDefinition definition)
-        {
-            if (!definition.HasUseProgressionRequirement)
-            {
-                return true;
-            }
-
-            return EvaluateProgressionRequirement(caster, subject, explicitScopeHost, definition.UseProgressionRequirementId);
-        }
-
-        private bool EvaluateProgressionUseRequirement(Entity caster, Entity subject, Entity explicitScopeHost, in AbilityProgressionRequirements requirements)
-        {
-            if (requirements.UseRequirementId <= 0)
-            {
-                return true;
-            }
-
-            return EvaluateProgressionRequirement(caster, subject, explicitScopeHost, requirements.UseRequirementId);
-        }
-
-        private bool EvaluateProgressionRequirement(Entity caster, Entity subject, Entity explicitScopeHost, int requirementId)
-        {
-            if (_progressionRequirements == null)
-            {
-                throw new InvalidOperationException("Ability progression requirement is configured, but ProgressionRequirementEvaluator is not registered.");
-            }
-
-            Entity resolvedSubject = World.IsAlive(subject) ? subject : caster;
-            Entity resolvedExplicitScopeHost = World.IsAlive(explicitScopeHost)
-                ? explicitScopeHost
-                : default;
-            var context = new RoleResolverContext(
-                actor: caster,
-                subject: resolvedSubject,
-                explicitScopeHost: resolvedExplicitScopeHost);
-            return _progressionRequirements.Evaluate(requirementId, in context);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Entity ReconstructEntity(int id, int worldId, int version)
-            => EntityUtil.Reconstruct(id, worldId, version);
     }
 }

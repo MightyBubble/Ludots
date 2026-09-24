@@ -421,7 +421,9 @@ namespace Ludots.Core.Gameplay.AI.Config
 
             var inputs = new List<UtilityAiInputDefinition>();
             var inputIds = new Dictionary<string, int>(StringComparer.Ordinal);
-            CompileInputs(inputNode, inputs, inputIds);
+            var graphScorePrograms = new List<UtilityAiGraphScoreProgramDefinition>();
+            var graphScoreProgramIndices = new Dictionary<int, int>();
+            CompileInputs(inputNode, inputs, inputIds, graphScorePrograms, graphScoreProgramIndices);
 
             var normalizations = new List<UtilityAiNormalizationDefinition>();
             var normalizationIds = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -446,7 +448,7 @@ namespace Ludots.Core.Gameplay.AI.Config
             var decisions = new List<UtilityAiDecisionDefinition>();
             var considerations = new List<UtilityAiConsiderationDefinition>();
             var decisionIds = new Dictionary<string, int>(StringComparer.Ordinal);
-            CompileDecisions(decisionNode, decisions, considerations, decisionIds, targetFilterIds, inputIds, normalizationIds, curveIds, taskIds);
+            CompileDecisions(decisionNode, decisions, considerations, decisionIds, targetFilterIds, inputIds, normalizationIds, curveIds, tasks, taskIds);
 
             var decisionMakers = new List<UtilityAiDecisionMakerDefinition>();
             var decisionMakerIds = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -474,7 +476,8 @@ namespace Ludots.Core.Gameplay.AI.Config
                 tasks.ToArray(),
                 stances.ToArray(),
                 actuators.ToArray(),
-                new UtilityAiAuthoringCatalog(profileIds, stanceIds, actuatorIds));
+                new UtilityAiAuthoringCatalog(profileIds, stanceIds, actuatorIds),
+                graphScorePrograms.ToArray());
         }
 
         private void CompileTargetFilters(
@@ -577,7 +580,12 @@ namespace Ludots.Core.Gameplay.AI.Config
             throw Fail($"{path}.Kind", $"Unsupported target filter op '{kind}'.");
         }
 
-        private void CompileInputs(JsonNode? node, List<UtilityAiInputDefinition> inputs, Dictionary<string, int> ids)
+        private void CompileInputs(
+            JsonNode? node,
+            List<UtilityAiInputDefinition> inputs,
+            Dictionary<string, int> ids,
+            List<UtilityAiGraphScoreProgramDefinition> graphScorePrograms,
+            Dictionary<int, int> graphScoreProgramIndices)
         {
             if (node is not JsonArray arr) return;
 
@@ -613,7 +621,20 @@ namespace Ludots.Core.Gameplay.AI.Config
                 else if (string.Equals(kind, "GraphScore", StringComparison.OrdinalIgnoreCase))
                 {
                     parsedKind = UtilityAiInputKind.GraphScore;
-                    graphId = ResolveGraphReference(obj, path);
+                    graphId = ResolveGraphReference(obj, path, out var program);
+                    if (!graphScoreProgramIndices.TryGetValue(graphId, out arg0))
+                    {
+                        try
+                        {
+                            arg0 = graphScorePrograms.Count;
+                            graphScorePrograms.Add(new UtilityAiGraphScoreProgramDefinition(graphId, program, path));
+                            graphScoreProgramIndices.Add(graphId, arg0);
+                        }
+                        catch (InvalidOperationException ex)
+                        {
+                            throw Fail(path, ex.Message);
+                        }
+                    }
                 }
                 else if (string.Equals(kind, "TargetHasTag", StringComparison.OrdinalIgnoreCase))
                 {
@@ -729,35 +750,17 @@ namespace Ludots.Core.Gameplay.AI.Config
                 JsonObject obj = RequireObject(arr[i], path);
                 string id = RequireRecordId(obj, path);
                 string kind = RequireString(obj, "Kind", path);
-                UtilityAiTaskKind parsedKind;
-                if (string.Equals(kind, "SubmitOrder", StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(kind, "SubmitOrder", StringComparison.Ordinal))
                 {
-                    parsedKind = UtilityAiTaskKind.SubmitOrder;
-                }
-                else if (string.Equals(kind, "Sequence", StringComparison.OrdinalIgnoreCase))
-                {
-                    parsedKind = UtilityAiTaskKind.Sequence;
-                }
-                else if (string.Equals(kind, "Parallel", StringComparison.OrdinalIgnoreCase))
-                {
-                    parsedKind = UtilityAiTaskKind.Parallel;
-                }
-                else if (string.Equals(kind, "ParallelComplete", StringComparison.OrdinalIgnoreCase))
-                {
-                    parsedKind = UtilityAiTaskKind.ParallelComplete;
-                }
-                else
-                {
-                    throw Fail($"{path}.Kind", $"Unsupported task kind '{kind}'.");
+                    throw Fail(
+                        $"{path}.Kind",
+                        $"Task kind '{kind}' is not supported. Only 'SubmitOrder' is supported.");
                 }
 
-                int orderTypeId = 0;
+                const UtilityAiTaskKind parsedKind = UtilityAiTaskKind.SubmitOrder;
+                int orderTypeId = ResolveOrderTypeReference(obj, path);
                 int abilityId = ResolveAbilityReference(obj, path, required: false);
                 int abilitySlotIndex = TryReadInt(obj, "AbilitySlotIndex", out int slot) ? slot : -1;
-                if (parsedKind == UtilityAiTaskKind.SubmitOrder)
-                {
-                    orderTypeId = ResolveOrderTypeReference(obj, path);
-                }
 
                 int submitMode = TryReadByte(obj, "SubmitMode", out byte sm) ? sm : (byte)OrderSubmitMode.Immediate;
                 if (!Enum.IsDefined(typeof(OrderSubmitMode), (byte)submitMode))
@@ -820,7 +823,7 @@ namespace Ludots.Core.Gameplay.AI.Config
                 string path = $"AI/actuators.json[{i}]";
                 JsonObject obj = RequireObject(arr[i], path);
                 string id = RequireRecordId(obj, path);
-                int abilityId = ResolveAbilityReference(obj, path, required: false);
+                int abilityId = ResolveAbilityReference(obj, path, required: true);
                 int readinessInputId = TryReadString(obj, "ReadinessInput", out string readiness)
                     ? ResolveLocalId(inputIds, readiness, $"{path}.ReadinessInput", "input")
                     : -1;
@@ -841,6 +844,7 @@ namespace Ludots.Core.Gameplay.AI.Config
             Dictionary<string, int> inputIds,
             Dictionary<string, int> normalizationIds,
             Dictionary<string, int> curveIds,
+            List<UtilityAiTaskDefinition> tasks,
             Dictionary<string, int> taskIds)
         {
             if (node is not JsonArray arr) return;
@@ -849,6 +853,7 @@ namespace Ludots.Core.Gameplay.AI.Config
             {
                 string path = $"AI/decisions.json[{i}]";
                 JsonObject obj = RequireObject(arr[i], path);
+                ValidateDecisionFields(obj, path);
                 string id = RequireRecordId(obj, path);
                 int targetFilterId = ResolveLocalId(targetFilterIds, RequireString(obj, "TargetFilter", path), $"{path}.TargetFilter", "target filter");
 
@@ -868,71 +873,142 @@ namespace Ludots.Core.Gameplay.AI.Config
                     }
                 }
 
-                int taskOffset = ResolveTaskRange(obj, path, id, taskIds, out int taskCount);
+                int taskIndex = ResolveTaskIndex(obj, path, id, taskIds);
                 int priority = TryReadInt(obj, "Priority", out int authoredPriority) ? authoredPriority : 0;
                 float baseScore = TryReadFloat(obj, "BaseScore", out float authoredBaseScore) ? authoredBaseScore : 1f;
                 float weightDecision = TryReadFloat(obj, "Weight", out float authoredWeightDecision) ? authoredWeightDecision : 1f;
                 float momentumBonus = TryReadFloat(obj, "MomentumBonus", out float authoredMomentum) ? authoredMomentum : 0f;
                 int minDurationSteps = TryReadInt(obj, "MinDurationSteps", out int authoredMinDuration) ? authoredMinDuration : 0;
-                int cooldownSteps = TryReadInt(obj, "CooldownSteps", out int authoredCooldownSteps) ? authoredCooldownSteps : 0;
-                int autocastAbilityId = ResolveAbilityReference(obj, path, required: false);
+                int decisionRepeatDelaySteps = TryReadInt(obj, "DecisionRepeatDelaySteps", out int authoredRepeatDelay) ? authoredRepeatDelay : 0;
+                int abilityId = ResolveAbilityReference(obj, path, required: false);
                 int abilitySlotIndex = TryReadInt(obj, "AbilitySlotIndex", out int authoredSlot) ? authoredSlot : -1;
-                int sharedCooldownTagId = TryReadString(obj, "SharedCooldownTag", out string cooldownTag)
-                    ? ResolveTag(cooldownTag, $"{path}.SharedCooldownTag")
-                    : 0;
-                UtilityAiDecisionFlags flags = ParseDecisionFlags(obj, path);
+                bool keepRunningUntilFinished = false;
+                if (obj.TryGetPropertyValue("KeepRunningUntilFinished", out JsonNode? keepRunningNode) &&
+                    (keepRunningNode is not JsonValue keepRunningValue ||
+                     !keepRunningValue.TryGetValue(out keepRunningUntilFinished)))
+                {
+                    throw Fail(
+                        $"{path}.KeepRunningUntilFinished",
+                        "KeepRunningUntilFinished must be a JSON boolean.");
+                }
+
+                ResolveUniqueAbilityIntent(
+                    tasks,
+                    taskIndex,
+                    path,
+                    ref abilityId,
+                    ref abilitySlotIndex);
 
                 ids.Add(id, decisions.Count);
                 decisions.Add(new UtilityAiDecisionDefinition(
                     targetFilterId,
                     considerationOffset,
                     considerations.Count - considerationOffset,
-                    taskOffset,
-                    taskCount,
+                    taskIndex,
                     priority,
                     baseScore,
                     weightDecision,
                     momentumBonus,
                     minDurationSteps,
-                    cooldownSteps,
-                    autocastAbilityId,
+                    decisionRepeatDelaySteps,
+                    abilityId,
                     abilitySlotIndex,
-                    sharedCooldownTagId,
-                    flags));
+                    keepRunningUntilFinished));
             }
         }
 
-        private int ResolveTaskRange(JsonObject obj, string path, string id, Dictionary<string, int> taskIds, out int taskCount)
+        private static void ValidateDecisionFields(JsonObject obj, string path)
         {
-            taskCount = 0;
-            int first = -1;
+            foreach (var property in obj)
+            {
+                bool supported = property.Key switch
+                {
+                    "id" or
+                    "TargetFilter" or
+                    "Priority" or
+                    "BaseScore" or
+                    "Weight" or
+                    "MomentumBonus" or
+                    "MinDurationSteps" or
+                    "DecisionRepeatDelaySteps" or
+                    "AbilityKey" or
+                    "AbilityId" or
+                    "AbilitySlotIndex" or
+                    "KeepRunningUntilFinished" or
+                    "Considerations" or
+                    "Tasks" => true,
+                    _ => false
+                };
+
+                if (!supported)
+                {
+                    throw Fail($"{path}.{property.Key}", $"Unsupported decision field '{property.Key}'.");
+                }
+            }
+        }
+
+        private int ResolveTaskIndex(
+            JsonObject obj,
+            string path,
+            string id,
+            Dictionary<string, int> taskIds)
+        {
             if (!obj.TryGetPropertyValue("Tasks", out var taskNode) || taskNode is not JsonArray taskArr)
             {
                 throw Fail($"AI/decisions.json:{id}.Tasks", "Decision must declare Tasks.");
             }
 
-            for (int t = 0; t < taskArr.Count; t++)
+            if (taskArr.Count != 1)
             {
-                string taskKey = taskArr[t]?.ToString() ?? string.Empty;
-                int resolved = ResolveLocalId(taskIds, taskKey, $"{path}.Tasks[{t}]", "task");
-                if (first < 0)
-                {
-                    first = resolved;
-                }
-                else if (first + taskCount != resolved)
-                {
-                    throw Fail($"{path}.Tasks[{t}]", "Decision task references must resolve to a contiguous compiled task range.");
-                }
-
-                taskCount++;
+                throw Fail(
+                    $"AI/decisions.json:{id}.Tasks",
+                    $"Decision must reference exactly one task; found {taskArr.Count}.");
             }
 
-            if (taskCount <= 0)
+            string taskKey = taskArr[0]?.ToString() ?? string.Empty;
+            return ResolveLocalId(taskIds, taskKey, $"{path}.Tasks[0]", "task");
+        }
+
+        private static void ResolveUniqueAbilityIntent(
+            List<UtilityAiTaskDefinition> tasks,
+            int taskIndex,
+            string decisionPath,
+            ref int abilityId,
+            ref int abilitySlotIndex)
+        {
+            UtilityAiTaskDefinition task = tasks[taskIndex];
+            if (task.AbilityId > 0)
             {
-                throw Fail($"AI/decisions.json:{id}.Tasks", "Decision must reference at least one task.");
+                if (abilityId > 0 && abilityId != task.AbilityId)
+                {
+                    throw Fail(
+                        decisionPath,
+                        $"Decision ability id {abilityId} conflicts with submitted task ability id {task.AbilityId} at compiled task index {taskIndex}.");
+                }
+
+                abilityId = task.AbilityId;
             }
 
-            return first;
+            if (task.AbilitySlotIndex >= 0)
+            {
+                if (abilitySlotIndex >= 0 && abilitySlotIndex != task.AbilitySlotIndex)
+                {
+                    throw Fail(
+                        decisionPath,
+                        $"Decision ability slot {abilitySlotIndex} conflicts with submitted task ability slot {task.AbilitySlotIndex} at compiled task index {taskIndex}.");
+                }
+
+                abilitySlotIndex = task.AbilitySlotIndex;
+            }
+
+            bool hasAbility = abilityId > 0;
+            bool hasSlot = abilitySlotIndex >= 0;
+            if (hasAbility != hasSlot)
+            {
+                throw Fail(
+                    decisionPath,
+                    "Ability decisions must resolve one complete ability/slot intent across the decision and its submitted tasks.");
+            }
         }
 
         private void CompileDecisionMakers(
@@ -1002,6 +1078,12 @@ namespace Ludots.Core.Gameplay.AI.Config
             {
                 string path = $"AI/profiles.json[{i}]";
                 JsonObject obj = RequireObject(arr[i], path);
+                if (obj.ContainsKey("DefaultStanceId"))
+                {
+                    throw Fail($"{path}.DefaultStanceId", "DefaultStanceId is not supported. Use DefaultStance with a stance key.");
+                }
+
+                ValidateProfileFields(obj, path);
                 string id = RequireRecordId(obj, path);
                 int offset = ResolveDecisionMakerRange(obj, path, decisionMakerIds, out int count);
                 int interval = TryReadInt(obj, "DecisionIntervalSteps", out int authoredInterval) ? authoredInterval : 1;
@@ -1010,23 +1092,42 @@ namespace Ludots.Core.Gameplay.AI.Config
                     throw Fail($"{path}.DecisionIntervalSteps", "DecisionIntervalSteps must be positive.");
                 }
 
-                int maxCandidates = TryReadInt(obj, "MaxCandidates", out int authoredMaxCandidates) ? authoredMaxCandidates : 64;
-                if (maxCandidates <= 0)
-                {
-                    throw Fail($"{path}.MaxCandidates", "MaxCandidates must be positive.");
-                }
-
-                if (obj.ContainsKey("DefaultStanceId"))
-                {
-                    throw Fail($"{path}.DefaultStanceId", "DefaultStanceId is not supported. Use DefaultStance with a stance key.");
-                }
-
+                int maxCandidates = RequirePositiveInt(obj, "MaxCandidates", path);
+                int maxGraphScoreInstructions = RequirePositiveInt(obj, "MaxGraphScoreInstructions", path);
                 int defaultStanceId = TryReadString(obj, "DefaultStance", out string stanceKey)
                     ? ResolveLocalId(stanceIds, stanceKey, $"{path}.DefaultStance", "stance")
                     : -1;
 
                 profileIds.Add(id, profiles.Count);
-                profiles.Add(new UtilityAiProfileDefinition(offset, count, interval, maxCandidates, defaultStanceId));
+                profiles.Add(new UtilityAiProfileDefinition(
+                    offset,
+                    count,
+                    interval,
+                    maxCandidates,
+                    maxGraphScoreInstructions,
+                    defaultStanceId));
+            }
+        }
+
+        private static void ValidateProfileFields(JsonObject obj, string path)
+        {
+            foreach (var property in obj)
+            {
+                bool supported = property.Key switch
+                {
+                    "id" or
+                    "DecisionMakers" or
+                    "DecisionIntervalSteps" or
+                    "MaxCandidates" or
+                    "MaxGraphScoreInstructions" or
+                    "DefaultStance" => true,
+                    _ => false
+                };
+
+                if (!supported)
+                {
+                    throw Fail($"{path}.{property.Key}", $"Unsupported profile field '{property.Key}'.");
+                }
             }
         }
 
@@ -1159,8 +1260,12 @@ namespace Ludots.Core.Gameplay.AI.Config
             return abilityId;
         }
 
-        private int ResolveGraphReference(JsonObject obj, string path)
+        private int ResolveGraphReference(
+            JsonObject obj,
+            string path,
+            out ReadOnlySpan<Ludots.Core.GraphRuntime.GraphInstruction> program)
         {
+            program = default;
             int graphId = 0;
             if (TryReadString(obj, "GraphKey", out string graphKey))
             {
@@ -1193,10 +1298,10 @@ namespace Ludots.Core.Gameplay.AI.Config
 
             if (_validation == null || _validation.Graphs == null)
             {
-                throw Fail(path, "Graph references require AiConfigValidationContext with GraphProgramRegistry.");
+                throw Fail(path, "GraphScore requires AiConfigValidationContext with GraphProgramRegistry.");
             }
 
-            if (!_validation.Graphs.TryGetProgram(graphId, out var program))
+            if (!_validation.Graphs.TryGetProgram(graphId, out program))
             {
                 throw Fail(path, $"References unknown graph id {graphId}.");
             }
@@ -1288,32 +1393,6 @@ namespace Ludots.Core.Gameplay.AI.Config
             if (string.Equals(value, "UtilityScore", StringComparison.OrdinalIgnoreCase)) return UtilityAiSelectionMode.UtilityScore;
             if (string.Equals(value, "FixedPriority", StringComparison.OrdinalIgnoreCase)) return UtilityAiSelectionMode.FixedPriority;
             throw Fail(path, $"Unsupported selection mode '{value}'.");
-        }
-
-        private static UtilityAiDecisionFlags ParseDecisionFlags(JsonObject obj, string path)
-        {
-            UtilityAiDecisionFlags flags = UtilityAiDecisionFlags.None;
-            if (TryReadBool(obj, "Autocast", out bool autocast) && autocast) flags |= UtilityAiDecisionFlags.Autocast;
-            if (TryReadBool(obj, "OrdinaryAttack", out bool ordinaryAttack) && ordinaryAttack) flags |= UtilityAiDecisionFlags.OrdinaryAttack;
-            if (TryReadBool(obj, "RequiresTarget", out bool requiresTarget) && requiresTarget) flags |= UtilityAiDecisionFlags.RequiresTarget;
-            if (TryReadBool(obj, "KeepRunningUntilFinished", out bool keepRunning) && keepRunning) flags |= UtilityAiDecisionFlags.KeepRunningUntilFinished;
-            if (TryReadBool(obj, "ExplicitOrderOnly", out bool explicitOnly) && explicitOnly) flags |= UtilityAiDecisionFlags.ExplicitOrderOnly;
-
-            if (obj.TryGetPropertyValue("Flags", out var node) && node is JsonArray arr)
-            {
-                for (int i = 0; i < arr.Count; i++)
-                {
-                    string flag = arr[i]?.ToString() ?? string.Empty;
-                    if (string.Equals(flag, "Autocast", StringComparison.OrdinalIgnoreCase)) flags |= UtilityAiDecisionFlags.Autocast;
-                    else if (string.Equals(flag, "OrdinaryAttack", StringComparison.OrdinalIgnoreCase)) flags |= UtilityAiDecisionFlags.OrdinaryAttack;
-                    else if (string.Equals(flag, "RequiresTarget", StringComparison.OrdinalIgnoreCase)) flags |= UtilityAiDecisionFlags.RequiresTarget;
-                    else if (string.Equals(flag, "KeepRunningUntilFinished", StringComparison.OrdinalIgnoreCase)) flags |= UtilityAiDecisionFlags.KeepRunningUntilFinished;
-                    else if (string.Equals(flag, "ExplicitOrderOnly", StringComparison.OrdinalIgnoreCase)) flags |= UtilityAiDecisionFlags.ExplicitOrderOnly;
-                    else throw Fail($"{path}.Flags[{i}]", $"Unsupported decision flag '{flag}'.");
-                }
-            }
-
-            return flags;
         }
 
         private ActionOrderSpec ReadOrderSpec(JsonObject orderObj, string path)

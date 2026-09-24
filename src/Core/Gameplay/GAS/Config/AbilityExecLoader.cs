@@ -97,6 +97,12 @@ namespace Ludots.Core.Gameplay.GAS.Config
         {
             var def = new AbilityDefinition();
 
+            if (obj.ContainsKey("cooldown"))
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'cooldown' is removed. Declare the duration with an exec TagClip and prevent activation with blockTags.blockedAny.");
+            }
+
             if (obj["indicator"] != null)
             {
                 throw new InvalidOperationException(
@@ -125,12 +131,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 throw new InvalidOperationException(
                     $"Ability '{id}' in '{path}' field 'onActivateEffects' is removed. " +
                     "Author effects once as exec.items EffectSignal or EffectClip entries.");
-            }
-
-            if (obj["cooldown"] is JsonObject cooldownObj)
-            {
-                def.Cooldown = CompileCooldown(cooldownObj, id, path);
-                def.HasCooldown = def.Cooldown.CooldownValueAttributeId > 0 || def.Cooldown.CooldownTagId > 0;
             }
 
             // ── blockTags ──
@@ -317,50 +317,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
             {
                 ValidationGraphId = graphId
             };
-        }
-
-        private static AbilityCooldown CompileCooldown(JsonObject cooldownObj, string id, string path)
-        {
-            var cooldown = new AbilityCooldown();
-
-            if (cooldownObj.ContainsKey("cooldownValueAttribute"))
-            {
-                throw new InvalidOperationException(
-                    $"Ability '{id}' in '{path}' uses unsupported cooldown field 'cooldownValueAttribute'. Use 'valueAttribute'.");
-            }
-
-            if (cooldownObj.ContainsKey("cooldownTag"))
-            {
-                throw new InvalidOperationException(
-                    $"Ability '{id}' in '{path}' uses unsupported cooldown field 'cooldownTag'. Use 'tag'.");
-            }
-
-            string attrName = cooldownObj["valueAttribute"]?.GetValue<string>() ?? string.Empty;
-            if (!string.IsNullOrWhiteSpace(attrName))
-            {
-                int attrId = AttributeRegistry.GetId(attrName);
-                if (attrId <= 0)
-                {
-                    throw new InvalidOperationException(
-                        $"Ability '{id}' in '{path}' cooldown.valueAttribute references unknown attribute '{attrName}'.");
-                }
-
-                cooldown.CooldownValueAttributeId = attrId;
-            }
-
-            string tagName = cooldownObj["tag"]?.GetValue<string>() ?? string.Empty;
-            if (!string.IsNullOrWhiteSpace(tagName))
-            {
-                cooldown.CooldownTagId = TagRegistry.Register(tagName);
-            }
-
-            if (cooldown.CooldownValueAttributeId <= 0 && cooldown.CooldownTagId <= 0)
-            {
-                throw new InvalidOperationException(
-                    $"Ability '{id}' in '{path}' cooldown must declare valueAttribute or tag.");
-            }
-
-            return cooldown;
         }
 
         private static void CompileItem(JsonObject itemObj, ref AbilityExecSpec spec, int idx, string id, string path)

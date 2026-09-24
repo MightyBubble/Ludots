@@ -20,6 +20,29 @@ namespace Ludots.Core.Gameplay.GAS
             GraphProgramRegistry graphPrograms,
             IGraphRuntimeApi graphApi)
         {
+            return Evaluate(
+                world,
+                caster,
+                explicitTarget,
+                default,
+                targetPosCm,
+                abilityId,
+                in precondition,
+                graphPrograms,
+                graphApi);
+        }
+
+        public static bool Evaluate(
+            World world,
+            Entity caster,
+            Entity explicitTarget,
+            Entity targetContext,
+            IntVector2 targetPosCm,
+            int abilityId,
+            in AbilityActivationPrecondition precondition,
+            GraphProgramRegistry graphPrograms,
+            IGraphRuntimeApi graphApi)
+        {
             if (precondition.ValidationGraphId <= 0)
             {
                 return true;
@@ -31,7 +54,9 @@ namespace Ludots.Core.Gameplay.GAS
                     $"Ability {abilityId} requires activation validation graphId={precondition.ValidationGraphId}, but graph validation services are not configured.");
             }
 
-            if (!graphPrograms.TryGetProgram(precondition.ValidationGraphId, out var validationProgram))
+            if (!graphPrograms.TryGetProgram(
+                    precondition.ValidationGraphId,
+                    out var validationProgram))
             {
                 throw new InvalidOperationException(
                     $"Ability {abilityId} references missing activation validation graphId={precondition.ValidationGraphId}.");
@@ -42,6 +67,7 @@ namespace Ludots.Core.Gameplay.GAS
                 world,
                 caster,
                 explicitTarget,
+                targetContext,
                 targetPosCm,
                 validationProgram,
                 graphApi,

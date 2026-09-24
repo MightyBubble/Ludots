@@ -6,12 +6,13 @@ namespace Ludots.Core.Spatial
 {
     public static class SpatialQueryPostProcessor
     {
-        private static readonly IComparer<Entity> StableComparerInstance = new StableEntityComparer();
+        private static readonly StableEntityComparer StableComparerInstance = new();
+        private static readonly Comparison<Entity> StableComparison = StableComparerInstance.Compare;
 
         public static int SortStableDedup(Span<Entity> span)
         {
             if (span.Length <= 1) return span.Length;
-            span.Sort(StableComparerInstance);
+            span.Sort(StableComparison);
             return DedupSorted(span);
         }
 
