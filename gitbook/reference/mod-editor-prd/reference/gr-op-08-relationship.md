@@ -4,20 +4,19 @@
 
 ## 1. 现状快照
 
-- 写侧五件（:142-145、:148，Effect）：EnsureLink/RemoveLink（dst=类型符号）、SetMetric/AddMetric/SetFlag（dst=reason，flags=关系类型，imm=度量/旗标符号）——效果组合元数据按 Relationship 域 Unsupported（fail-closed）。
-- 读侧三件：GetMetric（:146，LinearAll→Int）、HasFlag（:147，L+Q→Bool）、HasLink（:176，L+Q→Bool，flags=关系类型无 imm）。
-- Query 管线 13 件（:149-158、:173-175，QueryOnly）：Outgoing/Incoming/Mutual（source b）/BetweenPair（source b）建集；FilterMetricRange（list source min max）/FilterFlag/SortByMetric（降序旗标）；AggSum/Max/Average/MinMetric→Int；AggMax/MinEntityByMetric→Entity。
+- 建边/断边（EnsureLink/RemoveLink，dst=类型符号）图种为 Effect+Script+TriggerGraph。改度量/改旗标（SetMetric/AddMetric/SetFlag）仍只 Effect。五件写节点的效果元数据是 GasTransactional：效果计划收下，事务提交时落库，回滚时恢复提交前的边。Script/TriggerGraph 的策略放行建边与断边，这两张图直接写关系库。
+- 读侧三件：GetMetric（Int）、HasFlag（Bool）、HasLink（Bool）。线性图、Query（HasFlag/HasLink）、Script、TriggerGraph 可问。
+- Query 管线 13 件（QueryOnly）：Outgoing/Incoming/Mutual（source b）/BetweenPair（source b）建集；FilterMetricRange（list source min max）/FilterFlag/SortByMetric（降序旗标）；AggSum/Max/Average/MinMetric→Int；AggMax/MinEntityByMetric→Entity。
 - 关系类型/度量/旗标符号来自关系目录（rel-01）；度量聚合为 Int。
 
 ## 2. 代码锚点
 
 | 机制 | 位置 |
 |---|---|
-| 写侧五件描述符 | src/Core/NodeLibraries/GASGraph/GraphOpDescriptorTable.Data.cs:142-148 |
-| 读侧 GetMetric/HasFlag | GraphOpDescriptorTable.Data.cs:146-147 |
-| Query 管线 13 件 | GraphOpDescriptorTable.Data.cs:149-158, 173-175 |
-| HasLink | GraphOpDescriptorTable.Data.cs:176 |
-| Relationship 域 fail-closed | src/Core/NodeLibraries/GASGraph/GasGraphOpHandlerTable.cs:175-179 |
+| 写侧五件描述符 | src/Core/NodeLibraries/GASGraph/GraphOpDescriptorTable.Data.cs |
+| 建边/断边的脚本与触发图放行 | src/Core/NodeLibraries/GASGraph/GraphOpDescriptorTable.cs |
+| 写节点 GasTransactional 元数据 | src/Core/NodeLibraries/GASGraph/GasGraphOpHandlerTable.cs |
+| 效果事务暂存与撤回 | src/Core/Gameplay/GAS/RelationshipLinkSideEffectJournal.cs |
 | 关系目录 | assets/Relationships/catalog.json |
 
 **相关文档**：[gr-op-08 PRD](../prd/gr-op-08-relationship.md) · [gr-op-07 reference](gr-op-07-entityset.md)

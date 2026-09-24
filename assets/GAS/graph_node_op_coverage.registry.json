@@ -2801,7 +2801,9 @@
     {
       "op": "RelationshipEnsureLink",
       "authorableKinds": [
-        "Effect"
+        "Effect",
+        "TriggerGraph",
+        "Script"
       ],
       "showcaseId": "capability_standard_graph_op_RelationshipEnsureLink",
       "status": "covered",
@@ -2862,7 +2864,9 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_RelationshipGetMetric",
@@ -2885,8 +2889,10 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Query",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_RelationshipHasFlag",
@@ -2911,8 +2917,10 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Query",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_RelationshipHasLink",
@@ -3009,7 +3017,9 @@
     {
       "op": "RelationshipRemoveLink",
       "authorableKinds": [
-        "Effect"
+        "Effect",
+        "TriggerGraph",
+        "Script"
       ],
       "showcaseId": "capability_standard_graph_op_RelationshipRemoveLink",
       "status": "covered",

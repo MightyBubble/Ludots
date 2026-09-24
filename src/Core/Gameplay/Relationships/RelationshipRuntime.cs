@@ -430,6 +430,120 @@ namespace Ludots.Core.Gameplay.Relationships
             _changes.TryAdd(new RelationshipChangeRecord(source, target, validatedTypeId, RelationshipChangeKind.FlagChanged, metricId: -1, oldValue: 0, newValue: 0, oldFlags, newFlags));
         }
 
+        public int CaptureChangeCount() => _changes.Count;
+
+        public void TruncateChanges(int count) => _changes.Truncate(count);
+
+        public bool AreLinkEndpointsAlive(Entity source, Entity target)
+            => IsAliveInRuntimeWorld(source) && IsAliveInRuntimeWorld(target);
+
+        public void RequireLinkEndpoints(Entity source, Entity target)
+            => EnsureAliveInRuntimeWorld(source, target);
+
+        public int RequireRelationshipTypeId(int typeId) => ValidateTypeId(typeId);
+
+        public short ClampMetric(int metricId, int value)
+        {
+            _metrics.Get(metricId);
+            return ClampToDefinition(metricId, value);
+        }
+
+        public short MetricDefault(int metricId) => _metrics.Get(metricId).DefaultValue;
+
+        public uint RequireFlagMask(int flagId) => _flags.GetMask(flagId);
+
+        public RelationshipEdge CreateDefaultEdge() => RelationshipEdge.CreateDefault(_metrics);
+
+        public bool TryCopyEdge(Entity source, Entity target, int typeId, out RelationshipEdge edge)
+        {
+            if (!TryGetEdge(source, target, typeId, out edge))
+            {
+                return false;
+            }
+
+            edge = edge.Clone();
+            return true;
+        }
+
+        public int CopyLinkTypeIds(Entity source, Entity target, Span<int> destination)
+        {
+            if (!IsAliveInRuntimeWorld(source) || !IsAliveInRuntimeWorld(target) ||
+                !TryGetEdgeSet(source, target, out RelationshipEdgeSet set))
+            {
+                return 0;
+            }
+
+            if (set.Count > destination.Length)
+            {
+                throw new InvalidOperationException(
+                    $"Relationship pair {source.Id}->{target.Id} has {set.Count} types; the staging buffer holds {destination.Length}.");
+            }
+
+            for (int i = 0; i < set.Count; i++)
+            {
+                set.TryGetAt(i, out int typeId, out _);
+                destination[i] = typeId;
+            }
+
+            return set.Count;
+        }
+
+        public void RestoreEdge(Entity source, Entity target, int typeId, bool existed, in RelationshipEdge edge)
+        {
+            bool now = HasLink(source, target, typeId);
+            if (!existed)
+            {
+                if (now)
+                {
+                    RemoveLink(source, target, typeId);
+                }
+
+                return;
+            }
+
+            if (!now)
+            {
+                EnsureLink(source, target, typeId);
+            }
+
+            for (int metricId = 0; metricId < _metrics.Count; metricId++)
+            {
+                short want = edge.GetMetric(metricId);
+                if (GetMetric(source, target, typeId, metricId) != want)
+                {
+                    SetMetric(source, target, typeId, metricId, want);
+                }
+            }
+
+            if (!TryGetEdge(source, target, typeId, out RelationshipEdge current))
+            {
+                throw new InvalidOperationException(
+                    $"Relationship edge {source.Id}->{target.Id} type {typeId} disappeared while restoring a committed effect write.");
+            }
+
+            if (current.Flags == edge.Flags)
+            {
+                return;
+            }
+
+            for (int flagId = 0; flagId < 32; flagId++)
+            {
+                uint mask = 1u << flagId;
+                bool wantOn = (edge.Flags & mask) != 0;
+                if (!TryGetEdge(source, target, typeId, out current))
+                {
+                    throw new InvalidOperationException(
+                        $"Relationship edge {source.Id}->{target.Id} type {typeId} disappeared while restoring flags.");
+                }
+
+                bool haveOn = (current.Flags & mask) != 0;
+                if (wantOn != haveOn)
+                {
+                    SetFlag(source, target, typeId, flagId, wantOn);
+                }
+            }
+        }
+
         public bool TryGetHighestMetricTarget(Entity source, ReadOnlySpan<Entity> candidates, int typeId, int metricId, out Entity target, out short value)
         {
             target = Entity.Null;

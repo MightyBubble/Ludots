@@ -105,6 +105,16 @@ namespace Ludots.Core.Gameplay.Relationships
             _count = 0;
         }
 
+        public void Truncate(int count)
+        {
+            if ((uint)count > (uint)_count)
+            {
+                throw new ArgumentOutOfRangeException(nameof(count), count, "Relationship change truncate count is past the buffered records.");
+            }
+
+            _count = count;
+        }
+
         private void EnsureCapacity(int requiredCount)
         {
             if (requiredCount <= _buffer.Length)
