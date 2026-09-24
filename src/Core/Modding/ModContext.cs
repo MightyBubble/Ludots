@@ -3,6 +3,8 @@ using System.IO;
 using System.Threading.Tasks;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
+using Ludots.Core.GraphRuntime;
+using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Modding
@@ -12,6 +14,8 @@ namespace Ludots.Core.Modding
         public string ModId { get; }
         public IVirtualFileSystem VFS { get; }
         public FunctionRegistry FunctionRegistry { get; }
+        public GraphOpRegistry GraphOpRegistry { get; }
+        public GasGraphOpHandlerTable GasGraphOpHandlers { get; }
         public SystemFactoryRegistry SystemFactoryRegistry { get; }
         public TriggerDecoratorRegistry TriggerDecorators { get; }
 
@@ -25,11 +29,15 @@ namespace Ludots.Core.Modding
             FunctionRegistry fr,
             TriggerManager tm,
             SystemFactoryRegistry sfr,
-            TriggerDecoratorRegistry tdr)
+            TriggerDecoratorRegistry tdr,
+            GraphOpRegistry? graphOpRegistry = null,
+            GasGraphOpHandlerTable? gasGraphOpHandlers = null)
         {
             ModId = modId;
             VFS = vfs;
             FunctionRegistry = fr;
+            GraphOpRegistry = graphOpRegistry ?? GasGraphOpRegistry.CreateMutableDefault();
+            GasGraphOpHandlers = gasGraphOpHandlers ?? GasGraphOpHandlerTable.CreateMutableDefault();
             _triggerManager = tm;
             SystemFactoryRegistry = sfr;
             TriggerDecorators = tdr;

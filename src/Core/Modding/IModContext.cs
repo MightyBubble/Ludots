@@ -3,6 +3,8 @@ using System.IO;
 using System.Threading.Tasks;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
+using Ludots.Core.GraphRuntime;
+using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Modding
@@ -12,6 +14,8 @@ namespace Ludots.Core.Modding
         string ModId { get; }
         IVirtualFileSystem VFS { get; }
         FunctionRegistry FunctionRegistry { get; }
+        GraphOpRegistry GraphOpRegistry { get; }
+        GasGraphOpHandlerTable GasGraphOpHandlers { get; }
         SystemFactoryRegistry SystemFactoryRegistry { get; }
         TriggerDecoratorRegistry TriggerDecorators { get; }
         LogChannel LogChannel { get; }

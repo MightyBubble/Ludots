@@ -233,6 +233,8 @@ namespace Ludots.Core.Engine
         private Ludots.Core.Presentation.Instancing.InstancedBatchRequestBuffer _instancedBatchRequestBuffer;
         private Ludots.Core.Presentation.Instancing.InstancedBatchOperationBuffer _instancedBatchOperationBuffer;
         private GasPresentationEventBuffer _gasPresentationEvents;
+        private GraphOpRegistry? _graphOpRegistry;
+        private GasGraphOpHandlerTable? _gasGraphOpHandlers;
         private GasGraphRuntimeApi _gasGraphRuntimeApi;
         private Ludots.Core.Presentation.Rendering.GroundOverlayBuffer _groundOverlayBuffer;
         private Ludots.Core.Presentation.Rendering.RoadSplineBuffer _roadSplineBuffer;
@@ -452,11 +454,15 @@ namespace Ludots.Core.Engine
             TriggerManager = new TriggerManager();
             SystemFactoryRegistry = new SystemFactoryRegistry();
             TriggerDecoratorRegistry = new TriggerDecoratorRegistry();
-            ModLoader = new ModLoader(VFS, FunctionRegistry, TriggerManager, SystemFactoryRegistry, TriggerDecoratorRegistry);
+            _graphOpRegistry = GasGraphOpRegistry.CreateMutableDefault();
+            _gasGraphOpHandlers = GasGraphOpHandlerTable.CreateMutableDefault();
+            ModLoader = new ModLoader(VFS, FunctionRegistry, TriggerManager, SystemFactoryRegistry, TriggerDecoratorRegistry, _graphOpRegistry, _gasGraphOpHandlers);
             MapManager = new MapManager(VFS, TriggerManager, ModLoader);
             ModLoader.MapManager = MapManager;
             SetService(CoreServiceKeys.SystemFactoryRegistry, SystemFactoryRegistry);
             SetService(CoreServiceKeys.TriggerDecoratorRegistry, TriggerDecoratorRegistry);
+            SetService(CoreServiceKeys.GraphOpRegistry, _graphOpRegistry);
+            SetService(CoreServiceKeys.GasGraphOpHandlers, _gasGraphOpHandlers);
             OrderBlackboardKeyRegistry.ResetToBuiltins();
 
             try
@@ -791,6 +797,10 @@ namespace Ludots.Core.Engine
             var graphProgramRegistry = new GraphProgramRegistry();
             var graphOutputSchemas = new GraphOutputSchemaRegistry();
             var graphOutputValueKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            GraphOpRegistry graphOpRegistry = _graphOpRegistry
+                ?? throw new InvalidOperationException("GraphOpRegistry must be initialized before graph config loading.");
+            GasGraphOpHandlerTable graphOpHandlers = _gasGraphOpHandlers
+                ?? throw new InvalidOperationException("GasGraphOpHandlerTable must be initialized before graph config loading.");
             var scopeResolver = new ScopeResolver(World, progressionScopeKeys, entityCollectionStore, relationshipRuntime);
             var knowledgeProjectionStore = new KnowledgeProjectionStore(initialCapacity: 128);
             var knowledgeRelationCollectionProjector = new KnowledgeRelationCollectionProjector(
@@ -834,7 +844,10 @@ namespace Ludots.Core.Engine
                 graphSymbolResolver,
                 graphOutputSchemas,
                 graphOutputValueKeyRegistry,
-                entityCollectionStore);
+                entityCollectionStore,
+                graphOpRegistry);
+            graphOpRegistry.Freeze();
+            graphOpHandlers.Freeze();
             var graphPackages = graphConfigLoader.LoadIdsAndCompile(ConfigCatalog, ConfigConflictReport);
             var presetTypes = new PresetTypeRegistry();
             var presetTypeLoader = new PresetTypeLoader(ConfigPipeline, presetTypes);
@@ -924,7 +937,7 @@ namespace Ludots.Core.Engine
                 World,
                 graphProgramRegistry,
                 graphOutputSchemas,
-                GasGraphOpHandlerTable.Instance,
+                graphOpHandlers,
                 entityCollectionStore,
                 graphOutputValueStore);
             var progressionEvaluator = new ProgressionRequirementEvaluator(
@@ -935,7 +948,7 @@ namespace Ludots.Core.Engine
                 gasGraphApi,
                 tagOps,
                 scopeResolver);
-            var phaseExecutor = new EffectPhaseExecutor(graphProgramRegistry, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, effectTemplateRegistry, eventBus: EventBus, budget: gasBudget);
+            var phaseExecutor = new EffectPhaseExecutor(graphProgramRegistry, presetTypes, builtinHandlers, graphOpHandlers, effectTemplateRegistry, eventBus: EventBus, budget: gasBudget);
             var inputRequestQueue = new InputRequestQueue();
             var abilityInputRequestQueue = new InputRequestQueue();
             var inputResponseBuffer = new InputResponseBuffer();
@@ -1398,6 +1411,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.GasBudget, gasBudget);
             SetService(CoreServiceKeys.EffectTemplateRegistry, effectTemplateRegistry);
             SetService(CoreServiceKeys.TargetDispatchPresetRegistry, targetDispatchPresetRegistry);
+            SetService(CoreServiceKeys.GraphOpRegistry, graphOpRegistry);
+            SetService(CoreServiceKeys.GasGraphOpHandlers, graphOpHandlers);
             SetService(CoreServiceKeys.GraphProgramRegistry, graphProgramRegistry);
             SetService(CoreServiceKeys.GraphOutputSchemaRegistry, graphOutputSchemas);
             SetService(CoreServiceKeys.GraphOutputValueKeyRegistry, graphOutputValueKeyRegistry);

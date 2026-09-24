@@ -7,7 +7,9 @@ using System.Runtime.Loader;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
 using Ludots.Core.Config;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Hosting;
+using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Scripting;
 using Ludots.Core.Map;
 
@@ -17,6 +19,8 @@ namespace Ludots.Core.Modding
     {
         private readonly IVirtualFileSystem _vfs;
         private readonly FunctionRegistry _functionRegistry;
+        private readonly GraphOpRegistry _graphOpRegistry;
+        private readonly GasGraphOpHandlerTable _gasGraphOpHandlers;
         private readonly TriggerManager _triggerManager;
         private readonly SystemFactoryRegistry _systemFactoryRegistry;
         private readonly TriggerDecoratorRegistry _triggerDecoratorRegistry;
@@ -57,10 +61,15 @@ namespace Ludots.Core.Modding
         }
 
         public ModLoader(IVirtualFileSystem vfs, FunctionRegistry fr, TriggerManager tm,
-            SystemFactoryRegistry sfr = null, TriggerDecoratorRegistry tdr = null)
+            SystemFactoryRegistry? sfr = null,
+            TriggerDecoratorRegistry? tdr = null,
+            GraphOpRegistry? graphOpRegistry = null,
+            GasGraphOpHandlerTable? gasGraphOpHandlers = null)
         {
             _vfs = vfs;
             _functionRegistry = fr;
+            _graphOpRegistry = graphOpRegistry ?? GasGraphOpRegistry.CreateMutableDefault();
+            _gasGraphOpHandlers = gasGraphOpHandlers ?? GasGraphOpHandlerTable.CreateMutableDefault();
             _triggerManager = tm;
             _systemFactoryRegistry = sfr ?? new SystemFactoryRegistry();
             _triggerDecoratorRegistry = tdr ?? new TriggerDecoratorRegistry();
@@ -436,7 +445,15 @@ namespace Ludots.Core.Modding
                     {
                         var modInstance = (IMod)Activator.CreateInstance(modType);
                         Log.Info(in LogChannels.ModLoader, $"Instantiated entry for {manifest.Name}. Calling OnLoad...");
-                        var context = new ModContext(manifest.Name, _vfs, _functionRegistry, _triggerManager, _systemFactoryRegistry, _triggerDecoratorRegistry);
+                        var context = new ModContext(
+                            manifest.Name,
+                            _vfs,
+                            _functionRegistry,
+                            _triggerManager,
+                            _systemFactoryRegistry,
+                            _triggerDecoratorRegistry,
+                            _graphOpRegistry,
+                            _gasGraphOpHandlers);
                         modInstance.OnLoad(context);
                         Log.Info(in LogChannels.ModLoader, $"{manifest.Name} OnLoad completed.");
                         _loadedMods.Add(modInstance);

@@ -9,13 +9,28 @@ namespace Ludots.Core.NodeLibraries.GASGraph
     {
         public static (GraphProgramPackage? Package, List<GraphDiagnostic> Diagnostics) Compile(GraphConfig cfg)
         {
-            var (package, _, diagnostics) = CompileWithOutputs(cfg);
+            return Compile(cfg, GasGraphOpRegistry.Default);
+        }
+
+        public static (GraphProgramPackage? Package, List<GraphDiagnostic> Diagnostics) Compile(
+            GraphConfig cfg,
+            GraphOpRegistry? opRegistry)
+        {
+            var (package, _, diagnostics) = CompileWithOutputs(cfg, opRegistry);
             return (package, diagnostics);
         }
 
         public static (GraphProgramPackage? Package, GraphOutputSchema OutputSchema, List<GraphDiagnostic> Diagnostics) CompileWithOutputs(GraphConfig cfg)
         {
-            var diagnostics = GraphValidator.Validate(cfg);
+            return CompileWithOutputs(cfg, GasGraphOpRegistry.Default);
+        }
+
+        public static (GraphProgramPackage? Package, GraphOutputSchema OutputSchema, List<GraphDiagnostic> Diagnostics) CompileWithOutputs(
+            GraphConfig cfg,
+            GraphOpRegistry? opRegistry)
+        {
+            opRegistry ??= GasGraphOpRegistry.Default;
+            var diagnostics = GraphValidator.Validate(cfg, opRegistry);
             if (HasErrors(diagnostics))
             {
                 return (null, GraphOutputSchema.Empty, diagnostics);
@@ -59,13 +74,27 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             for (int idx = 0; idx < ordered.Count; idx++)
             {
                 var node = ordered[idx];
-                if (!GraphNodeOpParser.TryParse(node.Op, out var op))
+                if (!GraphNodeOpParser.TryResolve(node.Op, opRegistry, out GraphOpDescriptor opDescriptor, out var op))
                 {
                     diagnostics.Add(new GraphDiagnostic(GraphDiagnosticSeverity.Error, GraphDiagnosticCodes.UnknownNodeOp, $"Unknown node op '{node.Op}'.", cfg.Id, node.Id));
                     continue;
                 }
 
-                var (outType, fixedReg) = GetOutputTypeAndFixedReg(op);
+                if (opDescriptor.OpCode >= GraphVmLimits.HandlerTableSize)
+                {
+                    diagnostics.Add(new GraphDiagnostic(
+                        GraphDiagnosticSeverity.Error,
+                        GraphDiagnosticCodes.BudgetExceeded,
+                        $"Graph op '{opDescriptor.Name}' opcode {opDescriptor.OpCode} exceeds handler table capacity ({GraphVmLimits.HandlerTableSize}).",
+                        cfg.Id,
+                        node.Id));
+                    continue;
+                }
+
+                bool isBuiltin = opDescriptor.OpCode == (ushort)op && Enum.IsDefined(op);
+                var (outType, fixedReg) = isBuiltin
+                    ? GetOutputTypeAndFixedReg(op)
+                    : GetCustomOutputTypeAndFixedReg(in opDescriptor, cfg.Id, node.Id, diagnostics);
                 byte dstReg = 0;
                 if (outType != GraphValueType.Void)
                 {
@@ -89,7 +118,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 if (HasErrors(diagnostics)) return (null, GraphOutputSchema.Empty, diagnostics);
 
-                var ins = new GraphInstruction { Op = (ushort)op, Dst = dstReg };
+                var ins = new GraphInstruction { Op = opDescriptor.OpCode, Dst = dstReg };
+
+                if (!isBuiltin)
+                {
+                    CompileCustomInstruction(node, in opDescriptor, ref ins, valueMap, cfg.Id, diagnostics);
+                    instructions.Add(ins);
+                    continue;
+                }
 
                 switch (op)
                 {
@@ -520,6 +556,157 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             return (new GraphProgramPackage(cfg.Id, symbols.ToArray(), instructions.ToArray()), outputSchema, diagnostics);
+        }
+
+        private static (GraphValueType Type, byte? FixedReg) GetCustomOutputTypeAndFixedReg(
+            in GraphOpDescriptor descriptor,
+            string graphId,
+            string nodeId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            GraphValueType outputType = DecodeGraphValueType(
+                descriptor.OutputKind,
+                "output",
+                graphId,
+                nodeId,
+                diagnostics);
+
+            if (descriptor.FixedRegister.HasValue)
+            {
+                if (outputType == GraphValueType.Void || outputType == GraphValueType.TargetList)
+                {
+                    diagnostics.Add(new GraphDiagnostic(
+                        GraphDiagnosticSeverity.Error,
+                        GraphDiagnosticCodes.TypeMismatch,
+                        $"Custom graph op '{descriptor.Name}' cannot declare fixedRegister for output type {outputType}.",
+                        graphId,
+                        nodeId));
+                }
+                else
+                {
+                    ValidateFixedRegister(outputType, descriptor.FixedRegister.Value, descriptor.Name, graphId, nodeId, diagnostics);
+                }
+            }
+
+            return (outputType, descriptor.FixedRegister);
+        }
+
+        private static void CompileCustomInstruction(
+            GraphNodeConfig node,
+            in GraphOpDescriptor descriptor,
+            ref GraphInstruction ins,
+            Dictionary<string, (GraphValueType Type, byte Reg)> valueMap,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            int inputCount = node.Inputs?.Count ?? 0;
+            if (inputCount != descriptor.InputCount)
+            {
+                diagnostics.Add(new GraphDiagnostic(
+                    GraphDiagnosticSeverity.Error,
+                    GraphDiagnosticCodes.TypeMismatch,
+                    $"Custom graph op '{descriptor.Name}' expects {descriptor.InputCount} input(s), but node '{node.Id}' declares {inputCount}.",
+                    graphId,
+                    node.Id));
+                return;
+            }
+
+            ins.Imm = node.IntValue;
+            ins.ImmF = node.FloatValue;
+            ins.Flags = node.BoolValue ? (byte)1 : (byte)0;
+
+            for (int i = 0; i < descriptor.InputCount; i++)
+            {
+                GraphValueType expectedType = DecodeGraphValueType(
+                    descriptor.GetInputKind(i),
+                    $"input[{i}]",
+                    graphId,
+                    node.Id,
+                    diagnostics);
+
+                if (!IsRegisterInputType(expectedType))
+                {
+                    diagnostics.Add(new GraphDiagnostic(
+                        GraphDiagnosticSeverity.Error,
+                        GraphDiagnosticCodes.TypeMismatch,
+                        $"Custom graph op '{descriptor.Name}' input[{i}] uses unsupported register type {expectedType}.",
+                        graphId,
+                        node.Id));
+                    continue;
+                }
+
+                byte reg = RequireInput(node, i, expectedType, valueMap, graphId, diagnostics);
+                switch (i)
+                {
+                    case 0:
+                        ins.A = reg;
+                        break;
+                    case 1:
+                        ins.B = reg;
+                        break;
+                    case 2:
+                        ins.C = reg;
+                        break;
+                }
+            }
+        }
+
+        private static GraphValueType DecodeGraphValueType(
+            byte encoded,
+            string fieldName,
+            string graphId,
+            string nodeId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            var type = (GraphValueType)encoded;
+            if (!Enum.IsDefined(type))
+            {
+                diagnostics.Add(new GraphDiagnostic(
+                    GraphDiagnosticSeverity.Error,
+                    GraphDiagnosticCodes.TypeMismatch,
+                    $"Custom graph op {fieldName} type id {encoded} is not a valid GraphValueType.",
+                    graphId,
+                    nodeId));
+                return GraphValueType.Void;
+            }
+
+            return type;
+        }
+
+        private static bool IsRegisterInputType(GraphValueType type)
+        {
+            return type == GraphValueType.Bool ||
+                   type == GraphValueType.Int ||
+                   type == GraphValueType.Float ||
+                   type == GraphValueType.Entity;
+        }
+
+        private static void ValidateFixedRegister(
+            GraphValueType type,
+            byte reg,
+            string opName,
+            string graphId,
+            string nodeId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            int max = type switch
+            {
+                GraphValueType.Bool => GraphVmLimits.MaxBoolRegisters,
+                GraphValueType.Int => GraphVmLimits.MaxIntRegisters,
+                GraphValueType.Float => GraphVmLimits.MaxFloatRegisters,
+                GraphValueType.Entity => GraphVmLimits.MaxEntityRegisters,
+                _ => 0,
+            };
+
+            if (reg >= max)
+            {
+                diagnostics.Add(new GraphDiagnostic(
+                    GraphDiagnosticSeverity.Error,
+                    GraphDiagnosticCodes.BudgetExceeded,
+                    $"Custom graph op '{opName}' fixedRegister {reg} exceeds {type} register budget (max={max}).",
+                    graphId,
+                    nodeId));
+            }
         }
 
         private static (GraphValueType Type, byte? FixedReg) GetOutputTypeAndFixedReg(GraphNodeOp op)

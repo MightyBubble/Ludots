@@ -11,7 +11,9 @@ using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.AI.Components;
 using Ludots.Core.Gameplay.AI.Utility;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Modding;
+using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
@@ -247,6 +249,8 @@ namespace Ludots.Tests.GAS
             public string ModId { get; }
             public IVirtualFileSystem VFS => null!;
             public FunctionRegistry FunctionRegistry => null!;
+            public GraphOpRegistry GraphOpRegistry { get; } = new();
+            public GasGraphOpHandlerTable GasGraphOpHandlers { get; } = GasGraphOpHandlerTable.CreateMutableDefault();
             public SystemFactoryRegistry SystemFactoryRegistry => null!;
             public TriggerDecoratorRegistry TriggerDecorators => null!;
             public LogChannel LogChannel => default;

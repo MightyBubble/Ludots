@@ -1,4 +1,5 @@
 using System;
+using Ludots.Core.GraphRuntime;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
 {
@@ -158,18 +159,50 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
     public static class GraphNodeOpParser
     {
-        public static bool TryParse(string op, out GraphNodeOp parsed)
+        public static bool TryParse(string? op, out GraphNodeOp parsed)
+        {
+            return TryParse(op, GasGraphOpRegistry.Default, out parsed);
+        }
+
+        public static bool TryParse(string? op, GraphOpRegistry? registry, out GraphNodeOp parsed)
         {
             parsed = GraphNodeOp.None;
-            if (string.IsNullOrWhiteSpace(op)) return false;
 
-            if (Enum.TryParse(op, ignoreCase: true, out GraphNodeOp v))
+            if (!TryResolve(op, registry, out GraphOpDescriptor descriptor, out GraphNodeOp builtinOp))
             {
-                parsed = v;
-                return true;
+                return false;
             }
 
-            return false;
+            if (descriptor.OpCode != (ushort)builtinOp || !Enum.IsDefined(builtinOp))
+            {
+                return false;
+            }
+
+            parsed = builtinOp;
+            return true;
+        }
+
+        public static bool TryResolve(
+            string? op,
+            GraphOpRegistry? registry,
+            out GraphOpDescriptor descriptor,
+            out GraphNodeOp builtinOp)
+        {
+            registry ??= GasGraphOpRegistry.Default;
+            builtinOp = GraphNodeOp.None;
+
+            if (!registry.TryResolveDescriptor(op, out descriptor))
+            {
+                return false;
+            }
+
+            var candidate = (GraphNodeOp)descriptor.OpCode;
+            if (Enum.IsDefined(candidate))
+            {
+                builtinOp = candidate;
+            }
+
+            return true;
         }
     }
 }

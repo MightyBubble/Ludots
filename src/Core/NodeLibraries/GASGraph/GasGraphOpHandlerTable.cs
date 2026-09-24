@@ -24,13 +24,64 @@ namespace Ludots.Core.NodeLibraries.GASGraph
     /// </summary>
     public sealed class GasGraphOpHandlerTable
     {
-        public static readonly GasGraphOpHandlerTable Instance = new();
+        public static readonly GasGraphOpHandlerTable Instance = CreateFrozenDefault();
 
-        public GasGraphOpHandler[] Handlers { get; }
+        private readonly GasGraphOpHandler[] _handlers;
+        private bool _frozen;
 
-        private GasGraphOpHandlerTable()
+        public bool IsFrozen => _frozen;
+
+        private GasGraphOpHandlerTable(GasGraphOpHandler[] handlers, bool frozen)
         {
-            Handlers = CreateHandlers();
+            _handlers = handlers ?? throw new ArgumentNullException(nameof(handlers));
+            _frozen = frozen;
+        }
+
+        public static GasGraphOpHandlerTable CreateMutableDefault()
+        {
+            return new GasGraphOpHandlerTable(CreateHandlers(), frozen: false);
+        }
+
+        public GasGraphOpHandlerTable CloneMutable()
+        {
+            var clone = new GasGraphOpHandler[_handlers.Length];
+            Array.Copy(_handlers, clone, _handlers.Length);
+            return new GasGraphOpHandlerTable(clone, frozen: false);
+        }
+
+        public void Register(ushort opCode, GasGraphOpHandler handler)
+        {
+            EnsureMutable();
+
+            if (opCode == 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(opCode), opCode, "Graph opcode 0 is reserved for no-op.");
+            }
+
+            if (opCode >= _handlers.Length)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(opCode),
+                    opCode,
+                    $"Graph opcode must be smaller than handler table size {_handlers.Length}.");
+            }
+
+            if (handler == null)
+            {
+                throw new ArgumentNullException(nameof(handler));
+            }
+
+            if (_handlers[opCode] != null)
+            {
+                throw new InvalidOperationException($"Graph opcode {opCode} already has a registered handler.");
+            }
+
+            _handlers[opCode] = handler;
+        }
+
+        public void Freeze()
+        {
+            _frozen = true;
         }
 
         /// <summary>
@@ -41,7 +92,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         public static void Execute(ref GraphExecutionState state, ReadOnlySpan<GraphInstruction> program, GasGraphOpHandlerTable handlers)
         {
-            var table = handlers.Handlers;
+            if (handlers == null)
+            {
+                throw new ArgumentNullException(nameof(handlers));
+            }
+
+            var table = handlers._handlers;
             int pc = 0;
             int steps = 0;
             int maxSteps = GraphVmLimits.MaxInstructionsPerExecution;
@@ -216,6 +272,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             h[(ushort)GraphNodeOp.KnowledgeHasProjection] = HandleKnowledgeHasProjection;
 
             return h;
+        }
+
+        private static GasGraphOpHandlerTable CreateFrozenDefault()
+        {
+            var table = CreateMutableDefault();
+            table.Freeze();
+            return table;
+        }
+
+        private void EnsureMutable()
+        {
+            if (_frozen)
+            {
+                throw new InvalidOperationException("GasGraphOpHandlerTable is frozen.");
+            }
         }
 
         // ── Value Ops ──

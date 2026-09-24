@@ -19,6 +19,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             ReadOnlySpan<GraphInstruction> program,
             IGraphRuntimeApi api)
         {
+            Execute(world, caster, explicitTarget, targetPos, program, api, GasGraphOpHandlerTable.Instance);
+        }
+
+        public static void Execute(
+            World world,
+            Entity caster,
+            Entity explicitTarget,
+            IntVector2 targetPos,
+            ReadOnlySpan<GraphInstruction> program,
+            IGraphRuntimeApi api,
+            GasGraphOpHandlerTable handlers)
+        {
             Span<float> f = stackalloc float[GraphVmLimits.MaxFloatRegisters];
             Span<int> i = stackalloc int[GraphVmLimits.MaxIntRegisters];
             Span<byte> b = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
@@ -44,7 +56,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 TargetList = targetList
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, program, handlers);
         }
 
         public static void Execute(
@@ -55,6 +67,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             in GraphProgramBuffer program,
             IGraphRuntimeApi api)
         {
+            Execute(world, caster, explicitTarget, targetPos, in program, api, GasGraphOpHandlerTable.Instance);
+        }
+
+        public static void Execute(
+            World world,
+            Entity caster,
+            Entity explicitTarget,
+            IntVector2 targetPos,
+            in GraphProgramBuffer program,
+            IGraphRuntimeApi api,
+            GasGraphOpHandlerTable handlers)
+        {
             Span<GraphInstruction> tmp = stackalloc GraphInstruction[GraphProgramBuffer.CAPACITY];
             int count = program.Count;
             if (count > GraphProgramBuffer.CAPACITY) count = GraphProgramBuffer.CAPACITY;
@@ -63,7 +87,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 tmp[idx] = program.Get(idx);
             }
 
-            Execute(world, caster, explicitTarget, targetPos, tmp.Slice(0, count), api);
+            Execute(world, caster, explicitTarget, targetPos, tmp.Slice(0, count), api, handlers);
         }
 
         /// <summary>
@@ -79,6 +103,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             IntVector2 targetPos,
             ReadOnlySpan<GraphInstruction> program,
             IGraphRuntimeApi api)
+        {
+            return ExecuteValidation(world, caster, explicitTarget, targetPos, program, api, GasGraphOpHandlerTable.Instance);
+        }
+
+        public static bool ExecuteValidation(
+            World world,
+            Entity caster,
+            Entity explicitTarget,
+            IntVector2 targetPos,
+            ReadOnlySpan<GraphInstruction> program,
+            IGraphRuntimeApi api,
+            GasGraphOpHandlerTable handlers)
         {
             Span<float> f = stackalloc float[GraphVmLimits.MaxFloatRegisters];
             Span<int> i = stackalloc int[GraphVmLimits.MaxIntRegisters];
@@ -108,7 +144,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 TargetList = targetList
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, program, handlers);
 
             // B[0] = 1 → passed, B[0] = 0 → rejected
             return b[0] != 0;
@@ -124,6 +160,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             IntVector2 targetPos,
             ReadOnlySpan<GraphInstruction> program,
             IGraphRuntimeApi api)
+        {
+            return ExecuteScore(world, caster, explicitTarget, targetPos, program, api, GasGraphOpHandlerTable.Instance);
+        }
+
+        public static float ExecuteScore(
+            World world,
+            Entity caster,
+            Entity explicitTarget,
+            IntVector2 targetPos,
+            ReadOnlySpan<GraphInstruction> program,
+            IGraphRuntimeApi api,
+            GasGraphOpHandlerTable handlers)
         {
             Span<float> f = stackalloc float[GraphVmLimits.MaxFloatRegisters];
             Span<int> i = stackalloc int[GraphVmLimits.MaxIntRegisters];
@@ -150,7 +198,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 TargetList = targetList
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, program, handlers);
             return f[0];
         }
 
@@ -165,6 +213,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             in GraphProgramBuffer program,
             IGraphRuntimeApi api)
         {
+            return ExecuteValidation(world, caster, explicitTarget, targetPos, in program, api, GasGraphOpHandlerTable.Instance);
+        }
+
+        public static bool ExecuteValidation(
+            World world,
+            Entity caster,
+            Entity explicitTarget,
+            IntVector2 targetPos,
+            in GraphProgramBuffer program,
+            IGraphRuntimeApi api,
+            GasGraphOpHandlerTable handlers)
+        {
             Span<GraphInstruction> tmp = stackalloc GraphInstruction[GraphProgramBuffer.CAPACITY];
             int count = program.Count;
             if (count > GraphProgramBuffer.CAPACITY) count = GraphProgramBuffer.CAPACITY;
@@ -173,7 +233,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 tmp[idx] = program.Get(idx);
             }
 
-            return ExecuteValidation(world, caster, explicitTarget, targetPos, tmp.Slice(0, count), api);
+            return ExecuteValidation(world, caster, explicitTarget, targetPos, tmp.Slice(0, count), api, handlers);
         }
     }
 }
