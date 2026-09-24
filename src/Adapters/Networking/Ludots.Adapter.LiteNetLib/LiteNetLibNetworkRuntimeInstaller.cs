@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Security.Cryptography;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Hosting;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Networking.Commands;
@@ -27,11 +28,13 @@ public static class LiteNetLibNetworkRuntimeInstaller
         config.Validate();
         host.Validate();
 
-        if (!ContentFingerprint.TryParseHex(bootstrap.PlanFingerprint, out ContentFingerprint contentFingerprint) ||
-            contentFingerprint.IsEmpty)
+        ResolvedModLoadPlan modPlan = engine.GetService(CoreServiceKeys.ModLoadPlan)
+            ?? throw new InvalidOperationException(
+                "Networked launch requires the resolved ordered mod plan for content fingerprinting.");
+        ContentFingerprint contentFingerprint = ContentFingerprintCanonicalizer.FromOrderedMods(modPlan.OrderedMods);
+        if (contentFingerprint.IsEmpty)
         {
-            throw new InvalidOperationException(
-                "Networked launch requires a non-empty 64-character launcher plan fingerprint.");
+            throw new InvalidOperationException("Networked launch produced an empty content fingerprint.");
         }
 
         NetworkProcessRole role = host.ResolveRole();
@@ -70,6 +73,7 @@ public static class LiteNetLibNetworkRuntimeInstaller
         NetworkCommandIngress commands = Require(engine, CoreServiceKeys.NetworkCommandIngress);
         NetworkGameplayCommandGate gameplayCommandGate = Require(engine, CoreServiceKeys.NetworkGameplayCommandGate);
         NetworkCommandAdmissionResultBuffer admissions = Require(engine, CoreServiceKeys.NetworkCommandAdmissionResults);
+        OrderAdmissionResultBuffer entityAdmissions = Require(engine, CoreServiceKeys.EntityOrderAdmissionResults);
         var mapSession = engine.CurrentMapSession ??
             throw new InvalidOperationException("Authoritative networking requires the startup map before accepting connections.");
         var controllers = new AuthoritativeSeatControllerRegistry(
@@ -107,6 +111,7 @@ public static class LiteNetLibNetworkRuntimeInstaller
             commands,
             gameplayCommandGate,
             admissions,
+            entityAdmissions,
             controllers,
             entities,
             seatFactory.CreateAll(),
@@ -129,6 +134,10 @@ public static class LiteNetLibNetworkRuntimeInstaller
 
         appliers.Freeze();
         NetworkCommandAdmissionResultBuffer admissions = Require(engine, CoreServiceKeys.NetworkCommandAdmissionResults);
+        var feedback = new NetworkStagedCommandFeedbackStore(
+            admissions.Capacity,
+            config.MaxActorsPerCommandBatch);
+        engine.SetService(CoreServiceKeys.NetworkStagedCommandFeedback, feedback);
         var capacity = NetworkRuntimeCapacity.FromConfig(config);
         var protocol = new ProtocolVersion(config.ProtocolMajor, config.ProtocolMinor);
         string credentialPath = Path.IsPathRooted(host.CredentialPath)
@@ -150,7 +159,7 @@ public static class LiteNetLibNetworkRuntimeInstaller
             contentFingerprint,
             new AtomicFileClientSessionCredentialPort(credentialPath),
             new ClientReplicationBridgeFactory(engine.World, config.NetworkEntityCapacity, appliers),
-            admissions,
+            feedback,
             new ClientIdentityBindingNetworkRuntimeObserver(engine, observer));
         engine.SetService(
             CoreServiceKeys.ReplicatedClientCommandPort,

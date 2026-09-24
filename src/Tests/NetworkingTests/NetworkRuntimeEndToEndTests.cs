@@ -1,7 +1,10 @@
 using Arch.Core;
 using Ludots.Core.Association;
+using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Networking.Commands;
@@ -75,6 +78,7 @@ public sealed class NetworkRuntimeEndToEndTests
             commandHarness.Ingress,
             commandHarness.GameplayGate,
             commandHarness.Results,
+            commandHarness.EntityResults,
             new FixedControllerResolver(player),
             input,
             new[] { serverSeat },
@@ -82,7 +86,7 @@ public sealed class NetworkRuntimeEndToEndTests
 
         var credentials = new MemoryCredentials();
         var clientFactory = new ClientBridgeFactory(clientWorld, entityCapacity: 2);
-        var clientAdmissions = new NetworkCommandAdmissionResultBuffer(capacity: 16);
+        var clientAdmissions = new NetworkStagedCommandFeedbackStore(capacity: 16, maxActorsPerCommandBatch: 2);
         var client = new ReplicatedClientNetworkRuntime(
             in capacity,
             transport,
@@ -153,12 +157,12 @@ public sealed class NetworkRuntimeEndToEndTests
         Assert.That(transport.ClientCommandFragmentCount, Is.GreaterThan(1));
         server.PumpTransport();
         client.PumpTransport();
-        Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome scheduled), Is.True);
+        Assert.That(clientAdmissions.TryGet(1, out NetworkStagedCommandFeedback scheduled), Is.True);
         Assert.That(scheduled.Result, Is.EqualTo(OrderSubmitResult.NetworkScheduled));
 
         server.BeforeAuthoritativeTick(10);
         client.PumpTransport();
-        Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome queued), Is.True);
+        Assert.That(clientAdmissions.TryGet(1, out NetworkStagedCommandFeedback queued), Is.True);
         Assert.That(queued.Result, Is.EqualTo(OrderSubmitResult.Queued));
         Span<Order> admitted = stackalloc Order[2];
         Assert.That(commandHarness.Orders.TryDequeueBatch(admitted, out int admittedCount), Is.True);
@@ -174,7 +178,7 @@ public sealed class NetworkRuntimeEndToEndTests
         Assert.That(client.TrySubmitCommand(in completedHeader, entries), Is.True);
         server.PumpTransport();
         client.PumpTransport();
-        Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome completed), Is.True);
+        Assert.That(clientAdmissions.TryGet(2, out NetworkStagedCommandFeedback completed), Is.True);
         Assert.That(completed.Result, Is.EqualTo(OrderSubmitResult.NetworkMatchCompleted));
 
         serverWorld.Set(first, new TestReplicatedData(2, 99));
@@ -243,7 +247,7 @@ public sealed class NetworkRuntimeEndToEndTests
             fingerprint,
             new MemoryCredentials(),
             new ClientBridgeFactory(world, 2),
-            new NetworkCommandAdmissionResultBuffer(4),
+            new NetworkStagedCommandFeedbackStore(4, 2),
             observer);
 
         transport.ConnectClientOnly();
@@ -289,7 +293,7 @@ public sealed class NetworkRuntimeEndToEndTests
             fingerprint,
             credentials,
             new ClientBridgeFactory(world, 2),
-            new NetworkCommandAdmissionResultBuffer(4),
+            new NetworkStagedCommandFeedbackStore(4, 2),
             observer);
 
         Assert.That(client.TryConnectNow(), Is.True);
@@ -337,7 +341,7 @@ public sealed class NetworkRuntimeEndToEndTests
             fingerprint,
             credentials,
             factory,
-            new NetworkCommandAdmissionResultBuffer(4),
+            new NetworkStagedCommandFeedbackStore(4, 2),
             observer);
 
         Assert.That(client.TryConnectNow(), Is.True);
@@ -419,7 +423,7 @@ public sealed class NetworkRuntimeEndToEndTests
             fingerprint,
             new MemoryCredentials(),
             new ClientBridgeFactory(world, 2),
-            new NetworkCommandAdmissionResultBuffer(4),
+            new NetworkStagedCommandFeedbackStore(4, 2),
             observer);
 
         Assert.That(client.TryConnectNow(), Is.True);
@@ -488,7 +492,7 @@ public sealed class NetworkRuntimeEndToEndTests
             fingerprint,
             new MemoryCredentials(),
             new ClientBridgeFactory(world, 2),
-            new NetworkCommandAdmissionResultBuffer(4),
+            new NetworkStagedCommandFeedbackStore(4, 2),
             observer);
         var roomSeats = new[]
         {
@@ -545,6 +549,406 @@ public sealed class NetworkRuntimeEndToEndTests
             Assert.That(observer.LastFault.CodecStatus, Is.EqualTo(NetworkWireCodecStatus.InvalidInput));
             Assert.That(client.State, Is.EqualTo(ReplicatedClientConnectionState.Connected));
             Assert.That(client.HasRoomSnapshot, Is.False);
+        });
+    }
+
+    [Test]
+    public void AuthoritativeRuntime_HoldsOneUnackedSnapshot_AvoidsBaselineMismatchResyncLoop()
+    {
+        using World serverWorld = World.Create();
+        using World clientWorld = World.Create();
+        Entity player = serverWorld.Create(new PlayerIdentity { PlayerId = 1 });
+        Entity first = serverWorld.Create(new ReplicationSchemaRef(1), new TestReplicatedData(1, 10));
+        Entity second = serverWorld.Create(new ReplicationSchemaRef(1), new TestReplicatedData(1, 20));
+        var commandHarness = CreateCommandHarness(serverWorld, player, first, second);
+        commandHarness.Knowledge.Upsert(player, first, VisibleDisclosure());
+        commandHarness.Knowledge.Upsert(player, second, VisibleDisclosure());
+
+        var projectorRegistry = new ReplicationSchemaProjectorRegistry(schemaCapacity: 1);
+        Assert.That(projectorRegistry.Register(1, new TestProjector()), Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
+        projectorRegistry.Freeze();
+        var bridge = new AuthoritativeWorldReplicationBridge(
+            serverWorld,
+            commandHarness.Entities,
+            commandHarness.Knowledge,
+            player,
+            projectorRegistry,
+            entityCapacity: 2);
+        var disclosureLog = new ReplicationDisclosureChangeLog(capacity: 32);
+        var serverSeat = new AuthoritativeReplicationSeatRuntime(
+            seatSlot: 0,
+            playerId: new PlayerId(1),
+            bridge,
+            new AuthoritativeReplicationChannel(entityCapacity: 2, baselineCapacity: 4, disclosureLog),
+            disclosureLog,
+            new ReplicationProjectionBuffer(entityCapacity: 2),
+            new ReplicationPacketBuffer(entityCapacity: 2));
+
+        ContentFingerprint fingerprint = ContentFingerprintBuilder.FromCanonicalBytes(new byte[] { 42 });
+        var protocol = new ProtocolVersion(1, 0);
+        var capacity = new NetworkRuntimeCapacity(
+            maxDatagramPayloadBytes: 128,
+            connectionCapacity: 2,
+            entityCapacity: 2,
+            maxCommandEntries: 2,
+            maxCommandPayloadBytes: CommandBatchWireCodec.GetPayloadSize(2),
+            maxCommandFragments: 4,
+            maxSnapshotBytes: 256,
+            maxSnapshotFragments: 4,
+            outboundQueueCapacity: 32,
+            acknowledgementHistoryCapacity: 4,
+            controlChannel: new ChannelId(0),
+            commandChannel: new ChannelId(1),
+            stateChannel: new ChannelId(2),
+            statePublishIntervalTicks: 1);
+        var transport = new InMemoryTransport(new ConnectionId(21));
+        var observer = new RecordingObserver();
+        var input = new FixedReplicationInput(commandHarness.FirstHandle, commandHarness.SecondHandle);
+        var sessions = new AuthoritativeSessionRegistry(
+            seatCapacity: 1,
+            new SessionEpoch(88),
+            protocol,
+            fingerprint,
+            reconnectWindowTicks: 8,
+            readyCountdownTicks: 90);
+        var server = new AuthoritativeServerNetworkRuntime(
+            in capacity,
+            transport,
+            transport,
+            transport,
+            sessions,
+            commandHarness.Ingress,
+            commandHarness.GameplayGate,
+            commandHarness.Results,
+            commandHarness.EntityResults,
+            new FixedControllerResolver(player),
+            input,
+            new[] { serverSeat },
+            observer);
+        var clientFactory = new ClientBridgeFactory(clientWorld, entityCapacity: 2);
+        var clientAdmissions = new NetworkStagedCommandFeedbackStore(capacity: 16, maxActorsPerCommandBatch: 2);
+        var client = new ReplicatedClientNetworkRuntime(
+            in capacity,
+            transport,
+            transport,
+            transport,
+            reconnectRetrySeconds: 0.5f,
+            protocol,
+            fingerprint,
+            new MemoryCredentials(),
+            clientFactory,
+            clientAdmissions,
+            observer);
+
+        Assert.That(client.TryConnectNow(), Is.True);
+        client.PumpTransport();
+        server.PumpTransport();
+        client.PumpTransport();
+        Assert.That(client.TrySetRoomReady(ready: true), Is.True);
+        server.PumpTransport();
+        client.PumpTransport();
+
+        server.BeforeAuthoritativeTick(10);
+        server.AfterAuthoritativeCommit(10);
+        client.PumpTransport();
+        server.PumpTransport();
+        Assert.That(clientFactory.Bridge, Is.Not.Null);
+
+        int packetsAfterFull = transport.ServerReplicationPacketCount;
+        serverWorld.Set(first, new TestReplicatedData(2, 11));
+        server.BeforeAuthoritativeTick(11);
+        server.AfterAuthoritativeCommit(11);
+        Assert.That(transport.ServerReplicationPacketCount, Is.EqualTo(packetsAfterFull + 1));
+
+        serverWorld.Set(first, new TestReplicatedData(3, 12));
+        server.BeforeAuthoritativeTick(12);
+        server.AfterAuthoritativeCommit(12);
+        Assert.That(
+            transport.ServerReplicationPacketCount,
+            Is.EqualTo(packetsAfterFull + 1),
+            "Second publish must wait for acknowledgement of the in-flight snapshot.");
+
+        client.PumpTransport();
+        server.PumpTransport();
+        Assert.That(clientWorld.Get<TestAppliedState>(
+            clientFactory.Bridge!.TryResolve(commandHarness.FirstHandle, out Entity mirrored) ? mirrored : default).Value,
+            Is.EqualTo(11));
+
+        serverWorld.Set(first, new TestReplicatedData(4, 13));
+        server.BeforeAuthoritativeTick(13);
+        server.AfterAuthoritativeCommit(13);
+        client.PumpTransport();
+        server.PumpTransport();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(observer.ClientResyncRequiredCount, Is.Zero);
+            Assert.That(observer.Faults, Is.Zero);
+            Assert.That(server.IsFaulted, Is.False);
+            Assert.That(client.IsFaulted, Is.False);
+            Assert.That(clientWorld.Get<TestAppliedState>(
+                clientFactory.Bridge!.TryResolve(commandHarness.FirstHandle, out Entity latest) ? latest : default).Value,
+                Is.EqualTo(13));
+        });
+    }
+
+    [Test]
+    public void AuthoritativeRuntime_WiresNetworkGlobalAndEntityAdmissionStages_AndSurvivesBeyondEntityCapacity()
+    {
+        using World serverWorld = World.Create();
+        using World clientWorld = World.Create();
+        Entity player = serverWorld.Create(new PlayerIdentity { PlayerId = 1 });
+        Entity first = serverWorld.Create(new ReplicationSchemaRef(1), new TestReplicatedData(1, 10), OrderBuffer.CreateEmpty());
+        Entity second = serverWorld.Create(new ReplicationSchemaRef(1), new TestReplicatedData(1, 20), OrderBuffer.CreateEmpty());
+        var commandHarness = CreateCommandHarness(serverWorld, player, first, second);
+        commandHarness.Knowledge.Upsert(player, first, VisibleDisclosure());
+        commandHarness.Knowledge.Upsert(player, second, VisibleDisclosure());
+
+        var orderTypes = new OrderTypeRegistry();
+        orderTypes.Register(new OrderTypeConfig
+        {
+            Key = "test.move",
+            OrderTypeId = TestOrderTypeId,
+            Priority = 100,
+            CanInterruptSelf = true,
+        });
+        var orderBuffer = new OrderBufferSystem(
+            serverWorld,
+            new DiscreteClock(),
+            orderTypes,
+            new OrderRuleRegistry(),
+            commandHarness.Orders,
+            admissionResults: commandHarness.EntityResults);
+
+        var projectorRegistry = new ReplicationSchemaProjectorRegistry(schemaCapacity: 1);
+        Assert.That(projectorRegistry.Register(1, new TestProjector()), Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
+        projectorRegistry.Freeze();
+        var bridge = new AuthoritativeWorldReplicationBridge(
+            serverWorld,
+            commandHarness.Entities,
+            commandHarness.Knowledge,
+            player,
+            projectorRegistry,
+            entityCapacity: 2);
+        var disclosureLog = new ReplicationDisclosureChangeLog(capacity: 32);
+        var serverSeat = new AuthoritativeReplicationSeatRuntime(
+            seatSlot: 0,
+            playerId: new PlayerId(1),
+            bridge,
+            new AuthoritativeReplicationChannel(entityCapacity: 2, baselineCapacity: 4, disclosureLog),
+            disclosureLog,
+            new ReplicationProjectionBuffer(entityCapacity: 2),
+            new ReplicationPacketBuffer(entityCapacity: 2));
+
+        ContentFingerprint fingerprint = ContentFingerprintBuilder.FromCanonicalBytes(new byte[] { 77 });
+        var protocol = new ProtocolVersion(1, 0);
+        var capacity = Capacity();
+        var transport = new InMemoryTransport(new ConnectionId(31));
+        var observer = new RecordingObserver();
+        var input = new FixedReplicationInput(commandHarness.FirstHandle, commandHarness.SecondHandle);
+        var sessions = new AuthoritativeSessionRegistry(
+            seatCapacity: 1,
+            new SessionEpoch(91),
+            protocol,
+            fingerprint,
+            reconnectWindowTicks: 8,
+            readyCountdownTicks: 90);
+        var server = new AuthoritativeServerNetworkRuntime(
+            in capacity,
+            transport,
+            transport,
+            transport,
+            sessions,
+            commandHarness.Ingress,
+            commandHarness.GameplayGate,
+            commandHarness.Results,
+            commandHarness.EntityResults,
+            new FixedControllerResolver(player),
+            input,
+            new[] { serverSeat },
+            observer);
+        var clientAdmissions = new NetworkStagedCommandFeedbackStore(capacity: 4, maxActorsPerCommandBatch: 2);
+        var client = new ReplicatedClientNetworkRuntime(
+            in capacity,
+            transport,
+            transport,
+            transport,
+            reconnectRetrySeconds: 0.5f,
+            protocol,
+            fingerprint,
+            new MemoryCredentials(),
+            new ClientBridgeFactory(clientWorld, entityCapacity: 2),
+            clientAdmissions,
+            observer);
+
+        Assert.That(client.TryConnectNow(), Is.True);
+        client.PumpTransport();
+        server.PumpTransport();
+        client.PumpTransport();
+        Assert.That(client.TrySetRoomReady(ready: true), Is.True);
+        server.PumpTransport();
+        client.PumpTransport();
+        server.BeforeAuthoritativeTick(10);
+        server.AfterAuthoritativeCommit(10);
+        client.PumpTransport();
+        server.PumpTransport();
+
+        var stages = new List<OrderAdmissionStage>();
+        for (ulong sequence = 1; sequence <= 12; sequence++)
+        {
+            var entries = new[]
+            {
+                new NetworkCommandWireEntry(
+                    commandHarness.FirstHandle,
+                    TestOrderTypeId,
+                    NetworkCommandTargetPayload.FromWorldPositionCm(100 + (int)sequence, 0, 0)),
+            };
+            var header = new NetworkCommandBatchHeader(
+                client.SessionEpoch.Value,
+                sequence,
+                targetTick: 10 + (int)sequence,
+                acknowledgedCommittedTick: 10,
+                entryCount: 1);
+            Assert.That(client.TrySubmitCommand(in header, entries), Is.True);
+            server.PumpTransport();
+            client.PumpTransport();
+            Assert.That(clientAdmissions.TryGet(sequence, out NetworkStagedCommandFeedback network), Is.True);
+            Assert.That(network.Stage, Is.EqualTo(OrderAdmissionStage.NetworkIntake));
+            Assert.That(network.Result, Is.EqualTo(OrderSubmitResult.NetworkScheduled));
+            stages.Add(network.Stage);
+
+            uint tick = 10 + (uint)sequence;
+            server.BeforeAuthoritativeTick(tick);
+            client.PumpTransport();
+            Assert.That(clientAdmissions.TryGet(sequence, out NetworkStagedCommandFeedback global), Is.True);
+            Assert.That(global.Stage, Is.EqualTo(OrderAdmissionStage.GlobalIntake));
+            Assert.That(global.Result, Is.EqualTo(OrderSubmitResult.Queued));
+            stages.Add(global.Stage);
+
+            orderBuffer.Update(0f);
+            server.AfterAuthoritativeCommit(tick);
+            server.PumpTransport();
+            client.PumpTransport();
+            Assert.That(clientAdmissions.TryGet(sequence, out NetworkStagedCommandFeedback entity), Is.True);
+            Assert.That(entity.Stage, Is.EqualTo(OrderAdmissionStage.EntityIntake));
+            Assert.That(entity.Result, Is.EqualTo(OrderSubmitResult.Activated));
+            Assert.That(entity.LatestOutcome.AdmissionBatchId, Is.EqualTo(global.LatestOutcome.AdmissionBatchId));
+            Assert.That(entity.IsTerminal, Is.True);
+            stages.Add(entity.Stage);
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(stages, Does.Contain(OrderAdmissionStage.NetworkIntake));
+            Assert.That(stages, Does.Contain(OrderAdmissionStage.GlobalIntake));
+            Assert.That(stages, Does.Contain(OrderAdmissionStage.EntityIntake));
+            Assert.That(commandHarness.EntityResults.Count, Is.EqualTo(0));
+            Assert.That(observer.Faults, Is.Zero);
+            Assert.That(server.IsFaulted, Is.False);
+            Assert.That(client.IsFaulted, Is.False);
+        });
+    }
+
+    [Test]
+    public void ClientFeedbackStore_LongRunBeyondConfiguredCapacity_WithoutExternalDrain()
+    {
+        var capacity = Capacity();
+        var transport = new InMemoryTransport(new ConnectionId(41));
+        var observer = new RecordingObserver();
+        var protocol = new ProtocolVersion(1, 0);
+        ContentFingerprint fingerprint = ContentFingerprintBuilder.FromCanonicalBytes(new byte[] { 5 });
+        using World world = World.Create();
+        var feedback = new NetworkStagedCommandFeedbackStore(capacity: 2, maxActorsPerCommandBatch: 1);
+        var client = new ReplicatedClientNetworkRuntime(
+            in capacity,
+            transport,
+            transport,
+            transport,
+            reconnectRetrySeconds: 1f,
+            protocol,
+            fingerprint,
+            new MemoryCredentials(),
+            new ClientBridgeFactory(world, 2),
+            feedback,
+            observer);
+
+        Assert.That(client.TryConnectNow(), Is.True);
+        client.PumpTransport();
+        EnqueueHandshakeResponse(
+            transport,
+            SessionHandshakeResponse.Accept(
+                new SessionSeatBinding(0, 1, new PlayerId(1)),
+                new ReconnectToken(3, 4),
+                protocol,
+                fingerprint,
+                new SessionEpoch(9)));
+        client.PumpTransport();
+        Assert.That(client.State, Is.EqualTo(ReplicatedClientConnectionState.Connected));
+
+        var seat = new NetworkCommandSeat(0, 1, 1);
+        Span<byte> payload = stackalloc byte[CommandAdmissionWireCodec.SizeInBytes];
+        for (int i = 0; i < 16; i++)
+        {
+            var network = new NetworkCommandAdmissionOutcome(
+                in seat,
+                clientBatchSequence: (ulong)(i + 1),
+                targetTick: i,
+                actorCount: 1,
+                orderId: i + 1,
+                admissionBatchId: i + 1,
+                OrderSubmitResult.NetworkScheduled,
+                isReplay: false);
+            Assert.That(
+                CommandAdmissionWireCodec.TryEncode(client.SessionEpoch.Value, in network, payload, out int written),
+                Is.EqualTo(NetworkWireCodecStatus.Success));
+            transport.EnqueueServerFrame(new ChannelId(1), NetworkWireKind.CommandAdmissionResult, payload[..written]);
+            client.PumpTransport();
+
+            var global = new NetworkCommandAdmissionOutcome(
+                in seat,
+                clientBatchSequence: (ulong)(i + 1),
+                targetTick: i,
+                actorCount: 1,
+                orderId: i + 1,
+                admissionBatchId: i + 1,
+                admissionBatchIndex: 0,
+                OrderAdmissionStage.GlobalIntake,
+                OrderSubmitResult.Queued,
+                isReplay: false);
+            Assert.That(
+                CommandAdmissionWireCodec.TryEncode(client.SessionEpoch.Value, in global, payload, out written),
+                Is.EqualTo(NetworkWireCodecStatus.Success));
+            transport.EnqueueServerFrame(new ChannelId(1), NetworkWireKind.CommandAdmissionResult, payload[..written]);
+            client.PumpTransport();
+
+            var entity = new NetworkCommandAdmissionOutcome(
+                in seat,
+                clientBatchSequence: (ulong)(i + 1),
+                targetTick: i,
+                actorCount: 1,
+                orderId: i + 1,
+                admissionBatchId: i + 1,
+                admissionBatchIndex: 0,
+                OrderAdmissionStage.EntityIntake,
+                OrderSubmitResult.Activated,
+                isReplay: false);
+            Assert.That(
+                CommandAdmissionWireCodec.TryEncode(client.SessionEpoch.Value, in entity, payload, out written),
+                Is.EqualTo(NetworkWireCodecStatus.Success));
+            transport.EnqueueServerFrame(new ChannelId(1), NetworkWireKind.CommandAdmissionResult, payload[..written]);
+            client.PumpTransport();
+
+            Assert.That(feedback.TryGet((ulong)(i + 1), out NetworkStagedCommandFeedback decoded), Is.True);
+            Assert.That(decoded.IsTerminal, Is.True);
+            Assert.That(decoded.ActivatedCount, Is.EqualTo(1));
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(client.IsFaulted, Is.False);
+            Assert.That(observer.Faults, Is.Zero);
+            Assert.That(feedback.Count, Is.EqualTo(2));
+            Assert.That(feedback.RetiredCompletedCount, Is.EqualTo(14));
         });
     }
 
@@ -611,6 +1015,7 @@ public sealed class NetworkRuntimeEndToEndTests
         schemas.Freeze();
         var orders = new OrderQueue(capacity: 8);
         var results = new NetworkCommandAdmissionResultBuffer(capacity: 8);
+        var entityResults = new OrderAdmissionResultBuffer(capacity: 8);
         var config = new NetworkCommandIngressConfig(
             seatCapacity: 1,
             simulationTickRateHz: 30,
@@ -634,7 +1039,7 @@ public sealed class NetworkRuntimeEndToEndTests
             gameplayGate,
             orders,
             results);
-        return new CommandHarness(entities, knowledge, orders, results, ingress, gameplayGate, firstHandle, secondHandle);
+        return new CommandHarness(entities, knowledge, orders, results, entityResults, ingress, gameplayGate, firstHandle, secondHandle);
     }
 
     private static KnowledgeDisclosureRecord VisibleDisclosure() => new(
@@ -654,6 +1059,7 @@ public sealed class NetworkRuntimeEndToEndTests
         KnowledgeProjectionStore Knowledge,
         OrderQueue Orders,
         NetworkCommandAdmissionResultBuffer Results,
+        OrderAdmissionResultBuffer EntityResults,
         NetworkCommandIngress Ingress,
         NetworkGameplayCommandGate GameplayGate,
         NetworkEntityHandle FirstHandle,
@@ -804,6 +1210,7 @@ public sealed class NetworkRuntimeEndToEndTests
         public int SeatReleases { get; private set; }
         public NetworkRuntimeFault LastFault { get; private set; }
         public int ClientHandshakes { get; private set; }
+        public int ClientResyncRequiredCount { get; private set; }
         public HandshakeRejectReason LastHandshakeRejectReason { get; private set; }
         public int ClientRoomSnapshots { get; private set; }
         public int ServerRoomSnapshots { get; private set; }
@@ -835,7 +1242,7 @@ public sealed class NetworkRuntimeEndToEndTests
             LastHandshakeRejectReason = response.RejectReason;
         }
         public void OnClientAdmission(in NetworkCommandAdmissionOutcome outcome) { }
-        public void OnClientResyncRequired(in NetworkResyncRequired message) { }
+        public void OnClientResyncRequired(in NetworkResyncRequired message) => ClientResyncRequiredCount++;
         public void OnClientRoomSnapshot(
             in NetworkRoomSnapshotHeader snapshot,
             ReadOnlySpan<NetworkRoomSeatSnapshot> seats)
@@ -862,6 +1269,7 @@ public sealed class NetworkRuntimeEndToEndTests
         public InMemoryTransport(ConnectionId connection) => _connection = connection;
 
         public int ServerSnapshotFragmentCount { get; private set; }
+        public int ServerReplicationPacketCount { get; private set; }
         public int ClientCommandFragmentCount { get; private set; }
         public int ConnectAttempts { get; private set; }
         public ClientConnectionControlState State { get; private set; }
@@ -960,9 +1368,16 @@ public sealed class NetworkRuntimeEndToEndTests
         {
             byte[] copy = payload.ToArray();
             _clientInbound.Enqueue(new Frame(channelId, copy));
-            if (TryGetKind(copy, out NetworkWireKind kind) && kind == NetworkWireKind.SnapshotFragment)
+            if (TryGetKind(copy, out NetworkWireKind kind))
             {
-                ServerSnapshotFragmentCount++;
+                if (kind == NetworkWireKind.SnapshotFragment)
+                {
+                    ServerSnapshotFragmentCount++;
+                }
+                else if (kind == NetworkWireKind.ReplicationPacket)
+                {
+                    ServerReplicationPacketCount++;
+                }
             }
 
             return DatagramSendStatus.Sent;

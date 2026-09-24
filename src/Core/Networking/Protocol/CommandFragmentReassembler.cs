@@ -5,9 +5,11 @@ namespace Ludots.Core.Networking.Protocol
     /// <summary>
     /// Fixed-capacity out-of-order command-batch fragment reassembler.
     /// Fragments travel on the ReliableOrdered command channel, but reassembly still accepts
-    /// out-of-order arrivals for deterministic fault tests. All managed storage is preallocated;
-    /// rejected fragments never mutate assembler state. A completed batch requires an explicit
-    /// <see cref="Reset"/> before accepting a new one.
+    /// out-of-order arrivals for deterministic fault tests. All managed storage is preallocated.
+    /// Any rejected fragment/batch resets assembler state so a malformed or mixed batch cannot
+    /// poison a later valid batch for the same seat. Duplicate identical fragments leave state
+    /// unchanged. A completed batch also requires an explicit <see cref="Reset"/> after the
+    /// caller consumes <see cref="AssembledPayload"/>.
     /// </summary>
     public sealed class CommandFragmentReassembler
     {
@@ -85,6 +87,7 @@ namespace Ludots.Core.Networking.Protocol
                 out ReadOnlySpan<byte> fragmentData);
             if (decode != NetworkWireCodecStatus.Success)
             {
+                Reset();
                 return CommandReassemblyStatus.InvalidFragment;
             }
 
@@ -92,6 +95,22 @@ namespace Ludots.Core.Networking.Protocol
         }
 
         public CommandReassemblyStatus TryAccept(
+            in NetworkCommandFragmentHeader header,
+            ReadOnlySpan<byte> fragmentData)
+        {
+            CommandReassemblyStatus status = TryAcceptCore(in header, fragmentData);
+            if (status is CommandReassemblyStatus.InvalidFragment
+                or CommandReassemblyStatus.MixedMetadata
+                or CommandReassemblyStatus.CapacityExceeded
+                or CommandReassemblyStatus.StaleOrOutOfOrder)
+            {
+                Reset();
+            }
+
+            return status;
+        }
+
+        private CommandReassemblyStatus TryAcceptCore(
             in NetworkCommandFragmentHeader header,
             ReadOnlySpan<byte> fragmentData)
         {
@@ -172,7 +191,7 @@ namespace Ludots.Core.Networking.Protocol
                 return CommandReassemblyStatus.InvalidFragment;
             }
 
-            // Commit only after all validation succeeds — rejected paths never mutate state.
+            // Commit only after all validation succeeds.
             if (!_chunkSizeKnown)
             {
                 _chunkSize = chunkSize;

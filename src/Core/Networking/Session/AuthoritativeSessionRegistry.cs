@@ -354,6 +354,12 @@ namespace Ludots.Core.Networking.Session
 
         private bool TryInitialJoin(ConnectionId connectionId, out SessionHandshakeResponse response)
         {
+            if (_roomPhase == NetworkRoomPhase.Started)
+            {
+                response = Reject(HandshakeRejectReason.MatchAlreadyStarted);
+                return false;
+            }
+
             if (!TryFindEmptySeat(out int seat))
             {
                 response = Reject(HandshakeRejectReason.SessionFull);

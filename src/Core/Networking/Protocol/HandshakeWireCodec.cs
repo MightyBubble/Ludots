@@ -265,6 +265,6 @@ namespace Ludots.Core.Networking.Protocol
 
         private static bool IsKnownRejectReason(byte value) =>
             value is >= (byte)HandshakeRejectReason.ProtocolMismatch
-                and <= (byte)HandshakeRejectReason.SessionEpochMismatch;
+                and <= (byte)HandshakeRejectReason.MatchAlreadyStarted;
     }
 }

@@ -417,6 +417,60 @@ public sealed class AuthoritativeSessionRegistryTests
     }
 
     [Test]
+    public void StartedRoom_RejectsFirstTimeJoinIntoEmptySeat()
+    {
+        var registry = CreateRegistry(seatCapacity: 2, reconnectWindowTicks: 30);
+        var firstConnection = new ConnectionId(1);
+        var secondConnection = new ConnectionId(2);
+        Assert.That(registry.TryHandshake(firstConnection, JoinRequest(), 1, out _), Is.True);
+        Assert.That(registry.TryHandshake(secondConnection, JoinRequest(), 1, out SessionHandshakeResponse secondJoin), Is.True);
+        Assert.That(registry.ApplyRoomReadyIntent(firstConnection, NetworkRoomReadyState.Ready, 10), Is.EqualTo(RoomReadyIntentApplyResult.Applied));
+        Assert.That(registry.ApplyRoomReadyIntent(secondConnection, NetworkRoomReadyState.Ready, 10), Is.EqualTo(RoomReadyIntentApplyResult.Applied));
+        Assert.That(registry.AdvanceRoomCountdown(100), Is.True);
+        Assert.That(registry.RoomPhase, Is.EqualTo(NetworkRoomPhase.Started));
+
+        Assert.That(registry.TryDisconnect(secondConnection, currentTick: 101), Is.True);
+        var expired = new SessionSeatBinding[2];
+        Assert.That(registry.TryExpireAwaitingSeats(currentTick: 200, expired, out int expiredCount), Is.True);
+        Assert.That(expiredCount, Is.EqualTo(1));
+
+        Assert.That(
+            registry.TryHandshake(new ConnectionId(9), JoinRequest(), currentTick: 201, out SessionHandshakeResponse rejected),
+            Is.False);
+        Assert.That(rejected.RejectReason, Is.EqualTo(HandshakeRejectReason.MatchAlreadyStarted));
+        Assert.That(registry.RoomPhase, Is.EqualTo(NetworkRoomPhase.Started));
+    }
+
+    [Test]
+    public void StartedRoom_AllowsReconnectWithinGrace()
+    {
+        var registry = CreateRegistry(seatCapacity: 2, reconnectWindowTicks: 30);
+        var firstConnection = new ConnectionId(1);
+        var secondConnection = new ConnectionId(2);
+        Assert.That(registry.TryHandshake(firstConnection, JoinRequest(), 1, out _), Is.True);
+        Assert.That(registry.TryHandshake(secondConnection, JoinRequest(), 1, out SessionHandshakeResponse secondJoin), Is.True);
+        Assert.That(registry.ApplyRoomReadyIntent(firstConnection, NetworkRoomReadyState.Ready, 10), Is.EqualTo(RoomReadyIntentApplyResult.Applied));
+        Assert.That(registry.ApplyRoomReadyIntent(secondConnection, NetworkRoomReadyState.Ready, 10), Is.EqualTo(RoomReadyIntentApplyResult.Applied));
+        Assert.That(registry.AdvanceRoomCountdown(100), Is.True);
+        Assert.That(registry.RoomPhase, Is.EqualTo(NetworkRoomPhase.Started));
+
+        Assert.That(registry.TryDisconnect(secondConnection, currentTick: 101), Is.True);
+        Assert.That(
+            registry.TryHandshake(
+                new ConnectionId(3),
+                ReconnectRequest(secondJoin.ReconnectToken, secondJoin.SessionEpoch),
+                currentTick: 110,
+                out SessionHandshakeResponse reconnected),
+            Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(reconnected.Accepted, Is.True);
+            Assert.That(reconnected.Seat.Slot, Is.EqualTo(1));
+            Assert.That(registry.RoomPhase, Is.EqualTo(NetworkRoomPhase.Started));
+        });
+    }
+
+    [Test]
     public void Countdown_CompletesAfterExactlyNinetyCommittedTicks()
     {
         var registry = CreateRegistry(seatCapacity: 2);

@@ -283,6 +283,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<NetworkGameplayCommandGate> NetworkGameplayCommandGate = new("NetworkGameplayCommandGate");
         public static readonly ServiceKey<NetworkCommandSchemaRegistry> NetworkCommandSchemaRegistry = new("NetworkCommandSchemaRegistry");
         public static readonly ServiceKey<NetworkCommandAdmissionResultBuffer> NetworkCommandAdmissionResults = new("NetworkCommandAdmissionResults");
+        public static readonly ServiceKey<NetworkStagedCommandFeedbackStore> NetworkStagedCommandFeedback = new("NetworkStagedCommandFeedback");
         public static readonly ServiceKey<OrderAdmissionResultBuffer> EntityOrderAdmissionResults = new("EntityOrderAdmissionResults");
         public static readonly ServiceKey<NetworkEntityTable> NetworkEntityTable = new("NetworkEntityTable");
         public static readonly ServiceKey<AuthoritativeSeatControllerRegistry> AuthoritativeSeatControllers = new("AuthoritativeSeatControllers");

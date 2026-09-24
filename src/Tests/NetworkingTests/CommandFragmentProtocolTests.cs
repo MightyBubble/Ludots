@@ -162,17 +162,21 @@ public sealed class CommandFragmentProtocolTests
             CommandFragmentWireCodec.TryDecode(trailing, out _, out _),
             Is.EqualTo(NetworkWireCodecStatus.TrailingBytes));
         Assert.That(reassembler.TryAcceptWirePayload(trailing), Is.EqualTo(CommandReassemblyStatus.InvalidFragment));
+        Assert.That(reassembler.Phase, Is.EqualTo(CommandReassemblyPhase.Empty));
+        Assert.That(reassembler.ReceivedFragmentCount, Is.EqualTo(0));
 
+        Assert.That(reassembler.TryAcceptWirePayload(wires[0]), Is.EqualTo(CommandReassemblyStatus.Incomplete));
         byte[] badReserved = (byte[])wires[1].Clone();
         BinaryPrimitives.WriteUInt16LittleEndian(badReserved.AsSpan(26, 2), 1);
         Assert.That(reassembler.TryAcceptWirePayload(badReserved), Is.EqualTo(CommandReassemblyStatus.InvalidFragment));
+        Assert.That(reassembler.Phase, Is.EqualTo(CommandReassemblyPhase.Empty));
 
+        Assert.That(reassembler.TryAcceptWirePayload(wires[0]), Is.EqualTo(CommandReassemblyStatus.Incomplete));
         byte[] badIndex = (byte[])wires[1].Clone();
         BinaryPrimitives.WriteUInt16LittleEndian(badIndex.AsSpan(16, 2), 9);
         Assert.That(reassembler.TryAcceptWirePayload(badIndex), Is.EqualTo(CommandReassemblyStatus.InvalidFragment));
-
-        Assert.That(reassembler.ReceivedFragmentCount, Is.EqualTo(receivedBefore));
-        Assert.That(reassembler.Phase, Is.EqualTo(CommandReassemblyPhase.Assembling));
+        Assert.That(reassembler.Phase, Is.EqualTo(CommandReassemblyPhase.Empty));
+        Assert.That(receivedBefore, Is.EqualTo(1));
     }
 
     [Test]
@@ -189,8 +193,10 @@ public sealed class CommandFragmentProtocolTests
         byte[] mutated = (byte[])wires[0].Clone();
         mutated[^1] ^= 0xFF;
         Assert.That(reassembler.TryAcceptWirePayload(mutated), Is.EqualTo(CommandReassemblyStatus.InvalidFragment));
-        Assert.That(reassembler.ReceivedFragmentCount, Is.EqualTo(1));
+        Assert.That(reassembler.Phase, Is.EqualTo(CommandReassemblyPhase.Empty));
+        Assert.That(reassembler.ReceivedFragmentCount, Is.EqualTo(0));
 
+        Assert.That(reassembler.TryAcceptWirePayload(wires[0]), Is.EqualTo(CommandReassemblyStatus.Incomplete));
         Assert.That(reassembler.TryAcceptWirePayload(wires[1]), Is.EqualTo(CommandReassemblyStatus.Completed));
         Assert.That(reassembler.AssembledPayload.SequenceEqual(payload), Is.True);
     }
@@ -208,21 +214,43 @@ public sealed class CommandFragmentProtocolTests
         var reassembler = new CommandFragmentReassembler(MaxCommandPayloadBytes, MaxFragments);
         Assert.That(reassembler.TryAcceptWirePayload(wiresA[0]), Is.EqualTo(CommandReassemblyStatus.Incomplete));
         Assert.That(reassembler.TryAcceptWirePayload(wiresB[0]), Is.EqualTo(CommandReassemblyStatus.MixedMetadata));
-        Assert.That(reassembler.TryAcceptWirePayload(wiresEpoch[0]), Is.EqualTo(CommandReassemblyStatus.MixedMetadata));
-        Assert.That(reassembler.ReceivedFragmentCount, Is.EqualTo(1));
-        Assert.That(reassembler.ClientBatchSequence, Is.EqualTo(10UL));
-
-        Assert.That(reassembler.TryAcceptWirePayload(wiresA[1]), Is.EqualTo(CommandReassemblyStatus.Completed));
-        Assert.That(reassembler.TryAcceptWirePayload(wiresB[0]), Is.EqualTo(CommandReassemblyStatus.StaleOrOutOfOrder));
-        Assert.That(reassembler.Phase, Is.EqualTo(CommandReassemblyPhase.Completed));
-        Assert.That(reassembler.AssembledPayload.SequenceEqual(payloadA), Is.True);
-
-        reassembler.Reset();
         Assert.That(reassembler.Phase, Is.EqualTo(CommandReassemblyPhase.Empty));
-        Assert.Throws<InvalidOperationException>(() => _ = reassembler.AssembledPayload);
+        Assert.That(reassembler.ReceivedFragmentCount, Is.EqualTo(0));
+
+        Assert.That(reassembler.TryAcceptWirePayload(wiresEpoch[0]), Is.EqualTo(CommandReassemblyStatus.Incomplete));
+        Assert.That(reassembler.TryAcceptWirePayload(wiresA[0]), Is.EqualTo(CommandReassemblyStatus.MixedMetadata));
+        Assert.That(reassembler.Phase, Is.EqualTo(CommandReassemblyPhase.Empty));
+
+        Assert.That(reassembler.TryAcceptWirePayload(wiresA[0]), Is.EqualTo(CommandReassemblyStatus.Incomplete));
+        Assert.That(reassembler.TryAcceptWirePayload(wiresA[1]), Is.EqualTo(CommandReassemblyStatus.Completed));
+        Assert.That(reassembler.AssembledPayload.SequenceEqual(payloadA), Is.True);
+        Assert.That(reassembler.TryAcceptWirePayload(wiresB[0]), Is.EqualTo(CommandReassemblyStatus.StaleOrOutOfOrder));
+        Assert.That(reassembler.Phase, Is.EqualTo(CommandReassemblyPhase.Empty));
+
         Assert.That(reassembler.TryAcceptWirePayload(wiresB[1]), Is.EqualTo(CommandReassemblyStatus.Incomplete));
         Assert.That(reassembler.TryAcceptWirePayload(wiresB[0]), Is.EqualTo(CommandReassemblyStatus.Completed));
         Assert.That(reassembler.AssembledPayload.SequenceEqual(payloadB), Is.True);
+    }
+
+    [Test]
+    public void RejectedMixedBatch_ResetsSoLaterValidBatchCanAssemble()
+    {
+        var encoder = new CommandFragmentEncoder(MaxDatagramPayloadBytes, MaxCommandPayloadBytes, MaxFragments);
+        byte[] poisoned = CreatePatternPayload(encoder.MaxFragmentDataBytes + 4);
+        byte[] valid = CreatePatternPayload(encoder.MaxFragmentDataBytes + 12);
+        byte[][] mixedA = EncodeAll(encoder, sessionEpoch: 1, clientBatchSequence: 20, poisoned, 2);
+        byte[][] mixedB = EncodeAll(encoder, sessionEpoch: 1, clientBatchSequence: 21, poisoned, 2);
+        byte[][] validBatch = EncodeAll(encoder, sessionEpoch: 1, clientBatchSequence: 22, valid, 2);
+
+        var reassembler = new CommandFragmentReassembler(MaxCommandPayloadBytes, MaxFragments);
+        Assert.That(reassembler.TryAcceptWirePayload(mixedA[0]), Is.EqualTo(CommandReassemblyStatus.Incomplete));
+        Assert.That(reassembler.TryAcceptWirePayload(mixedB[0]), Is.EqualTo(CommandReassemblyStatus.MixedMetadata));
+        Assert.That(reassembler.Phase, Is.EqualTo(CommandReassemblyPhase.Empty));
+
+        Assert.That(reassembler.TryAcceptWirePayload(validBatch[0]), Is.EqualTo(CommandReassemblyStatus.Incomplete));
+        Assert.That(reassembler.TryAcceptWirePayload(validBatch[1]), Is.EqualTo(CommandReassemblyStatus.Completed));
+        Assert.That(reassembler.AssembledPayload.SequenceEqual(valid), Is.True);
+        Assert.That(reassembler.ClientBatchSequence, Is.EqualTo(22UL));
     }
 
     [Test]

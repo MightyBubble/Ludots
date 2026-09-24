@@ -28,7 +28,7 @@ namespace Ludots.Core.Networking.Runtime
         private readonly ContentFingerprint _contentFingerprint;
         private readonly IClientSessionCredentialPort _credentials;
         private readonly IClientReplicationBridgeFactory _replicationFactory;
-        private readonly NetworkCommandAdmissionResultBuffer _admissions;
+        private readonly NetworkStagedCommandFeedbackStore _admissions;
         private readonly INetworkRuntimeObserver _observer;
         private readonly CommandFragmentEncoder _commandEncoder;
         private readonly SnapshotFragmentReassembler _snapshotReassembler;
@@ -67,7 +67,7 @@ namespace Ludots.Core.Networking.Runtime
             ContentFingerprint contentFingerprint,
             IClientSessionCredentialPort credentials,
             IClientReplicationBridgeFactory replicationFactory,
-            NetworkCommandAdmissionResultBuffer admissions,
+            NetworkStagedCommandFeedbackStore admissions,
             INetworkRuntimeObserver observer)
         {
             if (!protocolVersion.IsWellFormed)
@@ -565,6 +565,7 @@ namespace Ludots.Core.Networking.Runtime
             _lastCommittedTick = 0;
             _awaitingFullSnapshot = false;
             _snapshotReassembler.Reset();
+            _admissions.Clear();
             ClearRoomSnapshot();
         }
 
@@ -616,7 +617,7 @@ namespace Ludots.Core.Networking.Runtime
                 return;
             }
 
-            if (!_admissions.TryWrite(in outcome))
+            if (!_admissions.TryObserve(in outcome))
             {
                 Fail(NetworkRuntimeFaultCode.AdmissionResultCapacityExceeded, NetworkWireKind.CommandAdmissionResult);
             }

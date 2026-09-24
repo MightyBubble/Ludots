@@ -160,6 +160,36 @@ public sealed class NetworkWireCodecTests
     }
 
     [Test]
+    public void CommandAdmissionOutcome_EntityIntakeStage_RoundTripsExplicitly()
+    {
+        var seat = new NetworkCommandSeat(slot: 0, generation: 1, playerId: 1);
+        var outcome = new NetworkCommandAdmissionOutcome(
+            in seat,
+            clientBatchSequence: 9,
+            targetTick: 40,
+            actorCount: 2,
+            orderId: 15,
+            admissionBatchId: 8,
+            admissionBatchIndex: 1,
+            OrderAdmissionStage.EntityIntake,
+            OrderSubmitResult.Activated,
+            isReplay: false);
+
+        Span<byte> buffer = stackalloc byte[CommandAdmissionWireCodec.SizeInBytes];
+        Assert.That(CommandAdmissionWireCodec.TryEncode(3, in outcome, buffer, out _), Is.EqualTo(NetworkWireCodecStatus.Success));
+        Assert.That(
+            CommandAdmissionWireCodec.TryDecode(buffer, 3, in seat, out NetworkCommandAdmissionOutcome decoded),
+            Is.EqualTo(NetworkWireCodecStatus.Success));
+        Assert.Multiple(() =>
+        {
+            Assert.That(decoded.Stage, Is.EqualTo(OrderAdmissionStage.EntityIntake));
+            Assert.That(decoded.Result, Is.EqualTo(OrderSubmitResult.Activated));
+            Assert.That(decoded.AdmissionBatchIndex, Is.EqualTo((ushort)1));
+            Assert.That(decoded.OrderId, Is.EqualTo(15));
+        });
+    }
+
+    [Test]
     public void CommandAdmissionOutcome_RoundTrip()
     {
         var seat = new NetworkCommandSeat(slot: 1, generation: 2, playerId: 9);

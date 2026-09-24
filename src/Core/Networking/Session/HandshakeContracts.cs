@@ -122,6 +122,7 @@ namespace Ludots.Core.Networking.Session
         StaleOrInvalidReconnectToken = 4,
         MalformedRequest = 5,
         SessionEpochMismatch = 6,
+        MatchAlreadyStarted = 7,
     }
 
     /// <summary>
