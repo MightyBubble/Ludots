@@ -14,6 +14,7 @@ using Ludots.Core.Navigation.NavMesh;
 
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Terrain;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Navigation.NavMesh.Bake
 {
@@ -34,6 +35,17 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             NavTerrainFeedKind feed = context.Config != null
                 ? context.Config.ParsedTerrainFeed
                 : NavTerrainFeedKind.Triangles;
+            ContinuousHeightBakeRequest continuous = null;
+            if (context.ContinuousHeightmap != null)
+            {
+                continuous = new ContinuousHeightBakeRequest
+                {
+                    Heightmap = context.ContinuousHeightmap,
+                    Bounds = context.ContinuousHeightBounds,
+                    BlockedAtOrBelowHeightCm = context.BlockedAtOrBelowHeightCm
+                };
+            }
+
             return RecastNavTileBaker.TryBake(
                 context.Terrain,
                 target.ChunkX,
@@ -48,7 +60,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 out tile,
                 out detourTileBytes,
                 out artifact,
-                feed);
+                feed,
+                continuous);
         }
     }
 
@@ -107,22 +120,49 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             out NavTile tile,
             out byte[] detourTileBytes,
             out NavBakeArtifact artifact,
-            NavTerrainFeedKind terrainFeed = NavTerrainFeedKind.Triangles)
+            NavTerrainFeedKind terrainFeed = NavTerrainFeedKind.Triangles,
+            ContinuousHeightBakeRequest continuous = null)
         {
             tile = null!;
             detourTileBytes = Array.Empty<byte>();
             artifact = default;
 
-            if (!NavTileBuilder.TryBuildTile(terrain, chunkX, chunkY, tileVersion, legacyConfig, out var baseTile, out var baseArtifact))
+            ComputeTileFootprintBounds(terrain, chunkX, chunkY, out float tileMinX, out float tileMinZ, out float tileMaxX, out float tileMaxZ);
+            bool haveQuantizedTile = NavTileBuilder.TryBuildTile(terrain, chunkX, chunkY, tileVersion, legacyConfig, out var baseTile, out var baseArtifact);
+            if (!haveQuantizedTile)
             {
-                artifact = baseArtifact;
-                return false;
+                if (continuous?.Heightmap == null)
+                {
+                    artifact = baseArtifact;
+                    return false;
+                }
+
+                int originXcm = (int)MathF.Round(tileMinX * CmPerMeter);
+                int originZcm = (int)MathF.Round(tileMinZ * CmPerMeter);
+                baseTile = new NavTile(
+                    new NavTileId(chunkX, chunkY, layer),
+                    tileVersion,
+                    buildConfigHash: 0,
+                    checksum: 0,
+                    originXcm,
+                    originZcm,
+                    Array.Empty<int>(),
+                    Array.Empty<int>(),
+                    Array.Empty<int>(),
+                    Array.Empty<int>(),
+                    Array.Empty<int>(),
+                    Array.Empty<int>(),
+                    Array.Empty<int>(),
+                    Array.Empty<int>(),
+                    Array.Empty<int>(),
+                    Array.Empty<byte>(),
+                    Array.Empty<NavBorderPortal>());
             }
 
             try
             {
-                ComputeTileFootprintBounds(terrain, chunkX, chunkY, out float tileMinX, out float tileMinZ, out float tileMaxX, out float tileMaxZ);
-                var rcCfg = BuildRcConfig(terrain, agentProfile, navProfile, tileMinX, tileMinZ, tileMaxX, tileMaxZ);
+                bool sampleContinuousHeight = continuous?.Heightmap != null;
+                var rcCfg = BuildRcConfig(terrain, agentProfile, navProfile, tileMinX, tileMinZ, tileMaxX, tileMaxZ, sampleContinuousHeight);
 
                 long widthVoxels = (long)rcCfg.TileSizeX + 2L * rcCfg.BorderSize;
                 long heightVoxels = (long)rcCfg.TileSizeZ + 2L * rcCfg.BorderSize;
@@ -143,7 +183,42 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 RcVec3f tileBmax;
                 RcBuilderResult rcResult;
                 bool areasFromPolymesh;
-                if (terrainFeed == NavTerrainFeedKind.Direct)
+                NavBorderPortal[] portalOverride = null;
+                if (sampleContinuousHeight)
+                {
+                    ContinuousHeightColumnFeed.Result fed = ContinuousHeightColumnFeed.Build(
+                        continuous.Heightmap,
+                        continuous.Bounds,
+                        continuous.BlockedAtOrBelowHeightCm,
+                        navProfile.MaxSlopeDeg,
+                        tileMinX,
+                        tileMinZ,
+                        tileMaxX,
+                        tileMaxZ,
+                        baseTile.OriginXcm,
+                        baseTile.OriginYcm,
+                        terrain.TileWidthCells(chunkX),
+                        terrain.TileHeightCells(chunkY),
+                        rcCfg,
+                        obstacles,
+                        layerId,
+                        (int)MathF.Round(agentProfile.RadiusCm));
+                    if (fed.Heightfield == null)
+                    {
+                        artifact = new NavBakeArtifact(new NavTileId(chunkX, chunkY, layer), tileVersion, NavBakeStage.WalkMask, NavBakeErrorCode.NoWalkableDomain, "No walkable columns after continuous height sampling.", 0, 0, 0, 0);
+                        return false;
+                    }
+
+                    portalOverride = fed.Portals;
+                    tileBmin = new RcVec3f(tileMinX, fed.Heightfield.bmin.Y, tileMinZ);
+                    tileBmax = new RcVec3f(
+                        tileMinX + rcCfg.TileSizeX * rcCfg.Cs,
+                        fed.Heightfield.bmax.Y,
+                        tileMinZ + rcCfg.TileSizeZ * rcCfg.Cs);
+                    rcResult = new RcBuilder().Build(new RcContext(), tileX: 0, tileZ: 0, geom: null!, rcCfg, fed.Heightfield, keepInterResults: false);
+                    areasFromPolymesh = true;
+                }
+                else if (terrainFeed == NavTerrainFeedKind.Direct)
                 {
                     RcHeightfield? solid = RecastDirectFeedHeightfield.BuildSolidHeightfield(
                         terrain, chunkX, chunkY, legacyConfig, rcCfg,
@@ -190,7 +265,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                     // DotRecast drops detail (tiny island / single-cell land), the LogicTerrain
                     // mesh from NavTileBuilder is already the authoritative walkable domain —
                     // publish it instead of failing the whole offline bake.
-                    if (baseTile.TriangleCount > 0 && baseArtifact.WalkableTriangleCount > 0)
+                    if (!sampleContinuousHeight && baseTile.TriangleCount > 0 && baseArtifact.WalkableTriangleCount > 0)
                     {
                         tile = baseTile.TileId.Layer == layer
                             ? baseTile
@@ -219,11 +294,12 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                     baseTile,
                     layer,
                     tileVersion,
-                    legacyConfig.ComputeHash() ^ ((ulong)(byte)terrainFeed << 56),
+                    legacyConfig.ComputeHash() ^ ((ulong)(byte)terrainFeed << 56) ^ (sampleContinuousHeight ? 1UL << 57 : 0UL),
                     rcResult.MeshDetail,
                     rcResult.Mesh,
                     areaFromPolymesh: areasFromPolymesh,
-                    out tile);
+                    out tile,
+                    portalOverride);
 
                 detourTileBytes = BuildDetourTileBytes(
                     rcResult,
@@ -456,6 +532,27 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         // coarser terrain step or a single tile allocates hundreds of thousands of columns.
         internal const int MaxRecastVoxelsPerAxis = 512;
 
+        internal static float ResolveRecastCellSizeMeters(
+            AgentProfileConfig agentProfile,
+            NavMeshAgentProfileConfig navProfile,
+            float terrainCellSizeMeters,
+            bool decoupleFromTerrain)
+        {
+            if (navProfile.CellSizeCm < 0)
+            {
+                throw new InvalidOperationException($"Nav profile '{navProfile.Id}' cellSizeCm must be >= 0.");
+            }
+
+            float radius = agentProfile.RadiusCm / CmPerMeter;
+            float agentCellSize = MathF.Max(0.05f, MathF.Min(0.5f, radius / 3f));
+            if (decoupleFromTerrain)
+            {
+                return navProfile.CellSizeCm > 0 ? navProfile.CellSizeCm / CmPerMeter : agentCellSize;
+            }
+
+            return MathF.Max(agentCellSize, terrainCellSizeMeters);
+        }
+
         private static RcConfig BuildRcConfig(
             LogicTerrainField terrain,
             AgentProfileConfig agentProfile,
@@ -463,16 +560,16 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             float tileMinX,
             float tileMinZ,
             float tileMaxX,
-            float tileMaxZ)
+            float tileMaxZ,
+            bool continuousHeight)
         {
             float radius = agentProfile.RadiusCm / CmPerMeter;
             float height = agentProfile.HeightCm / CmPerMeter;
             float maxClimb = navProfile.MaxClimbCm / CmPerMeter;
             float maxSlope = navProfile.MaxSlopeDeg;
 
-            float agentCellSize = MathF.Max(0.05f, MathF.Min(0.5f, radius / 3f));
             float terrainCellSize = GetTerrainCellStepMeters(terrain);
-            float cellSize = MathF.Max(agentCellSize, terrainCellSize);
+            float cellSize = ResolveRecastCellSizeMeters(agentProfile, navProfile, terrainCellSize, continuousHeight);
             float cellHeight = MathF.Max(cellSize * 0.5f, MathF.Max(0.01f, maxClimb));
             int tileSizeX = Math.Max(1, (int)MathF.Ceiling((tileMaxX - tileMinX) / cellSize));
             int tileSizeZ = Math.Max(1, (int)MathF.Ceiling((tileMaxZ - tileMinZ) / cellSize));
@@ -493,8 +590,11 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             // 部分多边形 detail 为空、Detour 序列化越界，故必须保持非零。
             // Continental strategy cells are kilometers across; keep agent radius as-is so
             // Recast does not erode an entire logic cell away from small landmasses.
-            float detailSampleDist = MathF.Max(16f, cellSize);
-            float detailSampleMaxError = MathF.Max(4f, cellSize * 0.25f);
+            // Column size decides which slopes are walkable. Detail sampling only fills
+            // height inside a polygon; a 1m sample on a 64m tile makes BuildPolyDetail
+            // quadratic. 4m / 1m keeps relief far finer than a 250cm height step.
+            float detailSampleDist = continuousHeight ? MathF.Max(cellSize * 8f, 4f) : MathF.Max(16f, cellSize);
+            float detailSampleMaxError = continuousHeight ? MathF.Max(cellHeight * 2f, 1f) : MathF.Max(4f, cellSize * 0.25f);
             return new RcConfig(
                 true,
                 tileSizeX,
@@ -609,7 +709,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             RcPolyMeshDetail detail,
             RcPolyMesh polymesh,
             bool areaFromPolymesh,
-            out NavTile tile)
+            out NavTile tile,
+            NavBorderPortal[] portalOverride = null)
         {
             var vertexIndex = new Dictionary<(int X, int Y, int Z), int>(detail.nverts);
             var vx = new List<int>(detail.nverts);
@@ -674,7 +775,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 n1,
                 n2,
                 triAreaIds.ToArray(),
-                baseTile.Portals);
+                portalOverride ?? baseTile.Portals);
 
             using var ms = new System.IO.MemoryStream();
             NavTileBinary.Write(ms, tmp);

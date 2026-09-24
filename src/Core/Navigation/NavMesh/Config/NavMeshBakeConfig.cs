@@ -28,6 +28,12 @@ namespace Ludots.Core.Navigation.NavMesh.Config
         public string Id { get; set; } = string.Empty;
         public int MaxClimbCm { get; set; }
         public float MaxSlopeDeg { get; set; }
+
+        /// <summary>
+        /// Recast column size in centimeters for a continuous-height source.
+        /// Zero means the baker derives it from the agent radius.
+        /// </summary>
+        public int CellSizeCm { get; set; }
     }
 
     public sealed class NavLayerConfig

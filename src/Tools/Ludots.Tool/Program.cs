@@ -281,7 +281,7 @@ namespace Ludots.Tool
             });
             navCommand.AddCommand(bakeRecastReactNavCommand);
 
-            var bakeHeightmapNavCommand = new Command("bake-heightmap", "Bake NavTiles from a ContinuousHeightmap .height via logic-terrain projection");
+            var bakeHeightmapNavCommand = new Command("bake-heightmap", "Bake NavTiles from a ContinuousHeightmap .height. A board that declares NavBakePolicy.heightSource=continuous-heightmap samples that height; otherwise the height is projected onto logic terrain first.");
             var heightmapInOption = new Option<string>("--in", "Input ContinuousHeightmap .height path") { IsRequired = true };
             var heightmapOutputRootOption = new Option<string?>("--outputRoot", () => null, "Output root containing assets/ (default: target mod root)");
             bakeHeightmapNavCommand.AddOption(mapIdOption);
@@ -932,6 +932,11 @@ namespace {modId}
                 throw new InvalidOperationException($"Map '{mapId}' has no navigation-enabled board.");
             }
 
+            bool mapDeclaresContinuousHeight =
+                !string.IsNullOrWhiteSpace(mapConfig.ContinuousHeightmap?.Asset) ||
+                !string.IsNullOrWhiteSpace(mapConfig.ContinuousHeightmapAsset);
+            NavBakePolicyRules.Validate(boardConfig, mapDeclaresContinuousHeight);
+
             NavMeshBakeConfigContext bakeConfigContext;
             try
             {
@@ -1014,12 +1019,16 @@ namespace {modId}
             }
 
             NavMeshBakeConfig bakeConfig = bakeConfigContext.Config;
+            bool sampleContinuousHeight = boardConfig.NavBakePolicy?.UsesContinuousHeightmap == true;
             return new NavBakeContext
             {
                 MapId = mapId,
                 ModId = modId ?? string.Empty,
                 SourceUri = ToCoreSourceUri(repoRoot, inputHeightmapPath),
                 Terrain = terrain,
+                ContinuousHeightmap = sampleContinuousHeight ? heightmap : null,
+                ContinuousHeightBounds = sampleContinuousHeight ? asset.Bounds : default,
+                BlockedAtOrBelowHeightCm = sampleContinuousHeight ? seaLevelCm : null,
                 Obstacles = obstacles,
                 Config = bakeConfig,
                 AgentProfiles = bakeConfigContext.AgentProfiles,
