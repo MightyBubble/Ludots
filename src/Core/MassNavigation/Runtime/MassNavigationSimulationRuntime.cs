@@ -105,7 +105,7 @@ public sealed class MassNavigationSimulationRuntime
     private readonly List<long> _loadedChunksToEvict;
     private readonly List<long> _loadedChunksAddedDuringUpdate;
     private readonly HashSet<Entity> _authoredBindingSeenEntities;
-    private readonly int _loadedChunkCapacity;
+    private int _loadedChunkCapacity;
     private float _streamingClockSeconds;
     private int _streamingMinChunkX = int.MinValue;
     private int _streamingMaxChunkX = int.MinValue;
@@ -308,8 +308,8 @@ public sealed class MassNavigationSimulationRuntime
         _loadedChunkLastTouchedSeconds = new Dictionary<long, float>(_loadedChunkCapacity);
         _loadedChunksToEvict = new List<long>(_loadedChunkCapacity);
         _loadedChunksAddedDuringUpdate = new List<long>(_loadedChunkCapacity);
-        _simWindowWidthCm = WorldConfig.SolverWindowWidthCm;
-        _simWindowHeightCm = WorldConfig.SolverWindowHeightCm;
+        _simWindowWidthCm = Config.Solver.FieldWidthCm;
+        _simWindowHeightCm = Config.Solver.FieldHeightCm;
         _simWindowCenterXCm = _activeHotZoneCenterXCm;
         _simWindowCenterYCm = _activeHotZoneCenterYCm;
         _flowWorkAreaCenterXCm = _simWindowCenterXCm;
@@ -327,12 +327,9 @@ public sealed class MassNavigationSimulationRuntime
     public void BindBoardWorld(WorldSizeSpec boardWorldSize, WorldGridLoadedChunks loadedChunks)
     {
         ArgumentNullException.ThrowIfNull(loadedChunks);
-        if (loadedChunks.ChunkSizeCm != WorldConfig.StreamingChunkSizeCm)
-        {
-            throw new InvalidOperationException(
-                $"MassNavigation streaming chunk size {WorldConfig.StreamingChunkSizeCm} does not match board-owned loaded chunks {loadedChunks.ChunkSizeCm}.");
-        }
-
+        _loadedChunkCapacity = Config.ScenarioRuntime.RuntimeCapacity.ResolveLoadedChunkCapacityForBoard(
+            loadedChunks.ChunkSizeCm,
+            Config.Streaming.RadiusCm);
         if (!ReferenceEquals(_loadedChunks, loadedChunks))
         {
             ReleaseLoadedChunkContribution();

@@ -4,15 +4,15 @@
   <rect x="40" y="64" width="1520" height="72" rx="12" fill="#14212e" stroke="#35536b" stroke-width="1.5" />
   <text x="72" y="100" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">001 map_loaded</text>
   <text x="420" y="100" fill="#ffffff" font-size="20" font-family="Consolas, monospace">View P1 Live | A 48/48 | B 48/48 | Proj 0 peak 0 | HUD BTF</text>
-  <text x="72" y="128" fill="#bccdde" font-size="18" font-family="Consolas, monospace">primary= | count=0 | proj=4 | feedback=12/0</text>
+  <text x="72" y="128" fill="#bccdde" font-size="18" font-family="Consolas, monospace">primary= | count=0 | proj=0 | feedback=4/0</text>
   <rect x="40" y="160" width="1520" height="72" rx="12" fill="#14212e" stroke="#35536b" stroke-width="1.5" />
   <text x="72" y="196" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">002 formations_saturated</text>
   <text x="420" y="196" fill="#ffffff" font-size="20" font-family="Consolas, monospace">View P1 Live | A 48/48 | B 48/48 | Proj 0 peak 0 | HUD BTF</text>
-  <text x="72" y="224" fill="#bccdde" font-size="18" font-family="Consolas, monospace">primary= | count=0 | proj=4 | feedback=12/0</text>
+  <text x="72" y="224" fill="#bccdde" font-size="18" font-family="Consolas, monospace">primary= | count=0 | proj=0 | feedback=4/0</text>
   <rect x="40" y="256" width="1520" height="72" rx="12" fill="#14212e" stroke="#35536b" stroke-width="1.5" />
   <text x="72" y="292" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">003 player_live_view</text>
   <text x="420" y="292" fill="#ffffff" font-size="20" font-family="Consolas, monospace">View P1 Live | A 48/48 | B 48/48 | Proj 0 peak 0 | HUD BTF</text>
-  <text x="72" y="320" fill="#bccdde" font-size="18" font-family="Consolas, monospace">primary=StressFireMageA | count=3 | proj=4 | feedback=12/0</text>
+  <text x="72" y="320" fill="#bccdde" font-size="18" font-family="Consolas, monospace">primary=StressFireMageA | count=3 | proj=0 | feedback=4/0</text>
   <rect x="40" y="352" width="1520" height="72" rx="12" fill="#14212e" stroke="#35536b" stroke-width="1.5" />
   <text x="72" y="388" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">004 player_formation_view</text>
   <text x="420" y="388" fill="#ffffff" font-size="20" font-family="Consolas, monospace">View P1 Formation | A 48/48 | B 48/48 | Proj 4 peak 4 | HUD BTF</text>
@@ -27,10 +27,10 @@
   <text x="72" y="608" fill="#bccdde" font-size="18" font-family="Consolas, monospace">primary=StressLaserMageA | count=1 | proj=4 | feedback=16/0</text>
   <rect x="40" y="640" width="1520" height="72" rx="12" fill="#14212e" stroke="#35536b" stroke-width="1.5" />
   <text x="72" y="676" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">007 combat_active</text>
-  <text x="420" y="676" fill="#ffffff" font-size="20" font-family="Consolas, monospace">View Command Snapshot | A 48/48 | B 48/48 | Proj 6 peak 21 | HUD BTF</text>
-  <text x="72" y="704" fill="#bccdde" font-size="18" font-family="Consolas, monospace">primary=StressLaserMageA | count=1 | proj=3 | feedback=109/377</text>
+  <text x="420" y="676" fill="#ffffff" font-size="20" font-family="Consolas, monospace">View Command Snapshot | A 48/48 | B 48/48 | Proj 14 peak 21 | HUD BTF</text>
+  <text x="72" y="704" fill="#bccdde" font-size="18" font-family="Consolas, monospace">primary=StressLaserMageA | count=1 | proj=13 | feedback=60/238</text>
   <rect x="40" y="736" width="1520" height="72" rx="12" fill="#14212e" stroke="#35536b" stroke-width="1.5" />
   <text x="72" y="772" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">008 scaled_up</text>
-  <text x="420" y="772" fill="#ffffff" font-size="20" font-family="Consolas, monospace">View Command Snapshot | A 48/56 | B 48/56 | Proj 3 peak 21 | HUD BTF</text>
-  <text x="72" y="800" fill="#bccdde" font-size="18" font-family="Consolas, monospace">primary=StressLaserMageA | count=1 | proj=4 | feedback=121/402</text>
+  <text x="420" y="772" fill="#ffffff" font-size="20" font-family="Consolas, monospace">View Command Snapshot | A 48/56 | B 48/56 | Proj 13 peak 21 | HUD BTF</text>
+  <text x="72" y="800" fill="#bccdde" font-size="18" font-family="Consolas, monospace">primary=StressLaserMageA | count=1 | proj=12 | feedback=56/242</text>
 </svg>

@@ -99,9 +99,6 @@ public sealed class MassNavigationConfig
         JsonElement world = RequireProperty(root, "world");
         RequireProperties(
             world,
-            "solverWindowWidthCm",
-            "solverWindowHeightCm",
-            "streamingChunkSizeCm",
             "commandFocusHoldTicks",
             "workAreaPaddingCm",
             "workAreaMaxWidthCm",
@@ -372,7 +369,7 @@ public sealed class MassNavigationConfig
             throw new InvalidOperationException("MassNavigation config requires a non-empty map id.");
         }
 
-        ScenarioRuntime.RuntimeCapacity.ApplyScenarioScaleDefaults(Scenario, World, Streaming);
+        ScenarioRuntime.RuntimeCapacity.ApplyScenarioScaleDefaults(Scenario, Streaming);
         Solver.Validate();
         ScenarioRuntime.Validate();
         Scenario.Validate(ScenarioRuntime);
@@ -391,7 +388,6 @@ public sealed class MassNavigationConfig
         }
 
         World.Validate(Solver);
-        ScenarioRuntime.RuntimeCapacity.ValidateForStreaming(World, Streaming);
 
         ValidateRelationships();
 
@@ -491,7 +487,6 @@ public sealed class MassNavigationRuntimeCapacityConfig
         RequirePositive(RouteStateCapacity, "routeStateCapacity");
         RequirePositive(RouteMaxExpandedPerRequest, "routeMaxExpandedPerRequest");
         RequirePositive(RouteWaypointCapacityPerAgent, "routeWaypointCapacityPerAgent");
-        RequirePositive(LoadedChunkCapacity, "loadedChunkCapacity");
         RequirePositive(RelationshipDomainCapacity, "relationshipDomainCapacity");
         RequirePositive(DisplacedAgentCapacity, "displacedAgentCapacity");
 
@@ -537,13 +532,13 @@ public sealed class MassNavigationRuntimeCapacityConfig
     }
 
     /// <summary>
-    /// 缺省推导：未显式 override 的规模容量按 ValidateForScenario/ValidateForStreaming
-    /// 的下限从 scenario 规模与 streaming 窗口推导（agent 计数、team 计数、窗口 chunk 数）。
-    /// agentsPerTeam=0 的外部 authoring 路径没有可推导规模，agent 档容量必须显式 override。
+    /// 缺省推导：未显式 override 的规模容量按 ValidateForScenario 的下限从 scenario
+    /// 规模推导（agent 计数、team 计数）。agentsPerTeam=0 的外部 authoring 路径没有
+    /// 可推导规模，agent 档容量必须显式 override。窗口 chunk 档（loadedChunkCapacity）
+    /// 依赖 board 拥有的 chunk 尺寸，推导移到 board 绑定期（ResolveLoadedChunkCapacityForBoard）。
     /// </summary>
     public void ApplyScenarioScaleDefaults(
         MassNavigationScenarioConfig scenario,
-        MassNavigationWorldConfig? world,
         MassNavigationStreamingConfig streaming)
     {
         ArgumentNullException.ThrowIfNull(scenario);
@@ -569,11 +564,6 @@ public sealed class MassNavigationRuntimeCapacityConfig
         {
             RelationshipDomainCapacity = scenario.Teams.Length;
         }
-
-        if (LoadedChunkCapacity <= 0 && world != null)
-        {
-            LoadedChunkCapacity = CountSquareChunksForRadius(streaming.RadiusCm, world.StreamingChunkSizeCm);
-        }
     }
 
     private static int RequireDerivableAuthoredAgentCount(long authoredAgentCount, string fieldName)
@@ -587,26 +577,24 @@ public sealed class MassNavigationRuntimeCapacityConfig
         return checked((int)authoredAgentCount);
     }
 
-    public void ValidateForStreaming(MassNavigationWorldConfig world, MassNavigationStreamingConfig streaming)
+    /// <summary>
+    /// board 绑定期的窗口容量解析：board 拥有的 chunk 尺寸是 SSOT（ChunkSizeCells × GridCellSizeCm），
+    /// 未显式 override（<= 0）时按 streaming 窗口推导，显式值小于窗口 chunk 数即拒绝。
+    /// </summary>
+    public int ResolveLoadedChunkCapacityForBoard(int boardChunkSizeCm, int streamingRadiusCm)
     {
-        if (world == null)
+        int minimumWindowChunkCapacity = CountSquareChunksForRadius(streamingRadiusCm, boardChunkSizeCm);
+        if (LoadedChunkCapacity <= 0)
         {
-            throw new InvalidOperationException("MassNavigation runtimeCapacity streaming validation requires world config.");
+            LoadedChunkCapacity = minimumWindowChunkCapacity;
         }
-
-        if (streaming == null)
-        {
-            throw new InvalidOperationException("MassNavigation runtimeCapacity streaming validation requires streaming config.");
-        }
-
-        int minimumWindowChunkCapacity = CountSquareChunksForRadius(
-            streaming.RadiusCm,
-            world.StreamingChunkSizeCm);
-        if (LoadedChunkCapacity < minimumWindowChunkCapacity)
+        else if (LoadedChunkCapacity < minimumWindowChunkCapacity)
         {
             throw new InvalidOperationException(
                 $"MassNavigation scenarioRuntime.runtimeCapacity.loadedChunkCapacity {LoadedChunkCapacity} is smaller than one streaming window chunk count {minimumWindowChunkCapacity}.");
         }
+
+        return LoadedChunkCapacity;
     }
 
     private static void RequirePositive(int value, string fieldName)
@@ -965,9 +953,6 @@ public sealed class MassNavigationTeamPresentationConfig
 
 public sealed class MassNavigationWorldConfig
 {
-    public int SolverWindowWidthCm { get; set; }
-    public int SolverWindowHeightCm { get; set; }
-    public int StreamingChunkSizeCm { get; set; }
     public int CommandFocusHoldTicks { get; set; }
     public int WorkAreaPaddingCm { get; set; }
     public int WorkAreaMaxWidthCm { get; set; }
@@ -1005,13 +990,6 @@ public sealed class MassNavigationWorldConfig
             throw new InvalidOperationException("MassNavigation world validation requires an explicit solver section.");
         }
 
-        if (SolverWindowWidthCm != solver.FieldWidthCm ||
-            SolverWindowHeightCm != solver.FieldHeightCm)
-        {
-            throw new InvalidOperationException(
-                $"MassNavigation world solver window must match solver field size ({solver.FieldWidthCm}x{solver.FieldHeightCm} cm).");
-        }
-
         var ids = new HashSet<string>(StringComparer.Ordinal);
         for (int i = 0; i < HotZones.Length; i++)
         {
@@ -1038,11 +1016,6 @@ public sealed class MassNavigationWorldConfig
             throw new InvalidOperationException("MassNavigation world ActiveHotZoneId must not be set without configured hot zones.");
         }
 
-        if (StreamingChunkSizeCm <= 0)
-        {
-            throw new InvalidOperationException("MassNavigation world requires StreamingChunkSizeCm > 0.");
-        }
-
         if (CommandFocusHoldTicks < 0)
         {
             throw new InvalidOperationException("MassNavigation world requires CommandFocusHoldTicks >= 0.");
@@ -1058,7 +1031,7 @@ public sealed class MassNavigationWorldConfig
             throw new InvalidOperationException("MassNavigation world requires positive WorkAreaMaxWidthCm and WorkAreaMaxHeightCm.");
         }
 
-        if (WorkAreaMaxWidthCm < SolverWindowWidthCm || WorkAreaMaxHeightCm < SolverWindowHeightCm)
+        if (WorkAreaMaxWidthCm < solver.FieldWidthCm || WorkAreaMaxHeightCm < solver.FieldHeightCm)
         {
             throw new InvalidOperationException("MassNavigation world work area max must be at least the solver cache size.");
         }

@@ -190,7 +190,7 @@ namespace Ludots.Tests.GAS
                     That(changed2.Bits[0] & (1UL << tagA), Is.Not.EqualTo(0UL));
                 }
 
-                var clear = new ClearPresentationFlagsSystem(world);
+                var clear = new ClearPresentationFlagsSystem(world, _tagOps.AttributeChanges);
                 clear.Update(0f);
                 That(world.Has<GameplayTagEffectiveChangedBits>(entity), Is.False);
             }

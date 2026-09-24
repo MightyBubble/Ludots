@@ -598,6 +598,7 @@ namespace Ludots.Tests.GAS
                 new GameSession(),
                 gasEvents,
                 new PresentationOwnerChangeBuffer(8),
+                new GameplayAttributeChangedChannel(),
                 enabled: true);
             Entity actor = world.Create();
             Entity target = world.Create();

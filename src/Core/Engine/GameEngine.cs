@@ -537,16 +537,17 @@ namespace Ludots.Core.Engine
             try
             {
                 // 4. Setup ECS & Session using merged config values
-                InitializeWorld(MergedConfig.WorldWidthInMacroTiles, MergedConfig.WorldHeightInMacroTiles);
+                (int worldWidthInMacroTiles, int worldHeightInMacroTiles) = ResolveStartupWorldExtent();
+                InitializeWorld(worldWidthInMacroTiles, worldHeightInMacroTiles);
                 SetService(CoreServiceKeys.World, World);
-                WorldMap = new WorldMap(MergedConfig.WorldWidthInMacroTiles, MergedConfig.WorldHeightInMacroTiles);
+                WorldMap = new WorldMap(worldWidthInMacroTiles, worldHeightInMacroTiles);
                 SetService(CoreServiceKeys.WorldMap, WorldMap);
                 GameSession = new GameSession();
                 SetService(CoreServiceKeys.GameSession, GameSession);
                 int gridCellSizeCm = MergedConfig.GridCellSizeCm;
                 WorldSizeSpec = new WorldExtentSpec(
-                    MergedConfig.WorldWidthInMacroTiles,
-                    MergedConfig.WorldHeightInMacroTiles,
+                    worldWidthInMacroTiles,
+                    worldHeightInMacroTiles,
                     gridCellSizeCm).ToWorldSizeSpec();
                 SpatialCoords = new SpatialCoordinateConverter(WorldSizeSpec);
                 _spatialPartition = new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 64);
@@ -1249,7 +1250,7 @@ namespace Ludots.Core.Engine
             var deferredTriggerQueue = new DeferredTriggerQueue(gasRuntimeCapacity.DeferredTriggerPerFrameCapacity);
             var deferredTriggerCollectionSystem = new DeferredTriggerCollectionSystem(World, deferredTriggerQueue, tagOps, dirtyEntities);
             var deferredTriggerProcessSystem = new DeferredTriggerProcessSystem(World, deferredTriggerQueue, EventBus);
-            var clearPresentationFlagsSystem = new ClearPresentationFlagsSystem(World);
+            var clearPresentationFlagsSystem = new ClearPresentationFlagsSystem(World, tagOps.AttributeChanges);
             var gasPresentationEvents = new GasPresentationEventBuffer(presentationConfig.GasPresentationEventCapacity);
             var globalPresentationEvents = new GlobalPresentationEventBuffer();
             var presentationEventStream = new PresentationEventStream(presentationConfig.PresentationEventStreamCapacity);
@@ -1261,6 +1262,7 @@ namespace Ludots.Core.Engine
                 GameSession,
                 gasPresentationEvents,
                 presentationOwnerChanges,
+                tagOps.AttributeChanges,
                 enabled: true);
             _authoritativeServerPresentationCleanupSystem = new AuthoritativeServerPresentationCleanupSystem(
                 World,
@@ -3458,6 +3460,43 @@ namespace Ludots.Core.Engine
                     World.Remove<SuspendedTag>(entity);
                 }
             }
+        }
+
+        /// <summary>
+        /// Startup world extent resolution: the startup map's primary board is the SSOT.
+        /// game.json worldWidth/HeightInMacroTiles are optional overrides that must agree
+        /// with the board; board-less maps keep the game.json declaration as the only source;
+        /// neither present falls back to SpatialScaleDefaults.
+        /// </summary>
+        private (int WidthInMacroTiles, int HeightInMacroTiles) ResolveStartupWorldExtent()
+        {
+            BoardConfig? startupBoard = null;
+            string? startupMapId = MergedConfig.StartupMapId;
+            if (!string.IsNullOrWhiteSpace(startupMapId))
+            {
+                MapConfig? startupMap = ((MapManager)MapManager).LoadMap(startupMapId);
+                startupBoard = startupMap?.Boards?.FirstOrDefault(board => board != null);
+            }
+
+            int ResolveAxis(int? authored, int? boardValue, int fallback, string axisName)
+            {
+                if (boardValue is int boardExtent)
+                {
+                    if (authored is int value && value != boardExtent)
+                    {
+                        throw new InvalidOperationException(
+                            $"game.json world{axisName}InMacroTiles ({value}) conflicts with startup map board '{startupBoard!.Name}' ({boardExtent}); map boards own the world extent — drop the game.json key or align it.");
+                    }
+
+                    return boardExtent;
+                }
+
+                return authored ?? fallback;
+            }
+
+            return (
+                ResolveAxis(MergedConfig.WorldWidthInMacroTiles, startupBoard?.WidthInMacroTiles, SpatialScaleDefaults.DefaultWorldWidthMacroTiles, "Width"),
+                ResolveAxis(MergedConfig.WorldHeightInMacroTiles, startupBoard?.HeightInMacroTiles, SpatialScaleDefaults.DefaultWorldHeightMacroTiles, "Height"));
         }
 
         /// <summary>

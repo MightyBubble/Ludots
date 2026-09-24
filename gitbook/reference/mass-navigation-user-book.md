@@ -149,7 +149,7 @@ Slot 只用于初始成员布局和稳定展开顺序。移动后的 command-gro
 
 ## 做自己的 RTS Mod
 
-1. 复制 showcase 的 Mod 目录结构和配置入口。
+1. 按 [给单位加寻路：一页纸](mass-navigation-quickstart.md) 走依赖声明 → 最小 config → 模板组件；键的必填性查 [MassNavigationConfig 键级参考表](mass-navigation-config-keys.md)，再决定复制 showcase 还是只写差异键。
 2. 定义自己的 anchor/member 业务组件。
 3. 实现一个 `ICommandActorExpander`，按稳定业务顺序输出成员。
 4. 在 input mapping 中复用 `massNavigationMove`。

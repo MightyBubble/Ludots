@@ -298,9 +298,10 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         tagChanges.Mark(7);
         var attributes = new AttributeBuffer();
         attributes.SetBase(0, 25f);
-        var attributeChanges = new GameplayAttributeChangedBits();
-        attributeChanges.Mark(0);
-        Entity owner = engine.World.Create(tagCache, tagChanges, attributes, attributeChanges);
+        Entity owner = engine.World.Create(tagCache, tagChanges, attributes);
+        TagOps tagOps = engine.GetService(CoreServiceKeys.TagOps)
+            ?? throw new InvalidOperationException("TagOps service is missing.");
+        tagOps.AttributeChanges.Mark(owner, 0);
 
         gasEvents.Publish(new GasPresentationEvent
         {
@@ -329,7 +330,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             Assert.That(gasEvents.Count, Is.Zero);
             Assert.That(globalEvents.Count, Is.Zero);
             Assert.That(engine.World.Has<GameplayTagEffectiveChangedBits>(owner), Is.False);
-            Assert.That(engine.World.Has<GameplayAttributeChangedBits>(owner), Is.False);
+            Assert.That(tagOps.AttributeChanges.Contains(owner), Is.False);
         });
     }
 

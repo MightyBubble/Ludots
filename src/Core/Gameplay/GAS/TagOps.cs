@@ -38,6 +38,9 @@ namespace Ludots.Core.Gameplay.GAS
         /// <summary>属性聚合脏注册表：属性变异经 TagOps 统一携带，标记与消费共享同一实例。</summary>
         public AttributeAggregateDirtyRegistry? AggregateDirty { get; }
 
+        /// <summary>属性变更广播通道：GAS 写方与表现消费方经 TagOps 共享同一实例（每 World 一个 TagOps）。</summary>
+        public GameplayAttributeChangedChannel AttributeChanges { get; } = new();
+
         /// <summary>
         /// Access the underlying TagRuleRegistry (e.g. for OrderSubmitter).
         /// </summary>

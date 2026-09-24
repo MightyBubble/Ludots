@@ -153,6 +153,8 @@
   - [引擎画廊 Wiki（Raylib 引擎能力场景）](reference/engine-gallery-wiki/README.md)
   - [面板案例库 Wiki（面板矩阵）](architecture/panel-cases/README.md)
   - [MassNavigation 用户教学书](reference/mass-navigation-user-book.md)
+  - [给单位加寻路：一页纸](reference/mass-navigation-quickstart.md)
+  - [MassNavigationConfig 键级参考表](reference/mass-navigation-config-keys.md)
   - [MassNavigation 正式链路手册](reference/mass-navigation-formal-chain.md)
   - [Agent Profile](reference/agent-profile.md)
   - [Obstacle Authoring](reference/obstacle-authoring.md)

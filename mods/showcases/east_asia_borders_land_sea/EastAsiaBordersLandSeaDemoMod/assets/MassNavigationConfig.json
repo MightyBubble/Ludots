@@ -1,9 +1,6 @@
 {
   "mapId": "east_asia_visual_heightmap",
   "world": {
-    "solverWindowWidthCm": 800000,
-    "solverWindowHeightCm": 800000,
-    "streamingChunkSizeCm": 228544,
     "commandFocusHoldTicks": 90,
     "workAreaPaddingCm": 200000,
     "workAreaMaxWidthCm": 6400000,

@@ -229,8 +229,6 @@ namespace Ludots.Tests.Presentation
 
             var config = MassNavigationOrderChainTests.CreateConfigForTests();
             config.Solver = solver;
-            config.World!.SolverWindowWidthCm = solver.FieldWidthCm;
-            config.World.SolverWindowHeightCm = solver.FieldHeightCm;
             config.Avoidance.Mode = avoidanceMode;
             MassNavigationOrderChainTests.PopulateModeSpecificAvoidance(config.Avoidance, avoidanceMode);
             config.Avoidance.Validate();

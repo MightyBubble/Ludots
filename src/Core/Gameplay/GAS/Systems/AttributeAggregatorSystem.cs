@@ -1,6 +1,5 @@
 using Arch.Core;
 using Arch.Core.Extensions;
-using Arch.Buffer;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
@@ -18,7 +17,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly IGraphRuntimeApi _graphApi;
         private readonly TagOps _tagOps;
         private readonly AttributeAggregateDirtyRegistry _aggregateDirty;
-        private readonly CommandBuffer _commandBuffer = new();
         private readonly List<Entity> _drainedEntities = new(256);
 
         public AttributeAggregatorSystem(World world, GraphProgramRegistry graphPrograms = null, IGraphRuntimeApi graphApi = null, TagOps tagOps = null, AttributeAggregateDirtyRegistry aggregateDirty = null) : base(world)
@@ -63,7 +61,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             $"{TagOps.MissingDirtyFlagsError}: entity={entity.Id}, system=AttributeAggregatorSystem.");
                     }
 
-                    ProcessDirtyEntity(World, entity, _commandBuffer, _graphPrograms, _graphApi, _tagOps, ref processed);
+                    ProcessDirtyEntity(World, entity, _graphPrograms, _graphApi, _tagOps, ref processed);
                 }
             }
             catch
@@ -77,18 +75,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 throw;
             }
 
-            if (_commandBuffer.Size > 0)
-            {
-                _commandBuffer.Playback(World);
-            }
-
             LastProcessedEntities = processed;
             LastUpdateElapsedMs = (System.Diagnostics.Stopwatch.GetTimestamp() - startTimestamp) * 1000d / System.Diagnostics.Stopwatch.Frequency;
         }
 
         public override void Dispose()
         {
-            _commandBuffer.Dispose();
             base.Dispose();
         }
 
@@ -223,14 +215,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         /// <summary>
         /// 旧 AttributeAggregatorWithDirtyJob 的逐实体聚合体；DirtyFlags 缺失由调用方先行抛错，
-        /// 本方法入口即假定四组件齐备。CommandBuffer 仅承载 GameplayAttributeChangedBits 的
-        /// 首次结构 Add（该组件由 ClearPresentationFlagsSystem 每 tick 清除并移除，结构合同属表现消费方）。
+        /// 本方法入口即假定四组件齐备。属性变更广播写进非结构稠密通道（TagOps 携带，
+        /// 表现消费方按 tick 读后 Clear，结构合同属表现消费方）。
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static unsafe void ProcessDirtyEntity(
             World world,
             Entity entity,
-            CommandBuffer commandBuffer,
             GraphProgramRegistry graphPrograms,
             IGraphRuntimeApi graphApi,
             TagOps tagOps,
@@ -257,8 +248,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 graphPrograms,
                 graphApi);
             RestorePersistentCurrentValues(ref attrBuffer, oldValues, derivedWrittenMask);
-            bool hasPresentationChanged = world.Has<GameplayAttributeChangedBits>(entity);
-            GameplayAttributeChangedBits presentationChangedLocal = default;
 
             // 4. 标记脏属性（用于延迟触发器）
             ulong changedMask = 0UL;
@@ -292,18 +281,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     throw;
                 }
 
-                for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
-                {
-                    if ((changedMask & (1UL << i)) != 0UL)
-                    {
-                        MarkPresentationChanged(world, entity, i, ref presentationChangedLocal, ref hasPresentationChanged);
-                    }
-                }
-            }
-
-            if (!hasPresentationChanged && presentationChangedLocal.IsAnyBitSet())
-            {
-                commandBuffer.Add(entity, presentationChangedLocal);
+                tagOps.AttributeChanges.MarkMask(entity, changedMask);
             }
         }
 
@@ -330,23 +308,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 attrBuffer.SetCurrent(i, previousCurrentValues[i]);
             }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void MarkPresentationChanged(
-            World world,
-            Entity entity,
-            int attributeId,
-            ref GameplayAttributeChangedBits presentationChangedLocal,
-            ref bool hasPresentationChanged)
-        {
-            if (hasPresentationChanged)
-            {
-                world.Get<GameplayAttributeChangedBits>(entity).Mark(attributeId);
-                return;
-            }
-
-            presentationChangedLocal.Mark(attributeId);
         }
     }
 }

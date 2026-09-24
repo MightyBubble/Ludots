@@ -37,8 +37,7 @@ worldHeightCm = HeightInMacroTiles * MacroTileCells(256) * GridCellSizeCm
 | Mod-local assets/game.json | `presentation.*Capacity` | 表现层容量，跟实体/marker/overlay 数量相关 |
 | Mod-local assets/game.json | `presentation.cameraCulling.*DistanceCm` | 近中远 LOD 裁剪距离 |
 | Mod-local assets/game.json | `presentation.minimap.*` | 小地图缩放、full-map/follow-camera 等表现策略 |
-| Mod-local assets/MassNavigationConfig.json | `world.solverWindowWidthCm` / `solverWindowHeightCm` | MassNavigationFlow 工作窗口，必须和 solver field 宽高一致 |
-| Mod-local assets/MassNavigationConfig.json | `solver.fieldWidthCm` / `fieldHeightCm` | FlowWindow 尺寸，单位 cm |
+| Mod-local assets/MassNavigationConfig.json | `solver.fieldWidthCm` / `fieldHeightCm` | FlowWindow 尺寸，单位 cm；同时就是 MassNavigationFlow 工作窗口，单一来源，不在 world 节重复声明 |
 | Mod-local assets/MassNavigationConfig.json | `solver.flowCellSizeCm` | FlowCell 分辨率，单位 cm |
 | Mod-local assets/MassNavigationConfig.json | `solver.separationHashCellSizeCm` / `hardResolveHashCellSizeCm` | 避障 hash 分辨率，单位 cm |
 | `assets/Navigation/agent_profiles.json` | `radiusCm` / `heightCm` / `clearanceCm` / `draftCm` / `beamCm` / `mass` / `layer` | agent 几何、避障身份与 NodeGraph 运输容量 SSOT |
@@ -69,7 +68,7 @@ worldHeightCm = HeightInMacroTiles * MacroTileCells(256) * GridCellSizeCm
 - `GridCellSizeCm = 100`：1 cell = 1m，适合人/士兵/小车级别。
 - `WidthInMacroTiles` / `HeightInMacroTiles` 可很大，例如 MassNavigation 示例使用 `250 x 250`，约 `64km x 64km`。
 - `ChunkSizeCells = 64`：1 个 PartitionChunk 约 `64m`，适合作为空间查询分区起点。
-- `MassNavigationConfig.world.solverWindowWidthCm` / `HeightCm` 和 `solver.fieldWidthCm` / `fieldHeightCm` 先取 `10000cm` 到 `48000cm` 这类战区窗口，而不是全图。
+- `solver.fieldWidthCm` / `fieldHeightCm` 先取 `10000cm` 到 `48000cm` 这类战区窗口，而不是全图；它同时就是 MassNavigationFlow 工作窗口。
 - `flowCellSizeCm = 100` 常作为 1m 流场；密集微操可降到 50cm，但 grid 数量会翻倍。
 - `hardResolveHashCellSizeCm = 50` 用于硬解析细邻居，允许小于 `CellCm`，但必须显式配置并整除 FlowWindow。
 - 需要小队/道路/门洞等精确移动时，用 `Navigation/pathing.json` 只让特定 profile 走 `PreferGraph` / `PreferMesh`；大军继续 MassNavigationFlow。
@@ -96,10 +95,6 @@ MassNavigationFlow 起点：
 ```json
 {
   "world": {
-    "solverWindowWidthCm": 10000,
-    "solverWindowHeightCm": 10000,
-    "streamingChunkSizeCm": 6400,
-    "streamingRadiusCm": 16000,
     "workAreaPaddingCm": 4000,
     "workAreaMaxWidthCm": 48000,
     "workAreaMaxHeightCm": 48000
@@ -110,6 +105,10 @@ MassNavigationFlow 起点：
     "flowCellSizeCm": 100,
     "separationHashCellSizeCm": 100,
     "hardResolveHashCellSizeCm": 50
+  },
+  "streaming": {
+    "retainSeconds": 6,
+    "radiusCm": 16000
   }
 }
 ```
@@ -170,9 +169,8 @@ Routing 起点：
 常见思路：
 
 - 先定世界范围，再定玩家活动半径。不要让每个系统都尝试覆盖整张地图。
-- `StreamingChunk` 应由正式配置或 board 分区推导；禁止私有 loader fallback。
-- `MassNavigationConfig.world.streamingChunkSizeCm` 可从 `ChunkSizeCells * GridCellSizeCm` 起步，例如 64 cells * 100cm = `6400cm`。
-- `streamingRadiusCm` 覆盖相机/玩家周围几圈 streaming chunk。
+- `StreamingChunk` 由 board 分区拥有（`ChunkSizeCells * GridCellSizeCm`，例如 64 cells * 100cm = `6400cm`），MassNavigationConfig 不再声明 streaming chunk 尺寸。
+- `streaming.radiusCm` 覆盖相机/玩家周围几圈 streaming chunk。
 - 动态门、桥、建筑等持久结构变化走 `Navigation/navmesh.json` 的 `runtime-incremental` + `cdt`，并给实体加 `RuntimeNavMeshStructuralObstacle`。
 - 临时人群拥堵、短寿命 blocker 仍归 MassNavigationFlow runtime avoidance，不应触发 navmesh rebuild。
 
@@ -229,7 +227,7 @@ Runtime incremental 起点：
 - `PartitionChunk` 只用于 spatial query/AOI；不要拿它解释 terrain/navmesh tile。
 - `TerrainChunk` 当前等于 NavTile footprint；`NavTile footprint` 不是独立尺度 owner。
 - `FlowCell` / `AvoidanceHashCell` / `PhysicsBroadphaseCell` 默认可等于 `CellCm`，但 owner 独立。
-- MassNavigationFlow `world.solverWindowWidthCm/HeightCm` 必须匹配 `solver.fieldWidthCm/fieldHeightCm`。
+- MassNavigationFlow 工作窗口就是 `solver.fieldWidthCm/fieldHeightCm`，单一来源；streaming chunk 尺寸由 board `ChunkSizeCells * GridCellSizeCm` 拥有。
 - `FlowWindow` 必须能被 `flowCellSizeCm`、`separationHashCellSizeCm`、`hardResolveHashCellSizeCm` 整除。
 - 所有 profile id、routing mode、navmesh mode/algorithm 的大小写都严格；不要写别名兼容。
 - 缺字段、坏 casing、未知 profile/layer 应 fail-fast，不要在 Mod 私有逻辑里补 fallback。

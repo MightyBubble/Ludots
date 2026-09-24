@@ -20,11 +20,14 @@ public sealed class MassNavigationOrderChainTests
     internal const int LocalTeamId = 1;
     internal const int EnemyTeamId = 2;
 
+    /// <summary>Board-owned streaming chunk size (ChunkSizeCells 5 × GridCellSizeCm 100) — the config no longer declares it.</summary>
+    internal const int BoardStreamingChunkSizeCm = 500;
+
     internal static Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks CreateLoadedChunksForTests(
         MassNavigationSimulationRuntime simulation)
     {
         return new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(
-            simulation.WorldConfig.StreamingChunkSizeCm,
+            BoardStreamingChunkSizeCm,
             simulation.Config.ScenarioRuntime.RuntimeCapacity.LoadedChunkCapacity);
     }
 
@@ -170,9 +173,6 @@ public sealed class MassNavigationOrderChainTests
             Solver = solver,
             World = new MassNavigationWorldConfig
             {
-                SolverWindowWidthCm = solver.FieldWidthCm,
-                SolverWindowHeightCm = solver.FieldHeightCm,
-                StreamingChunkSizeCm = 500,
                 CommandFocusHoldTicks = 3,
                 WorkAreaPaddingCm = 100,
                 WorkAreaMaxWidthCm = solver.FieldWidthCm,

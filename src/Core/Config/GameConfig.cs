@@ -87,8 +87,13 @@ namespace Ludots.Core.Config
 
         public int GridCellSizeCm { get; set; } = 100;
 
-        public int WorldWidthInMacroTiles { get; set; } = 64;
-        public int WorldHeightInMacroTiles { get; set; } = 64;
+        /// <summary>
+        /// 可选 world 覆盖：startup map 的首个 board 是 world 尺寸 SSOT。null = 从 map board 推导；
+        /// 显式值与 board 尺寸不一致时初始化即报错（Engine resolve：GameEngine.ResolveStartupWorldExtent）。
+        /// 无 board 的 map（纯 heightmap 场景）没有 map 侧来源，显式值是唯一声明。
+        /// </summary>
+        public int? WorldWidthInMacroTiles { get; set; }
+        public int? WorldHeightInMacroTiles { get; set; }
 
         public Physics2DConfig Physics2D { get; set; } = new Physics2DConfig();
 

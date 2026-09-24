@@ -53,7 +53,7 @@ namespace Ludots.Core.Gameplay.GAS
                 throw;
             }
 
-            MarkPresentationChanged(world, target, attributeId);
+            tagOps.AttributeChanges.Mark(target, attributeId);
         }
 
         public static void ReplaceCurrentFromCap(World world, Entity target, int attributeId, TagOps tagOps)
@@ -101,7 +101,7 @@ namespace Ludots.Core.Gameplay.GAS
                 throw;
             }
 
-            MarkPresentationChanged(world, target, attributeId);
+            tagOps.AttributeChanges.Mark(target, attributeId);
         }
 
         public static void ApplyModifiers(World world, Entity target, in EffectModifiers modifiers, TagOps tagOps)
@@ -182,7 +182,7 @@ namespace Ludots.Core.Gameplay.GAS
                 {
                     if ((changedMask & (1UL << attributeId)) != 0UL)
                     {
-                        MarkPresentationChanged(world, target, attributeId);
+                        tagOps.AttributeChanges.Mark(target, attributeId);
                     }
                 }
             }
@@ -213,16 +213,6 @@ namespace Ludots.Core.Gameplay.GAS
             }
 
             (tagOps.AggregateDirty ?? throw new InvalidOperationException(AttributeAggregateDirtyRegistry.MissingRegistryError)).MarkDirty(target);
-        }
-
-        private static void MarkPresentationChanged(World world, Entity target, int attributeId)
-        {
-            if (!world.Has<GameplayAttributeChangedBits>(target))
-            {
-                world.Add(target, new GameplayAttributeChangedBits());
-            }
-
-            world.Get<GameplayAttributeChangedBits>(target).Mark(attributeId);
         }
     }
 }

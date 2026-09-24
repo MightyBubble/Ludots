@@ -9,6 +9,15 @@ namespace Ludots.Core.Gameplay.GAS
     {
         private static readonly ComponentType[] GameplayEffectArchetype = [typeof(GameplayEffect), typeof(EffectContext), typeof(EffectModifiers), typeof(EffectResolveOrder)];
 
+        /// <summary>
+        /// World 直建路径的 Pending 效果计数（版本门控源）：EffectApplicationSystem 以
+        /// 计数对比跳过稳态零命中的全量 Pending 收集。生产 Pending 写点全部经
+        /// CreateEffect(World,...)——CommandBuffer 变体当前无调用方；若未来启用，
+        /// 必须在 Playback 物化后自行保证可见性（stage 时计数早于物化，门控会把
+        /// 未物化实体当作已见）。
+        /// </summary>
+        internal static long CreatedPendingEffects { get; private set; }
+
         public readonly struct EffectCreateCommand
         {
             public readonly Entity Source;
@@ -69,10 +78,10 @@ namespace Ludots.Core.Gameplay.GAS
             ge.State = EffectState.Pending;
             var entity = world.Create(
                 ge,
-                new EffectContext 
-                { 
+                new EffectContext
+                {
                     RootId = rootId,
-                    Source = source, 
+                    Source = source,
                     Target = target,
                     TargetContext = targetContext
                 },
@@ -80,6 +89,7 @@ namespace Ludots.Core.Gameplay.GAS
                 new EffectResolveOrder()
             );
             AddLifetimeMarkers(world, entity, in ge);
+            CreatedPendingEffects++;
 
             return entity;
         }

@@ -3,7 +3,7 @@
 ## Header
 - scenario: `narrative-showcase`
 - build: `GameEngine 1.0.0.0`
-- execution_timestamp_utc: `2026-08-30T18:31:11.6310583+00:00`
+- execution_timestamp_utc: `2026-09-13T11:10:20.1388613+00:00`
 - map: `narrative_showcase_hub`
 - clock: `fixed 1/60s`
 
@@ -55,7 +55,7 @@
 - [T+003] Took the lore branch via StoryChoice1, wrote MapVariableStore trust/lore, and advanced TaskRuntime into the trial beat.
 - [T+004] Placed Arcweaver near the shrine and started TrialReveal through SequencerRuntime via StoryInteract.
 - [T+005] Skipped the reveal sequence, let the completed callback emit the spawn signal, and observed the beast arrive through the runtime entity queue.
-- [T+006] SkillQ probe did not land in headless (HP stayed 220); continuing with deterministic GAS finisher.
+- [T+006] Used Arcweaver's inherited combat input on the spawned beast; HP 220 -> 202.
 - [T+007] Finished the encounter through GAS effects; TaskRuntime advanced into the return beat via signal tracking.
 - [T+007a] Return beat opened on story.standing_portrait with a half-screen standing figure for the warden.
 - [T+008] Returned to the elder, unlocked Mercy through lore-gated StoryChoice2, completed TaskRuntime, and received the trigger-driven GAS blessing reward.
@@ -70,6 +70,6 @@
 ## Summary Stats
 - total_actions: `10`
 - snapshots captured: `10`
-- median headless tick: `0.959ms`
-- max headless tick: `103.053ms`
+- median headless tick: `0.159ms`
+- max headless tick: `11.192ms`
 - final_ui_excerpt: `你 | 织弧者 | 守望者 | 米蕾勒`

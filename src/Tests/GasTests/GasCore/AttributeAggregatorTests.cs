@@ -628,7 +628,7 @@ namespace Ludots.Tests.GAS
             That(world.Get<AttributeBuffer>(target).GetCurrent(healthId), Is.EqualTo(100f));
             That(world.Get<DirtyFlags>(target).IsAnyAttributeDirty(), Is.False);
             That(world.Get<DirtyFlags>(target).DeferredTriggerQueued, Is.EqualTo(0));
-            That(world.Has<GameplayAttributeChangedBits>(target), Is.False);
+            That(tagOps.AttributeChanges.Contains(target), Is.False);
             That(registry.Contains(target), Is.True);
         }
 

@@ -28,7 +28,7 @@
 | 窗口 | `windowWidth` / `windowHeight` / `windowResizable` / `windowStartMaximized` / `windowTitle` | 窗口形态，默认 1280×720 |
 | 帧率 | `targetFps` | 目标帧率，默认 60 |
 | 仿真 | `simulationBudgetMsPerFrame` / `simulationMaxSlicesPerLogicFrame` | 每帧仿真预算（毫秒）与最大切片数，默认 4 / 120 |
-| 世界 | `gridCellSizeCm` / `worldWidthInMacroTiles` / `worldHeightInMacroTiles` | 网格与世界尺寸，默认 100 / 64 / 64 |
+| 世界 | `gridCellSizeCm` / `worldWidthInMacroTiles` / `worldHeightInMacroTiles` | 网格默认 100；世界尺寸默认 64 / 64，可选覆盖——启动地图 board 是世界尺寸 SSOT，显式值与 board 不一致时启动即报错，无 board 的地图以显式值为唯一来源 |
 | 物理 | `physics2D.enabled` | 2D 物理开关 |
 | 容量 | `gasRuntimeCapacity.*`（项数与逐项取值见 [事实与取值表](../facts.md)，当前 17 项，含效果请求队列容量） | 各运行时队列/快照上限；交叉约束：准入结果 ≥ 订单队列 × 2、准入拒绝 ≥ 订单队列；两项工作预算另校验有限 |
 | 表现 | `presentation` | 表现运行时配置，**必填** |

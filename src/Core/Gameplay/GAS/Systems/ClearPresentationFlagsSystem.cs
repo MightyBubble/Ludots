@@ -1,6 +1,7 @@
 using Arch.Core;
 using Arch.Buffer;
 using Arch.System;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
@@ -9,23 +10,24 @@ namespace Ludots.Core.Gameplay.GAS.Systems
     {
         private static readonly QueryDescription _tagQuery = new QueryDescription()
             .WithAll<GameplayTagEffectiveChangedBits>();
-        private static readonly QueryDescription _attributeQuery = new QueryDescription()
-            .WithAll<GameplayAttributeChangedBits>();
+        private readonly GameplayAttributeChangedChannel _attributeChanges;
         private readonly CommandBuffer _commandBuffer = new();
 
-        public ClearPresentationFlagsSystem(World world) : base(world) { }
+        public ClearPresentationFlagsSystem(World world, GameplayAttributeChangedChannel attributeChanges) : base(world)
+        {
+            _attributeChanges = attributeChanges ?? throw new System.ArgumentNullException(nameof(attributeChanges));
+        }
 
         public override void Update(in float dt)
         {
             var tagJob = new ClearTagJob { CommandBuffer = _commandBuffer };
             World.InlineEntityQuery<ClearTagJob, GameplayTagEffectiveChangedBits>(in _tagQuery, ref tagJob);
-
-            var attributeJob = new ClearAttributeJob { CommandBuffer = _commandBuffer };
-            World.InlineEntityQuery<ClearAttributeJob, GameplayAttributeChangedBits>(in _attributeQuery, ref attributeJob);
             if (_commandBuffer.Size > 0)
             {
                 _commandBuffer.Playback(World);
             }
+
+            _attributeChanges.Clear();
         }
 
         public override void Dispose()
@@ -42,17 +44,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             {
                 bits.Clear();
                 CommandBuffer.Remove<GameplayTagEffectiveChangedBits>(entity);
-            }
-        }
-
-        private struct ClearAttributeJob : IForEachWithEntity<GameplayAttributeChangedBits>
-        {
-            public CommandBuffer CommandBuffer;
-
-            public void Update(Entity entity, ref GameplayAttributeChangedBits bits)
-            {
-                bits.Clear();
-                CommandBuffer.Remove<GameplayAttributeChangedBits>(entity);
             }
         }
     }

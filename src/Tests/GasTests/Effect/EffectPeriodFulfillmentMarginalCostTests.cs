@@ -17,8 +17,8 @@ namespace Ludots.Tests.GAS
     /// ISSUE-1521 验收基准：已提交周期效果的履约域单事件边际成本。
     /// 形态：每效果 period 在 [8,64] 均匀随机 + 哈希初相（聚合到货近似泊松），
     /// 走生产 EffectLifetimeSystem（时间轮+编译内核+事务提交）与聚合器整链。
-    /// 断言：精简目标（履约车道本体）单事件边际 ≤2µs；富目标（含
-    /// GameplayAttributeChangedBits 结构广播搬迁）单独计量并设回归护栏。
+    /// 断言：精简目标（履约车道本体）单事件边际 ≤2µs；富目标（含稠密通道
+    /// GameplayAttributeChangedChannel 变更广播标记的完整组件集）单独计量并设回归护栏。
     /// </summary>
     [TestFixture]
     public sealed class EffectPeriodFulfillmentMarginalCostTests
@@ -56,12 +56,12 @@ namespace Ludots.Tests.GAS
 
             TestContext.Out.WriteLine(
                 $"fulfillment marginal: thin={thinMarginalUs:F2}us/event over {thinEvents} events; " +
-                $"fat(with structural broadcast)={fatMarginalUs:F2}us/event over {fatEvents} events");
+                $"fat(with dense broadcast channel)={fatMarginalUs:F2}us/event over {fatEvents} events");
 
             That(thinMarginalUs, Is.LessThanOrEqualTo(2.0d),
-                "履约车道单事件边际（精简目标，不含结构广播）超过 2µs 预算。");
+                "履约车道单事件边际（精简目标，不含变更广播）超过 2µs 预算。");
             That(fatMarginalUs, Is.LessThanOrEqualTo(10.0d),
-                "含结构广播搬迁的单事件边际超出回归护栏（10µs）。");
+                "含变更广播通道的单事件边际超出回归护栏（10µs）。");
         }
 
         private static double MeasureMarginalCost(int targetCount, int healthId, bool fatTargets, out long totalEvents)

@@ -53,6 +53,9 @@ namespace Ludots.Tests.GAS
     {
         private const int RoadTestTeamId = 1;
         private const int RoadTestPlayerId = 1;
+
+        /// <summary>Map board owns the streaming chunk size (ChunkSizeCells 64 × GridCellSizeCm 100).</summary>
+        private const int BoardChunkSizeCm = 6400;
         private const string BlueVanguardInstanceId = "road.player.blue";
         private const string BlueNorthColumnInstanceId = "road.player.blue.north";
         private const string BlueSouthColumnInstanceId = "road.player.blue.south";
@@ -2144,7 +2147,7 @@ namespace Ludots.Tests.GAS
             simulation.BindBoardWorld(
                 new WorldSizeSpec(new WorldAabbCm(-25_000, -25_000, 50_000, 50_000), 100),
                 new WorldGridLoadedChunks(
-                    simulation.WorldConfig.StreamingChunkSizeCm,
+                    BoardChunkSizeCm,
                     simulation.Config.ScenarioRuntime.RuntimeCapacity.LoadedChunkCapacity));
 
             Vector2 worldPosition = world.Get<WorldPositionCm>(actor).Value.ToVector2();
@@ -2185,7 +2188,7 @@ namespace Ludots.Tests.GAS
             simulation.BindBoardWorld(
                 new WorldSizeSpec(new WorldAabbCm(-25_000, -25_000, 50_000, 50_000), 100),
                 new WorldGridLoadedChunks(
-                    simulation.WorldConfig.StreamingChunkSizeCm,
+                    BoardChunkSizeCm,
                     simulation.Config.ScenarioRuntime.RuntimeCapacity.LoadedChunkCapacity));
             return simulation;
         }

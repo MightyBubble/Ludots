@@ -54,7 +54,7 @@ namespace Ludots.Tests.GAS
             Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(attributeId), Is.EqualTo(10f));
             Assert.That(world.Get<DirtyFlags>(entity).IsAnyAttributeDirty(), Is.False);
             Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
-            Assert.That(world.Has<GameplayAttributeChangedBits>(entity), Is.False);
+            Assert.That(tagOps.AttributeChanges.Contains(entity), Is.False);
             Assert.That(aggDirty.Contains(entity), Is.True);
         }
 
@@ -83,7 +83,7 @@ namespace Ludots.Tests.GAS
             Assert.That(effectRequests.Count, Is.Zero);
             Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(attributeId), Is.EqualTo(10f));
             Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
-            Assert.That(world.Has<GameplayAttributeChangedBits>(entity), Is.False);
+            Assert.That(tagOps.AttributeChanges.Contains(entity), Is.False);
             Assert.That(aggDirty.Contains(entity), Is.True);
         }
 
@@ -315,7 +315,7 @@ namespace Ludots.Tests.GAS
             Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(sourceAttributeId), Is.EqualTo(10f));
             Assert.That(effectRequests.Count, Is.Zero);
             Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
-            Assert.That(world.Has<GameplayAttributeChangedBits>(entity), Is.False);
+            Assert.That(tagOps.AttributeChanges.Contains(entity), Is.False);
             Assert.That(aggDirty.Contains(entity), Is.True);
         }
 
@@ -346,7 +346,7 @@ namespace Ludots.Tests.GAS
             Assert.That(world.Get<BlackboardFloatBuffer>(entity).TryGet(blackboardKeyId, out _), Is.False);
             Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(sourceAttributeId), Is.EqualTo(10f));
             Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
-            Assert.That(world.Has<GameplayAttributeChangedBits>(entity), Is.False);
+            Assert.That(tagOps.AttributeChanges.Contains(entity), Is.False);
             Assert.That(aggDirty.Contains(entity), Is.True);
         }
 
@@ -401,10 +401,9 @@ namespace Ludots.Tests.GAS
             Assert.That(dirty.IsAttributeDirty(intermediateAttributeId), Is.True);
             Assert.That(dirty.IsAttributeDirty(resultAttributeId), Is.True);
             Assert.That(tagOps.DirtyEntities.Count, Is.EqualTo(1));
-            Assert.That(world.Has<GameplayAttributeChangedBits>(entity), Is.True);
-            ref GameplayAttributeChangedBits presentation = ref world.Get<GameplayAttributeChangedBits>(entity);
-            Assert.That(presentation.IsSet(intermediateAttributeId), Is.True);
-            Assert.That(presentation.IsSet(resultAttributeId), Is.True);
+            Assert.That(tagOps.AttributeChanges.TryGetBits(entity, out ulong presentationBits), Is.True);
+            Assert.That(presentationBits & (1UL << intermediateAttributeId), Is.Not.EqualTo(0UL));
+            Assert.That(presentationBits & (1UL << resultAttributeId), Is.Not.EqualTo(0UL));
             Assert.That(aggDirty.Contains(entity), Is.False);
         }
 

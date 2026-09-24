@@ -601,8 +601,7 @@ namespace Ludots.Tests.Presentation
             var config = new MassNavigationConfigLoader(pipeline).Load(catalog, report);
 
             Assert.That(config.MapId, Is.EqualTo("mass_navigation"));
-            Assert.That(config.World, Is.Not.Null);
-            Assert.That(config.World!.SolverWindowWidthCm, Is.EqualTo(10_000));
+            Assert.That(config.Solver.FieldWidthCm, Is.EqualTo(10_000));
             Assert.That(config.Presentation.ResolveAgentTemplateId(1, heavy: false), Is.EqualTo("mass_navigation_agent_azure_light"));
         }
 

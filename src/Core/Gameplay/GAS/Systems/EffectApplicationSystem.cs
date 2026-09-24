@@ -116,6 +116,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private ApplicationStage _sliceStage;
         private int _cursor;
         private int _playbackCursor;
+        private long _pendingCollectEpoch = -1;
 
         private readonly EffectRequestQueue _effectRequests;
         private readonly GasBudget _budget;
@@ -230,12 +231,20 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 _activeEffectAttachDropped = 0;
                 _listenerRegistrationDropped = 0;
 
-                var collectJob = new CollectPendingEffectsJob { World = World, PendingEffects = _pendingEffects };
-                World.InlineEntityQuery<CollectPendingEffectsJob, GameplayEffect>(in _pendingEffectsQuery, ref collectJob);
-
-                if (_pendingEffects.Count > 1)
+                // 稳态版本门控：Pending 状态只由 GameplayEffectFactory 的 World 直建路径产生，
+                // 上次收集完成后计数未变 ⇒ 全量收集必然零命中，跳过（ProposalAndApply 与
+                // PostLifetime 各入 slice 一次收集，稳态各省一次全效果域扫描）。
+                if (_pendingCollectEpoch != GameplayEffectFactory.CreatedPendingEffects)
                 {
-                    _pendingEffects.Sort(PendingEffectEntryComparer.Instance);
+                    var collectJob = new CollectPendingEffectsJob { World = World, PendingEffects = _pendingEffects };
+                    World.InlineEntityQuery<CollectPendingEffectsJob, GameplayEffect>(in _pendingEffectsQuery, ref collectJob);
+
+                    if (_pendingEffects.Count > 1)
+                    {
+                        _pendingEffects.Sort(PendingEffectEntryComparer.Instance);
+                    }
+
+                    _pendingCollectEpoch = GameplayEffectFactory.CreatedPendingEffects;
                 }
             }
 
@@ -601,6 +610,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _sliceStage = ApplicationStage.ProcessPending;
             _cursor = 0;
             _playbackCursor = 0;
+            // 已收集未处理的 Pending 在中止后仍滞留世界态：门控必须失效，下一 slice 重收集。
+            _pendingCollectEpoch = -1;
             _pendingEffects.Clear();
             _effectsToDestroy.Clear();
             _effectsToActivate.Clear();

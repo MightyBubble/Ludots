@@ -783,6 +783,9 @@ namespace Ludots.Tests.Presentation
             config.Solver.PlayAreaMinYCm = 50f;
             config.Solver.PlayAreaMaxYCm = 9_950f;
             config.Solver.MaxObstacleCount = 8;
+            // Test board chunks are 500 cm (MassNavigationOrderChainTests.BoardStreamingChunkSizeCm);
+            // keep the streaming window inside the inherited 256-chunk capacity.
+            config.Streaming.RadiusCm = 1_000;
             config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity = 4;
             config.ScenarioRuntime.RuntimeCapacity.GroupMemberCapacity = 4;
             config.ScenarioRuntime.RuntimeCapacity.MovePlanExecutionMemberCapacity = 4;

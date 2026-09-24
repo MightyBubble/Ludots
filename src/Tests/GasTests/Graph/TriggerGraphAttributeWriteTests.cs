@@ -28,9 +28,8 @@ public sealed class TriggerGraphAttributeWriteTests
         Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
         world.Get<AttributeBuffer>(target).SetBase(healthId, 100f);
 
-        var api = new GasGraphRuntimeApi(
-            world,
-            tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
+        var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+        var api = new GasGraphRuntimeApi(world, tagOps: tagOps);
         var program = new[]
         {
             new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 2 },
@@ -43,8 +42,8 @@ public sealed class TriggerGraphAttributeWriteTests
 
         Assert.That(world.Get<AttributeBuffer>(target).GetCurrent(healthId), Is.EqualTo(42f));
         Assert.That(world.Get<DirtyFlags>(target).IsAttributeDirty(healthId), Is.True);
-        Assert.That(world.Has<GameplayAttributeChangedBits>(target), Is.True);
-        Assert.That(world.Get<GameplayAttributeChangedBits>(target).IsSet(healthId), Is.True);
+        Assert.That(tagOps.AttributeChanges.TryGetBits(target, out ulong presentationBits), Is.True);
+        Assert.That(presentationBits & (1UL << healthId), Is.Not.EqualTo(0UL));
     }
 
     [Test]

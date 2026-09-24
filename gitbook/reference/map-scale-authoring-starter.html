@@ -978,10 +978,6 @@
       const flow = number("flowWindowCm");
       return JSON.stringify({
         world: {
-          solverWindowWidthCm: flow,
-          solverWindowHeightCm: flow,
-          streamingChunkSizeCm: number("partitionChunkCells") * number("cellCm"),
-          streamingRadiusCm: flow * 2,
           workAreaPaddingCm: Math.round(flow * 0.4),
           workAreaMaxWidthCm: flow * 4,
           workAreaMaxHeightCm: flow * 4
@@ -992,6 +988,10 @@
           flowCellSizeCm: number("flowCellCm"),
           separationHashCellSizeCm: number("separationHashCm"),
           hardResolveHashCellSizeCm: number("hardHashCm")
+        },
+        streaming: {
+          retainSeconds: 6,
+          radiusCm: flow * 2
         }
       }, null, 2);
     }

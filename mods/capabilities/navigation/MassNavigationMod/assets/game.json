@@ -2,8 +2,6 @@
   "startupMapId": "mass_navigation",
   "windowTitle": "Ludots Engine - Mass Navigation",
   "targetFps": 0,
-  "worldWidthInMacroTiles": 250,
-  "worldHeightInMacroTiles": 250,
   "gasRuntimeCapacity": {
     "effectRequestQueueCapacity": 5000
   },

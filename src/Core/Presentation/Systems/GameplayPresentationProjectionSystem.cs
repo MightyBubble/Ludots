@@ -18,12 +18,12 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PresentationEventStream _stream;
         private readonly PresentationOwnerChangeBuffer _ownerChanges;
         private readonly GameSession _session;
+        private readonly GameplayAttributeChangedChannel _attributeChanges;
         private bool _enabled;
 
         private readonly QueryDescription _tagChangedQuery = new QueryDescription()
             .WithAll<GameplayTagEffectiveChangedBits, GameplayTagEffectiveCache>();
-        private readonly QueryDescription _attributeChangedQuery = new QueryDescription()
-            .WithAll<GameplayAttributeChangedBits, AttributeBuffer>();
+        private int _lastAttributeChangeVersion = -1;
 
         public GameplayPresentationProjectionSystem(
             World world,
@@ -32,6 +32,7 @@ namespace Ludots.Core.Presentation.Systems
             GameSession session,
             GasPresentationEventBuffer gasEvents,
             PresentationOwnerChangeBuffer ownerChanges,
+            GameplayAttributeChangedChannel attributeChanges,
             bool enabled) : base(world)
         {
             _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
@@ -39,6 +40,7 @@ namespace Ludots.Core.Presentation.Systems
             _stream = stream ?? throw new ArgumentNullException(nameof(stream));
             _ownerChanges = ownerChanges ?? throw new ArgumentNullException(nameof(ownerChanges));
             _session = session ?? throw new ArgumentNullException(nameof(session));
+            _attributeChanges = attributeChanges ?? throw new ArgumentNullException(nameof(attributeChanges));
             _enabled = enabled;
         }
 
@@ -241,13 +243,48 @@ namespace Ludots.Core.Presentation.Systems
             };
             World.InlineEntityQuery<TagChangedJob, GameplayTagEffectiveChangedBits, GameplayTagEffectiveCache>(in _tagChangedQuery, ref job);
 
-            var attributeJob = new AttributeChangedJob
+            if (_attributeChanges.Version == _lastAttributeChangeVersion)
             {
-                Stream = _stream,
-                OwnerChanges = _ownerChanges,
-                Tick = tick
-            };
-            World.InlineEntityQuery<AttributeChangedJob, GameplayAttributeChangedBits, AttributeBuffer>(in _attributeChangedQuery, ref attributeJob);
+                return;
+            }
+
+            ReadOnlySpan<Entity> changedEntities = _attributeChanges.Entities;
+            ReadOnlySpan<ulong> changedBits = _attributeChanges.Bits;
+            for (int i = 0; i < changedEntities.Length; i++)
+            {
+                Entity entity = changedEntities[i];
+                if (!World.IsAlive(entity) || !World.Has<AttributeBuffer>(entity))
+                {
+                    continue;
+                }
+
+                AttributeBuffer attributes = World.Get<AttributeBuffer>(entity);
+                ulong bits = changedBits[i];
+                while (bits != 0UL)
+                {
+                    int attributeId = BitOperations.TrailingZeroCount(bits);
+                    bits &= bits - 1;
+                    AddEventOrThrow(
+                        _stream,
+                        new PresentationEvent
+                        {
+                            LogicTickStamp = tick,
+                            Kind = PresentationEventKind.AttributeValueChanged,
+                            KeyId = attributeId,
+                            Source = entity,
+                            Target = entity,
+                            Magnitude = attributes.GetCurrent(attributeId),
+                        },
+                        nameof(GameplayAttributeChangedChannel));
+                    if (!_ownerChanges.TryAdd(new PresentationOwnerChange(entity, PresentationOwnerChangeKind.Attribute, attributeId)))
+                    {
+                        throw new InvalidOperationException(
+                            $"PresentationOwnerChangeBuffer overflow while recording attribute change attributeId={attributeId}.");
+                    }
+                }
+            }
+
+            _lastAttributeChangeVersion = _attributeChanges.Version;
         }
 
         private struct TagChangedJob : IForEachWithEntity<GameplayTagEffectiveChangedBits, GameplayTagEffectiveCache>
@@ -287,45 +324,6 @@ namespace Ludots.Core.Presentation.Systems
                                 throw new InvalidOperationException(
                                     $"PresentationOwnerChangeBuffer overflow while recording tag change tagId={tagId}.");
                             }
-                        }
-                    }
-                }
-            }
-        }
-
-        private struct AttributeChangedJob : IForEachWithEntity<GameplayAttributeChangedBits, AttributeBuffer>
-        {
-            public PresentationEventStream Stream;
-            public PresentationOwnerChangeBuffer OwnerChanges;
-            public int Tick;
-
-            public unsafe void Update(Entity entity, ref GameplayAttributeChangedBits changed, ref AttributeBuffer attributes)
-            {
-                fixed (byte* bits = changed.Bits)
-                {
-                    for (int attributeId = 0; attributeId < AttributeBuffer.MAX_ATTRS; attributeId++)
-                    {
-                        if (bits[attributeId] == 0)
-                        {
-                            continue;
-                        }
-
-                        AddEventOrThrow(
-                            Stream,
-                            new PresentationEvent
-                            {
-                                LogicTickStamp = Tick,
-                                Kind = PresentationEventKind.AttributeValueChanged,
-                                KeyId = attributeId,
-                                Source = entity,
-                                Target = entity,
-                                Magnitude = attributes.GetCurrent(attributeId),
-                            },
-                            nameof(AttributeChangedJob));
-                        if (!OwnerChanges.TryAdd(new PresentationOwnerChange(entity, PresentationOwnerChangeKind.Attribute, attributeId)))
-                        {
-                            throw new InvalidOperationException(
-                                $"PresentationOwnerChangeBuffer overflow while recording attribute change attributeId={attributeId}.");
                         }
                     }
                 }
