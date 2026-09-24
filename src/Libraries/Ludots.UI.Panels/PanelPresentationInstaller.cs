@@ -3,6 +3,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.PanelActivation;
 using Ludots.Core.UI.PanelHosting;
+using Ludots.Core.UI.PanelProjection;
 using Ludots.UI.Runtime;
 using Ludots.UI.Surface;
 
@@ -39,6 +40,26 @@ public static class PanelPresentationInstaller
             ? seatRegistry
             : null;
         var displayResolver = engine.GetService(CoreServiceKeys.PresentationDisplayResolver);
+
+        PanelEventActionBridge? eventBridge = null;
+        if (engine.TryGetService(CoreServiceKeys.ClientLocalSeatInputRuntime, out Ludots.Core.Client.ClientLocalSeatInputRuntime? seatInput) &&
+            seatInput != null)
+        {
+            ValidateTemplateEventActions(templates, engine);
+            eventBridge = new PanelEventActionBridge(
+                activation,
+                () => engine.TryGetService(CoreServiceKeys.ClientLocalSeatInputRuntime, out Ludots.Core.Client.ClientLocalSeatInputRuntime? runtime)
+                    ? runtime
+                    : null,
+                () => engine.TryGetService(CoreServiceKeys.ClientLocalSeatRegistry, out Ludots.Core.Client.ClientLocalSeatRegistry? seats)
+                    ? seats
+                    : null,
+                () => engine.TryGetService(CoreServiceKeys.InputHandler, out Ludots.Core.Input.Runtime.PlayerInputHandler? handler)
+                    ? handler
+                    : null);
+            engine.SetService(CoreServiceKeys.PanelEventActionBridge, eventBridge);
+        }
+
         engine.RegisterPresentationSystem(new PanelPresentationSystem(
             panelHost,
             templates,
@@ -50,6 +71,43 @@ public static class PanelPresentationInstaller
             textMeasurer,
             imageSizeProvider,
             displayResolver,
-            seats));
+            seats,
+            eventBridge,
+            new PanelTipOverlay((UiSurfaceHost)surfaceHost)));
+    }
+
+    /// <summary>
+    /// Install-time contract check for the Button chain: a control-bound event fires as a
+    /// semantic action (eventId 即 action id), so its id must exist in the input config
+    /// action catalog. Control-less events keep the programmatic dispatch vocabulary of the
+    /// #1013 MVP until that surface migrates. Failing here names the panel, the event, and
+    /// the control — a clickable panel whose action cannot be attributed is an authoring
+    /// bug, not a runtime concern.
+    /// </summary>
+    private static void ValidateTemplateEventActions(PanelTemplateRegistry templates, GameEngine engine)
+    {
+        if (!engine.TryGetService(CoreServiceKeys.InputActionIds, out System.Collections.Frozen.FrozenSet<string>? actionIds) ||
+            actionIds == null)
+        {
+            return;
+        }
+
+        foreach (PanelTemplate template in templates.Snapshot())
+        {
+            foreach (PanelTemplateEvent declaration in template.Events)
+            {
+                if (declaration.Control == null)
+                {
+                    continue;
+                }
+
+                if (!actionIds.Contains(declaration.EventId))
+                {
+                    throw new InvalidOperationException(
+                        $"PANEL.EVENT.ERR.ActionNotDeclared: panel template '{template.Id}' event '{declaration.EventId}' " +
+                        "is not a declared input action — panel event ids must be registered in the input config action catalog.");
+                }
+            }
+        }
     }
 }

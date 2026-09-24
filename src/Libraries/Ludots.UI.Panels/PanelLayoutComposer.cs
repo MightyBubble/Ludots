@@ -19,6 +19,16 @@ public interface IPanelLayoutBindingScope
 
 public delegate string PanelLayoutImageSourceResolver(string imageReference);
 
+/// <summary>
+/// Presentation-side hook for interactive controls: invoked for every Button after the
+/// builder is fully styled, with the scope the label/payload values resolved from — the
+/// binder attaches the click wiring (event bridge) and bakes payload values from the scope.
+/// </summary>
+public delegate void PanelControlInteractionBinder(
+    PanelLayoutControl control,
+    UiElementBuilder builder,
+    IPanelLayoutBindingScope scope);
+
 public sealed class PanelBindingScope : IPanelLayoutBindingScope
 {
     private readonly PanelVariableSet _values;
@@ -114,12 +124,13 @@ public sealed class PanelLayoutComposer
     public UiElementBuilder Compose(
         PanelLayoutControl root,
         IPanelLayoutBindingScope scope,
-        PanelLayoutImageSourceResolver imageSourceResolver)
+        PanelLayoutImageSourceResolver imageSourceResolver,
+        PanelControlInteractionBinder? interactionBinder = null)
     {
         ArgumentNullException.ThrowIfNull(root);
         ArgumentNullException.ThrowIfNull(scope);
         ArgumentNullException.ThrowIfNull(imageSourceResolver);
-        return ComposeControl(root, scope, imageSourceResolver, listComposer: null)
+        return ComposeControl(root, scope, imageSourceResolver, listComposer: null, interactionBinder)
             ?? throw new InvalidOperationException("Panel layout root cannot be hidden.");
     }
 
@@ -127,7 +138,8 @@ public sealed class PanelLayoutComposer
         IReadOnlyList<PanelLayoutControl> controls,
         IPanelLayoutBindingScope scope,
         PanelLayoutImageSourceResolver imageSourceResolver,
-        Func<PanelLayoutControl, UiElementBuilder>? listComposer = null)
+        Func<PanelLayoutControl, UiElementBuilder>? listComposer = null,
+        PanelControlInteractionBinder? interactionBinder = null)
     {
         ArgumentNullException.ThrowIfNull(controls);
         ArgumentNullException.ThrowIfNull(scope);
@@ -136,7 +148,7 @@ public sealed class PanelLayoutComposer
         var children = new List<UiElementBuilder>(controls.Count);
         for (int i = 0; i < controls.Count; i++)
         {
-            UiElementBuilder? child = ComposeControl(controls[i], scope, imageSourceResolver, listComposer);
+            UiElementBuilder? child = ComposeControl(controls[i], scope, imageSourceResolver, listComposer, interactionBinder);
             if (child != null)
             {
                 children.Add(child);
@@ -155,7 +167,8 @@ public sealed class PanelLayoutComposer
         PanelLayoutControl control,
         IPanelLayoutBindingScope scope,
         PanelLayoutImageSourceResolver imageSourceResolver,
-        Func<PanelLayoutControl, UiElementBuilder>? listComposer)
+        Func<PanelLayoutControl, UiElementBuilder>? listComposer,
+        PanelControlInteractionBinder? interactionBinder = null)
     {
         if (!string.IsNullOrWhiteSpace(control.VisibleWhenNotEmpty) &&
             !scope.IsPresent(control.VisibleWhenNotEmpty))
@@ -170,13 +183,40 @@ public sealed class PanelLayoutComposer
             PanelLayoutControlType.Badge => BuildBadge(control, scope),
             PanelLayoutControlType.List => listComposer?.Invoke(control)
                 ?? throw new InvalidOperationException("Panel layout list control requires a list composer."),
-            PanelLayoutControlType.Row => BuildContainer(control, scope, imageSourceResolver, row: true, listComposer),
-            PanelLayoutControlType.Column => BuildContainer(control, scope, imageSourceResolver, row: false, listComposer),
+            PanelLayoutControlType.Row => BuildContainer(control, scope, imageSourceResolver, row: true, listComposer, interactionBinder),
+            PanelLayoutControlType.Column => BuildContainer(control, scope, imageSourceResolver, row: false, listComposer, interactionBinder),
             PanelLayoutControlType.Image => BuildImage(control, scope, imageSourceResolver),
             PanelLayoutControlType.RichText => BuildRichText(control, scope),
-            PanelLayoutControlType.Repeater => BuildRepeater(control, scope, imageSourceResolver, listComposer),
+            PanelLayoutControlType.Repeater => BuildRepeater(control, scope, imageSourceResolver, listComposer, interactionBinder),
+            PanelLayoutControlType.Button => BuildButton(control, scope, interactionBinder),
             _ => throw new InvalidOperationException($"Panel layout control type '{control.Type}' is not supported.")
         };
+    }
+
+    private static UiElementBuilder BuildButton(
+        PanelLayoutControl control,
+        IPanelLayoutBindingScope scope,
+        PanelControlInteractionBinder? interactionBinder)
+    {
+        string text = !string.IsNullOrWhiteSpace(control.Bind)
+            ? scope.ReadText(control.Bind)
+            : control.Text ?? throw new InvalidOperationException("Button control requires text or bind.");
+        UiElementBuilder builder = new UiElementBuilder(UiNodeKind.Button)
+            .Class("control-button")
+            .Text(text);
+        if (control.FontSize.HasValue)
+        {
+            builder = builder.FontSize(control.FontSize.Value);
+        }
+
+        if (control.Bold)
+        {
+            builder = builder.Bold();
+        }
+
+        builder = ApplyCommon(builder, control, scope, "button");
+        interactionBinder?.Invoke(control, builder, scope);
+        return builder;
     }
 
     private UiElementBuilder BuildContainer(
@@ -184,12 +224,13 @@ public sealed class PanelLayoutComposer
         IPanelLayoutBindingScope scope,
         PanelLayoutImageSourceResolver imageSourceResolver,
         bool row,
-        Func<PanelLayoutControl, UiElementBuilder>? listComposer)
+        Func<PanelLayoutControl, UiElementBuilder>? listComposer,
+        PanelControlInteractionBinder? interactionBinder = null)
     {
         var children = new List<UiElementBuilder>(control.Children.Count);
         for (int i = 0; i < control.Children.Count; i++)
         {
-            UiElementBuilder? child = ComposeControl(control.Children[i], scope, imageSourceResolver, listComposer);
+            UiElementBuilder? child = ComposeControl(control.Children[i], scope, imageSourceResolver, listComposer, interactionBinder);
             if (child != null)
             {
                 children.Add(child);
@@ -387,7 +428,8 @@ public sealed class PanelLayoutComposer
         PanelLayoutControl control,
         IPanelLayoutBindingScope scope,
         PanelLayoutImageSourceResolver imageSourceResolver,
-        Func<PanelLayoutControl, UiElementBuilder>? listComposer)
+        Func<PanelLayoutControl, UiElementBuilder>? listComposer,
+        PanelControlInteractionBinder? interactionBinder = null)
     {
         if (string.IsNullOrWhiteSpace(control.Bind))
         {
@@ -404,7 +446,8 @@ public sealed class PanelLayoutComposer
                     control.Children[childIndex],
                     items[itemIndex],
                     imageSourceResolver,
-                    listComposer);
+                    listComposer,
+                    interactionBinder);
                 if (child != null)
                 {
                     children.Add(child);
@@ -416,6 +459,16 @@ public sealed class PanelLayoutComposer
             new UiElementBuilder(UiNodeKind.Container).Column().Children(children.ToArray()),
             control,
             scope);
+    }
+
+    private static string? ResolveTipText(string? literal, string? bind, IPanelLayoutBindingScope scope)
+    {
+        if (!string.IsNullOrWhiteSpace(bind))
+        {
+            return scope.ReadText(bind);
+        }
+
+        return string.IsNullOrWhiteSpace(literal) ? null : literal;
     }
 
     private static UiElementBuilder ApplyCommon(
@@ -434,6 +487,21 @@ public sealed class PanelLayoutComposer
             builder = builder.Classes(control.ClassName.Split(
                 ' ',
                 StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        }
+
+        if (control.Tip != null)
+        {
+            string? tipTitle = ResolveTipText(control.Tip.Title, control.Tip.TitleBind, scope);
+            string? tipText = ResolveTipText(control.Tip.Text, control.Tip.TextBind, scope);
+            if (tipTitle != null)
+            {
+                builder = builder.Attribute("data-tip-title", tipTitle);
+            }
+
+            if (tipText != null)
+            {
+                builder = builder.Attribute("data-tip-text", tipText);
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(control.ClassBind))

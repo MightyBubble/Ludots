@@ -1,0 +1,18 @@
+[
+  {
+    "id": "Effect.Ucp.FireballHit",
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -25
+      }
+    ],
+    "categories": [
+      "Effect.Ucp.Damage"
+    ]
+  }
+]

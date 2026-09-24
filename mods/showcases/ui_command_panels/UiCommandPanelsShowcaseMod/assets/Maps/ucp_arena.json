@@ -1,0 +1,66 @@
+{
+  "Id": "ucp_arena",
+  "World": {
+    "WidthCm": 819200,
+    "HeightCm": 819200,
+    "CellSizeCm": 100
+  },
+  "Tags": [
+    "showcase",
+    "panel",
+    "command-deck"
+  ],
+  "Variables": [
+    {
+      "name": "ucp_built",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "ucp_cast",
+      "type": "int",
+      "initial": 0
+    }
+  ],
+  "TriggerGraphs": [
+    {
+      "graph": "Graph.Ucp.OpenPanels",
+      "scopeInstanceId": "ucp_commander"
+    },
+    {
+      "graph": "Graph.Ucp.RosterBind",
+      "scopeInstanceId": "ucp_commander"
+    },
+    {
+      "graph": "Graph.Ucp.EnemiesBind",
+      "scopeInstanceId": "ucp_commander"
+    }
+  ],
+  "Entities": [
+    {
+      "InstanceId": "ucp_commander",
+      "Template": "ucp_commander"
+    },
+    {
+      "InstanceId": "ucp_dummy",
+      "Template": "ucp_dummy"
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "ucp_commander"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "ucp_dummy"
+    }
+  ],
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "ucp_commander"
+    }
+  ]
+}

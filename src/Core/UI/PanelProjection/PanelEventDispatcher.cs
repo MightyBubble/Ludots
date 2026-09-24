@@ -22,6 +22,7 @@ namespace Ludots.Core.UI.PanelProjection
         private readonly PanelTemplate _template;
         private readonly Action<string, IReadOnlyDictionary<string, object?>> _sink;
         private readonly UiPanelActivationStore? _activation;
+        private IReadOnlyDictionary<string, object?>? _lastValidated;
 
         public PanelEventDispatcher(PanelTemplate template, Action<string, IReadOnlyDictionary<string, object?>> sink)
             : this(template, sink, activation: null)
@@ -42,6 +43,7 @@ namespace Ludots.Core.UI.PanelProjection
         {
             PanelTemplateEvent declaration = RequireEvent(eventId);
             IReadOnlyDictionary<string, object?> payload = ValidatePayload(declaration, args);
+            _lastValidated = payload;
             _sink(declaration.EventId, payload);
         }
 
@@ -70,7 +72,7 @@ namespace Ludots.Core.UI.PanelProjection
             }
 
             Fire(eventId, args);
-            return PanelEventFireResult.Admit();
+            return PanelEventFireResult.Admit(_lastValidated);
         }
 
         private PanelTemplateEvent RequireEvent(string eventId)
@@ -156,10 +158,13 @@ namespace Ludots.Core.UI.PanelProjection
         }
     }
 
-    /// <summary>Outcome of a seat-attributed fire: admitted, or refused with a UI-showable reason.</summary>
-    public readonly record struct PanelEventFireResult(bool Admitted, string? Reason)
+    /// <summary>
+    /// Outcome of a seat-attributed fire: admitted (carrying the validated payload for
+    /// downstream channels), or refused with a UI-showable reason.
+    /// </summary>
+    public readonly record struct PanelEventFireResult(bool Admitted, string? Reason, IReadOnlyDictionary<string, object?>? Payload = null)
     {
-        public static PanelEventFireResult Admit() => new(true, null);
+        public static PanelEventFireResult Admit(IReadOnlyDictionary<string, object?>? payload = null) => new(true, null, payload);
 
         public static PanelEventFireResult Refuse(string reason) => new(false, reason);
     }

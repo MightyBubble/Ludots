@@ -1,0 +1,67 @@
+[
+  {
+    "id": "ucp_commander",
+    "initialInteractionContext": "interaction.context.ucp.battle",
+    "components": {
+      "Name": {
+        "Value": "指挥官"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 120
+        }
+      },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Ucp.Fireball",
+          "Ability.Ucp.Rally"
+        ]
+      },
+      "BlackboardIntBuffer": {},
+      "PlayerOwner": {
+        "PlayerId": 1
+      }
+    }
+  },
+  {
+    "id": "ucp_dummy",
+    "components": {
+      "Name": {
+        "Value": "靶子"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 200,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100
+        }
+      },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {}
+    }
+  }
+]

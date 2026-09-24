@@ -1,0 +1,658 @@
+[
+  {
+    "id": "Graph.Ucp.OpenPanels",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "scope",
+        "once": true
+      }
+    ],
+    "nodes": [
+      {
+        "id": "scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "create_skills",
+        "op": "CreatePanel",
+        "panelType": "panel.ucp.skills",
+        "panelAnchor": "screen.bottomLeft"
+      },
+      {
+        "id": "show_skills",
+        "op": "ShowPanel",
+        "panelType": "panel.ucp.skills"
+      },
+      {
+        "id": "create_command",
+        "op": "CreatePanel",
+        "panelType": "panel.ucp.command",
+        "panelAnchor": "screen.bottomRight"
+      },
+      {
+        "id": "show_command",
+        "op": "ShowPanel",
+        "panelType": "panel.ucp.command"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "scope",
+        "fromPort": "next",
+        "to": "create_skills"
+      },
+      {
+        "from": "create_skills",
+        "fromPort": "next",
+        "to": "show_skills"
+      },
+      {
+        "from": "show_skills",
+        "fromPort": "next",
+        "to": "create_command"
+      },
+      {
+        "from": "create_command",
+        "fromPort": "next",
+        "to": "show_command"
+      },
+      {
+        "from": "show_command",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "create_skills",
+        "toPort": "source"
+      },
+      {
+        "from": "scope",
+        "fromPort": "value",
+        "to": "create_command",
+        "toPort": "source"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.Ucp.Skills",
+    "kind": "Query",
+    "entry": "caster",
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "slots",
+        "op": "QueryCollectAbilitySlots"
+      },
+      {
+        "id": "ready",
+        "op": "LoadSelfAttribute",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "slots"
+      },
+      {
+        "from": "slots",
+        "fromPort": "next",
+        "to": "ready"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "slots",
+        "toPort": "source"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "slots",
+        "destination": "AbilitySlotCollection",
+        "type": "IntIdList",
+        "collectionKey": "ucp.slots",
+        "role": "Display",
+        "title": "技能槽",
+        "summary": "指挥官身上的有效技能槽"
+      },
+      {
+        "id": "ready",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "ready",
+        "key": "ucp.skills.ready"
+      }
+    ]
+  },
+  {
+    "id": "Graph.Ucp.Chip",
+    "kind": "Query",
+    "entry": "ready",
+    "nodes": [
+      {
+        "id": "ready",
+        "op": "LoadSelfAttribute",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [],
+    "valueEdges": [],
+    "outputs": [
+      {
+        "id": "ready",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "ready",
+        "key": "ucp.chip.ready"
+      }
+    ]
+  },
+  {
+    "id": "Graph.Ucp.Command",
+    "kind": "Query",
+    "entry": "built",
+    "nodes": [
+      {
+        "id": "built",
+        "op": "ReadMapVarInt",
+        "var": "ucp_built"
+      }
+    ],
+    "controlEdges": [],
+    "valueEdges": [],
+    "outputs": [
+      {
+        "id": "built",
+        "destination": "Summary",
+        "type": "Int",
+        "source": "built",
+        "key": "ucp.command.built"
+      }
+    ]
+  },
+  {
+    "id": "Graph.Ucp.Cast",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_panel_cast",
+        "event": "panel.Ui.CastFire",
+        "start": "caster",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "slot",
+        "op": "LoadEntryPayloadInt",
+        "payloadKey": "Ucp.Slot"
+      },
+      {
+        "id": "enemies",
+        "op": "QueryFromCollection",
+        "collectionKey": "ucp.enemies"
+      },
+      {
+        "id": "enemyTeam",
+        "op": "QueryFilterTeam",
+        "teamId": 2
+      },
+      {
+        "id": "idx0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "get0",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "submit",
+        "op": "SubmitCast",
+        "orderTypeKey": "castAbility"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "slot"
+      },
+      {
+        "from": "slot",
+        "fromPort": "next",
+        "to": "enemies"
+      },
+      {
+        "from": "enemies",
+        "fromPort": "next",
+        "to": "enemyTeam"
+      },
+      {
+        "from": "enemyTeam",
+        "fromPort": "next",
+        "to": "idx0"
+      },
+      {
+        "from": "idx0",
+        "fromPort": "next",
+        "to": "get0"
+      },
+      {
+        "from": "get0",
+        "fromPort": "next",
+        "to": "submit"
+      },
+      {
+        "from": "submit",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "enemies",
+        "toPort": "source"
+      },
+      {
+        "from": "idx0",
+        "fromPort": "value",
+        "to": "get0",
+        "toPort": "value"
+      },
+      {
+        "from": "slot",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "value"
+      },
+      {
+        "from": "get0",
+        "fromPort": "value",
+        "to": "submit",
+        "toPort": "target"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.Ucp.Build",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_cmd_build",
+        "action": "Ui.CmdBuild",
+        "start": "read",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "read",
+        "op": "ReadMapVarInt",
+        "var": "ucp_built"
+      },
+      {
+        "id": "one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "add",
+        "op": "AddInt"
+      },
+      {
+        "id": "write",
+        "op": "WriteMapVarInt",
+        "var": "ucp_built"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "read",
+        "fromPort": "next",
+        "to": "one"
+      },
+      {
+        "from": "one",
+        "fromPort": "next",
+        "to": "add"
+      },
+      {
+        "from": "add",
+        "fromPort": "next",
+        "to": "write"
+      },
+      {
+        "from": "write",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "read",
+        "fromPort": "value",
+        "to": "add",
+        "toPort": "a"
+      },
+      {
+        "from": "one",
+        "fromPort": "value",
+        "to": "add",
+        "toPort": "b"
+      },
+      {
+        "from": "add",
+        "fromPort": "value",
+        "to": "write",
+        "toPort": "value"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.Ucp.Roster",
+    "kind": "Query",
+    "entry": "map",
+    "nodes": [
+      {
+        "id": "map",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "team",
+        "op": "QueryFilterTeam",
+        "teamId": 1
+      },
+      {
+        "id": "template",
+        "op": "QueryFilterTemplate",
+        "template": "ucp_commander"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt",
+        "intValue": 1
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "map",
+        "fromPort": "next",
+        "to": "team"
+      },
+      {
+        "from": "team",
+        "fromPort": "next",
+        "to": "template"
+      },
+      {
+        "from": "template",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "map",
+        "fromPort": "list",
+        "to": "team",
+        "toPort": "list"
+      },
+      {
+        "from": "team",
+        "fromPort": "list",
+        "to": "template",
+        "toPort": "list"
+      }
+    ]
+  },
+  {
+    "id": "Graph.Ucp.RosterBind",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "bind_roster",
+        "event": "MapLoaded",
+        "start": "owner",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "owner",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "bind",
+        "op": "BindQueryCollection",
+        "functionName": "Graph.Ucp.Roster",
+        "collectionKey": "ucp.roster"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "owner",
+        "fromPort": "next",
+        "to": "bind"
+      },
+      {
+        "from": "bind",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "owner",
+        "fromPort": "value",
+        "to": "bind",
+        "toPort": "source"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.Ucp.Enemies",
+    "kind": "Query",
+    "entry": "map",
+    "nodes": [
+      {
+        "id": "map",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "team",
+        "op": "QueryFilterTeam",
+        "teamId": 2
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt",
+        "intValue": 1
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "map",
+        "fromPort": "next",
+        "to": "team"
+      },
+      {
+        "from": "team",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "map",
+        "fromPort": "list",
+        "to": "team",
+        "toPort": "list"
+      }
+    ]
+  },
+  {
+    "id": "Graph.Ucp.EnemiesBind",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "bind_enemies",
+        "event": "MapLoaded",
+        "start": "owner",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "owner",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "bind",
+        "op": "BindQueryCollection",
+        "functionName": "Graph.Ucp.Enemies",
+        "collectionKey": "ucp.enemies"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "owner",
+        "fromPort": "next",
+        "to": "bind"
+      },
+      {
+        "from": "bind",
+        "fromPort": "next",
+        "to": "ok"
+      },
+      {
+        "from": "ok",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "owner",
+        "fromPort": "value",
+        "to": "bind",
+        "toPort": "source"
+      },
+      {
+        "from": "ok",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

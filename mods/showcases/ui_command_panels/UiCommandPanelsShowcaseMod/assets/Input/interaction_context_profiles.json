@@ -1,0 +1,21 @@
+{
+  "profiles": [
+    {
+      "id": "interaction.context.ucp.battle",
+      "bindings": [
+        "Ui.CastFire",
+        "Ui.CmdBuild"
+      ],
+      "triggers": [
+        {
+          "trigger": "Graph.Ucp.Cast",
+          "event": "panel.Ui.CastFire"
+        },
+        {
+          "trigger": "Graph.Ucp.Build"
+        }
+      ],
+      "activeCollectionKey": "ucp.roster"
+    }
+  ]
+}

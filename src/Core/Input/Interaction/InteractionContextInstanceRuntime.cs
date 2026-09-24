@@ -60,6 +60,43 @@ namespace Ludots.Core.Input.Interaction
             _runDeactivatedSlotNow = runDeactivatedSlotNow;
         }
 
+        /// <summary>
+        /// Read contract for the active-context layout this runtime's writers own: copies the
+        /// subject's active profile ids newest-first (derived instances in reverse activation
+        /// order, then the base mount). Returns the count copied; destination too small fails
+        /// named. Readers that need LIFO arbitration (pointer routing, order drain) go through
+        /// here instead of walking the components directly.
+        /// </summary>
+        public static int CopyActiveContextIdsNewestFirst(World world, Entity subject, Span<int> destination)
+        {
+            ArgumentNullException.ThrowIfNull(world);
+            int count = 0;
+            if (world.TryGet<InteractionContextInstances>(subject, out InteractionContextInstances instances))
+            {
+                for (int i = instances.Count - 1; i >= 0; i--)
+                {
+                    if (count >= destination.Length)
+                    {
+                        throw new InvalidOperationException(
+                            $"Active-context chain of entity {subject} exceeds the reader's buffer ({destination.Length}).");
+                    }
+                    destination[count++] = instances[i].ContextId;
+                }
+            }
+
+            if (world.TryGet<InteractionContextInstance>(subject, out InteractionContextInstance baseContext))
+            {
+                if (count >= destination.Length)
+                {
+                    throw new InvalidOperationException(
+                        $"Active-context chain of entity {subject} exceeds the reader's buffer ({destination.Length}).");
+                }
+                destination[count++] = baseContext.ContextId;
+            }
+
+            return count;
+        }
+
         /// <summary>True when the subject carries the context as its base mount or an active instance.</summary>
         public bool IsActive(Entity subject, int profileId)
         {

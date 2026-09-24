@@ -148,6 +148,12 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<object> UiSurfaceHost = new("UiSurfaceHost");
         public static readonly ServiceKey<bool> UiCaptured = new("UiCaptured");
         public static readonly ServiceKey<bool> UiWheelCaptured = new("UiWheelCaptured");
+
+        /// <summary>Frozen action-id catalog from the loaded input config — the one vocabulary device actions, panel events, and bots share.</summary>
+        public static readonly ServiceKey<System.Collections.Frozen.FrozenSet<string>> InputActionIds = new("InputActionIds");
+
+        /// <summary>Panel event bridge (Button clicks → semantic actions + companion payload events); installed by panel presentation.</summary>
+        public static readonly ServiceKey<UI.PanelProjection.PanelEventActionBridge> PanelEventActionBridge = new("PanelEventActionBridge");
         public static readonly ServiceKey<IEntityCommandPanelService> EntityCommandPanelService = new("EntityCommandPanelService");
         public static readonly ServiceKey<IEntityCommandPanelHandleStore> EntityCommandPanelHandleStore = new("EntityCommandPanelHandleStore");
         public static readonly ServiceKey<IEntityCommandPanelSourceRegistry> EntityCommandPanelSourceRegistry = new("EntityCommandPanelSourceRegistry");
