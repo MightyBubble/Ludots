@@ -23,9 +23,23 @@ namespace VisualTerrainEditorMod.Runtime;
 internal sealed class VisualTerrainEditorRuntime
 {
     private const string TerrainMeshAssetKeyPrefix = "visual_terrain_editor.runtime_terrain";
-    private const int MinVisibleChunkRadius = 4;
-    private const int MaxVisibleChunkRadius = 8;
+    private const int MinVisibleChunkRadius = 2;
+    private const int MaxVisibleChunkRadius = 5;
     private const int RetainedChunkMargin = 1;
+    private const int DefaultChunkWorldSizeCm = 50_000;
+    private const int DefaultSamplesPerChunk = 257;
+    private const int DefaultRenderVerticesPerChunk = 33;
+
+    private static readonly VisualTerrainMapPreset[] MapPresets =
+    {
+        new("256", 1, 1),
+        new("512", 2, 2),
+        new("1K", 4, 4),
+        new("2K", 8, 8),
+        new("4K", 16, 16),
+        new("8K", 32, 32),
+        new("16K", 64, 64),
+    };
 
     private readonly Dictionary<long, RenderedChunk> _renderedChunks = new();
 
@@ -60,11 +74,13 @@ internal sealed class VisualTerrainEditorRuntime
 
     public VisualTerrainEditorRuntime()
     {
-        _document = new VisualTerrainEditorDocument(CreatePresetAsset("8K", 32, 32, 50_000, 257, 33));
+        _document = new VisualTerrainEditorDocument(CreatePresetAsset(MapPresets[5]));
         _panelController = new VisualTerrainEditorPanelController(this, _document);
     }
 
     public VisualTerrainEditorDocument Document => _document;
+
+    public ReadOnlySpan<VisualTerrainMapPreset> GetMapPresets() => MapPresets;
 
     public bool TryGetHoveredChunk(out int chunkX, out int chunkY)
     {
@@ -141,13 +157,13 @@ internal sealed class VisualTerrainEditorRuntime
 
         int loadedBefore = _document.LoadedChunkCount;
         bool chunkWindowChanged = EnsureChunkWindowLoaded(engine);
-        if (loadedBefore != _document.LoadedChunkCount || chunkWindowChanged)
+        if (loadedBefore != _document.LoadedChunkCount)
         {
             _panelDirty = true;
         }
 
         bool pointerChanged = UpdatePointerState(engine);
-        if (pointerChanged)
+        if (viewportChanged)
         {
             _panelDirty = true;
         }
@@ -232,19 +248,26 @@ internal sealed class VisualTerrainEditorRuntime
         _panelDirty = true;
     }
 
-    public void CreateSmallMap()
+    public void CreatePresetMap(string sizeLabel)
     {
-        QueueNewMapAsset(CreatePresetAsset("4K", 16, 16, 50_000, 257, 33), "Created new 4K world.");
-    }
+        if (string.IsNullOrWhiteSpace(sizeLabel))
+        {
+            throw new ArgumentException("Value cannot be null or whitespace.", nameof(sizeLabel));
+        }
 
-    public void CreateMediumMap()
-    {
-        QueueNewMapAsset(CreatePresetAsset("8K", 32, 32, 50_000, 257, 33), "Created new 8K world.");
-    }
+        for (int i = 0; i < MapPresets.Length; i++)
+        {
+            VisualTerrainMapPreset preset = MapPresets[i];
+            if (!string.Equals(preset.SizeLabel, sizeLabel, StringComparison.Ordinal))
+            {
+                continue;
+            }
 
-    public void CreateLargeMap()
-    {
-        QueueNewMapAsset(CreatePresetAsset("16K", 64, 64, 50_000, 257, 33), "Created new 16K world.");
+            QueueNewMapAsset(CreatePresetAsset(preset), $"Created new {preset.SizeLabel} world.");
+            return;
+        }
+
+        throw new InvalidOperationException($"Unknown visual terrain preset '{sizeLabel}'.");
     }
 
     public void SaveCurrentMap()
@@ -446,6 +469,7 @@ internal sealed class VisualTerrainEditorRuntime
         }
 
         ClearRenderedChunks(engine);
+        _panelController.Dispose();
         _document.Dispose();
         _document = new VisualTerrainEditorDocument(_pendingAssetReplacement);
         _panelController = new VisualTerrainEditorPanelController(this, _document);
@@ -773,7 +797,7 @@ internal sealed class VisualTerrainEditorRuntime
         VisualTerrainAssetDescriptor asset = _document.Asset;
         float chunkSpanCm = MathF.Max(asset.ChunkWorldWidthCm, asset.ChunkWorldHeightCm);
         float distanceCm = MathF.Max(engine.GameSession.Camera.State.DistanceCm, chunkSpanCm);
-        int radiusFromDistance = (int)MathF.Ceiling(distanceCm / chunkSpanCm) + 1;
+        int radiusFromDistance = (int)MathF.Ceiling(distanceCm / chunkSpanCm);
         int maxRadiusForMap = Math.Max(asset.ChunkColumns, asset.ChunkRows) - 1;
         return Math.Clamp(radiusFromDistance, MinVisibleChunkRadius, Math.Min(MaxVisibleChunkRadius, maxRadiusForMap));
     }
@@ -796,31 +820,25 @@ internal sealed class VisualTerrainEditorRuntime
         _statusText = statusText;
     }
 
-    private static VisualTerrainAssetDescriptor CreatePresetAsset(
-        string sizeLabel,
-        int chunkColumns,
-        int chunkRows,
-        int chunkWorldSizeCm,
-        int samplesPerChunk,
-        int renderPerChunk)
+    private static VisualTerrainAssetDescriptor CreatePresetAsset(VisualTerrainMapPreset preset)
     {
-        string suffix = sizeLabel.ToLowerInvariant();
+        string suffix = preset.SizeLabel.ToLowerInvariant();
         string unique = Guid.NewGuid().ToString("N")[..8];
         string id = $"vtmap_{DateTime.UtcNow:yyyyMMdd_HHmmss}_{suffix}_{unique}";
-        string displayName = $"Visual Terrain {sizeLabel} {DateTime.Now:HH:mm:ss}";
-        int worldWidthCm = checked(chunkColumns * chunkWorldSizeCm);
-        int worldHeightCm = checked(chunkRows * chunkWorldSizeCm);
+        string displayName = $"Visual Terrain {preset.SizeLabel} {DateTime.Now:HH:mm:ss}";
+        int worldWidthCm = checked(preset.ChunkColumns * DefaultChunkWorldSizeCm);
+        int worldHeightCm = checked(preset.ChunkRows * DefaultChunkWorldSizeCm);
 
         return new VisualTerrainAssetDescriptor(
             id: id,
             displayName: displayName,
             bounds: new WorldAabbCm(-(worldWidthCm / 2), -(worldHeightCm / 2), worldWidthCm, worldHeightCm),
-            chunkColumns: chunkColumns,
-            chunkRows: chunkRows,
-            samplesPerChunkColumn: samplesPerChunk,
-            samplesPerChunkRow: samplesPerChunk,
-            renderColumnsPerChunk: renderPerChunk,
-            renderRowsPerChunk: renderPerChunk,
+            chunkColumns: preset.ChunkColumns,
+            chunkRows: preset.ChunkRows,
+            samplesPerChunkColumn: DefaultSamplesPerChunk,
+            samplesPerChunkRow: DefaultSamplesPerChunk,
+            renderColumnsPerChunk: DefaultRenderVerticesPerChunk,
+            renderRowsPerChunk: DefaultRenderVerticesPerChunk,
             defaultHeight01: 0.45f,
             binding: VisualTerrainBindingDescriptor.None);
     }
@@ -834,6 +852,8 @@ internal sealed class VisualTerrainEditorRuntime
     {
         return Math.Clamp(_document.Asset.ChunkWorldWidthCm * 1.45f, 22_000f, 72_000f);
     }
+
+    public readonly record struct VisualTerrainMapPreset(string SizeLabel, int ChunkColumns, int ChunkRows);
 
     private readonly record struct RenderedChunk(int ChunkX, int ChunkY, Entity Entity);
 }

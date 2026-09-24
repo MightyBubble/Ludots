@@ -1,17 +1,24 @@
 using System;
 using Ludots.Core.Engine;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Actions;
+using Ludots.UI.Skia;
+using SkiaSharp;
 using VisualTerrainEditorMod.Runtime;
 
 namespace VisualTerrainEditorMod.UI;
 
-internal sealed class VisualTerrainEditorPanelController
+internal sealed class VisualTerrainEditorPanelController : IDisposable
 {
+    private static readonly SKColor MinimapBackground = SKColor.Parse("081017");
+    private static readonly SKColor MinimapUnloaded = SKColor.Parse("121A20");
+    private static readonly SKColor MinimapLoaded = SKColor.Parse("384A56");
+    private static readonly SKColor MinimapEdited = SKColor.Parse("40A87C");
     private static readonly UiColor PanelBorder = Color("#2E4153");
     private static readonly UiColor PanelBackground = Color("#E6101820");
     private static readonly UiColor MutedText = Color("#95A1AA");
@@ -21,12 +28,19 @@ internal sealed class VisualTerrainEditorPanelController
 
     private readonly VisualTerrainEditorRuntime _runtime;
     private readonly VisualTerrainEditorDocument _document;
+    private readonly UiCanvasContent _minimapCanvas;
+    private readonly SKPaint _minimapFillPaint = new() { IsAntialias = false, Style = SKPaintStyle.Fill };
+    private readonly SKPaint _minimapGridPaint = new() { IsAntialias = false, Style = SKPaintStyle.Stroke, StrokeWidth = 1f, Color = SKColor.Parse("1B2A34") };
+    private readonly SKPaint _minimapWindowPaint = new() { IsAntialias = false, Style = SKPaintStyle.Stroke, StrokeWidth = 1.5f, Color = SKColor.Parse("49D0E0") };
+    private readonly SKPaint _minimapHoverPaint = new() { IsAntialias = false, Style = SKPaintStyle.Stroke, StrokeWidth = 1.5f, Color = SKColors.White };
+    private readonly SKPaint _minimapCenterPaint = new() { IsAntialias = true, Style = SKPaintStyle.Fill, Color = SKColor.Parse("F1C96B") };
     private ReactivePage<VisualTerrainEditorPanelState>? _page;
 
     public VisualTerrainEditorPanelController(VisualTerrainEditorRuntime runtime, VisualTerrainEditorDocument document)
     {
         _runtime = runtime;
         _document = document;
+        _minimapCanvas = new UiCanvasContent(DrawChunkMinimap);
     }
 
     public void MountOrRefresh(UIRoot root, GameEngine engine, VisualTerrainEditorPanelState state)
@@ -56,18 +70,27 @@ internal sealed class VisualTerrainEditorPanelController
         }
     }
 
+    public void Dispose()
+    {
+        _minimapFillPaint.Dispose();
+        _minimapGridPaint.Dispose();
+        _minimapWindowPaint.Dispose();
+        _minimapHoverPaint.Dispose();
+        _minimapCenterPaint.Dispose();
+    }
+
     private UiElementBuilder BuildRoot(ReactiveContext<VisualTerrainEditorPanelState> context)
     {
         VisualTerrainEditorPanelState state = context.State;
         float minimapLeft = MathF.Max(16f, state.ViewportWidth - 16f - 288f);
         float brushLeft = MathF.Max(16f, state.ViewportWidth - 16f - 336f);
-        float brushTop = MathF.Max(16f, state.ViewportHeight - 16f - 486f);
+        float brushTop = MathF.Max(16f, state.ViewportHeight - 16f - 452f);
 
         return Ui.Column(
                 BuildInfoPanel(state)
                     .Width(416f)
                     .Absolute(16f, 16f),
-                BuildMinimapPanel(state)
+                BuildMinimapPanel()
                     .Width(288f)
                     .Absolute(minimapLeft, 16f),
                 BuildBrushPanel(state)
@@ -86,7 +109,7 @@ internal sealed class VisualTerrainEditorPanelController
                 .FontSize(22f)
                 .Bold()
                 .Color(PrimaryText),
-            Ui.Text("左键直接在 3D 世界绘制。左上只放地图和视图状态；右下是笔刷；右上是 chunk 小地图。")
+            Ui.Text("Left click paints directly in the 3D world. Top left is map state, bottom right is brush controls, top right is the chunk minimap.")
                 .FontSize(12f)
                 .Color(MutedText)
                 .WhiteSpace(UiWhiteSpace.Normal),
@@ -119,12 +142,7 @@ internal sealed class VisualTerrainEditorPanelController
                 .FontSize(12f)
                 .Color(MutedText)
                 .WhiteSpace(UiWhiteSpace.Normal),
-            BuildButtonGroup(
-                "Map",
-                BuildActionButton("New 4K", _ => _runtime.CreateSmallMap()),
-                BuildActionButton("New 8K", _ => _runtime.CreateMediumMap()),
-                BuildActionButton("New 16K", _ => _runtime.CreateLargeMap()),
-                BuildActionButton("Save Map", _ => _runtime.SaveCurrentMap())),
+            BuildButtonGroup("Map", BuildMapButtons()),
             BuildButtonGroup(
                 "View",
                 BuildModeButton("Base", state.ViewMode == TerrainViewMode.Base, _ => _runtime.SetViewMode(TerrainViewMode.Base)),
@@ -134,20 +152,12 @@ internal sealed class VisualTerrainEditorPanelController
 
     private UiElementBuilder BuildBrushPanel(VisualTerrainEditorPanelState state)
     {
-        string cursorText = "Cursor: off world";
-        if (_runtime.TryGetPointerWorld(out var worldCm))
-        {
-            cursorText = _runtime.TryGetHoveredChunk(out int chunkX, out int chunkY)
-                ? $"Cursor: ({worldCm.X}, {worldCm.Y}) cm | Chunk: ({chunkX}, {chunkY})"
-                : $"Cursor: ({worldCm.X}, {worldCm.Y}) cm";
-        }
-
         return BuildPanelCard(
             Ui.Text("Brush")
                 .FontSize(20f)
                 .Bold()
                 .Color(PrimaryText),
-            Ui.Text(cursorText)
+            Ui.Text("Use left click on the terrain. The in-world ring overlay is the authoritative brush indicator.")
                 .FontSize(12f)
                 .Color(MutedText)
                 .WhiteSpace(UiWhiteSpace.Normal),
@@ -170,86 +180,24 @@ internal sealed class VisualTerrainEditorPanelController
                 .Bold());
     }
 
-    private UiElementBuilder BuildMinimapPanel(VisualTerrainEditorPanelState state)
+    private UiElementBuilder BuildMinimapPanel()
     {
-        _runtime.GetVisibleChunkWindow(out int centerChunkX, out int centerChunkY, out int minChunkX, out int maxChunkX, out int minChunkY, out int maxChunkY);
-        string focusText = centerChunkX >= 0
-            ? $"Focus Chunk: ({centerChunkX}, {centerChunkY}) | Window: [{minChunkX}-{maxChunkX}] x [{minChunkY}-{maxChunkY}]"
-            : "Focus Chunk: n/a";
-
         return BuildPanelCard(
             Ui.Text("Chunk Minimap")
                 .FontSize(20f)
                 .Bold()
                 .Color(PrimaryText),
-            Ui.Text("灰: 未加载  蓝灰: 已加载  绿: 已编辑  青框: 镜头窗口  黄点: 相机焦点  白框: 当前笔刷 chunk")
+            Ui.Text("Dark: unloaded. Slate: loaded. Green: edited. Cyan frame: camera window. Gold dot: focus chunk. White frame: hovered chunk.")
                 .FontSize(12f)
                 .Color(MutedText)
                 .WhiteSpace(UiWhiteSpace.Normal),
-            Ui.Text(focusText)
-                .FontSize(12f)
-                .Color(MutedText)
-                .WhiteSpace(UiWhiteSpace.Normal),
-            BuildChunkGrid(state));
-    }
-
-    private UiElementBuilder BuildChunkGrid(VisualTerrainEditorPanelState state)
-    {
-        VisualTerrainAssetDescriptor asset = _document.Asset;
-        float cellSize = MathF.Max(2f, MathF.Floor(224f / MathF.Max(asset.ChunkColumns, asset.ChunkRows)));
-        float gridWidth = asset.ChunkColumns * cellSize;
-        float gridHeight = asset.ChunkRows * cellSize;
-
-        var rows = new UiElementBuilder[asset.ChunkRows];
-        _runtime.GetVisibleChunkWindow(out int centerChunkX, out int centerChunkY, out int minChunkX, out int maxChunkX, out int minChunkY, out int maxChunkY);
-        bool hasHover = _runtime.TryGetHoveredChunk(out int hoverChunkX, out int hoverChunkY);
-
-        for (int chunkY = 0; chunkY < asset.ChunkRows; chunkY++)
-        {
-            var cells = new UiElementBuilder[asset.ChunkColumns];
-            for (int chunkX = 0; chunkX < asset.ChunkColumns; chunkX++)
-            {
-                _document.GetChunkStatus(chunkX, chunkY, out bool loaded, out bool edited);
-                bool inWindow = chunkX >= minChunkX && chunkX <= maxChunkX && chunkY >= minChunkY && chunkY <= maxChunkY;
-                bool isCenter = chunkX == centerChunkX && chunkY == centerChunkY;
-                bool isHover = hasHover && chunkX == hoverChunkX && chunkY == hoverChunkY;
-
-                string background = edited
-                    ? "#40A87C"
-                    : loaded
-                        ? "#384A56"
-                        : "#121A20";
-                if (isCenter)
-                {
-                    background = "#F1C96B";
-                }
-
-                UiColor borderColor = inWindow ? Color("#49D0E0") : Color("#1B2A34");
-                float borderWidth = inWindow ? 1f : 0f;
-                if (isHover)
-                {
-                    borderColor = Color("#FFFFFF");
-                    borderWidth = 1f;
-                }
-
-                cells[chunkX] = Ui.Text(" ")
-                    .Width(cellSize)
-                    .Height(cellSize)
-                    .Background(background)
-                    .Border(borderWidth, borderColor);
-            }
-
-            rows[chunkY] = Ui.Row(cells).Gap(0f);
-        }
-
-        return Ui.Column(rows)
-            .Gap(0f)
-            .Width(gridWidth)
-            .Height(gridHeight)
-            .Padding(8f)
-            .Radius(12f)
-            .Background("#081017")
-            .Border(1f, PanelBorder);
+            Ui.Canvas(_minimapCanvas)
+                .Width(240f)
+                .Height(240f)
+                .Padding(8f)
+                .Radius(12f)
+                .Background("#081017")
+                .Border(1f, PanelBorder));
     }
 
     private UiElementBuilder BuildPanelCard(params UiElementBuilder[] children)
@@ -340,6 +288,95 @@ internal sealed class VisualTerrainEditorPanelController
             .Background("#1D262D")
             .Color(PrimaryText)
             .Border(1f, PanelBorder);
+    }
+
+    private UiElementBuilder[] BuildMapButtons()
+    {
+        ReadOnlySpan<VisualTerrainEditorRuntime.VisualTerrainMapPreset> presets = _runtime.GetMapPresets();
+        var buttons = new UiElementBuilder[presets.Length + 1];
+        for (int i = 0; i < presets.Length; i++)
+        {
+            string sizeLabel = presets[i].SizeLabel;
+            buttons[i] = BuildActionButton($"New {sizeLabel}", _ => _runtime.CreatePresetMap(sizeLabel));
+        }
+
+        buttons[presets.Length] = BuildActionButton("Save Map", _ => _runtime.SaveCurrentMap());
+        return buttons;
+    }
+
+    private void DrawChunkMinimap(SKCanvas canvas, SKRect rect)
+    {
+        VisualTerrainAssetDescriptor asset = _document.Asset;
+        if (asset.ChunkColumns <= 0 || asset.ChunkRows <= 0)
+        {
+            return;
+        }
+
+        canvas.Clear(MinimapBackground);
+
+        float cellWidth = rect.Width / asset.ChunkColumns;
+        float cellHeight = rect.Height / asset.ChunkRows;
+        _runtime.GetVisibleChunkWindow(out int centerChunkX, out int centerChunkY, out int minChunkX, out int maxChunkX, out int minChunkY, out int maxChunkY);
+        bool hasHover = _runtime.TryGetHoveredChunk(out int hoverChunkX, out int hoverChunkY);
+
+        for (int chunkY = 0; chunkY < asset.ChunkRows; chunkY++)
+        {
+            float top = rect.Top + (chunkY * cellHeight);
+            float bottom = rect.Top + ((chunkY + 1) * cellHeight);
+            for (int chunkX = 0; chunkX < asset.ChunkColumns; chunkX++)
+            {
+                _document.GetChunkStatus(chunkX, chunkY, out bool loaded, out bool edited);
+                _minimapFillPaint.Color = edited
+                    ? MinimapEdited
+                    : loaded
+                        ? MinimapLoaded
+                        : MinimapUnloaded;
+
+                float left = rect.Left + (chunkX * cellWidth);
+                float right = rect.Left + ((chunkX + 1) * cellWidth);
+                canvas.DrawRect(new SKRect(left, top, right, bottom), _minimapFillPaint);
+            }
+        }
+
+        for (int lineX = 0; lineX <= asset.ChunkColumns; lineX++)
+        {
+            float x = rect.Left + (lineX * cellWidth);
+            canvas.DrawLine(x, rect.Top, x, rect.Bottom, _minimapGridPaint);
+        }
+
+        for (int lineY = 0; lineY <= asset.ChunkRows; lineY++)
+        {
+            float y = rect.Top + (lineY * cellHeight);
+            canvas.DrawLine(rect.Left, y, rect.Right, y, _minimapGridPaint);
+        }
+
+        if (minChunkX >= 0 && minChunkY >= 0 && maxChunkX >= minChunkX && maxChunkY >= minChunkY)
+        {
+            SKRect windowRect = new(
+                rect.Left + (minChunkX * cellWidth),
+                rect.Top + (minChunkY * cellHeight),
+                rect.Left + ((maxChunkX + 1) * cellWidth),
+                rect.Top + ((maxChunkY + 1) * cellHeight));
+            canvas.DrawRect(windowRect, _minimapWindowPaint);
+        }
+
+        if (centerChunkX >= 0 && centerChunkY >= 0)
+        {
+            float centerX = rect.Left + ((centerChunkX + 0.5f) * cellWidth);
+            float centerY = rect.Top + ((centerChunkY + 0.5f) * cellHeight);
+            float radius = MathF.Max(2f, MathF.Min(cellWidth, cellHeight) * 0.3f);
+            canvas.DrawCircle(centerX, centerY, radius, _minimapCenterPaint);
+        }
+
+        if (hasHover)
+        {
+            SKRect hoverRect = new(
+                rect.Left + (hoverChunkX * cellWidth),
+                rect.Top + (hoverChunkY * cellHeight),
+                rect.Left + ((hoverChunkX + 1) * cellWidth),
+                rect.Top + ((hoverChunkY + 1) * cellHeight));
+            canvas.DrawRect(hoverRect, _minimapHoverPaint);
+        }
     }
 
     private static UiColor Color(string hex)
