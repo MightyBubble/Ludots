@@ -1,6 +1,60 @@
-﻿## GAS Composition Gate 鈥?Self Review
+﻿## GAS Composition Gate — Self Review
 
 Current closeouts and prior issue reviews follow.
+
+## PR #660 Final Architecture Repair - Response Chain / Command / Effect Scratch - 2026-07-25
+
+- **Task / Issue**: Close architecture-review P1 merge blockers on head `832481e`: Response Chain EntityIntake query window, Command fan-out hot-path `Array.Resize`, and EffectApplication scratch hard capacity.
+- **Date**: 2026-07-25
+- **Agent / Author**: Cursor Agent (isolated worktree `codex/pr660-cursor-final-fix`).
+
+### 1. Core judgment
+
+Primary delivery: A. Tighten existing admission, command-intake, and effect-application transaction boundaries.
+
+Result: PASS.
+
+Reason: Reuses `OrderAdmissionResultBuffer`, `OrderQueue`, `EffectProposalProcessingSystem`, `InputOrderMappingSystem`, and `EffectApplicationSystem`. Adds no graph op, effect preset enum, gameplay profile field, registry, loader, fallback path, or parallel runtime.
+
+### 2. Layer assignment
+
+| Step / capability | Layer | Implementation carrier |
+|---|---:|---|
+| Response-chain EntityIntake commit before dequeue ownership loss | 1 | `EffectProposalProcessingSystem` + `OrderAdmissionResultBuffer` |
+| Retired-generation GlobalIntake/EntityIntake pairing | 1 | `OrderAdmissionResultBuffer.CarryForwardUnpairedAcceptedGlobalIntake` |
+| Fixed command scratch / fail-fast capacity | 1 | `InputOrderMappingSystem.SetCommandIntentBatchCapacity` |
+| Effect application scratch hard ceiling | 1 | `EffectApplicationSystem.AddBounded` |
+
+### 3. Reuse list
+
+- Queues / Systems: existing Response Chain order queue, admission buffer, command intent routing, effect application deferred lists.
+- Registries / Config: existing order-queue capacity as command batch ceiling via CoreInput wiring.
+- Existing presets / graphs: unchanged.
+
+### 4. New Layer 0 ops
+
+N/A.
+
+### 5. Transaction boundary
+
+Response-chain orders reserve/commit EntityIntake before/when consumed so GlobalIntake is not carried forever. Command and effect scratch refuse growth past declared capacity with typed errors.
+
+### 6. Config SSOT
+
+Command batch ceiling reuses existing order-queue capacity; effect scratch keeps existing constructor capacities as hard ceilings.
+
+New JSON schema: NO.
+
+### 7. Red flag scan
+
+- [x] No profile inherit/placement enum added
+- [x] No parallel order/spawn/effect runtime added
+- [x] No fallback or silent request drain added
+- [x] No new registry, loader, preset, or schema added
+
+### 8. Next variant test
+
+A new Response Chain / Command / Effect variant continues through the same admission pairing and fixed-capacity scratch contracts.
 
 ## PR #660 / #689 Transaction Closeout - AbilityExec and Input Repair - 2026-07-25
 

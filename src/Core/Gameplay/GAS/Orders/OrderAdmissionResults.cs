@@ -589,11 +589,23 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             // Accepted GlobalIntake must remain queryable until EntityIntake consumes the order.
             // Orders enqueued during an open intake window after OrderBufferSystem ran would otherwise
             // lose GlobalIntake at the next BeginLogicStep while still sitting in the queue.
-            CarryForwardUnpairedAcceptedGlobalIntake(retiredItems, retiredCount);
-            CarryForwardUnpairedAcceptedGlobalIntake(retiredRejections, retiredRejectionCount);
+            CarryForwardUnpairedAcceptedGlobalIntake(
+                retiredItems,
+                retiredCount,
+                retiredRejections,
+                retiredRejectionCount);
+            CarryForwardUnpairedAcceptedGlobalIntake(
+                retiredRejections,
+                retiredRejectionCount,
+                retiredItems,
+                retiredCount);
         }
 
-        private void CarryForwardUnpairedAcceptedGlobalIntake(OrderAdmissionOutcome[] retired, int retiredCount)
+        private void CarryForwardUnpairedAcceptedGlobalIntake(
+            OrderAdmissionOutcome[] retired,
+            int retiredCount,
+            OrderAdmissionOutcome[] retiredPairing,
+            int retiredPairingCount)
         {
             for (int i = 0; i < retiredCount; i++)
             {
@@ -604,7 +616,12 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                     continue;
                 }
 
-                if (HasStage(outcome.OrderId, OrderAdmissionStage.EntityIntake))
+                // Pairing must inspect the retired generation itself. EntityIntake written in the
+                // same logic step lives in the retired buffer after the swap, not in the new
+                // current/pending generation yet.
+                if (HasStageIn(retired, retiredCount, outcome.OrderId, OrderAdmissionStage.EntityIntake) ||
+                    HasStageIn(retiredPairing, retiredPairingCount, outcome.OrderId, OrderAdmissionStage.EntityIntake) ||
+                    HasStage(outcome.OrderId, OrderAdmissionStage.EntityIntake))
                 {
                     continue;
                 }
@@ -623,38 +640,31 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
         }
 
+        private static bool HasStageIn(
+            OrderAdmissionOutcome[] items,
+            int count,
+            int orderId,
+            OrderAdmissionStage stage)
+        {
+            for (int i = count - 1; i >= 0; i--)
+            {
+                if (items[i].OrderId == orderId && items[i].Stage == stage)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private bool HasStage(int orderId, OrderAdmissionStage stage)
         {
-            for (int i = _currentCount - 1; i >= 0; i--)
+            if (HasStageIn(_currentItems, _currentCount, orderId, stage) ||
+                HasStageIn(_currentRejections, _currentRejectionCount, orderId, stage) ||
+                HasStageIn(_pendingItems, _pendingCount, orderId, stage) ||
+                HasStageIn(_pendingRejections, _pendingRejectionCount, orderId, stage))
             {
-                if (_currentItems[i].OrderId == orderId && _currentItems[i].Stage == stage)
-                {
-                    return true;
-                }
-            }
-
-            for (int i = _currentRejectionCount - 1; i >= 0; i--)
-            {
-                if (_currentRejections[i].OrderId == orderId && _currentRejections[i].Stage == stage)
-                {
-                    return true;
-                }
-            }
-
-            for (int i = _pendingCount - 1; i >= 0; i--)
-            {
-                if (_pendingItems[i].OrderId == orderId && _pendingItems[i].Stage == stage)
-                {
-                    return true;
-                }
-            }
-
-            for (int i = _pendingRejectionCount - 1; i >= 0; i--)
-            {
-                if (_pendingRejections[i].OrderId == orderId && _pendingRejections[i].Stage == stage)
-                {
-                    return true;
-                }
+                return true;
             }
 
             return false;

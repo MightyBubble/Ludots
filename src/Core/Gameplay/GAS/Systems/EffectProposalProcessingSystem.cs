@@ -656,9 +656,47 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     bool progressed = false;
                     if (_chainOrders != null)
                     {
-                        while (_chainOrders.TryDequeue(out var order))
+                        while (true)
                         {
                             if (workUnits >= MaxWorkUnitsPerSlice) return false;
+                            if (!_chainOrders.TryPeek(out var order))
+                            {
+                                break;
+                            }
+
+                            // Close the admission query window before mutating the queue: GlobalIntake
+                            // stays queryable until EntityIntake is recorded for the same order id.
+                            OrderAdmissionReservation intakeReservation = default;
+                            bool intakeReserved = false;
+                            if (order.OrderId > 0)
+                            {
+                                intakeReservation = _chainOrders.AdmissionResults.Reserve(
+                                    OrderAdmissionStage.EntityIntake,
+                                    order.OrderId,
+                                    order.OrderTypeId);
+                                intakeReserved = true;
+                            }
+
+                            if (!_chainOrders.TryDequeue(out order))
+                            {
+                                if (intakeReserved)
+                                {
+                                    _chainOrders.AdmissionResults.Cancel(in intakeReservation);
+                                }
+
+                                break;
+                            }
+
+                            if (intakeReserved)
+                            {
+                                var intakeOutcome = new OrderAdmissionOutcome(
+                                    order.OrderId,
+                                    order.OrderTypeId,
+                                    OrderAdmissionStage.EntityIntake,
+                                    OrderSubmitResult.Activated);
+                                _chainOrders.AdmissionResults.Commit(in intakeReservation, in intakeOutcome);
+                            }
+
                             progressed = true;
 
                             if (order.OrderTypeId == _responseChainOrderTypes.ChainPass)

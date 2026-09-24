@@ -209,6 +209,7 @@ namespace Ludots.Core.Input.Orders
     public sealed class InputOrderMappingSystem
     {
         private const int InitialScratchCapacity = 16;
+        public const string CommandScratchCapacityExceededError = "INPUT.COMMAND.ERR.ScratchCapacityExceeded";
 
         private readonly struct HeldStartEndState
         {
@@ -270,6 +271,7 @@ namespace Ludots.Core.Input.Orders
         private ActiveActorCollectionOwnerProvider? _activeActorCollectionOwnerProvider;
         private CommandIntentTargetFactsProvider? _commandIntentTargetFactsProvider;
         private OrderIdentityAssigner? _orderIdentityAssigner;
+        private int _commandIntentBatchCapacity = InitialScratchCapacity;
         
         // Context
         private Entity _localPlayer;
@@ -281,6 +283,7 @@ namespace Ludots.Core.Input.Orders
         private int _lastSubmittedOrderId;
         private float _elapsedSeconds;
         private readonly List<Entity> _collectionActorsScratch = new(InitialScratchCapacity);
+        private readonly string[] _heldStartEndReleaseScratch;
 
         private readonly struct RoutedOrderSubmission
         {
@@ -423,6 +426,7 @@ namespace Ludots.Core.Input.Orders
             }
 
             Array.Sort(_orderedMappings, CompareMappingEntries);
+            _heldStartEndReleaseScratch = new string[Math.Max(1, _orderedMappings.Length)];
         }
         
         // Callback setters (unchanged API + new ones)
@@ -493,12 +497,41 @@ namespace Ludots.Core.Input.Orders
                     "Command actor expansion requires MaxExpandedActorCount >= MaxExpandedActorsPerSource.");
             }
 
-            _commandIntentExpandedActorsScratch = new Entity[expander.MaxExpandedActorCount];
-            _commandIntentExpansionSourcesScratch = new Entity[expander.MaxExpandedActorCount];
-            _commandIntentExpandedRoutesScratch = new CommandIntentRoute[expander.MaxExpandedActorCount];
-            if (_commandIntentOrdersScratch.Length < expander.MaxExpandedActorCount)
+            SetCommandIntentBatchCapacity(expander.MaxExpandedActorCount);
+        }
+
+        public void SetCommandIntentBatchCapacity(int capacity)
+        {
+            if (capacity <= 0)
             {
-                _commandIntentOrdersScratch = new Order[expander.MaxExpandedActorCount];
+                throw new ArgumentOutOfRangeException(nameof(capacity), capacity, "Command intent batch capacity must be positive.");
+            }
+
+            if (capacity <= _commandIntentBatchCapacity &&
+                _commandIntentActorsScratch.Length >= capacity &&
+                _commandIntentOrdersScratch.Length >= capacity)
+            {
+                return;
+            }
+
+            _commandIntentBatchCapacity = Math.Max(_commandIntentBatchCapacity, capacity);
+            _commandIntentActorsScratch = new Entity[_commandIntentBatchCapacity];
+            _commandIntentExpandedActorsScratch = new Entity[_commandIntentBatchCapacity];
+            _commandIntentExpansionSourcesScratch = new Entity[_commandIntentBatchCapacity];
+            _commandIntentExpandedRoutesScratch = new CommandIntentRoute[_commandIntentBatchCapacity];
+            _commandIntentRoutedActorsScratch = new Entity[_commandIntentBatchCapacity];
+            _commandIntentRoutesScratch = new CommandIntentRoute[_commandIntentBatchCapacity];
+            _commandIntentRoutedRoutesScratch = new CommandIntentRoute[_commandIntentBatchCapacity];
+            _commandIntentDispatchActorsScratch = new Entity[_commandIntentBatchCapacity];
+            _commandIntentOrdersScratch = new Order[_commandIntentBatchCapacity];
+            if (_collectionActorsScratch.Capacity < _commandIntentBatchCapacity)
+            {
+                _collectionActorsScratch.Capacity = _commandIntentBatchCapacity;
+            }
+
+            if (_routedOrdersScratch.Capacity < _commandIntentBatchCapacity)
+            {
+                _routedOrdersScratch.Capacity = _commandIntentBatchCapacity;
             }
         }
 
@@ -630,8 +663,7 @@ namespace Ludots.Core.Input.Orders
         {
             if (_activeHeldStartEndActions.Count == 0) return;
             
-            // Collect releases to avoid modifying set during iteration
-            List<string>? toRemove = null;
+            int releaseCount = 0;
             foreach (var entry in _orderedMappings)
             {
                 string actionId = entry.ActionId;
@@ -646,13 +678,21 @@ namespace Ludots.Core.Input.Orders
                     {
                         SubmitOrder(state.Mapping, in endOrder);
                     }
-                    toRemove ??= new List<string>();
-                    toRemove.Add(actionId);
+
+                    if (releaseCount >= _heldStartEndReleaseScratch.Length)
+                    {
+                        throw new InvalidOperationException(
+                            $"{CommandScratchCapacityExceededError}: heldStartEnd releases={releaseCount + 1}, capacity={_heldStartEndReleaseScratch.Length}.");
+                    }
+
+                    _heldStartEndReleaseScratch[releaseCount++] = actionId;
                 }
             }
-            if (toRemove != null)
+
+            for (int i = 0; i < releaseCount; i++)
             {
-                foreach (var id in toRemove) _activeHeldStartEndActions.Remove(id);
+                _activeHeldStartEndActions.Remove(_heldStartEndReleaseScratch[i]);
+                _heldStartEndReleaseScratch[i] = string.Empty;
             }
         }
 
@@ -2032,13 +2072,8 @@ namespace Ludots.Core.Input.Orders
                 return;
             }
 
-            int next = scratch.Length;
-            while (next < required)
-            {
-                next *= 2;
-            }
-
-            Array.Resize(ref scratch, next);
+            throw new InvalidOperationException(
+                $"{CommandScratchCapacityExceededError}: entityScratch required={required}, capacity={scratch.Length}.");
         }
 
         private static void EnsureRouteScratch(ref CommandIntentRoute[] scratch, int required)
@@ -2048,13 +2083,8 @@ namespace Ludots.Core.Input.Orders
                 return;
             }
 
-            int next = scratch.Length;
-            while (next < required)
-            {
-                next *= 2;
-            }
-
-            Array.Resize(ref scratch, next);
+            throw new InvalidOperationException(
+                $"{CommandScratchCapacityExceededError}: routeScratch required={required}, capacity={scratch.Length}.");
         }
 
         private static void EnsureOrderScratch(ref Order[] scratch, int required)
@@ -2064,13 +2094,8 @@ namespace Ludots.Core.Input.Orders
                 return;
             }
 
-            int next = scratch.Length;
-            while (next < required)
-            {
-                next *= 2;
-            }
-
-            Array.Resize(ref scratch, next);
+            throw new InvalidOperationException(
+                $"{CommandScratchCapacityExceededError}: orderScratch required={required}, capacity={scratch.Length}.");
         }
 
         private Entity ResolvePrimaryActor(InputOrderMapping mapping)

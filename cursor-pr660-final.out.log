@@ -1,0 +1,16 @@
+Closed the three architecture-review **P1 merge blockers** on this isolated worktree (`832481e` / `codex/pr660-cursor-final-fix`).
+
+### Fixes
+1. **Response Chain result window** — consuming a chain order now reserves/commits `EntityIntake`; CarryForward pairs against the *retired* generation so accepted GlobalIntake is not carried forever (this was also breaking `ApplyForce_Preset_AndBinding_AllocatesZero`).
+2. **Command fan-out scratch** — hot-path `Array.Resize` replaced with typed capacity failure; `SetCommandIntentBatchCapacity` sizes fixed scratch (CoreInput wires it to order-queue capacity); held-release path no longer `new List`.
+3. **EffectApplication scratch** — deferred lists treat constructor capacity as a hard ceiling via `AddBounded` (no silent growth).
+
+### Verification
+- Focused GasTests: **63/63 passed**
+- `git diff --check`: clean
+
+### Changed files
+`OrderAdmissionResults.cs`, `EffectProposalProcessingSystem.cs`, `InputOrderMappingSystem.cs`, `LocalOrderSourceHelper.cs`, `EffectApplicationSystem.cs`, related tests, `artifacts/gas-composition-gate.md`
+
+### Residual risk
+Architecture-review **P2** items remain: Command path still returns bare `false` in some reject cases, and the AbilityExec IL guard is still narrow. Collection list providers can still grow a `List` if a caller ignores capacity. No commit made.Focused PR660 repair tests finished successfully: **63/63 passed**. The earlier Codex-home search background job failed with exit 2 and doesn’t affect the code changes.

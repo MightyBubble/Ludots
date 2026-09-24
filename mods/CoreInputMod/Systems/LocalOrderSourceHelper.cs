@@ -297,6 +297,7 @@ namespace CoreInputMod.Systems
                 dispatch,
                 collections,
                 TryGetCommandSourceOwner);
+            mapping.SetCommandIntentBatchCapacity(_orders.Capacity);
         }
 
         public bool TryGetLocalPlayerId(out int playerId)
