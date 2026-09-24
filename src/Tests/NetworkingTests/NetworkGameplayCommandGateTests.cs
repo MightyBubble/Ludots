@@ -1,4 +1,3 @@
-using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Networking.Commands;
 using NUnit.Framework;
 
@@ -12,15 +11,15 @@ public sealed class NetworkGameplayCommandGateTests
     {
         var gate = new NetworkGameplayCommandGate();
 
-        Assert.That(gate.TryAdmit(out OrderSubmitResult waiting), Is.False);
-        Assert.That(waiting, Is.EqualTo(OrderSubmitResult.NetworkMatchNotStarted));
+        Assert.That(gate.TryAdmit(out NetworkCommandAdmissionCode waiting), Is.False);
+        Assert.That(waiting, Is.EqualTo(NetworkCommandAdmissionCode.NetworkMatchNotStarted));
 
         gate.StartMatch();
         Assert.That(gate.TryAdmit(out _), Is.True);
 
         gate.CompleteMatch();
-        Assert.That(gate.TryAdmit(out OrderSubmitResult completed), Is.False);
-        Assert.That(completed, Is.EqualTo(OrderSubmitResult.NetworkMatchCompleted));
+        Assert.That(gate.TryAdmit(out NetworkCommandAdmissionCode completed), Is.False);
+        Assert.That(completed, Is.EqualTo(NetworkCommandAdmissionCode.NetworkMatchCompleted));
 
         gate.StartMatch();
         Assert.That(gate.Phase, Is.EqualTo(NetworkGameplayCommandPhase.Completed));

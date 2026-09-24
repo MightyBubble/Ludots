@@ -265,11 +265,17 @@ internal sealed class FrontlineTrainingAdmissionSystem : BaseSystem<World, float
     private readonly int _castAbilityOrderTypeId;
     private readonly int _trainAbilityId;
     private readonly int _crystalAttributeId;
+    private readonly TagOps _tagOps;
 
-    public FrontlineTrainingAdmissionSystem(World world, FrontlineRuntime runtime, OrderTypeRegistry orderTypes) : base(world)
+    public FrontlineTrainingAdmissionSystem(
+        World world,
+        FrontlineRuntime runtime,
+        OrderTypeRegistry orderTypes,
+        TagOps tagOps) : base(world)
     {
         _runtime = runtime;
         _orderTypes = orderTypes;
+        _tagOps = tagOps ?? throw new ArgumentNullException(nameof(tagOps));
         _castAbilityOrderTypeId = orderTypes.GetId(runtime.Config.CastAbilityOrderTypeKey);
         _trainAbilityId = AbilityIdRegistry.GetId(runtime.Config.TrainAbilityId);
         _crystalAttributeId = AttributeRegistry.Register(runtime.Config.CrystalAttribute);
@@ -318,7 +324,12 @@ internal sealed class FrontlineTrainingAdmissionSystem : BaseSystem<World, float
                         $"Admitted Frontline training order {order.OrderId} has {crystals} crystals, below its reserved cost {_runtime.Config.TrainCostCrystals}.");
                 }
 
-                attributes[index].SetCurrent(_crystalAttributeId, crystals - _runtime.Config.TrainCostCrystals);
+                AttributeMutationOps.SetCurrent(
+                    World,
+                    core,
+                    _crystalAttributeId,
+                    crystals - _runtime.Config.TrainCostCrystals,
+                    _tagOps);
                 coreStates[index].LastTrainResult = FrontlineTrainResult.Accepted;
             }
         }
@@ -337,7 +348,7 @@ internal sealed class FrontlineTrainingAdmissionSystem : BaseSystem<World, float
 
         if (!world.IsAlive(entity) || !world.Has<AbilityStateBuffer>(entity))
         {
-            return OrderSubmitResult.InvalidEntity;
+            return OrderSubmitResult.RejectedInvalidActor;
         }
 
         AbilityStateBuffer abilities = world.Get<AbilityStateBuffer>(entity);
@@ -383,7 +394,7 @@ internal sealed class FrontlineTrainingAdmissionSystem : BaseSystem<World, float
             (reservedTrainCount * _runtime.Config.TrainCostCrystals);
         return availableAfterReservations >= _runtime.Config.TrainCostCrystals
             ? OrderSubmitResult.Activated
-            : OrderSubmitResult.InsufficientResources;
+            : OrderSubmitResult.RejectedByRule;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1132,15 +1143,15 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
 
         _commandStatusText = admission.Stage switch
         {
-            OrderAdmissionStage.NetworkIntake when admission.Result == OrderSubmitResult.NetworkScheduled =>
+            NetworkCommandAdmissionStage.NetworkIntake when admission.Result == NetworkCommandAdmissionCode.NetworkScheduled =>
                 hud.CommandSendingText,
-            OrderAdmissionStage.GlobalIntake when admission.Result == OrderSubmitResult.Queued =>
+            NetworkCommandAdmissionStage.GlobalIntake when admission.Result == NetworkCommandAdmissionCode.Queued =>
                 hud.CommandAcceptedText,
-            OrderAdmissionStage.EntityIntake when admission.Result == OrderSubmitResult.Activated =>
+            NetworkCommandAdmissionStage.EntityIntake when admission.Result == NetworkCommandAdmissionCode.Activated =>
                 hud.CommandStartedText,
-            OrderAdmissionStage.EntityIntake when admission.Result == OrderSubmitResult.Queued =>
+            NetworkCommandAdmissionStage.EntityIntake when admission.Result == NetworkCommandAdmissionCode.Queued =>
                 hud.CommandQueuedText,
-            OrderAdmissionStage.EntityIntake when admission.Result == OrderSubmitResult.Pending =>
+            NetworkCommandAdmissionStage.EntityIntake when admission.Result == NetworkCommandAdmissionCode.Pending =>
                 hud.CommandPendingText,
             _ => hud.ResolveAdmissionRejection(admission.Result),
         };

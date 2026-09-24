@@ -304,7 +304,7 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         OrderSubmitResult rejected = SubmitTraining(engine, core, playerId: 1, slot: 0, out _);
         Assert.Multiple(() =>
         {
-            Assert.That(rejected, Is.EqualTo(OrderSubmitResult.InsufficientResources));
+            Assert.That(rejected, Is.EqualTo(OrderSubmitResult.RejectedByRule));
             Assert.That(world.Get<OrderBuffer>(core).HasActive, Is.False);
             Assert.That(world.Get<OrderBuffer>(core).HasQueued, Is.False);
         });
@@ -347,7 +347,7 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         Assert.Multiple(() =>
         {
             Assert.That(firstOutcome, Is.EqualTo(OrderSubmitResult.Queued));
-            Assert.That(secondOutcome, Is.EqualTo(OrderSubmitResult.InsufficientResources));
+            Assert.That(secondOutcome, Is.EqualTo(OrderSubmitResult.RejectedByRule));
             Assert.That(ReadAttribute(world, core, crystalAttributeId), Is.EqualTo(60f));
             Assert.That(world.Get<OrderBuffer>(core).QueuedCount, Is.EqualTo(1));
         });
@@ -406,6 +406,8 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         {
             Assert.That(firstResult, Is.EqualTo(OrderSubmitResult.Queued));
             Assert.That(secondResult, Is.EqualTo(OrderSubmitResult.Queued));
+            Assert.That(second.OrderId, Is.Not.EqualTo(first.OrderId),
+                "Sequential training commands must keep distinct order identities.");
             Assert.That(ReadAttribute(world, core, crystalAttributeId), Is.EqualTo(120f));
             Assert.That(world.Get<OrderBuffer>(core).QueuedCount, Is.EqualTo(2));
         });
@@ -430,14 +432,18 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         TickUntil(
             engine,
             () => world.Get<OrderBuffer>(core).HasActive &&
-                world.Get<OrderBuffer>(core).ActiveOrder.Order.OrderId == second.OrderId,
-            8,
-            "The second squad should start as soon as the first training finishes.");
+                world.Get<OrderBuffer>(core).ActiveOrder.Order.OrderId == second.OrderId &&
+                world.Get<FrontlineCoreState>(core).LastHandledTrainOrderId == second.OrderId &&
+                ReadAttribute(world, core, crystalAttributeId) == 0f &&
+                CountNamed(world, "Infantry") == startingInfantry + 1,
+            16,
+            "The second squad should start and expose the complete first-training result after the first training finishes.");
 
         Assert.Multiple(() =>
         {
             Assert.That(CountNamed(world, "Infantry"), Is.EqualTo(startingInfantry + 1));
             Assert.That(ReadAttribute(world, core, crystalAttributeId), Is.EqualTo(0f));
+            Assert.That(world.Get<FrontlineCoreState>(core).LastHandledTrainOrderId, Is.EqualTo(second.OrderId));
             Assert.That(world.Get<OrderBuffer>(core).ActiveOrder.Order.OrderId, Is.EqualTo(second.OrderId));
         });
 

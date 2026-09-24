@@ -28,17 +28,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
         /// </summary>
         public int InsertStep;
 
-        /// <summary>
-        /// Runtime-owned integer slot for execution cursors or other transient state.
-        /// Must not be used to rewrite authored order payload.
-        /// </summary>
-        public int RuntimeInt0;
-
-        /// <summary>
-        /// Set after EntityIntake publishes the transition to an active order.
-        /// This is admission metadata and must not share gameplay execution cursors.
-        /// </summary>
-        public byte AdmissionActivationPublished;
     }
     
     /// <summary>

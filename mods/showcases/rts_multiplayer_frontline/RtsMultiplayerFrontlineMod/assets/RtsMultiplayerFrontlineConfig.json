@@ -102,13 +102,14 @@
       "SubmitModeNotAllowed": "Command not sent: this action cannot use the selected queue mode"
     },
     "commandAdmissionRejectionText": {
-      "Blocked": "Command rejected: another action blocks it",
-      "QueueFull": "Command rejected: unit queue is full",
-      "Ignored": "Command rejected: unit cannot take that action now",
-      "InvalidEntity": "Command rejected: unit no longer exists",
-      "BatchRejected": "Command rejected: one selected unit cannot comply",
-      "ValidationRejected": "Command rejected: gameplay requirements are not met",
-      "InvalidOrderType": "Command rejected: action is unavailable",
+      "RejectedQueueFull": "Command rejected: unit queue is full",
+      "RejectedByRule": "Command rejected: not enough crystals",
+      "RejectedValidation": "Command rejected: gameplay requirements are not met",
+      "RejectedInvalidActor": "Command rejected: unit no longer exists",
+      "RejectedInvalidOrderType": "Command rejected: action is unavailable",
+      "RejectedBlackboardCapacity": "Command rejected: unit cannot store that action data",
+      "RejectedMissingBlackboard": "Command rejected: unit is missing required action data",
+      "RejectedAdmissionCapacity": "Command rejected: command capacity is full",
       "NetworkRateLimited": "Command rejected: too many commands at once",
       "NetworkTargetTickExpired": "Command rejected: it arrived too late",
       "NetworkTargetTickTooFarAhead": "Command rejected: timing is invalid",
@@ -128,12 +129,8 @@
       "NetworkCommandSchemaMismatch": "Command rejected: action data is invalid",
       "NetworkMatchNotStarted": "Command rejected: battle has not started",
       "NetworkMatchCompleted": "Command rejected: battle has ended",
-      "InsufficientResources": "Command rejected: not enough crystals",
-      "Expired": "Command expired before it could start",
-      "Cancelled": "Command cancelled before it could start",
-      "RejectedBlackboardCapacity": "Command rejected: unit cannot store that action data",
-      "RejectedMissingBlackboard": "Command rejected: unit is missing required action data",
-      "RejectedAdmissionCapacity": "Command rejected: command capacity is full"
+      "TerminalFailed": "Command rejected: unit cannot take that action now",
+      "TerminalCancelled": "Command cancelled before it could start"
     }
   }
 }

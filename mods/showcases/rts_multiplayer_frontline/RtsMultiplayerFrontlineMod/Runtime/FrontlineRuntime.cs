@@ -547,7 +547,7 @@ public sealed class FrontlineRuntime : IGameplayActionLoopGate
             ?? throw new InvalidOperationException("RTS Frontline requires TagOps.");
         EffectRequestQueue effectRequests = engine.GetService(CoreServiceKeys.EffectRequestQueue)
             ?? throw new InvalidOperationException("RTS Frontline requires EffectRequestQueue.");
-        var trainGuard = new FrontlineTrainingAdmissionSystem(engine.World, this, orderTypes);
+        var trainGuard = new FrontlineTrainingAdmissionSystem(engine.World, this, orderTypes, tagOps);
         orderRules.RegisterAdmissionValidator(
             orderTypes.GetId(Config.CastAbilityOrderTypeKey),
             trainGuard);

@@ -398,6 +398,19 @@ try {
         throw "Complete framebuffer fixture did not retain passing evidence for every required role: itemCount=$($completeFramebuffer.Count), failedRequirementCount=$(@($completeFramebuffer[0].requirements | Where-Object { -not [bool]$_.passed }).Count)."
     }
 
+    # Scenario: A failed top-level inspector result cannot pass when every nested requirement claims success.
+    Assert-FailsWith -ExpectedMessage "inspector reported passed=false" -Action {
+        Assert-ClientFramebufferPixelEvidencePassed -Items @([pscustomobject]@{
+            process = "fixture-client"
+            milestone = "ready"
+            passed = $false
+            requirements = @([pscustomobject]@{
+                role = "core"
+                passed = $true
+            })
+        })
+    }
+
     # Scenario: One missing required role fails even though the other three roles are real pixels.
     $missingRoleFramebuffer = @(Invoke-FramebufferFixture -Directory (Join-Path $fixtureRoot "framebuffer-missing-role") `
         -PngBase64 "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAMklEQVR4nGOouBT1nxLMACLkNQ3gGMT/v0wejoeIARSHwcUHz+B4iBpAcRiMGjDUDQAACmGiPr2E254AAAAASUVORK5CYII=" `

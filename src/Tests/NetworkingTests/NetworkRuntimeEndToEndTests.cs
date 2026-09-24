@@ -2,6 +2,7 @@ using System.Buffers.Binary;
 using Arch.Core;
 using Ludots.Core.Association;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Knowledge;
@@ -224,7 +225,8 @@ public sealed class NetworkRuntimeEndToEndTests
             commandHarness.Ingress,
             commandHarness.GameplayGate,
             commandHarness.Results,
-            commandHarness.EntityResults,
+            commandHarness.OrderAdmissionResults,
+            commandHarness.TerminalResults,
             new FixedControllerResolver(player),
             input,
             new[] { serverSeat },
@@ -353,13 +355,13 @@ public sealed class NetworkRuntimeEndToEndTests
         server.PumpTransport();
         client.PumpTransport();
         Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome scheduled), Is.True);
-        Assert.That(scheduled.Result, Is.EqualTo(OrderSubmitResult.NetworkScheduled));
+        Assert.That(scheduled.Result, Is.EqualTo(NetworkCommandAdmissionCode.NetworkScheduled));
         Assert.That(scheduled.CommittedTick, Is.EqualTo(10));
 
         server.BeforeAuthoritativeTick(11);
         client.PumpTransport();
         Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome queued), Is.True);
-        Assert.That(queued.Result, Is.EqualTo(OrderSubmitResult.Queued));
+        Assert.That(queued.Result, Is.EqualTo(NetworkCommandAdmissionCode.Queued));
         Assert.That(queued.CommittedTick, Is.EqualTo(10));
         Span<Order> admitted = stackalloc Order[2];
         Assert.That(commandHarness.Orders.TryDequeueBatch(admitted, out int admittedCount), Is.True);
@@ -375,11 +377,11 @@ public sealed class NetworkRuntimeEndToEndTests
             in admitted[1],
             OrderAdmissionStage.EntityIntake,
             OrderSubmitResult.Activated);
-        commandHarness.EntityResults.BeginLogicStep();
-        Assert.That(commandHarness.EntityResults.TryWrite(in firstQueued), Is.True);
-        Assert.That(commandHarness.EntityResults.TryWrite(in secondActivated), Is.True);
-        commandHarness.EntityResults.EndEntityIntake();
-        commandHarness.EntityResults.EndLogicStep();
+        commandHarness.OrderAdmissionResults.BeginLogicStep();
+        Assert.That(commandHarness.OrderAdmissionResults.TryWrite(in firstQueued), Is.True);
+        Assert.That(commandHarness.OrderAdmissionResults.TryWrite(in secondActivated), Is.True);
+        commandHarness.OrderAdmissionResults.EndEntityIntake();
+        commandHarness.OrderAdmissionResults.EndLogicStep();
         server.PumpTransport();
         client.PumpTransport();
         Assert.That(
@@ -401,12 +403,12 @@ public sealed class NetworkRuntimeEndToEndTests
         Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome secondEntityActivated), Is.True);
         Assert.Multiple(() =>
         {
-            Assert.That(firstEntityQueued.Stage, Is.EqualTo(OrderAdmissionStage.EntityIntake));
-            Assert.That(firstEntityQueued.Result, Is.EqualTo(OrderSubmitResult.Queued));
+            Assert.That(firstEntityQueued.Stage, Is.EqualTo(NetworkCommandAdmissionStage.EntityIntake));
+            Assert.That(firstEntityQueued.Result, Is.EqualTo(NetworkCommandAdmissionCode.Queued));
             Assert.That(firstEntityQueued.AdmissionBatchIndex, Is.Zero);
             Assert.That(firstEntityQueued.CommittedTick, Is.EqualTo(11));
-            Assert.That(secondEntityActivated.Stage, Is.EqualTo(OrderAdmissionStage.EntityIntake));
-            Assert.That(secondEntityActivated.Result, Is.EqualTo(OrderSubmitResult.Activated));
+            Assert.That(secondEntityActivated.Stage, Is.EqualTo(NetworkCommandAdmissionStage.EntityIntake));
+            Assert.That(secondEntityActivated.Result, Is.EqualTo(NetworkCommandAdmissionCode.Activated));
             Assert.That(secondEntityActivated.AdmissionBatchIndex, Is.EqualTo(1));
             Assert.That(secondEntityActivated.CommittedTick, Is.EqualTo(11));
         });
@@ -423,7 +425,7 @@ public sealed class NetworkRuntimeEndToEndTests
         server.BeforeAuthoritativeTick(12);
         client.PumpTransport();
         Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome pendingQueued), Is.True);
-        Assert.That(pendingQueued.Result, Is.EqualTo(OrderSubmitResult.Queued));
+        Assert.That(pendingQueued.Result, Is.EqualTo(NetworkCommandAdmissionCode.Queued));
         Assert.That(pendingQueued.CommittedTick, Is.EqualTo(11));
         Span<Order> abandonedOrders = stackalloc Order[2];
         Assert.That(commandHarness.Orders.TryDequeueBatch(abandonedOrders, out int abandonedCount), Is.True);
@@ -433,10 +435,10 @@ public sealed class NetworkRuntimeEndToEndTests
             in admitted[0],
             OrderAdmissionStage.EntityIntake,
             OrderSubmitResult.Activated);
-        commandHarness.EntityResults.BeginLogicStep();
-        Assert.That(commandHarness.EntityResults.TryWrite(in firstActivated), Is.True);
-        commandHarness.EntityResults.EndEntityIntake();
-        commandHarness.EntityResults.EndLogicStep();
+        commandHarness.OrderAdmissionResults.BeginLogicStep();
+        Assert.That(commandHarness.OrderAdmissionResults.TryWrite(in firstActivated), Is.True);
+        commandHarness.OrderAdmissionResults.EndEntityIntake();
+        commandHarness.OrderAdmissionResults.EndLogicStep();
         server.PumpTransport();
         client.PumpTransport();
         Assert.That(
@@ -454,7 +456,7 @@ public sealed class NetworkRuntimeEndToEndTests
         server.PumpTransport();
         client.PumpTransport();
         Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome completed), Is.True);
-        Assert.That(completed.Result, Is.EqualTo(OrderSubmitResult.NetworkMatchCompleted));
+        Assert.That(completed.Result, Is.EqualTo(NetworkCommandAdmissionCode.NetworkMatchCompleted));
         Assert.That(completed.CommittedTick, Is.EqualTo(11));
 
         server.AfterAuthoritativeCommit(12);
@@ -462,7 +464,7 @@ public sealed class NetworkRuntimeEndToEndTests
         Assert.That(clientAdmissions.TryRead(out NetworkCommandAdmissionOutcome firstEntityActivated), Is.True);
         Assert.Multiple(() =>
         {
-            Assert.That(firstEntityActivated.Result, Is.EqualTo(OrderSubmitResult.Activated));
+            Assert.That(firstEntityActivated.Result, Is.EqualTo(NetworkCommandAdmissionCode.Activated));
             Assert.That(firstEntityActivated.AdmissionBatchIndex, Is.Zero);
             Assert.That(firstEntityActivated.ClientBatchSequence, Is.EqualTo(1));
             Assert.That(firstEntityActivated.CommittedTick, Is.EqualTo(12));
@@ -579,7 +581,7 @@ public sealed class NetworkRuntimeEndToEndTests
         Assert.Multiple(() =>
         {
             Assert.That(resumedOutcome.ClientBatchSequence, Is.EqualTo(4));
-            Assert.That(resumedOutcome.Result, Is.EqualTo(OrderSubmitResult.NetworkMatchCompleted));
+            Assert.That(resumedOutcome.Result, Is.EqualTo(NetworkCommandAdmissionCode.NetworkMatchCompleted));
         });
 
         server.PumpTransport();
@@ -594,19 +596,19 @@ public sealed class NetworkRuntimeEndToEndTests
         Assert.That(observer.SeatReleases, Is.Zero);
         server.BeforeAuthoritativeTick(17);
 
-        var abandonedFirst = new OrderAdmissionOutcome(
-            in abandonedOrders[0],
-            OrderAdmissionStage.EntityIntake,
-            OrderSubmitResult.Cancelled);
-        var abandonedSecond = new OrderAdmissionOutcome(
-            in abandonedOrders[1],
-            OrderAdmissionStage.EntityIntake,
-            OrderSubmitResult.Cancelled);
-        commandHarness.EntityResults.BeginLogicStep();
-        Assert.That(commandHarness.EntityResults.TryWrite(in abandonedFirst), Is.True);
-        Assert.That(commandHarness.EntityResults.TryWrite(in abandonedSecond), Is.True);
-        commandHarness.EntityResults.EndEntityIntake();
-        commandHarness.EntityResults.EndLogicStep();
+        commandHarness.TerminalResults.EnsureCanWrite(2);
+        commandHarness.TerminalResults.Write(new OrderTerminalOutcome(
+            abandonedOrders[0].OrderId,
+            abandonedOrders[0].OrderTypeId,
+            OrderTerminalState.Cancelled,
+            OrderFailureReason.None,
+            abandonedOrders[0].Actor));
+        commandHarness.TerminalResults.Write(new OrderTerminalOutcome(
+            abandonedOrders[1].OrderId,
+            abandonedOrders[1].OrderTypeId,
+            OrderTerminalState.Cancelled,
+            OrderFailureReason.None,
+            abandonedOrders[1].Actor));
         server.AfterAuthoritativeCommit(17);
 
         Assert.Multiple(() =>
@@ -1476,7 +1478,8 @@ public sealed class NetworkRuntimeEndToEndTests
                 commandHarness.Ingress,
                 commandHarness.GameplayGate,
                 commandHarness.Results,
-                commandHarness.EntityResults,
+                commandHarness.OrderAdmissionResults,
+                commandHarness.TerminalResults,
                 new FixedControllerResolver(player),
                 new FixedReplicationInput(commandHarness.FirstHandle, commandHarness.SecondHandle),
                 new[] { replicationSeat },
@@ -1542,9 +1545,9 @@ public sealed class NetworkRuntimeEndToEndTests
             NetworkCommandSubmitModeMask.Immediate | NetworkCommandSubmitModeMask.Queued,
             KnowledgePositionAccess.None));
         schemas.Freeze();
-        var globalAdmissionResults = new OrderAdmissionResultBuffer(capacity: 8);
-        var entityResults = new OrderAdmissionResultBuffer(capacity: 8);
-        var orders = new OrderQueue(capacity: 8, globalAdmissionResults);
+        var orderAdmissionResults = new OrderAdmissionResultBuffer(capacity: 8);
+        var terminalResults = new OrderTerminalResultBuffer(capacity: 8);
+        var orders = new OrderQueue(capacity: 8, orderAdmissionResults);
         var results = new NetworkCommandAdmissionResultBuffer(capacity: 8);
         var config = new NetworkCommandIngressConfig(
             seatCapacity: 1,
@@ -1555,7 +1558,8 @@ public sealed class NetworkRuntimeEndToEndTests
             sequenceHistoryCapacity: 4,
             maxPastTargetTicks: 2,
             maxFutureTargetTicks: 2,
-            scheduledBatchCapacity: 4);
+            scheduledBatchCapacity: 4,
+            commandCorrelationCapacity: 16);
         var gameplayGate = new NetworkGameplayCommandGate();
         gameplayGate.StartMatch();
         var ingress = new NetworkCommandIngress(
@@ -1574,7 +1578,8 @@ public sealed class NetworkRuntimeEndToEndTests
             knowledge,
             orders,
             results,
-            entityResults,
+            orderAdmissionResults,
+            terminalResults,
             ingress,
             gameplayGate,
             firstHandle,
@@ -1598,7 +1603,8 @@ public sealed class NetworkRuntimeEndToEndTests
         KnowledgeProjectionStore Knowledge,
         OrderQueue Orders,
         NetworkCommandAdmissionResultBuffer Results,
-        OrderAdmissionResultBuffer EntityResults,
+        OrderAdmissionResultBuffer OrderAdmissionResults,
+        OrderTerminalResultBuffer TerminalResults,
         NetworkCommandIngress Ingress,
         NetworkGameplayCommandGate GameplayGate,
         NetworkEntityHandle FirstHandle,

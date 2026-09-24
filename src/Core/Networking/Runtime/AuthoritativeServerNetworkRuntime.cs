@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Networking.Commands;
 using Ludots.Core.Networking.Protocol;
@@ -23,7 +24,8 @@ namespace Ludots.Core.Networking.Runtime
         private readonly NetworkCommandIngress _commands;
         private readonly NetworkGameplayCommandGate _gameplayCommandGate;
         private readonly NetworkCommandAdmissionResultBuffer _commandResults;
-        private readonly OrderAdmissionResultBuffer _entityResults;
+        private readonly OrderAdmissionResultBuffer _orderAdmissionResults;
+        private readonly OrderTerminalResultBuffer _terminalResults;
         private readonly IAuthoritativeSeatControllerResolver _controllers;
         private readonly IAuthoritativeReplicationInputPort _replicationInput;
         private readonly AuthoritativeReplicationSeatRuntime[] _replicationSeats;
@@ -54,18 +56,12 @@ namespace Ludots.Core.Networking.Runtime
         private readonly NetworkRoomSeatSnapshot[] _roomSeats;
         private readonly NetworkCommandAdmissionOutcome[] _pendingAdmissions;
         private readonly bool[] _pendingAdmissionActive;
-        private readonly bool[] _batchCorrelationActive;
-        private readonly bool[] _batchCorrelationDeliver;
-        private readonly int[] _batchCorrelationIds;
-        private readonly int[] _batchCorrelationSeatSlots;
-        private readonly uint[] _batchCorrelationSeatGenerations;
-        private readonly int[] _batchCorrelationPlayerIds;
-        private readonly ulong[] _batchCorrelationSequences;
-        private readonly int[] _batchCorrelationTargetTicks;
-        private readonly int[] _batchCorrelationActorCounts;
-        private readonly ushort[] _batchCorrelationTerminalCounts;
-        private readonly byte[] _batchCorrelationRowStates;
-        private int _batchCorrelationSearchStart;
+        private uint _lastProcessedAdmissionGeneration;
+        private int _processedAdmissionCount;
+        private bool _hasProcessedAdmissionGeneration;
+        private uint _lastProcessedTerminalGeneration;
+        private int _processedTerminalCount;
+        private bool _hasProcessedTerminalGeneration;
 
         private readonly byte[] _receiveBuffer;
         private readonly byte[] _payloadBuffer;
@@ -90,7 +86,8 @@ namespace Ludots.Core.Networking.Runtime
             NetworkCommandIngress commands,
             NetworkGameplayCommandGate gameplayCommandGate,
             NetworkCommandAdmissionResultBuffer commandResults,
-            OrderAdmissionResultBuffer entityResults,
+            OrderAdmissionResultBuffer orderAdmissionResults,
+            OrderTerminalResultBuffer terminalResults,
             IAuthoritativeSeatControllerResolver controllers,
             IAuthoritativeReplicationInputPort replicationInput,
             AuthoritativeReplicationSeatRuntime[] replicationSeats,
@@ -104,7 +101,8 @@ namespace Ludots.Core.Networking.Runtime
             _commands = commands ?? throw new ArgumentNullException(nameof(commands));
             _gameplayCommandGate = gameplayCommandGate ?? throw new ArgumentNullException(nameof(gameplayCommandGate));
             _commandResults = commandResults ?? throw new ArgumentNullException(nameof(commandResults));
-            _entityResults = entityResults ?? throw new ArgumentNullException(nameof(entityResults));
+            _orderAdmissionResults = orderAdmissionResults ?? throw new ArgumentNullException(nameof(orderAdmissionResults));
+            _terminalResults = terminalResults ?? throw new ArgumentNullException(nameof(terminalResults));
             _controllers = controllers ?? throw new ArgumentNullException(nameof(controllers));
             _replicationInput = replicationInput ?? throw new ArgumentNullException(nameof(replicationInput));
             _replicationSeats = replicationSeats ?? throw new ArgumentNullException(nameof(replicationSeats));
@@ -172,21 +170,9 @@ namespace Ludots.Core.Networking.Runtime
             _expiredSeats = new SessionSeatBinding[seats];
             _roomSeats = new NetworkRoomSeatSnapshot[seats];
             int pendingAdmissionCapacity = checked(
-                (commandResults.Capacity + _entityResults.Capacity) * sessions.SeatCapacity);
+                (commandResults.Capacity + _orderAdmissionResults.GenerationCapacity) * sessions.SeatCapacity);
             _pendingAdmissions = new NetworkCommandAdmissionOutcome[pendingAdmissionCapacity];
             _pendingAdmissionActive = new bool[pendingAdmissionCapacity];
-            int correlationCapacity = capacity.CommandCorrelationCapacity;
-            _batchCorrelationActive = new bool[correlationCapacity];
-            _batchCorrelationDeliver = new bool[correlationCapacity];
-            _batchCorrelationIds = new int[correlationCapacity];
-            _batchCorrelationSeatSlots = new int[correlationCapacity];
-            _batchCorrelationSeatGenerations = new uint[correlationCapacity];
-            _batchCorrelationPlayerIds = new int[correlationCapacity];
-            _batchCorrelationSequences = new ulong[correlationCapacity];
-            _batchCorrelationTargetTicks = new int[correlationCapacity];
-            _batchCorrelationActorCounts = new int[correlationCapacity];
-            _batchCorrelationTerminalCounts = new ushort[correlationCapacity];
-            _batchCorrelationRowStates = new byte[checked(correlationCapacity * capacity.MaxCommandEntries)];
             _receiveBuffer = new byte[capacity.MaxDatagramPayloadBytes];
             _payloadBuffer = new byte[Math.Max(capacity.MaxDatagramPayloadBytes, HandshakeWireCodec.ResponseSizeInBytes)];
             _datagramBuffer = new byte[capacity.MaxDatagramPayloadBytes];
@@ -264,6 +250,7 @@ namespace Ludots.Core.Networking.Runtime
             }
             PublishRoomSnapshotIfChanged();
             FlushEntityAdmissionResults();
+            FlushTerminalResults();
             _authoritativeTickOpen = false;
             FlushPendingAdmissions();
             bool scheduledPublish = committedTick % (uint)_capacity.StatePublishIntervalTicks == 0;
@@ -681,7 +668,7 @@ namespace Ludots.Core.Networking.Runtime
                 checked((int)_currentTick),
                 checked((int)_lastCommittedTick),
                 _commandEntries.AsSpan(0, entryCount));
-            if (outcome.Result == Ludots.Core.Gameplay.GAS.Orders.OrderSubmitResult.NetworkAdmissionBackpressured)
+            if (outcome.Result == NetworkCommandAdmissionCode.NetworkAdmissionBackpressured)
             {
                 SendAdmissionOutcome(connection, in outcome);
             }
@@ -1047,7 +1034,7 @@ namespace Ludots.Core.Networking.Runtime
                         NetworkRuntimeFaultCode.AdmissionResultUndeliverable,
                         detail: outcome.CommittedTick);
                 }
-                RecordBatchCorrelation(in outcome);
+
                 EnqueuePendingAdmission(in outcome);
             }
         }
@@ -1059,34 +1046,47 @@ namespace Ludots.Core.Networking.Runtime
                 Fail(NetworkRuntimeFaultCode.ReplicationBuildRejected, detail: unchecked((int)_lastCommittedTick));
             }
 
-            while (_entityResults.TryRead(out OrderAdmissionOutcome entityOutcome))
+            NetworkCommandCorrelationTable correlations = _commands.Correlations;
+            uint generation = _orderAdmissionResults.Generation;
+            if (!_hasProcessedAdmissionGeneration || generation != _lastProcessedAdmissionGeneration)
             {
-                if (entityOutcome.AdmissionSource == OrderAdmissionSource.Local)
+                if (_hasProcessedAdmissionGeneration && generation != unchecked(_lastProcessedAdmissionGeneration + 1u))
+                {
+                    Fail(NetworkRuntimeFaultCode.AdmissionResultUndeliverable, detail: unchecked((int)generation));
+                }
+
+                _lastProcessedAdmissionGeneration = generation;
+                _processedAdmissionCount = 0;
+                _hasProcessedAdmissionGeneration = true;
+            }
+
+            int currentCount = _orderAdmissionResults.CurrentGenerationCount;
+            if (currentCount < _processedAdmissionCount)
+            {
+                Fail(NetworkRuntimeFaultCode.AdmissionResultUndeliverable, detail: currentCount);
+            }
+
+            for (int i = _processedAdmissionCount; i < currentCount; i++)
+            {
+                ref readonly OrderAdmissionOutcome entityOutcome = ref _orderAdmissionResults[i];
+                if (entityOutcome.AdmissionBatchId <= 0 ||
+                    !correlations.TryFindByAdmissionBatchId(
+                        entityOutcome.AdmissionBatchId,
+                        out int correlation,
+                        out NetworkCommandCorrelationContext context))
                 {
                     continue;
                 }
 
-                if (entityOutcome.AdmissionSource != OrderAdmissionSource.Network ||
-                    entityOutcome.AdmissionBatchId <= 0)
+                if (entityOutcome.Stage != OrderAdmissionStage.EntityIntake)
                 {
-                    Fail(
-                        NetworkRuntimeFaultCode.AdmissionResultUndeliverable,
-                        detail: entityOutcome.AdmissionBatchId);
+                    continue;
                 }
 
-                int correlation = FindBatchCorrelation(entityOutcome.AdmissionBatchId);
-                if (correlation < 0)
-                {
-                    Fail(
-                        NetworkRuntimeFaultCode.AdmissionResultUndeliverable,
-                        detail: entityOutcome.AdmissionBatchId);
-                }
-
-                int actorCount = _batchCorrelationActorCounts[correlation];
-                if (entityOutcome.PlayerId != _batchCorrelationPlayerIds[correlation] ||
+                int actorCount = context.ActorCount;
+                if (entityOutcome.PlayerId != context.PlayerId ||
                     entityOutcome.AdmissionBatchSize != actorCount ||
                     entityOutcome.AdmissionBatchIndex >= actorCount ||
-                    entityOutcome.Stage != OrderAdmissionStage.EntityIntake ||
                     !IsEntityAdmissionResult(entityOutcome.Result))
                 {
                     Fail(
@@ -1094,9 +1094,8 @@ namespace Ludots.Core.Networking.Runtime
                         detail: entityOutcome.AdmissionBatchId);
                 }
 
-                int rowStateIndex = checked(
-                    correlation * _capacity.MaxCommandEntries + entityOutcome.AdmissionBatchIndex);
-                byte previousState = _batchCorrelationRowStates[rowStateIndex];
+                byte previousState = correlations.GetRowState(correlation, entityOutcome.AdmissionBatchIndex);
+                bool accepted = OrderSubmitResultSemantics.IsAccepted(entityOutcome.Result);
                 bool waitsForActivation = entityOutcome.Result is OrderSubmitResult.Queued or OrderSubmitResult.Pending;
                 if ((waitsForActivation && previousState != 0) ||
                     (!waitsForActivation && previousState == 2))
@@ -1106,142 +1105,148 @@ namespace Ludots.Core.Networking.Runtime
                         detail: entityOutcome.AdmissionBatchId);
                 }
 
-                if (waitsForActivation)
+                if (accepted)
                 {
-                    _batchCorrelationRowStates[rowStateIndex] = 1;
+                    correlations.SetRowState(correlation, entityOutcome.AdmissionBatchIndex, 1);
                 }
                 else
                 {
-                    _batchCorrelationRowStates[rowStateIndex] = 2;
-                    _batchCorrelationTerminalCounts[correlation]++;
+                    correlations.SetRowState(correlation, entityOutcome.AdmissionBatchIndex, 2);
+                    correlations.IncrementTerminalCount(correlation);
                 }
 
                 var seat = new NetworkCommandSeat(
-                    _batchCorrelationSeatSlots[correlation],
-                    _batchCorrelationSeatGenerations[correlation],
-                    _batchCorrelationPlayerIds[correlation]);
-                var outcome = new NetworkCommandAdmissionOutcome(
+                    context.SeatSlot,
+                    context.SeatGeneration,
+                    context.PlayerId);
+                NetworkCommandAdmissionOutcome outcome = NetworkCommandAdmissionOutcome.FromCoreAdmission(
                     in seat,
-                    _batchCorrelationSequences[correlation],
-                    _batchCorrelationTargetTicks[correlation],
+                    context.ClientBatchSequence,
+                    context.TargetTick,
                     actorCount,
-                    entityOutcome.OrderId,
-                    entityOutcome.AdmissionBatchId,
-                    entityOutcome.AdmissionBatchIndex,
-                    OrderAdmissionStage.EntityIntake,
-                    entityOutcome.Result,
+                    in entityOutcome,
                     isReplay: false,
                     committedTick: checked((int)_lastCommittedTick));
-                if (_batchCorrelationDeliver[correlation])
+                if (correlations.GetDeliver(correlation))
                 {
                     _commands.RecordEntityAdmission(in outcome);
                     EnqueuePendingAdmission(in outcome);
                 }
 
-                if (_batchCorrelationTerminalCounts[correlation] == actorCount)
+                if (correlations.GetTerminalCount(correlation) == actorCount)
                 {
-                    ClearBatchCorrelation(correlation);
-                }
-            }
-        }
-
-        private static bool IsEntityAdmissionResult(OrderSubmitResult result) =>
-            result is >= OrderSubmitResult.Activated and <= OrderSubmitResult.InvalidOrderType
-                or OrderSubmitResult.InsufficientResources
-                or OrderSubmitResult.Expired
-                or OrderSubmitResult.Cancelled;
-
-        private void RecordBatchCorrelation(in NetworkCommandAdmissionOutcome outcome)
-        {
-            if (outcome.IsReplay ||
-                outcome.Stage != OrderAdmissionStage.GlobalIntake ||
-                outcome.Result != OrderSubmitResult.Queued ||
-                outcome.AdmissionBatchId <= 0)
-            {
-                return;
-            }
-
-            if (outcome.ActorCount <= 0 || outcome.ActorCount > _capacity.MaxCommandEntries)
-            {
-                Fail(NetworkRuntimeFaultCode.AdmissionResultUndeliverable, detail: outcome.AdmissionBatchId);
-            }
-
-            int existing = FindBatchCorrelation(outcome.AdmissionBatchId);
-            if (existing >= 0)
-            {
-                if (_batchCorrelationSeatSlots[existing] != outcome.SeatSlot ||
-                    _batchCorrelationSeatGenerations[existing] != outcome.SeatGeneration ||
-                    _batchCorrelationSequences[existing] != outcome.ClientBatchSequence ||
-                    _batchCorrelationActorCounts[existing] != outcome.ActorCount)
-                {
-                    Fail(NetworkRuntimeFaultCode.AdmissionResultUndeliverable, detail: outcome.AdmissionBatchId);
-                }
-
-                return;
-            }
-
-            int free = FindFreeBatchCorrelation();
-            if (free < 0)
-            {
-                Fail(NetworkRuntimeFaultCode.AdmissionResultCapacityExceeded, detail: outcome.AdmissionBatchId);
-            }
-
-            _batchCorrelationActive[free] = true;
-            _batchCorrelationDeliver[free] = true;
-            _batchCorrelationIds[free] = outcome.AdmissionBatchId;
-            _batchCorrelationSeatSlots[free] = outcome.SeatSlot;
-            _batchCorrelationSeatGenerations[free] = outcome.SeatGeneration;
-            _batchCorrelationPlayerIds[free] = outcome.PlayerId;
-            _batchCorrelationSequences[free] = outcome.ClientBatchSequence;
-            _batchCorrelationTargetTicks[free] = outcome.TargetTick;
-            _batchCorrelationActorCounts[free] = outcome.ActorCount;
-            _batchCorrelationTerminalCounts[free] = 0;
-            Array.Clear(
-                _batchCorrelationRowStates,
-                free * _capacity.MaxCommandEntries,
-                _capacity.MaxCommandEntries);
-        }
-
-        private int FindBatchCorrelation(int admissionBatchId)
-        {
-            for (int i = 0; i < _batchCorrelationActive.Length; i++)
-            {
-                if (_batchCorrelationActive[i] && _batchCorrelationIds[i] == admissionBatchId)
-                {
-                    return i;
+                    correlations.Clear(correlation);
                 }
             }
 
-            return -1;
+            _processedAdmissionCount = currentCount;
         }
 
-        private int FindFreeBatchCorrelation()
+        private void FlushTerminalResults()
         {
-            for (int offset = 0; offset < _batchCorrelationActive.Length; offset++)
+            if (!_authoritativeTickOpen || _lastCommittedTick != _currentTick)
             {
-                int index = (_batchCorrelationSearchStart + offset) % _batchCorrelationActive.Length;
-                if (_batchCorrelationActive[index])
+                Fail(NetworkRuntimeFaultCode.ReplicationBuildRejected, detail: unchecked((int)_lastCommittedTick));
+            }
+
+            uint generation = _terminalResults.Generation;
+            if (!_hasProcessedTerminalGeneration || generation != _lastProcessedTerminalGeneration)
+            {
+                if (_hasProcessedTerminalGeneration && generation != unchecked(_lastProcessedTerminalGeneration + 1u))
+                {
+                    Fail(NetworkRuntimeFaultCode.AdmissionResultUndeliverable, detail: unchecked((int)generation));
+                }
+
+                _lastProcessedTerminalGeneration = generation;
+                _processedTerminalCount = 0;
+                _hasProcessedTerminalGeneration = true;
+            }
+
+            if (_terminalResults.Count < _processedTerminalCount)
+            {
+                Fail(NetworkRuntimeFaultCode.AdmissionResultUndeliverable, detail: _terminalResults.Count);
+            }
+
+            NetworkCommandCorrelationTable correlations = _commands.Correlations;
+            for (int i = _processedTerminalCount; i < _terminalResults.Count; i++)
+            {
+                ref readonly OrderTerminalOutcome terminalOutcome = ref _terminalResults[i];
+                if (!correlations.TryFindByOrderIdAndActor(
+                        terminalOutcome.OrderId,
+                        terminalOutcome.Actor,
+                        out int correlation,
+                        out ushort admissionBatchIndex,
+                        out NetworkCommandCorrelationContext context))
                 {
                     continue;
                 }
 
-                _batchCorrelationSearchStart = (index + 1) % _batchCorrelationActive.Length;
-                return index;
+                if (context.PlayerId <= 0 ||
+                    admissionBatchIndex >= context.ActorCount)
+                {
+                    Fail(
+                        NetworkRuntimeFaultCode.AdmissionResultUndeliverable,
+                        detail: terminalOutcome.OrderId);
+                }
+
+                byte previousState = correlations.GetRowState(correlation, admissionBatchIndex);
+                if (previousState == 2 ||
+                    (terminalOutcome.State == OrderTerminalState.Completed && previousState != 1))
+                {
+                    Fail(
+                        NetworkRuntimeFaultCode.AdmissionResultUndeliverable,
+                        detail: terminalOutcome.OrderId);
+                }
+
+                correlations.SetRowState(correlation, admissionBatchIndex, 2);
+                correlations.IncrementTerminalCount(correlation);
+
+                var seat = new NetworkCommandSeat(
+                    context.SeatSlot,
+                    context.SeatGeneration,
+                    context.PlayerId);
+                NetworkCommandAdmissionOutcome outcome = NetworkCommandAdmissionOutcome.FromTerminal(
+                    in seat,
+                    context.ClientBatchSequence,
+                    context.TargetTick,
+                    context.ActorCount,
+                    terminalOutcome.OrderId,
+                    context.AdmissionBatchId,
+                    admissionBatchIndex,
+                    terminalOutcome.State,
+                    isReplay: false,
+                    committedTick: checked((int)_lastCommittedTick));
+                if (correlations.GetDeliver(correlation))
+                {
+                    EnqueuePendingAdmission(in outcome);
+                }
+
+                if (correlations.GetTerminalCount(correlation) == context.ActorCount)
+                {
+                    correlations.Clear(correlation);
+                }
             }
 
-            return -1;
+            _processedTerminalCount = _terminalResults.Count;
         }
 
-        private void ClearBatchCorrelation(int index)
+        private static bool IsEntityAdmissionResult(OrderSubmitResult result)
         {
-            _batchCorrelationActive[index] = false;
-            _batchCorrelationDeliver[index] = false;
-            _batchCorrelationIds[index] = 0;
-            _batchCorrelationTerminalCounts[index] = 0;
-            Array.Clear(
-                _batchCorrelationRowStates,
-                index * _capacity.MaxCommandEntries,
-                _capacity.MaxCommandEntries);
+            return result switch
+            {
+                OrderSubmitResult.Activated => true,
+                OrderSubmitResult.Queued => true,
+                OrderSubmitResult.Pending => true,
+                OrderSubmitResult.RejectedQueueFull => true,
+                OrderSubmitResult.RejectedByRule => true,
+                OrderSubmitResult.RejectedValidation => true,
+                OrderSubmitResult.RejectedInvalidActor => true,
+                OrderSubmitResult.RejectedInvalidOrderType => true,
+                OrderSubmitResult.RejectedBlackboardCapacity => true,
+                OrderSubmitResult.RejectedMissingBlackboard => true,
+                OrderSubmitResult.RejectedAdmissionCapacity => true,
+                _ => throw new ArgumentOutOfRangeException(nameof(result), result, "Unknown order submit result."),
+            };
         }
 
         private void EnqueuePendingAdmission(in NetworkCommandAdmissionOutcome outcome)
@@ -1383,15 +1388,7 @@ namespace Ludots.Core.Networking.Runtime
                 }
             }
 
-            for (int i = 0; i < _batchCorrelationActive.Length; i++)
-            {
-                if (_batchCorrelationActive[i] &&
-                    _batchCorrelationSeatSlots[i] == binding.Slot &&
-                    _batchCorrelationSeatGenerations[i] == binding.Generation)
-                {
-                    _batchCorrelationDeliver[i] = false;
-                }
-            }
+            _commands.AbandonCorrelationDeliveryForSeat(binding.Slot, binding.Generation);
         }
 
         private void SendFramed(

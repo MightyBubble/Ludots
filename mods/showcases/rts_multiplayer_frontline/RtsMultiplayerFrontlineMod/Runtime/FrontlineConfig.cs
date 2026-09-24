@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Networking.Commands;
 using Ludots.Core.Networking.Runtime;
 
 namespace RtsMultiplayerFrontlineMod.Runtime;
@@ -331,12 +332,12 @@ public sealed class FrontlineHudConfig
         return _submitResultText[index];
     }
 
-    internal string ResolveAdmissionRejection(OrderSubmitResult result)
+    internal string ResolveAdmissionRejection(NetworkCommandAdmissionCode code)
     {
-        int index = (int)result;
+        int index = (int)code;
         if ((uint)index >= (uint)_admissionResultText.Length || string.IsNullOrEmpty(_admissionResultText[index]))
         {
-            throw new InvalidOperationException($"RTS Frontline HUD has no server command result text for {result}.");
+            throw new InvalidOperationException($"RTS Frontline HUD has no server command result text for {code}.");
         }
 
         return _admissionResultText[index];
@@ -393,23 +394,20 @@ public sealed class FrontlineHudConfig
 
     private static string[] CompileAdmissionResultText(Dictionary<string, string> configured)
     {
-        // Enum.GetName/ToString prefer an arbitrary/last alias for duplicate underlying values.
-        // Walk GetNames in metadata order and keep the first name per underlying value as the
-        // canonical config key (Blocked, QueueFull, ...) so alias duplicates stay DRY.
-        string[] names = Enum.GetNames<OrderSubmitResult>();
-        int capacity = OrderAdmissionResultBuffer.SubmitResultCount;
+        string[] names = Enum.GetNames<NetworkCommandAdmissionCode>();
+        int capacity = NetworkCommandAdmissionCodeSemantics.CodeCount;
         var compiled = new string[capacity];
         var seen = new bool[capacity];
         int expected = 0;
         for (int i = 0; i < names.Length; i++)
         {
             string name = names[i];
-            OrderSubmitResult value = Enum.Parse<OrderSubmitResult>(name);
+            NetworkCommandAdmissionCode value = Enum.Parse<NetworkCommandAdmissionCode>(name);
             int index = (int)value;
             if ((uint)index >= (uint)capacity)
             {
                 throw new InvalidOperationException(
-                    $"RTS Frontline HUD order submit result {name} ({index}) exceeds SubmitResultCount {capacity}.");
+                    $"RTS Frontline HUD network command admission code {name} ({index}) exceeds CodeCount {capacity}.");
             }
 
             if (seen[index])
@@ -418,8 +416,9 @@ public sealed class FrontlineHudConfig
             }
 
             seen[index] = true;
-            if (value is OrderSubmitResult.Activated or OrderSubmitResult.Queued or
-                OrderSubmitResult.Pending or OrderSubmitResult.NetworkScheduled)
+            if (value is NetworkCommandAdmissionCode.Activated or NetworkCommandAdmissionCode.Queued or
+                NetworkCommandAdmissionCode.Pending or NetworkCommandAdmissionCode.NetworkScheduled or
+                NetworkCommandAdmissionCode.TerminalCompleted)
             {
                 continue;
             }

@@ -50,8 +50,7 @@ namespace Ludots.Core.Networking.Commands
         private readonly int[] _scheduledOrderCounts;
         private readonly Order[] _scheduledOrders;
         private readonly int[] _drainSlots;
-        private int _scheduledBatchCount;
-        private int _lastDrainTick = -1;
+        private readonly NetworkCommandCorrelationTable _correlations;
 
         public NetworkCommandIngress(
             in NetworkCommandIngressConfig config,
@@ -126,9 +125,49 @@ namespace Ludots.Core.Networking.Commands
             _scheduledOrderCounts = new int[config.ScheduledBatchCapacity];
             _scheduledOrders = new Order[checked(config.ScheduledBatchCapacity * config.MaxActorsPerBatch)];
             _drainSlots = new int[config.ScheduledBatchCapacity];
+            _correlations = new NetworkCommandCorrelationTable(
+                config.CommandCorrelationCapacity,
+                config.MaxActorsPerBatch);
         }
 
         public int ScheduledBatchCount => _scheduledBatchCount;
+
+        public void AbandonCorrelationDeliveryForSeat(int seatSlot, uint seatGeneration) =>
+            _correlations.AbandonDeliveryForSeat(seatSlot, seatGeneration);
+
+        public bool TryFindCorrelationByAdmissionBatchId(
+            int admissionBatchId,
+            out NetworkCommandCorrelationContext context) =>
+            _correlations.TryFindByAdmissionBatchId(admissionBatchId, out _, out context);
+
+        public bool TryFindCorrelationByOrderIdAndBatchIndex(
+            int orderId,
+            ushort admissionBatchIndex,
+            out NetworkCommandCorrelationContext context) =>
+            _correlations.TryFindByOrderIdAndBatchIndex(orderId, admissionBatchIndex, out _, out context);
+
+        public bool TryFindCorrelationByOrderIdAndActor(
+            int orderId,
+            Entity actor,
+            out ushort admissionBatchIndex,
+            out NetworkCommandCorrelationContext context) =>
+            _correlations.TryFindByOrderIdAndActor(orderId, actor, out _, out admissionBatchIndex, out context);
+
+        public bool TryClearCorrelationByAdmissionBatchId(int admissionBatchId)
+        {
+            if (!_correlations.TryFindByAdmissionBatchId(admissionBatchId, out int tableIndex, out _))
+            {
+                return false;
+            }
+
+            _correlations.Clear(tableIndex);
+            return true;
+        }
+
+        internal NetworkCommandCorrelationTable Correlations => _correlations;
+
+        private int _scheduledBatchCount;
+        private int _lastDrainTick = -1;
 
         public void BindSeat(in NetworkCommandSeat seat, Entity controller, int serverTick)
         {
@@ -250,7 +289,7 @@ namespace Ludots.Core.Networking.Commands
 
                 NetworkCommandAdmissionOutcome cancelled = CreateScheduledOutcome(
                     i,
-                    OrderSubmitResult.NetworkInvalidConnectionSeat,
+                    NetworkCommandAdmissionCode.NetworkInvalidConnectionSeat,
                     isReplay: false,
                     committedTick);
                 WriteResult(in cancelled);
@@ -300,7 +339,7 @@ namespace Ludots.Core.Networking.Commands
                     entries.Length,
                     orderId: 0,
                     admissionBatchId: 0,
-                    OrderSubmitResult.NetworkAdmissionBackpressured,
+                    NetworkCommandAdmissionCode.NetworkAdmissionBackpressured,
                     isReplay: false,
                     committedTick);
             }
@@ -312,7 +351,7 @@ namespace Ludots.Core.Networking.Commands
                     header.ClientBatchSequence,
                     header.TargetTick,
                     entries.Length,
-                    OrderSubmitResult.NetworkInvalidConnectionSeat,
+                    NetworkCommandAdmissionCode.NetworkInvalidConnectionSeat,
                     committedTick);
             }
 
@@ -323,7 +362,7 @@ namespace Ludots.Core.Networking.Commands
                     header.ClientBatchSequence,
                     header.TargetTick,
                     entries.Length,
-                    OrderSubmitResult.NetworkSequenceExhausted,
+                    NetworkCommandAdmissionCode.NetworkSequenceExhausted,
                     committedTick);
             }
 
@@ -340,7 +379,7 @@ namespace Ludots.Core.Networking.Commands
                             header.ClientBatchSequence,
                             header.TargetTick,
                             entries.Length,
-                            OrderSubmitResult.NetworkCommandSchemaMismatch,
+                            NetworkCommandAdmissionCode.NetworkCommandSchemaMismatch,
                             committedTick);
                     }
 
@@ -354,7 +393,7 @@ namespace Ludots.Core.Networking.Commands
                             entries.Length,
                             orderId: 0,
                             admissionBatchId: 0,
-                            OrderSubmitResult.NetworkAdmissionBackpressured,
+                            NetworkCommandAdmissionCode.NetworkAdmissionBackpressured,
                             isReplay: false,
                             committedTick);
                     }
@@ -371,7 +410,7 @@ namespace Ludots.Core.Networking.Commands
                     header.ClientBatchSequence,
                     header.TargetTick,
                     entries.Length,
-                    OrderSubmitResult.NetworkSequenceOutsideHistory,
+                    NetworkCommandAdmissionCode.NetworkSequenceOutsideHistory,
                     committedTick);
             }
 
@@ -382,11 +421,11 @@ namespace Ludots.Core.Networking.Commands
                     header.ClientBatchSequence,
                     header.TargetTick,
                     entries.Length,
-                    OrderSubmitResult.NetworkSequenceGap,
+                    NetworkCommandAdmissionCode.NetworkSequenceGap,
                     committedTick);
             }
 
-            if (!_gameplayGate.TryAdmit(out OrderSubmitResult phaseRejection))
+            if (!_gameplayGate.TryAdmit(out NetworkCommandAdmissionCode phaseRejection))
             {
                 return CompleteRejected(
                     in seat,
@@ -404,7 +443,7 @@ namespace Ludots.Core.Networking.Commands
                     in seat,
                     in header,
                     entries.Length,
-                    OrderSubmitResult.NetworkTargetTickExpired,
+                    NetworkCommandAdmissionCode.NetworkTargetTickExpired,
                     signature,
                     committedTick);
             }
@@ -415,7 +454,7 @@ namespace Ludots.Core.Networking.Commands
                     in seat,
                     in header,
                     entries.Length,
-                    OrderSubmitResult.NetworkTargetTickTooFarAhead,
+                    NetworkCommandAdmissionCode.NetworkTargetTickTooFarAhead,
                     signature,
                     committedTick);
             }
@@ -426,7 +465,7 @@ namespace Ludots.Core.Networking.Commands
                     in seat,
                     in header,
                     entries.Length,
-                    OrderSubmitResult.NetworkCommandSchemaMismatch,
+                    NetworkCommandAdmissionCode.NetworkCommandSchemaMismatch,
                     signature,
                     committedTick);
             }
@@ -437,7 +476,7 @@ namespace Ludots.Core.Networking.Commands
                     in seat,
                     in header,
                     entries.Length,
-                    OrderSubmitResult.NetworkActorLimitExceeded,
+                    NetworkCommandAdmissionCode.NetworkActorLimitExceeded,
                     signature,
                     committedTick);
             }
@@ -448,7 +487,7 @@ namespace Ludots.Core.Networking.Commands
                     in seat,
                     in header,
                     entries.Length,
-                    OrderSubmitResult.NetworkScheduleFull,
+                    NetworkCommandAdmissionCode.NetworkScheduleFull,
                     signature,
                     committedTick);
             }
@@ -460,7 +499,7 @@ namespace Ludots.Core.Networking.Commands
                     header.SubmitMode,
                     entries,
                     destination,
-                    out OrderSubmitResult validationResult))
+                    out NetworkCommandAdmissionCode validationResult))
             {
                 return CompleteRejected(
                     in seat,
@@ -477,7 +516,7 @@ namespace Ludots.Core.Networking.Commands
                     in seat,
                     in header,
                     entries.Length,
-                    OrderSubmitResult.NetworkRateLimited,
+                    NetworkCommandAdmissionCode.NetworkRateLimited,
                     signature,
                     committedTick);
             }
@@ -494,7 +533,7 @@ namespace Ludots.Core.Networking.Commands
                 header.ClientBatchSequence,
                 header.TargetTick,
                 entries.Length,
-                OrderSubmitResult.NetworkScheduled,
+                NetworkCommandAdmissionCode.NetworkScheduled,
                 committedTick);
             RecordCompleted(seat.Slot, header.ClientBatchSequence, signature, in accepted);
             return accepted;
@@ -502,7 +541,7 @@ namespace Ludots.Core.Networking.Commands
 
         public void RecordEntityAdmission(in NetworkCommandAdmissionOutcome outcome)
         {
-            if (outcome.Stage != OrderAdmissionStage.EntityIntake ||
+            if (outcome.Stage != NetworkCommandAdmissionStage.EntityIntake ||
                 outcome.IsReplay ||
                 (uint)outcome.SeatSlot >= (uint)_config.SeatCapacity ||
                 outcome.ActorCount <= 0 ||
@@ -550,26 +589,43 @@ namespace Ludots.Core.Networking.Commands
                 int scheduledSlot = _drainSlots[i];
                 int orderCount = _scheduledOrderCounts[scheduledSlot];
                 Span<Order> batch = GetScheduledOrders(scheduledSlot, orderCount);
-                OrderSubmitResult result;
+                NetworkCommandAdmissionCode code;
                 if (orderCount > _orders.AvailableCapacity)
                 {
-                    result = OrderSubmitResult.QueueFull;
+                    code = NetworkCommandAdmissionCode.RejectedQueueFull;
                 }
                 else
                 {
-                    OrderSubmitResult enqueueResult = _orders.TryEnqueueSharedBatch(batch, OrderAdmissionSource.Network);
+                    _correlations.EnsureCanRegisterBatch(orderCount);
+                    OrderSubmitResult enqueueResult = _orders.TryEnqueueSharedBatch(batch);
                     if (!OrderSubmitResultSemantics.IsAccepted(enqueueResult))
                     {
-                        throw new InvalidOperationException(
-                            "OrderQueue capacity changed during single-writer network command admission.");
-                    }
+                        if (enqueueResult == OrderSubmitResult.RejectedQueueFull)
+                        {
+                            throw new InvalidOperationException(
+                                "OrderQueue capacity changed during single-writer network command admission.");
+                        }
 
-                    result = enqueueResult;
+                        code = NetworkCommandAdmissionCodeSemantics.ProjectCoreSubmitResult(enqueueResult);
+                    }
+                    else
+                    {
+                        code = NetworkCommandAdmissionCodeSemantics.ProjectCoreSubmitResult(enqueueResult);
+                        var correlationSeat = new NetworkCommandSeat(
+                            _scheduledSeatSlots[scheduledSlot],
+                            _seatGenerations[_scheduledSeatSlots[scheduledSlot]],
+                            _seatPlayerIds[_scheduledSeatSlots[scheduledSlot]]);
+                        _correlations.RegisterBatch(
+                            in correlationSeat,
+                            _scheduledSequences[scheduledSlot],
+                            _scheduledTargetTicks[scheduledSlot],
+                            batch);
+                    }
                 }
 
                 NetworkCommandAdmissionOutcome outcome = CreateScheduledOutcome(
                     scheduledSlot,
-                    result,
+                    code,
                     isReplay: false,
                     committedTick);
                 WriteResult(in outcome);
@@ -587,7 +643,7 @@ namespace Ludots.Core.Networking.Commands
             OrderSubmitMode submitMode,
             ReadOnlySpan<NetworkCommandWireEntry> entries,
             Span<Order> destination,
-            out OrderSubmitResult result)
+            out NetworkCommandAdmissionCode result)
         {
             Entity controller = _seatControllers[seatSlot];
             int playerId = _seatPlayerIds[seatSlot];
@@ -596,19 +652,19 @@ namespace Ludots.Core.Networking.Commands
                 ref readonly NetworkCommandWireEntry entry = ref entries[i];
                 if (!entry.Actor.IsValid)
                 {
-                    result = OrderSubmitResult.NetworkInvalidActorHandle;
+                    result = NetworkCommandAdmissionCode.NetworkInvalidActorHandle;
                     return false;
                 }
 
                 if (!_entities.TryResolve(entry.Actor, out Entity actor) || !_world.IsAlive(actor))
                 {
-                    result = OrderSubmitResult.NetworkStaleActorGeneration;
+                    result = NetworkCommandAdmissionCode.NetworkStaleActorGeneration;
                     return false;
                 }
 
                 if (!_controlDomains.IsControllableBy(controller, actor))
                 {
-                    result = OrderSubmitResult.NetworkActorNotControlled;
+                    result = NetworkCommandAdmissionCode.NetworkActorNotControlled;
                     return false;
                 }
 
@@ -616,7 +672,7 @@ namespace Ludots.Core.Networking.Commands
                 {
                     if (destination[prior].Actor == actor)
                     {
-                        result = OrderSubmitResult.NetworkCommandSchemaMismatch;
+                        result = NetworkCommandAdmissionCode.NetworkCommandSchemaMismatch;
                         return false;
                     }
                 }
@@ -627,7 +683,7 @@ namespace Ludots.Core.Networking.Commands
                     !schema.AllowsSubmitMode(submitMode) ||
                     !TryValidateTargetShape(in targetPayload, in schema))
                 {
-                    result = OrderSubmitResult.NetworkCommandSchemaMismatch;
+                    result = NetworkCommandAdmissionCode.NetworkCommandSchemaMismatch;
                     return false;
                 }
 
@@ -638,13 +694,13 @@ namespace Ludots.Core.Networking.Commands
                 {
                     if (!entry.Target.TryGetTargetEntity(out NetworkEntityHandle targetHandle))
                     {
-                        result = OrderSubmitResult.NetworkInvalidTargetHandle;
+                        result = NetworkCommandAdmissionCode.NetworkInvalidTargetHandle;
                         return false;
                     }
 
                     if (!_entities.TryResolve(targetHandle, out target) || !_world.IsAlive(target))
                     {
-                        result = OrderSubmitResult.NetworkStaleTargetGeneration;
+                        result = NetworkCommandAdmissionCode.NetworkStaleTargetGeneration;
                         return false;
                     }
 
@@ -657,7 +713,7 @@ namespace Ludots.Core.Networking.Commands
                             schema.RequiredTargetPositionAccess);
                     if (!canTarget)
                     {
-                        result = OrderSubmitResult.NetworkTargetNotKnown;
+                        result = NetworkCommandAdmissionCode.NetworkTargetNotKnown;
                         return false;
                     }
                 }
@@ -685,7 +741,7 @@ namespace Ludots.Core.Networking.Commands
                 };
             }
 
-            result = OrderSubmitResult.NetworkScheduled;
+            result = NetworkCommandAdmissionCode.NetworkScheduled;
             return true;
         }
 
@@ -763,7 +819,7 @@ namespace Ludots.Core.Networking.Commands
             in NetworkCommandSeat seat,
             in NetworkCommandBatchHeader header,
             int actorCount,
-            OrderSubmitResult result,
+            NetworkCommandAdmissionCode result,
             ulong signature,
             int committedTick)
         {
@@ -780,7 +836,7 @@ namespace Ludots.Core.Networking.Commands
 
         private NetworkCommandAdmissionOutcome CreateScheduledOutcome(
             int scheduledSlot,
-            OrderSubmitResult result,
+            NetworkCommandAdmissionCode result,
             bool isReplay,
             int committedTick)
         {
@@ -1023,7 +1079,7 @@ namespace Ludots.Core.Networking.Commands
             ulong clientBatchSequence,
             int targetTick,
             int actorCount,
-            OrderSubmitResult result,
+            NetworkCommandAdmissionCode result,
             int committedTick)
         {
             NetworkCommandAdmissionOutcome outcome = CreateOutcome(
@@ -1055,7 +1111,7 @@ namespace Ludots.Core.Networking.Commands
             int actorCount,
             int orderId,
             int admissionBatchId,
-            OrderSubmitResult result,
+            NetworkCommandAdmissionCode result,
             bool isReplay,
             int committedTick)
         {

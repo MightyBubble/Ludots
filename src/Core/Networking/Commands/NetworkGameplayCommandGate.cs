@@ -1,5 +1,4 @@
 using System;
-using Ludots.Core.Gameplay.GAS.Orders;
 
 namespace Ludots.Core.Networking.Commands
 {
@@ -32,15 +31,22 @@ namespace Ludots.Core.Networking.Commands
             Phase = NetworkGameplayCommandPhase.Completed;
         }
 
-        public bool TryAdmit(out OrderSubmitResult rejection)
+        public bool TryAdmit(out NetworkCommandAdmissionCode rejection)
         {
-            rejection = Phase switch
+            switch (Phase)
             {
-                NetworkGameplayCommandPhase.WaitingForMatch => OrderSubmitResult.NetworkMatchNotStarted,
-                NetworkGameplayCommandPhase.Completed => OrderSubmitResult.NetworkMatchCompleted,
-                _ => default,
-            };
-            return Phase == NetworkGameplayCommandPhase.Active;
+                case NetworkGameplayCommandPhase.WaitingForMatch:
+                    rejection = NetworkCommandAdmissionCode.NetworkMatchNotStarted;
+                    return false;
+                case NetworkGameplayCommandPhase.Active:
+                    rejection = default;
+                    return true;
+                case NetworkGameplayCommandPhase.Completed:
+                    rejection = NetworkCommandAdmissionCode.NetworkMatchCompleted;
+                    return false;
+                default:
+                    throw new InvalidOperationException($"Unknown network gameplay command phase {Phase}.");
+            }
         }
     }
 }

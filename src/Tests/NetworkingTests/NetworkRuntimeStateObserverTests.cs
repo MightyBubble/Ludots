@@ -18,13 +18,13 @@ public sealed class NetworkRuntimeStateObserverTests
         var observer = CreateObserver();
         var seat = new NetworkCommandSeat(slot: 0, generation: 1, playerId: 1);
         NetworkCommandAdmissionOutcome scheduled = Outcome(
-            in seat, sequence: 1, OrderAdmissionStage.NetworkIntake, OrderSubmitResult.NetworkScheduled);
+            in seat, sequence: 1, NetworkCommandAdmissionStage.NetworkIntake, NetworkCommandAdmissionCode.NetworkScheduled);
         NetworkCommandAdmissionOutcome global = Outcome(
-            in seat, sequence: 1, OrderAdmissionStage.GlobalIntake, OrderSubmitResult.Queued);
+            in seat, sequence: 1, NetworkCommandAdmissionStage.GlobalIntake, NetworkCommandAdmissionCode.Queued);
         NetworkCommandAdmissionOutcome waiting = Outcome(
-            in seat, sequence: 1, OrderAdmissionStage.EntityIntake, OrderSubmitResult.Queued);
+            in seat, sequence: 1, NetworkCommandAdmissionStage.EntityIntake, NetworkCommandAdmissionCode.Queued);
         NetworkCommandAdmissionOutcome terminal = Outcome(
-            in seat, sequence: 1, OrderAdmissionStage.EntityIntake, OrderSubmitResult.Activated);
+            in seat, sequence: 1, NetworkCommandAdmissionStage.EntityIntake, NetworkCommandAdmissionCode.Activated);
 
         observer.OnClientAdmission(in scheduled);
         observer.OnClientAdmission(in global);
@@ -42,8 +42,8 @@ public sealed class NetworkRuntimeStateObserverTests
         Assert.Multiple(() =>
         {
             Assert.That(observer.ClientAdmissionRevision, Is.EqualTo(4));
-            Assert.That(observer.LastClientAdmission.Stage, Is.EqualTo(OrderAdmissionStage.EntityIntake));
-            Assert.That(observer.LastClientAdmission.Result, Is.EqualTo(OrderSubmitResult.Activated));
+            Assert.That(observer.LastClientAdmission.Stage, Is.EqualTo(NetworkCommandAdmissionStage.EntityIntake));
+            Assert.That(observer.LastClientAdmission.Result, Is.EqualTo(NetworkCommandAdmissionCode.Activated));
         });
     }
 
@@ -53,13 +53,13 @@ public sealed class NetworkRuntimeStateObserverTests
         var observer = CreateObserver();
         var seat = new NetworkCommandSeat(slot: 0, generation: 1, playerId: 1);
         NetworkCommandAdmissionOutcome scheduled = Outcome(
-            in seat, sequence: 1, OrderAdmissionStage.NetworkIntake, OrderSubmitResult.NetworkScheduled);
+            in seat, sequence: 1, NetworkCommandAdmissionStage.NetworkIntake, NetworkCommandAdmissionCode.NetworkScheduled);
         NetworkCommandAdmissionOutcome global = Outcome(
-            in seat, sequence: 1, OrderAdmissionStage.GlobalIntake, OrderSubmitResult.Queued);
+            in seat, sequence: 1, NetworkCommandAdmissionStage.GlobalIntake, NetworkCommandAdmissionCode.Queued);
         NetworkCommandAdmissionOutcome queued = Outcome(
-            in seat, sequence: 1, OrderAdmissionStage.EntityIntake, OrderSubmitResult.Queued);
+            in seat, sequence: 1, NetworkCommandAdmissionStage.EntityIntake, NetworkCommandAdmissionCode.Queued);
         NetworkCommandAdmissionOutcome activated = Outcome(
-            in seat, sequence: 1, OrderAdmissionStage.EntityIntake, OrderSubmitResult.Activated);
+            in seat, sequence: 1, NetworkCommandAdmissionStage.EntityIntake, NetworkCommandAdmissionCode.Activated);
 
         observer.OnClientAdmission(in scheduled);
         observer.OnClientAdmission(in global);
@@ -74,10 +74,10 @@ public sealed class NetworkRuntimeStateObserverTests
         Assert.Multiple(() =>
         {
             Assert.That(count, Is.EqualTo(4));
-            Assert.That(progress[0].Result, Is.EqualTo(OrderSubmitResult.NetworkScheduled));
-            Assert.That(progress[1].Stage, Is.EqualTo(OrderAdmissionStage.GlobalIntake));
-            Assert.That(progress[2].Result, Is.EqualTo(OrderSubmitResult.Queued));
-            Assert.That(progress[3].Result, Is.EqualTo(OrderSubmitResult.Activated));
+            Assert.That(progress[0].Result, Is.EqualTo(NetworkCommandAdmissionCode.NetworkScheduled));
+            Assert.That(progress[1].Stage, Is.EqualTo(NetworkCommandAdmissionStage.GlobalIntake));
+            Assert.That(progress[2].Result, Is.EqualTo(NetworkCommandAdmissionCode.Queued));
+            Assert.That(progress[3].Result, Is.EqualTo(NetworkCommandAdmissionCode.Activated));
         });
     }
 
@@ -91,8 +91,8 @@ public sealed class NetworkRuntimeStateObserverTests
             NetworkCommandAdmissionOutcome outcome = Outcome(
                 in seat,
                 sequence,
-                OrderAdmissionStage.EntityIntake,
-                OrderSubmitResult.Activated);
+                NetworkCommandAdmissionStage.EntityIntake,
+                NetworkCommandAdmissionCode.Activated);
             observer.OnClientAdmission(in outcome);
         }
 
@@ -111,9 +111,9 @@ public sealed class NetworkRuntimeStateObserverTests
         var observer = CreateObserver();
         var seat = new NetworkCommandSeat(slot: 0, generation: 1, playerId: 1);
         NetworkCommandAdmissionOutcome activated = Outcome(
-            in seat, sequence: 1, OrderAdmissionStage.EntityIntake, OrderSubmitResult.Activated);
+            in seat, sequence: 1, NetworkCommandAdmissionStage.EntityIntake, NetworkCommandAdmissionCode.Activated);
         NetworkCommandAdmissionOutcome rejected = Outcome(
-            in seat, sequence: 1, OrderAdmissionStage.NetworkIntake, OrderSubmitResult.NetworkActorNotControlled);
+            in seat, sequence: 1, NetworkCommandAdmissionStage.NetworkIntake, NetworkCommandAdmissionCode.NetworkActorNotControlled);
 
         observer.OnClientAdmission(in activated);
         observer.OnClientAdmission(in rejected);
@@ -121,7 +121,7 @@ public sealed class NetworkRuntimeStateObserverTests
         Assert.Multiple(() =>
         {
             Assert.That(observer.ClientAdmissionRevision, Is.EqualTo(2));
-            Assert.That(observer.LastClientAdmission.Result, Is.EqualTo(OrderSubmitResult.NetworkActorNotControlled));
+            Assert.That(observer.LastClientAdmission.Result, Is.EqualTo(NetworkCommandAdmissionCode.NetworkActorNotControlled));
         });
     }
 
@@ -131,11 +131,11 @@ public sealed class NetworkRuntimeStateObserverTests
         var observer = CreateObserver();
         var seat = new NetworkCommandSeat(slot: 0, generation: 1, playerId: 1);
         NetworkCommandAdmissionOutcome firstScheduled = Outcome(
-            in seat, sequence: 1, OrderAdmissionStage.NetworkIntake, OrderSubmitResult.NetworkScheduled);
+            in seat, sequence: 1, NetworkCommandAdmissionStage.NetworkIntake, NetworkCommandAdmissionCode.NetworkScheduled);
         NetworkCommandAdmissionOutcome secondScheduled = Outcome(
-            in seat, sequence: 2, OrderAdmissionStage.NetworkIntake, OrderSubmitResult.NetworkScheduled);
+            in seat, sequence: 2, NetworkCommandAdmissionStage.NetworkIntake, NetworkCommandAdmissionCode.NetworkScheduled);
         NetworkCommandAdmissionOutcome firstRejected = Outcome(
-            in seat, sequence: 1, OrderAdmissionStage.EntityIntake, OrderSubmitResult.ValidationRejected);
+            in seat, sequence: 1, NetworkCommandAdmissionStage.EntityIntake, NetworkCommandAdmissionCode.RejectedValidation);
 
         observer.OnClientAdmission(in firstScheduled);
         observer.OnClientAdmission(in secondScheduled);
@@ -144,9 +144,9 @@ public sealed class NetworkRuntimeStateObserverTests
         Assert.Multiple(() =>
         {
             Assert.That(observer.TryGetClientAdmission(1, out NetworkCommandAdmissionOutcome first), Is.True);
-            Assert.That(first.Result, Is.EqualTo(OrderSubmitResult.ValidationRejected));
+            Assert.That(first.Result, Is.EqualTo(NetworkCommandAdmissionCode.RejectedValidation));
             Assert.That(observer.TryGetClientAdmission(2, out NetworkCommandAdmissionOutcome second), Is.True);
-            Assert.That(second.Result, Is.EqualTo(OrderSubmitResult.NetworkScheduled));
+            Assert.That(second.Result, Is.EqualTo(NetworkCommandAdmissionCode.NetworkScheduled));
             Assert.That(observer.LastClientAdmission.ClientBatchSequence, Is.EqualTo(2));
             Assert.That(observer.ClientAdmissionHistoryMissCount, Is.Zero);
         });
@@ -160,15 +160,15 @@ public sealed class NetworkRuntimeStateObserverTests
         NetworkCommandAdmissionOutcome firstActivated = Outcome(
             in seat,
             sequence: 7,
-            OrderAdmissionStage.EntityIntake,
-            OrderSubmitResult.Activated,
+            NetworkCommandAdmissionStage.EntityIntake,
+            NetworkCommandAdmissionCode.Activated,
             actorCount: 2,
             admissionBatchIndex: 0);
         NetworkCommandAdmissionOutcome secondRejected = Outcome(
             in seat,
             sequence: 7,
-            OrderAdmissionStage.EntityIntake,
-            OrderSubmitResult.NetworkActorNotControlled,
+            NetworkCommandAdmissionStage.EntityIntake,
+            NetworkCommandAdmissionCode.RejectedInvalidActor,
             actorCount: 2,
             admissionBatchIndex: 1);
 
@@ -178,11 +178,11 @@ public sealed class NetworkRuntimeStateObserverTests
         Assert.Multiple(() =>
         {
             Assert.That(observer.TryGetClientActorAdmission(7, 0, out NetworkCommandAdmissionOutcome first), Is.True);
-            Assert.That(first.Result, Is.EqualTo(OrderSubmitResult.Activated));
+            Assert.That(first.Result, Is.EqualTo(NetworkCommandAdmissionCode.Activated));
             Assert.That(observer.TryGetClientActorAdmission(7, 1, out NetworkCommandAdmissionOutcome second), Is.True);
-            Assert.That(second.Result, Is.EqualTo(OrderSubmitResult.NetworkActorNotControlled));
+            Assert.That(second.Result, Is.EqualTo(NetworkCommandAdmissionCode.RejectedInvalidActor));
             Assert.That(observer.TryGetClientAdmission(7, out NetworkCommandAdmissionOutcome summary), Is.True);
-            Assert.That(summary.Result, Is.EqualTo(OrderSubmitResult.NetworkActorNotControlled));
+            Assert.That(summary.Result, Is.EqualTo(NetworkCommandAdmissionCode.RejectedInvalidActor));
         });
     }
 
@@ -197,22 +197,22 @@ public sealed class NetworkRuntimeStateObserverTests
         NetworkCommandAdmissionOutcome first = Outcome(
             in seat,
             sequence: 8,
-            OrderAdmissionStage.EntityIntake,
-            OrderSubmitResult.Activated,
+            NetworkCommandAdmissionStage.EntityIntake,
+            NetworkCommandAdmissionCode.Activated,
             actorCount: 2,
             admissionBatchIndex: 0);
         NetworkCommandAdmissionOutcome second = Outcome(
             in seat,
             sequence: 9,
-            OrderAdmissionStage.EntityIntake,
-            OrderSubmitResult.NetworkActorNotControlled,
+            NetworkCommandAdmissionStage.EntityIntake,
+            NetworkCommandAdmissionCode.RejectedInvalidActor,
             actorCount: 2,
             admissionBatchIndex: 1);
         NetworkCommandAdmissionOutcome stale = Outcome(
             in seat,
             sequence: 7,
-            OrderAdmissionStage.NetworkIntake,
-            OrderSubmitResult.NetworkScheduled);
+            NetworkCommandAdmissionStage.NetworkIntake,
+            NetworkCommandAdmissionCode.NetworkScheduled);
         observer.OnClientAdmission(in first);
         observer.OnClientAdmission(in second);
         observer.OnClientAdmission(in stale);
@@ -242,14 +242,14 @@ public sealed class NetworkRuntimeStateObserverTests
         NetworkCommandAdmissionOutcome newSessionFirst = Outcome(
             in seat,
             sequence: 1,
-            OrderAdmissionStage.NetworkIntake,
-            OrderSubmitResult.NetworkScheduled);
+            NetworkCommandAdmissionStage.NetworkIntake,
+            NetworkCommandAdmissionCode.NetworkScheduled);
         observer.OnClientAdmission(in newSessionFirst);
 
         Assert.Multiple(() =>
         {
             Assert.That(observer.TryGetClientAdmission(1, out NetworkCommandAdmissionOutcome observed), Is.True);
-            Assert.That(observed.Result, Is.EqualTo(OrderSubmitResult.NetworkScheduled));
+            Assert.That(observed.Result, Is.EqualTo(NetworkCommandAdmissionCode.NetworkScheduled));
             Assert.That(observer.LastClientAdmission.ClientBatchSequence, Is.EqualTo(1));
             Assert.That(observer.ClientAdmissionRevision, Is.EqualTo(1));
             Assert.That(observer.ClientAdmissionHistoryMissCount, Is.Zero);
@@ -267,8 +267,8 @@ public sealed class NetworkRuntimeStateObserverTests
         NetworkCommandAdmissionOutcome oldSessionRejection = Outcome(
             in seat,
             sequence: 1,
-            OrderAdmissionStage.NetworkIntake,
-            OrderSubmitResult.NetworkActorNotControlled);
+            NetworkCommandAdmissionStage.NetworkIntake,
+            NetworkCommandAdmissionCode.NetworkActorNotControlled);
         observer.OnClientAdmission(in oldSessionRejection);
 
         SessionHandshakeResponse nextHandshake = AcceptedHandshake(sessionEpoch: 11);
@@ -276,15 +276,15 @@ public sealed class NetworkRuntimeStateObserverTests
         NetworkCommandAdmissionOutcome newSessionAdmission = Outcome(
             in seat,
             sequence: 1,
-            OrderAdmissionStage.NetworkIntake,
-            OrderSubmitResult.NetworkScheduled);
+            NetworkCommandAdmissionStage.NetworkIntake,
+            NetworkCommandAdmissionCode.NetworkScheduled);
         observer.OnClientAdmission(in newSessionAdmission);
 
         Assert.Multiple(() =>
         {
             Assert.That(observer.TryGetClientAdmission(1, out NetworkCommandAdmissionOutcome observed), Is.True);
-            Assert.That(observed.Result, Is.EqualTo(OrderSubmitResult.NetworkScheduled));
-            Assert.That(observer.LastClientAdmission.Result, Is.EqualTo(OrderSubmitResult.NetworkScheduled));
+            Assert.That(observed.Result, Is.EqualTo(NetworkCommandAdmissionCode.NetworkScheduled));
+            Assert.That(observer.LastClientAdmission.Result, Is.EqualTo(NetworkCommandAdmissionCode.NetworkScheduled));
             Assert.That(observer.ClientAdmissionRevision, Is.EqualTo(1));
         });
     }
@@ -300,8 +300,8 @@ public sealed class NetworkRuntimeStateObserverTests
         NetworkCommandAdmissionOutcome admission = Outcome(
             in seat,
             sequence: 3,
-            OrderAdmissionStage.EntityIntake,
-            OrderSubmitResult.Activated);
+            NetworkCommandAdmissionStage.EntityIntake,
+            NetworkCommandAdmissionCode.Activated);
         observer.OnClientAdmission(in admission);
 
         SessionHandshakeResponse reconnectHandshake = AcceptedHandshake(sessionEpoch: 10);
@@ -310,7 +310,7 @@ public sealed class NetworkRuntimeStateObserverTests
         Assert.Multiple(() =>
         {
             Assert.That(observer.TryGetClientAdmission(3, out NetworkCommandAdmissionOutcome observed), Is.True);
-            Assert.That(observed.Result, Is.EqualTo(OrderSubmitResult.Activated));
+            Assert.That(observed.Result, Is.EqualTo(NetworkCommandAdmissionCode.Activated));
             Assert.That(observer.ClientAdmissionRevision, Is.EqualTo(1));
         });
     }
@@ -326,8 +326,8 @@ public sealed class NetworkRuntimeStateObserverTests
         NetworkCommandAdmissionOutcome oldGenerationRejection = Outcome(
             in firstSeat,
             sequence: 1,
-            OrderAdmissionStage.NetworkIntake,
-            OrderSubmitResult.NetworkActorNotControlled);
+            NetworkCommandAdmissionStage.NetworkIntake,
+            NetworkCommandAdmissionCode.NetworkActorNotControlled);
         observer.OnClientAdmission(in oldGenerationRejection);
 
         SessionHandshakeResponse nextGenerationHandshake = AcceptedHandshake(sessionEpoch: 10, seatGeneration: 2);
@@ -336,15 +336,15 @@ public sealed class NetworkRuntimeStateObserverTests
         NetworkCommandAdmissionOutcome nextGenerationAdmission = Outcome(
             in nextSeat,
             sequence: 1,
-            OrderAdmissionStage.NetworkIntake,
-            OrderSubmitResult.NetworkScheduled);
+            NetworkCommandAdmissionStage.NetworkIntake,
+            NetworkCommandAdmissionCode.NetworkScheduled);
         observer.OnClientAdmission(in nextGenerationAdmission);
 
         Assert.Multiple(() =>
         {
             Assert.That(observer.TryGetClientAdmission(1, out NetworkCommandAdmissionOutcome observed), Is.True);
             Assert.That(observed.SeatGeneration, Is.EqualTo(2));
-            Assert.That(observed.Result, Is.EqualTo(OrderSubmitResult.NetworkScheduled));
+            Assert.That(observed.Result, Is.EqualTo(NetworkCommandAdmissionCode.NetworkScheduled));
             Assert.That(observer.ClientAdmissionRevision, Is.EqualTo(1));
         });
     }
@@ -360,8 +360,8 @@ public sealed class NetworkRuntimeStateObserverTests
     private static NetworkCommandAdmissionOutcome Outcome(
         in NetworkCommandSeat seat,
         ulong sequence,
-        OrderAdmissionStage stage,
-        OrderSubmitResult result,
+        NetworkCommandAdmissionStage stage,
+        NetworkCommandAdmissionCode code,
         int actorCount = 1,
         ushort admissionBatchIndex = 0) =>
         new(
@@ -373,7 +373,7 @@ public sealed class NetworkRuntimeStateObserverTests
             admissionBatchId: 30,
             admissionBatchIndex,
             stage,
-            result,
+            code,
             isReplay: false,
             committedTick: 10);
 

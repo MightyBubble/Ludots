@@ -105,8 +105,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             OrderTypeRegistry registry,
             OrderRuleRegistry? orderRuleRegistry,
             int currentStep,
-            int stepRateHz,
-            OrderAdmissionResultBuffer? admissionResults = null)
+            int stepRateHz)
         {
             if (stepRateHz <= 0)
             {
@@ -132,49 +131,9 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 return admission;
             }
 
-            OrderBuffer before = default;
-            int expectedCancellations = 0;
-            if (OrderAdmissionTracking.HasWaitingNetworkFeedback(in buffer))
-            {
-                before = buffer;
-                Preview(
-                    world,
-                    entity,
-                    in order,
-                    registry,
-                    orderRuleRegistry,
-                    currentStep,
-                    stepRateHz,
-                    out OrderBuffer projected);
-                expectedCancellations = OrderAdmissionTracking.CountRemovedWaiting(in before, in projected);
-                if (expectedCancellations > 0 &&
-                    (admissionResults == null || admissionResults.AvailableCapacity < expectedCancellations))
-                {
-                    throw new InvalidOperationException(
-                        $"Submitting order {order.OrderId} would cancel {expectedCancellations} network-admitted waiting orders without matching result capacity.");
-                }
-            }
-
-            OrderSubmitResult result = IsQueuedMode(order.SubmitMode)
+            return IsQueuedMode(order.SubmitMode)
                 ? HandleQueuedMode(ref buffer, in order, in config, currentStep, stepRateHz)
                 : HandleImmediateMode(world, entity, ref buffer, in order, in config, registry, orderRuleRegistry, currentStep, stepRateHz);
-            if (expectedCancellations > 0)
-            {
-                int actualCancellations = OrderAdmissionTracking.CountRemovedWaiting(in before, in buffer);
-                if (actualCancellations != expectedCancellations)
-                {
-                    throw new InvalidOperationException(
-                        $"Order {order.OrderId} cancellation count changed after preflight: expected {expectedCancellations}, got {actualCancellations}.");
-                }
-
-                OrderAdmissionTracking.PublishRemovedWaiting(
-                    admissionResults!,
-                    in before,
-                    in buffer,
-                    OrderSubmitResult.Cancelled);
-            }
-
-            return result;
         }
 
         private static OrderSubmitResult HandleQueuedMode(
@@ -896,8 +855,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         public static void CancelAll(
             World world,
             Entity entity,
-            OrderTypeRegistry registry,
-            OrderAdmissionResultBuffer? admissionResults = null)
+            OrderTypeRegistry registry)
         {
             if (!world.IsAlive(entity) || !world.Has<OrderBuffer>(entity))
             {
@@ -905,21 +863,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
 
             ref var buffer = ref world.Get<OrderBuffer>(entity);
-            int correlatedWaiting = 0;
-            if (buffer.HasPending && OrderAdmissionTracking.RequiresNetworkFeedback(in buffer.PendingOrder.Order))
-            {
-                correlatedWaiting++;
-            }
-
-            for (int i = 0; i < buffer.QueuedCount; i++)
-            {
-                Order queued = buffer.GetQueued(i).Order;
-                if (OrderAdmissionTracking.RequiresNetworkFeedback(in queued))
-                {
-                    correlatedWaiting++;
-                }
-            }
-
             int terminalResultCount = 0;
             if (buffer.HasActive)
             {
@@ -943,29 +886,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 registry.EnsureTerminalResultCapacity(terminalResultCount);
             }
 
-            if (correlatedWaiting > 0)
-            {
-                if (admissionResults == null || admissionResults.AvailableCapacity < correlatedWaiting)
-                {
-                    throw new InvalidOperationException(
-                        $"Cancelling {correlatedWaiting} admitted waiting orders requires matching result capacity.");
-                }
-
-                if (buffer.HasPending && OrderAdmissionTracking.RequiresNetworkFeedback(in buffer.PendingOrder.Order))
-                {
-                    PublishCancellation(admissionResults, in buffer.PendingOrder.Order);
-                }
-
-                for (int i = 0; i < buffer.QueuedCount; i++)
-                {
-                    Order queued = buffer.GetQueued(i).Order;
-                    if (OrderAdmissionTracking.RequiresNetworkFeedback(in queued))
-                    {
-                        PublishCancellation(admissionResults, in queued);
-                    }
-                }
-            }
-
             FinalizeActive(
                 world,
                 entity,
@@ -977,21 +897,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             ReleaseQueuedOrders(world, ref buffer, registry);
             ReleasePendingOrder(world, ref buffer, registry);
             buffer.Clear();
-        }
-
-        private static void PublishCancellation(
-            OrderAdmissionResultBuffer admissionResults,
-            in Order order)
-        {
-            var outcome = new OrderAdmissionOutcome(
-                in order,
-                OrderAdmissionStage.EntityIntake,
-                OrderSubmitResult.Cancelled);
-            if (!admissionResults.TryWrite(in outcome))
-            {
-                throw new InvalidOperationException(
-                    $"Order cancellation result capacity {admissionResults.Capacity} is exhausted.");
-            }
         }
 
         private static bool FinalizeActive(
