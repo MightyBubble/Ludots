@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using Arch.Core;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -8,7 +9,11 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Registry;
+using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
@@ -138,7 +143,11 @@ namespace Ludots.Tests.GAS
                 PeriodTicks = 0,
                 Modifiers = modifiers,
             });
-            FinalizeBuffTemplates(templates);
+            FinalizeBuffTemplates(
+                templates,
+                out GraphProgramRegistry programs,
+                out PresetTypeRegistry presetTypes,
+                out BuiltinHandlerRegistry builtinHandlers);
 
             var requests = new EffectRequestQueue();
             var aggregateDirty = new Ludots.Core.Gameplay.GAS.AttributeAggregateDirtyRegistry();
@@ -152,7 +161,23 @@ namespace Ludots.Tests.GAS
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                 tagOps: tagOps,
                 aggregateDirty: aggregateDirty);
-            var application = new EffectApplicationSystem(world, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, new Ludots.Core.Engine.DiscreteClock(), requests, templates: templates, tagOps: tagOps, aggregateDirty: aggregateDirty);
+            var graphApi = new GasGraphRuntimeApi(world, tagOps: tagOps) { AggregateDirty = aggregateDirty };
+            var phaseExecutor = new EffectPhaseExecutor(
+                programs,
+                presetTypes,
+                builtinHandlers,
+                GasGraphOpHandlerTable.Instance,
+                templates);
+            var application = new EffectApplicationSystem(
+                world,
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new Ludots.Core.Engine.DiscreteClock(),
+                requests,
+                templates: templates,
+                phaseExecutor: phaseExecutor,
+                graphApi: graphApi,
+                tagOps: tagOps,
+                aggregateDirty: aggregateDirty);
             var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps, aggregateDirty: tagOps.AggregateDirty);
 
             requests.Publish(new EffectRequest
@@ -346,6 +371,92 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void RelationshipCatalogInstaller_RegistersBandsAndCompilesCallbacksAndSynergies()
+        {
+            var catalog = new RelationshipCatalogConfig
+            {
+                Types =
+                {
+                    new RelationshipTypeConfig { Id = "SocialBond", IsSymmetric = false }
+                },
+                Metrics =
+                {
+                    new RelationshipMetricConfig { Id = "Loyalty", MinValue = -100, MaxValue = 100, DefaultValue = 0 }
+                },
+                Flags =
+                {
+                    new RelationshipFlagConfig { Id = "Trusted" }
+                },
+                Bands =
+                {
+                    new RelationshipBandConfig
+                    {
+                        Id = "TrustedBand",
+                        TypeId = "SocialBond",
+                        MetricId = "Loyalty",
+                        FlagId = "Trusted",
+                        Threshold = 60,
+                        Comparison = RelationshipBandComparison.GreaterOrEqual
+                    }
+                },
+                Callbacks =
+                {
+                    new RelationshipCallbackConfig
+                    {
+                        Id = "TrustedCallback",
+                        TypeId = "SocialBond",
+                        MetricId = "Loyalty",
+                        Min = 60,
+                        EventKey = "Relationship.Trusted",
+                        AddTagsToTarget = { "Tests.Relationship.Trusted" }
+                    }
+                },
+                Synergies =
+                {
+                    new RelationshipSynergyConfig
+                    {
+                        Id = "TrustedPairSynergy",
+                        RequireAllTags = { "Tests.Relationship.Trusted" },
+                        MinimumCount = 2,
+                        ApplyTagsToTeam = { "Tests.Relationship.TeamSynergy" },
+                        EventKey = "Relationship.Synergy"
+                    }
+                }
+            };
+            var types = new RelationshipTypeRegistry();
+            var metrics = new RelationshipMetricRegistry();
+            var flags = new RelationshipFlagRegistry();
+            var bands = new RelationshipBandRegistry();
+            var collections = new EntityCollectionStore(
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                initialCollectionCapacity: 8,
+                initialRowCapacity: 32);
+
+            RelationshipCatalogRuntime runtime = RelationshipCatalogInstaller.Install(
+                catalog,
+                types,
+                metrics,
+                flags,
+                bands,
+                collections);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(bands.Bands, Has.Count.EqualTo(1));
+                Assert.That(bands.Bands[0].TypeId, Is.EqualTo(types.GetId("SocialBond")));
+                Assert.That(bands.Bands[0].MetricId, Is.EqualTo(metrics.GetId("Loyalty")));
+                Assert.That(bands.Bands[0].FlagId, Is.EqualTo(flags.GetId("Trusted")));
+                Assert.That(runtime.Callbacks, Has.Count.EqualTo(1));
+                Assert.That(runtime.Callbacks[0].TypeId, Is.EqualTo(types.GetId("SocialBond")));
+                Assert.That(runtime.Callbacks[0].MetricId, Is.EqualTo(metrics.GetId("Loyalty")));
+                Assert.That(runtime.Callbacks[0].AddTagsToTarget, Has.Length.EqualTo(1));
+                Assert.That(runtime.Synergies, Has.Count.EqualTo(1));
+                Assert.That(runtime.Synergies[0].RequiredTags, Has.Length.EqualTo(1));
+                Assert.That(runtime.Synergies[0].StateTagId, Is.GreaterThan(0));
+            });
+        }
+
+        [Test]
         public void RelationshipChangeBuffer_GrowsInsteadOfDroppingRecords()
         {
             var buffer = new RelationshipChangeBuffer(capacity: 1);
@@ -406,9 +517,14 @@ namespace Ludots.Tests.GAS
                 new RelationshipReverseIndex(world));
         }
 
-        private static void FinalizeBuffTemplates(EffectTemplateRegistry templates)
+        private static void FinalizeBuffTemplates(
+            EffectTemplateRegistry templates,
+            out GraphProgramRegistry programs,
+            out PresetTypeRegistry presetTypes,
+            out BuiltinHandlerRegistry builtinHandlers)
         {
-            var presetTypes = new PresetTypeRegistry();
+            programs = new GraphProgramRegistry();
+            presetTypes = new PresetTypeRegistry();
             var buff = new PresetTypeDefinition
             {
                 Type = EffectPresetType.Buff,
@@ -420,13 +536,13 @@ namespace Ludots.Tests.GAS
                 PhaseHandler.Builtin(BuiltinHandlerId.ApplyModifiers);
             presetTypes.Register(in buff);
 
-            var builtinHandlers = new BuiltinHandlerRegistry();
+            builtinHandlers = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(builtinHandlers);
             GasTestEffectExecutionPlanFinalizer.FinalizeAll(
                 templates,
                 presetTypes,
                 builtinHandlers,
-                new GraphProgramRegistry(),
+                programs,
                 "Test/RelationshipCoreTests.json");
         }
 

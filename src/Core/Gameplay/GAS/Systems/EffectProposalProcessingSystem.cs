@@ -1820,7 +1820,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 targetPos,
                 EffectPhaseId.OnPropose,
                 in tpl.PhaseGraphBindings,
-                tpl.PresetTypeId,
+                tpl.EffectivePresetTypeId,
                 proposal.CategoryId,
                 proposal.TemplateId,
                 in mergedConfig,

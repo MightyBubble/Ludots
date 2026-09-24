@@ -149,7 +149,9 @@ namespace Ludots.Core.Gameplay.Relationships
             ArgumentNullException.ThrowIfNull(collections);
 
             var runtime = new RelationshipCatalogRuntime();
-            
+
+            runtime.Callbacks.AddRange(CompileCallbacks(catalog.Callbacks, types, metrics));
+            runtime.Synergies.AddRange(CompileSynergies(catalog.Synergies));
             runtime._knowledgeGrants = CompileKnowledgeGrants(catalog.KnowledgeGrants, types, collections);
 
             return runtime;
@@ -194,6 +196,87 @@ namespace Ludots.Core.Gameplay.Relationships
 
             Array.Resize(ref ids, count);
             return ids;
+        }
+
+        private static RelationshipCallbackRule[] CompileCallbacks(
+            List<RelationshipCallbackConfig>? configs,
+            RelationshipTypeRegistry types,
+            RelationshipMetricRegistry metrics)
+        {
+            if (configs == null || configs.Count == 0)
+            {
+                return Array.Empty<RelationshipCallbackRule>();
+            }
+
+            var rules = new RelationshipCallbackRule[configs.Count];
+            int count = 0;
+            for (int i = 0; i < configs.Count; i++)
+            {
+                RelationshipCallbackConfig? config = configs[i];
+                if (config == null)
+                {
+                    continue;
+                }
+
+                rules[count++] = new RelationshipCallbackRule(
+                    RequireNonEmpty(config.Id, $"relationship catalog callbacks[{i}].id"),
+                    types.GetId(RequireNonEmpty(config.TypeId, $"relationship catalog callbacks[{i}].typeId")),
+                    metrics.GetId(RequireNonEmpty(config.MetricId, $"relationship catalog callbacks[{i}].metricId")),
+                    config.Min,
+                    config.Max,
+                    new EventKey(config.EventKey ?? string.Empty),
+                    new EventKey(config.ExitEventKey ?? string.Empty),
+                    ResolveTags(config.AddTagsToSource),
+                    ResolveTags(config.AddTagsToTarget),
+                    ResolveTags(config.AddTagsToSourceTeam),
+                    ResolveTags(config.AddTagsToTargetTeam),
+                    ResolveTags(config.RemoveTagsFromSource),
+                    ResolveTags(config.RemoveTagsFromTarget),
+                    ResolveTags(config.RemoveTagsFromSourceTeam),
+                    ResolveTags(config.RemoveTagsFromTargetTeam));
+            }
+
+            if (count == rules.Length)
+            {
+                return rules;
+            }
+
+            Array.Resize(ref rules, count);
+            return rules;
+        }
+
+        private static RelationshipSynergyRule[] CompileSynergies(List<RelationshipSynergyConfig>? configs)
+        {
+            if (configs == null || configs.Count == 0)
+            {
+                return Array.Empty<RelationshipSynergyRule>();
+            }
+
+            var rules = new RelationshipSynergyRule[configs.Count];
+            int count = 0;
+            for (int i = 0; i < configs.Count; i++)
+            {
+                RelationshipSynergyConfig? config = configs[i];
+                if (config == null)
+                {
+                    continue;
+                }
+
+                rules[count++] = new RelationshipSynergyRule(
+                    RequireNonEmpty(config.Id, $"relationship catalog synergies[{i}].id"),
+                    ResolveTags(config.RequireAllTags),
+                    config.MinimumCount <= 0 ? 1 : config.MinimumCount,
+                    ResolveTags(config.ApplyTagsToTeam),
+                    new EventKey(config.EventKey ?? string.Empty));
+            }
+
+            if (count == rules.Length)
+            {
+                return rules;
+            }
+
+            Array.Resize(ref rules, count);
+            return rules;
         }
 
         private static KnowledgeRelationCollectionGrant[] CompileKnowledgeGrants(
