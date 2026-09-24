@@ -376,6 +376,330 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_primitive_ring_raylib",
+      "name": "Raylib Micro - 圆环图元",
+      "selectors": [
+        "$performer_raylib_micro_primitive_ring"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_primitive_line_raylib",
+      "name": "Raylib Micro - 线段图元",
+      "selectors": [
+        "$performer_raylib_micro_primitive_line"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_primitive_sprite_emitter_raylib",
+      "name": "Raylib Micro - 面片粒子发射器",
+      "selectors": [
+        "$performer_raylib_micro_primitive_sprite_emitter"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_primitive_ribbon_emitter_raylib",
+      "name": "Raylib Micro - 带状发射器",
+      "selectors": [
+        "$performer_raylib_micro_primitive_ribbon_emitter"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_primitive_track_emitter_raylib",
+      "name": "Raylib Micro - 轨迹发射器",
+      "selectors": [
+        "$performer_raylib_micro_primitive_track_emitter"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_primitive_ring_emitter_raylib",
+      "name": "Raylib Micro - 环形发射器",
+      "selectors": [
+        "$performer_raylib_micro_primitive_ring_emitter"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_primitive_model_emitter_raylib",
+      "name": "Raylib Micro - 模型粒子发射器",
+      "selectors": [
+        "$performer_raylib_micro_primitive_model_emitter"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_semantic_explosion_raylib",
+      "name": "Raylib Micro - 爆炸命中",
+      "selectors": [
+        "$performer_raylib_micro_semantic_explosion"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_semantic_laser_raylib",
+      "name": "Raylib Micro - 激光命中",
+      "selectors": [
+        "$performer_raylib_micro_semantic_laser"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_semantic_lightning_raylib",
+      "name": "Raylib Micro - 闪电链路",
+      "selectors": [
+        "$performer_raylib_micro_semantic_lightning"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_semantic_projectile_trail_raylib",
+      "name": "Raylib Micro - 投射物轨迹",
+      "selectors": [
+        "$performer_raylib_micro_semantic_projectile_trail"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_semantic_slash_raylib",
+      "name": "Raylib Micro - 近战斩击",
+      "selectors": [
+        "$performer_raylib_micro_semantic_slash"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_semantic_shield_raylib",
+      "name": "Raylib Micro - 护盾展开",
+      "selectors": [
+        "$performer_raylib_micro_semantic_shield"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_semantic_heal_raylib",
+      "name": "Raylib Micro - 治疗脉冲",
+      "selectors": [
+        "$performer_raylib_micro_semantic_heal"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_semantic_burn_raylib",
+      "name": "Raylib Micro - 灼烧地面",
+      "selectors": [
+        "$performer_raylib_micro_semantic_burn"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_semantic_poison_raylib",
+      "name": "Raylib Micro - 毒雾地面",
+      "selectors": [
+        "$performer_raylib_micro_semantic_poison"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_semantic_frost_raylib",
+      "name": "Raylib Micro - 冰冻地面",
+      "selectors": [
+        "$performer_raylib_micro_semantic_frost"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_semantic_portal_raylib",
+      "name": "Raylib Micro - 传送门",
+      "selectors": [
+        "$performer_raylib_micro_semantic_portal"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_semantic_target_lock_raylib",
+      "name": "Raylib Micro - 目标锁定",
+      "selectors": [
+        "$performer_raylib_micro_semantic_target_lock"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_semantic_selection_raylib",
+      "name": "Raylib Micro - 对象选中",
+      "selectors": [
+        "$performer_raylib_micro_semantic_selection"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_semantic_cast_radius_raylib",
+      "name": "Raylib Micro - 圆形施法范围",
+      "selectors": [
+        "$performer_raylib_micro_semantic_cast_radius"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_semantic_warning_circle_raylib",
+      "name": "Raylib Micro - 圆形危险预警",
+      "selectors": [
+        "$performer_raylib_micro_semantic_warning_circle"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_semantic_warning_cone_raylib",
+      "name": "Raylib Micro - 锥形危险预警",
+      "selectors": [
+        "$performer_raylib_micro_semantic_warning_cone"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_semantic_warning_line_raylib",
+      "name": "Raylib Micro - 直线危险预警",
+      "selectors": [
+        "$performer_raylib_micro_semantic_warning_line"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_semantic_placement_raylib",
+      "name": "Raylib Micro - 放置预览",
+      "selectors": [
+        "$performer_raylib_micro_semantic_placement"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_semantic_dash_path_raylib",
+      "name": "Raylib Micro - 冲刺路径与落点",
+      "selectors": [
+        "$performer_raylib_micro_semantic_dash_path"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_semantic_tether_raylib",
+      "name": "Raylib Micro - 牵引链接",
+      "selectors": [
+        "$performer_raylib_micro_semantic_tether"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_semantic_summon_raylib",
+      "name": "Raylib Micro - 召唤法阵",
+      "selectors": [
+        "$performer_raylib_micro_semantic_summon"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_semantic_buff_raylib",
+      "name": "Raylib Micro - 增益状态",
+      "selectors": [
+        "$performer_raylib_micro_semantic_buff"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_semantic_debuff_warning_raylib",
+      "name": "Raylib Micro - 减益警示",
+      "selectors": [
+        "$performer_raylib_micro_semantic_debuff_warning"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_semantic_stun_raylib",
+      "name": "Raylib Micro - 眩晕状态",
+      "selectors": [
+        "$performer_raylib_micro_semantic_stun"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_semantic_silence_raylib",
+      "name": "Raylib Micro - 沉默状态",
+      "selectors": [
+        "$performer_raylib_micro_semantic_silence"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_semantic_root_raylib",
+      "name": "Raylib Micro - 定身束缚",
+      "selectors": [
+        "$performer_raylib_micro_semantic_root"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_semantic_stealth_reveal_raylib",
+      "name": "Raylib Micro - 潜行显形",
+      "selectors": [
+        "$performer_raylib_micro_semantic_stealth_reveal"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_semantic_channeling_raylib",
+      "name": "Raylib Micro - 持续引导",
+      "selectors": [
+        "$performer_raylib_micro_semantic_channeling"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_raylib_micro_semantic_interact_pickup_raylib",
+      "name": "Raylib Micro - 拾取提示",
+      "selectors": [
+        "$performer_raylib_micro_semantic_interact_pickup"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

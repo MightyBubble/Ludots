@@ -83,6 +83,33 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        [TestCase(AssetKind.Ring)]
+        [TestCase(AssetKind.Line)]
+        [TestCase(AssetKind.SpriteEmitter)]
+        [TestCase(AssetKind.RibbonEmitter)]
+        [TestCase(AssetKind.ModelEmitter)]
+        [TestCase(AssetKind.TrackEmitter)]
+        [TestCase(AssetKind.RingEmitter)]
+        public void Sync_IgnoresConcretePrimitiveLane(AssetKind primitiveKind)
+        {
+            var planner = new StaticMeshAdapterSyncPlanner();
+
+            planner.Sync(new[]
+            {
+                CreateItem(
+                    515,
+                    VisualRenderPath.Primitive,
+                    meshAssetId: 0,
+                    materialId: 0,
+                    assetKind: primitiveKind),
+            });
+
+            Assert.That(planner.ActiveBindings.Count, Is.EqualTo(0));
+            Assert.That(planner.Operations, Is.Empty);
+            Assert.That(planner.TryGetBinding(515, out _), Is.False);
+        }
+
+        [Test]
         public void Sync_CustomDataChange_EmitsUpdate_WithoutChangingLaneSlot()
         {
             var planner = new StaticMeshAdapterSyncPlanner();

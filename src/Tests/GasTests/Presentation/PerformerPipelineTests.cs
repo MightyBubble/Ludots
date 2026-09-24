@@ -136,6 +136,29 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void Create_WithFullParent_ThrowsBeforeCreatingAnUntrackedChild()
+        {
+            Entity owner = _world.Create();
+            var definitions = new PerformerDefinitionRegistry();
+            int parentDefinitionId = definitions.Register("capacity.parent", new PerformerDefinition());
+            int childDefinitionId = definitions.Register("capacity.child", new PerformerDefinition());
+            _buf.BindDefinitions(definitions);
+            Entity parent = _buf.Create(parentDefinitionId, owner, 7);
+            for (int index = 0; index < PerformerChildren.MAX_CHILDREN; index++)
+            {
+                _buf.Create(childDefinitionId, owner, 7, PresentationAnchorKind.Entity, Vector3.Zero, 0, parent, default);
+            }
+            int activeBefore = _buf.ActiveCount;
+
+            InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+                _buf.Create(childDefinitionId, owner, 7, PresentationAnchorKind.Entity, Vector3.Zero, 0, parent, default))!;
+
+            Assert.That(exception.Message, Does.Contain("cannot exceed 16 direct children"));
+            Assert.That(_world.Get<PerformerChildren>(parent).Count, Is.EqualTo(PerformerChildren.MAX_CHILDREN));
+            Assert.That(_buf.ActiveCount, Is.EqualTo(activeBefore));
+        }
+
+        [Test]
         public void CreateHierarchy_RecursivelyBuildsChildrenAndAppliesDefaults()
         {
             Entity owner = _world.Create(new VisualTransform());
@@ -1107,7 +1130,7 @@ namespace Ludots.Tests.Presentation
                 resolveAnimationProfileId: animationProfiles.GetId,
                 resolveBehaviorAssetId: (kind, key) => kind switch
                 {
-                    AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.Decal or AssetKind.VFX or AssetKind.Spline or AssetKind.Sound => meshes.GetId(key),
+                    AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.Decal or AssetKind.Spline or AssetKind.Sound => meshes.GetId(key),
                     AssetKind.WorldText => textCatalog.GetTokenId(key),
                     AssetKind.GroundOverlay => Enum.TryParse<GroundOverlayShape>(key, ignoreCase: false, out var shape) ? (int)shape : 0,
                     _ => 0,

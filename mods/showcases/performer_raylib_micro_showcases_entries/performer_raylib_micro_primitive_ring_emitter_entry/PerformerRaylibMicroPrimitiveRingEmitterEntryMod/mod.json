@@ -1,0 +1,19 @@
+{
+  "name": "PerformerRaylibMicroPrimitiveRingEmitterEntryMod",
+  "version": "1.0.0",
+  "description": "Entry mod for Raylib micro showcase: 环形发射器.",
+  "main": "bin/net8.0/PerformerRaylibMicroPrimitiveRingEmitterEntryMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "PerformerRaylibMicroShowcasesMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "performer",
+    "raylib",
+    "micro",
+    "primitive",
+    "dark"
+  ]
+}

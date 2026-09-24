@@ -1,3 +1,59 @@
+# GAS Composition Gate - Raylib Performer Micro Showcases
+
+- Date: 2026-07-24
+- Agent: Codex
+- Result: PASS
+
+## Core Judgment
+
+Primary delivery is A: concrete performer composition and adapter rendering over existing Presentation infrastructure. This work does not add a GAS preset, gameplay graph op, lifecycle profile enum, or parallel loader. The authoring idea stays as offline expansion into existing performer definitions and concrete `AssetKind` values.
+
+## Layer Assignment
+
+| Step / Capability | Layer | Carrier |
+| --- | --- | --- |
+| Player semantic authoring notes | Layer 3 authoring preset concept only | PRD / report documentation |
+| Semantic plus theme expansion | Layer 2 composition concept | Generated performer child graph data |
+| Runtime creation and cleanup | Existing runtime | `CreatePerformer` / `DestroyPerformerScope` commands |
+| Concrete drawing | Adapter primitive | `AssetKind.Ring`, `Line`, `ParticleEmitter`, `RibbonTrail`, `Mesh` context |
+
+## Reuse List
+
+- Handlers: existing presentation command handlers; no new GAS `BuiltinHandler`.
+- Queues / Systems: existing Performer emit systems, Presentation request flush, Raylib primitive draw path.
+- Resolvers / Registries: `PerformerDefinitionConfigLoader`, `PerformerDefinitionRegistry`, `AssetKind` parser and retired-kind validation.
+- Existing data path: mod assets, launcher binding/preset registry, Raylib screenshot capture environment variables.
+
+## New Layer 0 Ops
+
+N/A. No entity lifecycle atomic op is added.
+
+## Transaction Boundary
+
+Runtime uses the existing performer scope lifecycle: a spawned showcase entity creates one root performer, and entity destruction destroys that scope. There is no new all-or-nothing gameplay transaction.
+
+## Config SSOT
+
+- Performer data: `mods/showcases/performer_raylib_micro_showcases/PerformerRaylibMicroShowcasesMod/assets/Presentation/performers.json`
+- Showcase manifest: `mods/showcases/performer_raylib_micro_showcases/PerformerRaylibMicroShowcasesMod/assets/Presentation/showcases.manifest.json`
+- Launcher entries: `launcher.config.json`, `launcher.presets.json`, `showcase.registry.json`
+
+New JSON schema: NO. The generated files use existing performer, map, entity template, launcher and registry shapes.
+
+## Red Flag Scan
+
+- [x] No new profile inherit/placement enum
+- [x] No new spawn/morph/lifecycle materialization pipeline
+- [x] No new generic `VFX` / `Effect` asset kind or compatibility alias
+- [x] No silent fallback for retired `AssetKind.VFX`
+- [x] Theme remains offline authoring parameters, not a performer behavior
+
+## Next Variant Test
+
+The next visual semantic variant should change performer child composition or concrete primitive parameters. It must not add a semantic `AssetKind`, a generic VFX registry, or a runtime theme decision path.
+
+---
+
 # GAS Composition Gate - PR #658 / Issue #690
 
 - Date: 2026-07-19

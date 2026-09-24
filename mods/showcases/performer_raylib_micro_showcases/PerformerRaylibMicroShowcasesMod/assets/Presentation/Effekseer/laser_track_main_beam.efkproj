@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<EffekseerProject>
+  <Root>
+    <Name>Root</Name>
+    <Children>
+      <Node>
+        <CommonValues><MaxGeneration><Infinite>True</Infinite></MaxGeneration><Life><Center>31</Center><Max>31</Max><Min>31</Min></Life><GenerationTime><Center>1</Center><Max>1</Max><Min>1</Min></GenerationTime><GenerationTimeOffset><Center>-30</Center><Max>-30</Max><Min>-30</Min></GenerationTimeOffset></CommonValues>
+        <LocationValues><Type>1</Type><PVA><Velocity><X><Center>0.25</Center><Max>0.25</Max><Min>0.25</Min></X></Velocity></PVA></LocationValues>
+        <RendererCommonValues><ColorTexture>textures/laser_beam_profile.png</ColorTexture><AlphaBlend>2</AlphaBlend><ZWrite>False</ZWrite><ZTest>True</ZTest><FadeInType>1</FadeInType><FadeIn><Frame>2</Frame></FadeIn><FadeOutType>1</FadeOutType><FadeOut><Frame>4</Frame></FadeOut></RendererCommonValues>
+        <DrawingValues><Type>6</Type>
+          <TrailColorLeft><Type>0</Type><Fixed><R>255</R><G>255</G><B>255</B><A>97</A></Fixed></TrailColorLeft><TrailColorLeftMiddle><Type>0</Type><Fixed><R>255</R><G>255</G><B>255</B><A>199</A></Fixed></TrailColorLeftMiddle>
+          <TrailColorCenter><Type>0</Type><Fixed><R>255</R><G>255</G><B>255</B><A>255</A></Fixed></TrailColorCenter><TrailColorCenterMiddle><Type>0</Type><Fixed><R>255</R><G>255</G><B>255</B><A>255</A></Fixed></TrailColorCenterMiddle>
+          <TrailColorRight><Type>0</Type><Fixed><R>255</R><G>255</G><B>255</B><A>97</A></Fixed></TrailColorRight><TrailColorRightMiddle><Type>0</Type><Fixed><R>255</R><G>255</G><B>255</B><A>199</A></Fixed></TrailColorRightMiddle>
+          <Track><TrackSizeFor_Fixed>0.16</TrackSizeFor_Fixed><TrackSizeMiddle_Fixed>0.3</TrackSizeMiddle_Fixed><TrackSizeBack_Fixed>0.16</TrackSizeBack_Fixed><SplineDivision>1</SplineDivision></Track>
+        </DrawingValues>
+        <Name>laser_track_main_beam</Name><Children />
+      </Node>
+    </Children>
+  </Root>
+  <ToolVersion>1.80.6</ToolVersion>
+  <Version>3</Version>
+  <StartFrame>0</StartFrame>
+  <EndFrame>180</EndFrame>
+  <IsLoop>True</IsLoop>
+</EffekseerProject>

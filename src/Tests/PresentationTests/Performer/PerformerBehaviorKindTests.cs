@@ -27,7 +27,7 @@ namespace Ludots.Tests.Presentation
         public void BehaviorKindContract_ArchitectureExposesCoreKinds()
         {
             BehaviorKind[] values = (BehaviorKind[])Enum.GetValues(typeof(BehaviorKind));
-            Assert.That(values.Length, Is.EqualTo(10), "BehaviorKind SSOT is the architecture enum.");
+            Assert.That(values.Length, Is.EqualTo(11), "BehaviorKind SSOT is the architecture enum.");
             Assert.That(values, Does.Contain(BehaviorKind.AssetBinding));
             Assert.That(values, Does.Contain(BehaviorKind.AttributeBinding));
             Assert.That(values, Does.Contain(BehaviorKind.TagBinding));
@@ -38,6 +38,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(values, Does.Contain(BehaviorKind.Spline));
             Assert.That(values, Does.Contain(BehaviorKind.Grounding));
             Assert.That(values, Does.Contain(BehaviorKind.MinimapMarker));
+            Assert.That(values, Does.Contain(BehaviorKind.ParamTween));
         }
 
         [Test]
@@ -53,6 +54,7 @@ namespace Ludots.Tests.Presentation
             Assert.That((byte)BehaviorKind.Spline, Is.EqualTo(8));
             Assert.That((byte)BehaviorKind.Grounding, Is.EqualTo(9));
             Assert.That((byte)BehaviorKind.MinimapMarker, Is.EqualTo(10));
+            Assert.That((byte)BehaviorKind.ParamTween, Is.EqualTo(11));
         }
 
         [Test]

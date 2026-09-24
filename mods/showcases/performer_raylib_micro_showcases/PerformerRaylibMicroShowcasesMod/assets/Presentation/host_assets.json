@@ -1,0 +1,308 @@
+[
+  {
+    "id": "raylib.emitter.sprite.impact_flash.raylib",
+    "assetKind": "SpriteEmitter",
+    "assetId": "raylib.emitter.sprite.impact_flash",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/laser_sprite_impact_flash.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.ribbon.energy_trail.raylib",
+    "assetKind": "RibbonEmitter",
+    "assetId": "raylib.emitter.ribbon.energy_trail",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/laser_ribbon_energy_trail.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.track.main_beam.raylib",
+    "assetKind": "TrackEmitter",
+    "assetId": "raylib.emitter.track.main_beam",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/laser_track_main_beam.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.ring.impact_wave.raylib",
+    "assetKind": "RingEmitter",
+    "assetId": "raylib.emitter.ring.impact_wave",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/laser_ring_impact_wave.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.model.energy_shard.raylib",
+    "assetKind": "ModelEmitter",
+    "assetId": "raylib.emitter.model.energy_shard",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/laser_model_energy_shard.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.semantic.explosion.signature.raylib",
+    "assetKind": "SpriteEmitter",
+    "assetId": "raylib.emitter.semantic.explosion.signature",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/semantic_explosion_signature.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.semantic.laser.signature.raylib",
+    "assetKind": "TrackEmitter",
+    "assetId": "raylib.emitter.semantic.laser.signature",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/semantic_laser_signature.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.semantic.lightning.signature.raylib",
+    "assetKind": "SpriteEmitter",
+    "assetId": "raylib.emitter.semantic.lightning.signature",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/semantic_lightning_signature.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.semantic.projectile_trail.signature.raylib",
+    "assetKind": "RibbonEmitter",
+    "assetId": "raylib.emitter.semantic.projectile_trail.signature",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/semantic_projectile_trail_signature.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.semantic.slash.signature.raylib",
+    "assetKind": "SpriteEmitter",
+    "assetId": "raylib.emitter.semantic.slash.signature",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/semantic_slash_signature.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.semantic.shield.signature.raylib",
+    "assetKind": "SpriteEmitter",
+    "assetId": "raylib.emitter.semantic.shield.signature",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/semantic_shield_signature.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.semantic.heal.signature.raylib",
+    "assetKind": "SpriteEmitter",
+    "assetId": "raylib.emitter.semantic.heal.signature",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/semantic_heal_signature.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.semantic.burn.signature.raylib",
+    "assetKind": "SpriteEmitter",
+    "assetId": "raylib.emitter.semantic.burn.signature",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/semantic_burn_signature.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.semantic.poison.signature.raylib",
+    "assetKind": "SpriteEmitter",
+    "assetId": "raylib.emitter.semantic.poison.signature",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/semantic_poison_signature.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.semantic.frost.signature.raylib",
+    "assetKind": "SpriteEmitter",
+    "assetId": "raylib.emitter.semantic.frost.signature",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/semantic_frost_signature.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.semantic.portal.signature.raylib",
+    "assetKind": "RibbonEmitter",
+    "assetId": "raylib.emitter.semantic.portal.signature",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/semantic_portal_signature.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.semantic.target_lock.signature.raylib",
+    "assetKind": "SpriteEmitter",
+    "assetId": "raylib.emitter.semantic.target_lock.signature",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/semantic_target_lock_signature.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.semantic.selection.signature.raylib",
+    "assetKind": "RingEmitter",
+    "assetId": "raylib.emitter.semantic.selection.signature",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/semantic_selection_signature.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.semantic.cast_radius.signature.raylib",
+    "assetKind": "RingEmitter",
+    "assetId": "raylib.emitter.semantic.cast_radius.signature",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/semantic_cast_radius_signature.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.semantic.warning_circle.signature.raylib",
+    "assetKind": "RingEmitter",
+    "assetId": "raylib.emitter.semantic.warning_circle.signature",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/semantic_warning_circle_signature.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.semantic.warning_cone.signature.raylib",
+    "assetKind": "SpriteEmitter",
+    "assetId": "raylib.emitter.semantic.warning_cone.signature",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/semantic_warning_cone_signature.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.semantic.warning_line.signature.raylib",
+    "assetKind": "RibbonEmitter",
+    "assetId": "raylib.emitter.semantic.warning_line.signature",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/semantic_warning_line_signature.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.semantic.placement.signature.raylib",
+    "assetKind": "RingEmitter",
+    "assetId": "raylib.emitter.semantic.placement.signature",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/semantic_placement_signature.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.semantic.dash_path.signature.raylib",
+    "assetKind": "RibbonEmitter",
+    "assetId": "raylib.emitter.semantic.dash_path.signature",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/semantic_dash_path_signature.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.semantic.tether.signature.raylib",
+    "assetKind": "RibbonEmitter",
+    "assetId": "raylib.emitter.semantic.tether.signature",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/semantic_tether_signature.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.semantic.summon.signature.raylib",
+    "assetKind": "RibbonEmitter",
+    "assetId": "raylib.emitter.semantic.summon.signature",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/semantic_summon_signature.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.semantic.buff.signature.raylib",
+    "assetKind": "SpriteEmitter",
+    "assetId": "raylib.emitter.semantic.buff.signature",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/semantic_buff_signature.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.semantic.debuff_warning.signature.raylib",
+    "assetKind": "SpriteEmitter",
+    "assetId": "raylib.emitter.semantic.debuff_warning.signature",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/semantic_debuff_warning_signature.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.semantic.stun.signature.raylib",
+    "assetKind": "SpriteEmitter",
+    "assetId": "raylib.emitter.semantic.stun.signature",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/semantic_stun_signature.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.semantic.silence.signature.raylib",
+    "assetKind": "SpriteEmitter",
+    "assetId": "raylib.emitter.semantic.silence.signature",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/semantic_silence_signature.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.semantic.root.signature.raylib",
+    "assetKind": "ModelEmitter",
+    "assetId": "raylib.emitter.semantic.root.signature",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/semantic_root_signature.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.semantic.stealth_reveal.signature.raylib",
+    "assetKind": "RingEmitter",
+    "assetId": "raylib.emitter.semantic.stealth_reveal.signature",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/semantic_stealth_reveal_signature.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.semantic.channeling.signature.raylib",
+    "assetKind": "SpriteEmitter",
+    "assetId": "raylib.emitter.semantic.channeling.signature",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/semantic_channeling_signature.efkefc"
+    ]
+  },
+  {
+    "id": "raylib.emitter.semantic.interact_pickup.signature.raylib",
+    "assetKind": "SpriteEmitter",
+    "assetId": "raylib.emitter.semantic.interact_pickup.signature",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerRaylibMicroShowcasesMod:assets/Presentation/Effekseer/semantic_interact_pickup_signature.efkefc"
+    ]
+  }
+]

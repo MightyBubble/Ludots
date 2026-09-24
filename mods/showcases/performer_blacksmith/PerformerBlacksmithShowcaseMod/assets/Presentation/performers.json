@@ -557,7 +557,7 @@
         "kind": "AssetBinding",
         "activeByDefault": false,
         "assetBinding": {
-          "assetKind": "VFX",
+          "assetKind": "Mesh",
           "assetId": "blacksmith.smoke.billboard",
           "renderPath": "StaticMesh",
           "mobility": "Movable",

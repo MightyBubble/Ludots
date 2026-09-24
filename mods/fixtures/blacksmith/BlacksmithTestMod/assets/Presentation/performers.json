@@ -331,7 +331,7 @@
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
-          "assetKind": "VFX",
+          "assetKind": "Mesh",
           "assetId": "blacksmith.fixture.smoke",
           "renderPath": "StaticMesh",
           "mobility": "Movable",

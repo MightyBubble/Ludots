@@ -1,0 +1,19 @@
+{
+  "name": "PerformerRaylibMicroSemanticSilenceEntryMod",
+  "version": "1.0.0",
+  "description": "Entry mod for Raylib micro showcase: 沉默状态.",
+  "main": "bin/net8.0/PerformerRaylibMicroSemanticSilenceEntryMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "PerformerRaylibMicroShowcasesMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "performer",
+    "raylib",
+    "micro",
+    "semantic",
+    "dark"
+  ]
+}

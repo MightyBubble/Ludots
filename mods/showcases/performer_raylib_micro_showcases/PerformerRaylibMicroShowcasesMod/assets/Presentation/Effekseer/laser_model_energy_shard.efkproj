@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<EffekseerProject>
+  <Root>
+    <Name>Root</Name>
+    <Children>
+      <Node>
+        <CommonValues><MaxGeneration><Infinite>True</Infinite></MaxGeneration><Life><Center>72</Center><Max>84</Max><Min>60</Min></Life><GenerationTime><Center>6</Center><Max>8</Max><Min>4</Min></GenerationTime><GenerationTimeOffset><Center>-30</Center><Max>-30</Max><Min>-30</Min></GenerationTimeOffset></CommonValues>
+        <LocationValues><Type>1</Type><PVA><Location><X><Max>0.45</Max><Min>-0.45</Min></X><Y><Max>0.18</Max><Min>0</Min></Y><Z><Max>0.45</Max><Min>-0.45</Min></Z></Location><Velocity><Y><Center>0.025</Center><Max>0.04</Max><Min>0.01</Min></Y></Velocity></PVA></LocationValues>
+        <RotationValues><Type>1</Type><PVA><Rotation><Y><Max>180</Max><Min>-180</Min></Y></Rotation><Velocity><Y><Center>4</Center><Max>6</Max><Min>2</Min></Y><Z><Center>2</Center><Max>4</Max><Min>-1</Min></Z></Velocity></PVA></RotationValues>
+        <ScalingValues><Fixed><Scale><X>0.28</X><Y>0.28</Y><Z>0.28</Z></Scale></Fixed></ScalingValues>
+        <RendererCommonValues><AlphaBlend>2</AlphaBlend><ZWrite>False</ZWrite><ZTest>True</ZTest><FadeInType>1</FadeInType><FadeIn><Frame>3</Frame></FadeIn><FadeOutType>1</FadeOutType><FadeOut><Frame>24</Frame></FadeOut></RendererCommonValues>
+        <DrawingValues><Type>5</Type><Model><Model>models/energy_shard.efkmodel</Model><Color>0</Color><Color_Fixed><R>255</R><G>255</G><B>255</B><A>220</A></Color_Fixed></Model></DrawingValues>
+        <Name>laser_model_energy_shard</Name><Children />
+      </Node>
+    </Children>
+  </Root>
+  <ToolVersion>1.80.6</ToolVersion>
+  <Version>3</Version>
+  <StartFrame>0</StartFrame>
+  <EndFrame>180</EndFrame>
+  <IsLoop>True</IsLoop>
+</EffekseerProject>

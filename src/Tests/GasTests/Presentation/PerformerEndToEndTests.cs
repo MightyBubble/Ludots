@@ -753,7 +753,7 @@ namespace Ludots.Tests.Presentation
                 resolveAnimationProfileId: animationProfiles.GetId,
                 resolveBehaviorAssetId: (kind, key) => kind switch
                 {
-                    AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.Decal or AssetKind.VFX or AssetKind.Spline or AssetKind.Sound => meshes.GetId(key),
+                    AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.Decal or AssetKind.Spline or AssetKind.Sound => meshes.GetId(key),
                     AssetKind.WorldText => textCatalog.GetTokenId(key),
                     AssetKind.GroundOverlay => Enum.TryParse<GroundOverlayShape>(key, ignoreCase: false, out var shape) ? (int)shape : 0,
                     _ => 0,

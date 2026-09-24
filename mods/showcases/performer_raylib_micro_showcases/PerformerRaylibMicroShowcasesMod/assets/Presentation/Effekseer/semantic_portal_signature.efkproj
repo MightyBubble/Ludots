@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<EffekseerProject>
+  <Root>
+    <Name>Root</Name>
+    <Children>
+      <Node>
+        <CommonValues><MaxGeneration><Infinite>True</Infinite></MaxGeneration><Life><Center>26</Center><Max>26</Max><Min>26</Min></Life><GenerationTime><Center>1.219512</Center><Max>1.219512</Max><Min>1.219512</Min></GenerationTime><GenerationTimeOffset><Center>-18.518519</Center><Max>-18.518519</Max><Min>-18.518519</Min></GenerationTimeOffset></CommonValues>
+        <LocationValues><Type>1</Type><PVA><Velocity><X><Center>0.0216</Center><Max>0.0216</Max><Min>0.0216</Min></X></Velocity></PVA></LocationValues>
+        <RendererCommonValues><ColorTexture>textures/laser_beam_profile.png</ColorTexture><AlphaBlend>2</AlphaBlend><ZWrite>False</ZWrite><ZTest>True</ZTest><FadeInType>1</FadeInType><FadeIn><Frame>1.851852</Frame></FadeIn><FadeOutType>1</FadeOutType><FadeOut><Frame>11.111111</Frame></FadeOut></RendererCommonValues>
+        <DrawingValues><Type>3</Type><Ribbon><ViewpointDependent>True</ViewpointDependent><ColorAll_Fixed><R>255</R><G>255</G><B>255</B><A>224</A></ColorAll_Fixed><Position>1</Position><Position_Fixed_L>-0.062856</Position_Fixed_L><Position_Fixed_R>0.062856</Position_Fixed_R><SplineDivision>1</SplineDivision></Ribbon></DrawingValues>
+        <Name>semantic_portal_signature</Name><Children />
+      </Node>
+    </Children>
+  </Root>
+  <ToolVersion>1.80.6</ToolVersion>
+  <Version>3</Version>
+  <StartFrame>0</StartFrame>
+  <EndFrame>180</EndFrame>
+  <IsLoop>True</IsLoop>
+</EffekseerProject>

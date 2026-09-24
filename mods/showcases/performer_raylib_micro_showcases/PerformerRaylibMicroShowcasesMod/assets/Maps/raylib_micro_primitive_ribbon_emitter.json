@@ -1,0 +1,44 @@
+{
+  "Id": "raylib_micro_primitive_ribbon_emitter",
+  "Tags": [
+    "showcase",
+    "performer",
+    "raylib",
+    "micro",
+    "primitive",
+    "frost",
+    "focus",
+    "Raylib.Background:Deep",
+    "Raylib.DebugGuides:Off"
+  ],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 1,
+      "HeightInMacroTiles": 1,
+      "GridCellSizeCm": 100
+    }
+  ],
+  "DefaultCamera": {
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "Yaw": 32,
+    "Pitch": 58,
+    "DistanceCm": 750,
+    "FovYDeg": 44
+  },
+  "Entities": [
+    {
+      "Template": "raylib_micro_primitive_ribbon_emitter_entity",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 0,
+            "Y": 0
+          }
+        }
+      }
+    }
+  ]
+}

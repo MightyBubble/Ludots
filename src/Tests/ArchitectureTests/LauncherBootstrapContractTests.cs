@@ -11,6 +11,263 @@ namespace Ludots.Tests.Architecture
     public class LauncherBootstrapContractTests
     {
         [Test]
+        public void LauncherCli_ParsesExplicitWaitFlag()
+        {
+            CliCommand command = CliCommand.Parse(new[]
+            {
+                "launch",
+                "example_binding",
+                "--adapter",
+                "raylib",
+                "--build",
+                "never",
+                "--wait"
+            });
+
+            Assert.That(command.Primary, Is.EqualTo("launch"));
+            Assert.That(command.Wait, Is.True);
+            Assert.That(command.BuildMode, Is.EqualTo(LauncherBuildMode.Never));
+            Assert.That(command.Operands, Is.EqualTo(new[] { "example_binding" }));
+        }
+
+        [Test]
+        public void LauncherCli_PropagatesWaitedChildExitCode()
+        {
+            var result = new LauncherLaunchResult(
+                false,
+                "Platform process exited with code 7.",
+                123,
+                string.Empty,
+                "launcher.runtime.json",
+                null)
+            {
+                ExitCode = 7
+            };
+
+            Assert.That(LauncherCliExitCode.FromLaunchResult(result), Is.EqualTo(7));
+        }
+
+        [Test]
+        public async Task WaitForExitAsync_WaitsForChildAndReturnsExactNonZeroExitCode()
+        {
+            var startInfo = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = OperatingSystem.IsWindows() ? "powershell.exe" : "/bin/sh",
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            if (OperatingSystem.IsWindows())
+            {
+                startInfo.ArgumentList.Add("-NoProfile");
+                startInfo.ArgumentList.Add("-NonInteractive");
+                startInfo.ArgumentList.Add("-Command");
+                startInfo.ArgumentList.Add("Start-Sleep -Milliseconds 150; exit 7");
+            }
+            else
+            {
+                startInfo.ArgumentList.Add("-c");
+                startInfo.ArgumentList.Add("sleep 0.15; exit 7");
+            }
+
+            using var process = System.Diagnostics.Process.Start(startInfo)
+                ?? throw new InvalidOperationException("Failed to start launcher wait test child process.");
+
+            int? exitCode = await LauncherService.WaitForExitAsync(process, waitForExit: true);
+
+            Assert.That(process.HasExited, Is.True);
+            Assert.That(exitCode, Is.EqualTo(7));
+        }
+
+        [Test]
+        public async Task PrepareAppForLaunchAsync_NeverValidatesExistingArtifactsWithoutWritingThem()
+        {
+            string repoRoot = FindRepoRoot();
+            string tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-never-app-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+            string appAssemblyPath = Path.Combine(tempDirectory, "Test.App.dll");
+            string depsPath = Path.ChangeExtension(appAssemblyPath, ".deps.json");
+            string runtimeConfigPath = Path.ChangeExtension(appAssemblyPath, ".runtimeconfig.json");
+
+            try
+            {
+                File.WriteAllText(appAssemblyPath, "assembly");
+                File.WriteAllText(depsPath, "deps");
+                File.WriteAllText(runtimeConfigPath, "runtimeconfig");
+                DateTime assemblyWriteTime = File.GetLastWriteTimeUtc(appAssemblyPath);
+                DateTime depsWriteTime = File.GetLastWriteTimeUtc(depsPath);
+                DateTime runtimeConfigWriteTime = File.GetLastWriteTimeUtc(runtimeConfigPath);
+                var launcher = new LauncherService(repoRoot);
+                LauncherLaunchPlan plan = CreateAppArtifactTestPlan(tempDirectory, appAssemblyPath);
+
+                LauncherBuildResult result = await launcher.PrepareAppForLaunchAsync(plan, LauncherBuildMode.Never);
+
+                Assert.That(result.Ok, Is.True, result.Output);
+                Assert.That(result.Output, Does.Contain("skipped by --build never"));
+                Assert.That(File.GetLastWriteTimeUtc(appAssemblyPath), Is.EqualTo(assemblyWriteTime));
+                Assert.That(File.GetLastWriteTimeUtc(depsPath), Is.EqualTo(depsWriteTime));
+                Assert.That(File.GetLastWriteTimeUtc(runtimeConfigPath), Is.EqualTo(runtimeConfigWriteTime));
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public async Task PrepareAppForLaunchAsync_NeverFailsWhenRuntimeArtifactIsMissing()
+        {
+            string repoRoot = FindRepoRoot();
+            string tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-never-missing-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+            string appAssemblyPath = Path.Combine(tempDirectory, "Test.App.dll");
+            File.WriteAllText(appAssemblyPath, "assembly");
+            var launcher = new LauncherService(repoRoot);
+            LauncherLaunchPlan plan = CreateAppArtifactTestPlan(tempDirectory, appAssemblyPath);
+
+            try
+            {
+                LauncherBuildResult result = await launcher.PrepareAppForLaunchAsync(plan, LauncherBuildMode.Never);
+
+                Assert.That(result.Ok, Is.False);
+                Assert.That(result.ExitCode, Is.Not.Zero);
+                Assert.That(result.Output, Does.Contain("required runtime artifact(s) are missing"));
+                Assert.That(result.Output, Does.Contain(Path.ChangeExtension(appAssemblyPath, ".deps.json")));
+                Assert.That(result.Output, Does.Contain(Path.ChangeExtension(appAssemblyPath, ".runtimeconfig.json")));
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public async Task BuildAsync_NeverFailsForMissingModMainAssemblyWithoutBuilding()
+        {
+            string repoRoot = FindRepoRoot();
+            string tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-never-mod-{Guid.NewGuid():N}");
+            string modRoot = Path.Combine(tempDirectory, "mods", "NeverBuildProbeMod");
+            string buildMarkerPath = Path.Combine(modRoot, "build-invoked.marker");
+            string mainAssemblyPath = Path.Combine(modRoot, "bin", "NeverBuildProbeMod.dll");
+
+            try
+            {
+                Directory.CreateDirectory(modRoot);
+                WriteBuildProbeProject(Path.Combine(modRoot, "NeverBuildProbeMod.csproj"));
+                WriteTestModManifest(modRoot, "NeverBuildProbeMod", "bin/NeverBuildProbeMod.dll");
+                LauncherService launcher = CreateIsolatedLauncher(tempDirectory);
+
+                IReadOnlyList<LauncherBuildResult> results = await launcher.BuildAsync(
+                    new[] { "mod:NeverBuildProbeMod" },
+                    LauncherPlatformIds.Raylib,
+                    LauncherBuildMode.Never);
+
+                LauncherBuildResult result = results.Single(item => item.Id == "NeverBuildProbeMod");
+                Assert.That(result.Ok, Is.False);
+                Assert.That(result.ExitCode, Is.Not.Zero);
+                Assert.That(result.Output, Does.Contain("Mod build is disabled by --build never"));
+                Assert.That(result.Output, Does.Contain(mainAssemblyPath));
+                Assert.That(File.Exists(buildMarkerPath), Is.False, "--build never must not invoke the mod project.");
+                Assert.That(Directory.Exists(Path.Combine(tempDirectory, "assets", "ModSdk")), Is.False,
+                    "--build never must not export the Mod SDK before validating the existing main assembly.");
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public async Task BuildAsync_NeverFailsForMissingBrowserRuntimePackageWithoutBuildingOrExportingSdk()
+        {
+            string repoRoot = FindRepoRoot();
+            string tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-never-browser-{Guid.NewGuid():N}");
+            string modRoot = Path.Combine(tempDirectory, "mods", "BrowserRuntimeProbeMod");
+            string modAssemblyPath = Path.Combine(modRoot, "bin", "BrowserRuntimeProbeMod.dll");
+            string providerRoot = Path.Combine(tempDirectory, "BrowserProvider");
+            string providerBuildMarkerPath = Path.Combine(providerRoot, "build-invoked.marker");
+            string providerAssemblyPath = Path.Combine(tempDirectory, "BrowserRuntime", "probe", "BrowserProvider.dll");
+
+            try
+            {
+                Directory.CreateDirectory(modRoot);
+                WriteBuildProbeProject(Path.Combine(modRoot, "BrowserRuntimeProbeMod.csproj"));
+                WriteTestModManifest(modRoot, "BrowserRuntimeProbeMod", "bin/BrowserRuntimeProbeMod.dll");
+                Directory.CreateDirectory(Path.GetDirectoryName(modAssemblyPath)!);
+                File.WriteAllText(modAssemblyPath, "prebuilt");
+
+                Directory.CreateDirectory(providerRoot);
+                WriteBuildProbeProject(Path.Combine(providerRoot, "BrowserProvider.csproj"));
+
+                LauncherService launcher = CreateIsolatedLauncher(
+                    tempDirectory,
+                    browserRuntimeProvidersJson: """
+                    [
+                      {
+                        "id": "probe",
+                        "projectPath": "BrowserProvider/BrowserProvider.csproj",
+                        "packageRootPath": "BrowserRuntime/probe",
+                        "assemblyPath": "BrowserRuntime/probe/BrowserProvider.dll",
+                        "hostTypeName": "BrowserProvider.Host"
+                      }
+                    ]
+                    """,
+                    presetsJson: """
+                    {
+                      "schemaVersion": 1,
+                      "presets": [
+                        {
+                          "id": "browser-runtime-probe",
+                          "name": "Browser runtime probe",
+                          "selectors": [
+                            "mod:BrowserRuntimeProbeMod"
+                          ],
+                          "adapterId": "raylib",
+                          "buildMode": "never",
+                          "browserRuntime": {
+                            "enabled": true,
+                            "required": true,
+                            "provider": "probe"
+                          }
+                        }
+                      ]
+                    }
+                    """);
+
+                IReadOnlyList<LauncherBuildResult> results = await launcher.BuildAsync(
+                    new[] { "preset:browser-runtime-probe" },
+                    LauncherPlatformIds.Raylib,
+                    LauncherBuildMode.Never);
+
+                Assert.That(results.Single(item => item.Id == "BrowserRuntimeProbeMod").Ok, Is.True);
+                LauncherBuildResult browserResult = results.Single(item => item.Id == "browserRuntime:probe");
+                Assert.That(browserResult.Ok, Is.False);
+                Assert.That(browserResult.ExitCode, Is.Not.Zero);
+                Assert.That(browserResult.Output, Does.Contain("Host browser runtime provider build is disabled by --build never"));
+                Assert.That(browserResult.Output, Does.Contain($"Host browser runtime provider assembly is missing: {providerAssemblyPath}"));
+                Assert.That(File.Exists(providerBuildMarkerPath), Is.False,
+                    "--build never must not invoke the browser runtime provider project.");
+                Assert.That(Directory.Exists(Path.Combine(tempDirectory, "assets", "ModSdk")), Is.False,
+                    "--build never must not export the Mod SDK while validating a browser runtime package.");
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
         public async Task RunProcessAsync_ReturnsWithoutHanging_WhenDescendantKeepsRedirectedOutputOpen()
         {
             if (!OperatingSystem.IsWindows())
@@ -54,6 +311,113 @@ namespace Ludots.Tests.Architecture
                     Directory.Delete(tempDirectory, recursive: true);
                 }
             }
+        }
+
+        private static LauncherLaunchPlan CreateAppArtifactTestPlan(string outputDirectory, string appAssemblyPath)
+        {
+            return new LauncherLaunchPlan(
+                LauncherPlatformIds.Raylib,
+                "never",
+                Array.Empty<string>(),
+                Array.Empty<string>(),
+                Array.Empty<string>(),
+                Array.Empty<LauncherPlannedMod>(),
+                "generated",
+                Path.Combine(outputDirectory, "launcher.runtime.json"),
+                outputDirectory,
+                appAssemblyPath,
+                string.Empty,
+                null,
+                new LauncherPlanDiagnostics(Array.Empty<LauncherResolvedSetting>(), Array.Empty<string>()),
+                new LauncherAdapterDescriptor(
+                    LauncherPlatformIds.Raylib,
+                    "Raylib",
+                    "desktop",
+                    "dotnet",
+                    "launcher.runtime.v1",
+                    "Test.App.csproj",
+                    outputDirectory,
+                    string.Empty,
+                    string.Empty,
+                    string.Empty,
+                    "launcher.runtime.json"),
+                1,
+                DateTime.UtcNow.ToString("O"),
+                "test-plan",
+                Path.Combine(outputDirectory, "raylib.launch.graph.json"));
+        }
+
+        private static LauncherService CreateIsolatedLauncher(
+            string tempDirectory,
+            string browserRuntimeProvidersJson = "[]",
+            string presetsJson = """
+            {
+              "schemaVersion": 1,
+              "presets": []
+            }
+            """)
+        {
+            Directory.CreateDirectory(tempDirectory);
+            string configPath = Path.Combine(tempDirectory, "launcher.config.json");
+            string presetsPath = Path.Combine(tempDirectory, "launcher.presets.json");
+            string preferencesPath = Path.Combine(tempDirectory, "preferences.json");
+            string userConfigPath = Path.Combine(tempDirectory, "config.overlay.json");
+            File.WriteAllText(
+                configPath,
+                $$"""
+                {
+                  "schemaVersion": 1,
+                  "scanRoots": [
+                    {
+                      "id": "repo_mods",
+                      "path": "mods",
+                      "scanMode": "recursive",
+                      "enabled": true
+                    }
+                  ],
+                  "adapters": {
+                    "default": "raylib"
+                  },
+                  "browserRuntimeProviders": {{browserRuntimeProvidersJson}}
+                }
+                """);
+            File.WriteAllText(presetsPath, presetsJson);
+            File.WriteAllText(preferencesPath, "{}");
+            File.WriteAllText(userConfigPath, "{}");
+            return new LauncherService(tempDirectory, configPath, presetsPath, preferencesPath, userConfigPath);
+        }
+
+        private static void WriteBuildProbeProject(string projectPath)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(projectPath)!);
+            File.WriteAllText(
+                projectPath,
+                """
+                <Project Sdk="Microsoft.NET.Sdk">
+                  <PropertyGroup>
+                    <TargetFramework>net8.0</TargetFramework>
+                  </PropertyGroup>
+                  <Target Name="RecordBuildInvocation" BeforeTargets="Build">
+                    <WriteLinesToFile File="$(MSBuildProjectDirectory)/build-invoked.marker" Lines="invoked" Overwrite="true" />
+                  </Target>
+                </Project>
+                """);
+        }
+
+        private static void WriteTestModManifest(string modRoot, string modId, string mainAssemblyPath)
+        {
+            File.WriteAllText(
+                Path.Combine(modRoot, "mod.json"),
+                $$"""
+                {
+                  "name": "{{modId}}",
+                  "version": "1.0.0",
+                  "description": "launcher --build never contract probe",
+                  "main": "{{mainAssemblyPath}}",
+                  "priority": 0,
+                  "dependencies": {}
+                }
+                """);
         }
 
         [Test]

@@ -1,0 +1,19 @@
+{
+  "name": "PerformerRaylibMicroSemanticBuffEntryMod",
+  "version": "1.0.0",
+  "description": "Entry mod for Raylib micro showcase: 增益状态.",
+  "main": "bin/net8.0/PerformerRaylibMicroSemanticBuffEntryMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "PerformerRaylibMicroShowcasesMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "performer",
+    "raylib",
+    "micro",
+    "semantic",
+    "holy"
+  ]
+}

@@ -1,0 +1,866 @@
+[
+  {
+    "id": "raylib_micro_primitive_ring_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.primitive_ring"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_primitive_line_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.primitive_line"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_primitive_sprite_emitter_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.primitive_sprite_emitter"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_primitive_ribbon_emitter_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.primitive_ribbon_emitter"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_primitive_track_emitter_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.primitive_track_emitter"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_primitive_ring_emitter_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.primitive_ring_emitter"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_primitive_model_emitter_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.primitive_model_emitter"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_semantic_explosion_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.semantic_explosion"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_semantic_laser_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.semantic_laser"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_semantic_lightning_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.semantic_lightning"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_semantic_projectile_trail_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.semantic_projectile_trail"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_semantic_slash_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.semantic_slash"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_semantic_shield_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.semantic_shield"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_semantic_heal_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.semantic_heal"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_semantic_burn_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.semantic_burn"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_semantic_poison_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.semantic_poison"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_semantic_frost_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.semantic_frost"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_semantic_portal_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.semantic_portal"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_semantic_target_lock_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.semantic_target_lock"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_semantic_selection_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.semantic_selection"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_semantic_cast_radius_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.semantic_cast_radius"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_semantic_warning_circle_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.semantic_warning_circle"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_semantic_warning_cone_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.semantic_warning_cone"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_semantic_warning_line_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.semantic_warning_line"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_semantic_placement_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.semantic_placement"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_semantic_dash_path_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.semantic_dash_path"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_semantic_tether_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.semantic_tether"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_semantic_summon_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.semantic_summon"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_semantic_buff_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.semantic_buff"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_semantic_debuff_warning_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.semantic_debuff_warning"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_semantic_stun_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.semantic_stun"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_semantic_silence_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.semantic_silence"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_semantic_root_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.semantic_root"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_semantic_stealth_reveal_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.semantic_stealth_reveal"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_semantic_channeling_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.semantic_channeling"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_micro_semantic_interact_pickup_entity",
+    "components": {
+      "Name": {
+        "Value": "RaylibMicro.semantic_interact_pickup"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {},
+        "current": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  }
+]

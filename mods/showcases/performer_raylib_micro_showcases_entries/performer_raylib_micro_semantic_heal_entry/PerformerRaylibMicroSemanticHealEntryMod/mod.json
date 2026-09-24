@@ -1,0 +1,19 @@
+{
+  "name": "PerformerRaylibMicroSemanticHealEntryMod",
+  "version": "1.0.0",
+  "description": "Entry mod for Raylib micro showcase: 治疗脉冲.",
+  "main": "bin/net8.0/PerformerRaylibMicroSemanticHealEntryMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "PerformerRaylibMicroShowcasesMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "performer",
+    "raylib",
+    "micro",
+    "semantic",
+    "holy"
+  ]
+}

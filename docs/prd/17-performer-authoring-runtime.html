@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Performer Authoring Runtime PRD — Ludots Wiki</title>
+<link rel="stylesheet" href="../site-assets/site.css">
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="../site-assets/site.js"></script>
+</head>
+<body data-docs-page="prd/17-performer-authoring-runtime.html">
+<div class="container docs-layout">
+<nav class="sidebar" id="nav"></nav>
+<main class="main" id="content"></main>
+</div>
+<script type="text/markdown" id="mdContent">
+# Performer Authoring 到 Runtime 表演管线 PRD
+
+## 1. 概述
+
+这份 PRD 固化 Ludots 表现生产线的最终边界。玩家看到的是激光、闪电、爆炸、护盾等反馈；作者交付的是一场 Performer 表演，而不是一个笼统的“特效对象”。父 Performer 组织 child performer，scope 传递对象与空间参数，Behavior 决定何时发生，Command 决定创建、更新和停止，Tween 改变普通表现参数。
+
+表现语言分为四层，四层不能互相冒充：
+
+| 层 | 回答的问题 | 例子 |
+|---|---|---|
+| 逻辑参数 | 在哪里、连向谁、持续多久、强度多少 | source、target、path、alpha、size、width、duration |
+| 具体实现 | 最终由什么图元或单发射器画出来 | Ring、Line、SpriteEmitter、ModelEmitter、RibbonEmitter、TrackEmitter、RingEmitter |
+| 常用语义 | 玩家把它理解成什么 | 激光、闪电链、爆炸、护盾、治疗、燃烧、传送、范围预警 |
+| Theme | 同一语义呈现什么风格 | 熔岩、黑暗、神圣、冰霜、科技、Mod 自定义主题 |
+
+Theme 是离线编译输入，不是 Performer Behavior。它只把风格展开为颜色、透明度、尺寸、宽度、抖动、节奏和材质参数；运行时不识别 theme token，也不依据 theme 选择实现类型。
+
+Effekseer 固定为 `1.80.6`。它只负责一个具体发射器资产内部的粒子生成、曲线、运动和绘制，不接管 Performer、child performer、scope、Behavior、Command 或 Tween。
+
+二十九种玩家语义各自拥有一个 `signatureEmitterId`。签名资源不是新的语义型 AssetKind，而是该语义专属、可追溯的某一种具体 emitter 资产；辅助层仍可复用其他具体 emitter。语义 showcase 的特效主体必须来自 Effekseer，Raylib Mesh 只允许作为明确标注的地面、角色、目标或玩法对象参照。
+
+`AssetKind.VFX` 退役。任何配置遇到它都必须明确失败，不提供兼容别名、不自动迁移、不替换为 Mesh、Billboard、白球、默认颜色或任意其他实现。
+
+## 2. 结构
+
+| 阶段 | Ludots 职责 | 输入与产物 |
+|---|---|---|
+| Authoring | 声明 semantic、theme、父子 Performer、scope 和时间关系 | 面向作者的表演描述 |
+| Offline Compile | 展开 semantic 与 theme，绑定具体 AssetKind，编译参数和时间轨 | 普通 Performer 定义、child 列表、参数、Command、Tween |
+| Asset Validation | 在隔离子进程中验证 Effekseer 资产和依赖 | 通过门禁的单发射器资产或明确错误 |
+| Runtime | 执行 Behavior、Command、Tween，维护 child 生命周期并透传 scope | 可被适配器消费的具体表现请求 |
+| Raylib Adapter | 绘制原生图元，驱动通过验证的 Effekseer 单发射器 | 确定的 Ring、Line 或 emitter 画面 |
+
+Authoring 正本采用固定顶层顺序：`schemaVersion / namespace / themes / motionClasses / emitters / showcases`。每个 emitter 同时声明具体 AssetKind、所属 showcase、用途、离线工程参数、格式和哈希；每个语义 showcase 声明唯一 `signatureEmitterId`。生成器必须先完整校验，再生成普通 Performer 配置；未知字段、重复标识、未知引用或无法展开的声明都直接失败，不输出半成品。
+
+### 2.1 Ludots 拥有的控制面
+
+- Performer 是一场表演的身份与生命周期单位。
+- child performer 是组合单位；复杂语义由多个 child 组合，不塞进一个发射器资产。
+- scope 传递 owner、source、target、path、socket、area 和普通表现参数。
+- Behavior 负责触发、维持、跟随和停止条件。
+- Command 负责创建、更新、显隐、停止与销毁。
+- Tween 负责 alpha、size、width、color、offset、intensity 等参数随时间变化。
+
+### 2.2 Adapter 拥有的绘制面
+
+- Raylib 原生 `Ring` 和 `Line` 保持独立、具体、无资源的图元。
+- Effekseer 通道只开放 `SpriteEmitter`、`ModelEmitter`、`RibbonEmitter`、`TrackEmitter`、`RingEmitter` 五种具体 AssetKind。
+- 已有 `Mesh`、`SkinnedMesh`、`GroundOverlay`、`Spline`、`WorldHud`、`WorldText` 等具体通道继续独立存在。
+- `Explosion`、`Lightning`、`Laser`、`Shield` 是作者与玩家使用的语义，不是 AssetKind。
+
+## 3. 详情
+
+### 3.1 Theme 的离线合同
+
+- Theme 可以由 Core 或 Mod 声明，自定义主题必须使用命名空间，例如 `core.lava`、`combat.shadowFrost`。
+- Theme 只改变同一语义的风格参数，不拥有生命周期、不创建 child、不改变 Behavior、不决定 AssetKind。
+- Offline Compile 将 theme token 完全展开到 `paramDefaults`、child `paramOverrides`、材质输入或已编译 Tween。
+- 未知 theme、字段类型错误、参数越界或无法完整展开时，编译必须失败。
+- Runtime 只消费已展开的数值和向量，不保留 theme 分支，不在热路径做字符串查找或动态 schema 决策。
+
+### 3.2 七种最小实现合同
+
+| AssetKind | 实现归属 | 最小职责 | 不负责 |
+|---|---|---|---|
+| `Ring` | Raylib 原生 | 范围边界、脉冲、落点、命中环 | 粒子发射与复杂材质曲线 |
+| `Line` | Raylib 原生 | 直线、连接、方向、十字、路径骨架 | 柔性带、连续面和粒子群 |
+| `SpriteEmitter` | Effekseer | 面片粒子、火花、烟尘、命中闪光 | 组合多个独立语义层 |
+| `ModelEmitter` | Effekseer | 基于模型的碎片或立体粒子 | Ludots Mesh 实体生命周期 |
+| `RibbonEmitter` | Effekseer | 沿粒子历史形成柔性带 | source-target 的业务跟随规则 |
+| `TrackEmitter` | Effekseer | 有宽度和分段的连续轨迹或光束主体 | 激光完整语义及命中反馈 |
+| `RingEmitter` | Effekseer | 发射器内部的环形粒子面 | 原生 Ring 的范围与调试职责 |
+
+同名外观不等于同一实现。原生 `Ring` 永远由 Raylib 绘制；`RingEmitter` 永远加载通过验证的 Effekseer 单发射器资产。禁止根据是否存在资源在两条路径间切换。
+
+### 3.3 Motion Class 与 ParamTween 合同
+
+- `motionClasses` 是可复用的声明式动效类，作用类似 CSS 动效类；它描述参数如何随时间变化，不拥有 Performer 生命周期。
+- 每个动效类由离线生成器展开为一个或多个 `ParamTween` Behavior，支持 Float、Vector、delay、duration、easing、loop 与 ping-pong。
+- 动效属性必须绑定正式参数槽；当前缩放与透明度分别使用 `motion_scale = 12`、`motion_alpha = 13`，禁止生成临时编号或未注册参数名。
+- 同一个展示可以组合多个动效类；引用不存在的类、重复绑定同一属性或参数类型不匹配时，生成必须失败。
+- Runtime 在稳态 Chunk 迭代中更新 Tween，不在热路径分配内存。注册表版本变化后，已有 Tween 状态必须重置，不能继续消费旧定义。
+
+### 3.4 Effekseer 资产合同
+
+- 工具与运行库固定为 Effekseer `1.80.6`。
+- 正式运行时格式必须为 `1810`；`1800` 是 alpha1 格式，不得作为 1.80.6 正式资产放行。
+- 每个资产必须是 `Root -> 一个叶节点`，且声明的 AssetKind 必须与叶节点真实类型一致。
+- 单个资产只表达一个 `SpriteEmitter`、`ModelEmitter`、`RibbonEmitter`、`TrackEmitter` 或 `RingEmitter`。
+- 资产不得携带 child emitter、声音、GPU 粒子、自定义材质、外部曲线、程序化模型、力场、碰撞、触发器、LOD 或动态表达式。
+- `ModelEmitter` 必须声明且只声明一个受管外部模型资源；其他依赖必须符合白名单和可追踪路径规则。
+- 外部纹理和模型路径必须是相对 emitter 资产目录的受管路径；绝对路径、`..` 越界、缺失文件和空文件一律拒绝。
+- 二十九个语义签名资源必须与二十九个语义一一对应；规范化后忽略名称的表现参数指纹不得重复，导出的二进制 SHA-256 也不得重复。
+- `.efkproj` 由 emitter 的声明式工程参数生成；Sprite 签名纹理由离线位图脚本生成。`-Mode Check` 必须能逐字节复现工程源、纹理和 `.efkefc`，否则判定源产物漂移。
+- 正式导出只允许执行 `scripts/export-raylib-effekseer-assets.ps1 -Mode Write`。工程源、纹理、模型和导出结果先进入同一个隔离暂存包，全部通过当前原生验证器后才整批发布并刷新 SHA-256；失败时恢复正式资产与 authoring 正本。
+- Effekseer 资产先由离线编译器解析，再交给受限隔离子进程验证；主游戏进程不直接试探未知或损坏资产。
+- 解析失败、版本未知、字段未知、类型无法判断、依赖缺失或校验进程异常，一律 fail-closed。
+
+### 3.5 从作者描述到一帧画面
+
+1. 作者选择一个玩家语义和 Theme，并声明 source、target、持续时间等逻辑参数。
+2. Offline Compile 把语义、Theme 与 motionClasses 展开为父 Performer、多个 child performer、具体 AssetKind、参数覆盖、Command 和 ParamTween。
+3. Effekseer emitter 资产在隔离子进程完成 `1810`、节点类型、依赖和禁用能力校验。
+4. Runtime 根据 Behavior 创建表演，通过 scope 向 children 透传 source、target、颜色、尺寸和强度。
+5. Raylib Adapter 绘制原生 Ring/Line，并只播放已经通过门禁的 Effekseer emitter。
+6. 停止条件到达后，Command 显式停止并清理对应 child；不存在静默遗留或替代绘制。
+
+### 3.6 展示交付规则
+
+- 每一种具体实现有一个独立 showcase：两种原生图元和五种 Effekseer emitter 共七个入口。
+- 每一种常用语义有一个独立 showcase；一个入口只回答“玩家看到了什么、做了什么、得到了什么反馈”。
+- 每个语义 showcase 必须且只能引用一次自己的签名资源，不得包含原生 Ring/Line；Mesh 只保留显式 `scene` 角色。
+- 每个 Performer 最多声明十六个直接 child；超出 `PerformerChildren` 容量必须在离线生成时失败，不能让多出的 child 脱离 scope 和父级销毁。
+- 每个 showcase 交付真实 Raylib 录屏和代表截图；视频先展示动作与反馈，截图用于辨认轮廓与空间关系。
+- 汇报网站不使用大而全 gallery 冒充验收，不把实现统计、调试数字或架构名当作玩家说明。
+- 交付目标是七个实现入口与二十九个玩家语义入口，共三十六个独立录屏和三十六张海报。每段为 `1280x720`、十六个采样帧、两秒。录屏摘要必须绑定当前 authoring 与生成器 SHA-256；任一输入变化后，旧媒体立即失效并由汇报网站显示缺失。
+
+## 4. 场景
+
+### 4.1 持续激光
+
+作者声明 `semantic=laser`、一个科技类 Theme、source、target 和持续时间。离线编译结果必须至少包含三个 child performer：
+
+- `TrackEmitter`：从 source 指向 target 的持续光束主体。
+- `SpriteEmitter`：target 处持续可读的命中闪光或火花。
+- `RingEmitter`：target 处明确、稳定的命中波纹。
+
+Behavior 维持 source 和 target 的跟随，Command 创建和停止三层 child，Tween 驱动宽度、透明度和强度。Effekseer 不知道“激光”语义，也不负责目标选择、跟随或整场生命周期。
+
+### 4.2 闪电链
+
+作者声明 source 和有顺序的 targets。离线编译将每一跳展开为独立连接 child，并用短促、折转、间歇的参数区分于持续激光。玩家不读标签也应从轮廓和节奏判断它在多个目标间跳跃。
+
+### 4.3 爆炸与命中
+
+爆炸由中心闪光、向外粒子、冲击环等单职责 child 同时组成。中心闪光可以使用专属 `SpriteEmitter`，碎片可以使用 `ModelEmitter`，装饰冲击波使用 `RingEmitter`。任一 child 缺失都应明确暴露，不得由剩余 child 假装整场表演成功。
+
+### 4.4 范围预警与护盾
+
+玩法边界优先使用原生 `Ring`、`Line` 或已有 `GroundOverlay`，以保证读数稳定。`RingEmitter` 可以增添流动装饰，但不得成为碰撞范围、危险边界或选择判定的唯一可视来源。
+
+### 4.5 自定义主题
+
+Mod 声明 `combat.shadowFrost` 并用于冰霜命中。离线编译把它展开成冰蓝核心、暗色边缘、透明度、宽度、抖动和节奏参数。运行时只看到这些普通参数，不存在 `ThemeBehavior`，也不会按 theme 名选择绘制后端。
+
+## 5. 边界
+
+### 5.1 必须成立
+
+- Ludots 始终拥有 Performer、child、scope、Behavior、Command、Tween 和复杂语义的组合权。
+- Effekseer 始终被限制在单发射器资产内部，不成为新的表演运行时或语义层。
+- 原生 `Ring` / `Line` 与 Effekseer 五种 emitter 是七条明确资产通道。
+- 二十九个语义各自拥有一个专属签名 emitter；签名只提供可辨认的视觉身份，不接管语义、主题或生命周期。
+- source、target、alpha、size、width、duration 等通过正式 scope 和表现参数传递，不借用材质自定义数据冒充业务字段。
+- 缺资产、缺绑定、未知类型、非法数值、资产损坏、验证崩溃和运行库不匹配都必须明确失败。
+
+### 5.2 明确禁止
+
+- 禁止新增 `VFX`、`Effect`、`VisualRecipe` 等笼统总类承载这套能力。
+- 禁止恢复或兼容 `AssetKind.VFX`，也禁止复用其退役编号表达新类型。
+- 禁止把 `ParticleEmitter`、`RibbonTrail` 作为五种 Effekseer AssetKind 的模糊别名。
+- 禁止创建 `Explosion`、`Laser`、`Lightning`、`Shield` 等语义型 AssetKind。
+- 禁止把 Theme 实现为 Behavior，或让 Theme 在运行时切换 AssetKind。
+- 禁止同一个 AssetKind 在原生绘制和 Effekseer 资源之间 fallback。
+- 禁止主进程加载未经隔离验证的 emitter 资产。
+- 禁止用默认 Mesh、白球、默认颜色、世界原点或静默不画掩盖错误。
+
+## 6. UAT
+
+```gherkin
+功能: 玩家在独立展示中认出每一种最小实现
+
+  场景: 每种实现都有自己的展示
+    假如玩家打开表现管线汇报网站
+    当玩家进入“实现展示”区域
+    那么玩家应分别看到 Ring、Line、SpriteEmitter、ModelEmitter、RibbonEmitter、TrackEmitter 和 RingEmitter 的独立入口
+    并且每个入口应只突出一种实现
+    并且每个入口应提供真实 Raylib 录屏和代表截图
+
+  场景: 汇报目录覆盖全部交付
+    假如评审者打开表现展示目录
+    当评审者分别切换“实现图元”和“玩家语义”
+    那么目录应显示七个实现入口和二十九个语义入口
+    并且三十六个入口都应有可播放的两秒录屏与清楚海报
+    并且任一缺失、尺寸错误、帧数错误或时长错误都应让交付门禁失败
+
+  场景: 旧录屏不能证明新资源
+    假如作者修改了语义配方、Effekseer 资源声明或离线生成器
+    当评审者只保留修改前的录屏打开汇报目录
+    那么对应入口应显示当前版本证据缺失
+    并且旧录屏不应继续计入三十六项交付
+
+  场景: 玩家区分原生环和环发射器
+    假如玩家依次打开 Ring 与 RingEmitter 展示
+    当玩家观察两段录屏
+    那么 Ring 应呈现稳定清楚的玩法边界
+    并且 RingEmitter 应呈现由粒子运动形成的环形画面
+    并且任一展示都不应在两种实现之间自动替换
+```
+
+```gherkin
+功能: 玩家通过独立语义展示读懂战斗反馈
+
+  场景: 持续激光的三层反馈同时成立
+    假如玩家面对一个可移动的远程目标
+    当玩家持续发射激光并让目标移动
+    那么玩家应看到光束始终从施法者连接到目标
+    并且目标处应同时出现持续命中闪光和明确命中环
+    并且停止发射后这三层画面都应及时结束
+
+  场景: 玩家不靠标签区分闪电链和激光
+    假如玩家先释放闪电链再持续发射激光
+    当玩家只观察画面而不阅读说明
+    那么闪电链应短暂、折转并在多个目标间跳跃
+    并且激光应持续、笔直并始终连接同一个目标
+
+  场景: 一种语义只在一个展示中验收
+    假如玩家进入语义展示列表
+    当玩家选择爆炸、护盾、治疗、燃烧、传送或范围预警中的任意一项
+    那么当前画面应只演示所选语义
+    并且玩家不需要从同时播放的其他画面中猜测当前反馈
+
+  场景: 每种语义拥有可辨认的 Effekseer 主体
+    假如玩家关闭说明文字依次观看二十九个语义展示
+    当玩家观察增益、减益、眩晕、沉默、治疗和范围预警
+    那么每项应由自己的 Effekseer 签名资源给出不同轮廓
+    并且关闭 Effekseer 绘制后只应留下地面、角色、目标和玩法对象参照
+
+  场景: 同一动效节奏可以被多个展示复用
+    假如两个独立展示都声明了同一种呼吸节奏
+    当玩家依次观看这两个展示
+    那么两者的缩放与明暗变化应保持相同节奏
+    并且各自的实现图元、主题风格和生命周期仍应独立
+```
+
+```gherkin
+功能: 作者错误不会变成玩家看到的替代画面
+
+  场景: 旧视觉总类被拒绝
+    假如表演配置仍声明 AssetKind 为 VFX
+    当配置进入离线编译
+    那么编译应明确失败
+    并且不应生成兼容别名或替代图元
+
+  场景: 正式资产格式被严格验证
+    假如一个 emitter 资产不是 Effekseer 1.80.6 的 1810 格式
+    当隔离验证进程检查该资产
+    那么资产应被明确拒绝
+    并且 1800 格式不应被当作 1.80.6 正式资产放行
+
+  场景: 损坏资产不会进入游戏进程
+    假如一个 emitter 资产损坏、依赖缺失或包含禁用能力
+    当离线资产门禁运行
+    那么隔离验证应失败并给出可定位错误
+    并且游戏主进程不应尝试加载该资产
+
+  场景: 外部资源不能逃离资产目录
+    假如 emitter 声明了绝对路径、父目录越界、缺失文件或空文件
+    当作者执行正式 Effekseer 导出脚本
+    那么导出应在替换正式资产前明确失败
+    并且旧的有效资产与校验摘要不应被损坏
+
+  场景: 超出父级容量的表演不能生成
+    假如作者为一个展示声明超过十六个直接 child
+    当配置进入离线编译
+    那么编译应指出超出父级容量并失败
+    并且不应创建脱离 scope、裁剪同步或父级销毁的残留画面
+
+  场景: 未知主题不会套用默认样式
+    假如作者引用一个未声明的自定义主题
+    当离线编译处理这场表演
+    那么编译应明确失败
+    并且玩家不应看到默认颜色、默认 Mesh 或默认主题替代结果
+```
+</script>
+<script>
+document.getElementById('content').innerHTML = marked.parse(document.getElementById('mdContent').textContent);
+</script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <BaseIntermediateOutputPath>$(TEMP)\ludots-raylib-micro-obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
+    <IntermediateOutputPath>$(BaseIntermediateOutputPath)$(Configuration)\</IntermediateOutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="obj\**\*.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\performer_raylib_micro_showcases\PerformerRaylibMicroShowcasesMod\PerformerRaylibMicroShowcasesMod.csproj" />
+  </ItemGroup>
+  <Target Name="ExposeLauncherReferenceAssembly" AfterTargets="Build" Condition="'$(ProduceReferenceAssembly)' == 'true'">
+    <PropertyGroup>
+      <_LauncherReferenceDir>$(MSBuildProjectDirectory)\obj\$(Configuration)\ref\</_LauncherReferenceDir>
+      <_LauncherReferenceAssembly>$(_LauncherReferenceDir)$(AssemblyName).dll</_LauncherReferenceAssembly>
+      <_ProducedReferenceAssembly>$(IntermediateOutputPath)ref\$(AssemblyName).dll</_ProducedReferenceAssembly>
+      <_ProducedReferenceIntAssembly>$(IntermediateOutputPath)refint\$(AssemblyName).dll</_ProducedReferenceIntAssembly>
+      <_ProducedMainAssembly>$(IntermediateOutputPath)$(AssemblyName).dll</_ProducedMainAssembly>
+    </PropertyGroup>
+    <MakeDir Directories="$(_LauncherReferenceDir)" />
+    <Copy SourceFiles="$(_ProducedReferenceAssembly)" DestinationFiles="$(_LauncherReferenceAssembly)" SkipUnchangedFiles="true" Condition="Exists('$(_ProducedReferenceAssembly)')" />
+    <Copy SourceFiles="$(_ProducedReferenceIntAssembly)" DestinationFiles="$(_LauncherReferenceAssembly)" SkipUnchangedFiles="true" Condition="!Exists('$(_ProducedReferenceAssembly)') and Exists('$(_ProducedReferenceIntAssembly)')" />
+    <Copy SourceFiles="$(_ProducedMainAssembly)" DestinationFiles="$(_LauncherReferenceAssembly)" SkipUnchangedFiles="true" Condition="!Exists('$(_ProducedReferenceAssembly)') and !Exists('$(_ProducedReferenceIntAssembly)') and Exists('$(_ProducedMainAssembly)')" />
+  </Target>
+</Project>

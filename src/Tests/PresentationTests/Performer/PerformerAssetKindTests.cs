@@ -3,6 +3,7 @@ using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Presentation;
+using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
@@ -21,20 +22,26 @@ namespace Ludots.Tests.Presentation
     public sealed class PerformerAssetKindTests
     {
         [Test]
-        public void AssetKindContract_ArchitectureExposesNineKinds()
+        public void AssetKindContract_ExposesConcretePrimitiveAndEmitterKindsOnly()
         {
             AssetKind[] values = (AssetKind[])System.Enum.GetValues(typeof(AssetKind));
-            Assert.That(values.Length, Is.EqualTo(10), "AssetKind SSOT is the architecture enum, which defines 10 kinds.");
+            Assert.That(values.Length, Is.EqualTo(16));
             Assert.That(values, Does.Contain(AssetKind.Mesh));
             Assert.That(values, Does.Contain(AssetKind.SkinnedMesh));
             Assert.That(values, Does.Contain(AssetKind.Decal));
-            Assert.That(values, Does.Contain(AssetKind.VFX));
             Assert.That(values, Does.Contain(AssetKind.Sound));
             Assert.That(values, Does.Contain(AssetKind.Spline));
             Assert.That(values, Does.Contain(AssetKind.WorldHud));
             Assert.That(values, Does.Contain(AssetKind.WorldText));
             Assert.That(values, Does.Contain(AssetKind.GroundOverlay));
             Assert.That(values, Does.Contain(AssetKind.Surface));
+            Assert.That(values, Does.Contain(AssetKind.Ring));
+            Assert.That(values, Does.Contain(AssetKind.Line));
+            Assert.That(values, Does.Contain(AssetKind.SpriteEmitter));
+            Assert.That(values, Does.Contain(AssetKind.RibbonEmitter));
+            Assert.That(values, Does.Contain(AssetKind.ModelEmitter));
+            Assert.That(values, Does.Contain(AssetKind.TrackEmitter));
+            Assert.That(values, Does.Contain(AssetKind.RingEmitter));
         }
 
         [Test]
@@ -59,77 +66,60 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void StaticStableVisual_ProductionPath_AllocatesDistinctHandles_WhenLegacyProjectionCollides()
+        [TestCase("VFX")]
+        [TestCase("ParticleEmitter")]
+        [TestCase("RibbonTrail")]
+        public void AssetKindContract_RemovedNamesHaveNoCompatibilityAlias(string removedName)
         {
-            const int meshPerformerStableId = 219_522;
-            const int vfxPerformerStableId = 247_666;
-            const int meshDefinitionId = 1;
-            const int vfxDefinitionId = 817;
+            Assert.That(System.Enum.TryParse(removedName, ignoreCase: false, out AssetKind _), Is.False);
+        }
 
-            int legacyMesh = PerformerBehaviorRuntimeUtility.ComposeVisualStableId(
-                meshPerformerStableId,
-                slotIndex: 1,
-                AssetKind.Mesh,
-                meshDefinitionId);
-            int legacyVfx = PerformerBehaviorRuntimeUtility.ComposeVisualStableId(
-                vfxPerformerStableId,
-                slotIndex: 0,
-                AssetKind.VFX,
-                vfxDefinitionId);
-            Assert.That(legacyVfx, Is.EqualTo(legacyMesh), "This pair reproduces a real static performer legacy StableId collision.");
-
-            using var world = World.Create();
-            Entity owner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
-            var instances = new PerformerEntityRuntime(world);
+        [Test]
+        [TestCase(AssetKind.Ring)]
+        [TestCase(AssetKind.Line)]
+        public void AssetKindContract_PrimitiveDirectRegistrationRejectsMaterialCustomData(AssetKind primitiveKind)
+        {
             var definitions = new PerformerDefinitionRegistry();
-            var requests = new PresentationRequestBuffer();
-            var stableIds = new PresentationStableIdAllocator();
-            var visualStableIds = new PerformerVisualStableIdTable(stableIds, capacity: 4);
-            var stableDrawCache = new StableDrawCache(4);
 
-            int meshDefId = definitions.Register("collision.mesh", CreateStaticStableDefinition(1, AssetKind.Mesh, 101, 201));
-            Assert.That(meshDefId, Is.EqualTo(meshDefinitionId));
-            for (int id = meshDefinitionId + 1; id < vfxDefinitionId; id++)
-            {
-                Assert.That(definitions.Register($"collision.padding.{id}", new PerformerDefinition()), Is.EqualTo(id));
-            }
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                definitions.Register($"{primitiveKind}.with.material.custom.data", new PerformerDefinition
+                {
+                    Behaviors =
+                    [
+                        new BehaviorSlot
+                        {
+                            SlotIndex = 0,
+                            Kind = BehaviorKind.AssetBinding,
+                            ActiveByDefault = true,
+                            AssetBinding = new AssetBindingConfig
+                            {
+                                AssetKind = primitiveKind,
+                                RenderPath = VisualRenderPath.Primitive,
+                                Mobility = VisualMobility.Movable,
+                                LocalScale = Vector3.One,
+                                AssetIdParamKey = -1,
+                                AssetSwapParamKey = -1,
+                                MaterialParamKey = -1,
+                                MaterialCustomData = new MaterialCustomDataBinding
+                                {
+                                    Slots =
+                                    [
+                                        new MaterialCustomDataSlotBinding
+                                        {
+                                            Slot = 0,
+                                            Lane = MaterialCustomDataLane.Float,
+                                            ParamKey = -1,
+                                            DefaultFloatValue = 1f,
+                                        },
+                                    ],
+                                },
+                            },
+                        },
+                    ],
+                }))!;
 
-            int vfxDefId = definitions.Register("collision.vfx", CreateStaticStableDefinition(0, AssetKind.VFX, 102, 202));
-            Assert.That(vfxDefId, Is.EqualTo(vfxDefinitionId));
-
-            PerformerDefinition meshDefinition = definitions.Get(meshDefId);
-            PerformerDefinition vfxDefinition = definitions.Get(vfxDefId);
-            instances.Create(meshDefId, owner, 0, PresentationAnchorKind.WorldPosition, Vector3.Zero, meshPerformerStableId, Entity.Null, meshDefinition);
-            instances.Create(vfxDefId, owner, 0, PresentationAnchorKind.WorldPosition, new Vector3(2f, 0f, 0f), vfxPerformerStableId, Entity.Null, vfxDefinition);
-
-            using var emit = new PerformerEmitSystem(
-                world,
-                instances,
-                definitions,
-                requests,
-                new Dictionary<string, object>(),
-                stableDrawCache: stableDrawCache,
-                visualStableIds: visualStableIds);
-
-            emit.Update(0.016f);
-
-            PerformerVisualStableKey meshKey = PerformerBehaviorRuntimeUtility.ComposeVisualStableKey(
-                meshPerformerStableId,
-                slotIndex: 1,
-                AssetKind.Mesh,
-                meshDefId);
-            PerformerVisualStableKey vfxKey = PerformerBehaviorRuntimeUtility.ComposeVisualStableKey(
-                vfxPerformerStableId,
-                slotIndex: 0,
-                AssetKind.VFX,
-                vfxDefId);
-            Assert.That(visualStableIds.TryGet(meshKey, out int meshStableId), Is.True);
-            Assert.That(visualStableIds.TryGet(vfxKey, out int vfxStableId), Is.True);
-            Assert.That(vfxStableId, Is.Not.EqualTo(meshStableId));
-            Assert.That(stableDrawCache.Count, Is.EqualTo(2));
-            Assert.That(stableDrawCache.Contains(meshStableId), Is.True);
-            Assert.That(stableDrawCache.Contains(vfxStableId), Is.True);
-            Assert.That(requests.Count, Is.EqualTo(0), "Static stable visuals must stay in StableDrawCache, not fall back to transient requests.");
+            Assert.That(ex.Message, Does.Contain($"assetKind '{primitiveKind}' must not declare"));
+            Assert.That(ex.Message, Does.Contain("materialCustomData"));
         }
 
         [Test]
@@ -138,28 +128,46 @@ namespace Ludots.Tests.Presentation
             Assert.That((byte)AssetKind.Mesh, Is.EqualTo(1));
             Assert.That((byte)AssetKind.SkinnedMesh, Is.EqualTo(2));
             Assert.That((byte)AssetKind.Decal, Is.EqualTo(3));
-            Assert.That((byte)AssetKind.VFX, Is.EqualTo(4));
+            Assert.That(System.Enum.IsDefined(typeof(AssetKind), (byte)4), Is.False);
             Assert.That((byte)AssetKind.Sound, Is.EqualTo(5));
             Assert.That((byte)AssetKind.Spline, Is.EqualTo(6));
             Assert.That((byte)AssetKind.WorldHud, Is.EqualTo(7));
             Assert.That((byte)AssetKind.WorldText, Is.EqualTo(8));
             Assert.That((byte)AssetKind.GroundOverlay, Is.EqualTo(9));
             Assert.That((byte)AssetKind.Surface, Is.EqualTo(10));
+            Assert.That((byte)AssetKind.Ring, Is.EqualTo(11));
+            Assert.That((byte)AssetKind.Line, Is.EqualTo(12));
+            Assert.That((byte)AssetKind.SpriteEmitter, Is.EqualTo(13));
+            Assert.That((byte)AssetKind.RibbonEmitter, Is.EqualTo(14));
+            Assert.That((byte)AssetKind.ModelEmitter, Is.EqualTo(15));
+            Assert.That((byte)AssetKind.TrackEmitter, Is.EqualTo(16));
+            Assert.That((byte)AssetKind.RingEmitter, Is.EqualTo(17));
         }
 
         [Test]
-        public void VisualRenderPathContract_ExposesSurfaceLane()
+        public void VisualRenderPathContract_ExposesSurfaceAndPrimitiveLanes()
         {
             Assert.That((byte)VisualRenderPath.Surface, Is.EqualTo(6));
             Assert.That(VisualRenderPath.Surface.IsSurfaceLane(), Is.True);
             Assert.That(VisualRenderPath.Surface.IsStaticInstanceLane(), Is.False);
             Assert.That(VisualRenderPath.Surface.IsSkinnedLane(), Is.False);
+            Assert.That((byte)VisualRenderPath.Primitive, Is.EqualTo(7));
+            Assert.That(VisualRenderPath.Primitive.IsPrimitiveLane(), Is.True);
+            Assert.That(VisualRenderPath.Primitive.IsSurfaceLane(), Is.False);
+            Assert.That(VisualRenderPath.Primitive.IsStaticInstanceLane(), Is.False);
+            Assert.That(VisualRenderPath.Primitive.IsSkinnedLane(), Is.False);
         }
 
         [TestCase(AssetKind.Mesh, 1001, 2001, VisualRenderPath.StaticMesh)]
         [TestCase(AssetKind.SkinnedMesh, 1002, 2002, VisualRenderPath.SkinnedMesh)]
         [TestCase(AssetKind.Decal, 1003, 2003, VisualRenderPath.StaticMesh)]
-        [TestCase(AssetKind.VFX, 1004, 2004, VisualRenderPath.StaticMesh)]
+        [TestCase(AssetKind.Ring, 0, 0, VisualRenderPath.Primitive)]
+        [TestCase(AssetKind.Line, 0, 0, VisualRenderPath.Primitive)]
+        [TestCase(AssetKind.SpriteEmitter, 1013, 0, VisualRenderPath.Primitive)]
+        [TestCase(AssetKind.RibbonEmitter, 1014, 0, VisualRenderPath.Primitive)]
+        [TestCase(AssetKind.ModelEmitter, 1015, 0, VisualRenderPath.Primitive)]
+        [TestCase(AssetKind.TrackEmitter, 1016, 0, VisualRenderPath.Primitive)]
+        [TestCase(AssetKind.RingEmitter, 1017, 0, VisualRenderPath.Primitive)]
         public void AssetBinding_VisualKinds_EmitVisualProxy(
             AssetKind assetKind,
             int assetId,
@@ -196,6 +204,7 @@ namespace Ludots.Tests.Presentation
                             LocalScale = Vector3.One,
                             AssetIdParamKey = -1,
                             AssetSwapParamKey = -1,
+                            MaterialParamKey = -1,
                         },
                     },
                 ],
@@ -224,11 +233,119 @@ namespace Ludots.Tests.Presentation
             ReadOnlySpan<PresentationRequest> span = requests.GetSpan();
             Assert.That(span.Length, Is.EqualTo(1));
             Assert.That(span[0].Kind, Is.EqualTo(PresentationRequestKind.VisualProxy));
-            Assert.That(span[0].VisualProxy.MeshAssetId, Is.EqualTo(assetId));
+            Assert.That(span[0].VisualProxy.AssetId, Is.EqualTo(assetId));
             Assert.That(span[0].VisualProxy.MaterialId, Is.EqualTo(materialId));
             Assert.That(span[0].VisualProxy.RenderPath, Is.EqualTo(renderPath));
             Assert.That(span[0].VisualProxy.Position, Is.EqualTo(new Vector3(4f, 5f, 6f)));
             Assert.That(span[0].VisualProxy.Scale, Is.EqualTo(new Vector3(1.5f, 2f, 2.5f)));
+        }
+
+        [Test]
+        [TestCase(AssetKind.Ring)]
+        [TestCase(AssetKind.Line)]
+        [TestCase(AssetKind.SpriteEmitter)]
+        [TestCase(AssetKind.RibbonEmitter)]
+        [TestCase(AssetKind.ModelEmitter)]
+        [TestCase(AssetKind.TrackEmitter)]
+        [TestCase(AssetKind.RingEmitter)]
+        public void AssetBinding_PrimitiveLane_FlushesConcreteAssetAndTarget(AssetKind assetKind)
+        {
+            using var world = World.Create();
+            Entity owner = world.Create(
+                new PresentationStableId { Value = 7110 },
+                VisualTransform.Default,
+                new CullState { IsVisible = true, LOD = LODLevel.High });
+            var instances = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            var requests = new PresentationRequestBuffer();
+            var primitives = new PrimitiveDrawBuffer(8);
+            var snapshot = new PrimitiveDrawBuffer(8);
+            var proxyBuffer = new PresentationVisualProxyBuffer(8);
+            var skinned = new SkinnedVisualBatchBuffer(8);
+            var stableDrawCache = new StableDrawCache(8);
+            int colorParamKey = 812;
+            int scaleParamKey = 813;
+            int visibleParamKey = 814;
+            int targetParamKey = 815;
+            int assetId = assetKind.IsEmitterKind() ? 1200 + (int)assetKind : 0;
+
+            int defId = definitions.Register($"asset.{assetKind}.primitive", new PerformerDefinition
+            {
+                DefaultColor = new Vector4(1f, 0f, 0f, 1f),
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                            ActiveByDefault = true,
+                            AssetBinding = new AssetBindingConfig
+                            {
+                                AssetKind = assetKind,
+                                AssetId = assetId,
+                                MaterialId = 0,
+                                RenderPath = VisualRenderPath.Primitive,
+                            Mobility = VisualMobility.Movable,
+                            LocalScale = new Vector3(2f, 1f, 3f),
+                            ColorParamKey = colorParamKey,
+                            ScaleParamKey = scaleParamKey,
+                            TargetParamKey = targetParamKey,
+                            VisibilityParamKey = visibleParamKey,
+                            AssetIdParamKey = -1,
+                            AssetSwapParamKey = -1,
+                            MaterialParamKey = -1,
+                        },
+                    },
+                ],
+            });
+
+            instances.BindDefinitions(definitions);
+            PerformerDefinition definition = definitions.Get(defId);
+            Entity performer = instances.Create(defId, owner, 0, PresentationAnchorKind.WorldPosition, new Vector3(4f, 0f, 6f), 7111, Entity.Null, definition);
+            ref var state = ref world.Get<PerformerState>(performer);
+            state.BehaviorActiveMask = 1u;
+            world.Get<PerformerWorldRotation>(performer).Value = Quaternion.Identity;
+            world.Get<PerformerWorldScale>(performer).Value = Vector3.One;
+            instances.SetParam(performer, colorParamKey, ParamLane.Vector, 0f, 0, new Vector4(0.2f, 0.7f, 1f, 0.9f));
+            instances.SetParam(performer, scaleParamKey, ParamLane.Float, 1.5f, 0, default);
+            instances.SetParam(performer, visibleParamKey, ParamLane.Int, 0f, 1, default);
+            instances.SetParam(performer, targetParamKey, ParamLane.Vector, 0f, 0, new Vector4(9f, 8f, 7f, 1f));
+
+            using var emit = new PerformerEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                new Dictionary<string, object>());
+            using var flush = new PresentationRequestFlushSystem(
+                world,
+                requests,
+                new PrefabRegistry(),
+                new MeshAssetRegistry(),
+                stableDrawCache,
+                primitives,
+                new GroundOverlayBuffer(),
+                new WorldHudBatchBuffer(),
+                new RoadSplineBuffer(),
+                snapshot,
+                proxyBuffer,
+                skinned);
+
+            emit.Update(0.016f);
+            flush.Update(0.016f);
+
+            Assert.That(primitives.Count, Is.EqualTo(1));
+            ref readonly PrimitiveDrawItem item = ref primitives.GetSpan()[0];
+            Assert.That(item.AssetKind, Is.EqualTo(assetKind));
+            Assert.That(item.RenderPath, Is.EqualTo(VisualRenderPath.Primitive));
+            Assert.That(item.AssetId, Is.EqualTo(assetId));
+            Assert.That(item.MaterialId, Is.EqualTo(0));
+            Assert.That(item.Position, Is.EqualTo(new Vector3(4f, 0f, 6f)));
+            Assert.That(item.Scale, Is.EqualTo(new Vector3(3f, 1.5f, 4.5f)));
+            Assert.That(item.Color, Is.EqualTo(new Vector4(0.2f, 0.7f, 1f, 0.9f)));
+            Assert.That(item.HasTarget, Is.True);
+            Assert.That(item.TargetPosition, Is.EqualTo(new Vector3(9f, 8f, 7f)));
+            Assert.That(item.Visibility, Is.EqualTo(VisualVisibility.Visible));
         }
 
         [Test]
@@ -972,7 +1089,6 @@ namespace Ludots.Tests.Presentation
         [TestCase(AssetKind.Mesh)]
         [TestCase(AssetKind.SkinnedMesh)]
         [TestCase(AssetKind.Decal)]
-        [TestCase(AssetKind.VFX)]
         public void StaticStableVisual_CacheableSubtype_EmitsOnlyWhenDirty_AndRemovesWhenDeactivated(AssetKind assetKind)
         {
             using var world = World.Create();

@@ -1,0 +1,44 @@
+{
+  "Id": "raylib_micro_semantic_buff",
+  "Tags": [
+    "showcase",
+    "performer",
+    "raylib",
+    "micro",
+    "semantic",
+    "holy",
+    "focus",
+    "Raylib.Background:Deep",
+    "Raylib.DebugGuides:Off"
+  ],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 1,
+      "HeightInMacroTiles": 1,
+      "GridCellSizeCm": 100
+    }
+  ],
+  "DefaultCamera": {
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "Yaw": 0,
+    "Pitch": 86,
+    "DistanceCm": 600,
+    "FovYDeg": 40
+  },
+  "Entities": [
+    {
+      "Template": "raylib_micro_semantic_buff_entity",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 0,
+            "Y": 0
+          }
+        }
+      }
+    }
+  ]
+}

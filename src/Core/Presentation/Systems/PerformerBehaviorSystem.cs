@@ -19,6 +19,7 @@ using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Tweening;
 
 namespace Ludots.Core.Presentation.Systems
 {
@@ -69,7 +70,7 @@ namespace Ludots.Core.Presentation.Systems
             .WithAll<PerformerState, PerformerBootstrapPending>();
         private readonly QueryDescription _tickDrivenQuery = new QueryDescription()
             .WithAll<PerformerState, PerformerWorldPosition, PerformerWorldPlanePosition>()
-            .WithAny<PerfHasSpline, PerfHasAttachmentTick, PerfHasGrounding, PerfHasSound, PerfHasOwnerFacingBinding>()
+            .WithAny<PerfHasSpline, PerfHasAttachmentTick, PerfHasGrounding, PerfHasSound, PerfHasOwnerFacingBinding, PerfHasParamTween>()
             .WithNone<PerformerBootstrapPending>();
         private readonly QueryDescription _materialDirtyQuery = new QueryDescription()
             .WithAll<PerformerState, PerfMaterialDirty>()
@@ -674,6 +675,11 @@ namespace Ludots.Core.Presentation.Systems
                 ApplyOwnerFacingBindings(entity, owner, definition);
             }
 
+            if (definition.HasParamTweenBehavior)
+            {
+                ApplyParamTweens(entity, in state, definition, tickDt);
+            }
+
             bool hasSoundBehavior = definition.HasSoundBehavior;
             if (hasSoundBehavior)
             {
@@ -1210,6 +1216,234 @@ namespace Ludots.Core.Presentation.Systems
                 ref var facing = ref World.Get<PerformerWorldFacing>(entity);
                 facing.AngleRad = 0f;
                 facing.HasValue = 1;
+            }
+        }
+
+        private void ApplyParamTweens(
+            Entity entity,
+            in PerformerState performerState,
+            PerformerDefinition definition,
+            float dt)
+        {
+            if (!float.IsFinite(dt) || dt < 0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(dt), dt, "ParamTween tick delta must be finite and non-negative.");
+            }
+
+            if (!World.Has<PerformerParamTweenState>(entity))
+            {
+                throw new InvalidOperationException(
+                    $"Performer definition {performerState.DefId} has ParamTween behavior but entity {entity.Id} has no PerformerParamTweenState.");
+            }
+
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            int[] tweenBehaviorIndices = definition.ParamTweenBehaviorIndices;
+            ValidateActiveParamTweenTargets(performerState.BehaviorActiveMask, behaviors, tweenBehaviorIndices);
+
+            ref PerformerParamTweenState tweenState = ref World.Get<PerformerParamTweenState>(entity);
+            for (int i = 0; i < tweenBehaviorIndices.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[tweenBehaviorIndices[i]];
+                if (!IsBehaviorActive(performerState.BehaviorActiveMask, slot.SlotIndex))
+                {
+                    continue;
+                }
+
+                ApplyParamTween(entity, definition, in slot, ref tweenState, dt);
+            }
+        }
+
+        private void ApplyParamTween(
+            Entity entity,
+            PerformerDefinition definition,
+            in BehaviorSlot slot,
+            ref PerformerParamTweenState state,
+            float dt)
+        {
+            int slotIndex = slot.SlotIndex;
+            uint bit = 1u << slotIndex;
+            ref readonly ParamTweenConfig config = ref slot.ParamTween;
+
+            if ((state.ValidatedTargetMask & bit) == 0u)
+            {
+                ValidateParamTweenTargetTree(entity, definition, config.ParamKey, config.Lane, depth: 0);
+                state.ValidatedTargetMask |= bit;
+            }
+
+            if ((state.StartedMask & bit) == 0u)
+            {
+                state.StartedMask |= bit;
+                state.CompletedMask &= ~bit;
+                state.SetElapsedSeconds(slotIndex, 0f);
+                if (config.Easing == TweenEasing.Cut && config.DelaySeconds == 0f)
+                {
+                    SetParamTweenValue(entity, in config, 1f);
+                    state.CompletedMask |= bit;
+                }
+                else
+                {
+                    SetParamTweenValue(entity, in config, 0f);
+                }
+
+                return;
+            }
+
+            if ((state.CompletedMask & bit) != 0u)
+            {
+                SetParamTweenValue(entity, in config, 1f);
+                return;
+            }
+
+            float elapsed = state.GetElapsedSeconds(slotIndex) + dt;
+            if (elapsed < config.DelaySeconds)
+            {
+                state.SetElapsedSeconds(slotIndex, elapsed);
+                SetParamTweenValue(entity, in config, 0f);
+                return;
+            }
+
+            if (config.Easing == TweenEasing.Cut)
+            {
+                state.SetElapsedSeconds(slotIndex, config.DelaySeconds);
+                state.CompletedMask |= bit;
+                SetParamTweenValue(entity, in config, 1f);
+                return;
+            }
+
+            float activeElapsed = elapsed - config.DelaySeconds;
+            float rawProgress;
+            if (config.Loop)
+            {
+                float period = config.PingPong
+                    ? config.DurationSeconds * 2f
+                    : config.DurationSeconds;
+                if (activeElapsed >= period)
+                {
+                    activeElapsed %= period;
+                    elapsed = config.DelaySeconds + activeElapsed;
+                }
+
+                float cycle = activeElapsed / config.DurationSeconds;
+                if (config.PingPong)
+                {
+                    int cycleIndex = (int)MathF.Floor(cycle);
+                    float cycleProgress = cycle - cycleIndex;
+                    rawProgress = (cycleIndex & 1) == 0
+                        ? cycleProgress
+                        : 1f - cycleProgress;
+                }
+                else
+                {
+                    rawProgress = cycle - MathF.Floor(cycle);
+                }
+            }
+            else
+            {
+                rawProgress = Math.Clamp(activeElapsed / config.DurationSeconds, 0f, 1f);
+                if (rawProgress >= 1f)
+                {
+                    elapsed = config.DelaySeconds + config.DurationSeconds;
+                    state.CompletedMask |= bit;
+                }
+            }
+
+            state.SetElapsedSeconds(slotIndex, elapsed);
+            SetParamTweenValue(entity, in config, TweenEasingUtil.Evaluate(rawProgress, config.Easing));
+        }
+
+        private void SetParamTweenValue(Entity entity, in ParamTweenConfig config, float progress)
+        {
+            switch (config.Lane)
+            {
+                case ParamLane.Float:
+                    SetParam(
+                        entity,
+                        config.ParamKey,
+                        ParamLane.Float,
+                        config.FromFloat + ((config.ToFloat - config.FromFloat) * progress),
+                        0,
+                        Vector4.Zero);
+                    break;
+
+                case ParamLane.Vector:
+                    Vector4 value = Vector4.Lerp(config.FromVector, config.ToVector, progress);
+                    SetParam(entity, config.ParamKey, ParamLane.Vector, 0f, 0, in value);
+                    break;
+
+                default:
+                    throw new InvalidOperationException($"ParamTween lane '{config.Lane}' is not supported at runtime.");
+            }
+        }
+
+        private static void ValidateActiveParamTweenTargets(
+            uint activeMask,
+            BehaviorSlot[] behaviors,
+            int[] tweenBehaviorIndices)
+        {
+            for (int left = 0; left < tweenBehaviorIndices.Length; left++)
+            {
+                ref readonly BehaviorSlot leftSlot = ref behaviors[tweenBehaviorIndices[left]];
+                if (!IsBehaviorActive(activeMask, leftSlot.SlotIndex))
+                {
+                    continue;
+                }
+
+                for (int right = left + 1; right < tweenBehaviorIndices.Length; right++)
+                {
+                    ref readonly BehaviorSlot rightSlot = ref behaviors[tweenBehaviorIndices[right]];
+                    if (!IsBehaviorActive(activeMask, rightSlot.SlotIndex) ||
+                        leftSlot.ParamTween.Lane != rightSlot.ParamTween.Lane ||
+                        leftSlot.ParamTween.ParamKey != rightSlot.ParamTween.ParamKey)
+                    {
+                        continue;
+                    }
+
+                    throw new InvalidOperationException(
+                        $"Active ParamTween slots {leftSlot.SlotIndex} and {rightSlot.SlotIndex} both target {leftSlot.ParamTween.Lane} param {leftSlot.ParamTween.ParamKey}.");
+                }
+            }
+        }
+
+        private void ValidateParamTweenTargetTree(
+            Entity entity,
+            PerformerDefinition definition,
+            int paramKey,
+            ParamLane lane,
+            int depth)
+        {
+            if (depth >= 32)
+            {
+                throw new InvalidOperationException("ParamTween child target validation exceeded the maximum performer hierarchy depth of 32.");
+            }
+
+            if (definition.AffectsMaterialSourceParam(paramKey, lane))
+            {
+                throw new InvalidOperationException(
+                    $"ParamTween cannot drive Material materialSwapParamKey {paramKey} in performer definition {definition.Id}. Use SetParam commands for discrete material selection.");
+            }
+
+            if (!World.Has<PerformerChildren>(entity))
+            {
+                return;
+            }
+
+            ref PerformerChildren children = ref World.Get<PerformerChildren>(entity);
+            for (int i = 0; i < children.Count; i++)
+            {
+                Entity child = children.Get(i);
+                if (!World.IsAlive(child) || !World.Has<PerformerState>(child))
+                {
+                    continue;
+                }
+
+                ref readonly PerformerState childState = ref World.Get<PerformerState>(child);
+                if (!_definitions.TryGet(childState.DefId, out PerformerDefinition childDefinition))
+                {
+                    throw new InvalidOperationException(
+                        $"ParamTween target validation found child performer {child.Id} with unknown definition {childState.DefId}.");
+                }
+
+                ValidateParamTweenTargetTree(child, childDefinition, paramKey, lane, depth + 1);
             }
         }
 

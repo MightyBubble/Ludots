@@ -2,6 +2,7 @@ using System;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Presentation.Assets;
+using Ludots.Core.Presentation.Performers;
 
 namespace Ludots.Core.Presentation.Config
 {
@@ -12,15 +13,26 @@ namespace Ludots.Core.Presentation.Config
         private readonly ConfigPipeline _configs;
         private readonly MeshAssetRegistry _meshRegistry;
         private readonly PresentationMaterialRegistry _materialRegistry;
+        private readonly EmitterAssetRegistry? _emitterRegistry;
 
         public PresentationHostAssetConfigLoader(
             ConfigPipeline configs,
             MeshAssetRegistry meshRegistry,
             PresentationMaterialRegistry materialRegistry)
+            : this(configs, meshRegistry, materialRegistry, emitterRegistry: null)
+        {
+        }
+
+        public PresentationHostAssetConfigLoader(
+            ConfigPipeline configs,
+            MeshAssetRegistry meshRegistry,
+            PresentationMaterialRegistry materialRegistry,
+            EmitterAssetRegistry? emitterRegistry)
         {
             _configs = configs ?? throw new ArgumentNullException(nameof(configs));
             _meshRegistry = meshRegistry ?? throw new ArgumentNullException(nameof(meshRegistry));
             _materialRegistry = materialRegistry ?? throw new ArgumentNullException(nameof(materialRegistry));
+            _emitterRegistry = emitterRegistry;
         }
 
         public void Apply(string backendId, ConfigCatalog catalog = null, ConfigConflictReport report = null)
@@ -56,9 +68,45 @@ namespace Ludots.Core.Presentation.Config
                     continue;
                 }
 
+                if (TryParseEmitterKind(assetKind, out AssetKind emitterKind))
+                {
+                    ApplyEmitterHostAsset(node, backendId, emitterKind);
+                    continue;
+                }
+
                 throw new InvalidOperationException(
                     $"Presentation host asset '{RequireString(node, "id", "host asset row")}' has unsupported assetKind '{assetKind}'.");
             }
+        }
+
+        private void ApplyEmitterHostAsset(JsonNode node, string backendId, AssetKind emitterKind)
+        {
+            string rowId = RequireString(node, "id", "host asset row");
+            if (_emitterRegistry == null)
+            {
+                throw new InvalidOperationException(
+                    $"Presentation host asset '{rowId}' binds emitter kind '{emitterKind}', but no EmitterAssetRegistry was supplied for backend '{backendId}'.");
+            }
+
+            string assetId = RequireString(node, "assetId", rowId);
+            _emitterRegistry.BindSourceUris(
+                assetId,
+                emitterKind,
+                ParseSourceUris(node["sourceUris"], rowId));
+        }
+
+        private static bool TryParseEmitterKind(string value, out AssetKind assetKind)
+        {
+            assetKind = value switch
+            {
+                nameof(AssetKind.SpriteEmitter) => AssetKind.SpriteEmitter,
+                nameof(AssetKind.RibbonEmitter) => AssetKind.RibbonEmitter,
+                nameof(AssetKind.ModelEmitter) => AssetKind.ModelEmitter,
+                nameof(AssetKind.TrackEmitter) => AssetKind.TrackEmitter,
+                nameof(AssetKind.RingEmitter) => AssetKind.RingEmitter,
+                _ => default,
+            };
+            return assetKind.IsEmitterKind();
         }
 
         private void ApplyMeshHostAsset(JsonNode node, string backendId)

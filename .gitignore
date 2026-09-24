@@ -74,6 +74,7 @@ external/
 artifacts/
 BrowserRuntime/
 _temp_export/
+.ludots-export-*.efkefc
 .codex_out/
 
 # ----- Build Logs & Artifacts -----
@@ -87,6 +88,7 @@ out.host.*.log
 !src/Platforms/Desktop/raylib.dll
 !src/Platforms/Desktop/libraylib.so
 !src/Libraries/SkiaSharp/runtimes/**/native/*
+!src/Libraries/Effekseer/runtimes/**/native/ludots_effekseer.dll
 
 Thumbs.db
 ehthumbs.db

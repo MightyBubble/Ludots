@@ -327,6 +327,294 @@
         "value": "mods/showcases/item_system/WeaponBenchShowcaseMod",
         "projectPath": "WeaponBenchShowcaseMod.csproj"
       }
+    },
+    {
+      "name": "performer_raylib_micro_primitive_ring",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_primitive_ring_entry/PerformerRaylibMicroPrimitiveRingEntryMod",
+        "projectPath": "PerformerRaylibMicroPrimitiveRingEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_primitive_line",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_primitive_line_entry/PerformerRaylibMicroPrimitiveLineEntryMod",
+        "projectPath": "PerformerRaylibMicroPrimitiveLineEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_primitive_sprite_emitter",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_primitive_sprite_emitter_entry/PerformerRaylibMicroPrimitiveSpriteEmitterEntryMod",
+        "projectPath": "PerformerRaylibMicroPrimitiveSpriteEmitterEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_primitive_ribbon_emitter",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_primitive_ribbon_emitter_entry/PerformerRaylibMicroPrimitiveRibbonEmitterEntryMod",
+        "projectPath": "PerformerRaylibMicroPrimitiveRibbonEmitterEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_primitive_track_emitter",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_primitive_track_emitter_entry/PerformerRaylibMicroPrimitiveTrackEmitterEntryMod",
+        "projectPath": "PerformerRaylibMicroPrimitiveTrackEmitterEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_primitive_ring_emitter",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_primitive_ring_emitter_entry/PerformerRaylibMicroPrimitiveRingEmitterEntryMod",
+        "projectPath": "PerformerRaylibMicroPrimitiveRingEmitterEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_primitive_model_emitter",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_primitive_model_emitter_entry/PerformerRaylibMicroPrimitiveModelEmitterEntryMod",
+        "projectPath": "PerformerRaylibMicroPrimitiveModelEmitterEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_semantic_explosion",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_semantic_explosion_entry/PerformerRaylibMicroSemanticExplosionEntryMod",
+        "projectPath": "PerformerRaylibMicroSemanticExplosionEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_semantic_laser",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_semantic_laser_entry/PerformerRaylibMicroSemanticLaserEntryMod",
+        "projectPath": "PerformerRaylibMicroSemanticLaserEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_semantic_lightning",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_semantic_lightning_entry/PerformerRaylibMicroSemanticLightningEntryMod",
+        "projectPath": "PerformerRaylibMicroSemanticLightningEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_semantic_projectile_trail",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_semantic_projectile_trail_entry/PerformerRaylibMicroSemanticProjectileTrailEntryMod",
+        "projectPath": "PerformerRaylibMicroSemanticProjectileTrailEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_semantic_slash",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_semantic_slash_entry/PerformerRaylibMicroSemanticSlashEntryMod",
+        "projectPath": "PerformerRaylibMicroSemanticSlashEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_semantic_shield",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_semantic_shield_entry/PerformerRaylibMicroSemanticShieldEntryMod",
+        "projectPath": "PerformerRaylibMicroSemanticShieldEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_semantic_heal",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_semantic_heal_entry/PerformerRaylibMicroSemanticHealEntryMod",
+        "projectPath": "PerformerRaylibMicroSemanticHealEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_semantic_burn",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_semantic_burn_entry/PerformerRaylibMicroSemanticBurnEntryMod",
+        "projectPath": "PerformerRaylibMicroSemanticBurnEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_semantic_poison",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_semantic_poison_entry/PerformerRaylibMicroSemanticPoisonEntryMod",
+        "projectPath": "PerformerRaylibMicroSemanticPoisonEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_semantic_frost",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_semantic_frost_entry/PerformerRaylibMicroSemanticFrostEntryMod",
+        "projectPath": "PerformerRaylibMicroSemanticFrostEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_semantic_portal",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_semantic_portal_entry/PerformerRaylibMicroSemanticPortalEntryMod",
+        "projectPath": "PerformerRaylibMicroSemanticPortalEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_semantic_target_lock",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_semantic_target_lock_entry/PerformerRaylibMicroSemanticTargetLockEntryMod",
+        "projectPath": "PerformerRaylibMicroSemanticTargetLockEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_semantic_selection",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_semantic_selection_entry/PerformerRaylibMicroSemanticSelectionEntryMod",
+        "projectPath": "PerformerRaylibMicroSemanticSelectionEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_semantic_cast_radius",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_semantic_cast_radius_entry/PerformerRaylibMicroSemanticCastRadiusEntryMod",
+        "projectPath": "PerformerRaylibMicroSemanticCastRadiusEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_semantic_warning_circle",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_semantic_warning_circle_entry/PerformerRaylibMicroSemanticWarningCircleEntryMod",
+        "projectPath": "PerformerRaylibMicroSemanticWarningCircleEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_semantic_warning_cone",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_semantic_warning_cone_entry/PerformerRaylibMicroSemanticWarningConeEntryMod",
+        "projectPath": "PerformerRaylibMicroSemanticWarningConeEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_semantic_warning_line",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_semantic_warning_line_entry/PerformerRaylibMicroSemanticWarningLineEntryMod",
+        "projectPath": "PerformerRaylibMicroSemanticWarningLineEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_semantic_placement",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_semantic_placement_entry/PerformerRaylibMicroSemanticPlacementEntryMod",
+        "projectPath": "PerformerRaylibMicroSemanticPlacementEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_semantic_dash_path",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_semantic_dash_path_entry/PerformerRaylibMicroSemanticDashPathEntryMod",
+        "projectPath": "PerformerRaylibMicroSemanticDashPathEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_semantic_tether",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_semantic_tether_entry/PerformerRaylibMicroSemanticTetherEntryMod",
+        "projectPath": "PerformerRaylibMicroSemanticTetherEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_semantic_summon",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_semantic_summon_entry/PerformerRaylibMicroSemanticSummonEntryMod",
+        "projectPath": "PerformerRaylibMicroSemanticSummonEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_semantic_buff",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_semantic_buff_entry/PerformerRaylibMicroSemanticBuffEntryMod",
+        "projectPath": "PerformerRaylibMicroSemanticBuffEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_semantic_debuff_warning",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_semantic_debuff_warning_entry/PerformerRaylibMicroSemanticDebuffWarningEntryMod",
+        "projectPath": "PerformerRaylibMicroSemanticDebuffWarningEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_semantic_stun",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_semantic_stun_entry/PerformerRaylibMicroSemanticStunEntryMod",
+        "projectPath": "PerformerRaylibMicroSemanticStunEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_semantic_silence",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_semantic_silence_entry/PerformerRaylibMicroSemanticSilenceEntryMod",
+        "projectPath": "PerformerRaylibMicroSemanticSilenceEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_semantic_root",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_semantic_root_entry/PerformerRaylibMicroSemanticRootEntryMod",
+        "projectPath": "PerformerRaylibMicroSemanticRootEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_semantic_stealth_reveal",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_semantic_stealth_reveal_entry/PerformerRaylibMicroSemanticStealthRevealEntryMod",
+        "projectPath": "PerformerRaylibMicroSemanticStealthRevealEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_semantic_channeling",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_semantic_channeling_entry/PerformerRaylibMicroSemanticChannelingEntryMod",
+        "projectPath": "PerformerRaylibMicroSemanticChannelingEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_raylib_micro_semantic_interact_pickup",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_raylib_micro_showcases_entries/performer_raylib_micro_semantic_interact_pickup_entry/PerformerRaylibMicroSemanticInteractPickupEntryMod",
+        "projectPath": "PerformerRaylibMicroSemanticInteractPickupEntryMod.csproj"
+      }
     }
   ],
   "adapters": {
@@ -340,7 +628,9 @@
       "assemblyPath": "BrowserRuntime/cef/Ludots.UI.Browser.Cef.dll",
       "hostTypeName": "Ludots.UI.Browser.Cef.CefBrowserRuntimeHost",
       "useCollectibleLoadContext": false,
-      "processSharedAssemblyNamePrefixes": ["CefSharp"]
+      "processSharedAssemblyNamePrefixes": [
+        "CefSharp"
+      ]
     }
   ],
   "projectHints": []

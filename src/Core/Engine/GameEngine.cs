@@ -997,6 +997,7 @@ namespace Ludots.Core.Engine
             var performerCommandBuffer = new PerformerCommandBuffer(presentationConfig.PerformerCommandCapacity);
             var presentationPrefabs = new PrefabRegistry();
             var meshAssets = new MeshAssetRegistry();
+            var emitterAssets = new EmitterAssetRegistry();
             var materialAssets = new PresentationMaterialRegistry();
             var instancedBatchAssets = new InstancedBatchAssetRegistry();
             var instancedBatchRequests = new InstancedBatchRequestBuffer(presentationConfig.PresentationRequestCapacity);
@@ -1079,6 +1080,7 @@ namespace Ludots.Core.Engine
             }
 
             new MeshAssetConfigLoader(ConfigPipeline, meshAssets, presentationPrefabs).Load(ConfigCatalog, ConfigConflictReport);
+            new EmitterAssetConfigLoader(ConfigPipeline, emitterAssets).Load(ConfigCatalog, ConfigConflictReport);
             new PresentationMaterialConfigLoader(ConfigPipeline, materialAssets).Load(ConfigCatalog, ConfigConflictReport);
             new InstancedBatchAssetConfigLoader(
                 ConfigPipeline,
@@ -1186,12 +1188,16 @@ namespace Ludots.Core.Engine
                     AssetKind.Mesh => meshAssets.GetId(key),
                     AssetKind.SkinnedMesh => meshAssets.GetId(key),
                     AssetKind.Decal => meshAssets.GetId(key),
-                    AssetKind.VFX => meshAssets.GetId(key),
                     AssetKind.Spline => meshAssets.GetId(key),
                     AssetKind.Surface => meshAssets.GetId(key),
                     AssetKind.Sound => meshAssets.GetId(key),
                     AssetKind.WorldText => presentationTextCatalog.GetTokenId(key),
                     AssetKind.GroundOverlay => ResolveGroundOverlayShapeId(key),
+                    AssetKind.SpriteEmitter => emitterAssets.ResolveId(kind, key),
+                    AssetKind.RibbonEmitter => emitterAssets.ResolveId(kind, key),
+                    AssetKind.ModelEmitter => emitterAssets.ResolveId(kind, key),
+                    AssetKind.TrackEmitter => emitterAssets.ResolveId(kind, key),
+                    AssetKind.RingEmitter => emitterAssets.ResolveId(kind, key),
                     _ => 0,
                 },
                 instancedBatchAssets.GetId,
@@ -1510,6 +1516,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.PerformerCommandBuffer, performerCommandBuffer);
             SetService(CoreServiceKeys.PresentationPrefabRegistry, presentationPrefabs);
             SetService(CoreServiceKeys.PresentationMeshAssetRegistry, meshAssets);
+            SetService(CoreServiceKeys.PresentationEmitterAssetRegistry, emitterAssets);
             SetService(CoreServiceKeys.PresentationMaterialRegistry, materialAssets);
             SetService(CoreServiceKeys.InstancedBatchAssetRegistry, instancedBatchAssets);
             SetService(CoreServiceKeys.InstancedBatchRequestBuffer, instancedBatchRequests);

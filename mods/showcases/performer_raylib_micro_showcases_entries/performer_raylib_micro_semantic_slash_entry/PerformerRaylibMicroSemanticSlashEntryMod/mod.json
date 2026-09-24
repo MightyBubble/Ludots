@@ -1,0 +1,19 @@
+{
+  "name": "PerformerRaylibMicroSemanticSlashEntryMod",
+  "version": "1.0.0",
+  "description": "Entry mod for Raylib micro showcase: 近战斩击.",
+  "main": "bin/net8.0/PerformerRaylibMicroSemanticSlashEntryMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "PerformerRaylibMicroShowcasesMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "performer",
+    "raylib",
+    "micro",
+    "semantic",
+    "frost"
+  ]
+}

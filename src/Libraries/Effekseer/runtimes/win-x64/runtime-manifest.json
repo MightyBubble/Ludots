@@ -1,0 +1,8 @@
+{
+  "runtimeIdentifier": "win-x64",
+  "library": "native/ludots_effekseer.dll",
+  "bridgeAbiVersion": 1,
+  "effekseerVersion": "1.80.6",
+  "effekseerRuntimeFormatVersion": 1810,
+  "sha256": "9189fad86599a8a1d33401a530688f41c727ec2d4acc683c2adbfea83f90320e"
+}

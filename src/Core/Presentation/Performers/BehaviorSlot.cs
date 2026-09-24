@@ -1,6 +1,7 @@
 using System;
 using System.Numerics;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Tweening;
 
 namespace Ludots.Core.Presentation.Performers
 {
@@ -20,6 +21,7 @@ namespace Ludots.Core.Presentation.Performers
         public SplineConfig Spline;
         public GroundingConfig Grounding;
         public MinimapMarkerConfig MinimapMarker;
+        public ParamTweenConfig ParamTween;
     }
 
     public enum BehaviorKind : byte
@@ -34,6 +36,7 @@ namespace Ludots.Core.Presentation.Performers
         Spline = 8,
         Grounding = 9,
         MinimapMarker = 10,
+        ParamTween = 11,
     }
 
     public struct AssetBindingConfig
@@ -50,6 +53,7 @@ namespace Ludots.Core.Presentation.Performers
             LocalScale = Vector3.One;
             ScaleParamKey = PerformerParamKeyRegistry.UnsetParamKey;
             ColorParamKey = PerformerParamKeyRegistry.UnsetParamKey;
+            TargetParamKey = PerformerParamKeyRegistry.UnsetParamKey;
             MaterialParamKey = PerformerParamKeyRegistry.UnsetParamKey;
             AssetIdParamKey = PerformerParamKeyRegistry.UnsetParamKey;
             AssetSwapParamKey = PerformerParamKeyRegistry.UnsetParamKey;
@@ -72,6 +76,7 @@ namespace Ludots.Core.Presentation.Performers
         public Vector3 LocalScale;
         public int ScaleParamKey;
         public int ColorParamKey;
+        public int TargetParamKey;
         public int MaterialParamKey;
         public int AssetIdParamKey;
         public int AssetSwapParamKey;
@@ -299,5 +304,20 @@ namespace Ludots.Core.Presentation.Performers
         public int OrientationParamKey;
         public float OrientationOffsetRad;
         public float OrientationLengthPx;
+    }
+
+    public struct ParamTweenConfig
+    {
+        public int ParamKey;
+        public ParamLane Lane;
+        public float FromFloat;
+        public float ToFloat;
+        public Vector4 FromVector;
+        public Vector4 ToVector;
+        public float DurationSeconds;
+        public float DelaySeconds;
+        public TweenEasing Easing;
+        public bool Loop;
+        public bool PingPong;
     }
 }

@@ -287,6 +287,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<PerformerCommandBuffer> PerformerCommandBuffer = new("PerformerCommandBuffer");
         public static readonly ServiceKey<PrefabRegistry> PresentationPrefabRegistry = new("PresentationPrefabRegistry");
         public static readonly ServiceKey<MeshAssetRegistry> PresentationMeshAssetRegistry = new("PresentationMeshAssetRegistry");
+        public static readonly ServiceKey<EmitterAssetRegistry> PresentationEmitterAssetRegistry = new("PresentationEmitterAssetRegistry");
         public static readonly ServiceKey<PresentationMaterialRegistry> PresentationMaterialRegistry = new("PresentationMaterialRegistry");
         public static readonly ServiceKey<InstancedBatchAssetRegistry> InstancedBatchAssetRegistry = new("InstancedBatchAssetRegistry");
         public static readonly ServiceKey<InstancedBatchRequestBuffer> InstancedBatchRequestBuffer = new("InstancedBatchRequestBuffer");

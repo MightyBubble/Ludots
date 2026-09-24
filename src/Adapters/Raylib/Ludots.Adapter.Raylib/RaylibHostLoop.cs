@@ -1,8 +1,10 @@
 using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Adapter.Raylib.Services;
+using Ludots.Adapter.Raylib.Effekseer;
 using Ludots.Client.Raylib.Rendering;
 using Ludots.Core.Components;
 using Ludots.Core.Diagnostics;
@@ -163,6 +165,8 @@ namespace Ludots.Adapter.Raylib
             int targetFps = config.TargetFps == 0 ? 0 : (config.TargetFps < 0 ? 60 : config.TargetFps);
             bool windowOpened = false;
             bool windowResizable = config.WindowResizable || config.WindowStartMaximized;
+            RaylibEffekseerRuntime? effekseerRuntime = null;
+            PrimitiveDrawBuffer? effekseerVisualSnapshot = null;
 
             var terrainRenderer = new RaylibTerrainRenderer
             {
@@ -198,6 +202,18 @@ namespace Ludots.Adapter.Raylib
                 Rl.SetExitKey(0);
                 Rl.SetTargetFPS(targetFps);
                 IntPtr nativeWindowHandle = Rl.GetWindowHandle();
+
+                if (!engine.TryGetService(CoreServiceKeys.PresentationEmitterAssetRegistry, out EmitterAssetRegistry emitterAssets))
+                {
+                    throw new InvalidOperationException("Raylib host requires PresentationEmitterAssetRegistry before creating the Effekseer runtime.");
+                }
+                if (emitterAssets.Count > 0)
+                {
+                    effekseerVisualSnapshot = engine.GetService(CoreServiceKeys.PresentationVisualSnapshotBuffer)
+                        ?? throw new InvalidOperationException("Raylib host requires PresentationVisualSnapshotBuffer before creating the Effekseer runtime.");
+                    effekseerRuntime = new RaylibEffekseerRuntime(
+                        new CoreRaylibEmitterSnapshotResolver(emitterAssets, engine.VFS));
+                }
 
                 screenWidth = Math.Max(1, Rl.GetScreenWidth());
                 screenHeight = Math.Max(1, Rl.GetScreenHeight());
@@ -338,6 +354,8 @@ namespace Ludots.Adapter.Raylib
                 float autoOrbitDegPerSecond = float.TryParse(Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_AUTO_ORBIT_DEG_PER_SEC"), out float parsedAutoOrbitDegPerSecond)
                     ? parsedAutoOrbitDegPerSecond
                     : 0f;
+                float? fixedFrameDeltaSeconds = ParseFixedFrameDeltaSeconds(
+                    Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_FIXED_FRAME_DELTA_SECONDS"));
                 SyntheticUiPlayback syntheticUiPlayback = ReadSyntheticUiPlayback();
                 int frameIndex = 0;
                 Stopwatch runtimeStopwatch = Stopwatch.StartNew();
@@ -372,7 +390,7 @@ namespace Ludots.Adapter.Raylib
                             uiRoot.Resize(w, h);
                         }
 
-                        float dt = Rl.GetFrameTime();
+                        float dt = fixedFrameDeltaSeconds ?? Rl.GetFrameTime();
                         presentationTiming?.ObserveFrame(dt * 1000d);
                         var renderDebug = ResolveRenderDebugState(engine);
                         bool activeMapRequestsDeepBackground = ActiveMapHasTag(engine, MapTags.RaylibDeepBackground);
@@ -432,6 +450,11 @@ namespace Ludots.Adapter.Raylib
 
                         float cameraAlpha = presentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
                         cameraPresenter.Update(engine.GameSession.Camera, cameraAlpha, renderCameraDebug);
+                        if (effekseerRuntime != null)
+                        {
+                            effekseerRuntime.Sync(effekseerVisualSnapshot!);
+                            effekseerRuntime.Update(dt);
+                        }
                         hudProjection?.Update(dt);
                         benchmarkRenderer?.PrepareFrame(presentationTiming, lastW, lastH);
                         if (globalFieldVisualBuffer != null)
@@ -599,6 +622,17 @@ namespace Ludots.Adapter.Raylib
                             presentationTiming?.ObserveRoadSplineRender(0d, 0);
                         }
 
+                        if (effekseerRuntime != null)
+                        {
+                            CameraClipPlanes effekseerClipPlanes = CameraViewportUtil.ResolveClipPlanes(in activeCameraState);
+                            float effekseerAspect = MathF.Max(0.001f, lastW / (float)Math.Max(1, lastH));
+                            effekseerRuntime.Draw(
+                                in activeCamera,
+                                effekseerAspect,
+                                effekseerClipPlanes.NearMeters,
+                                effekseerClipPlanes.FarMeters);
+                        }
+
                         if (drawDebugDraw &&
                             engine.TryGetService(CoreServiceKeys.DebugDrawCommandBuffer, out DebugDrawCommandBuffer dd))
                         {
@@ -736,16 +770,23 @@ namespace Ludots.Adapter.Raylib
                     catch (Exception ex)
                     {
                         Log.Error(in LogChannels.Engine, $"Unhandled exception in game loop: {ex}");
-                        break;
+                        throw;
                     }
                 }
             }
             finally
             {
-                if (windowOpened) Rl.CloseWindow();
-                terrainRenderer.Dispose();
-                visualHeightmapRenderer.Dispose();
-                engine.Dispose();
+                try
+                {
+                    effekseerRuntime?.Dispose();
+                }
+                finally
+                {
+                    if (windowOpened) Rl.CloseWindow();
+                    terrainRenderer.Dispose();
+                    visualHeightmapRenderer.Dispose();
+                    engine.Dispose();
+                }
             }
         }
 
@@ -941,6 +982,24 @@ namespace Ludots.Adapter.Raylib
             return float.TryParse(Environment.GetEnvironmentVariable(key), out float value)
                 ? value
                 : defaultValue;
+        }
+
+        internal static float? ParseFixedFrameDeltaSeconds(string? raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return null;
+            }
+
+            if (!float.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out float value) ||
+                !float.IsFinite(value) ||
+                value <= 0f)
+            {
+                throw new InvalidOperationException(
+                    $"LUDOTS_RAYLIB_FIXED_FRAME_DELTA_SECONDS must be a finite positive number in invariant format; actual='{raw}'.");
+            }
+
+            return value;
         }
 
         private static void DrawLightweightDiagnosticHud(GameEngine engine, PresentationTimingDiagnostics? timing)

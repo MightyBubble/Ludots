@@ -4,6 +4,7 @@ using System.Numerics;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Modding;
+using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Events;
@@ -11,6 +12,7 @@ using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
+using Ludots.Core.Tweening;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 
@@ -246,6 +248,415 @@ namespace Ludots.Tests.Presentation
             Assert.That(definition.Behaviors[0].AssetBinding.MaterialParamKey, Is.EqualTo(semanticKey));
             Assert.That(definition.Behaviors[1].SlotIndex, Is.EqualTo(2));
             Assert.That(definition.Behaviors[1].MinimapMarker.VisibilityParamKey, Is.EqualTo(-1));
+        }
+
+        [Test]
+        public void Load_LoadsOfflineExpandedThemeOutputAsOrdinaryParamsAndChildOverrides()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  { "id": "primitive.burst.radial" },
+                  {
+                    "id": "performer.lavaExplosion",
+                    "paramDefaults": [
+                      { "paramKey": "lavaExplosion.intensity", "lane": "Float", "floatValue": 1.25 },
+                      { "paramKey": "lavaExplosion.primaryColor", "lane": "Vector", "vectorValue": [1.0, 0.28, 0.08, 1.0] },
+                      { "paramKey": "lavaExplosion.radius", "lane": "Float", "floatValue": 3.5 }
+                    ],
+                    "children": [
+                      {
+                        "definitionId": "primitive.burst.radial",
+                        "scopeTag": "impact",
+                        "paramOverrides": [
+                          { "paramKey": "lavaExplosion.edgeColor", "lane": "Vector", "vectorValue": [1.0, 0.72, 0.18, 0.72] },
+                          { "paramKey": "lavaExplosion.jitter", "lane": "Float", "floatValue": 0.35 }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            loader.Load(catalog);
+
+            Assert.That(registry.TryGet(registry.GetId("performer.lavaExplosion"), out var definition), Is.True);
+            Assert.That(definition.Behaviors, Is.Empty, "Theme authoring must not require a Theme behavior.");
+            Assert.That(Enum.GetNames(typeof(BehaviorKind)), Does.Not.Contain("Theme"));
+            Assert.That(definition.ParamDefaults.Length, Is.EqualTo(3));
+            Assert.That(definition.ParamDefaults[0].ParamKey, Is.EqualTo(PerformerParamKeyRegistry.Register("lavaExplosion.intensity")));
+            Assert.That(definition.ParamDefaults[0].Lane, Is.EqualTo(ParamLane.Float));
+            Assert.That(definition.ParamDefaults[0].FloatValue, Is.EqualTo(1.25f).Within(0.001f));
+            Assert.That(definition.ParamDefaults[1].ParamKey, Is.EqualTo(PerformerParamKeyRegistry.Register("lavaExplosion.primaryColor")));
+            Assert.That(definition.ParamDefaults[1].Lane, Is.EqualTo(ParamLane.Vector));
+            Assert.That(definition.ParamDefaults[1].VectorValue, Is.EqualTo(new Vector4(1.0f, 0.28f, 0.08f, 1.0f)));
+            Assert.That(definition.ParamDefaults[2].ParamKey, Is.EqualTo(PerformerParamKeyRegistry.Register("lavaExplosion.radius")));
+            Assert.That(definition.ParamDefaults[2].Lane, Is.EqualTo(ParamLane.Float));
+            Assert.That(definition.ParamDefaults[2].FloatValue, Is.EqualTo(3.5f).Within(0.001f));
+            Assert.That(definition.Children.Length, Is.EqualTo(1));
+            Assert.That(definition.Children[0].DefinitionId, Is.EqualTo(registry.GetId("primitive.burst.radial")));
+            Assert.That(definition.Children[0].ScopeTag, Is.EqualTo(PerformerScopeTagRegistry.GetId("impact")));
+            Assert.That(definition.Children[0].ParamOverrides.Length, Is.EqualTo(2));
+            Assert.That(definition.Children[0].ParamOverrides[0].ParamKey, Is.EqualTo(PerformerParamKeyRegistry.Register("lavaExplosion.edgeColor")));
+            Assert.That(definition.Children[0].ParamOverrides[0].VectorValue, Is.EqualTo(new Vector4(1.0f, 0.72f, 0.18f, 0.72f)));
+            Assert.That(definition.Children[0].ParamOverrides[1].ParamKey, Is.EqualTo(PerformerParamKeyRegistry.Register("lavaExplosion.jitter")));
+            Assert.That(definition.Children[0].ParamOverrides[1].FloatValue, Is.EqualTo(0.35f).Within(0.001f));
+        }
+
+        [Test]
+        public void Load_RejectsRuntimeThemeParamKeys()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  {
+                    "id": "bad_runtime_theme",
+                    "paramDefaults": [
+                      { "paramKey": "presentation.theme.primary", "lane": "Vector", "vectorValue": [1.0, 0.28, 0.08, 1.0] }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("reserved authoring-only theme key"));
+            Assert.That(ex.Message, Does.Contain("Compile themes into ordinary performer params"));
+        }
+
+        [Test]
+        [TestCase("VFX")]
+        [TestCase("ParticleEmitter")]
+        [TestCase("RibbonTrail")]
+        public void Load_RejectsRemovedAssetKindNames(string removedKind)
+        {
+            WriteCatalog();
+            WritePerformers($$"""
+                [
+                  {
+                    "id": "retired_visual_kind",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "AssetBinding",
+                        "activeByDefault": true,
+                        "assetBinding": {
+                          "assetKind": "{{removedKind}}",
+                          "assetId": "legacy.spark",
+                          "renderPath": "StaticMesh",
+                          "mobility": "Static"
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("AssetBinding.assetKind"));
+            Assert.That(ex.Message, Does.Contain("invalid value"));
+        }
+
+        [Test]
+        public void Load_ResolvesEmitterAssetFromDedicatedRegistryAndCompilesTargetParam()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  {
+                    "id": "beam.owner",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "AssetBinding",
+                        "activeByDefault": true,
+                        "assetBinding": {
+                          "assetKind": "TrackEmitter",
+                          "assetId": "beam.core",
+                          "renderPath": "Primitive",
+                          "mobility": "Movable",
+                          "targetParamKey": "beam.target"
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var emitters = new EmitterAssetRegistry();
+            int emitterAssetId = emitters.Register(
+                "beam.core",
+                AssetKind.TrackEmitter,
+                EmitterAssetDescriptor.RequiredRuntimeFormatVersion,
+                new string('a', 64));
+            var registry = new PerformerDefinitionRegistry();
+            new PerformerDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveBehaviorAssetId: emitters.ResolveId).Load(catalog);
+
+            PerformerDefinition definition = registry.Get(registry.GetId("beam.owner"));
+            AssetBindingConfig binding = definition.Behaviors[0].AssetBinding;
+            Assert.That(binding.AssetKind, Is.EqualTo(AssetKind.TrackEmitter));
+            Assert.That(binding.AssetId, Is.EqualTo(emitterAssetId));
+            Assert.That(PerformerParamKeyRegistry.TryGetId("beam.target", out int targetParamKey), Is.True);
+            Assert.That(binding.TargetParamKey, Is.EqualTo(targetParamKey));
+        }
+
+        [Test]
+        public void Load_RejectsEmitterAssetWhoseRegisteredKindDoesNotMatchBinding()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  {
+                    "id": "beam.owner",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "AssetBinding",
+                        "activeByDefault": true,
+                        "assetBinding": {
+                          "assetKind": "TrackEmitter",
+                          "assetId": "trail.ribbon",
+                          "renderPath": "Primitive",
+                          "mobility": "Movable"
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var emitters = new EmitterAssetRegistry();
+            emitters.Register(
+                "trail.ribbon",
+                AssetKind.RibbonEmitter,
+                EmitterAssetDescriptor.RequiredRuntimeFormatVersion,
+                new string('b', 64));
+            var registry = new PerformerDefinitionRegistry();
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                new PerformerDefinitionConfigLoader(
+                    pipeline,
+                    registry,
+                    resolveBehaviorAssetId: emitters.ResolveId).Load(catalog))!;
+
+            Assert.That(ex.Message, Does.Contain("not requested kind 'TrackEmitter'"));
+        }
+
+        [Test]
+        public void Load_AcceptsRingPrimitiveAssetBindingWithoutResourceIds()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  {
+                    "id": "primitive.ring.owner",
+                    "defaultColor": [0.1, 0.8, 1.0, 0.75],
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "AssetBinding",
+                        "activeByDefault": true,
+                        "assetBinding": {
+                          "assetKind": "Ring",
+                          "renderPath": "Primitive",
+                          "mobility": "Movable",
+                          "localScale": [2.5, 1.0, 4.0],
+                          "colorParamKey": "ring.color",
+                          "scaleParamKey": "ring.scale",
+                          "visibilityParamKey": "ring.visible"
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            loader.Load(catalog);
+
+            Assert.That(registry.TryGet(registry.GetId("primitive.ring.owner"), out var definition), Is.True);
+            AssetBindingConfig binding = definition.Behaviors[0].AssetBinding;
+            Assert.That(binding.AssetKind, Is.EqualTo(AssetKind.Ring));
+            Assert.That(binding.RenderPath, Is.EqualTo(VisualRenderPath.Primitive));
+            Assert.That(binding.AssetId, Is.EqualTo(0));
+            Assert.That(binding.MaterialId, Is.EqualTo(0));
+            Assert.That(binding.LocalScale, Is.EqualTo(new Vector3(2.5f, 1f, 4f)));
+            Assert.That(binding.ColorParamKey, Is.EqualTo(PerformerParamKeyRegistry.Register("ring.color")));
+            Assert.That(binding.ScaleParamKey, Is.EqualTo(PerformerParamKeyRegistry.Register("ring.scale")));
+            Assert.That(binding.VisibilityParamKey, Is.EqualTo(PerformerParamKeyRegistry.Register("ring.visible")));
+        }
+
+        [Test]
+        public void Load_AcceptsLinePrimitiveAssetBindingWithoutResourceIds()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  {
+                    "id": "primitive.line.owner",
+                    "defaultColor": [0.1, 0.9, 1.0, 0.85],
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "AssetBinding",
+                        "activeByDefault": true,
+                        "assetBinding": {
+                          "assetKind": "Line",
+                          "renderPath": "Primitive",
+                          "mobility": "Movable",
+                          "localScale": [4.0, 0.12, 0.12],
+                          "colorParamKey": "line.color",
+                          "scaleParamKey": "line.scale",
+                          "visibilityParamKey": "line.visible"
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            loader.Load(catalog);
+
+            Assert.That(registry.TryGet(registry.GetId("primitive.line.owner"), out var definition), Is.True);
+            AssetBindingConfig binding = definition.Behaviors[0].AssetBinding;
+            Assert.That(binding.AssetKind, Is.EqualTo(AssetKind.Line));
+            Assert.That(binding.RenderPath, Is.EqualTo(VisualRenderPath.Primitive));
+            Assert.That(binding.AssetId, Is.EqualTo(0));
+            Assert.That(binding.MaterialId, Is.EqualTo(0));
+            Assert.That(binding.LocalScale, Is.EqualTo(new Vector3(4f, 0.12f, 0.12f)));
+            Assert.That(binding.ColorParamKey, Is.EqualTo(PerformerParamKeyRegistry.Register("line.color")));
+            Assert.That(binding.ScaleParamKey, Is.EqualTo(PerformerParamKeyRegistry.Register("line.scale")));
+            Assert.That(binding.VisibilityParamKey, Is.EqualTo(PerformerParamKeyRegistry.Register("line.visible")));
+        }
+
+        [TestCase(
+            """
+            {
+              "assetKind": "Ring",
+              "assetId": "some.mesh",
+              "renderPath": "Primitive",
+              "mobility": "Movable"
+            }
+            """,
+            "must not declare assetId")]
+        [TestCase(
+            """
+            {
+              "assetKind": "Ring",
+              "materialId": "some.material",
+              "renderPath": "Primitive",
+              "mobility": "Movable"
+            }
+            """,
+            "must not declare materialId")]
+        [TestCase(
+            """
+            {
+              "assetKind": "Ring",
+              "renderPath": "Primitive",
+              "mobility": "Movable",
+              "materialCustomData": [
+                { "slot": 0, "lane": "Float", "defaultFloatValue": 1.0 }
+              ]
+            }
+            """,
+            "materialCustomData is not supported")]
+        [TestCase(
+            """
+            {
+              "assetKind": "Ring",
+              "renderPath": "StaticMesh",
+              "mobility": "Movable"
+            }
+            """,
+            "requires renderPath 'Primitive'")]
+        [TestCase(
+            """
+            {
+              "assetKind": "Line",
+              "assetId": "some.mesh",
+              "renderPath": "Primitive",
+              "mobility": "Movable"
+            }
+            """,
+            "must not declare assetId")]
+        [TestCase(
+            """
+            {
+              "assetKind": "Line",
+              "materialId": "some.material",
+              "renderPath": "Primitive",
+              "mobility": "Movable"
+            }
+            """,
+            "must not declare materialId")]
+        [TestCase(
+            """
+            {
+              "assetKind": "Line",
+              "renderPath": "StaticMesh",
+              "mobility": "Movable"
+            }
+            """,
+            "requires renderPath 'Primitive'")]
+        public void Load_RejectsMisconfiguredPrimitiveAssetBinding(string assetBindingJson, string expectedMessage)
+        {
+            WriteCatalog();
+            WritePerformers($$"""
+                [
+                  {
+                    "id": "bad_ring_actor",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "AssetBinding",
+                        "activeByDefault": true,
+                        "assetBinding": {{assetBindingJson}}
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveMaterialId: _ => 42,
+                resolveBehaviorAssetId: (_, _) => 42);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain(expectedMessage));
         }
 
         [Test]
@@ -1267,6 +1678,55 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void Load_AcceptsCanonicalMotionBehaviorSlots()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  {
+                    "id": "motion_actor",
+                    "behaviors": [
+                      {
+                        "slot": "motion_scale",
+                        "kind": "ParamTween",
+                        "paramTween": {
+                          "paramKey": "motion.scale",
+                          "lane": "Float",
+                          "fromFloat": 0.25,
+                          "toFloat": 1.0,
+                          "durationSeconds": 0.35,
+                          "easing": "SmoothStep"
+                        }
+                      },
+                      {
+                        "slot": "motion_alpha",
+                        "kind": "ParamTween",
+                        "paramTween": {
+                          "paramKey": "motion.alpha",
+                          "lane": "Vector",
+                          "fromVector": [1.0, 1.0, 1.0, 0.0],
+                          "toVector": [1.0, 1.0, 1.0, 1.0],
+                          "durationSeconds": 0.5,
+                          "easing": "SmoothStep"
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            Assert.DoesNotThrow(() => loader.Load(catalog));
+            Assert.That(registry.TryGet(registry.GetId("motion_actor"), out PerformerDefinition definition), Is.True);
+            Assert.That(definition.Behaviors[0].SlotIndex, Is.EqualTo(12));
+            Assert.That(definition.Behaviors[1].SlotIndex, Is.EqualTo(13));
+        }
+
+        [Test]
         public void Load_RejectsNonCanonicalBehaviorSlotAliases()
         {
             WriteCatalog();
@@ -1613,6 +2073,33 @@ namespace Ludots.Tests.Presentation
             Assert.That(root.Children.Length, Is.EqualTo(1));
             Assert.That(root.Children[0].DefinitionId, Is.EqualTo(registry.GetId("child_a")));
             Assert.That(root.Children[0].ScopeTag, Is.EqualTo(PerformerScopeTagRegistry.GetId("structure")));
+        }
+
+        [Test]
+        public void Load_RejectsChildrenBeyondRuntimeCapacity()
+        {
+            WriteCatalog();
+            var childRefs = new string[PerformerChildren.MAX_CHILDREN + 1];
+            for (int index = 0; index < childRefs.Length; index++)
+            {
+                childRefs[index] = "{ \"definitionId\": \"child\", \"scopeTag\": \"structure\" }";
+            }
+            WritePerformers(
+                $$"""
+                [
+                  { "id": "child" },
+                  {
+                    "id": "root",
+                    "children": [{{string.Join(",", childRefs)}}]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, new PerformerDefinitionRegistry());
+
+            InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(exception.Message, Does.Contain("exceeds direct child capacity 16"));
         }
 
         [Test]
@@ -2260,6 +2747,108 @@ namespace Ludots.Tests.Presentation
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
             Assert.That(ex.Message, Does.Contain("hud.missing.token"));
+        }
+
+        [Test]
+        public void Load_ParsesStrictFloatAndVectorParamTweenContracts()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  {
+                    "id": "param_tween.strict",
+                    "behaviors": [
+                      {
+                        "slot": "material",
+                        "kind": "ParamTween",
+                        "activeByDefault": true,
+                        "paramTween": {
+                          "paramKey": "presentation.alpha",
+                          "lane": "Float",
+                          "fromFloat": 0.1,
+                          "toFloat": 0.9,
+                          "durationSeconds": 0.5,
+                          "delaySeconds": 0.25,
+                          "easing": "SmoothStep",
+                          "loop": false,
+                          "pingPong": false
+                        }
+                      },
+                      {
+                        "slot": "spline",
+                        "kind": "ParamTween",
+                        "activeByDefault": true,
+                        "paramTween": {
+                          "paramKey": "presentation.color",
+                          "lane": "Vector",
+                          "fromVector": [0.0, 0.25, 0.5, 0.75],
+                          "toVector": [1.0, 0.75, 0.5, 0.25],
+                          "durationSeconds": 1.0,
+                          "easing": "Linear",
+                          "loop": true,
+                          "pingPong": true
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            new PerformerDefinitionConfigLoader(pipeline, registry).Load(catalog);
+            PerformerDefinition definition = registry.Get(registry.GetId("param_tween.strict"));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(definition.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.ParamTween));
+                Assert.That(definition.Behaviors[0].ParamTween.Lane, Is.EqualTo(ParamLane.Float));
+                Assert.That(definition.Behaviors[0].ParamTween.FromFloat, Is.EqualTo(0.1f));
+                Assert.That(definition.Behaviors[0].ParamTween.ToFloat, Is.EqualTo(0.9f));
+                Assert.That(definition.Behaviors[0].ParamTween.DurationSeconds, Is.EqualTo(0.5f));
+                Assert.That(definition.Behaviors[0].ParamTween.DelaySeconds, Is.EqualTo(0.25f));
+                Assert.That(definition.Behaviors[0].ParamTween.Easing, Is.EqualTo(TweenEasing.SmoothStep));
+                Assert.That(definition.Behaviors[1].ParamTween.Lane, Is.EqualTo(ParamLane.Vector));
+                Assert.That(definition.Behaviors[1].ParamTween.FromVector, Is.EqualTo(new Vector4(0f, 0.25f, 0.5f, 0.75f)));
+                Assert.That(definition.Behaviors[1].ParamTween.ToVector, Is.EqualTo(new Vector4(1f, 0.75f, 0.5f, 0.25f)));
+                Assert.That(definition.Behaviors[1].ParamTween.Loop, Is.True);
+                Assert.That(definition.Behaviors[1].ParamTween.PingPong, Is.True);
+            });
+        }
+
+        [TestCase("{ \"paramKey\": \"presentation.value\", \"lane\": \"Int\", \"durationSeconds\": 1.0, \"easing\": \"Linear\" }", "SetParam commands")]
+        [TestCase("{ \"paramKey\": \"presentation.value\", \"lane\": \"Float\", \"fromFloat\": 0, \"toFloat\": 1, \"durationSeconds\": 0, \"easing\": \"Linear\" }", "positive durationSeconds")]
+        [TestCase("{ \"paramKey\": \"presentation.value\", \"lane\": \"Float\", \"fromFloat\": 0, \"toFloat\": 1, \"durationSeconds\": 1, \"easing\": \"Linear\", \"pingPong\": true }", "pingPong requires loop=true")]
+        [TestCase("{ \"paramKey\": \"presentation.value\", \"lane\": \"Float\", \"from\": 0, \"to\": 1, \"durationSeconds\": 1, \"easing\": \"Linear\" }", "does not accept generic from/to")]
+        [TestCase("{ \"paramKey\": \"presentation.value\", \"lane\": \"Float\", \"fromFloat\": 0, \"toFloat\": 1, \"durationSeconds\": 1, \"easing\": \"linear\" }", "invalid value 'linear'")]
+        [TestCase("{ \"paramKey\": \"presentation.value\", \"lane\": \"Vector\", \"fromVector\": [0, 0, 0], \"toVector\": [1, 1, 1, 1], \"durationSeconds\": 1, \"easing\": \"Linear\" }", "4-component")]
+        public void Load_RejectsInvalidParamTweenContracts(string paramTweenJson, string expectedMessage)
+        {
+            WriteCatalog();
+            WritePerformers(
+                $$"""
+                [
+                  {
+                    "id": "param_tween.invalid",
+                    "behaviors": [
+                      {
+                        "slot": "material",
+                        "kind": "ParamTween",
+                        "activeByDefault": true,
+                        "paramTween": {{paramTweenJson}}
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(exception.Message, Does.Contain(expectedMessage));
         }
 
         private (VirtualFileSystem Vfs, ModLoader ModLoader, ConfigPipeline Pipeline, ConfigCatalog Catalog) BuildPipeline()
