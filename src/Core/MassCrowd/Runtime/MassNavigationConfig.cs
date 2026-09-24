@@ -240,10 +240,14 @@ public sealed class MassNavigationConfig
         RequireProperties(
             RequireProperty(cameraProfiles, "requestPolicy"),
             "blendDurationSeconds",
+            "requestTacticalCameraOnMapFocus",
             "resetRuntimeState",
             "snapToFollowTargetWhenAvailable",
             "strategicTargetXCm",
             "strategicTargetYCm");
+        RequireBooleanProperty(
+            RequireProperty(cameraProfiles, "requestPolicy"),
+            "requestTacticalCameraOnMapFocus");
         RequireProperties(
             RequireProperty(root, "minimap"),
             "visible",
@@ -954,6 +958,7 @@ public sealed class MassNavigationCameraProfilesConfig
 public sealed class MassNavigationCameraRequestPolicyConfig
 {
     public float BlendDurationSeconds { get; set; }
+    public bool RequestTacticalCameraOnMapFocus { get; set; }
     public bool ResetRuntimeState { get; set; }
     public bool SnapToFollowTargetWhenAvailable { get; set; }
     public float StrategicTargetXCm { get; set; }

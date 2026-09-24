@@ -12,6 +12,7 @@ using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Systems;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Core.MassCrowd.Systems;
@@ -119,7 +120,7 @@ public sealed class MassNavigationRuntime
         ConfigureRenderDebug(engine);
         ConfigureCoreMinimap(engine);
         ApplyCullingFocusOverride(engine);
-        EnsureTacticalCamera(engine);
+        RequestTacticalCameraOnMapFocusIfConfigured(engine, config.CameraProfiles.RequestPolicy);
         if (config.ScenarioRuntime.AutoSpawnConfiguredScenario)
         {
             EnsureScenario(engine);
@@ -357,14 +358,7 @@ public sealed class MassNavigationRuntime
     {
         MassNavigationCameraProfilesConfig cameraProfiles = RequireCameraProfiles(engine);
         string tacticalProfileId = cameraProfiles.TacticalProfileId;
-        engine.GlobalContext[CoreServiceKeys.VirtualCameraRequest.Name] = CreateCameraRequest(
-            tacticalProfileId,
-            cameraProfiles.RequestPolicy);
-        engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
-        {
-            VirtualCameraId = tacticalProfileId,
-            TargetCm = targetCm
-        });
+        QueueCameraTargetRequest(engine, tacticalProfileId, targetCm, cameraProfiles.RequestPolicy);
     }
 
     private static void BindLocalSelectionOwner(GameEngine engine)
@@ -426,8 +420,15 @@ public sealed class MassNavigationRuntime
         }
     }
 
-    private static void EnsureTacticalCamera(GameEngine engine)
+    private static void RequestTacticalCameraOnMapFocusIfConfigured(
+        GameEngine engine,
+        MassNavigationCameraRequestPolicyConfig requestPolicy)
     {
+        if (!requestPolicy.RequestTacticalCameraOnMapFocus)
+        {
+            return;
+        }
+
         RequestTacticalCameraReset(engine);
     }
 
@@ -486,14 +487,7 @@ public sealed class MassNavigationRuntime
         Vector2 targetCm = ResolveCameraTarget(engine);
         MassNavigationCameraProfilesConfig cameraProfiles = RequireCameraProfiles(engine);
         string tacticalProfileId = cameraProfiles.TacticalProfileId;
-        engine.GlobalContext[CoreServiceKeys.VirtualCameraRequest.Name] = CreateCameraRequest(
-            tacticalProfileId,
-            cameraProfiles.RequestPolicy);
-        engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
-        {
-            VirtualCameraId = tacticalProfileId,
-            TargetCm = targetCm
-        });
+        QueueCameraTargetRequest(engine, tacticalProfileId, targetCm, cameraProfiles.RequestPolicy);
     }
 
     public static void RequestStrategicCameraReset(GameEngine engine)
@@ -501,14 +495,11 @@ public sealed class MassNavigationRuntime
         MassNavigationSimulationRuntime simulation = RequireSimulationRuntime(engine, "strategic camera reset");
         MassNavigationCameraRequestPolicyConfig requestPolicy = simulation.Config.CameraProfiles.RequestPolicy;
         string strategicProfileId = simulation.Config.CameraProfiles.StrategicProfileId;
-        engine.GlobalContext[CoreServiceKeys.VirtualCameraRequest.Name] = CreateCameraRequest(
+        QueueCameraTargetRequest(
+            engine,
             strategicProfileId,
+            new Vector2(requestPolicy.StrategicTargetXCm, requestPolicy.StrategicTargetYCm),
             requestPolicy);
-        engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
-        {
-            VirtualCameraId = strategicProfileId,
-            TargetCm = new Vector2(requestPolicy.StrategicTargetXCm, requestPolicy.StrategicTargetYCm)
-        });
     }
 
     public static bool IsStrategicWorldCameraActive(GameEngine engine)
@@ -541,6 +532,60 @@ public sealed class MassNavigationRuntime
             ResetRuntimeState = policy.ResetRuntimeState,
             SnapToFollowTargetWhenAvailable = policy.SnapToFollowTargetWhenAvailable
         };
+    }
+
+    private static void QueueCameraTargetRequest(
+        GameEngine engine,
+        string profileId,
+        Vector2 targetCm,
+        MassNavigationCameraRequestPolicyConfig policy)
+    {
+        ValidateCameraRequestTarget(engine, profileId, targetCm);
+        engine.GlobalContext[CoreServiceKeys.VirtualCameraRequest.Name] = CreateCameraRequest(profileId, policy);
+        engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
+        {
+            VirtualCameraId = profileId,
+            TargetCm = targetCm
+        });
+    }
+
+    private static void ValidateCameraRequestTarget(GameEngine engine, string profileId, Vector2 targetCm)
+    {
+        if (!float.IsFinite(targetCm.X) || !float.IsFinite(targetCm.Y))
+        {
+            throw new System.InvalidOperationException(
+                $"MassCrowd runtime camera request '{profileId}' requires a finite target.");
+        }
+
+        VirtualCameraRegistry registry = engine.GetService(CoreServiceKeys.VirtualCameraRegistry)
+            ?? throw new System.InvalidOperationException("MassCrowd runtime camera request requires VirtualCameraRegistry.");
+        VirtualCameraDefinition definition = registry.Get(profileId);
+        switch (definition.TargetHeightMode)
+        {
+            case VirtualCameraTargetHeightMode.Flat:
+                return;
+            case VirtualCameraTargetHeightMode.VisualHeightmap:
+                ValidateVisualHeightmapCameraTarget(engine, definition, targetCm);
+                return;
+            default:
+                throw new System.InvalidOperationException(
+                    $"MassCrowd runtime camera request '{profileId}' declares unsupported target height mode '{definition.TargetHeightMode}'.");
+        }
+    }
+
+    private static void ValidateVisualHeightmapCameraTarget(
+        GameEngine engine,
+        VirtualCameraDefinition definition,
+        Vector2 targetCm)
+    {
+        IVisualHeightmap heightmap = engine.GetService(CoreServiceKeys.VisualHeightmap)
+            ?? throw new System.InvalidOperationException(
+                $"MassCrowd runtime camera request '{definition.Id}' requires CoreServiceKeys.VisualHeightmap before posting global camera requests.");
+        if (!heightmap.TrySampleHeightCm(targetCm.X, targetCm.Y, out _, definition.TargetHeightLayerIndex))
+        {
+            throw new System.InvalidOperationException(
+                $"MassCrowd runtime camera request '{definition.Id}' target ({targetCm.X}, {targetCm.Y}) cm is outside the focused map VisualHeightmap layer {definition.TargetHeightLayerIndex}.");
+        }
     }
 
     private static Vector2 ResolveCameraTarget(GameEngine engine)

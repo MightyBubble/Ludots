@@ -136,6 +136,7 @@
     "strategicProfileId": "RoadNetwork.Camera.Strategic",
     "requestPolicy": {
       "blendDurationSeconds": 0,
+      "requestTacticalCameraOnMapFocus": false,
       "resetRuntimeState": true,
       "snapToFollowTargetWhenAvailable": false,
       "strategicTargetXCm": 0,

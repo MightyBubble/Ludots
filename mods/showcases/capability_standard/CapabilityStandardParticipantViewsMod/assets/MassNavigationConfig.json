@@ -143,6 +143,7 @@
     "strategicProfileId": "Camera.Profile.MassNavigationStrategic",
     "requestPolicy": {
       "blendDurationSeconds": 0,
+      "requestTacticalCameraOnMapFocus": false,
       "resetRuntimeState": true,
       "snapToFollowTargetWhenAvailable": false,
       "strategicTargetXCm": 0,

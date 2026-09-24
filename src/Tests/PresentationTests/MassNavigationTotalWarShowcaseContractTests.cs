@@ -20,6 +20,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Layers;
 using Ludots.Core.Map;
+using Ludots.Core.Map.Board;
 using Ludots.Core.MassCrowd;
 using Ludots.Core.MassCrowd.Runtime;
 using Ludots.Core.MassCrowd.Systems;
@@ -345,6 +346,9 @@ namespace Ludots.Tests.Presentation
             JsonObject cameraRequestPolicy = cameraProfiles["requestPolicy"]?.AsObject()
                 ?? throw new InvalidOperationException("cameraProfiles.requestPolicy must be authored.");
             Assert.That(cameraRequestPolicy.ContainsKey("blendDurationSeconds"), Is.True);
+            Assert.That(cameraRequestPolicy.ContainsKey("requestTacticalCameraOnMapFocus"), Is.True);
+            Assert.That(cameraRequestPolicy["requestTacticalCameraOnMapFocus"]?.GetValue<bool>(), Is.False,
+                "MassNavigation focus must not claim camera ownership unless this policy explicitly opts in.");
             Assert.That(cameraRequestPolicy.ContainsKey("resetRuntimeState"), Is.True);
             Assert.That(cameraRequestPolicy.ContainsKey("snapToFollowTargetWhenAvailable"), Is.True);
             Assert.That(cameraRequestPolicy.ContainsKey("strategicTargetXCm"), Is.True);
@@ -1109,6 +1113,45 @@ namespace Ludots.Tests.Presentation
             Assert.DoesNotThrow(() => Tick(engine),
                 "MassNavigation runtime systems must not tick between CurrentMapSession focus and MapLoaded board-world binding.");
             Assert.That(engine.GetService(MassNavigationKeys.SimulationRuntime), Is.Null);
+        }
+
+        [Test]
+        public void MassNavigationMapFocus_DoesNotQueueImplicitCameraTakeover()
+        {
+            using var engine = new Ludots.Core.Engine.GameEngine();
+            engine.InitializeWithConfigPipeline(TotalWarDependencyPaths(), Path.Combine(FindRepoRoot(), "assets"));
+            engine.Start();
+
+            FocusMassNavigationRuntimeSession(engine, "mass_navigation_total_war");
+            var runtime = new MassNavigationRuntime(new NullModContext());
+
+            runtime.HandleMapFocusedAsync(engine.CreateContext()).GetAwaiter().GetResult();
+
+            Assert.That(engine.GlobalContext.ContainsKey(CoreServiceKeys.VirtualCameraRequest.Name), Is.False,
+                "MassCrowd map focus must leave camera authority with MapConfig.DefaultCamera unless config explicitly requests takeover.");
+            Assert.That(engine.GlobalContext.ContainsKey(CoreServiceKeys.CameraPoseRequest.Name), Is.False,
+                "MassCrowd map focus must not post a hidden tactical camera pose as a side effect of capability setup.");
+        }
+
+        [Test]
+        public void MassNavigationCameraRequest_ValidatesVisualHeightmapTargetBeforePosting()
+        {
+            using var engine = new Ludots.Core.Engine.GameEngine();
+            engine.InitializeWithConfigPipeline(TotalWarDependencyPaths(), Path.Combine(FindRepoRoot(), "assets"));
+            engine.Start();
+
+            FocusMassNavigationRuntimeSession(engine, "mass_navigation_total_war");
+            var runtime = new MassNavigationRuntime(new NullModContext());
+            runtime.HandleMapFocusedAsync(engine.CreateContext()).GetAwaiter().GetResult();
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                MassNavigationRuntime.RequestTacticalCameraReset(engine))!;
+
+            Assert.That(ex.Message, Does.Contain("requires CoreServiceKeys.VisualHeightmap"));
+            Assert.That(engine.GlobalContext.ContainsKey(CoreServiceKeys.VirtualCameraRequest.Name), Is.False,
+                "Invalid MassNavigation camera targets must not leave a pending VirtualCameraRequest for CameraRuntimeSystem.");
+            Assert.That(engine.GlobalContext.ContainsKey(CoreServiceKeys.CameraPoseRequest.Name), Is.False,
+                "Invalid MassNavigation camera targets must not leave a pending CameraPoseRequest for CameraRuntimeSystem.");
         }
 
         [Test]
@@ -2955,6 +2998,37 @@ namespace Ludots.Tests.Presentation
             MethodInfo method = typeof(GameEngine).GetMethod("SetCurrentMapSession", BindingFlags.Instance | BindingFlags.NonPublic)
                 ?? throw new MissingMethodException(typeof(GameEngine).FullName, "SetCurrentMapSession");
             var session = new MapSession(new MapId(mapId), new MapConfig { Id = mapId });
+            method.Invoke(engine, new object[] { session });
+        }
+
+        private static void FocusMassNavigationRuntimeSession(GameEngine engine, string mapId)
+        {
+            MethodInfo method = typeof(GameEngine).GetMethod("SetCurrentMapSession", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? throw new MissingMethodException(typeof(GameEngine).FullName, "SetCurrentMapSession");
+            var boardConfig = new BoardConfig
+            {
+                Name = "default",
+                SpatialType = "Grid",
+                WidthInMacroTiles = 1,
+                HeightInMacroTiles = 1,
+                GridCellSizeCm = 100,
+                ChunkSizeCells = 64,
+            };
+            var mapConfig = new MapConfig { Id = mapId };
+            mapConfig.Boards.Add(boardConfig);
+            var session = new MapSession(new MapId(mapId), mapConfig);
+            session.AddBoard(BoardFactory.Create(boardConfig, new BoardIdRegistry()));
+            Entity owner = engine.World.Create(
+                new PlayerOwner { PlayerId = 1 },
+                new SelectionDragState());
+            session.LocalPlayerId = 1;
+            session.LocalPlayerEntity = owner;
+            session.PlayerEntityLookup.Register(1, owner);
+            if (engine.GetService(CoreServiceKeys.CameraCullingFocusOverride) == null)
+            {
+                engine.SetService(CoreServiceKeys.CameraCullingFocusOverride, new CameraCullingFocusOverride());
+            }
+
             method.Invoke(engine, new object[] { session });
         }
 
