@@ -40,11 +40,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             switch (Kind)
             {
                 case RegionVolumeShapeKind.Circle:
-                {
-                    Fix64 dx = local.X;
-                    Fix64 dy = local.Y;
-                    return dx * dx + dy * dy <= Radius * Radius;
-                }
+                    return DistanceSq(local) <= Square(Radius);
 
                 case RegionVolumeShapeKind.Rect:
                     return Fix64.Abs(local.X) <= HalfWidth &&
@@ -75,12 +71,12 @@ namespace Ludots.Core.Gameplay.MapTriggers
             {
                 Fix64Vec2 a = points[i];
                 Fix64Vec2 b = points[(i + 1) % points.Length];
-                Fix64 cross = (b.X - a.X) * (local.Y - a.Y) - (b.Y - a.Y) * (local.X - a.X);
-                if (cross < Fix64.Zero)
+                double cross = Cross(a, b, local);
+                if (cross < 0d)
                 {
                     sawNegative = true;
                 }
-                else if (cross > Fix64.Zero)
+                else if (cross > 0d)
                 {
                     sawPositive = true;
                 }
@@ -97,7 +93,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         /// <summary>Capsule containment: squared point-to-segment distance vs half-thickness.</summary>
         private bool ContainsSegment(Fix64Vec2 local)
         {
-            return PointSegmentDistanceSq(local, SegmentA, SegmentB) <= HalfThickness * HalfThickness;
+            return PointSegmentDistanceSq(local, SegmentA, SegmentB) <= Square(HalfThickness);
         }
 
         /// <summary>
@@ -112,7 +108,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             switch (Kind)
             {
                 case RegionVolumeShapeKind.Circle:
-                    return PointSegmentDistanceSq(Fix64Vec2.Zero, a, b) <= Radius * Radius;
+                    return PointSegmentDistanceSq(Fix64Vec2.Zero, a, b) <= Square(Radius);
 
                 case RegionVolumeShapeKind.Rect:
                     return SegmentTouchesQuadEdges(a, b, HalfWidth, HalfHeight);
@@ -122,7 +118,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
                 case RegionVolumeShapeKind.Segment:
                     return SegmentSegmentDistanceSq(a, b, SegmentA, SegmentB)
-                        <= HalfThickness * HalfThickness;
+                        <= Square(HalfThickness);
 
                 default:
                     return false;
@@ -155,62 +151,71 @@ namespace Ludots.Core.Gameplay.MapTriggers
         /// <summary>Touching counts (boundary-inclusive), matching containment semantics.</summary>
         private static bool SegmentsTouch(Fix64Vec2 a1, Fix64Vec2 a2, Fix64Vec2 b1, Fix64Vec2 b2)
         {
-            return SegmentSegmentDistanceSq(a1, a2, b1, b2) == Fix64.Zero;
-        }
-
-        private static Fix64 PointSegmentDistanceSq(Fix64Vec2 p, Fix64Vec2 a, Fix64Vec2 b)
-        {
-            Fix64Vec2 ab = b - a;
-            Fix64Vec2 ap = p - a;
-            Fix64 denominator = ab.X * ab.X + ab.Y * ab.Y;
-            Fix64 t = Fix64.Zero;
-            if (denominator > Fix64.Zero)
-            {
-                t = (ap.X * ab.X + ap.Y * ab.Y) / denominator;
-                if (t < Fix64.Zero)
-                {
-                    t = Fix64.Zero;
-                }
-                else if (t > Fix64.OneValue)
-                {
-                    t = Fix64.OneValue;
-                }
-            }
-
-            Fix64Vec2 closest = a + t * ab;
-            Fix64Vec2 delta = p - closest;
-            return delta.X * delta.X + delta.Y * delta.Y;
+            return SegmentSegmentDistanceSq(a1, a2, b1, b2) == 0d;
         }
 
         /// <summary>
-        /// Squared distance between two segments, exact and overflow-safe: a
-        /// straddle-test decides intersection with bounded cross products (the naive
-        /// clamped-parametrization denominator is a product of length-squares and
-        /// overflows Q32.32 at ordinary map scale), and for non-intersecting 2D
-        /// segments the closest point always lies on an endpoint of one of them.
-        /// Touching segments yield exactly zero.
+        /// Squared distance from <paramref name="p"/> to segment <paramref name="a"/>–<paramref name="b"/>.
+        /// The clamp parameter and the square both stay in double: a Q31.32 product
+        /// wraps once a length passes about 46340 centimeters, and the wrapped square
+        /// then compares as if the point sat near the origin.
         /// </summary>
-        private static Fix64 SegmentSegmentDistanceSq(Fix64Vec2 a1, Fix64Vec2 a2, Fix64Vec2 b1, Fix64Vec2 b2)
+        private static double PointSegmentDistanceSq(Fix64Vec2 p, Fix64Vec2 a, Fix64Vec2 b)
+        {
+            double ax = a.X.ToDouble();
+            double ay = a.Y.ToDouble();
+            double abx = b.X.ToDouble() - ax;
+            double aby = b.Y.ToDouble() - ay;
+            double apx = p.X.ToDouble() - ax;
+            double apy = p.Y.ToDouble() - ay;
+            double denominator = abx * abx + aby * aby;
+            double t = 0d;
+            if (denominator > 0d)
+            {
+                t = (apx * abx + apy * aby) / denominator;
+                if (t < 0d)
+                {
+                    t = 0d;
+                }
+                else if (t > 1d)
+                {
+                    t = 1d;
+                }
+            }
+
+            double dx = p.X.ToDouble() - (ax + t * abx);
+            double dy = p.Y.ToDouble() - (ay + t * aby);
+            return dx * dx + dy * dy;
+        }
+
+        /// <summary>
+        /// Squared distance between two segments. A straddle test decides intersection
+        /// because the clamped-parameter denominator is a product of length-squares;
+        /// touching segments yield exactly zero. Otherwise the closest point of two
+        /// non-crossing 2D segments lies on an endpoint, and that square is computed
+        /// in double so a separation past about 46340 centimeters cannot wrap.
+        /// </summary>
+        private static double SegmentSegmentDistanceSq(Fix64Vec2 a1, Fix64Vec2 a2, Fix64Vec2 b1, Fix64Vec2 b2)
         {
             if (SegmentsIntersect(a1, a2, b1, b2))
             {
-                return Fix64.Zero;
+                return 0d;
             }
 
-            Fix64 best = PointSegmentDistanceSq(a1, b1, b2);
-            Fix64 tail = PointSegmentDistanceSq(a2, b1, b2);
+            double best = PointSegmentDistanceSq(a1, b1, b2);
+            double tail = PointSegmentDistanceSq(a2, b1, b2);
             if (tail < best)
             {
                 best = tail;
             }
 
-            Fix64 fromB1 = PointSegmentDistanceSq(b1, a1, a2);
+            double fromB1 = PointSegmentDistanceSq(b1, a1, a2);
             if (fromB1 < best)
             {
                 best = fromB1;
             }
 
-            Fix64 fromB2 = PointSegmentDistanceSq(b2, a1, a2);
+            double fromB2 = PointSegmentDistanceSq(b2, a1, a2);
             if (fromB2 < best)
             {
                 best = fromB2;
@@ -219,40 +224,66 @@ namespace Ludots.Core.Gameplay.MapTriggers
             return best;
         }
 
-        private static bool SegmentsIntersect(Fix64Vec2 a1, Fix64Vec2 a2, Fix64Vec2 b1, Fix64Vec2 b2)
+        /// <summary>
+        /// Squared length in double. A Q31.32 product wraps once the length passes
+        /// about 46340 centimeters, and the wrapped square compares as near the origin.
+        /// </summary>
+        private static double DistanceSq(Fix64Vec2 value)
         {
-            Fix64 d1 = Cross(a1, a2, b1);
-            Fix64 d2 = Cross(a1, a2, b2);
-            Fix64 d3 = Cross(b1, b2, a1);
-            Fix64 d4 = Cross(b1, b2, a2);
-
-            if (((d1 > Fix64.Zero && d2 < Fix64.Zero) || (d1 < Fix64.Zero && d2 > Fix64.Zero)) &&
-                ((d3 > Fix64.Zero && d4 < Fix64.Zero) || (d3 < Fix64.Zero && d4 > Fix64.Zero)))
-            {
-                return true;
-            }
-
-            if (d1 == Fix64.Zero && OnSegment(a1, b1, a2))
-            {
-                return true;
-            }
-
-            if (d2 == Fix64.Zero && OnSegment(a1, b2, a2))
-            {
-                return true;
-            }
-
-            if (d3 == Fix64.Zero && OnSegment(b1, a1, b2))
-            {
-                return true;
-            }
-
-            return d4 == Fix64.Zero && OnSegment(b1, a2, b2);
+            double x = value.X.ToDouble();
+            double y = value.Y.ToDouble();
+            return x * x + y * y;
         }
 
-        private static Fix64 Cross(Fix64Vec2 o, Fix64Vec2 a, Fix64Vec2 b)
+        private static double Square(Fix64 value)
         {
-            return (a.X - o.X) * (b.Y - o.Y) - (a.Y - o.Y) * (b.X - o.X);
+            double v = value.ToDouble();
+            return v * v;
+        }
+
+        private static bool SegmentsIntersect(Fix64Vec2 a1, Fix64Vec2 a2, Fix64Vec2 b1, Fix64Vec2 b2)
+        {
+            double d1 = Cross(a1, a2, b1);
+            double d2 = Cross(a1, a2, b2);
+            double d3 = Cross(b1, b2, a1);
+            double d4 = Cross(b1, b2, a2);
+
+            if (((d1 > 0d && d2 < 0d) || (d1 < 0d && d2 > 0d)) &&
+                ((d3 > 0d && d4 < 0d) || (d3 < 0d && d4 > 0d)))
+            {
+                return true;
+            }
+
+            if (d1 == 0d && OnSegment(a1, b1, a2))
+            {
+                return true;
+            }
+
+            if (d2 == 0d && OnSegment(a1, b2, a2))
+            {
+                return true;
+            }
+
+            if (d3 == 0d && OnSegment(b1, a1, b2))
+            {
+                return true;
+            }
+
+            return d4 == 0d && OnSegment(b1, a2, b2);
+        }
+
+        /// <summary>
+        /// 2D cross (a-o)×(b-o) in double. A Q31.32 product wraps once the two
+        /// lengths multiply past about 2^31, which flips the straddle sign and can
+        /// both pull a far point inside a polygon and miss a long sweep across an edge.
+        /// </summary>
+        private static double Cross(Fix64Vec2 o, Fix64Vec2 a, Fix64Vec2 b)
+        {
+            double ax = a.X.ToDouble() - o.X.ToDouble();
+            double ay = a.Y.ToDouble() - o.Y.ToDouble();
+            double bx = b.X.ToDouble() - o.X.ToDouble();
+            double by = b.Y.ToDouble() - o.Y.ToDouble();
+            return ax * by - ay * bx;
         }
 
         /// <summary>Collinear containment: q between inclusive p and r.</summary>
