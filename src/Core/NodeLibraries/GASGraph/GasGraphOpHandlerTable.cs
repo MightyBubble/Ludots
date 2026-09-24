@@ -2137,7 +2137,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleSubmitAssignedOrder(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.Api.SubmitAssignedOrder(s.Caster, s.E[ins.A], ins.Imm, s.I[ins.B], s.I[ins.C]);
+            Entity target = ins.A == byte.MaxValue ? Entity.Null : s.E[ins.A];
+            s.Api.SubmitAssignedOrder(s.Caster, target, ins.Imm, s.I[ins.B], s.I[ins.C]);
         }
 
         private static void HandleCompleteActiveOrder(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

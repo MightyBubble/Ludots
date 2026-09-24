@@ -45,6 +45,7 @@ LoadCaster → LoadExplicitTarget → ConstInt → ConstInt → **SubmitAssigned
 
 - 图种边界：可用于 Script / TriggerGraph；Effect / Score / Validation / Derived / Query 图不可用（编译期白名单拒绝）。
 - imm 是装载期解析的符号名：符号改名后，引用它的图要跟着改并重编译。
+- 目标口可以不接。不接时这道令没有实体目标，落点仍由 a、b 给出。
 - 同类用法：见手册分册的场景节。
 ## 怎么进
 
