@@ -88,7 +88,6 @@ internal sealed class MassNavigationAgentMetadataSyncSystem : ISystem<float>
                     domainId,
                     profile.Heavy,
                     geometry.Mass,
-                    profile.VisualScale,
                     geometry.RadiusCm,
                     profile.SpeedCmPerSecond,
                     new MassNavigationAgentLayer(layer.Value.Category, layer.Value.Mask));

@@ -38,8 +38,8 @@ public sealed class MassNavigationGroupRuntimeTransactionTests
             new[] { first, second },
             new[]
             {
-                new MassNavigationAgentSeed(1, 1_000f, 1_000f, false, 1f, 1f, 20f, 800f, layer),
-                new MassNavigationAgentSeed(1, 1_200f, 1_000f, false, 1f, 1f, 20f, 800f, layer),
+                new MassNavigationAgentSeed(1, 1_000f, 1_000f, false, 1f, 20f, 800f, layer),
+                new MassNavigationAgentSeed(1, 1_200f, 1_000f, false, 1f, 20f, 800f, layer),
             },
             new[] { true, true });
 
@@ -97,8 +97,8 @@ public sealed class MassNavigationGroupRuntimeTransactionTests
             new[] { first, second },
             new[]
             {
-                new MassNavigationAgentSeed(1, 1_000f, 1_000f, false, 1f, 1f, 20f, 800f, layer),
-                new MassNavigationAgentSeed(1, 1_200f, 1_000f, false, 1f, 1f, 20f, 800f, layer),
+                new MassNavigationAgentSeed(1, 1_000f, 1_000f, false, 1f, 20f, 800f, layer),
+                new MassNavigationAgentSeed(1, 1_200f, 1_000f, false, 1f, 20f, 800f, layer),
             },
             new[] { true, true });
 
@@ -156,8 +156,8 @@ public sealed class MassNavigationGroupRuntimeTransactionTests
             new[] { first, second },
             new[]
             {
-                new MassNavigationAgentSeed(1, 1_000f, 1_000f, false, 1f, 1f, 20f, 800f, layer),
-                new MassNavigationAgentSeed(1, 1_200f, 1_000f, false, 1f, 1f, 20f, 800f, layer),
+                new MassNavigationAgentSeed(1, 1_000f, 1_000f, false, 1f, 20f, 800f, layer),
+                new MassNavigationAgentSeed(1, 1_200f, 1_000f, false, 1f, 20f, 800f, layer),
             },
             new[] { true, true });
 

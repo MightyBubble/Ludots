@@ -64,10 +64,6 @@ internal static class MassNavigationScenarioBootstrap
             float yCm = simulation.MassNavigationFlow.GetPositionY(i);
             float worldXCm = simulation.ToWorldXCm(xCm);
             float worldYCm = simulation.ToWorldYCm(yCm);
-            float navMass = simulation.MassNavigationFlow.GetNavMass(i);
-            float visualScale = simulation.MassNavigationFlow.GetVisualScale(i);
-            float bodyRadiusCm = simulation.MassNavigationFlow.GetBodyRadiusCm(i);
-            float speedCmPerSecond = simulation.MassNavigationFlow.GetSpeedCmPerSecond(i);
             bool heavy = simulation.MassNavigationFlow.IsHeavyProfile(i);
             string templateId = simulation.Config.Presentation.ResolveAgentTemplateId(teamId, heavy);
             authoring.ValidateTemplate(templateId);

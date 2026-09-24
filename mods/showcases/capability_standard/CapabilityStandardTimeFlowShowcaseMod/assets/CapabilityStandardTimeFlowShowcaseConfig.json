@@ -18,8 +18,7 @@
     "targetYCm": 1500,
     "bodyRadiusCm": 30,
     "speedCmPerSecond": 240,
-    "navMass": 1,
-    "visualScale": 0.35
+    "navMass": 1
   },
   "navigationSolver": {
     "fieldWidthCm": 4000,

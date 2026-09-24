@@ -105,7 +105,6 @@ public sealed class MassNavigationAgentProfileConfig
 {
     public string Id { get; set; } = string.Empty;
     public bool Heavy { get; set; }
-    public float VisualScale { get; set; }
     public float SpeedCmPerSecond { get; set; }
     public int EveryNth { get; set; }
     public int NthOffset { get; set; }
@@ -115,11 +114,6 @@ public sealed class MassNavigationAgentProfileConfig
         if (string.IsNullOrWhiteSpace(Id))
         {
             throw new InvalidOperationException($"MassNavigation agentProfiles.profiles[{index}] requires id.");
-        }
-
-        if (!(VisualScale > 0f))
-        {
-            throw new InvalidOperationException($"MassNavigation agent profile '{Id}' requires VisualScale > 0.");
         }
 
         if (!(SpeedCmPerSecond > 0f))

@@ -2160,7 +2160,6 @@ namespace Ludots.Tests.GAS
                         localPositionYCm: simulation.ToLocalYCm(worldPosition.Y),
                         heavy: false,
                         navMass: 1f,
-                        visualScale: 1f,
                         bodyRadiusCm: 30f,
                         speedCmPerSecond: 1200f,
                         layer),

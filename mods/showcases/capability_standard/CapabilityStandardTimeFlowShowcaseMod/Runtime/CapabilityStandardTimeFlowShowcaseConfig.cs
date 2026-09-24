@@ -151,7 +151,6 @@ internal sealed class TimeFlowNavigationProbeConfig
     public float BodyRadiusCm { get; set; }
     public float SpeedCmPerSecond { get; set; }
     public float NavMass { get; set; }
-    public float VisualScale { get; set; }
 
     public void Validate(MassNavigationFlowSolverConfig solver)
     {
@@ -163,7 +162,6 @@ internal sealed class TimeFlowNavigationProbeConfig
         RequirePositive(BodyRadiusCm, "navigationProbe.bodyRadiusCm");
         RequirePositive(SpeedCmPerSecond, "navigationProbe.speedCmPerSecond");
         RequirePositive(NavMass, "navigationProbe.navMass");
-        RequirePositive(VisualScale, "navigationProbe.visualScale");
         RequireInside(StartXCm, solver.PlayAreaMinXCm, solver.PlayAreaMaxXCm, "navigationProbe.startXCm");
         RequireInside(StartYCm, solver.PlayAreaMinYCm, solver.PlayAreaMaxYCm, "navigationProbe.startYCm");
         RequireInside(TargetXCm, solver.PlayAreaMinXCm, solver.PlayAreaMaxXCm, "navigationProbe.targetXCm");

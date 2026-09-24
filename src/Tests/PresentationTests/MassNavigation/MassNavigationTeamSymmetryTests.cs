@@ -256,7 +256,6 @@ public class MassNavigationTeamSymmetryTests
                 {
                     Id = "heavy",
                     Heavy = true,
-                    VisualScale = 0.34f,
                     SpeedCmPerSecond = 800f,
                     EveryNth = 7,
                     NthOffset = 0,
@@ -265,7 +264,6 @@ public class MassNavigationTeamSymmetryTests
                 {
                     Id = "light",
                     Heavy = false,
-                    VisualScale = 0.22f,
                     SpeedCmPerSecond = 800f,
                     EveryNth = 0,
                     NthOffset = 0,

@@ -398,7 +398,6 @@ namespace Ludots.Tests.Presentation.Movement
                         localPositionYCm: spec.WorldYCm,
                         heavy: false,
                         navMass: 1f,
-                        visualScale: 1f,
                         bodyRadiusCm: ProfileBodyRadiusCm,
                         speedCmPerSecond: 800f,
                         layer);
