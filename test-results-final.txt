@@ -1,0 +1,29 @@
+﻿C:\001_AI\LudotsProd_nonperformer_integration_20260803\src\Tests\GasTests\bin\Debug\net8.0\GasTests.dll (.NETCoreApp,Version=v8.0)鐨勬祴璇曡繍琛?
+鎬诲叡 1 涓祴璇曟枃浠朵笌鎸囧畾妯″紡鐩稿尮閰嶃€?
+  澶辫触 CallerParams_OverrideForceValues_InInstantEffect [190 ms]
+  閿欒娑堟伅:
+     ForceX should use CallerParams override
+Assert.That(attr.GetCurrent(fxAttrId), Is.EqualTo(100.0f))
+  Expected: 100.0f
+  But was:  0.0f
+
+  鍫嗘爤璺熻釜:
+     at Ludots.Tests.GAS.CallerParamsE2ETests.CallerParams_OverrideForceValues_InInstantEffect() in C:\001_AI\LudotsProd_nonperformer_integration_20260803\src\Tests\GasTests\Ability\CallerParamsE2ETests.cs:line 103
+
+1)    at Ludots.Tests.GAS.CallerParamsE2ETests.CallerParams_OverrideForceValues_InInstantEffect() in C:\001_AI\LudotsProd_nonperformer_integration_20260803\src\Tests\GasTests\Ability\CallerParamsE2ETests.cs:line 103
+
+
+  澶辫触 CallerParams_PartialOverride_PreservesTemplateDefaultsInInstantEffect [16 ms]
+  閿欒娑堟伅:
+     Assert.That(attr.GetCurrent(fxAttrId), Is.EqualTo(100.0f))
+  Expected: 100.0f
+  But was:  0.0f
+
+  鍫嗘爤璺熻釜:
+     at Ludots.Tests.GAS.CallerParamsE2ETests.CallerParams_PartialOverride_PreservesTemplateDefaultsInInstantEffect() in C:\001_AI\LudotsProd_nonperformer_integration_20260803\src\Tests\GasTests\Ability\CallerParamsE2ETests.cs:line 160
+
+1)    at Ludots.Tests.GAS.CallerParamsE2ETests.CallerParams_PartialOverride_PreservesTemplateDefaultsInInstantEffect() in C:\001_AI\LudotsProd_nonperformer_integration_20260803\src\Tests\GasTests\Ability\CallerParamsE2ETests.cs:line 160
+
+
+
+澶辫触!  - 澶辫触:     2锛岄€氳繃:   163锛屽凡璺宠繃:     0锛屾€昏:   165锛屾寔缁椂闂? 5 s - GasTests.dll (net8.0)

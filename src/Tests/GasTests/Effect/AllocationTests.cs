@@ -218,6 +218,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
 
+            AttributeRegistry.Register("_test.AllocationTests.AttributeIdZeroGuard");
             int fxId = AttributeRegistry.Register("Physics.ForceRequestX");
             int fyId = AttributeRegistry.Register("Physics.ForceRequestY");
 

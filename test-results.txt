@@ -1,0 +1,50 @@
+﻿C:\001_AI\LudotsProd_nonperformer_integration_20260803\src\Tests\GasTests\bin\Debug\net8.0\GasTests.dll (.NETCoreApp,Version=v8.0)鐨勬祴璇曡繍琛?
+鎬诲叡 1 涓祴璇曟枃浠朵笌鎸囧畾妯″紡鐩稿尮閰嶃€?
+  澶辫触 CallerParams_OverrideForceValues_InInstantEffect [146 ms]
+  閿欒娑堟伅:
+     ForceX should use CallerParams override
+Assert.That(attr.GetCurrent(fxAttrId), Is.EqualTo(100.0f))
+  Expected: 100.0f
+  But was:  0.0f
+
+  鍫嗘爤璺熻釜:
+     at Ludots.Tests.GAS.CallerParamsE2ETests.CallerParams_OverrideForceValues_InInstantEffect() in C:\001_AI\LudotsProd_nonperformer_integration_20260803\src\Tests\GasTests\Ability\CallerParamsE2ETests.cs:line 102
+
+1)    at Ludots.Tests.GAS.CallerParamsE2ETests.CallerParams_OverrideForceValues_InInstantEffect() in C:\001_AI\LudotsProd_nonperformer_integration_20260803\src\Tests\GasTests\Ability\CallerParamsE2ETests.cs:line 102
+
+
+  澶辫触 CallerParams_PartialOverride_PreservesTemplateDefaultsInInstantEffect [17 ms]
+  閿欒娑堟伅:
+     Assert.That(attr.GetCurrent(fxAttrId), Is.EqualTo(100.0f))
+  Expected: 100.0f
+  But was:  0.0f
+
+  鍫嗘爤璺熻釜:
+     at Ludots.Tests.GAS.CallerParamsE2ETests.CallerParams_PartialOverride_PreservesTemplateDefaultsInInstantEffect() in C:\001_AI\LudotsProd_nonperformer_integration_20260803\src\Tests\GasTests\Ability\CallerParamsE2ETests.cs:line 159
+
+1)    at Ludots.Tests.GAS.CallerParamsE2ETests.CallerParams_PartialOverride_PreservesTemplateDefaultsInInstantEffect() in C:\001_AI\LudotsProd_nonperformer_integration_20260803\src\Tests\GasTests\Ability\CallerParamsE2ETests.cs:line 159
+
+
+  澶辫触 MudCombat_Stress_ArcaneVolleyWithBurning_ReportsThroughput [21 m 52 s]
+  閿欒娑堟伅:
+     Assert.That(sw.Elapsed.TotalSeconds, Is.LessThan(10))
+  Expected: less than 10
+  But was:  1159.2445227000001d
+
+  鍫嗘爤璺熻釜:
+     at Ludots.Tests.GAS.MudAbilityChainStressDemoTests.MudCombat_Stress_ArcaneVolleyWithBurning_ReportsThroughput() in C:\001_AI\LudotsProd_nonperformer_integration_20260803\src\Tests\GasTests\Integration\MudAbilityChainStressDemoTests.cs:line 507
+
+1)    at Ludots.Tests.GAS.MudAbilityChainStressDemoTests.MudCombat_Stress_ArcaneVolleyWithBurning_ReportsThroughput() in C:\001_AI\LudotsProd_nonperformer_integration_20260803\src\Tests\GasTests\Integration\MudAbilityChainStressDemoTests.cs:line 507
+
+
+  鏍囧噯杈撳嚭娑堟伅:
+ [MUD][STRESS] 浣犲湪澶у巺閲婃斁銆愬ゥ鏈綈灏勩€戯紝2000 涓洰鏍囧悓鏃跺彈鍑诲苟瑙﹀彂鐕冪儳銆?
+ [MUD][STRESS] LogicFrames=5 Roots=10000 ElapsedMs=1159244.5 PerRootUs=115924.452
+ [MUD][STRESS] ResponseWindows=10000 ResponseSteps=20000 ResponseCreates=10000
+ [MUD][STRESS] AllocBytes(CurrentThread)=17219640
+ [MUD][STRESS] GC Collections 螖: Gen0=1 Gen1=0 Gen2=0
+ [MUD][STRESS] TimeMs: AdvanceClock=0.01 ActivateAbility=1159244.19 EffectLoop=0.00 Sum=1159244.19
+
+
+
+澶辫触!  - 澶辫触:     3锛岄€氳繃:   162锛屽凡璺宠繃:     0锛屾€昏:   165锛屾寔缁椂闂? 21 m 56 s - GasTests.dll (net8.0)

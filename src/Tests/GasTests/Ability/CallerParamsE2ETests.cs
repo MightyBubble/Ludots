@@ -44,6 +44,25 @@ namespace Ludots.Tests.GAS
             EffectParamKeys.Initialize();
         }
 
+        [SetUp]
+        public void SetUp()
+        {
+            EffectParamKeys.Initialize();
+            GraphIdRegistry.Clear();
+            EnsureForceTargetAttributesRegistered();
+        }
+
+        private static void EnsureForceTargetAttributesRegistered()
+        {
+            // ApplyForce skips PresetAttribute0/1 when the resolved id is 0.
+            if (AttributeRegistry.GetId("Physics.ForceRequestX") < 0)
+            {
+                AttributeRegistry.Register("_test.CallerParams.AttributeIdZeroGuard");
+                AttributeRegistry.Register("Physics.ForceRequestX");
+                AttributeRegistry.Register("Physics.ForceRequestY");
+            }
+        }
+
         // ------------------------------------------------------------
         //  Scenario: CallerParams override ForceX/Y in ApplyForce2D preset
         // ------------------------------------------------------------
@@ -96,7 +115,7 @@ namespace Ludots.Tests.GAS
                 chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
 
                 var proposalSys = CreateProposalSystem(world, requests, templates, chainOrders, pipeline, catalog);
-                proposalSys.Update(0.016f);
+                RunProposalWithResponseChainPasses(proposalSys, chainOrders);
 
                 ref var attr = ref world.Get<AttributeBuffer>(target);
                 That(attr.GetCurrent(fxAttrId), Is.EqualTo(100.0f), "ForceX should use CallerParams override");
@@ -153,7 +172,7 @@ namespace Ludots.Tests.GAS
                     chainOrders,
                     pipeline,
                     catalog);
-                proposalSys.Update(0.016f);
+                RunProposalWithResponseChainPasses(proposalSys, chainOrders);
 
                 ref var attr = ref world.Get<AttributeBuffer>(target);
                 That(attr.GetCurrent(fxAttrId), Is.EqualTo(100.0f));
@@ -210,7 +229,7 @@ namespace Ludots.Tests.GAS
                 chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
 
                 var proposalSys = CreateProposalSystem(world, requests, templates, chainOrders, pipeline, catalog);
-                proposalSys.Update(0.016f);
+                RunProposalWithResponseChainPasses(proposalSys, chainOrders);
 
                 // Without CallerParams, force values should be 0 (template doesn't define them in configParams)
                 ref var attr = ref world.Get<AttributeBuffer>(target);
@@ -741,6 +760,17 @@ namespace Ludots.Tests.GAS
                 graphPrograms,
                 GasGraphOpHandlerTable.Instance,
                 "GAS/effects.json");
+        }
+
+        private static void RunProposalWithResponseChainPasses(
+            EffectProposalProcessingSystem proposalSys,
+            OrderQueue chainOrders)
+        {
+            OrderAdmissionResultBuffer admissionResults = chainOrders.AdmissionResults;
+            admissionResults.BeginLogicStep();
+            proposalSys.Update(0.016f);
+            admissionResults.EndEntityIntake();
+            admissionResults.EndLogicStep();
         }
 
         private static EffectProposalProcessingSystem CreateProposalSystem(

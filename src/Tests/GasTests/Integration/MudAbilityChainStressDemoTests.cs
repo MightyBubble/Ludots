@@ -19,6 +19,7 @@ using static NUnit.Framework.Assert;
 namespace Ludots.Tests.GAS
 {
     [TestFixture]
+    [NonParallelizable]
     public class MudAbilityChainStressDemoTests
     {
         private const string ChainHealthAttributeName = "tests.mud.ability-chain.health";
@@ -215,6 +216,7 @@ namespace Ludots.Tests.GAS
                             world,
                             abilityExecSystem,
                             processing,
+                            effectReceipts,
                             terminalResults,
                             player,
                             goblinA,
@@ -229,6 +231,7 @@ namespace Ludots.Tests.GAS
                             world,
                             abilityExecSystem,
                             processing,
+                            effectReceipts,
                             terminalResults,
                             player,
                             player,
@@ -243,6 +246,7 @@ namespace Ludots.Tests.GAS
                             world,
                             abilityExecSystem,
                             processing,
+                            effectReceipts,
                             terminalResults,
                             player,
                             goblinB,
@@ -385,7 +389,7 @@ namespace Ludots.Tests.GAS
                 const int castAbilityOrderTypeId = 100;
                 var terminalResults = new OrderTerminalResultBuffer(capacity: 8192);
                 var orderTypes = CreateCastOrderTypes(castAbilityOrderTypeId, terminalResults);
-                var effectReceipts = new EffectTransactionReceiptBuffer();
+                var effectReceipts = new EffectTransactionReceiptBuffer(capacity: 32768);
                 var abilityExecSystem = new AbilityExecSystem(
                     world,
                     clock,
@@ -429,12 +433,15 @@ namespace Ludots.Tests.GAS
                         world,
                         abilityExecSystem,
                         processing,
+                        effectReceipts,
                         terminalResults,
                         player,
                         targets,
                         castAbilityOrderTypeId,
                         slotIndex: 0,
-                        ref nextOrderId);
+                        ref nextOrderId,
+                        manualReceipt: true);
+                    processing.Update(dt);
                     clocks.AdvanceFixedFrame();
                     clocks.AdvanceStep();
                 }
@@ -470,15 +477,18 @@ namespace Ludots.Tests.GAS
                         world,
                         abilityExecSystem,
                         processing,
+                        effectReceipts,
                         terminalResults,
                         player,
                         targets,
                         castAbilityOrderTypeId,
                         slotIndex: 0,
-                        ref nextOrderId);
+                        ref nextOrderId,
+                        manualReceipt: true);
                     ticksActivate += Stopwatch.GetTimestamp() - t0;
 
                     t0 = Stopwatch.GetTimestamp();
+                    processing.Update(dt);
                     ticksProcess += Stopwatch.GetTimestamp() - t0;
                     totalWindows += budget.ResponseWindows;
                     totalSteps += budget.ResponseSteps;
@@ -545,12 +555,14 @@ namespace Ludots.Tests.GAS
             World world,
             AbilityExecSystem abilityExecSystem,
             EffectProcessingLoopSystem processing,
+            EffectTransactionReceiptBuffer effectReceipts,
             OrderTerminalResultBuffer terminalResults,
             Entity actor,
             Entity[] targets,
             int castAbilityOrderTypeId,
             int slotIndex,
-            ref int nextOrderId)
+            ref int nextOrderId,
+            bool manualReceipt = false)
         {
             for (int i = 0; i < targets.Length; i++)
             {
@@ -558,12 +570,14 @@ namespace Ludots.Tests.GAS
                     world,
                     abilityExecSystem,
                     processing,
+                    effectReceipts,
                     terminalResults,
                     actor,
                     targets[i],
                     castAbilityOrderTypeId,
                     slotIndex,
-                    nextOrderId++);
+                    nextOrderId++,
+                    manualReceipt);
             }
         }
 
@@ -571,12 +585,14 @@ namespace Ludots.Tests.GAS
             World world,
             AbilityExecSystem abilityExecSystem,
             EffectProcessingLoopSystem processing,
+            EffectTransactionReceiptBuffer effectReceipts,
             OrderTerminalResultBuffer terminalResults,
             Entity actor,
             Entity target,
             int castAbilityOrderTypeId,
             int slotIndex,
-            int orderId)
+            int orderId,
+            bool manualReceipt = false)
         {
             terminalResults.Clear();
             var order = OrderBuilder.CreateCastAbility(
@@ -593,7 +609,19 @@ namespace Ludots.Tests.GAS
             world.Get<BlackboardIntBuffer>(actor).Set(OrderBlackboardKeys.Cast_SlotIndex, slotIndex);
             world.Get<BlackboardEntityBuffer>(actor).Set(OrderBlackboardKeys.Cast_TargetEntity, target);
             abilityExecSystem.Update(0f);
-            processing.Update(0f);
+            if (manualReceipt)
+            {
+                ref readonly var waitingExec = ref world.Get<AbilityExecInstance>(actor);
+                effectReceipts.Write(new EffectTransactionReceipt
+                {
+                    RequestId = waitingExec.WaitRequestId,
+                    Outcome = EffectTransactionOutcome.Succeeded,
+                });
+            }
+            else
+            {
+                processing.Update(0f);
+            }
             abilityExecSystem.Update(0f);
             abilityExecSystem.Update(0f);
 
