@@ -61,7 +61,7 @@ Formation anchor 进入 `collection.command.source`，但不接收 order，也�
 
 ## GAS 与 MassNavigation 边界
 
-GAS projection 只处理自己注册的 `massNavigationMove` order，并验证：
+大规模寻路地图聚焦后，订单适配器同时接收 `massNavigationMove` 与核心 `moveTo`。先移动再施法的组合计划，以及仍提交普通移动令的配置，进入同一条落位管线：按槽位散开，到位后完成订单。投影仍验证：
 
 - active order id 为正；
 - spatial kind 为单一 `WorldCm`；

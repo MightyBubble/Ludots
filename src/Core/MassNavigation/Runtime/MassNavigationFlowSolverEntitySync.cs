@@ -41,8 +41,10 @@ public sealed partial class MassNavigationFlowSolverState
                     $"MassNavigationFlowSolverState cannot sync unit {i} because no tracked agent entity is registered.");
             }
 
-            // Death destroys the unit in a later phase. The agent slot stays until the
-            // next binding rebuild, so a dead track is a gameplay fact, not a corrupt table.
+            // Agents destroyed outside the nav runtime's own removal (death rule,
+            // two-phase presentation destroy) stay dirty for one removal cycle.
+            // Skipping the pose write is the guard; the metadata sync drops the slot
+            // on its next pass. Death is gameplay, not a corrupt table.
             if (!world.IsAlive(entity))
             {
                 continue;

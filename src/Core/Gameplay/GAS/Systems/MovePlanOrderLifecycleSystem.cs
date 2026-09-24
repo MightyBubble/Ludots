@@ -17,6 +17,7 @@ public sealed class MovePlanOrderLifecycleSystem : BaseSystem<World, float>
 
     private readonly OrderTypeRegistry _orderTypeRegistry;
     private readonly int _moveOrderTypeId;
+    private readonly int _secondaryMoveOrderTypeId;
 
     public MovePlanOrderLifecycleSystem(World world, OrderTypeRegistry orderTypeRegistry, int moveOrderTypeId)
         : base(world)
@@ -28,7 +29,25 @@ public sealed class MovePlanOrderLifecycleSystem : BaseSystem<World, float>
         }
 
         _moveOrderTypeId = moveOrderTypeId;
+        _secondaryMoveOrderTypeId = 0;
     }
+
+    public MovePlanOrderLifecycleSystem(World world, OrderTypeRegistry orderTypeRegistry, int moveOrderTypeId, int secondaryMoveOrderTypeId)
+        : base(world)
+    {
+        _orderTypeRegistry = orderTypeRegistry ?? throw new ArgumentNullException(nameof(orderTypeRegistry));
+        if (moveOrderTypeId <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(moveOrderTypeId));
+        }
+
+        _moveOrderTypeId = moveOrderTypeId;
+        _secondaryMoveOrderTypeId = secondaryMoveOrderTypeId;
+    }
+
+    private bool IsMoveOrder(int orderTypeId) =>
+        orderTypeId == _moveOrderTypeId ||
+        (_secondaryMoveOrderTypeId > 0 && orderTypeId == _secondaryMoveOrderTypeId);
 
     public override void Update(in float dt)
     {
@@ -42,7 +61,7 @@ public sealed class MovePlanOrderLifecycleSystem : BaseSystem<World, float>
                 ref OrderBuffer buffer = ref buffers[index];
                 ref MovePlanExecutionResult result = ref results[index];
                 if (!buffer.HasActive ||
-                    buffer.ActiveOrder.Order.OrderTypeId != _moveOrderTypeId ||
+                    !IsMoveOrder(buffer.ActiveOrder.Order.OrderTypeId) ||
                     result.Kind == MovePlanExecutionResultKind.None ||
                     result.CommandGroupToken != buffer.ActiveOrder.Order.RequireCommandGroupToken())
                 {

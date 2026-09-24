@@ -2155,7 +2155,7 @@ namespace Ludots.Tests.GAS
                 new[]
                 {
                     new MassNavigationAgentSeed(
-                        teamId: 1,
+                        relationshipDomainId: 1,
                         localPositionXCm: simulation.ToLocalXCm(worldPosition.X),
                         localPositionYCm: simulation.ToLocalYCm(worldPosition.Y),
                         heavy: false,
